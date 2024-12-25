@@ -5,10 +5,12 @@
   "description": "The personal website of fretchen",
   "scripts": {
     "start": "vite",
+    "lint": "eslint src",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "typewatch": "tsc --noEmit --watch"
+    "typewatch": "tsc --noEmit --watch",
+    "prepare": "husky install"
   },
   "license": "MIT",
   "dependencies": {
@@ -17,11 +19,21 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@types/react": "^18.2.7",
     "@types/react-dom": "^18.2.4",
     "babel-preset-nano-react-app": "^0.1.0",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react": "^7.37.3",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
     "typescript": "^5.0.4",
+    "typescript-eslint": "^8.18.2",
     "vite": "^4.5.5",
     "vite-tsconfig-paths": "^4.2.0"
+  },
+  "lint-staged": {
+    "*.js": "eslint --cache --fix"
   }
 }

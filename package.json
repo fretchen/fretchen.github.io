@@ -9,8 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "typewatch": "tsc --noEmit --watch",
-    "prepare": "husky install"
+    "typewatch": "tsc --noEmit --watch"
   },
   "license": "MIT",
   "dependencies": {

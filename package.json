@@ -5,6 +5,7 @@
   "description": "The personal website of fretchen",
   "scripts": {
     "start": "vite",
+    "lint": "eslint src",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

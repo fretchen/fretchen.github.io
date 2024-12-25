@@ -1,11 +1,13 @@
 import * as React from "react";
 
-import { MuiMarkdown } from 'mui-markdown';
+import { MuiMarkdown } from "mui-markdown";
 
-export default () => (
+const App: React.FC = () => (
   <>
     <h1>Welcome to React Vite Micro App!</h1>
     <p>Hard to get more minimal than this small React app.</p>
-    <MuiMarkdown>{`# Hello markdown!`}</MuiMarkdown>;
+    <MuiMarkdown>{`# Hello markdown!`}</MuiMarkdown>
   </>
 );
+
+export default App;

@@ -2,7 +2,7 @@
   "name": "fretchen.github.io",
   "homepage": "https://fretchen.github.io/",
   "version": "0.1.0",
-  "description": "",
+  "description": "The personal website of fretchen",
   "scripts": {
     "start": "vite",
     "build": "vite build",
@@ -12,6 +12,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "mui-markdown": "^1.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

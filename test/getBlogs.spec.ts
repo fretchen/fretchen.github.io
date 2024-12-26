@@ -1,8 +1,9 @@
-var assert = require('assert');
-describe('Array', function () {
-  describe('#indexOf()', function () {
-    it('should return -1 when the value is not present', function () {
-      assert.equal([1, 2, 3].indexOf(4), -1);
-    });
+import { getBlogs } from "../src/utils/getBlogs";
+
+var assert = require("assert");
+describe("Make sure we can get blog posts", function () {
+  it("should return an array of blogs", function () {
+    const blogs = getBlogs();
+    assert.equal(blogs.length, 2);
   });
 });

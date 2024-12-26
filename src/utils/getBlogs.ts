@@ -5,7 +5,7 @@
 import fs from "fs";
 
 export const getBlogs = () => {
-  const blogDirectory = "src/blogs";
+  const blogDirectory = "./blog";
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles.map((file) => {
     const blogContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");

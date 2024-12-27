@@ -24,3 +24,8 @@ export const getBlogs = () => {
   fs.writeFileSync(jsonFilePath, JSON.stringify(blogs, null, 2));
   return blogs;
 };
+
+// Skript ausführen
+if (require.main === module) {
+  getBlogs();
+}

@@ -1,61 +1,53 @@
-# Nano React App Default Typescript Template
+Generated with [Bati](https://batijs.dev) ([version 320](https://www.npmjs.com/package/create-bati/v/0.0.320)) using this command:
 
-The default template project for [nano-react-app](https://github.com/nano-react-app/nano-react-app).
-
-- `npm start` — This will spawn a development server with a default port of `3000`.
-- `npm run build` — This will output a production build in the `dist` directory.
-- `npm run preview` — This will run the production build locally with a default port of `5173` (this will not work if you haven't generated the production build yet).
-- `npm run typecheck` — This will run `tsc --noEmit` which basically just typechecks your project.
-- `npm run typewatch` — This will run `tsc --noEmit --watch` which will typecheck your project as you make changes.
-
-## Typechecking
-
-Unfortunately, ViteJS does not perform typechecking. So you will need to make use of the `typecheck` and `typewatch` scripts above.
-
-## Custom port
-
-You can use the `-p` flag to specify a port for development. To do this, you can either run `npm start` with an additional flag:
-
-```
-npm start -- --port 1234
+```sh
+npm create bati --- --react --panda-css --eslint --prettier
 ```
 
-Or edit the `start` script directly:
+## Contents
 
-```
-vite --port 1234
-```
+* [React](#react)
 
-## Adding styles
+  * [`/pages/+config.ts`](#pagesconfigts)
+  * [Routing](#routing)
+  * [`/pages/_error/+Page.jsx`](#pages_errorpagejsx)
+  * [`/pages/+onPageTransitionStart.ts` and `/pages/+onPageTransitionEnd.ts`](#pagesonpagetransitionstartts-and-pagesonpagetransitionendts)
+  * [SSR](#ssr)
+  * [HTML Streaming](#html-streaming)
 
-You can use CSS files with simple ES2015 `import` statements anywhere in your Javascript:
+## React
 
-```js
-import "./index.css";
-```
+This app is ready to start. It's powered by [Vike](https://vike.dev) and [React](https://react.dev/learn).
 
-## Babel transforms
+### `/pages/+config.ts`
 
-The Babel preset [babel-preset-nano-react-app](https://github.com/nano-react-app/babel-preset-nano-react-app) is used to support the same transforms that Create React App supports.
+Such `+` files are [the interface](https://vike.dev/config) between Vike and your code. It defines:
 
-The Babel configuration lives inside `package.json` and will override an external `.babelrc` file, so if you want to use `.babelrc` remember to delete the `babel` property inside `package.json`.
+* A default [`<Layout>` component](https://vike.dev/Layout) (that wraps your [`<Page>` components](https://vike.dev/Page)).
+* A default [`title`](https://vike.dev/title).
+* Global [`<head>` tags](https://vike.dev/head-tags).
 
-## Deploy to GitHub Pages
+### Routing
 
-You can also deploy your project using GitHub pages.
-First install the `gh-pages` [package](https://github.com/tschaub/gh-pages):
+[Vike's built-in router](https://vike.dev/routing) lets you choose between:
 
-`npm i -D gh-pages`
+* [Filesystem Routing](https://vike.dev/filesystem-routing) (the URL of a page is determined based on where its `+Page.jsx` file is located on the filesystem)
+* [Route Strings](https://vike.dev/route-string)
+* [Route Functions](https://vike.dev/route-function)
 
-With Parcel's `--public-url` flag, use the following scripts for deployment:
+### `/pages/_error/+Page.jsx`
 
-```
-"scripts": {
-  "start": "vite",
-  "build": "vite build",
-  "predeploy": "rm -rf dist && vite build",
-  "deploy": "gh-pages -d dist"
-},
-```
+The [error page](https://vike.dev/error-page) which is rendered when errors occur.
 
-Then follow the normal procedure in GitHub Pages and select the `gh-pages` branch.
+### `/pages/+onPageTransitionStart.ts` and `/pages/+onPageTransitionEnd.ts`
+
+The [`onPageTransitionStart()` hook](https://vike.dev/onPageTransitionStart), together with [`onPageTransitionEnd()`](https://vike.dev/onPageTransitionEnd), enables you to implement page transition animations.
+
+### SSR
+
+SSR is enabled by default. You can [disable it](https://vike.dev/ssr) for all your pages or only for some pages.
+
+### HTML Streaming
+
+You can enable/disable [HTML streaming](https://vike.dev/stream) for all your pages, or only for some pages while still using it for others.
+

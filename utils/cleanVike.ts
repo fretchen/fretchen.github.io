@@ -5,7 +5,6 @@
  */
 
 import fs from "fs";
-import path from "path";
 
 const serverDirectory = "./build/server";
 const clientDirectory = "./build/client";

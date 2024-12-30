@@ -13,9 +13,7 @@ export const getBlogs = () => {
     .map((file) => {
       const blogContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");
       return {
-        title: file.endsWith(".mdx")
-          ? file.replace(".mdx", "")
-          : file.replace(".md", ""),
+        title: file.endsWith(".mdx") ? file.replace(".mdx", "") : file.replace(".md", ""),
         content: blogContent,
       };
     });
@@ -25,7 +23,4 @@ export const getBlogs = () => {
   return blogs;
 };
 
-// Skript ausführen
-if (require.main === module) {
-  getBlogs();
-}
+getBlogs();

@@ -1,8 +1,16 @@
+import react from "@vitejs/plugin-react";
+import mdx from "@mdx-js/rollup";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+import vike from "vike/plugin";
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  plugins: [
+    vike({
+      prerender: true,
+    }),
+    mdx(),
+    react({}),
+  ],
   build: {
     outDir: "build",
   },

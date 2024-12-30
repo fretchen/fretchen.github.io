@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { MuiMarkdown } from "mui-markdown";
-import blogs from "../blog/blogs.json";
+import blogs from "../../blog/blogs.json";
 
 const App: React.FC = function () {
   console.log(blogs);

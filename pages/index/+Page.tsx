@@ -9,7 +9,7 @@ export default function Page() {
       <ul>
         <li>Rendered to HTML.</li>
         <li>
-          Interactive. <Counter />
+          Interactive . <Counter />
         </li>
       </ul>
     </>

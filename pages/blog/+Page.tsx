@@ -1,18 +1,21 @@
 import * as React from "react";
 
-import { MuiMarkdown } from "mui-markdown";
 import blogs from "../../blog/blogs.json";
+import { Link } from "../../components/Link";
 
 const App: React.FC = function () {
   console.log(blogs);
   return (
-    <div className="App">
-      <h1>Welcome to React Vite Micro App!</h1>
-      <p>Hard to get more minimal than this small React app.</p>
+    <div className="Blog">
+      <h1>Welcome to my blog!</h1>
+      <p>It contains notes about all kind of topic, ideas etc.</p>
       {blogs.map((blog, index) => (
         <div key={index}>
           <h2>{blog.title}</h2>
-          <MuiMarkdown>{blog.content}</MuiMarkdown>
+          <p>
+            {" "}
+            <Link href={`/blog/${index}`}>Read more</Link>
+          </p>
         </div>
       ))}
     </div>

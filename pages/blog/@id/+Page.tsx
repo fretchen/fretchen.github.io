@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { MuiMarkdown } from "mui-markdown";
 import blogs from "../../../blog/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../components/Post";

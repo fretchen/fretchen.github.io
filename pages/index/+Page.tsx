@@ -1,17 +1,14 @@
 import React from "react";
-import { Counter } from "./Counter.js";
 
 export default function Page() {
   return (
     <>
-      <h1>My Vike app</h1>
-      This page is:
-      <ul>
-        <li>Rendered to HTML.</li>
-        <li>
-          Interactive . <Counter />
-        </li>
-      </ul>
+      <h1>Website by fretchen</h1>
+      <p>
+        {" "}
+        Welcome to my Website with all kinds of notes etc. For the moment it is mostly a blog, but let us see how it
+        evolves.
+      </p>
     </>
   );
 }

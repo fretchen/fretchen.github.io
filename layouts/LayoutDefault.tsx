@@ -1,7 +1,6 @@
 import "./style.css";
 
 import React from "react";
-import logoUrl from "../assets/logo.svg";
 import { Link } from "../components/Link.js";
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
@@ -14,7 +13,6 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
       }}
     >
       <Sidebar>
-        <Logo />
         <Link href="/">Welcome</Link>
         <Link href="/blog">Blog</Link>
         {""}
@@ -55,21 +53,6 @@ function Content({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
-    </div>
-  );
-}
-
-function Logo() {
-  return (
-    <div
-      style={{
-        marginTop: 20,
-        marginBottom: 10,
-      }}
-    >
-      <a href="/">
-        <img src={logoUrl} height={64} width={64} alt="logo" />
-      </a>
     </div>
   );
 }

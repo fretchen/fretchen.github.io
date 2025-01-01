@@ -8,31 +8,33 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         maxWidth: 900,
         margin: "auto",
       }}
     >
-      <Sidebar>
+      <h1 style={{ textAlign: "center", margin: "20px 0", padding: "10px" }}>Website by fretchen</h1>
+      <Appbar>
         <Link href="/">Welcome</Link>
-        <Link href="/blog">Blog</Link>
         {""}
-      </Sidebar>
+      </Appbar>
       <Content>{children}</Content>
     </div>
   );
 }
 
-function Sidebar({ children }: { children: React.ReactNode }) {
+function Appbar({ children }: { children: React.ReactNode }) {
   return (
     <div
-      id="sidebar"
+      id="Appbar"
       style={{
-        padding: 20,
-        flexShrink: 0,
+        padding: "10px 20px",
+        width: "100%",
         display: "flex",
-        flexDirection: "column",
-        lineHeight: "1.8em",
-        borderRight: "2px solid #eee",
+        flexDirection: "row",
+        gap: "20px",
+        borderBottom: "2px solid #eee",
+        alignItems: "center"
       }}
     >
       {children}

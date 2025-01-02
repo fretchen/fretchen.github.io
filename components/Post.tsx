@@ -3,13 +3,14 @@
  */
 
 import React from "react";
-import { MuiMarkdown } from "mui-markdown";
-
-export function Post({ title, content }: { title: string; content: string }) {
+import Markdown from "react-markdown";
+import { BlogPost } from "../types/BlogPost";
+export function Post({ title, content, publishing_date }: BlogPost) {
   return (
     <>
       <h2>{title}</h2>
-      <MuiMarkdown>{content}</MuiMarkdown>
+      {publishing_date && <p>Published on: {publishing_date}</p>}
+      <Markdown>{content}</Markdown>
     </>
   );
 }

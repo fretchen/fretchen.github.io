@@ -7,12 +7,12 @@ const BlogList: React.FC = function () {
   return (
     <div className="BlogList">
       {blogs.map((blog, index) => (
-        <div key={index}>
-          <h2>{blog.title}</h2>
-          <p>
+        <div key={index} style={{ marginBottom: "20px" }}>
+          {blog.publishing_date && <p style={{ marginBottom: "5px" }}>{blog.publishing_date}</p>}
+          <Link href={`/blog/${index}`}>
             {" "}
-            <Link href={`/blog/${index}`}>Read more</Link>
-          </p>
+            <h2 style={{ marginTop: "0" }}> {blog.title} </h2>
+          </Link>
         </div>
       ))}
     </div>

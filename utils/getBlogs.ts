@@ -6,8 +6,7 @@ import fs from "fs";
 import path from "path";
 import { BlogPost } from "../types/BlogPost";
 
-export const getBlogs = (): BlogPost[] => {
-  const blogDirectory = "./blog";
+export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles
     .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))

@@ -4,7 +4,7 @@ import { strict as assert } from "assert";
 
 describe("Make sure we can get blog posts", function () {
   it("should return an array of blogs", function () {
-    const blogs = getBlogs();
+    const blogs = getBlogs("./test/blog");
     assert.equal(blogs.length, 2);
   });
 });

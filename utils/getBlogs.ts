@@ -4,12 +4,7 @@
 
 import fs from "fs";
 import path from "path";
-
-interface BlogPost {
-  title: string;
-  content: string;
-  publishing_date?: string;
-}
+import { BlogPost } from "../types/BlogPost";
 
 export const getBlogs = (): BlogPost[] => {
   const blogDirectory = "./blog";

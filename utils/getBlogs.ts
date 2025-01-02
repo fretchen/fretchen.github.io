@@ -5,17 +5,51 @@
 import fs from "fs";
 import path from "path";
 
-export const getBlogs = () => {
+interface BlogPost {
+  title: string;
+  content: string;
+  publishing_date?: string;
+}
+
+export const getBlogs = (): BlogPost[] => {
   const blogDirectory = "./blog";
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles
     .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))
     .map((file) => {
-      const blogContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");
-      return {
-        title: file.endsWith(".mdx") ? file.replace(".mdx", "") : file.replace(".md", ""),
-        content: blogContent,
-      };
+      const blogFileContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");
+      // separate any front matter from the content
+      let blogContent = blogFileContent;
+
+      const frontMatter = blogFileContent.match(/---([\s\S]*?)---/);
+      if (frontMatter) {
+        blogContent = blogContent.replace(frontMatter[0], "");
+        // remove leading and trailing newlines
+        blogContent = blogContent.replace(/^\n/, "").replace(/\n$/, "");
+        const blogPost: BlogPost = {
+          title: "",
+          content: blogContent,
+        };
+
+        // strip the leading and trailing '---' from the front matter
+        const frontContent = frontMatter[0].replace(/---/g, "");
+        // find a line in front matter that starts with publishing_date:
+        const publishingDate = frontContent.match(/publishing_date: (.*)/);
+        if (publishingDate) {
+          blogPost.publishing_date = publishingDate[1];
+        }
+        // find a line in front matter that starts with title:
+        const title = frontContent.match(/title: (.*)/);
+        if (title) {
+          blogPost.title = title[1];
+        }
+        return blogPost;
+      } else {
+        return {
+          title: file.endsWith(".mdx") ? file.replace(".mdx", "") : file.replace(".md", ""),
+          content: blogContent,
+        };
+      }
     });
 
   const jsonFilePath = path.join(blogDirectory, "blogs.json");

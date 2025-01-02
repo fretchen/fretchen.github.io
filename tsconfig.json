@@ -13,7 +13,7 @@
     "moduleResolution": "Bundler",
     "target": "ES2022",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["vite/client", "vike-react"],
+    "types": ["vite/client", "vike-react", "mocha"],
     "jsx": "preserve",
     "jsxImportSource": "react"
   },

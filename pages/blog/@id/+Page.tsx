@@ -6,11 +6,15 @@ import { Post } from "../../../components/Post";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
-  const id = pageContext.routeParams.id;
+  const id = Number(pageContext.routeParams.id);
+
+  if (isNaN(id)) {
+    throw new Error("Invalid blog post ID");
+  }
   // select the t`th blog post from blogs.json
   const blog = blogs[id];
 
-  return <Post title={blog.title} content={blog.content} />;
+  return <Post title={blog.title} content={blog.content} publishing_date={blog.publishing_date} />;
 };
 
 export default App;

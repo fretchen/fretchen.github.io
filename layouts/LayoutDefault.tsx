@@ -34,7 +34,7 @@ function Appbar({ children }: { children: React.ReactNode }) {
         flexDirection: "row",
         gap: "20px",
         borderBottom: "2px solid #eee",
-        alignItems: "center"
+        alignItems: "center",
       }}
     >
       {children}

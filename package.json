@@ -16,9 +16,9 @@
     "@types/mocha": "^10.0.10",
     "@vitejs/plugin-react": "^4.3.4",
     "mocha": "^11.0.1",
-    "mui-markdown": "^1.2.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.1",
     "tsx": "^4.19.2",
     "vike-react": "^0.5.10"
   },

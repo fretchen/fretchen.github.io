@@ -6,7 +6,7 @@ import fs from "fs";
 
 export const removeMath = (fileDirectory: string = "./blog") => {
   const blogFiles = fs.readdirSync(fileDirectory);
-console.log(blogFiles);
+  console.log(blogFiles);
   // go through each file remove \begin{aligned} and \end{aligned}
 
   blogFiles.forEach((file) => {

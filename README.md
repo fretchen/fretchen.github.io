@@ -1,1 +1,1 @@
-Person website. Not more. Not less.
+Personal website. Not more. Not less.

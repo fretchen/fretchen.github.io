@@ -147,3 +147,4 @@ styled-system-studio
 .DS_Store
 test/blog/blogs.json
 blog/blogs.json
+amo/blogs.json

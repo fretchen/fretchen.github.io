@@ -111,7 +111,9 @@ $$
 $$
 
 And given that these are complex vectors, we will measure their overlap
-through a Hermitian scalar product $$
+through a Hermitian scalar product 
+
+$$
 \langle\psi_1 \psi_2\rangle=(\langle{\psi_2}| \psi_1\rangle)^*.
 $$
 
@@ -123,7 +125,9 @@ $\uparrow$ with a certain probability p. So the inverse $\downarrow$
 arrives with likelyhood $1-p$. We would then classical list the
 probabilities with $(p,1-p)$. In the quantum world we achieve such a
 coin for example in spin 1/2 systems or qubits in general. We will then
-describe the system through the state: $$
+describe the system through the state: 
+
+$$
 \left|\psi\right\rangle = \alpha_\uparrow \left|\uparrow\right\rangle + \alpha_\downarrow \left|\downarrow\right\rangle  \qquad \text{with} \; \langle\psi | \psi\rangle = 1.
 $$
 
@@ -156,6 +160,7 @@ be conserved. So we transform the state by some operator $\hat{U}$,
 which just maps the state
 $\left|\psi\right\rangle\xrightarrow[]{U}\left|\psi'\right\rangle$.
 This should not change the norm, and we obtain the condition:
+
 $$
 \left\langle\psi\right|\hat{U}^\dag\hat{U} \left|\psi\right\rangle = 1\\
 \hat{U}^\dag\hat{U}  = \mathbb{1}
@@ -208,11 +213,17 @@ $a_\alpha$ of the operator $\hat{A}$:
 
 $$
 \hat{A}\left|\alpha\right\rangle=a_{\alpha}\left|\alpha\right\rangle.
-$$ The system will collapse to the corresponding
+$$ 
+
+The system will collapse to the corresponding
 eigenvector and the probability of finding the system in state
-$\left|\alpha\right\rangle$ is $$
+$\left|\alpha\right\rangle$ is 
+
+$$
 P(\left|\alpha\right\rangle)=||\hat{P}_{\left|\alpha\right\rangle} \left|\psi\right\rangle||^2 = \left\langle\psi\right| \hat{P}^{\dag}_{\left|\alpha\right\rangle} \hat{P}_{\left|\alpha\right\rangle} \left|\psi\right\rangle,
-$$ where
+$$ 
+
+where
 $\hat{P}_{\left|\alpha\right\rangle}= \left|\alpha\right\rangle \left\langle\alpha\right|$.
 
 As for our previous examples, how would you measure them typically, i.e.
@@ -240,27 +251,42 @@ what would be the operator ?
 Being able to access the operator values and intialize the wavefunction
 in some way, we also want to have a prediction on its time-evolution.
 For most cases of this lecture we can simply describe the system by the
-non-relativistic **Schrödinger Equation.** It reads $$
+non-relativistic **Schrödinger Equation.** It reads 
+
+$$
 i\hbar\partial_t\left|\psi(t)\right\rangle=\hat{H}(t)\left|\psi(t)\right\rangle.
-$$ In general, the Hamilton operator $\hat{H}$ is
+$$ 
+
+In general, the Hamilton operator $\hat{H}$ is
 time-dependent. For a time-independent Hamilton operator $\hat{H}$, we
 can find eigenstates $\left|\phi_n\right\rangle$ with
 corresponding eigenenergies $E_n$ :
 
 $$
 \hat{H}\left|\phi_n\right\rangle=E_n\left|\phi_n\right\rangle.
-$$ The eigenstates $\left|\phi_n\right\rangle$
+$$ 
+
+The eigenstates $\left|\phi_n\right\rangle$
 in turn have a simple time evolution:
 
 $$
     \left|\phi_n(t)\right\rangle=\left|\phi_n(0)\right\rangle\cdot \exp{-i E_nt/\hbar}.
-$$ If we know the initial state of a system
+$$ 
+
+If we know the initial state of a system
+
 $$
 \left|\psi(0)\right\rangle=\sum_n \alpha_n\left|\phi_n\right\rangle,
-$$ where $\alpha_n=\langle\phi_n | \psi(0)\rangle$, we will
-know the full dimension time evolution $$
+$$ 
+
+where $\alpha_n=\langle\phi_n | \psi(0)\rangle$, we will
+know the full dimension time evolution 
+
+$$
 \left|\psi(t)\right\rangle=\sum_n\alpha_n\left|\phi_n\right\rangle\exp{-i E_n t/\hbar}. \;\, \text{(Schrödinger picture)}
-$$ **Note.** Sometimes it is beneficial to work in the
+$$ 
+
+**Note.** Sometimes it is beneficial to work in the
 Heisenberg picture, which works with static ket vectors
 $\left|\psi\right\rangle^{(H)}$ and incorporates the time
 evolution in the operators. [^1] In certain cases one would have to have
@@ -276,27 +302,48 @@ Heisenberg picture instead of the Schrödinger picture. This approach is
 widely used in the field of many-body physics, as it underlies the
 formalism of the second quantization. To make the connection with the
 Schrödinger picture we should remember that we have the formal solution
-of $$
+of 
+
+$$
 \left|\psi(t)\right\rangle = \mathrm{e}^{-i\hat{H}t}\left|\psi(0)\right\rangle
-$$ So, if we would like to look into the expectation value
-of some operator, we have: $$
+$$ 
+
+So, if we would like to look into the expectation value
+of some operator, we have:
+
+$$
 \langle\hat{A}(t)\rangle = \left\langle\psi(0)\right|\mathrm{e}^{i\hat{H}t}\hat{A}_S\mathrm{e}^{-i\hat{H}t}\left|\psi(0)\right\rangle
-$$ This motivates the following definition of the operator
-in the Heisenberg picture: $$
+$$ 
+
+This motivates the following definition of the operator
+in the Heisenberg picture: 
+
+$$
     \hat{A}_H=\mathrm{e}^{i{\hat{H} t}/{\hbar}} \hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}
-$$ where $\exp{-i{\hat{H} t}/{\hbar}}$ is a time evolution
+$$ 
+
+where $\exp{-i{\hat{H} t}/{\hbar}}$ is a time evolution
 operator (N.B.: $\hat{H}_S = \hat{H}_H$). The time evolution of
-$\hat{A}_H$ is: $$
-    \notag \frac{d}{dt} \hat{A}_H &=&& \frac{i}{\hbar}\hat{H}\mathrm{e}^{i{\hat{H}t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}\\ 
-    &&-&\frac{i}{\hbar} \mathrm{e}^{i{\hat{H} t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H}t}/{\hbar}}\hat{H}+\partial_t \hat{A}_H\\
-    &=&& \frac{i}{\hbar}\left[\hat{H},\hat{A}_H\right] + \mathrm{e}^{i{\hat{H}t}/{\hbar}}\partial_t\hat{A}_S\mathrm{e}^{-i{\hat{H}t}/{\hbar}}
-$$ **Note.** In the Heisenberg picture the state vectors
-are time-independent: $$
+$\hat{A}_H$ is:
+
+$$
+    \frac{d}{dt} \hat{A}_H = \frac{i}{\hbar}\hat{H}\mathrm{e}^{i{\hat{H}t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}\\
+    -\frac{i}{\hbar} \mathrm{e}^{i{\hat{H} t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H}t}/{\hbar}}\hat{H}+\partial_t \hat{A}_H\\
+    = \frac{i}{\hbar}\left[\hat{H},\hat{A}_H\right] + \mathrm{e}^{i{\hat{H}t}/{\hbar}}\partial_t\hat{A}_S\mathrm{e}^{-i{\hat{H}t}/{\hbar}}
+$$
+
+**Note.** In the Heisenberg picture the state vectors
+are time-independent:
+
+$$
     \left|\psi\right\rangle_H \equiv \left|\psi(t=0)\right\rangle=\exp{i{\hat{H}}t/{\hbar}} \left|\psi(t)\right\rangle.
-$$ Therefore, the results of measurements are the same in
-both pictures: $$
+$$
+
+Therefore, the results of measurements are the same in
+both pictures:
+
+$$
  \left\langle\psi(t)\right|\hat{A}\left|\psi(t)\right\rangle = \left\langle\psi\right|_H \hat{A}_H \left|\psi\right\rangle_H.
- 
 $$
 
 The next lecture of this series can be found here: [@Jendrzejewski].

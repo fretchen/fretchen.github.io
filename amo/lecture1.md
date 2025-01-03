@@ -83,32 +83,37 @@ the lecture:
 
 The first step is to identify the right Hilbert space for your problem.
 For a classical problem, we would simply list all the different possible
-outcomes in a list $(p_1, \cdots, p_N)$ of *real* numbers. As one of the
+outcomes in a list $$(p_1, \cdots, p_N)$$ of *real* numbers. As one of the
 outcomes has to happen, we obtain the normalization condition:
-$$\begin{aligned}
-\sum_i p_i = 1
-\end{aligned}$$
+
+```math
+ \sum_i p_i = 1
+```
 
 In quantum mechanics, we follow a similar approach of first identifying
 the possible outcomes. But instead of describing the outcomes with real
-numbers, we now associate a complex number $\alpha_i$ to each outcome
-$(\alpha_1, \cdots, \alpha_N)$, with $\alpha_i \in \mathbb{C}$. Given
+numbers, we now associate a complex number $$\alpha_i$$ to each outcome
+$$(\alpha_1, \cdots, \alpha_N)$$, with $$\alpha_i \in \mathbb{C}$$. Given
 that they should also describe some probability they have to be
-normalized to one, but now we have the condition: $$\begin{aligned}
+normalized to one, but now we have the condition: 
+
+$$
 \sum_i |\alpha_i|^2 = 1
-\end{aligned}$$
+$$
 
 Aaronson claims that this is just measuring probabilities in in $L_2$
 norm. I would highly recommend his discussions on his blog for a more
 instructive derivation[@quantum]. Next we will not use the traditional
-lists, but the bra-ket notation, by writing: $$\begin{aligned}
-\ensuremath{\left|\psi\right\rangle}&= \sum_i \alpha_i \ensuremath{\left|i\right\rangle}
-\end{aligned}$$
+lists, but the bra-ket notation, by writing:
+
+$$
+\left|\psi\right\rangle = \sum_i \alpha_i \left|i\right\rangle
+$$
 
 And given that these are complex vectors, we will measure their overlap
-through a Hermitian scalar product $$\begin{aligned}
+through a Hermitian scalar product $$
 \langle\psi_1 \psi_2\rangle=(\langle{\psi_2}| \psi_1\rangle)^*.
-\end{aligned}$$
+$$
 
 ## The coin toss
 
@@ -118,9 +123,9 @@ $\uparrow$ with a certain probability p. So the inverse $\downarrow$
 arrives with likelyhood $1-p$. We would then classical list the
 probabilities with $(p,1-p)$. In the quantum world we achieve such a
 coin for example in spin 1/2 systems or qubits in general. We will then
-describe the system through the state: $$\begin{aligned}
-\ensuremath{\left|\psi\right\rangle} = \alpha_\uparrow \ensuremath{\left|\uparrow\right\rangle} + \alpha_\downarrow \ensuremath{\left|\downarrow\right\rangle}  \qquad \text{with} \; \langle\psi | \psi\rangle = 1.
-\end{aligned}$$
+describe the system through the state: $$
+\left|\psi\right\rangle = \alpha_\uparrow \left|\uparrow\right\rangle + \alpha_\downarrow \left|\downarrow\right\rangle  \qquad \text{with} \; \langle\psi | \psi\rangle = 1.
+$$
 
 The next problem is how to act on the system in the classical world or
 in the quantum world.
@@ -149,24 +154,33 @@ manipulating quantum states:
 As states change and evolve, we know that the total probability should
 be conserved. So we transform the state by some operator $\hat{U}$,
 which just maps the state
-$\ensuremath{\left|\psi\right\rangle}\xrightarrow[]{U}\ensuremath{\left|\psi'\right\rangle}$.
+$\left|\psi\right\rangle\xrightarrow[]{U}\left|\psi'\right\rangle$.
 This should not change the norm, and we obtain the condition:
-$$\begin{aligned}
-\ensuremath{\left\langle\psi\right|}\hat{U}^\dag\hat{U} \ensuremath{\left|\psi\right\rangle} = 1\\
+$$
+\left\langle\psi\right|\hat{U}^\dag\hat{U} \left|\psi\right\rangle = 1\\
 \hat{U}^\dag\hat{U}  = \mathbb{1}
-\end{aligned}$$ That's the very definition of unitary operators and
+$$ 
+
+That's the very definition of unitary operators and
 unitary matrices. Going back to the case of a coin toss, we see that we
 can then transform our qubit through the unitary operator:
-$$\begin{aligned}
+
+$$
 \hat{U}=\frac{1}{\sqrt{2}}\left(\begin{array}{cc}
 1 & -1\\
 1 & 1
 \end{array}\right)
-\end{aligned}$$ Applying it on the previously defined states $\uparrow$
-and $\downarrow$, we get the superposition state: $$\begin{aligned}
-\hat{U}\ensuremath{\left|\uparrow\right\rangle} &= \frac{\ensuremath{\left|\uparrow\right\rangle}-\ensuremath{\left|\downarrow\right\rangle}}{\sqrt{2}}\\
-\hat{U}\ensuremath{\left|\downarrow\right\rangle} &= \frac{\ensuremath{\left|\uparrow\right\rangle}+\ensuremath{\left|\downarrow\right\rangle}}{\sqrt{2}}
-\end{aligned}$$ As we use the unitary matrices we also see why we might
+$$
+
+Applying it on the previously defined states $\uparrow$
+and $\downarrow$, we get the superposition state:
+
+$$
+\hat{U}\left|\uparrow\right\rangle = \frac{\left|\uparrow\right\rangle-\left|\downarrow\right\rangle}{\sqrt{2}}\\
+\hat{U}\left|\downarrow\right\rangle = \frac{\left|\uparrow\right\rangle+\left|\downarrow\right\rangle}{\sqrt{2}}
+$$
+
+As we use the unitary matrices we also see why we might
 one to use complex numbers. Imagine that we would like to do something
 that is roughly the square root of the unitary, which often just means
 that the system should evolve for half the time as we will see later. If
@@ -192,14 +206,14 @@ unitary operator might be written as $\hat{U}= e^{i\hat{A}}$.
 In a *measurement* , the possible outcomes are then the eigenvalues
 $a_\alpha$ of the operator $\hat{A}$:
 
-$$\begin{aligned}
-\hat{A}\ensuremath{\left|\alpha\right\rangle}=a_{\alpha}\ensuremath{\left|\alpha\right\rangle}.
-\end{aligned}$$ The system will collapse to the corresponding
+$$
+\hat{A}\left|\alpha\right\rangle=a_{\alpha}\left|\alpha\right\rangle.
+$$ The system will collapse to the corresponding
 eigenvector and the probability of finding the system in state
-$\ensuremath{\left|\alpha\right\rangle}$ is $$\begin{aligned}
-P(\ensuremath{\left|\alpha\right\rangle})=||\hat{P}_{\ensuremath{\left|\alpha\right\rangle}} \ensuremath{\left|\psi\right\rangle}||^2 = \ensuremath{\left\langle\psi\right|} \hat{P}^{\dag}_{\ensuremath{\left|\alpha\right\rangle}} \hat{P}_{\ensuremath{\left|\alpha\right\rangle}} \ensuremath{\left|\psi\right\rangle},
-\end{aligned}$$ where
-$\hat{P}_{\ensuremath{\left|\alpha\right\rangle}}= \ensuremath{\left|\alpha\right\rangle} \ensuremath{\left\langle\alpha\right|}$.
+$\left|\alpha\right\rangle$ is $$
+P(\left|\alpha\right\rangle)=||\hat{P}_{\left|\alpha\right\rangle} \left|\psi\right\rangle||^2 = \left\langle\psi\right| \hat{P}^{\dag}_{\left|\alpha\right\rangle} \hat{P}_{\left|\alpha\right\rangle} \left|\psi\right\rangle,
+$$ where
+$\hat{P}_{\left|\alpha\right\rangle}= \left|\alpha\right\rangle \left\langle\alpha\right|$.
 
 As for our previous examples, how would you measure them typically, i.e.
 what would be the operator ?
@@ -226,29 +240,29 @@ what would be the operator ?
 Being able to access the operator values and intialize the wavefunction
 in some way, we also want to have a prediction on its time-evolution.
 For most cases of this lecture we can simply describe the system by the
-non-relativistic **Schrödinger Equation.** It reads $$\begin{aligned}
-i\hbar\partial_t\ensuremath{\left|\psi(t)\right\rangle}=\hat{H}(t)\ensuremath{\left|\psi(t)\right\rangle}.
-\end{aligned}$$ In general, the Hamilton operator $\hat{H}$ is
+non-relativistic **Schrödinger Equation.** It reads $$
+i\hbar\partial_t\left|\psi(t)\right\rangle=\hat{H}(t)\left|\psi(t)\right\rangle.
+$$ In general, the Hamilton operator $\hat{H}$ is
 time-dependent. For a time-independent Hamilton operator $\hat{H}$, we
-can find eigenstates $\ensuremath{\left|\phi_n\right\rangle}$ with
+can find eigenstates $\left|\phi_n\right\rangle$ with
 corresponding eigenenergies $E_n$ :
 
-$$\begin{aligned}
-\hat{H}\ensuremath{\left|\phi_n\right\rangle}=E_n\ensuremath{\left|\phi_n\right\rangle}.
-\end{aligned}$$ The eigenstates $\ensuremath{\left|\phi_n\right\rangle}$
+$$
+\hat{H}\left|\phi_n\right\rangle=E_n\left|\phi_n\right\rangle.
+$$ The eigenstates $\left|\phi_n\right\rangle$
 in turn have a simple time evolution:
 
-$$\begin{aligned}
-    \ensuremath{\left|\phi_n(t)\right\rangle}=\ensuremath{\left|\phi_n(0)\right\rangle}\cdot \exp{-i E_nt/\hbar}.
-\end{aligned}$$ If we know the initial state of a system
-$$\begin{aligned}
-\ensuremath{\left|\psi(0)\right\rangle}=\sum_n \alpha_n\ensuremath{\left|\phi_n\right\rangle},
-\end{aligned}$$ where $\alpha_n=\langle\phi_n | \psi(0)\rangle$, we will
-know the full dimension time evolution $$\begin{aligned}
-\ensuremath{\left|\psi(t)\right\rangle}=\sum_n\alpha_n\ensuremath{\left|\phi_n\right\rangle}\exp{-i E_n t/\hbar}. \;\, \text{(Schrödinger picture)}
-\end{aligned}$$ **Note.** Sometimes it is beneficial to work in the
+$$
+    \left|\phi_n(t)\right\rangle=\left|\phi_n(0)\right\rangle\cdot \exp{-i E_nt/\hbar}.
+$$ If we know the initial state of a system
+$$
+\left|\psi(0)\right\rangle=\sum_n \alpha_n\left|\phi_n\right\rangle,
+$$ where $\alpha_n=\langle\phi_n | \psi(0)\rangle$, we will
+know the full dimension time evolution $$
+\left|\psi(t)\right\rangle=\sum_n\alpha_n\left|\phi_n\right\rangle\exp{-i E_n t/\hbar}. \;\, \text{(Schrödinger picture)}
+$$ **Note.** Sometimes it is beneficial to work in the
 Heisenberg picture, which works with static ket vectors
-$\ensuremath{\left|\psi\right\rangle}^{(H)}$ and incorporates the time
+$\left|\psi\right\rangle^{(H)}$ and incorporates the time
 evolution in the operators. [^1] In certain cases one would have to have
 access to relativistic dynamics, which are then described by the **Dirac
 equation**. However, we will only touch on this topic very briefly, as
@@ -262,28 +276,28 @@ Heisenberg picture instead of the Schrödinger picture. This approach is
 widely used in the field of many-body physics, as it underlies the
 formalism of the second quantization. To make the connection with the
 Schrödinger picture we should remember that we have the formal solution
-of $$\begin{aligned}
-\ensuremath{\left|\psi(t)\right\rangle} = \mathrm{e}^{-i\hat{H}t}\ensuremath{\left|\psi(0)\right\rangle}
-\end{aligned}$$ So, if we would like to look into the expectation value
-of some operator, we have: $$\begin{aligned}
-\langle\hat{A}(t)\rangle = \ensuremath{\left\langle\psi(0)\right|}\mathrm{e}^{i\hat{H}t}\hat{A}_S\mathrm{e}^{-i\hat{H}t}\ensuremath{\left|\psi(0)\right\rangle}
-\end{aligned}$$ This motivates the following definition of the operator
-in the Heisenberg picture: $$\begin{aligned}
+of $$
+\left|\psi(t)\right\rangle = \mathrm{e}^{-i\hat{H}t}\left|\psi(0)\right\rangle
+$$ So, if we would like to look into the expectation value
+of some operator, we have: $$
+\langle\hat{A}(t)\rangle = \left\langle\psi(0)\right|\mathrm{e}^{i\hat{H}t}\hat{A}_S\mathrm{e}^{-i\hat{H}t}\left|\psi(0)\right\rangle
+$$ This motivates the following definition of the operator
+in the Heisenberg picture: $$
     \hat{A}_H=\mathrm{e}^{i{\hat{H} t}/{\hbar}} \hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}
-\end{aligned}$$ where $\exp{-i{\hat{H} t}/{\hbar}}$ is a time evolution
+$$ where $\exp{-i{\hat{H} t}/{\hbar}}$ is a time evolution
 operator (N.B.: $\hat{H}_S = \hat{H}_H$). The time evolution of
-$\hat{A}_H$ is: $$\begin{aligned}
+$\hat{A}_H$ is: $$
     \notag \frac{d}{dt} \hat{A}_H &=&& \frac{i}{\hbar}\hat{H}\mathrm{e}^{i{\hat{H}t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}\\ 
     &&-&\frac{i}{\hbar} \mathrm{e}^{i{\hat{H} t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H}t}/{\hbar}}\hat{H}+\partial_t \hat{A}_H\\
     &=&& \frac{i}{\hbar}\left[\hat{H},\hat{A}_H\right] + \mathrm{e}^{i{\hat{H}t}/{\hbar}}\partial_t\hat{A}_S\mathrm{e}^{-i{\hat{H}t}/{\hbar}}
-\end{aligned}$$ **Note.** In the Heisenberg picture the state vectors
-are time-independent: $$\begin{aligned}
-    \ensuremath{\left|\psi\right\rangle}_H \equiv \ensuremath{\left|\psi(t=0)\right\rangle}=\exp{i{\hat{H}}t/{\hbar}} \ensuremath{\left|\psi(t)\right\rangle}.
-\end{aligned}$$ Therefore, the results of measurements are the same in
-both pictures: $$\begin{aligned}
- \ensuremath{\left\langle\psi(t)\right|}\hat{A}\ensuremath{\left|\psi(t)\right\rangle} = \ensuremath{\left\langle\psi\right|}_H \hat{A}_H \ensuremath{\left|\psi\right\rangle}_H.
+$$ **Note.** In the Heisenberg picture the state vectors
+are time-independent: $$
+    \left|\psi\right\rangle_H \equiv \left|\psi(t=0)\right\rangle=\exp{i{\hat{H}}t/{\hbar}} \left|\psi(t)\right\rangle.
+$$ Therefore, the results of measurements are the same in
+both pictures: $$
+ \left\langle\psi(t)\right|\hat{A}\left|\psi(t)\right\rangle = \left\langle\psi\right|_H \hat{A}_H \left|\psi\right\rangle_H.
  
-\end{aligned}$$
+$$
 
 The next lecture of this series can be found here: [@Jendrzejewski].
 

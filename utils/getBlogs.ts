@@ -6,6 +6,20 @@ import fs from "fs";
 import path from "path";
 import { BlogPost } from "../types/BlogPost";
 
+// write a little function the removes any \ensuremath{} from the content of the string
+// this is necessary because the markdown parser we use does not support math mode
+
+function removeEnsureMath(content: string): string {
+  return content.replace(/\\ensuremath{([^}]*)}/g, "$1");
+}
+
+// remove the \begin{aligned} and \end{aligned} from the content of the string
+// this is necessary because the markdown parser we use does not support math mode
+
+function removeAligned(content: string): string {
+  return content.replace(/\\begin{aligned}([^]*)\\end{aligned}/g, "$1");
+}
+
 export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles
@@ -14,6 +28,12 @@ export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
       const blogFileContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");
       // separate any front matter from the content
       let blogContent = blogFileContent;
+
+      // remove any \ensuremath{} from the content
+      blogContent = removeEnsureMath(blogContent);
+
+      // remove any \begin{aligned} and \end{aligned} from the content
+      blogContent = removeAligned(blogContent);
 
       const frontMatter = blogFileContent.match(/---([\s\S]*?)---/);
       if (frontMatter) {

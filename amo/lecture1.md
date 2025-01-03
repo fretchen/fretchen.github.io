@@ -51,12 +51,11 @@ all the time. So we will start out with a review of the basic
 ingredients to facilitate the later discussion of the experiments.
 
 Some good introductions on the traditional approach can be found in
-[@2002; @2006] [@1][@2]. Previously, we mostly followed the discussion
-of Ref. [@2006]. Nowadays, I also recommend the works by Scott Aaronson
-[@quantum; @holes]. There is also a good [article by
+[^2002], [^2006], [^CT1], [^CT2]. Previously, we mostly followed the discussion
+of Ref. [^2006]. Nowadays, I also recommend the works by Scott Aaronson in [this](https://scottaaronson.com/democritus/lec9.html) and [this lecture](https://www.scottaaronson.com/barbados-2016.pdf). There is also a good [article by
 Quanta-Magazine](https://www.quantamagazine.org/quantum-theory-rebuilt-from-simple-physical-principles-20170830/#)
 on the whole effort to derive quantum mechanics from some simple
-principles. This effort started with Ref. [@axioms], which actually
+principles. This effort started with [this paper](https://arxiv.org/abs/quant-ph/0101012v4), which actually
 makes for a nice read.
 
 Before we start with the detailled cooking recipe let us give you some
@@ -346,7 +345,17 @@ $$
  \left\langle\psi(t)\right|\hat{A}\left|\psi(t)\right\rangle = \left\langle\psi\right|_H \hat{A}_H \left|\psi\right\rangle_H.
 $$
 
-The next lecture of this series can be found here: [@Jendrzejewski].
-
 [^1]: We will follow this route in the discussion of the two-level
     system and the Bloch sphere.
+
+[^2002]:
+    Dalibard Basdevant. Quantum Mechanics. Springer-Verlag, 2002
+
+[^2006]:
+    Jean Dalibard Jean-Louis Basdevant. The Quantum Mechanics Solver. Springer-Verlag, 2006.
+
+[^CT1]:
+    Quantum Mechanics, Volume 1.
+
+[^CT2]:
+    Quantum Mechanics, Volume 2. 

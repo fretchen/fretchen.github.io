@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "vite",
-    "prebuild": "tsx ./utils/getBlogs.ts",
+    "prebuild": "tsx ./utils/preBuild.ts",
     "build": "vite build",
     "postbuild": "tsx ./utils/cleanVike.ts",
     "preview": "vite preview",

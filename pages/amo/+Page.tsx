@@ -7,7 +7,12 @@ const App: React.FC = function () {
   console.log(blogs);
   return (
     <div className="AMO">
-      <h1>Welcome to my lecture notes on AMO!</h1>
+      <h1>AMO lecture notes</h1>
+      <p>
+        {" "}
+        Welcome, to my lecture notes on Atomic, Molecular and Optical physics that I prepared in my time in Heidelberg.
+        They consist of a total of 24 lectures, which I will recollect here again.
+      </p>
       <AmoList />
     </div>
   );

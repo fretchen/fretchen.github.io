@@ -7,7 +7,7 @@ import Markdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
-
+import rehypeRaw from "rehype-raw";
 import { BlogPost } from "../types/BlogPost";
 import "katex/dist/katex.min.css";
 
@@ -16,7 +16,7 @@ export function Post({ title, content, publishing_date }: BlogPost) {
     <>
       <h1>{title}</h1>
       {publishing_date && <p>Published on: {publishing_date}</p>}
-      <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+      <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
         {content}
       </Markdown>
     </>

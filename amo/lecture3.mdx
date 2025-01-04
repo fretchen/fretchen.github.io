@@ -13,9 +13,8 @@ like level splitting at avoided crossings and dynamical properties like
 Rabi oscillations.
 
 After the previous discussions of some basic cooking recipes to quantum
-mechanics in last weeks lectures [@Jendrzejewskia] and [@Jendrzejewski],
-we will use them to understand the two-level system. A very detailled
-discussion can be found in chapter 4 of Ref. [@1]. The importance of the
+mechanics in last weeks lectures, we will use them to understand the two-level system. A very detailled
+discussion can be found in chapter 4 of Ref. [^CT1]. The importance of the
 two-level system is at least three-fold:
 
 1.  It is the simplest system of quantum mechanics as it spans a Hilbert
@@ -28,13 +27,13 @@ two-level system is at least three-fold:
     fundamental building block of the exploding field of quantum
     computing and quantum information science.
 
-![Examples for two-state systems. a) Benzene: In the ground state, the
+<img src="./lecture3_pic1.png" width="90%">
+
+Examples for two-state systems. a) Benzene: In the ground state, the
 electrons are delocalized. b) Ammonia: The nitrogen atom is either found
 above or below the hydrogen triangle. The state changes when the
 nitrogen atom tunnels. c) Molecular ion : The electron is either
 localized near proton 1 or 2.
-](figures/Bildschirmfoto-2018-09-28-um-14-39-281/Bildschirmfoto-2018-09-28-um-14-39-281){#217687
-width="0.70\\columnwidth"}
 
 Some of the many examples for two-level systems that can be found in
 nature:
@@ -44,7 +43,7 @@ nature:
 - Two-level atom with one electron (simplified): Excited vs. ground
   state
 
-- Structures of molecules, e.g., [NH~3~](#fig:twostate)
+- Structures of molecules, e.g., $NH_3$
 
 - Occupation of mesoscopic capacitors in nanodevices.
 
@@ -174,23 +173,15 @@ $\Omega = 0$ and the 'dressed' states for the coupled system.
 ## General case
 
 Quite importantly we can solve the system completely even in the general
-case. By diagonalizing Eq.
-[\[Eq:TwoLevelGeneral\]](#Eq:TwoLevelGeneral){reference-type="eqref"
-reference="Eq:TwoLevelGeneral"} we obtain:
+case. By diagonalizing the Hamiltonian we obtain:
 
 $$
-
  E_\pm = \pm \frac{\hbar}{2} \sqrt{\Delta^2+|\Omega|^2}
 $$
 
 The energies can be nicely summarized as in Fig.
-[2](#326199){reference-type="ref" reference="326199"}
 
-![Anticrossing of energy levels.
-](figures/Bildschirmfoto-2018-09-28-um-14-35-34/AvoidedCrossing){#326199
-width="0.70\\columnwidth"}
-
- 
+<img src="./lecture3_pic2.png" width="90%">
 
 The Eigenstates then read:
 
@@ -216,12 +207,9 @@ abstract, it is extremely helpful to visualize the problem on the Bloch
 sphere. The idea of the Bloch sphere is that the we have a complex wave
 function of well defined norm and two free parameters. So it seems quite
 natural to look for a good representation of it. And this is the Bloch
-sphere as drawn in Fig. [3](#613576){reference-type="ref"
-reference="613576"}.
+sphere as drawn below
 
-![The presentation of the eigenstate on the Bloch sphere.
-](figures/BlochSphereWithVectorForLecture/BlochSphereWithVectorForLecture){#613576
-width="0.70\\columnwidth"}
+<img src="./lecture3_pic3.png" width="90%">
 
 We will see especially its usefulness especially as we discuss the
 dynamics of the two-state system.
@@ -233,9 +221,7 @@ dynamics of the two-state system.
 After the static case we now want to investigate the dynamical
 properties of the two-state system. We calculate the time evolution of
 $\left|\psi(t)\right\rangle = c_0(t)\left|0\right\rangle + c_1(t)\left|1\right\rangle$
-with the Schrödinger equation and the perturbed Hamiltonian
-[\[Eq:TwoLevelGeneral\]](#Eq:TwoLevelGeneral){reference-type="eqref"
-reference="Eq:TwoLevelGeneral"}:
+with the Schrödinger equation and the perturbed Hamiltonian:
 
 $$
 i\hbar \frac{d}{dt}\left|\psi(t)\right\rangle=\hat{H}\left|\psi(t)\right\rangle,\\
@@ -263,14 +249,8 @@ P_1(t)=\left|\left\langle 1|\psi(t)\right\rangle\right|^2.
 $$
 
 As a first step, we have to apply the initial condition
-to
-[\[eq:psitimeevolution\]](#eq:psitimeevolution){reference-type="eqref"
-reference="eq:psitimeevolution"} and express
-$\left|\varphi\right\rangle$ in terms of
-[\[eq:staticpsiplus\]](#eq:staticpsiplus){reference-type="eqref"
-reference="eq:staticpsiplus"} and
-[\[eq:staticpsiminus\]](#eq:staticpsiminus){reference-type="eqref"
-reference="eq:staticpsiminus"}:
+to and express
+$\left|\varphi\right\rangle$ in terms of $|\psi_+$ and $|\psi_-$:
 
 $$
 \left|\psi(0)\right\rangle \overset{!}{=} \left|0\right\rangle\\
@@ -299,9 +279,7 @@ $$
  P_1(t)=\frac{1}{1+\left(\frac{\Delta}{|\Omega|}\right)^2}\sin^2\left(\sqrt{|\Omega|^2+\Delta^2}\frac{t}{2}\right)
 $$
 
-![Rabi oscillations
-](figures/Bildschirmfoto-2018-09-28-um-14-43-51/RabiOscillation){#833990
-width="0.70\\columnwidth"}
+<img src="./lecture3_pic4.png" width="90%">
 
 ## Visualization of the dynamics in the spin picture
 
@@ -309,9 +287,7 @@ While the previous derivation might be the standard one, which certainly
 leads to the right results it might not be the most intuitive way of
 thinking about the dynamics. They become actually quite transparent in
 the spin language and on the Bloch sphere. So let us go back to the
-formulation of the Hamiltonian in terms of spins as in Eq.
-[\[Eq:HamSpin\]](#Eq:HamSpin){reference-type="eqref"
-reference="Eq:HamSpin"}.
+formulation of the Hamiltonian in terms of spins as at the beginning of the lecture.
 
 How would the question of the time evolution from $0$ to $1$ and back go
 now ? Basically, we would assume that the spin has been initialize into
@@ -382,9 +358,9 @@ $$
 \hat{H}\left|-\right\rangle = \left|1\right\rangle  ~   \hat{H}\left|+\right\rangle = \left|0\right\rangle
 $$
 
-In the [forth
-lecture](https://www.authorea.com/326506/emMDRkXxtm44IKqpCtDi6g) we will
-see how it is that a time-dependent field can actually couple two atomic
-states, which are normally of very different energies.
+In the forth lecture we will see how it is that a time-dependent field can actually couple two atomic states, which are normally of very different energies.
 
 [^1]: See the discussions of the next lecture
+
+
+[^CT1]: Quantum Mechanics, Volume 1. Cohen-Tannoudji, Diu, Laloe. Wiley-VCH, 2006.

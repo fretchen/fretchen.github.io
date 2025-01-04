@@ -1,9 +1,9 @@
 ---
 author:
-- Fred Jendrzejewski
-- Selim Jochim
+  - Fred Jendrzejewski
+  - Selim Jochim
 bibliography:
-- bibliography/converted_to_latex.bib
+  - bibliography/converted_to_latex.bib
 date: January 04, 2025
 nocite: "[@*]"
 title: Lecture 4 - Atoms in oscillating fields
@@ -28,7 +28,7 @@ mind:
 
 The solution is to resonantly couple two of the atom's levels by
 applying an external, oscillatory field, which is very nicely discussed
-in chapter 12 of Ref. [@2002] [@Cohen_Tannoudji_1998]. We will discuss
+in chapter 12 of Ref. [^2002] [^Cohen_Tannoudji_1998]. We will discuss
 important and fundamental properties of systems with a time-dependent
 Hamiltonian.
 
@@ -64,7 +64,7 @@ $$
 to find the system in the state
 $\left|m\right\rangle$ at the time $t$?
 
-# Evolution Equation
+## Evolution Equation
 
 The system $\left|\psi(t)\right\rangle$ can be expressed as
 follows:
@@ -83,9 +83,7 @@ i\hbar \sum_n\left(\dot{\gamma}_n(t)-i\frac{E_n}{\hbar}\gamma_n(t)\right)\mathrm
  = \sum_n \gamma_n(t) \mathrm{e}^{-i{E_n}t/{\hbar}} \hat{V} \left|n\right\rangle
 $$
 
-If we multiply
-[\[eq:timeev\]](#eq:timeev){reference-type="eqref"
-reference="eq:timeev"} with $\left\langle k\right|$ we
+If we multiply the equation with $\left\langle k\right|$ we
 obtain a set of coupled differential equations
 
 $$
@@ -100,29 +98,29 @@ time evolution.
 The solution of this set of equations depends on the details of the
 system. However, there are a few important points:
 
--   For short enough times, the dynamics are driving by the coupling
-    strength
-    $\left\langle k\right|\hat{V} \left|n\right\rangle$.
+- For short enough times, the dynamics are driving by the coupling
+  strength
+  $\left\langle k\right|\hat{V} \left|n\right\rangle$.
 
--   The right-hand sight will oscillate on time scales of $E_n-E_k$ and
-    typically average to zero for long times.
+- The right-hand sight will oscillate on time scales of $E_n-E_k$ and
+  typically average to zero for long times.
 
--   If the coupling element is an oscillating field
-    $\propto e^{i\omega_L t}$, it might put certain times on resonance
-    and allow us to avoid the averaging effect. It is exactly this
-    effect, which allows us to isolate specific transitions to a very
-    high degree [^1]
+- If the coupling element is an oscillating field
+  $\propto e^{i\omega_L t}$, it might put certain times on resonance
+  and allow us to avoid the averaging effect. It is exactly this
+  effect, which allows us to isolate specific transitions to a very
+  high degree [^1]
 
 We will now see how the two-state system emerges from these
 approximations and then set-up the perturbative treatment step-by-step.
 
-# Rotating wave approximation
+## Rotating wave approximation
 
 We will now assume that the coupling term in indeed an oscillating field
 with frequency $\omega_L$, so it reads:
 
 $$
-\hat{V} = \hat{V}_0 \cos(\omega_Lt) = \frac{\hat{V}_0}{2} \left(e^{i\omega_lt}+e^{-i\omega_lt}\right)  
+\hat{V} = \hat{V}_0 \cos(\omega_Lt) = \frac{\hat{V}_0}{2} \left(e^{i\omega_lt}+e^{-i\omega_lt}\right)
 $$
 
 We will further assume the we would like use it to
@@ -146,13 +144,13 @@ too:
 
 $$
 i \dot{\gamma}_i = \Omega \tilde{\gamma}_f \\
-i\dot{\tilde{\gamma}}_f = \delta \tilde{\gamma}_f + \Omega^* \gamma_i 
+i\dot{\tilde{\gamma}}_f = \delta \tilde{\gamma}_f + \Omega^* \gamma_i
 $$
 
 This has exactly the form of the two-level system that
 we studied previously.
 
-## Adiabatic elimination
+### Adiabatic elimination
 
 We can now proceed to the quite important case of far detuning, where
 $\delta \gg \Omega$. In this case, the final state
@@ -165,7 +163,7 @@ $$
 
 We can use this equation to eliminate $\gamma$ from the
 time evolution of the ground state. This approximation is known as
-*adiabatic elimination*:
+_adiabatic elimination_:
 
 $$
 \tilde{\gamma}_f = \frac{\Omega^*}{\delta}\gamma_i\\
@@ -177,24 +175,19 @@ state with an energy $E_i = \frac{|\Omega|^2}{\delta}$. If the Rabi
 coupling is created through an oscillating electric field, i.e. a laser,
 this is know as the **light shift** or the **optical dipole potential**.
 It is this concept that underlies the optical tweezer for which Arthur
-Ashkin got the nobel prize in the 2018 [@2018].
+Ashkin got the [nobel prize in the 2018](https://www.nobelprize.org/uploads/2018/10/advanced-physicsprize2018.pdf).
 
-## Example: Atomic clocks in optical tweezers
+### Example: Atomic clocks in optical tweezers
 
-A neat example that ties the previous concepts together is the recent
-paper [@readout]. The experimental setup is visualized in Fig.
-[1](#870855){reference-type="ref" reference="870855"}.
+A neat example that ties the previous concepts together is [the recent
+paper](https://arxiv.org/abs/1908.05619v2). The experimental setup is visualized in the figure below.
 
-![Experimental setup of an atomic array optical clock as taken from
-[@readout].
-](figures/Bildschirmfoto-2019-10-23-um-11-27-17/Bildschirmfoto-2019-10-23-um-11-27-17){#870855
-width="0.70\\columnwidth"}
+<img src="./lecture4_pic1.png" width="90%">
 
 While nice examples these clocks are still far away from the best clocks
-out there, which are based on optical lattice clocks and ions
-[@Ludlow_2015].
+out there, which are based on [optical lattice clocks and ions](http://dx.doi.org/10.1103/revmodphys.87.637).
 
-# Perturbative Solution
+## Perturbative Solution
 
 The more formal student might wonder at which points all these rather
 hefty approximation are actually valid, which is obviously a very
@@ -209,7 +202,7 @@ $$
 , where $\lambda$ is a small parameter. In other words
 we assume that the initial system $\hat{H}_0$ is only weakly perturbed.
 Having identified the small parameter $\lambda$, we make the
-*perturbative ansatz*
+_perturbative ansatz_
 
 $$
     \gamma_n(t) = \gamma_n^{(0)} + \lambda \gamma_n^{(1)} + \lambda^2 \gamma_n^{(2)} + \cdots
@@ -231,11 +224,11 @@ the coupling, which is at least of order $\lambda$.
 So, for the $1$st order we get
 
 $$
- 
+
 i\hbar \dot{\gamma}_k^{(1)} = \sum_n \gamma_n^{(0)} \mathrm{e}^{-i(E_n-E_k)t/{\hbar}}\left\langle k\right|\hat{H}_1\left|n\right\rangle.
 $$
 
-## First Order Solution (Born Approximation)
+### First Order Solution (Born Approximation)
 
 For the initial conditions $\psi(t=0)=\left|i\right\rangle$
 we get
@@ -244,15 +237,15 @@ $$
 \gamma_k^{(0)}(t) = \delta_{ik}.
 $$
 
-We plug this in the $1$st order approximation
-[\[eq:1storderapprox\]](#eq:1storderapprox){reference-type="eqref"
-reference="eq:1storderapprox"} and obtain the rate for the system to go
+We plug this in the $1$st order approximation and obtain the rate for the system to go
 to the final state $\left|f\right\rangle$:
+
 $$
 i \hbar\dot{\gamma}^{(1)} = \mathrm{e}^{i(E_f-E_i)t/{\hbar}} \left\langle f\right|\hat{H}_1 \left|i\right\rangle
 $$
 
 Integration with $\gamma_f^{(1)}(t=0) = 0$ yields
+
 $$
 
 \gamma_f^{(1)} = \frac{1}{i\hbar}\int\limits_0^t \mathrm{e}^{i(E_f-E_i)t'/{\hbar}} \left\langle f\right| \hat{H}_1(t')\left|i\right\rangle \mathop{}\!\mathrm{d}t',
@@ -270,15 +263,13 @@ this approximation to be valid!
 
 **Example 1: Constant Perturbation.**
 
-![Sketch of a constant perturbation
-](figures/Bildschirmfoto-2018-09-28-um-15-46-04/Bildschirmfoto-2018-09-28-um-15-46-04){#723552
-width="0.70\\columnwidth"}
+<img src="./lecture4_pic2.png" width="90%">
+
+Sketch of a constant perturbation.
 
 We apply a constant perturbation in the time interval
-$\left[0,T\right]$, as shown in [2](#723552){reference-type="ref"
-reference="723552"}. If we use
-[\[eq:gammaf1\]](#eq:gammaf1){reference-type="eqref"
-reference="eq:gammaf1"} and set $\hbar \omega_0 = E_f-E_i$, we get
+$\left[0,T\right]$, as shown in above. If we use the expression for $\gamma_f^{(1)}$ and set $\hbar \omega_0 = E_f-E_i$, we get
+
 $$
 \gamma_f^{(1)}(t\geq T) = \frac{1}{i \hbar} \left\langle f\right|\hat{H}_1\left|i\right\rangle \frac{\mathrm{e}^{i\omega_0 T}-1}{i\omega_0},
 $$
@@ -289,12 +280,11 @@ $$
 P_{i\to f} = \frac{1}{\hbar^2}\left|\left\langle f\right|\hat{V}\left|i\right\rangle\right|^2 \underbrace{\frac{\sin^2\left(\omega_0\frac{T}{2}\right)}{\left(\frac{\omega_0}{2}\right)^2}}_{\mathrm{y}(\omega_0,T)}.
 $$
 
-A sketch of $\mathrm{y}(\omega_0,T)$ is shown in
-[3](#615128){reference-type="ref" reference="615128"}.
+A sketch of $\mathrm{y}(\omega_0,T)$ is shown below
 
-![A sketch of y
-](figures/Bildschirmfoto-2018-09-28-um-15-54-58/Bildschirmfoto-2018-09-28-um-15-54-58){#615128
-width="0.70\\columnwidth"}
+<img src="./lecture4_pic3.png" width="90%">
+
+A sketch of y
 
 We can push this calculation to the extreme case of
 $T\rightarrow \infty$. This results in a delta function, which is peaked
@@ -307,6 +297,7 @@ $$
 This is the celebrated **Fermi's golden rule**.
 
 **Example 2: Sinusoidal Perturbation.** For the perturbation
+
 $$
 \hat{H}_1(t) = \left\{ \begin{array}{ccl} \hat{H}_1\mathrm{e}^{-i\omega t} && \text{for}\; 0 < t < T \\ 0 &&\text{otherwise}\end{array} \right.
 $$
@@ -321,5 +312,10 @@ At $\omega = \left|E_f - E_i\right|/\hbar$ we are on resonance.
 
 In the fifth lecture, we will start to dive into the hydrogen atom.
 
-[^1]: This is the idea behind atomic and optical clocks, which work
+[^1]:
+    This is the idea behind atomic and optical clocks, which work
     nowadays at $10^{-18}$.
+
+[^2002]: Jean Dalibard Jean-Louis Basdevant. Quantum Mechanics. Springer-Verlag, 2002.
+
+[^Cohen_Tannoudji_1998]: Claude Cohen-Tannoudji, Jacques Dupont-Roc, Gilbert Grynberg. Atom-Photon Interactions. Wiley-VCH Verlag GmbH, 1998.

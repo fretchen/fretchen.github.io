@@ -16,6 +16,8 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
       <h1 style={{ textAlign: "center", margin: "20px 0", padding: "10px" }}>Website by fretchen</h1>
       <Appbar>
         <Link href="/">Welcome</Link>
+        <Link href="/blog">Blog</Link>
+        <Link href="/amo">AMO</Link>
         {""}
       </Appbar>
       <Content>{children}</Content>

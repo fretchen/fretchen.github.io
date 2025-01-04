@@ -80,7 +80,7 @@ rather boring. However, we typically have the ability to change the
 Hamiltonian by switching on and off laser or microwave fields [^1]. We
 can then write the Hamiltonian in its most general form as:
 $$
-\label{Eq:TwoLevelGeneral}
+
 \hat{H} = \frac{\hbar}{2}\left( \begin{array}{cc} \Delta  & \Omega_x - i\Omega_y\\ \Omega_x +i\Omega_y & -\Delta \end{array} \right)
 $$
 
@@ -114,7 +114,7 @@ $$
 We then obtain:
 
 $$
-\label{Eq:HamSpin}
+
 \hat{H} = \mathbf{B}\cdot\hat{\mathbf{s}}\text{ with }\mathbf{B} = (\Omega_x, \Omega_y, \Delta)
 $$
 
@@ -152,7 +152,7 @@ system anymore. How should the system be described now ? We can once
 again diagonalize the system and write
 
 $$
-\hat{H}\left|\varphi_{\pm\right\rangle} = E_{\pm}\left|\varphi_\pm\right\rangle\\
+\hat{H}\left|\varphi_{\pm}\right\rangle = E_{\pm}\left|\varphi_\pm\right\rangle\\
 E_{\pm} = \pm\frac{\hbar}{2}\Omega\\
 \left|\varphi_\pm\right\rangle = \frac{\left|0\right\rangle\pm\left|1\right\rangle}{\sqrt{2}}
 $$
@@ -176,7 +176,7 @@ case. By diagonalizing Eq.
 reference="Eq:TwoLevelGeneral"} we obtain:
 
 $$
-\label{eq:Epm}
+
  E_\pm = \pm \frac{\hbar}{2} \sqrt{\Delta^2+|\Omega|^2}
 $$
 
@@ -192,17 +192,17 @@ width="0.70\\columnwidth"}
 The Eigenstates then read:
 
 $$
-\left|\psi_+\right\rangle=\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle, \label{eq:staticpsiplus}
+\left|\psi_+\right\rangle=\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle, 
 $$
 
 $$
-\left|\psi_-\right\rangle=-\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle, \label{eq:staticpsiminus}
+\left|\psi_-\right\rangle=-\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle, 
 $$
 
 where
 
 $$
- \label{eq:parameters}
+ 
 \tan(\theta) = \frac{|\Omega|}{\Delta} 
 $$
 
@@ -245,7 +245,7 @@ previous section. For the state
 $\left|\psi(t)\right\rangle$ we get
 
 $$
- \left|\psi(t)\right\rangle=\lambda \mathrm{e}^{-i{E_+}t/{\hbar}} \left|\psi_+\right\rangle + \mu \mathrm{e}^{-i{E_-}t/{\hbar}} \left|\psi_-\right\rangle \label{eq:psitimeevolution}
+ \left|\psi(t)\right\rangle=\lambda \mathrm{e}^{-i{E_+}t/{\hbar}} \left|\psi_+\right\rangle + \mu \mathrm{e}^{-i{E_-}t/{\hbar}} \left|\psi_-\right\rangle 
 $$
 
 with the factors $\lambda$ and $\mu$, which are defined
@@ -270,8 +270,8 @@ reference="eq:staticpsiplus"} and
 reference="eq:staticpsiminus"}:
 
 $$
-\left|\psi(0)\right\rangle \overset{!}{=}& \left|0\right\rangle\\
-  = & \mathrm{e}^{i{\varphi}/{2}} \left[ \cos\left( \frac{\theta}{2}\right) \left|\psi_+\right\rangle-\sin\left(\frac{\theta}{2}\right)\left|\psi_-\right\rangle\right]
+\left|\psi(0)\right\rangle \overset{!}{=} \left|0\right\rangle\\
+  = \mathrm{e}^{i{\varphi}/{2}} \left[ \cos\left( \frac{\theta}{2}\right) \left|\psi_+\right\rangle-\sin\left(\frac{\theta}{2}\right)\left|\psi_-\right\rangle\right]
 $$
 
 By equating the coefficients we get for $\lambda$ and

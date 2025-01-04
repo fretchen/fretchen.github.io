@@ -40,6 +40,8 @@ export const removeMath = (fileDirectory: string = "./blog") => {
     // if a line starts with $$, add two empty lines behind it
     blogContent = blogContent.replace(/\n\$\$ /g, "\n$$$\n\n");
 
+    // remove the \label{} with the text in it from the content
+    blogContent = blogContent.replace(/\\label{([^}]*)}/g, "");
 
     // write the new content to the file
     fs.writeFileSync(`${fileDirectory}/${file}`, blogContent);

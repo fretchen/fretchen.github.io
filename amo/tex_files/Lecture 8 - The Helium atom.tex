@@ -1,0 +1,414 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{siunitx}
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+\newcommand{\Hzero}{\hat{H}_0} 
+\newcommand{\Wop}{\hat{W}} 
+
+\begin{document}
+
+\title{Lecture 8 - The Helium atom}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\author[2]{Selim Jochim}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+\affil[2]{Physikalisches Institut der Universität Heidelberg}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 04, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+In this lecture we will discuss some basic properties of the Helium atom. We will introduce first some useful notations for the specific Hamiltonian at hand. Then we will focus on the important consequences played by the electron-electron interaction on the spin structure and the level scheme of the system. Finally, we will introduce the variational method for the estimation of the ground state energy.%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+In todays lecture, we will see how the electron spin couples to the orbital angular momentum and how this creates spin-orbit coupling. We will then start out with the discussion of the Helium atom.
+
+\section{Spin-orbit coupling}
+
+The third term, which arises from the Dirac equation is the spin-orbit coupling. We will give here a common hand-waving explanation in a similiar spirit to the discussion of the magnetic moment for given angular momentum \cite{Demtr_der_2010}. Please, be aware that it misses a factor of 2. The electron has a spin 1/2 and hence a magnetic moment $\vec{M}_S = -g_e \mu_B \frac{\vec{S}}{\hbar}$. This magnetic moment experiences a magnetic field, simply due to the motion of the electron charge itself. Assuming a circular motion of the electron, we obtain the magnetic field amplitude:
+\begin{align}
+B &= \frac{\mu_0 i}{2r}\\
+B &= \frac{\mu_0 ev}{4\pi r^2}\\
+B &= \frac{\mu_0 e}{4\pi m_e r^3}L\\
+\end{align}
+Through the coupling with the spin and introducing a fudge factor of 2\footnote{It's proper derivation is left to quantum field theory lectures}, we obtain the Hamiltonian:
+\begin{align}\label{Eq:HamLS}
+\hat{H}_{LS} = \frac{g_e}{4\pi \epsilon_0}\frac{e^2}{2m_e^2c^2 r^3}  \hat{\vec{L}}\cdot \hat{\vec{S}}
+\end{align}
+
+How does it act on a state $\ket{\psi}$? For the example 
+\begin{align}
+\ket{\psi} = \ket{m_l} \otimes \ket{m_s}
+\end{align}
+we get:
+\begin{align}
+\hat{L}_z \cdot \hat{S}_z \left( \ket{m_l} \otimes \ket{m_s} \right)
+= \hbar^2 m_l \cdot m_s (\ket{m_l} \otimes \ket{m_s})
+\end{align}
+The states
+%
+\begin{align}
+\ket{n,l,m_l} \otimes \ket{s,m_s}. 
+\end{align}
+%
+
+span the complete Hilbert space. Any state of the atom can be represented by:
+%
+\begin{align}
+\ket{\psi} = \sum_{\{n,l,m_l,m_s\}} c_{n,l,m_l,m_s} \ket{n,l,m_l,m_s}.
+\end{align}
+%
+As usual we can massively simplify the problem by using the appropiate conserved quantities.
+
+
+
+\subsection{Conservation of total angular momentum}
+
+We can look into it a bit further into the details and see that the Hamiltonian $\hat{H}_\textrm{LS}$ does not commute with $\hat{L}_z$:
+\begin{align}
+[L_z, \vec{L}\cdot \vec{S}] &= [L_z, L_x S_x + L_y S_y + L_z S_z]\\
+[L_z, \vec{L}\cdot \vec{S}] &= [L_z, L_x ]S_x + [L_z,  L_y  ]S_y\\
+[L_z, \vec{L}\cdot \vec{S}] &= i\hbar L_y S_x -i\hbar L_x S_y\neq 0
+\end{align}
+This suggests that $L_z$ is not a good quantum number anymore. We have to include the spin degree of freedom into the description. Let us repeat the same procedure for the spin projection:
+\begin{align}
+[S_z, \vec{L}\cdot \vec{S}] &= [S_z, L_x S_x + L_y S_y + L_z S_z]\\
+[S_z, \vec{L}\cdot \vec{S}] &= L_x [S_z,  S_x] + L_y [S_z,  S_y]\\
+[S_z, \vec{L}\cdot \vec{S}] &= i\hbar L_x S_y -i\hbar L_y S_x\neq 0
+\end{align}
+This implies that the spin projection is not a conserved quantity either. However, the sum of spin and orbital angular momentum will commute $[L_z + S_z, \vec{L}\vec{S}] =0$ according to the above calculations. Similiar calculations hold for the other components, indicating that the \textit{total angular momentum} is conserved \footnote{It should be as there is no external torque acting on the atom}:
+\begin{align}
+\vec{J} = \vec{L} + \vec{S}
+\end{align}
+We can now rewrite eq. \eqref{Eq:HamLS} in terms of the conserved quantities through the following following little trick: 
+\begin{align}
+\hat{\vec{J}}^2 &= \left( \hat{\vec{L}} + \hat{\vec{S}} \right) ^2 = \hat{\vec{L}}^2 + 2 \hat{\vec{L}} \cdot \hat{\vec{S}} + \hat{\vec{S}}^2\\
+\hat{\vec{L}} \cdot \hat{\vec{S}} &= \frac{1}{2} \left( \hat{\vec{J}}^2 - \hat{\vec{L}}^2 - \hat{\vec{S}}^2 \right)
+\end{align}
+
+
+
+
+This directly implies that $\hat{J}^2$, $\hat{L}^2$ and $\hat{S}^2$ are new conserved quantities of the system. If we call $\hat{H}_0$ the Hamiltonian of the hydrogen atom, we previously used the complete set of commuting observables \footnote{see lecture 2 for a few words on the definition of such a set }:
+\begin{align}
+\left\{ \hat{H}_0, \hat{\vec{L}}^2, \hat{L}_z,\hat{\vec{S}}^2, \hat{S}_z \right\}
+\end{align}
+
+We now use the complete set of commuting observables:
+\begin{align}
+\left\{ \hat{H}_0 + \hat{H}_{LS}, \hat{\vec{L}}^2,\hat{\vec{S}}^2, \hat{\vec{J}}^2, \hat{J}_z \right\}.
+\end{align}
+The corresponding basis states $\ket{n,l,j,m_j}$ are given by:
+%
+\begin{align}
+\ket{n,l,j,m_j} = \sum_{m_l,m_s} \ket{n, l, m_l, m_s} \underbrace{\braket{n, l, m_l, m_s | n, l, j, m_j}}_{\text{Clebsch-Gordan coefficients}}
+\end{align}
+%
+Here, the Clebsch-Gordan coefficients (cf. \cite{Olive_2014}, p. 557, or \url{http://pdg.lbl.gov/2002/clebrpp.pdf}) describe the coupling of angular momentum states.
+
+
+
+\textbf{Example: $l=1$ and $s=1/2$.}
+
+With the Clebsch-Gordan coefficients, the following example states---given by $Jj$ and $m_j$---can be expressed by linear combinations of states defined by $m_l$ and $m_s$:
+%
+\begin{align}
+\ket{j=\frac{3}{2}, m_j = \frac{3}{2}} &=&& \ket{m_l=1, m_s = +\frac{1}{2}}\\
+\ket{j=\frac{3}{2}, m_j = \frac{1}{2}} &= &\sqrt{\frac{1}{3}} &\ket{m_l=1, m_s = -\frac{1}{2}} +\sqrt{\frac{2}{3}} &\ket{m_l = 0, m_s = +\frac{1}{2}}
+\end{align}
+
+\subsection{Summary of the relativistic shifts}
+We can now proceed to a summary of the relativistic effects in the hydrogen atom as presented in Fig. \ref{391959}.
+
+\begin{itemize}
+\item The states should be characterized by angular momentum anymore, but by the total angular momentum $J$ and the orbital angular momentum. We introduce the notation:
+\begin{align}
+nl_{j}
+\end{align}
+\item All shifts are on the order of $\alpha^2$ and hence pertubative.
+\item Some levels remain degenerate in relativistic theory, most importantly the $2s_{1/2}$ and the $2p_{1/2}$ state.
+\end{itemize}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-11-05-um-08-30-48/Bildschirmfoto-2018-11-05-um-08-30-48}
+\caption{{Fine structure of the Hydrogen atom. Adapted from~\protect\cite{Demtr_der_2010}~
+Fig. 5.33
+{\label{391959}}%
+}}
+\end{center}
+\end{figure}
+
+\section{The Lamb shift}
+
+The previous discussions studied the effects of the Dirac equation onto our understanding of the Hydrogen atom. Most importantly, we saw that we can test those predictions quite well through the shifts in the level scheme. It is possible to push this analysis even further. One particularly important candidate here are the degenerate levels $2s_{1/2}$ and $2p_{1/2}$. Being able to see any splitting here, will be proof physics beyond the Dirac equation. And it is a relative measurement, for which it therefore not necessary to have insane absolute precisions. It is exactly this measurement that Lamb and Retherford undertook in 1947 \cite{Lamb_1947}. They observed actually a splitting of roughly $1$GHz, which they drove through direct rf-transitions. The observed shift was immediately explained by Bethe \cite{Bethe_1947} through the idea of QED a concept that we will come back to later in this lecture in a much simpler context of cavity QED.
+
+We would simply like to add here that the long story of the hydrogen atom and the Lamb shift is far from over as open questions remained until September 2019. Basically, a group of people measured the radius in some 'heavy' muonic hydrogen very precisely in 2010 \cite{Pohl_2010}. They could only explain them by changing the size of the proton radius, which was previously assumed to be well measured. It was only this year the another team reperformed a similiar measurement on electronic hydrogen (the normal one), obtaining consistent results \cite{Bezginov_2019}. A nice summary of the "proton radius puzzle" can be found \href{https://www.quantamagazine.org/physicists-finally-nail-the-protons-size-and-hope-dies-20190911/}{here}. 
+
+\section{The helium problem}
+
+In this lecture we will discuss the Helium atom and what makes it so interesting in the laboratory. We will most importantly see that you cannot solve the problem exactly. This makes it a great historical example where a simple system was used to test state-of-the-art theories. An extensive discussion can be found in Chapter 7 of \cite{bransden2003physics} or Chapter 6 of  \cite{Demtr_der_2010}. Even nowadays, the system continues to be a nice test-bed of many-body theories \cite{Combescot_2017, Ott_2019}.
+
+The Helium atom describes a two electron system as shown in the figure below.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/HeliumSketch/HeliumSketch}
+\caption{{The helium atom describes two electrons coupled to the nucleus of charge
+Z=2.~~
+{\label{982117}}%
+}}
+\end{center}
+\end{figure}
+
+
+
+In the reference frame of center-of-mass we obtain the following Hamiltonian:
+\begin{equation}
+H = -\frac{\hbar^2}{2\mu}\nabla_{r_1}^2 -\frac{\hbar^2}{2\mu}\nabla_{r_2}^2-\frac{\hbar^2}{M}\nabla_{r_1}\cdot\nabla_{r_2}+\frac{e^2}{4\pi \epsilon_0}\left(-\frac{Z}{r_1}-\frac{Z}{r_2}+\frac{1}{r_{12}}\right)
+\end{equation}
+
+The term in the middle is the mass polarization term. We further introduced the reduced mass
+\begin{equation}
+\mu = \frac{m_eM}{m_e + M}
+\end{equation}
+For the very large mass differences $M= 7300 m_e \gg m_e$, we can do two simplifications:
+\begin{itemize}
+\item Omit the term on the mass polarization.
+\item Set the reduced mass to the mass of the electron.
+\end{itemize}
+
+So we obtain the simplified Hamiltonian
+\begin{equation}
+H = -\frac{\hbar^2}{2m_e}\nabla_{r_1}^2 -\frac{\hbar^2}{2m_e}\nabla_{r_2}^2+\frac{e^2}{4\pi \epsilon_0}\left(-\frac{Z}{r_1}-\frac{Z}{r_2}+\frac{1}{r_{12}}\right)
+\end{equation}
+
+
+
+\section{Natural units}
+For simplicity it is actually nice to work in the so-called \textbf{natural units}, where we measure all energies and distance on typical scales. We will start out by measuring all distances in units of $a_0$, which is defined as:
+\begin{equation}
+a_0 = \frac{4\pi \epsilon_0 \hbar^2}{me^2} = \SI{0.5}{angstrom}
+\end{equation}
+So we can introduce the replacement:
+\begin{equation}
+\mathbf{r} = \mathbf{\tilde{r}}a_0
+\end{equation}
+So the Hamiltonian reads:
+\begin{eqnarray}
+H &= -\frac{\hbar^2}{2m_ea_0^2}\nabla_{\tilde{r}_1}^2 -\frac{\hbar^2}{2m_ea_0^2}\nabla_{\tilde{r}_2}^2+\frac{e^2}{4\pi \epsilon_0 a_0}\left(-\frac{Z}{\tilde{r}_1}-\frac{Z}{\tilde{r}_2}+\frac{1}{\tilde{r}_{12}}\right)\\
+H &= -\frac{e^4 m}{2(4\pi\epsilon_0)^2 \hbar^2}\nabla_{\tilde{r}_1}^2 -\frac{e^4 m}{2(4\pi\epsilon_0)^2 \hbar^2}\nabla_{\tilde{r}_2}^2+\frac{e^4 m}{(4\pi \epsilon_0)^2\hbar^2}\left(-\frac{Z}{\tilde{r}_1}-\frac{Z}{\tilde{r}_2}+\frac{1}{\tilde{r}_{12}}\right)
+\end{eqnarray}
+And finally we can measure all energies in units of
+\begin{equation}
+E_0 = \frac{e^4 m}{(4\pi\epsilon_0)^2\hbar^2} = \SI{1}{hartree} = \SI{27.2}{eV}
+\end{equation}
+So the Hamiltonian reads in these natural units:
+\begin{equation}
+\label{eq:HeliumReduced}
+\tilde{H} = -\frac{1}{2}\nabla_{\tilde{r}_1}^2 -\frac{1}{2}\nabla_{\tilde{r}_2}^2+\left(-\frac{Z}{\tilde{r}_1}-\frac{Z}{\tilde{r}_2}+\frac{1}{\tilde{r}_{12}}\right)
+\end{equation}
+Another, more common, way of introducing this is to define:
+\begin{eqnarray}
+m &=& \hbar = e = 4\pi \epsilon_0 \equiv 1\\
+\alpha &=& \frac{e^2}{(4\pi \epsilon_0) \hbar c}= \frac{1}{137}\\
+\Rightarrow c &=& \frac{1}{\alpha}
+\end{eqnarray}
+
+Within these units we have for the hydrogen atom:
+\begin{equation}
+E_n = \frac{Z^2}{2}\frac{1}{n^2}E_0
+\end{equation}
+
+\textbf{For the remainder of this lecture we will assume that we are working in natural units and just omit the tildas.}
+
+
+
+\section{Electron-electron interaction}
+
+Now we can decompose the Hamiltonian in the following fashion:
+\begin{equation}
+H = H_1 + H_2 + H_{12}
+\end{equation}
+So without the coupling term between the electrons we would just have once again two hydrogen atoms. The whole crux is now that the term $H_{12}$ is actually coupling or \textbf{entangling} the two electrons.
+
+
+
+\section{Symmetries}
+
+The \textbf{exchange} operator is defined as:
+\begin{align}
+P_{12}\psi(r_1,r_2) = \psi(r_2, r_1)
+\end{align}
+We directly see for \eqref{eq:HeliumReduced} that the exchange operator commutes with the Hamiltonian, $[H,P_{12}] = 0$. This implies directly that the parity is a conserved quantity of the system and that we have a set of Eigenstates associated with the parity. 
+
+We can now apply the operator twice:
+\begin{align}
+P_{12}^2\psi(r_1,r_2) = \lambda^2 \psi(r_1, r_2) = \psi(r_1, r_2)
+\end{align}
+
+So we can see that there are two sets of eigenvalues with $\lambda = \pm 1$.
+\begin{align}
+P_{12}\psi_\pm = \pm \psi_\pm
+\end{align}
+
+We will call:
+\begin{itemize}
+\item $\psi_+$ are para-states
+\item $\psi_-$ are ortho-states
+\end{itemize}
+
+This symmetry is a really strong one and it was only recently that direct transitions between ortho and para-states were observed \cite{Kanamori_2017}. Interestingly, we did not need to look into the spin and the Pauli principle for this discussion at all. This will happen in the next step.
+
+\section{Spin and Pauli principle}
+
+We have seen that the Hamiltonian \eqref{eq:HeliumReduced} does not contain the spin degree of freedom. So we can decompose the total wave function as:
+\begin{equation}
+\overline{\psi} = \psi(\mathbf{r}_1, \mathbf{r}_2) \cdot \chi(1,2)
+\end{equation}
+
+\subsection{Spin degree of freedom}
+
+Given that the electron is $s=\frac{1}{2}$, we can decompose each wavefunction as:
+\begin{equation}
+\chi = \alpha |\uparrow\rangle + \beta |\downarrow\rangle
+\end{equation}
+So if the two spins were \textit{not} correlated, we could just write the spin wavefunction as:
+\begin{equation}
+\chi(1,2) = \chi_\mathrm{1}\cdot\chi_\mathrm{2}
+\end{equation}
+However, the electron-electron interaction entangles the atoms. An example would be the singlet state:
+\begin{equation}
+\chi(1,2) = \frac{1}{\sqrt{2}}\left(|\uparrow \downarrow\rangle - |\downarrow\uparrow \rangle\right)
+\end{equation}
+
+To construct the full wave function we need to take into account the \textit{Pauli} principle, which telles us for Fermions that the \textit{full} wavefunction should anti-sysmmetrc under exchange of particles:
+\begin{equation}
+\overline{\psi}(q_1, q_2, \cdots, q_i,\cdots,  q_j, \cdots) = 
+-\overline{\psi}(q_1, q_2, \cdots, q_j,\cdots,  q_i, \cdots)
+\end{equation}
+This tells us that each quantum state can be only occupied by a single electron at maximum.
+
+Now we can come back to the full wavefunction using the results of the previous section. We have:
+\begin{equation}
+\overline{\psi}(1,2) = \psi_{\pm}(r_1,r_2)\chi_\mp(1,2)
+\end{equation}
+with $P_{12}\chi_\pm = \pm \chi_\pm$. Now can once again look for good solutions to this problem. It is basically the total spin $\mathbf{S} = \mathbf{S}_1 + \mathbf{S}_2$, or better $\mathbf{S}^2$. This commutes with both the Hamiltonian and the parity operator, so it is a conserved quantity. Sorting out the solutions we have
+\begin{align}
+\chi_- &= \frac{1}{\sqrt{2}}\left(|\uparrow\downarrow\rangle - |\downarrow\uparrow\rangle\right)\\
+\chi_{+,1} &= |\uparrow\uparrow\rangle \\
+\chi_{+,1} &= \frac{1}{\sqrt{2}}\left(|\uparrow\downarrow\rangle + |\downarrow\uparrow\rangle\right) \\
+\chi_{+,-1} &= |\downarrow\downarrow\rangle \\
+\end{align}
+So $\chi_+$ is associated with spin 1 and $\chi_-$ is associated with spin 0.
+
+\selectlanguage{english}
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

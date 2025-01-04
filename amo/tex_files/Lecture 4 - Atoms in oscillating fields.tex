@@ -1,0 +1,335 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+
+\begin{document}
+
+\title{Lecture 4 - Atoms in oscillating fields}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\author[2]{Selim Jochim}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+\affil[2]{Physikalisches Institut der Universität Heidelberg}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 04, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+In the lecture, we will see how a time dependent coupling allows us to engineer a new Hamiltonian. Most importantly,  we will discuss the resonant coupling of two levels and the decay of a single level to a continuum.%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+In the last lecture \cite{Jendrzejewski}, we discussed the properties of two coupled levels. However, we did not elaborate at any stage how such a system might emerge in a true atom. Two fundamental questions come to mind:
+\begin{enumerate}
+\item How is it that a laser allows to treat two atomic levels of very different energies as if they were degenerate ?
+\item An atom has many energy levels $E_n$ and most of them are not degenerate. How can we reduce this complicated structure to a two-level system?
+\end{enumerate}
+
+The solution is to resonantly couple two of the atom's levels by applying an external, oscillatory field, which is very nicely discussed in chapter 12 of Ref. \cite{2002} \cite{Cohen_Tannoudji_1998}. We will discuss important and fundamental properties of systems with a time-dependent Hamiltonian.
+
+We will discuss a simple model for  the atom in the oscillatory field. We can write down the Hamiltonian:
+
+\begin{align}
+ \hat{H} = \hat{H}_0 + \hat{V}(t).
+\end{align}
+Here, $\hat{H}_0$ belongs to the atom and $V(t)$ describes the time-dependent field and its interaction with the atom. We assume that $\ket{n}$ is an eigenstate of $\hat{H}_0$ and write:
+\begin{align}
+\hat{H}_0\ket{n} = E_n \ket{n}.
+\end{align}
+
+If the system is initially prepared in the state $\ket{i}$, so that
+\begin{align}
+\ket{\psi(t=0)} = \ket{i},
+\end{align}
+what is the probability
+\begin{align}
+P_m(t) = \left|\braket{m|\psi(t)}\right|^2
+\end{align}
+to find the system in the state $\ket{m}$ at the time $t$?
+
+\section{Evolution Equation}
+The system $\ket{\psi(t)}$ can be expressed as follows:
+\begin{align}
+\ket{\psi(t)} = \sum_n \gamma_n(t) \eexp{-i{E_n}t/{\hbar}} \ket{n},
+\end{align}
+where the exponential is the time evolution for $\hat{H}_1 =~0$. We plug this equation in the Schr\selectlanguage{ngerman}ödinger equation and get:
+\begin{align}
+i\hbar \sum_n\left(\dot{\gamma}_n(t)-i\frac{E_n}{\hbar}\gamma_n(t)\right)\eexp{-i{E_n}t/{\hbar}}\ket{n} = \sum_n \gamma_n(t) \eexp{-i{E_n}t/{\hbar}}\left(\hat{H}_0 + \hat{V}\right) \ket{n}\label{eq:timeev}\\
+\Longleftrightarrow i\hbar\sum_n \dot{\gamma}_n(t) \eexp{-i{E_n}t/{\hbar}} \ket{n}
+ = \sum_n \gamma_n(t) \eexp{-i{E_n}t/{\hbar}} \hat{V} \ket{n}
+\end{align}
+If we multiply \eqref{eq:timeev} with $\bra{k}$ we obtain a set of coupled differential equations
+\begin{align}
+i\hbar \dot{\gamma}_k \eexp{-i{E_k}t/{\hbar}} &= \sum_n \gamma_n \eexp{-{E_n}t/{\hbar}}\bra{k}\hat{V}\ket{n},\\
+i\hbar \dot{\gamma}_k &= \sum_n \gamma_n \eexp{-i {(E_n-E_k)}t/{\hbar}} \bra{k} \hat{V}\ket{n}
+\end{align}
+with initial conditions $\ket{\psi(t=0)}$. They determine the full time evolution. 
+
+The solution of this set of equations depends on the details of the system. However, there are a few important points:
+
+\begin{itemize}
+\item For short enough times, the dynamics are driving by the coupling strength $\bra{k}\hat{V} \ket{n}$.
+\item The right-hand sight will oscillate on time scales of $E_n-E_k$ and typically average to zero for long times.
+\item If the coupling element is an oscillating field $\propto e^{i\omega_L t}$, it might put certain times on resonance and allow us to avoid the averaging effect. It is exactly this effect, which allows us to isolate specific transitions to a very high degree \footnote{This is the idea behind atomic and optical clocks, which work nowadays at $10^{-18}$.}
+\end{itemize}
+
+We will now see how the two-state system emerges from these approximations and then set-up the perturbative treatment step-by-step.
+
+\section{Rotating wave approximation}
+We will now assume that the coupling term in indeed an oscillating field with frequency $\omega_L$, so it reads:
+\begin{align}
+\hat{V} = \hat{V}_0 \cos(\omega_Lt) = \frac{\hat{V}_0}{2} \left(e^{i\omega_lt}+e^{-i\omega_lt}\right)  
+\end{align}
+We will further assume the we would like use it to isolate the transition $i\rightarrow f$, which is of frequency $\hbar \omega_0 = E_f - E_i$. The relevant quantity is then the detuning $\delta = \omega_0 - \omega_L$. If it is much smaller than any other energy difference $E_n-E_i$, we directly reduce the system to the following closed system:
+
+\begin{align}
+i\dot{\gamma}_i &= \gamma_f \eexp{-i \delta t} \Omega\\
+i\dot{\gamma}_f &= \gamma_i \eexp{i \delta t}\Omega^*
+\end{align}
+Here we defined $\Omega = \bra{i} \frac{\hat{V_0}}{2\hbar}\ket{f}$. And to make it really a time-of the same form as the two-level system from the last lecture, we perform the transformation $\gamma_f = \tilde{\gamma}_f e^{i\delta t}$, which reduces the system too:
+\begin{align}
+i \dot{\gamma}_i &= \Omega \tilde{\gamma}_f \\
+i\dot{\tilde{\gamma}}_f &= \delta \tilde{\gamma}_f + \Omega^* \gamma_i 
+\end{align}
+This has exactly the form of the two-level system that we studied previously.
+
+
+
+\subsection{Adiabatic elimination}
+
+We can now proceed to the quite important case of far detuning, where $\delta \gg \Omega$. In this case, the final state $\ket{f}$ gets barely populated and the time evolution can be approximated to to be zero \cite{lukin}.
+\begin{align}
+\dot{\tilde{\gamma}}_f = 0
+\end{align}
+We can use this equation to eliminate $\gamma$ from the time evolution of the ground state. This approximation is known as \textit{adiabatic elimination}:
+\begin{align}
+\tilde{\gamma}_f &= \frac{\Omega^*}{\delta}\gamma_i\\
+\Rightarrow i\hbar \dot{\gamma}_i &= \frac{|\Omega|^2}{\delta} \tilde{\gamma}_i
+\end{align}
+The last equation described the evolution of the initial state with an energy $E_i = \frac{|\Omega|^2}{\delta}$. If the Rabi coupling is created through an oscillating electric field, i.e. a laser, this is know as the \textbf{light shift} or the \textbf{optical dipole potential}. It is this concept that underlies the optical tweezer for which Arthur Ashkin got the nobel prize in the 2018 \cite{2018}.
+
+
+\subsection{Example: Atomic clocks in optical tweezers}
+
+A neat example that ties the previous concepts together is the recent paper \cite{readout}. The experimental setup is visualized in Fig. \ref{870855}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2019-10-23-um-11-27-17/Bildschirmfoto-2019-10-23-um-11-27-17}
+\caption{{Experimental setup of an atomic array optical clock as taken from
+\protect\cite{readout}.
+{\label{870855}}%
+}}
+\end{center}
+\end{figure}
+
+While nice examples these clocks are still far away from the best clocks out there, which are based on optical lattice clocks and ions \cite{Ludlow_2015}. 
+
+
+
+\section{Perturbative Solution}
+The more formal student might wonder at which points all these rather hefty approximation are actually valid, which is obviously a very substantial question. So, we will now try to isolate the most important contributions to the complicated system through perturbation theory. For that we will assume that we can write:
+\begin{align}
+\hat{V}(t) =\lambda \hat{H}_1(t)
+\end{align}
+, where $\lambda$ is a small parameter. In other words we assume that the initial system $\hat{H}_0$ is only weakly perturbed.
+Having identified the small parameter $\lambda$, we make the \textit{perturbative ansatz} 
+\begin{align}
+    \gamma_n(t) = \gamma_n^{(0)} + \lambda \gamma_n^{(1)} + \lambda^2 \gamma_n^{(2)} + \cdots
+\end{align}
+and plug this ansatz in the evolution equations and sort them by terms of equal power in $\lambda$.
+
+The $0$th order reads
+\begin{align}
+ i\hbar \dot{\gamma}_k^{(0)} = 0.
+\end{align}
+The $0$th order does not have a time evolution since we prepared it in an eigenstate of $\hat{H}_0$. Any evolution arises due the coupling, which is at least of order $\lambda$.
+
+So, for the $1$st order we get
+\begin{align} \label{eq:1storderapprox}
+i\hbar \dot{\gamma}_k^{(1)} = \sum_n \gamma_n^{(0)} \eexp{-i(E_n-E_k)t/{\hbar}}\bra{k}\hat{H}_1\ket{n}.
+\end{align}
+
+\subsection{First Order Solution (Born Approximation)}
+For the initial conditions $\psi(t=0)=\ket{i}$ we get
+\begin{align}
+\gamma_k^{(0)}(t) = \delta_{ik}.
+\end{align}
+We plug this in the $1$st order approximation \eqref{eq:1storderapprox} and obtain the rate for the system to go to the final state $\ket{f}$:
+%
+\begin{align}
+i \hbar\dot{\gamma}^{(1)} = \eexp{i(E_f-E_i)t/{\hbar}} \bra{f}\hat{H}_1 \ket{i}
+\end{align}
+Integration with $\gamma_f^{(1)}(t=0) = 0$ yields
+\begin{align}\label{eq:gammaf1}
+\gamma_f^{(1)} = \frac{1}{i\hbar}\int\limits_0^t \eexp{i(E_f-E_i)t'/{\hbar}} \bra{f} \hat{H}_1(t')\ket{i} \dif t',
+\end{align}
+so that we obtain the probability for ending up in the final state:
+\begin{align}
+P_{i\to f}(t) = \lambda^2\left| \gamma_f^{(1)}(t)\right|^2.
+\end{align}
+Note that  $ P_{i\to f}(t) \ll 1$ is the condition for this approximation to be valid!
+
+\textbf{Example 1: Constant Perturbation.}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-09-28-um-15-46-04/Bildschirmfoto-2018-09-28-um-15-46-04}
+\caption{{Sketch of a constant perturbation
+{\label{723552}}%
+}}
+\end{center}
+\end{figure}
+
+We apply a constant perturbation in the time interval $\left[0,T\right]$, as shown in
+\ref{723552}. If we use \eqref{eq:gammaf1} and set $\hbar \omega_0 = E_f-E_i$, we get
+\begin{align}
+\gamma_f^{(1)}(t\geq T) = \frac{1}{i \hbar} \bra{f}\hat{H}_1\ket{i} \frac{\eexp{i\omega_0 T}-1}{i\omega_0},
+\end{align}
+and therefore
+\begin{align}
+P_{i\to f} = \frac{1}{\hbar^2}\left|\bra{f}\hat{V}\ket{i}\right|^2 \underbrace{\frac{\sin^2\left(\omega_0\frac{T}{2}\right)}{\left(\frac{\omega_0}{2}\right)^2}}_{\mathrm{y}(\omega_0,T)}.
+\end{align}
+A sketch of $\mathrm{y}(\omega_0,T)$ is shown in \ref{615128}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-09-28-um-15-54-58/Bildschirmfoto-2018-09-28-um-15-54-58}
+\caption{{A sketch of y
+{\label{615128}}%
+}}
+\end{center}
+\end{figure}
+
+We can push this calculation to the extreme case of $T\rightarrow \infty$. This results in a delta function, which is peaked round $\omega_0 = 0$ and we can write:
+\begin{align}
+P_{i\to f} =  T\frac{2\pi}{\hbar^2}\left|\bra{f}\hat{V}\ket{i}\right|^2\delta(\omega_0)
+\end{align}
+This is the celebrated \textbf{Fermi's golden rule}.
+
+\textbf{Example 2: Sinusoidal Perturbation.}
+For the perturbation
+\begin{align}
+\hat{H}_1(t) = \left\{ \begin{array}{ccl} \hat{H}_1\eexp{-i\omega t} && \text{for}\; 0 < t < T \\ 0 &&\text{otherwise}\end{array} \right.
+\end{align}
+we obtain the probability
+\begin{align}
+P_{i\to f} (t \geq T) = \frac{1}{\hbar^2} \left|\bra{f}\hat{V}\ket{i}\right|^2 \mathrm{y}(\omega_0 - \omega, T).
+\end{align}
+
+At $\omega = \left|E_f - E_i\right|/\hbar$ we are on resonance.
+
+In the
+\href{https://www.authorea.com/users/143341/articles/326514-lecture-5-the-hydrogen-atom}{fifth
+lecture}, we will start to dive into the hydrogen atom.
+
+\selectlanguage{english}
+\FloatBarrier
+\nocite{*}
+
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

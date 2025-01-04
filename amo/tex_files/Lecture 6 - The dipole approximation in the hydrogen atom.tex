@@ -1,0 +1,426 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{siunitx}
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+\newcommand{\Hzero}{\hat{H}_0}
+\newcommand{\Wop}{\hat{W}}
+\newcommand{\aOs}{\tilde{a}_{0}}
+
+\begin{document}
+
+\title{Lecture 6 - The dipole approximation in the hydrogen atom}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\author[2]{Selim Jochim}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+\affil[2]{Physikalisches Institut für Physik der Universität Heidelberg}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 04, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+We will continue with some properties of the hydrogen atom. First compare it to the harmonic oscillator, then look into dipole transitions and end with the coupling to static magnetic fields.%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+In the last lecture \cite{atom} we discussed the basic properties of the hydrogen atom and found its eigenstates. We will now summarize the most important properties and look into its orbitals. From that we will understand the understand the interaction with electromagnetic waves and introduce the selection rules for dipole transitions.
+
+\section{The energies of Hydrogen and its wavefunctions}
+In the last lecture, we looked into hydrogen and saw that we could write it's Hamiltonian as:
+\begin{align}
+\hat{H}_\text{atom} = \hat{H}_r + \frac{\hat{L}}{2\mu r^2}+V(r) \\
+\hat{H}_r = -\frac{\hbar^2}{2\mu}\frac{1}{r^2}\frac{\partial}{\partial r}\left(r^2\frac{\partial}{\partial r}\right)
+\end{align}
+We could then separate out the angular part and decompose it as:
+\begin{align}
+\psi (r,\theta,\phi) = \frac{u(r)}{r} Y_{lm}(\theta,\phi)
+\end{align}
+The radial wave equation reads then:
+\begin{align}\label{Eq:RadWF}
+-\frac{\hbar^2}{2\mu}\frac{d^2}{dr^2}u(r) +\underbrace{ \left( -\frac{Ze^2}{4\pi\epsilon_0 r} + \frac{\hbar^2}{2\mu} \frac{l(l+1)}{r^2} \right)}_{V_{\text{eff}}} u(r) = E \, u(r),\end{align}
+
+\subsection{Energy scales}
+We can now make \eqref{Eq:RadWF} dimensionless, by rewriting:
+\begin{align}
+r = \rho \aOs
+\end{align}
+So we rewrite:
+\begin{align}
+-\frac{\hbar^2}{2\mu \aOs^2}\frac{d^2}{d\rho^2}u(r) + \left( -\frac{Ze^2}{4\pi\epsilon_0\aOs }\frac{1}{\rho} + \frac{\hbar^2}{2\mu \aOs^2} \frac{l(l+1)}{\rho^2} \right) u(r) = E \, u(r),
+\end{align}
+This allows us to measure energies in units of:
+\begin{align}
+E &= \epsilon R_{y,\textrm{m}}\\
+R_{y,\textrm{m}} &= -\frac{\hbar^2}{2\mu \aOs^2}
+\end{align}
+The equation reads then:
+\begin{align}
+\frac{d^2}{d\rho^2}u(\rho) + \left( \frac{\mu Ze^2 \aOs}{\hbar^2 4\pi\epsilon_0}\frac{2}{\rho} - \frac{l(l+1)}{\rho^2} \right) u(\rho) = \epsilon u(\rho),
+\end{align}
+If we finally set 
+\begin{align}
+\aOs &=\frac{4\pi\epsilon_0 \hbar^2}{\mu Z e^2}
+\end{align}
+We obtain the especially elegant formulation:
+\begin{align}
+\frac{d^2}{d\rho^2}u(\rho) + \left( \frac{2}{\rho} - \frac{l(l+1)}{\rho^2} \right) u(\rho) = \epsilon u(\rho),
+\end{align}
+We typically call $\aOs$ the \textbf{Bohr radius} for an atom with reduced mass $\mu$ and with a nucleus with charge number $Z$. $R_{y,\textrm{m}}$ is the \textbf{Rydberg energy} of such an atom.
+
+The universal constant is defined for the infinite mass limit $\mu \approx m_e$ and for $Z=1$. As a length scale we introduce the Bohr radius for infinite nuclear mass
+\begin{align}
+a_0 &= \frac{4\pi\epsilon_0\hbar^2}{m_e e^2} = \text{\num{0.5} \text{angstrom}} = \text{\SI{0.05}{\nano\meter}}.
+\end{align}
+The energy scale reads:
+\begin{align}
+R_{y,\infty} &= \frac{m_e e^4}{32 \pi^2 \epsilon_0^2 \hbar^2}\\
+&\approx \SI{2.179e-18}{J}\\
+& \approx e \times\SI{13.6}{eV}\\
+&\approx h \times\SI{3289}{T\hertz}
+\end{align}
+ So if we excite the hydrogen atom for time scales of a few attoseconds, we will coherently create superposition states of all existing levels. But which ones ? And at which frequency ?
+ 
+\subsection{Solution of the radial wave equation}
+At this stage we can have a look into the energy landscape:\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-09-28-um-16-21-46/Bildschirmfoto-2018-09-28-um-16-21-46}
+\caption{{Energy potential of the hydrogen atom
+{\label{951159}}%
+}}
+\end{center}
+\end{figure}
+
+
+
+
+The energies read then
+\begin{align}
+E_n = -\frac{R_{y,\textrm{m}}}{n^2} \qquad \text{with} \qquad  n=1,2,3,\cdots
+\end{align}
+for $l=0$ and
+\begin{align}
+E_n = -\frac{R_{y,\textrm{m}}}{n^2} \qquad \text{with} \qquad  n=2,3,4,\cdots
+\end{align}
+for $l=1$. Despite the different effective potentials (see \ref{951159}), we get the same eigenstates. This looks like an accidental degeneracy.
+Actually, there is a hidden symmetry which comes from the so-called ``Runge-Lenz'' vector. It only occurs in an attractive $1/r$-potential \cite{atom}. This vector reads:
+\begin{equation}
+\mathbf{A} =\mathbf{p}\times\mathbf{L}-\mathbf{r}
+\end{equation}
+
+Finally, we can also visualize the radial wavefunctions for the hydrogen atom as shown in Fig. \ref{785001}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-10-29-um-08-04-45/Bildschirmfoto-2018-10-29-um-08-04-45}
+\caption{{Radial wavefunctions
+{\label{785001}}%
+}}
+\end{center}
+\end{figure}
+
+Associated with these radial wavefunctions, we also have the angular profiles. Where $Y_{lm}(\theta, \phi)$ are the \textbf{spherical harmonics} as shown in Fig. \ref{175742}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-10-18-um-09-04-42/Bildschirmfoto-2018-10-18-um-09-04-42}
+\caption{{The spherical harmonics. Fig is taken from Ref.~\protect\cite{Demtr_der_2018}
+{\label{175742}}%
+}}
+\end{center}
+\end{figure}
+
+Their shape is especially important for understanding the possibility of coupling different orbits through electromagnetic waves.
+
+
+
+
+
+\section{The electric dipole approximation}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-09-29-um-21-46-38/Bildschirmfoto-2018-09-29-um-21-46-38}
+\caption{{Interaction between an atom and an electromagnetic wave
+\(\vec{E}\) with wave vector \(\vec{k}\). The states
+\(\text{|g>}\) and~\(\text{|e>}\) stand for the ground and
+excited state and \(\hbar\omega_0\) is the energy of the resonant
+transition between the states.
+{\label{823292}}%
+}}
+\end{center}
+\end{figure}
+
+
+
+We consider an atom which is located in a radiation field.
+By resonant coupling with the frequency $\omega_0$, it can go from the ground state $\ket{g}$ to the excited state $\ket{e}$ (see \ref{823292}).
+
+The potential energy of a charge distribution in a homogeneous electromagnetic field $\vec{E}$ is:
+\begin{align}
+E_\text{pot} = \sum_i q_i \vec{r}_i\cdot \vec{E}.
+\end{align}
+%Multipole expansion. Only one part left: 
+If the upper limit of the sum is 2, we obtain the dipole moment
+\begin{align}
+\vec{D} = e \vec{r}.
+\end{align}
+For the hydrogen atom, the distance corresponds to the Bohr radius.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-09-29-um-21-49-06/Bildschirmfoto-2018-09-29-um-21-49-06}
+\caption{{A charge distribution in an electromagnetic field
+\$\textbackslash{}vec\{E\}\$
+{\label{241421}}%
+}}
+\end{center}
+\end{figure}
+
+\textbf{Note.} Apart from the monopole, the dipole potential is the lowest order term of the multipole expansion of the scalar potential $\phi$:
+% Distance between particles small compared to range of field distribution we are in.
+\begin{align}
+\phi \left( \vec{r} \right) =& \frac{1}{4\pi\epsilon_0}\frac{\vec{D}\cdot\vec{r}}{|\vec{r}|^3}\\
+\vec{E}(\vec{r})=& \vec{\nabla}\phi(\vec{r}) = \frac{ 3 \left(\vec{D}\cdot \vec{r}\right) \vec{r}/{|\vec{r}|^2}- \vec{D}}{4\pi\epsilon_0|\vec{r}|^3}.
+\end{align}
+
+For the dipole approximation we consider the size of the atom and compare it to the wavelength $\lambda$ of the electromagnetic field:
+\begin{align}
+\braket{|r|} \sim 1\text{angstrom}\ll \lambda \sim 10^3\text{angstrom}
+\end{align}
+
+\begin{itemize}
+\item Therefore, we assume that the field is homogeneous in space and omit the spatial dependence:
+\begin{align}
+E(r,t) \approx E(t)
+\end{align}  
+\item The correction term resulting from the semi-classical dipole approximation then is
+\begin{align}
+\hat{H}_1(t)=-e\hat{\vec{r}} \cdot \vec{E}(t) = -\hat{\vec{D}} \cdot \vec{E}(t)
+\end{align}
+\item Why can the magnetic field be ignored in this approximation? The velocity of an electron is $\sim \alpha c$. The hydrogen atom only has small relativistic corrections. If we compare the modulus of the magnetic and the electric field, we get:
+\begin{align}
+\left| \vec{B} \right| = \frac{|\vec{E}|}{c}
+\end{align}
+The electric field contribution thus dominates.
+\end{itemize}
+%
+Now we choose 
+\begin{align}
+\vec{E} = E_0 \vec{\epsilon} \cos \left(\omega t - \vec{k} \cdot \vec{r}\right)
+\end{align}
+and do time-\-de\-pen\-dent perturbation theory (see \cite{Jendrzejewski}):
+
+\begin{align}
+\ket{\psi(t)} = \gamma_1(t) \eexp{-iE_1t/\hbar} \ket{1} +& \gamma_2(t) \eexp{-iE_2t/\hbar} \ket{2}\\
++&\sum_{n=3}^\infty \gamma_n \eexp{-iE_nt/\hbar} \ket{n}
+\end{align}
+As initial condition we choose
+\begin{align}
+ \gamma_i(0) = \left\{ \begin{array}{ccc} 1 &\text{for}&  i=1 \\ 0 &\text{for}& i>1  \end{array} \right.
+\end{align}
+%
+We write $\omega_0 = (E_2-E_1)/\hbar$ and get to first order $\hat{vec{D}}$:
+
+\begin{align}
+\gamma_2(t) = \overbrace{\frac{E_0}{2\hbar} \braket{2|\hat{\vec{D}}\cdot \vec{\epsilon}\,|1}}^{\text{Rabi frequency }\Omega} \underbrace{\left(\frac{\eexp{i(\omega_0 + \omega)t}-1}{\omega_0 + \omega} + \frac{\eexp{i(\omega_0 - \omega)t}-1}{\omega_0 - \omega}\right)}_{\text{time evolution of the system}}
+\end{align}
+%
+The term before the round brackets is called dipole matrix element:
+%
+\begin{align}\label{Eq:DipOp}
+\braket{2|\hat{\vec{D}}\cdot \vec{\epsilon}\,|1} =e \int \psi_2\left(\vec{r}\right) \cdot \vec{r} \cdot \vec{\epsilon} \cdot \psi_1\left(\vec{r}\right) \dif \vec{r}.
+\end{align}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-10-31-um-11-54-46/SelectionRules}
+\caption{{Coupling of different orbitals.
+{\label{708926}}%
+}}
+\end{center}
+\end{figure}
+
+\section{Selection rules}
+We can now look into the allowed transition in the atom as they are what we will typically observe within experiments.
+
+\subsection{Change of parity}
+The parity operator is defined as:
+\begin{align}
+\hat{P}\psi(\vec{r}) = \psi(-\vec{r})
+\end{align}
+For the eigenfunction we have:
+\begin{align}
+\hat{P} \psi(\vec{r}) = \lambda \psi(\vec{r})\\
+\lambda = \pm 1
+\end{align}
+The eigenvalues are called \textit{odd} and \textit{even}. From the definition of the dipole operator we can see that it is of odd parity. What about the parity of the states that it is coupling ? If they have both the same parity than the whole integral will disappear and no dipole transition can appear. 
+
+We can become more concrete for the given eigenfunctions as we have within spherical coordinates:
+\begin{align}
+(r, \theta, \phi) \rightarrow (r, \pi -\theta, \phi+\pi)
+\end{align}
+For the orbitals of the hydrogen atom we then have explicitly:
+\begin{align}
+\hat{P}\psi_{nlm}(r, \theta, \phi) &= R_{nl}(r)Y_{lm}(\pi -\theta, \phi+\pi)\\
+&= (-1)^l R_{nl}(r)Y_{lm}(, \theta, \phi)
+\end{align}
+This gives us the first selection rule that the \textbf{orbital angular momentum has to change for dipole transitions} $\Delta  l = \pm 1$. 
+\begin{itemize}
+\item $s$ orbitals are only coupled to $p$ orbitals through dipole transitions.
+\item $p$ orbitals are only coupled to $s$ and $d$ orbitals through dipole transitions.
+\end{itemize}
+
+
+
+\subsection{Coupling for linearly polarized light}
+Having established the need for parity change, we also need to investigate the influence of the polarization of the light, which enters the dipole operator through the vector $\epsilon$. In the simplest case the light has linear polarization ($\pi$ polarized) and we can write:
+\begin{align}
+\vec{E}(t) = \vec{e}_zE_0 \cos(\omega t +\varphi)
+\end{align}
+This means that the dipole transition element \eqref{Eq:DipOp} is now given by:
+\begin{align}
+\bra{2}\vec{D}\cdot\vec{e}_z\ket{1} = e \int \psi_2(\vec{r}) z \psi_1\left(\vec{r}\right) \dif \vec{r}
+\end{align}
+We can now transform z into the spherical coordinates $z= r \cos(\theta) = r\sqrt{\frac{4\pi}{3}}Y_{10}(\theta, \phi)$. We can further separate out the angular part of the integral to obtain:
+\begin{align}
+\bra{2}\vec{D}\cdot\vec{e}_z\ket{1} \propto e \int \sin(\theta) d\theta d\varphi Y_{l',m'}(\theta, \varphi) Y_{10}(\theta, \phi) Y_{l,m}(\theta, \varphi)
+\end{align}
+This element is only non-zero if $m = m'$ (see appendix C of \cite{Hertel_2015} for all the gorious details).\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-10-30-um-13-22-49/Bildschirmfoto-2018-10-30-um-13-22-49}
+\caption{{Dipole selection rules for different polarizations of light.
+{\label{852353}}%
+}}
+\end{center}
+\end{figure}
+
+\subsection{Circularly polarized light}
+Light has not just linear polarization, but it might also have some circular polarization. In this case we can write:
+\begin{align}
+\vec{E}(t) &= \frac{E_0}{\sqrt{2}} \left(\cos(\omega t +\varphi)\vec{e}_x + \sin(\omega t +\varphi)\vec{e}_y\right)\\
+\vec{E}(t) &= \text{Re}\left(\vec{e}_+ E_0 e^{-i\omega t +\phi}\right)\\
+\vec{e}_\pm &= \frac{\vec{e}_x\pm i\vec{e}_y}{\sqrt{2}}
+\end{align}
+So light with polarization $\vec{\epsilon} = \vec{e}_+$ is called right-hand circular ($\sigma^+$) and $\vec{\epsilon} = \vec{e}_-$ is called left-hand circular ($\sigma^-$). Let us now evaluate the transition elements here. The dipole operator element boils now down to the evaluation of the integral:
+\begin{align}
+\bra{l',m',n'}x+iy\ket{l,m,n}
+\end{align}
+As previously we can express the coupling term in spherical coordinates:
+\begin{align}
+\frac{x+iy}{\sqrt{2}} = -r \sqrt{\frac{4\pi}{3}}Y_{11}(\theta, \varphi)
+\end{align}
+Evaluation of the integrals lead now to the rule the projection of the quantum number has to change $m' = m+1$. In a similiar fashion we find for left-hand circular light the selection rule $m' = m - 1$. All the results are summed up in Fig. \ref{852353}.
+
+In the next lecture~\cite{atoma} we will investigate the influence
+of perturbative effects and see how the fine structure arises.
+
+\selectlanguage{english}
+\FloatBarrier
+\nocite{*}
+
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

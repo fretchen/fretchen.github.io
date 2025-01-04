@@ -28,6 +28,12 @@ export const removeMath = (fileDirectory: string = "./blog") => {
     // remove any \end{aligned} from the content
     blogContent = blogContent.replace(/\\end{aligned}/g, "");
 
+    // replace any &= with =
+    blogContent = blogContent.replace(/&=/g, "=");
+
+    // replace any =& with =
+    blogContent = blogContent.replace(/=&/g, "=");
+
     // write the new content to the file
     fs.writeFileSync(`${fileDirectory}/${file}`, blogContent);
   });

@@ -14,7 +14,7 @@ import "katex/dist/katex.min.css";
 export function Post({ title, content, publishing_date }: BlogPost) {
   return (
     <>
-      <h2>{title}</h2>
+      <h1>{title}</h1>
       {publishing_date && <p>Published on: {publishing_date}</p>}
       <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
         {content}

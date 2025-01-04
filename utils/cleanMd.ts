@@ -34,6 +34,13 @@ export const removeMath = (fileDirectory: string = "./blog") => {
     // replace any =& with =
     blogContent = blogContent.replace(/=&/g, "=");
 
+    // replace any line ending on ` $$` with and empty line in the middle
+    blogContent = blogContent.replace(/ \$\$\n/g, "\n\n$$$\n");
+
+    // if a line starts with $$, add two empty lines behind it
+    blogContent = blogContent.replace(/\n\$\$ /g, "\n$$$\n\n");
+
+
     // write the new content to the file
     fs.writeFileSync(`${fileDirectory}/${file}`, blogContent);
   });

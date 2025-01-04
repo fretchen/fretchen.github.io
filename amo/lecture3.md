@@ -1,9 +1,9 @@
 ---
 author:
-- Fred Jendrzejewski
-- Selim Jochim
+  - Fred Jendrzejewski
+  - Selim Jochim
 bibliography:
-- bibliography/converted_to_latex.bib
+  - bibliography/converted_to_latex.bib
 date: January 04, 2025
 title: Lecture 3 - The two-level system
 ---
@@ -39,18 +39,18 @@ width="0.70\\columnwidth"}
 Some of the many examples for two-level systems that can be found in
 nature:
 
--   Spin of the electron: Up vs. down state
+- Spin of the electron: Up vs. down state
 
--   Two-level atom with one electron (simplified): Excited vs. ground
-    state
+- Two-level atom with one electron (simplified): Excited vs. ground
+  state
 
--   Structures of molecules, e.g., [NH~3~](#fig:twostate)
+- Structures of molecules, e.g., [NH~3~](#fig:twostate)
 
--   Occupation of mesoscopic capacitors in nanodevices.
+- Occupation of mesoscopic capacitors in nanodevices.
 
--   Current states in superconducting loops.
+- Current states in superconducting loops.
 
--   Nitrogen-vacancy centers in diamond.
+- Nitrogen-vacancy centers in diamond.
 
 # Hamiltonian, Eigenstates and Matrix Notation
 
@@ -71,6 +71,7 @@ $$
 $$
 
 so that $\hat{H}_0$ be written as a diagonal matrix
+
 $$
     \hat{H}_0 = \left(\begin{array}{cc} E_0 & 0 \\ 0 & E_1 \end{array}\right).
 $$
@@ -79,12 +80,14 @@ If we would only prepare eigenstates the system would be
 rather boring. However, we typically have the ability to change the
 Hamiltonian by switching on and off laser or microwave fields [^1]. We
 can then write the Hamiltonian in its most general form as:
+
 $$
 
 \hat{H} = \frac{\hbar}{2}\left( \begin{array}{cc} \Delta  & \Omega_x - i\Omega_y\\ \Omega_x +i\Omega_y & -\Delta \end{array} \right)
 $$
 
 Sometimes we will also chose the definition:
+
 $$
 \Omega = |\Omega| e^{i\varphi}=\Omega_x + i\Omega_y
 $$
@@ -192,18 +195,18 @@ width="0.70\\columnwidth"}
 The Eigenstates then read:
 
 $$
-\left|\psi_+\right\rangle=\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle, 
+\left|\psi_+\right\rangle=\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle,
 $$
 
 $$
-\left|\psi_-\right\rangle=-\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle, 
+\left|\psi_-\right\rangle=-\sin\left(\frac{\theta}{2}\right) \mathrm{e}^{-i{\varphi}/{2}}\left|0\right\rangle+\cos\left(\frac{\theta}{2}\right) \mathrm{e}^{i{\varphi}/{2}}\left|1\right\rangle,
 $$
 
 where
 
 $$
- 
-\tan(\theta) = \frac{|\Omega|}{\Delta} 
+
+\tan(\theta) = \frac{|\Omega|}{\Delta}
 $$
 
 # The Bloch sphere
@@ -245,7 +248,7 @@ previous section. For the state
 $\left|\psi(t)\right\rangle$ we get
 
 $$
- \left|\psi(t)\right\rangle=\lambda \mathrm{e}^{-i{E_+}t/{\hbar}} \left|\psi_+\right\rangle + \mu \mathrm{e}^{-i{E_-}t/{\hbar}} \left|\psi_-\right\rangle 
+ \left|\psi(t)\right\rangle=\lambda \mathrm{e}^{-i{E_+}t/{\hbar}} \left|\psi_+\right\rangle + \mu \mathrm{e}^{-i{E_-}t/{\hbar}} \left|\psi_-\right\rangle
 $$
 
 with the factors $\lambda$ and $\mu$, which are defined
@@ -320,7 +323,8 @@ picture we have:
 $$
 \frac{d}{dt} \hat{s}_i = \frac{i}{\hbar}\left[\hat{H},\hat{s}_i\right]\\
 \frac{d}{dt} \hat{s}_i = \frac{i}{\hbar}\sum_j B_j \left[\hat{s}_j,\hat{s}_i\right]\\
- 
+
+
 $$
 
 So to understand we time evolution, we only need to
@@ -337,7 +341,8 @@ $$
 \frac{d}{dt} \hat{s}_x = 0\\
 \frac{d}{dt} \hat{s}_y = -\Omega \hat{s}_z\\
 \frac{d}{dt} \hat{s}_z = \Omega \hat{s}_y
- 
+
+
 $$
 
 So applying a field in x-direction leads to a rotation of the spin
@@ -353,20 +358,20 @@ experience](https://quantum-computing.ibm.com/). However, you will
 typically not find Pauli matrices etc within these systems. The typical
 notation there is:
 
--   $R_x(\phi)$ is a rotation around the x-axis for an angle $\phi$.
+- $R_x(\phi)$ is a rotation around the x-axis for an angle $\phi$.
 
--   Same holds for $R_y$ and $R_z$.
+- Same holds for $R_y$ and $R_z$.
 
--   $X$ denotes the rotation around the x axis for an angle $\pi$. So it
-    transforms $\left|1\right\rangle$ into
-    $\left|0\right\rangle$ and vise versa.
+- $X$ denotes the rotation around the x axis for an angle $\pi$. So it
+  transforms $\left|1\right\rangle$ into
+  $\left|0\right\rangle$ and vise versa.
 
--   $Z$ denotes the rotation around the x axis for an angle $\pi$. So it
-    transforms $\left|+\right\rangle$ into
-    $\left|-\right\rangle$ and vise versa.
+- $Z$ denotes the rotation around the x axis for an angle $\pi$. So it
+  transforms $\left|+\right\rangle$ into
+  $\left|-\right\rangle$ and vise versa.
 
 The most commonly used gate is actually one that we did not talk about
-at all, it is the *Hadamard* gate, which transforms
+at all, it is the _Hadamard_ gate, which transforms
 $\left|1\right\rangle$ into
 $\left|-\right\rangle$ and
 $\left|0\right\rangle$ into

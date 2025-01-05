@@ -1,3 +1,7 @@
+# the public repo images
+
+public/amo
+
 # Logs
 logs
 *.log

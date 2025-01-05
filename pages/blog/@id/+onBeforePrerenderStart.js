@@ -7,7 +7,5 @@ async function onBeforePrerenderStart() {
     const blogURL = `/blog/${index}`;
     return blogURL;
   });
-  console.log("blogURLs");
-  console.log(blogURLs);
   return blogURLs;
 }

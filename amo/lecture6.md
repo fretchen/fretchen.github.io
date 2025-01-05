@@ -204,6 +204,7 @@ $$
 
 
 
+
 $$
 
 - The correction term resulting from the semi-classical dipole
@@ -211,6 +212,7 @@ $$
 
 $$
     \hat{H}_1(t)=-e\hat{\vec{r}} \cdot \vec{E}(t) = -\hat{\vec{D}} \cdot \vec{E}(t)
+
 
 
 

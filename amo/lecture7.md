@@ -155,14 +155,13 @@ $$
 
 where $\mu_B$ is the **Bohr magneton**. Its potential
 energy in a magnetic field $\vec{B} = B_0 \vec{e}_z$ is then:
+
 $$
 V_B = -\vec{M}_L\cdot \vec{B}\\
 = \frac{\mu_B}{\hbar} L_z B_0
 $$
 
-Its contribution is directly evaluated from Eq.
-[\[Eq:PerturbFirstOrder\]](#Eq:PerturbFirstOrder){reference-type="eqref"
-reference="Eq:PerturbFirstOrder"} to be:
+Its contribution is directly evaluated from the expression on first oder pertubation theory to be:
 
 $$
 E_{Zeeman} = \mu_B m B_0

@@ -32,88 +32,143 @@ hydrogen atom is stationnary perturbation theory in form of external
 magnetic fields or relativistic corrections. We will remind you of
 perturbation theory here and then apply it to some simple cases.
 
-We can now simply write down the problem as: $$\begin{aligned}
-\left(\hat{H}_0+\lambda \hat{W}\right)\ensuremath{\left|\psi_m\right\rangle} = E_m\ensuremath{\left|\psi_m\right\rangle}
-\end{aligned}$$ $\lambda$ is a very small parameter and $\hat{H}_0$ is
+We can now simply write down the problem as:
+
+$$
+\left(\hat{H}_0+\lambda \hat{W}\right)\left|\psi_m\right\rangle = E_m\left|\psi_m\right\rangle
+$$
+
+$\lambda$ is a very small parameter and $\hat{H}_0$ is
 describing the hydrogen atom system. We will note the eigenvalues and
-eigenstates of this system as: $$\begin{aligned}
-\label{Eq:EigsUnperturb}
-\hat{H}_0\ensuremath{\left|\varphi_n\right\rangle} = \epsilon_n \ensuremath{\left|\varphi_n\right\rangle}
-\end{aligned}$$ While, we do not know the exact solution of
-$\ensuremath{\left|\psi_m\right\rangle}$ and the energy $E_m$, we decide
+eigenstates of this system as:
+
+$$
+
+\hat{H}_0\left|\varphi_n\right\rangle = \epsilon_n \left|\varphi_n\right\rangle
+$$
+
+While, we do not know the exact solution of
+$\left|\psi_m\right\rangle$ and the energy $E_m$, we decide
 to decompose them in the following expansion of the small parameter
-$\lambda$: $$\begin{aligned}
-\ensuremath{\left|\psi_m\right\rangle} &= \ensuremath{\left|\psi_m^{(0)}\right\rangle} + \lambda\ensuremath{\left|\psi_m^{(1)}\right\rangle}+\lambda^2\ensuremath{\left|\psi_m^{(2)}\right\rangle}+O(\lambda^3)\\
-E_m &= E_m^{(0)} +\lambda E_m^{(1)} + \lambda^2 E_m^{(2)}+O(\lambda^3)\,
-\end{aligned}$$ To zeroth order in $\lambda$ we obtain:
-$$\begin{aligned}
-\hat{H}_0\ensuremath{\left|\psi_m^{(0)}\right\rangle} = E_m^{(0)}\ensuremath{\left|\psi_m^{(0)}\right\rangle}
-\end{aligned}$$ So it is just the unperturbed system and we can
-identify: $$\begin{aligned}
-\ensuremath{\left|\psi_m^{(0)}\right\rangle} = \ensuremath{\left|\varphi_m\right\rangle}~~E_m^{(0)} = \epsilon_m
-\end{aligned}$$ For the first order we have to solve $$\begin{aligned}
-\label{Eq:FirstOrder}
-(\hat{H}_0-E_m^{(0)}) \ensuremath{\left|\psi_m^{(1)}\right\rangle} + (\hat{W}-E_m^{(1)})\ensuremath{\left|\psi_m^{(0)}\right\rangle}= 0\\
-(\hat{H}_0-\epsilon_m) \ensuremath{\left|\psi_m^{(1)}\right\rangle} + (\hat{W}-E_m^{(1)})\ensuremath{\left|\varphi_m\right\rangle}= 0
-\end{aligned}$$ We can multiply the whole equation by
-$\ensuremath{\left\langle\varphi_m\right|}$ from the right. As
-$\ensuremath{\left\langle\varphi_m\right|}\hat{H}_0= \epsilon_m\ensuremath{\left\langle\varphi_m\right|}$,
-the first term cancels out. Hence, we obtain: $$\begin{aligned}
-\label{Eq:PerturbFirstOrder}
-\boxed{E_m^{(1)} = \ensuremath{\left\langle\varphi_m\right|}\hat{W}\ensuremath{\left|\varphi_m\right\rangle}}
-\end{aligned}$$ We now also need to obtain the correction to the
-eigenstate. For that, we put
-[\[Eq:PerturbFirstOrder\]](#Eq:PerturbFirstOrder){reference-type="eqref"
-reference="Eq:PerturbFirstOrder"} into
-[\[Eq:FirstOrder\]](#Eq:FirstOrder){reference-type="eqref"
-reference="Eq:FirstOrder"}: $$\begin{aligned}
-(\hat{H}_0-\epsilon_m) \ensuremath{\left|\psi_m^{(1)}\right\rangle} + (\hat{W}\ensuremath{\left|\varphi_m\right\rangle}-\ensuremath{\left|\varphi_m\right\rangle}\ensuremath{\left\langle\varphi_m\right|}\hat{W}\ensuremath{\left|\varphi_m\right\rangle})= 0
-\end{aligned}$$ We can now multiply the whole equation by
-$\ensuremath{\left\langle\varphi_i\right|}$ from the right and obtain:
-$$\begin{aligned}
-(\epsilon_i-\epsilon_m)\ensuremath{\left\langle\varphi_i\right|}\ensuremath{\left|\psi_m^{(1)}\right\rangle}+\ensuremath{\left\langle\varphi_i\right|}\hat{W}\ensuremath{\left|\varphi_m\right\rangle} &=& 0
-\end{aligned}$$ By rewriting the above equation, this directly gives us
-the decompositon of the $\ensuremath{\left|\psi_m^{(1)}\right\rangle}$
-onto the original eigenstates and have: $$\begin{aligned}
-\label{Eq:FirstOrderState}
-\boxed{\ensuremath{\left|\psi_m^{(1)}\right\rangle} = \sum_{i\neq m} \frac{\ensuremath{\left\langle\varphi_i\right|}\hat{W}\ensuremath{\left|\varphi_m\right\rangle}}{(\epsilon_m-\epsilon_i)}\ensuremath{\left|\varphi_i\right\rangle}}
-\end{aligned}$$ And we end the calculation with second order pertubation
-in $\lambda$ $$\begin{aligned}
-(\hat{H}_0-E_m^{(0)}) \ensuremath{\left|\psi_m^{(2)}\right\rangle} + (\hat{W}-E_m^{(1)})\ensuremath{\left|\psi_m^{(1)}\right\rangle}-E_m^{(2)} \ensuremath{\left|\psi_m^{(0)}\right\rangle}= 0\\
-(\hat{H}_0-\epsilon_m) \ensuremath{\left|\psi_m^{(2)}\right\rangle} + (\hat{W}-E_m^{(1)})\ensuremath{\left|\psi_m^{(1)}\right\rangle}-E_m^{(2)} \ensuremath{\left|\varphi_m\right\rangle}= 0\\
-\end{aligned}$$ We can multiply once again whole equation by
-$\ensuremath{\left\langle\varphi_m\right|}$ from the right, which
+$\lambda$:
+
+$$
+\left|\psi_m\right\rangle = \left|\psi_m^{(0)}\right\rangle + \lambda\left|\psi_m^{(1)}\right\rangle+\lambda^2\left|\psi_m^{(2)}\right\rangle+O(\lambda^3)\\
+E_m = E_m^{(0)} +\lambda E_m^{(1)} + \lambda^2 E_m^{(2)}+O(\lambda^3)\,
+$$
+
+To zeroth order in $\lambda$ we obtain:
+$$
+\hat{H}_0\left|\psi_m^{(0)}\right\rangle = E_m^{(0)}\left|\psi_m^{(0)}\right\rangle
+$$
+
+So it is just the unperturbed system and we can
+identify:
+
+$$
+\left|\psi_m^{(0)}\right\rangle = \left|\varphi_m\right\rangle~~E_m^{(0)} = \epsilon_m
+$$
+
+For the first order we have to solve
+
+$$
+
+(\hat{H}_0-E_m^{(0)}) \left|\psi_m^{(1)}\right\rangle + (\hat{W}-E_m^{(1)})\left|\psi_m^{(0)}\right\rangle= 0\\
+(\hat{H}_0-\epsilon_m) \left|\psi_m^{(1)}\right\rangle + (\hat{W}-E_m^{(1)})\left|\varphi_m\right\rangle= 0
+$$
+
+We can multiply the whole equation by
+$\left\langle\varphi_m\right|$ from the right. As
+$\left\langle\varphi_m\right|\hat{H}_0= \epsilon_m\left\langle\varphi_m\right|$,
+the first term cancels out. Hence, we obtain:
+
+$$
+
+\boxed{E_m^{(1)} = \left\langle\varphi_m\right|\hat{W}\left|\varphi_m\right\rangle}
+$$
+
+We now also need to obtain the correction to the
+eigenstate. For that, we put the solution for the energy into the Ansatz to obain:
+
+$$
+(\hat{H}_0-\epsilon_m) \left|\psi_m^{(1)}\right\rangle + (\hat{W}\left|\varphi_m\right\rangle-\left|\varphi_m\right\rangle\left\langle\varphi_m\right|\hat{W}\left|\varphi_m\right\rangle)= 0
+$$
+
+We can now multiply the whole equation by
+$\left\langle\varphi_i\right|$ from the right and obtain:
+$$
+(\epsilon_i-\epsilon_m)\left\langle\varphi_i\right|\left|\psi_m^{(1)}\right\rangle+\left\langle\varphi_i\right|\hat{W}\left|\varphi_m\right\rangle = 0
+$$
+
+By rewriting the above equation, this directly gives us
+the decompositon of the $\left|\psi_m^{(1)}\right\rangle$
+onto the original eigenstates and have:
+
+$$
+
+\boxed{\left|\psi_m^{(1)}\right\rangle = \sum_{i\neq m} \frac{\left\langle\varphi_i\right|\hat{W}\left|\varphi_m\right\rangle}{(\epsilon_m-\epsilon_i)}\left|\varphi_i\right\rangle}
+$$
+
+And we end the calculation with second order pertubation
+in $\lambda$
+
+$$
+(\hat{H}_0-E_m^{(0)}) \left|\psi_m^{(2)}\right\rangle + (\hat{W}-E_m^{(1)})\left|\psi_m^{(1)}\right\rangle-E_m^{(2)} \left|\psi_m^{(0)}\right\rangle= 0\\
+(\hat{H}_0-\epsilon_m) \left|\psi_m^{(2)}\right\rangle + (\hat{W}-E_m^{(1)})\left|\psi_m^{(1)}\right\rangle-E_m^{(2)} \left|\varphi_m\right\rangle= 0\\
+$$
+
+We can multiply once again whole equation by
+$\left\langle\varphi_m\right|$ from the right, which
 directly drops the first term. The term
-$E_m^{(1)}\ensuremath{\left\langle\varphi_m\right|}\ensuremath{\left|\psi_m^{(1)}\right\rangle}$
+$E_m^{(1)}\left\langle\varphi_m\right|\left|\psi_m^{(1)}\right\rangle$
 drops out as the first order perturbation does not contain a projection
-onto the initial state. So we can write: $$\begin{aligned}
-E_m^{(2)}= \ensuremath{\left\langle\varphi_m\right|}\hat{W}\ensuremath{\left|\psi_m^{(1)}\right\rangle}
-\end{aligned}$$ Plugging in our solution
-[\[Eq:FirstOrderState\]](#Eq:FirstOrderState){reference-type="eqref"
-reference="Eq:FirstOrderState"}, we obtain: $$\label{Eq:PerturbSecOrder}
-\boxed{E_m^{(2)} = \sum_{i\neq m} \frac{|\ensuremath{\left\langle\varphi_i\right|}\hat{W}\ensuremath{\left|\varphi_m\right\rangle}|^2}{(\epsilon_m-\epsilon_i)}}$$
+onto the initial state. So we can write:
+
+$$
+E_m^{(2)}= \left\langle\varphi_m\right|\hat{W}\left|\psi_m^{(1)}\right\rangle
+$$
+
+Plugging in our solution, we obtain:
+
+$$
+\boxed{E_m^{(2)} = \sum_{i\neq m} \frac{|\left\langle\varphi_i\right|\hat{W}\left|\varphi_m\right\rangle|^2}{(\epsilon_m-\epsilon_i)}}
+$$
 
 # Static external magnetic fields
 
 A first beautiful application of perturbation theory is the study of
 static magnetic fields (see Ch 1.9 and Ch. 2.7.1 of [@Hertel_2015] for
 more details). The motion of the electron around the nucleus implies a
-magnetic current $$\begin{aligned}
+magnetic current
+
+$$
 I = \frac{e}{t} = \frac{ev}{2\pi r}
-\end{aligned}$$ and this implies a magnetic moment $M = I A$, with the
-enclosed surface $A=\pi r^2$. It may be rewritten as: $$\begin{aligned}
-\vec{M}_L &= -\frac{e}{2m_e}\vec{L} &=-\frac{\mu_B}{\hbar} \vec{L} \\
-\mu_B &= \frac{\hbar e}{2m_e}
-\end{aligned}$$ where $\mu_B$ is the **Bohr magneton**. Its potential
+$$
+
+and this implies a magnetic moment $M = I A$, with the
+enclosed surface $A=\pi r^2$. It may be rewritten as:
+
+$$
+\vec{M}_L = -\frac{e}{2m_e}\vec{L} =-\frac{\mu_B}{\hbar} \vec{L} \\
+\mu_B = \frac{\hbar e}{2m_e}
+$$
+
+where $\mu_B$ is the **Bohr magneton**. Its potential
 energy in a magnetic field $\vec{B} = B_0 \vec{e}_z$ is then:
-$$\begin{aligned}
-V_B &= -\vec{M}_L\cdot \vec{B}\\
-&= \frac{\mu_B}{\hbar} L_z B_0
-\end{aligned}$$ Its contribution is directly evaluated from Eq.
+$$
+V_B = -\vec{M}_L\cdot \vec{B}\\
+= \frac{\mu_B}{\hbar} L_z B_0
+$$
+
+Its contribution is directly evaluated from Eq.
 [\[Eq:PerturbFirstOrder\]](#Eq:PerturbFirstOrder){reference-type="eqref"
-reference="Eq:PerturbFirstOrder"} to be: $$\begin{aligned}
+reference="Eq:PerturbFirstOrder"} to be:
+
+$$
 E_{Zeeman} = \mu_B m B_0
-\end{aligned}$$ This is the Zeeman splitting of the different magnetic
+$$
+
+This is the Zeeman splitting of the different magnetic
 substates. It is visualized in Fig. [1](#982283){reference-type="ref"
 reference="982283"}.
 
@@ -126,13 +181,19 @@ width="0.70\\columnwidth"}
 We have now investigated the structure of the hydrogen atom and seen how
 its energy gets shifted in external magnetic fields. We can combine this
 understanding to study conservative traps for atoms and ions. Neutral
-atoms experience the external field: $$\begin{aligned}
+atoms experience the external field:
+
+$$
 E_{mag}(x,y) = \mu_B m B_0(x,y)
-\end{aligned}$$ For ions on the other hand we have fully charged
+$$
+
+For ions on the other hand we have fully charged
 particles. So they simply experience the external electric field
-directly: $$\begin{aligned}
+directly:
+
+$$
 E_{el}(x,y) = -q E(x,y)
-\end{aligned}$$
+$$
 
 Trapping atoms and ions has to be done under very good vacuum such that
 they are well isolate from the enviromnent and high precision
@@ -184,32 +245,50 @@ here. But what were the main approximations ?
 
 So, how does relativity affect the hydrogen spectrum? In a first step,
 we should actually introduce the magnetic moment of the spin:
-$$\begin{aligned}
+$$
 \vec{M}_S = -g_e \mu_B \frac{\vec{S}}{\hbar}
-\end{aligned}$$ The spin of the electron is $1/2$, making it a fermion
-and the *g factor of the electron* reads $$\begin{aligned}
+$$
+
+The spin of the electron is $1/2$, making it a fermion
+and the *g factor of the electron* reads
+
+$$
 g_e \approx 2.0023
-\end{aligned}$$ Further discussions of the g-factor might be found in
+$$
+
+Further discussions of the g-factor might be found in
 Chapter 6.6 of [@Hertel_2015].
 
 ## Amplitude of the relativistic effects
 
 We saw in lecture 5 [@Jendrzejewski] and 6 [@Jendrzejewskib], that the
-energy levels of hydrogenlike atoms are given by: $$\begin{aligned}
-\label{Eq:EnergyHydrogen}
-E_n &= \frac{Z^2 R_{y,\infty}}{n^2}\\
-R_{y,\infty} &= \frac{m_e e^4}{32 \pi^2 \epsilon_0^2 \hbar^2}
-\end{aligned}$$ We can now use the fine-structure constant, which
+energy levels of hydrogenlike atoms are given by:
+
+$$
+
+E_n = \frac{Z^2 R_{y,\infty}}{n^2}\\
+R_{y,\infty} = \frac{m_e e^4}{32 \pi^2 \epsilon_0^2 \hbar^2}
+$$
+
+We can now use the fine-structure constant, which
 measures the coupling strength of the electric charges to the
-electromagnetic field: $$\begin{aligned}
-\label{Eq:FS}
-\alpha &= \frac{e^2}{4\pi\epsilon_0\hbar c}\\
-&= \frac{1}{137.035999139(31)}
-\end{aligned}$$ We can now rewrite Eq.
+electromagnetic field:
+
+$$
+
+\alpha = \frac{e^2}{4\pi\epsilon_0\hbar c}\\
+= \frac{1}{137.035999139(31)}
+$$
+
+We can now rewrite Eq.
 [\[Eq:EnergyHydrogen\]](#Eq:EnergyHydrogen){reference-type="eqref"
-reference="Eq:EnergyHydrogen"} as: $$\begin{aligned}
+reference="Eq:EnergyHydrogen"} as:
+
+$$
 E_n = \frac{1}{2} \underbrace{m_e c^2}_{\text{rest mass energy}} Z^2 \alpha^2 \frac{1}{n^2}
-\end{aligned}$$ Here, $m_e c^2\approx \SI{511}{\kilo eV}$ is the rest
+$$
+
+Here, $m_e c^2\approx \SI{511}{\kilo eV}$ is the rest
 mass energy of the electron. $E_n \approx \SI{10}{eV}$ on the other hand
 is the energy of the bound state and therefore in the order of the
 kinetic energy of the electron. As long as it is much smaller than the
@@ -230,29 +309,45 @@ relativistic terms is actually the existance of the electron spin.
 ## The relativistic mass and Darwin term
 
 1.  "Relativistic mass": The relativistic relation between energy and
-    momentum reads: $$\begin{aligned}
-    E_\text{rel} &= \sqrt{(mc^2)^2+(\vec{p}c)^2}\\
-    &\approx mc^2 + \frac{p^2}{2m}- \frac{\vec{p}^{\,4}}{8m^3c^2} + \cdots
-    \end{aligned}$$ The first two terms of the expansion are the
+    momentum reads:
+
+$$
+    E_\text{rel} = \sqrt{(mc^2)^2+(\vec{p}c)^2}\\
+    \approx mc^2 + \frac{p^2}{2m}- \frac{\vec{p}^{\,4}}{8m^3c^2} + \cdots
+$$
+
+
+    
+    The first two terms of the expansion are the
     nonrelativistic limit and the third term is the first correction.
-    Therefore, the corresponding Hamiltonian is: $$\begin{aligned}
+    Therefore, the corresponding Hamiltonian is:
+
+$$
     \hat{H}_\text{rm} = - \frac{\hat{\vec{p}}^{\,4}}{8m^3c^2}.
-    \end{aligned}$$
+$$
 
 2.  Darwin term: If $r=0$, the potential $V(r)$ diverges to $-\infty$.
-    We get: $$\begin{aligned}
+    We get:
+
+$$
     \hat{H}_\text{Darwin} = \frac{\pi \hbar^2}{2m^2c^2}\left( \frac{Ze^2}{4\pi\epsilon_0}\right) \delta(\hat{\vec{r}})
-    \end{aligned}$$
+$$
 
 If we perform a first correction to the energy of the eigenstates
-$\ensuremath{\left\langle n,l,m\right\rangle}$ by calculating
-$$\begin{aligned}
-\ensuremath{\left\langle n,l,m|\hat{H}'|n,l,m\right\rangle},
-\end{aligned}$$ we find that it works perfectly for case (1) and (2)
+$\left\langle n,l,m\right\rangle$ by calculating
+
+$$
+\left\langle n,l,m|\hat{H'|n,l,m}\right\rangle,
+$$
+
+we find that it works perfectly for case (1) and (2)
 which is due to degeneracy. $\hat{H}_\text{rm}$ and
 $\hat{H}_\text{Darwin}$ commute with all observables forming the
 complete set of commuting observables (CSCO) for $\hat{H}_0$
-$$\begin{aligned}
+
+$$
 \hat{H}_0,\hat{\vec{L}}^2, \hat{L}_z,
-\end{aligned}$$ with states described by
-$\ensuremath{\left|n,l,m\right\rangle}$.
+$$
+
+with states described by
+$\left|n,l,m\right\rangle$.

@@ -21,7 +21,7 @@ terms. Most importantly, we will introduce that coupling between the
 orbital angular momentum and the spin of the electron, which leads to
 the fine splitting.
 
-# Perturbation theory
+## Perturbation theory
 
 Up to now have studied the hydrogen atom to find its eigensystem and
 then studied how it evolves under the presence of oscillating electric
@@ -134,7 +134,7 @@ $$
 \boxed{E_m^{(2)} = \sum_{i\neq m} \frac{|\left\langle\varphi_i\right|\hat{W}\left|\varphi_m\right\rangle|^2}{(\epsilon_m-\epsilon_i)}}
 $$
 
-# Static external magnetic fields
+## Static external magnetic fields
 
 A first beautiful application of perturbation theory is the study of
 static magnetic fields (see Ch 1.9 and Ch. 2.7.1 of [@Hertel_2015] for
@@ -168,14 +168,13 @@ E_{Zeeman} = \mu_B m B_0
 $$
 
 This is the Zeeman splitting of the different magnetic
-substates. It is visualized in Fig. [1](#982283){reference-type="ref"
-reference="982283"}.
+substates. It is visualized below 
 
-![The Zeeman effect in the hydrogen atom.
-](figures/Bildschirmfoto-2018-10-31-um-08-07-29/Bildschirmfoto-2018-10-31-um-08-07-29){#982283
-width="0.70\\columnwidth"}
+<img src="./lecture7_pic1.png" width="70%">
 
-# Trapping with electric or magnetic fields
+The Zeeman effect in the hydrogen atom.
+
+## Trapping with electric or magnetic fields
 
 We have now investigated the structure of the hydrogen atom and seen how
 its energy gets shifted in external magnetic fields. We can combine this
@@ -204,34 +203,33 @@ experimentalists have to play some tricks with oscillating fields. We
 will not derive in detail how a resulting **Paul trap** works, but the
 [linked video](https://youtu.be/Xb-zpM0UOzk) gives a very nice
 impression of the idea behind it. A sketch is presented in Fig.
-[2](#149591){reference-type="ref" reference="149591"}.
 
-![The upper stage shows the phases of The two phases of the oscillating
+<img src="./lecture7_pic2.png" width="70%">
+
+The upper stage shows the phases of The two phases of the oscillating
 electric field of a Paul trap. Taken
 from [wikipedia](https://en.wikipedia.org/wiki/Quadrupole_ion_trap).
 Below we can see a linear ion (Paul) trap containing six calcium 40
 ions. Taken
-from [here](https://quantumoptics.at/en/research/lintrap.html) .
-](figures/IonTraps-01/IonTraps-01){#149591 width="0.70\\columnwidth"}
+from [here](https://quantumoptics.at/en/research/lintrap.html).
+
 
 This work on trapping ions dates back to the middle of the last century
 (!!!) and was recognized by the[ Nobel prize in
 1989](https://www.nobelprize.org/prizes/physics/1989/summary/) for
-Wolfgang Paul [@Paul_1990] and Hans Dehmelt [@Dehmelt_1990]. They shared
+[Wolfgang Paul](http://dx.doi.org/10.1103/revmodphys.62.531) and[Hans Dehmelt](http://dx.doi.org/10.1103/revmodphys.62.525). They shared
 the prize with Norman Ramsey, who developped extremely precise
-spectroscopic methods, now known as Ramsey spectroscopy [@Ramsey_1990].
+spectroscopic methods, now known [as Ramsey spectroscopy](http://dx.doi.org/10.1103/revmodphys.62.541).
 
 For atoms we can play similiar games with magnetic traps. Again we have
 to solve the problem of the zero magnetic fields. Widely used
 configurations are the Ioffe-Pritchard trap, where quadrupole fields are
-superposed with a bias field [@Pritchard_1983], or TOP-traps
-[@Petrich_1995].
+superposed [with a bias field](http://dx.doi.org/10.1103/physrevlett.51.1336), or [TOP-traps](http://dx.doi.org/10.1103/physrevlett.74.3352).
 
-Ion traps are now the basis of ionic quantum computers [@ions] and
-magnetic traps paved the way for quantum simulators with cold atoms
-[@Jendrzejewskia].
+Ion traps are now the basis of ionic quantum computers and
+magnetic traps paved the way for quantum simulators with cold atoms as will see later on.
 
-# What we missed from the Dirac equation
+### What we missed from the Dirac equation
 
 Until now we have completely neglected relativistic effects, i.e. we
 should have really solved the Dirac equation instead of the Schrödinger
@@ -256,11 +254,11 @@ g_e \approx 2.0023
 $$
 
 Further discussions of the g-factor might be found in
-Chapter 6.6 of [@Hertel_2015].
+[Chapter 6.6 of Hertel](http://dx.doi.org/10.1007/978-3-642-54322-7).
 
-## Amplitude of the relativistic effects
+#### Amplitude of the relativistic effects
 
-We saw in lecture 5 [@Jendrzejewski] and 6 [@Jendrzejewskib], that the
+We saw in the previous lectures, that the
 energy levels of hydrogenlike atoms are given by:
 
 $$
@@ -279,16 +277,14 @@ $$
 = \frac{1}{137.035999139(31)}
 $$
 
-We can now rewrite Eq.
-[\[Eq:EnergyHydrogen\]](#Eq:EnergyHydrogen){reference-type="eqref"
-reference="Eq:EnergyHydrogen"} as:
+We can now rewrite the energies of the hydrogen atom as:
 
 $$
 E_n = \frac{1}{2} \underbrace{m_e c^2}_{\text{rest mass energy}} Z^2 \alpha^2 \frac{1}{n^2}
 $$
 
-Here, $m_e c^2\approx \SI{511}{\kilo eV}$ is the rest
-mass energy of the electron. $E_n \approx \SI{10}{eV}$ on the other hand
+Here, $m_e c^2\approx 511\textrm{k eV}$ is the rest
+mass energy of the electron. $E_n \approx 10\text{eV}$ on the other hand
 is the energy of the bound state and therefore in the order of the
 kinetic energy of the electron. As long as it is much smaller than the
 rest-mass of the electron, we can neglect the relativistic effects. A
@@ -305,7 +301,7 @@ For the hydrogen atom we can thus treat the relativistic effects in a
 perturbative approach.But the most important consequence of the
 relativistic terms is actually the existance of the electron spin.
 
-## The relativistic mass and Darwin term
+### The relativistic mass and Darwin term
 
 1.  "Relativistic mass": The relativistic relation between energy and
     momentum reads:
@@ -316,8 +312,7 @@ $$
 $$
 
 
-    
-    The first two terms of the expansion are the
+The first two terms of the expansion are the
     nonrelativistic limit and the third term is the first correction.
     Therefore, the corresponding Hamiltonian is:
 
@@ -348,5 +343,4 @@ $$
 \hat{H}_0,\hat{\vec{L}}^2, \hat{L}_z,
 $$
 
-with states described by
-$\left|n,l,m\right\rangle$.
+with states described by $\left|n,l,m\right\rangle$.

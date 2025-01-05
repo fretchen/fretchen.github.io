@@ -9,6 +9,10 @@ const publicFolder = "./public";
 
 export const copyImg = (imgDirectory: string = "amo") => {
   const imgFiles = fs.readdirSync(`./${imgDirectory}`);
+  const destFolder = `${publicFolder}/${imgDirectory}`;
+  if (!fs.existsSync(destFolder)) {
+    fs.mkdirSync(destFolder);
+  }
   console.log(imgFiles);
   imgFiles.forEach((file) => {
     // check that the file is an image file with ending .png, .jpg or .svg
@@ -16,6 +20,6 @@ export const copyImg = (imgDirectory: string = "amo") => {
       return;
     }
     const imgFileContent = fs.readFileSync(`${imgDirectory}/${file}`);
-    fs.writeFileSync(`${publicFolder}/${imgDirectory}/${file}`, imgFileContent);
+    fs.writeFileSync(`${destFolder}/${file}`, imgFileContent);
   });
 };

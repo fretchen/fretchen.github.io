@@ -9,7 +9,6 @@ export const removeMath = (fileDirectory: string = "./blog") => {
   // go through each file remove \begin{aligned} and \end{aligned}
 
   blogFiles.forEach((file) => {
-
     // check that the file is a markdown file with ending .md or .mdx
     if (!file.endsWith(".md") && !file.endsWith(".mdx")) {
       return;

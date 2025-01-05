@@ -1,9 +1,9 @@
 ---
 author:
-- Fred Jendrzejewski
-- Selim Jochim
+  - Fred Jendrzejewski
+  - Selim Jochim
 bibliography:
-- bibliography/converted_to_latex.bib
+  - bibliography/converted_to_latex.bib
 date: January 04, 2025
 title: Lecture 7 - Beyond the 'boring' hydrogen atom
 ---
@@ -58,6 +58,7 @@ E_m = E_m^{(0)} +\lambda E_m^{(1)} + \lambda^2 E_m^{(2)}+O(\lambda^3)\,
 $$
 
 To zeroth order in $\lambda$ we obtain:
+
 $$
 \hat{H}_0\left|\psi_m^{(0)}\right\rangle = E_m^{(0)}\left|\psi_m^{(0)}\right\rangle
 $$
@@ -96,6 +97,7 @@ $$
 
 We can now multiply the whole equation by
 $\left\langle\varphi_i\right|$ from the right and obtain:
+
 $$
 (\epsilon_i-\epsilon_m)\left\langle\varphi_i\right|\left|\psi_m^{(1)}\right\rangle+\left\langle\varphi_i\right|\hat{W}\left|\varphi_m\right\rangle = 0
 $$
@@ -168,7 +170,7 @@ E_{Zeeman} = \mu_B m B_0
 $$
 
 This is the Zeeman splitting of the different magnetic
-substates. It is visualized below 
+substates. It is visualized below
 
 <img src="./lecture7_pic1.png" width="70%">
 
@@ -213,7 +215,6 @@ Below we can see a linear ion (Paul) trap containing six calcium 40
 ions. Taken
 from [here](https://quantumoptics.at/en/research/lintrap.html).
 
-
 This work on trapping ions dates back to the middle of the last century
 (!!!) and was recognized by the[ Nobel prize in
 1989](https://www.nobelprize.org/prizes/physics/1989/summary/) for
@@ -242,12 +243,13 @@ here. But what were the main approximations ?
 
 So, how does relativity affect the hydrogen spectrum? In a first step,
 we should actually introduce the magnetic moment of the spin:
+
 $$
 \vec{M}_S = -g_e \mu_B \frac{\vec{S}}{\hbar}
 $$
 
 The spin of the electron is $1/2$, making it a fermion
-and the *g factor of the electron* reads
+and the _g factor of the electron_ reads
 
 $$
 g_e \approx 2.0023
@@ -290,12 +292,12 @@ kinetic energy of the electron. As long as it is much smaller than the
 rest-mass of the electron, we can neglect the relativistic effects. A
 few observations:
 
--   Relativistic effects are most pronounced for deeply bound states of
-    small quantum number $n$.
+- Relativistic effects are most pronounced for deeply bound states of
+  small quantum number $n$.
 
--   Relativistic effects effects will become important once
-    $(Z\alpha)\approx 1$, so they will play a major role in heavy
-    nuclei.
+- Relativistic effects effects will become important once
+  $(Z\alpha)\approx 1$, so they will play a major role in heavy
+  nuclei.
 
 For the hydrogen atom we can thus treat the relativistic effects in a
 perturbative approach.But the most important consequence of the
@@ -311,10 +313,9 @@ $$
     \approx mc^2 + \frac{p^2}{2m}- \frac{\vec{p}^{\,4}}{8m^3c^2} + \cdots
 $$
 
-
 The first two terms of the expansion are the
-    nonrelativistic limit and the third term is the first correction.
-    Therefore, the corresponding Hamiltonian is:
+nonrelativistic limit and the third term is the first correction.
+Therefore, the corresponding Hamiltonian is:
 
 $$
     \hat{H}_\text{rm} = - \frac{\hat{\vec{p}}^{\,4}}{8m^3c^2}.

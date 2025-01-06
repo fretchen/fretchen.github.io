@@ -1,5 +1,5 @@
 ---
-publishing_date: 2025-01-06
+publishing_date: 2025-01-03
 title: Ideas behind the blog stack
 ---
 

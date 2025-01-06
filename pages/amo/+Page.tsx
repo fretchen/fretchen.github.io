@@ -1,10 +1,8 @@
 import * as React from "react";
 
-import blogs from "../../amo/blogs.json";
 import AmoList from "../../components/AmoList";
 
 const App: React.FC = function () {
-  console.log(blogs);
   return (
     <div className="AMO">
       <h1>AMO lecture notes</h1>

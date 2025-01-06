@@ -155,7 +155,7 @@ hydrogen atom as presented in Fig.
 
 <img src="./lecture8_pic1.png" width="70%"/>
 
-Fine structure of the Hydrogen atom. Adapted from [Demtröder 2010 Fig. 5.33](http://dx.doi.org/10.1007/978-3-642-10298-1) 
+Fine structure of the Hydrogen atom. Adapted from [Demtröder 2010 Fig. 5.33](http://dx.doi.org/10.1007/978-3-642-10298-1)
 
 - The states should be characterized by angular momentum anymore, but
   by the total angular momentum $J$ and the orbital angular momentum.
@@ -355,12 +355,14 @@ solutions to this problem. It is basically the total spin
 $\mathbf{S} = \mathbf{S}_1 + \mathbf{S}_2$, or better $\mathbf{S}^2$.
 This commutes with both the Hamiltonian and the parity operator, so it
 is a conserved quantity. Sorting out the solutions we have
+
 $$
 
 \chi*- = \frac{1}{\sqrt{2}}\left(|\uparrow\downarrow\rangle - |\downarrow\uparrow\rangle\right)\\
 \chi*{+,1} = |\uparrow\uparrow\rangle \\
 \chi*{+,1} = \frac{1}{\sqrt{2}}\left(|\uparrow\downarrow\rangle + |\downarrow\uparrow\rangle\right) \\
 \chi*{+,-1} = |\downarrow\downarrow\rangle \\
+
 
 $$
 

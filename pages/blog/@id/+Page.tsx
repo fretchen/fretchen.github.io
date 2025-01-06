@@ -21,8 +21,11 @@ const App: React.FC = function () {
     <div>
       <Post title={blog.title} content={blog.content} publishing_date={blog.publishing_date} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
-        {prevBlog && <Link href={`/blog/${id - 1}`}>Previous: {prevBlog.title}</Link>}
-        {nextBlog && <Link href={`/blog/${id + 1}`}>Next: {nextBlog.title}</Link>}
+        {
+          // the labelling in the blogs has to be inverted as we sort the blogs in descending order
+        }
+        {prevBlog && <Link href={`/blog/${id - 1}`}>Next post: {prevBlog.title}</Link>}
+        {nextBlog && <Link href={`/blog/${id + 1}`}>Previous post: {nextBlog.title}</Link>}
       </div>
     </div>
   );

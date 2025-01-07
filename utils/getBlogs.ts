@@ -46,6 +46,15 @@ export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
       }
     });
 
+  // sort the blogs by publishing date with the most recent first
+  blogs.sort((a, b) => {
+    if (a.publishing_date && b.publishing_date) {
+      return new Date(a.publishing_date).getTime() - new Date(b.publishing_date).getTime();
+    } else {
+      return 0;
+    }
+  });
+
   const jsonFilePath = path.join(blogDirectory, "blogs.json");
   fs.writeFileSync(jsonFilePath, JSON.stringify(blogs, null, 2));
   return blogs;

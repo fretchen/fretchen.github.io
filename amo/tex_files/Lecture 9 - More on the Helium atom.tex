@@ -1,0 +1,424 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{siunitx}
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+\newcommand*\ch[1]{\ensuremath{\mathrm{#1}}}
+
+\begin{document}
+
+\title{Lecture 9 - More on the Helium atom}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\author[2]{Selim Jochim}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+\affil[2]{Physikalisches Institut der Universität Heidelberg}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 07, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+We will finish our discussion of the Helium atom. Most importantly, we will dive into the strong separation between singlet and triplet states.%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+In the last lecture \cite{Jendrzejewski}, we saw some important properties of the He atom:
+\begin{itemize}
+\item Total angular momentum, spin and the electronic quantum number are labelling the states.
+\item The exchange symmetry introduces the important distinction between ortho and para-states.
+\end{itemize}
+Today, we will see how this exchange symmetry enters the level scheme and how it is linked to the spin. 
+
+\section{Level scheme}
+
+We can now continue through the level scheme of Helium and try to understand our observations. No radiative transitions between $S=0$ and $S=1$, which means that we will basically have two independent schemes. They are characterized by:
+\begin{itemize}
+\item electronic excitations, which are the main quantum numbers $N$.
+\item orbital angular momentum, with quantum number $L$.
+\item total spin with quantum number $S$
+\item total angular momentum $J$, but the spin-orbit coupling in Helium is actually extremly small.
+\end{itemize}
+We will then use the term notation:
+\begin{equation}
+N ^{2S+1}L_J
+\end{equation}
+the superscript is giving the multiplicity or the number of different $J$ levels. 
+
+Having the level structure, we are now able to calculate the energies of the different states. We will start out with the ground state and then work our way through the excited states. 
+
+
+\section{Independent particle model}
+
+We will now go back to the influence of the interaction on the eigenenergies of the system. Going back to the Helium atoms, we will treat the single particle Hamiltonians as unperturbed system and $H_{12}$ as the perturbation:
+\begin{align}
+H_0 &= -\frac{1}{2}\nabla_{r_1}^2 -\frac{Z}{r_1} -\frac{1}{2}\nabla_{r_2}^2 -\frac{Z}{r_2}\\
+H_1 &=\frac{1}{r_{12}}
+\end{align}
+We now know the solutions to $H_0$, because the factorize:
+\begin{align}
+\left(\hat{H}_1 + \hat{H}_2\right)|\psi_1\rangle\otimes|\psi_2\rangle = 
+\left(E_1 + E_2\right)|\psi_1\rangle\otimes|\psi_2\rangle
+\end{align}
+\subsection{Groundstate energy - perturbative approach}
+At this stage we can try to calculate the groundstate energy. We can derive that the unperturbed energy reads:
+\begin{equation}
+E_0^{(0)}= Z^2\si{hartree}
+\end{equation}
+The electron interaction leads within first order perturbation theory to an energy shift of:
+\begin{equation}
+E_0^{(1)}= \langle\psi_0|\frac{1}{r_{12}}|\psi_0\rangle = \frac{5}{8}Z
+\end{equation}
+We can see that the first order energy shift is actually not that small, so we might start to question perturbation theory.
+
+\subsection{Groundstate energy - variational approach}
+
+In the variational approach, we will try to find the minimal energy of the ground state. Namely we will minimize:
+\begin{equation}
+E_{var} = \frac{\langle\psi|\hat{H}|\psi\rangle}{\langle\psi|\psi\rangle}
+\end{equation}
+We can actually proof that this works nicely within a few lines. For that we will expand our trial function $|\psi\rangle$ into the (unknown) eigenstates of $\hat{H}$:
+\begin{equation}
+|\psi\rangle = \sum_n c_n |\psi_n\rangle
+\end{equation}
+For the energies this implies:
+\begin{equation}
+\hat{H}|\psi_n\rangle = E_n|\psi_n\rangle
+\end{equation}
+So we end up with:
+\begin{align}
+\langle \psi|H|\psi\rangle - E_0 &= \sum_n E_n c_n^*c_n - E_0 \sum_n c_n^*c_n\\
+&= \sum_n (E_n-E_0)|c_n|^2 \geq 0
+\end{align}
+So the variational principle always gives an upper bound on the ground state energy. The question is how good is this bound in each individual case.
+
+To apply the variational approach, we will introduce a variational parameter. This parameter is typically guessed from physical intuition. Here it will be the charge, which will be replaced by an \textit{screened charge} $Z_{eff}$.
+
+
+
+As variational wavefunction, we will employ the groundstate of the hydrogen atom, which reads:
+\begin{align}
+\psi_{var}(r_1, r_2) = e^{-Z_{eff}(r_1+r_2)}
+\end{align}
+We find then that the total energy is:
+\begin{equation}
+E_{var}^0 = Z_{eff}^2 -2ZZ_{eff}+\frac{5}{8}Z_{eff}
+\end{equation}
+It becomes minimal at
+\begin{align}
+Z_{eff} = Z- \frac{5}{16}
+\end{align}
+So at this stage, we might compare the different levels of approximation to the experimental result:
+\begin{itemize}
+\item The experimental observation is $E_{exp}^0=-2.90372$ hartree
+\item The independent particle model predicts $E^0 = -4 $ hartree.
+\item First order pertubation theory predicts $E^0 = -2,709$ hartree.
+\item The variational principle predicts $E^0 = -2.84$ hartree.
+\end{itemize}
+The best theories achieve an accuracy of $10^{-7}$ \cite{Hertel_2015} Chapter 7.2.5.
+
+
+
+
+
+
+\section{Exchange Interaction}
+Up to now we focused on the ground state properties of the $1^
+1S$ state. In the next step we will try to understand the influence of the interaction term on the excited states (c.f. \cite{Hertel_2015} Chapter 7). To attack this problem we will approach it pertubatively.
+
+We saw that we could factorize the full wavefunction into external and internal degrees of freedom. Further, we have the singlet $\chi_S$ (anti-symmetric) and triplet states $\chi_T$ (symmetric) for the spin. This can now be combined too:
+\begin{align}
+\overline{\psi}_S(1,2) &= \psi_{+}(r_1, r_2)\chi_S(1,2)\\
+\overline{\psi}_T(1,2) &= \psi_{-}(r_1, r_2)\chi_T(1,2)\\
+\end{align}
+
+In a next step, we can construct $\psi_{\pm}$ from the eigenstates of the unperturbed Hamiltonian. We define the states $\ket{q_1} \equiv \ket{n_1,l_1,m_1}$ and $\ket{q_2} \equiv \ket{n_2,l_2,m_2}$. The properly symmetrized states are:
+%
+\begin{align}
+\ket{\psi_\pm} = \frac{1}{\sqrt{2}}\left( \ket{q_1}_1 \otimes \ket{q_2}_2 \pm \ket{q_2}_1 \otimes \ket{q_1}_2 \right)
+\end{align}
+Now we can perform an estimate of the energy shift on these states.
+\begin{align}
+\Delta E_{S,T} &= \bra{\overline{\psi}_{S,T} }\frac{1}{\hat{r}_{12}} \ket{\overline{\psi}_{S,T}}\\
+&= \bra{\psi_{+,-} }\frac{1}{\hat{r}_{12}} \ket{\psi_{+,-} }
+\end{align}
+We then get
+%
+\begin{align}
+\Delta E_{S,T} &= \frac{1}{2} \left(\bra{q_1 q_2 } \pm \bra{q_2 q_1}\right) \left| \frac{1}{\hat{r}_{12}} \right| \left( \ket{q_1 q_2} \pm \ket{q_2 q_1} \right)\\
+&= \bra{q_1 q_2} \frac{1}{\hat{r}_{12}}\ket{q_1 q_2} \pm \bra{q_1 q_2} \frac{1}{\hat{r}_{12}} \ket{q_2 q_1}
+\end{align}
+So we summarize:
+\begin{align}
+\Delta E_S &= J_{nl} + K_{nl}\\
+\Delta E_T &= J_{nl} - K_{nl}
+\end{align}
+
+The first term is called \emph{direct} (Coulomb) term and the second term is known as \emph{exchange} term. If we integrate the direct term, we get:
+
+\begin{align}
+J_{nl} &= \int \int \psi_{q_1}^*\left(\vec{r}_1\right) \psi_{q_2}^* \left(\vec{r}_2\right) \frac{1}{r_{12}} \psi_{q_1} \left(\vec{r}_1\right) \psi_{q_2} \left(\vec{r}_2\right) \dif \vec{r}_1 \dif \vec{r}_2 \\
+&= \int \int \left| \psi_{q_1} \left(\vec{r}_1\right) \right|^2 \left| \psi_{q_2}\left(\vec{r}_2\right) \right|^2 \frac{1}{r_{12}} \dif \vec{r}_1 \dif \vec{r}_2.
+\end{align}
+This is Coulomb repulsion. 
+
+
+
+
+\subsection{Exchange term}
+The integration of the exchange term yields:
+%
+\begin{align}
+K = \bra{q_1 q_2} \frac{1}{r_{12}} \ket{q_2 q_1} = \int \psi_{q_1}^* \left(\vec{r}_1\right) \psi_{q_2}^* \left( \vec{r}_2 \right) \frac{1}{r_{12}} \psi_{q_2}\left(\vec{r}_1\right) \psi_{q_1} \left( \vec{r}_2 \right) \dif \vec{r}_1 \dif \vec{r}_2
+\end{align}
+To understand it a bit better, we can rewrite it in a more transparent way in terms of the spin operator, which measures the difference between the singlet and the triplet state. Especially suited is:
+\begin{align}
+\hat{\vec{S}}_1 \cdot \hat{\vec{S}}_2 &= \frac{1}{2} \left(\hat{\vec{S}}^2 - \hat{\vec{S}}_1^2 - \hat{\vec{S}}_2^2 \right)\\
+\hat{\vec{S}}_1 \cdot \hat{\vec{S}}_2 \chi_T &= \frac{1}{4} \chi_T\\
+\hat{\vec{S}}_1 \cdot \hat{\vec{S}}_2 \chi_S &= -\frac{3}{4} \chi_S
+\end{align}
+This allows us to rewrite the splitting in terms of an effective Hamiltonian
+
+\begin{align}
+\hat{H}_\text{eff} = J_{nl} + \frac{1}{2}\left(1+ 4\hat{\vec{S}}_1 \cdot \hat{\vec{S}}_2\right) K_{nl}
+\end{align}
+
+\section{Obtained energy shifts.}
+
+As an example, we have a look at the energy shifts (see \ref{955156}) for two electrons in the states defined by:
+%
+\begin{align}
+&q_1:& &n_1=1,& &l_1 = 0\\
+&q_2:& &n_2=2,& &l_2= 0,1
+\end{align}
+%
+The $2^3S$ level for example corresponds to the state
+\begin{align}
+\frac{1}{\sqrt{2}} \left( \ket{1s2s} - \ket{2s1s} \right) \otimes \ket{\uparrow \uparrow}
+\end{align}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-10-01-um-07-47-36/Bildschirmfoto-2018-10-01-um-07-47-36}
+\caption{{Obtained energy shifts.
+{\label{955156}}%
+}}
+\end{center}
+\end{figure}
+
+This splitting is in the order of 0.25eV and hence much larger than the typical spin-orbit coupling. This explains, why the coupling to the total angular momentum $J$ remains largely ignored for helium.
+
+\section{Summary: Structure of the {He} Atom}
+
+\begin{itemize}
+\item In the independent particle model, a state is determined by:
+\begin{align}
+\ket{n_1 l_1 m_1} \otimes \ket{n_2 l_2 m_2 }
+\end{align}
+\item Only one electron can be electronically excited to a stable state. An excellent discussion of the auto-ionization can be found in Sec. 1.3 of \cite{Grynberg_2009}. Thus, $N$ is the quantum number of the electronic excitation.
+
+\item Ignoring the spin degree of freedom, the eigenstates have a discrete symmetry with respect to particle exchange. The \ch{He} eigenstates are therefore either in a \emph{triplet} or in a \emph{singlet} state. Here, we are talking about the symmetry with respect to the exchange of two particles. No inversion of space is done here!
+%
+Why can we not assume a finite mass of the nucleui in order to describe two electrons by hydrogenic wave functions? The nucleus' motion would introduce an additional coupling term between the electrons
+%
+%We can introduce an effective term called the Heisenberg exchange term???
+\item The quantum number $L$ stands for the total orbital angular momentum.
+
+\item There is another conserved quantity we have not discussed yet: The total angular momentum
+\begin{align}
+\hat{\vec{J}} = \hat{\vec{L}} + \hat{\vec{S}}.
+\end{align}
+\textbf{Note.} For \ch{^4He}, there is no nuclear spin, meaning that there is no hyperfine structure.
+\end{itemize}
+
+Let us now have a look at the level scheme of the helium atom as depicted in \ref{124335}.
+
+\textbf{Note.} The general notation used in \ref{124335} is
+\begin{align}
+N^{2S+1}L_J,
+\end{align}  
+where $2S+1$ denotes the multiplicity of the spin.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/helevelscheme/helevelscheme}
+\caption{{Level scheme of singlet and triplet states of the helium atom from L=0
+up to L=3. The ground state 1\textsuperscript{1}S\textsubscript{0} is
+chosen to have the energy E=0. Taken from~\protect\cite{Demtr_der_2010}.
+{\label{124335}}%
+}}
+\end{center}
+\end{figure}
+
+\begin{itemize}
+\item The fact that we can write the state down with a well-defined $S$ and $L$ is called $LS$ or Russell-Saunders coupling. All $s_i$ couple to $S = \sum_i s_i$ and all $l_j$ couple to $L=\sum_j l_j$. There is no coupling between the spin and the spatial degree of freedom!
+\end{itemize}
+
+\begin{itemize}
+\item We have introduced an effective spin interaction, but we have ignored the ``real'' interactions between the spins! What does it mean? How should we introduce it if we wanted to? How can we find out whether what we did is justifiable?
+\item The dipole interaction between two spins is %(Magnetic moment associated with spin (1 Bohr magneton). Compass needles with interaction between them)
+\begin{align}
+\sim\frac{\mu_0(g \mu_B/2)^2}{4\pi \hbar d^3} = \frac{\alpha^2}{4} \;(\text{a.u.})
+\end{align}
+where $\mu_0 = 4\pi \alpha^2$, $\mu_B=1/2$, $\hbar=1$, and $d\approx~a_0~=~1$.
+Compared to the energy difference between $2^1S$ and $2^3S$ ---which is $>\alpha^2$ and on the order of \si{\electronvolt}---it is a very small effect.
+
+%Comes not from spin interaction...?
+%
+\item Also, we have ignored the spin-orbit interaction of each electron between its own spin and its orbital angular momentum. From the hydrogen atom we know that the energy for the spin-orbit interaction
+\begin{align}
+E_\textrm{ls} \propto (Z\alpha)^2
+\end{align}
+%
+is very strongly suppressed compared to the exchange interaction and the Coulomb repulsion.
+
+\textbf{Note.} This will be different for heavy atoms, where $Z$ is large.
+\end{itemize}
+
+\section{Dipole Selection Rules in Helium}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/hegasdischarge/hegasdischarge}
+\caption{{Emission lines of helium. Taken from~\protect\cite{wikipedia}.
+{\label{372421}}%
+}}
+\end{center}
+\end{figure}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/hetransitions/hetransitions}
+\caption{{Possible transitions within the singlet and triplet system of helium.
+Taken from~\protect\cite{Demtr_der_2010} .
+{\label{585159}}%
+}}
+\end{center}
+\end{figure}
+
+If helium atoms are excited in a gas discharge, one can see characteristic emission lines (see \ref{372421}).  In \ref{585159} the major dipole transitions are plotted. The singlet and triplet levels are always plotted separately and there is no transition between a singlet and a triplet state. Because of this observation, people thought in the beginning that there were two different types of helium (``para'' and ``ortho''). %Kirchhoff used spectroscopy to identify. How come that this is observed by this?
+
+The rules for transitions to occur are determined by the dipole matrix element containing the initial state $i$ and the final state $f$:
+\begin{align} \label{eq:ifmatrixelement}
+\braket{i|\hat{\vec{r}}|f}.
+\end{align}
+
+Due to the $LS$ coupling scheme, we get: %Orbital wave function depending on orbital wfcts times some spin wavefunction
+\begin{align}
+\ket{\psi(\vec{r}_1, \vec{r}_2)} \otimes \ket{\chi (1,2)}.
+\end{align}
+There is no entanglement between the degrees of freedom and no mixed symmetry between spin and spatial degree of freedom! If we plug this into \eqref{eq:ifmatrixelement} and multiply it out, we get, because the operator $\hat{\vec{r}}$ does not act on the spin degree of freedom:
+%We can multiply it out. What happens to spin dof if we multiply it out? . position operator does not act on
+\begin{align}
+\braket{i|\hat{\vec{r}}\,|f} = \braket{\chi(1,2) | \chi'(1,2)} \cdot \braket{\psi(\vec{r}_1, \vec{r}_2)|\hat{\vec{r}} \,| \psi'(\vec{r}_1, \vec{r}_2)}
+\end{align}
+\begin{enumerate}
+\item The first factor has to be zero if the total spin is not the same. Then the relative alignment is not the same. Thus, there are no dipole transitions between singlet and triplet atoms!
+\item From the second factor we infer that transitions can only occur between states of opposite parity, e.g., $\Delta l = \pm 1$, together with angular momentum conservation.
+\end{enumerate}
+
+\selectlanguage{english}
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

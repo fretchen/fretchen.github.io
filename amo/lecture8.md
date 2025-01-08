@@ -2,7 +2,7 @@
 author:
   - Fred Jendrzejewski
   - Selim Jochim
-date: January 04, 2025
+order: 8
 title: Lecture 8 - The Helium atom
 ---
 

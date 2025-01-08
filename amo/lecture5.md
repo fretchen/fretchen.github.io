@@ -2,10 +2,7 @@
 author:
   - Fred Jendrzejewski
   - Selim Jochim
-bibliography:
-  - bibliography/converted_to_latex.bib
-date: January 04, 2025
-nocite: "[@*]"
+order: 5
 title: Lecture 5 - The Hydrogen Atom
 ---
 

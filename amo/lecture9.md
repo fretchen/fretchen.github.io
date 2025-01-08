@@ -2,9 +2,7 @@
 author:
 - Fred Jendrzejewski
 - Selim Jochim
-bibliography:
-- bibliography/converted_to_latex.bib
-date: January 07, 2025
+order: 9
 title: Lecture 9 - More on the Helium atom
 ---
 

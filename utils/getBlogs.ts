@@ -5,8 +5,9 @@
 import fs from "fs";
 import path from "path";
 import { BlogPost } from "../types/BlogPost";
+import { BlogOptions } from "../types/BlogOptions";
 
-export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
+export const getBlogs = ({ blogDirectory = "./blog", sortBy = "publishing_date" }: BlogOptions): BlogPost[] => {
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles
     .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))
@@ -37,6 +38,12 @@ export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
         if (title) {
           blogPost.title = title[1];
         }
+
+        // find a line in front matter that starts with order:
+        const order = frontContent.match(/order: (.*)/);
+        if (order) {
+          blogPost.order = parseInt(order[1]);
+        }
         return blogPost;
       } else {
         return {
@@ -46,18 +53,30 @@ export const getBlogs = (blogDirectory: string = "./blog"): BlogPost[] => {
       }
     });
 
-  // sort the blogs by publishing date with the most recent first
-  blogs.sort((a, b) => {
-    if (a.publishing_date && b.publishing_date) {
-      return new Date(a.publishing_date).getTime() - new Date(b.publishing_date).getTime();
-    } else {
-      return 0;
-    }
-  });
+  if (sortBy === "order") {
+    // sort the blogs by order
+    blogs.sort((a, b) => {
+      console.log(a.order, b.order);
+      if (a.order && b.order) {
+        return a.order - b.order;
+      } else {
+        return 0;
+      }
+    });
+  } else if (sortBy === "publishing_date") {
+    // sort the blogs by publishing date with the most recent first
+    blogs.sort((a, b) => {
+      if (a.publishing_date && b.publishing_date) {
+        return new Date(a.publishing_date).getTime() - new Date(b.publishing_date).getTime();
+      } else {
+        return 0;
+      }
+    });
+  }
 
   const jsonFilePath = path.join(blogDirectory, "blogs.json");
   fs.writeFileSync(jsonFilePath, JSON.stringify(blogs, null, 2));
   return blogs;
 };
 
-getBlogs();
+getBlogs({ blogDirectory: "./blog", sortBy: "publishing_date" });

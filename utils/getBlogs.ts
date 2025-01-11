@@ -56,7 +56,6 @@ export const getBlogs = ({ blogDirectory = "./blog", sortBy = "publishing_date" 
   if (sortBy === "order") {
     // sort the blogs by order
     blogs.sort((a, b) => {
-      console.log(a.order, b.order);
       if (a.order && b.order) {
         return a.order - b.order;
       } else {

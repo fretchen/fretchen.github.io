@@ -18,7 +18,7 @@ properties of the light passing through a medium.
 
 We would like to study the propagation of a electric field through an
 ensemble of atoms as visualized in Fig.
-[1](#881526){reference-type="ref" reference="881526"}. We assume a
+[1](#fig-dielectric). We assume a
 mono-chromatic plane wave to come in, such that we can write down the
 electric field as:
 
@@ -28,21 +28,20 @@ $$
 
 This incoming field will polarize the gas of dipoles.
 
-![Propagation of a light field through a dielectric medium. []{#881526
-label="881526"} ](figures/Absorption-01/Absorption-01){#881526
-width="0.70\\columnwidth"}
+<figure id="fig-dielectric">
+<img src="./lecture10_pic1.png" width="70%" />
+<figcaption>Propagation of a light field through a dielectric medium. </figcaption>
+</figure>
 
 For the propagation we will do the following assumptions:
 
 -   The atoms are independent.
-
 -   We can describe them as small dipoles.
-
 -   We can describe the light in the semi-classical approximation.
 
 We have already employed this picture in in the slightly abstract
 formulation in Lecture 4, where we studied the evolution of the atoms in
-electric fields [@Jendrzejewskia] and in Lecture 6 [@Jendrzejewski]
+electric fields and in Lecture 6 
 concerning the transition rules in hydrogen. This allows us to calculate
 the expectation value of the dipole operator through:
 
@@ -50,8 +49,7 @@ $$
 \langle \vec{D}\rangle = \left\langle\psi\right|\vec{D}\left|\psi\right\rangle
 $$
 
-As already discussed in Lecture 6 [@Jendrzejewski] we
-can then write it down as:
+As already discussed in Lecture 6  we can then write it down as:
 
 $$
 \langle \vec{D}\rangle = E_0 \vec{\alpha}
@@ -112,9 +110,7 @@ $$
 \vec{P} = \mathcal{P} e^{ikz-i \omega_L t}\\
 $$
 
-As shown in more detail in Chapter 4 of [@lukin], Eq.
-[\[Eq:Maxwell\]](#Eq:Maxwell){reference-type="eqref"
-reference="Eq:Maxwell"} reduces then to:
+As shown in more detail in [Chapter 4 of Lukin](http://lukin.physics.harvard.edu/wp-uploads/Papers/285b_notes_2005-1.Lily.pdf), the Maxwell equation reduces then to:
 
 $$
 \frac{\partial}{\partial z}\mathcal{E}+\frac{1}{c}\frac{\partial}{\partial t}\mathcal{E} = \frac{ik}{2\epsilon_0}\mathcal{P}
@@ -128,9 +124,7 @@ $$
 \frac{\partial}{\partial z}\mathcal{E}= i\frac{\omega}{c}\mathcal{E} +\frac{ik}{2\epsilon_0}\mathcal{P}
 $$
 
-Finally, we can use
-[\[Eq:Chi\]](#Eq:Chi){reference-type="eqref" reference="Eq:Chi"} to
-write:
+Finally, we can use the definition of the susceptibility to write:
 
 $$
 \frac{\partial}{\partial z}\mathcal{E}= i\left(\frac{\omega}{c} +\frac{k}{2} \chi(\omega)\right) \mathcal{E}\\
@@ -284,5 +278,5 @@ $$
 \sigma_{ge} = i\frac{\Omega}{2}\frac{\Gamma_2-i(\omega_L-\omega_0)}{\Gamma_2^2+(\omega_0-\omega_L)^2+\Omega^2\Gamma_2/\Gamma}
 $$
 
-In the next lecture [@down-conversion] we will employ those results to
+In the next lecture we will employ those results to
 study the laser.

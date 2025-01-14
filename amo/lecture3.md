@@ -2,9 +2,7 @@
 author:
   - fretchen
   - Selim Jochim
-bibliography:
-  - bibliography/converted_to_latex.bib
-date: January 04, 2025
+order: 3
 title: Lecture 3 - The two-level system
 ---
 

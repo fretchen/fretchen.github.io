@@ -1,0 +1,303 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{siunitx}
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+
+\begin{document}
+
+\title{Lecture 5 - Propagation of light in dielectric media}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 07, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+In this lecture we will study the propagation of light through a dielectric medium like atomic gases. We will see that it is characterized by the susceptibility and discuss the case of two-level atoms. This sets the stage for the laser.%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+Until now we focused on the properties of atoms and how can control them through external fields. In this lecture, we will focus much more on the properties of the light passing through a medium.
+
+\section{Introduction}
+We would like to study the propagation of a electric field through an ensemble of atoms as visualized in Fig. \ref{881526}. We assume a mono-chromatic plane wave to come in, such that we can write down the electric field as:
+\begin{align}
+\vec{E}_{in}&= E_0 \vec{\epsilon}e^{i kz -i\omega_L t}
+\end{align} 
+This incoming field will polarize the gas of dipoles.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Absorption-01/Absorption-01}
+\caption{{Propagation of a light field through a dielectric medium.
+{\label{881526}}%
+}}
+\end{center}
+\end{figure}
+
+
+
+For the propagation we will do the following assumptions:
+\begin{itemize}
+\item The atoms are independent.
+\item We can describe them as small dipoles.
+\item We can describe the light in the semi-classical approximation.
+\end{itemize}
+We have already employed this picture in in the slightly abstract formulation in Lecture 4, where we studied the evolution of the atoms in electric fields \cite{Jendrzejewskia} and in Lecture 6 \cite{Jendrzejewski} concerning the transition rules in hydrogen. This allows us to calculate the expectation value of the dipole operator through:
+\begin{align}
+\langle \vec{D}\rangle = \bra{\psi}\vec{D}\ket{\psi}
+\end{align}
+As already discussed in Lecture 6 \cite{Jendrzejewski} we can then write it down as:
+\begin{align}
+\langle \vec{D}\rangle = E_0 \vec{\alpha}
+\end{align}
+We call $\alpha$ the \textbf{polarizability}. For a large gas with a constant density of dipoles $n$, we obtain a macroscopic polarization of:
+\begin{align}
+\vec{P} &= n \langle \vec{D}\rangle\\
+&= n \vec{\alpha} E_0
+\end{align}
+This leads us then to identify the susceptibility of the dielectric medium:
+\begin{align}\label{Eq:Chi}
+\vec{P} &= \epsilon_0 \chi \vec{E}\\
+\chi &= \frac{n \alpha}{\epsilon_0}
+\end{align}
+To notes to this relation:
+\begin{enumerate}
+\item The linear relationship between polarization and electric field is only valid for weak electric fields. For stronger fields, higher order terms become important. They are the fundamental ingredient of non-linear optics. In general, we can write:
+\begin{align}
+P_i = \epsilon_0 \sum_{j}\chi_{ij}^{1}E_j+\epsilon_0 \sum_{jk}\chi_{ijk}^{2}E_jE_k + ...
+\end{align}
+\item Given that $\chi$ and $\alpha$ are proportional to $\langle D \rangle$, they can be complex. We will see that real and imaginary part have very different interpretations.
+\end{enumerate}
+\section{Propagation of light}
+At this stage we would like to understand the propagation of an electric field through such a polarized medium. The general Maxwell equation actually reads:
+\begin{align}\label{Eq:Maxwell}
+\nabla^2 \vec{E}-\frac{1}{c^2}\frac{\partial^2 \vec{E}}{\partial t^2}= \frac{1}{\epsilon_0 c^2}\frac{\partial^2 \vec{P}}{\partial t^2}
+\end{align}
+This equation can be massively simplified by only looking at a slowly-evolving envelope $\mathcal{E}(r,t)$ and $\mathcal{P}(r,t)$, which are defined through:
+\begin{align}
+\vec{E} &= \mathcal{E} e^{ikz-i \omega_L t}\\
+\vec{P} &= \mathcal{P} e^{ikz-i \omega_L t}\\
+\end{align}
+As shown in more detail in Chapter 4 of \cite{lukin}, Eq. \eqref{Eq:Maxwell} reduces then to:
+\begin{align}
+\frac{\partial}{\partial z}\mathcal{E}+\frac{1}{c}\frac{\partial}{\partial t}\mathcal{E} = \frac{ik}{2\epsilon_0}\mathcal{P}
+\end{align}
+
+This equation becomes especially transparent, if we investigate it for very long times, such that we can perform a Fourier transformation and obtain:
+\begin{align}
+\frac{\partial}{\partial z}\mathcal{E}= i\frac{\omega}{c}\mathcal{E} +\frac{ik}{2\epsilon_0}\mathcal{P}
+\end{align}
+Finally, we can use \eqref{Eq:Chi} to write: 
+\begin{align}
+\frac{\partial}{\partial z}\mathcal{E}&= i\left(\frac{\omega}{c} +\frac{k}{2} \chi(\omega)\right) \mathcal{E}\\
+\mathcal{E}(\omega, z) &=E_0 e^{i\left(\frac{\omega}{c} +\frac{k}{2}\chi(\omega)\right)z} 
+\end{align}
+
+\subsection{Absorption and refraction}
+
+The meaning of the susceptibility becomes especially clear for a continuous wave, where $\omega\rightarrow 0$ and we obtain:
+\begin{align}
+\mathcal{E}(\omega\rightarrow 0, z) &=E_0 e^{i\frac{k\chi(0)}{2} z}
+\end{align}
+We can then see that:
+\begin{itemize}
+\item The imaginary part of the susceptibility leads to absorption on a scale $l^{-1} = \frac{k}{2}\text{Im}(\chi(0))$
+\item The real part describes a phase shift. The evolution of the electric field can be seen as propagating with a wavevector $k \rightarrow k +\frac{k}{2}\text{Re}(\chi(0))$, so the dielectric medium has a refractive index $n = 1 + \frac{\text{Re}(\chi(0))}{2}$
+\end{itemize}
+
+\subsection{Dispersion}
+If the electric field has a certain frequency distribution, we might have to perform the proper integral to obtain the time evolution, i.e.:
+\begin{align}
+\mathcal{E}(t, z) &=\int d\omega e^{-i\omega t}\mathcal{E}(\omega,0) e^{i\left(\frac{\omega}{c} +\frac{k}{2}\chi(\omega)\right)z}
+\end{align}
+
+To solve the problem we can develop the susceptibility:
+\begin{align}
+\chi(\omega) = \chi(0)+\frac{d\chi}{d\omega}\omega
+\end{align}
+And we obtain:
+\begin{align}
+\mathcal{E}(t, z) &=e^{izk\chi(0)/2}
+\mathcal{E}(t-z/v_g, 0)\\
+v_g &= \frac{c}{1+\frac{\omega_L}{2}\frac{d\chi}{d\omega}}
+\end{align}
+
+So the group velocity is controlled by the derivative of the susceptibility !
+
+
+
+\section{Two level system}
+After this rather general discussion, we will now employ it to understand the action of two-level systems on the travelling beam. So we will now focus on the influence of the atoms on the field in comparision with the previous discussions. Further, we will have to take into account the finite lifetime of the excited states in a phenomenological manner. For a two level system with excited state $\ket{e}$ and groundstate $\ket{g}$, we can directly write down the wavefunction as:
+\begin{align}
+\ket{\psi} = \gamma_g\ket{g}+ \gamma_e\ket{e}
+\end{align}
+In this basis, the dipole element reads:
+\begin{align}
+\langle D\rangle &= \bra{e}D\ket{g} \gamma_e^*\gamma_g\\
+&= d \sigma_{eg}
+\end{align}
+In the second line we introduced the notations:
+\begin{itemize}
+\item $d = \bra{e}D\ket{g}$
+\item The product $\gamma_e^*\gamma_g$ can identified with the off-diagonal component of the density operator $\sigma=\ket{\psi}\bra{\psi}$. We will often call it \textbf{coherence}.
+\end{itemize}
+The Hamiltonian of this model reads then in the rotating wave-approximation:
+\begin{align}
+\hat{H} &= 0\ket{g}\bra{g}+\hbar\delta \ket{e}\bra{e} + \hbar\Omega\left[\ket{e}\bra{g}+\ket{g}\bra{e}\right]\\
+\Omega &= d E/\hbar
+\end{align}
+This is exactly the model that we discussed in the lectures 3 and 4 \cite{Jendrzejewskib,Jendrzejewskia}. We then found that the time evolution might be described via:
+\begin{align}
+i\dot{\gamma}_g(t) &= \Omega \gamma_e\\
+i\dot{\gamma}_e(t) &= \delta \gamma_e +\Omega \gamma_g\\
+\end{align}
+We can combine them to the components of the density operator, which then read:
+\begin{align}
+\sigma_{ij} = c_{i}^*c_j
+\end{align}
+From these coefficients, we can now obtain the evolution of the populations:
+\begin{align}
+\dot{N}_g &= \dot{\sigma}_{gg} = \dot{\gamma}_{g}^*\gamma_g+ \gamma_{g}^*\dot{\gamma}_g\\
+&= i\Omega(\sigma_{eg}-\sigma_{ge})\\
+\dot{N}_e &= -\dot{N}_g
+\end{align}
+So the total number of atoms stays automatically conserved. As for the coherences we obtain:
+\begin{align}
+\dot{\sigma}_{eg} &= \dot{\gamma}_{e}^*\gamma_g+ \gamma_{e}^*\dot{\gamma}_g\\
+&= i\delta \sigma_{eg}+i (N_g-N_e)\Omega\\
+\dot{\sigma}_{ge}&= -i\delta \sigma_{ge}-i (N_g-N_e)\Omega
+\end{align}
+
+This density operator approach allows us to introduce spontaneous decay in a very straight-forward fashion:
+\begin{itemize}
+\item The time evolution of the excited state gets an additional term $-\Gamma N_e$.
+\item Atoms coming from the excited state relax to the ground state, so we add a term $\Gamma N_e$.
+\item The coherence decays also through a term $-\Gamma_2 \sigma_{ge}$. We will use here for simplicity the limit of $\Gamma_2 = \Gamma/2$
+\end{itemize}
+So the full equations read now:
+\begin{align}
+\dot{N}_g &= i\Omega(\sigma_{eg}-\sigma_{ge})+\Gamma N_e\\
+\dot{\sigma}_{ge}&= -i\delta \sigma_{ge}-i (N_g-N_e)\Omega-\Gamma_2\sigma_{ge}
+\end{align}
+
+At this stage we can find the steady-state solutions by setting $\dot{N}_g = \dot{\sigma}_{ge} = 0$. This leads too:
+\begin{align}\label{Eq:PopTwoLevel}
+N_e &= \frac{1}{2}\frac{\Omega^2 \frac{\Gamma_2}{\Gamma}}{(\omega_0-\omega_L)^2+\Gamma_2^2+\Omega^2\frac{\Gamma_2}{\Gamma}}\end{align}
+\begin{align}\label{Eq:CohTwoLevel}
+\sigma_{ge} &= i\frac{\Omega}{2}\frac{\Gamma_2-i(\omega_L-\omega_0)}{\Gamma_2^2+(\omega_0-\omega_L)^2+\Omega^2\Gamma_2/\Gamma}
+\end{align}
+
+In the next lecture \cite{down-conversion} we will employ those results to study the laser.
+
+\selectlanguage{english}
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

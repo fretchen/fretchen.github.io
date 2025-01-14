@@ -2,9 +2,7 @@
 author:
   - Fred Jendrzejewski
   - Selim Jochim
-bibliography:
-  - bibliography/converted_to_latex.bib
-date: January 03, 2025
+order: 1
 title: Lecture 1 - Some cooking recipes for Quantum Mechanics
 ---
 

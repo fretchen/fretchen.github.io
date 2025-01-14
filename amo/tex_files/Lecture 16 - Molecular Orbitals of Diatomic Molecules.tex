@@ -1,0 +1,316 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{siunitx}
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+\newcommand*\ch[1]{\ensuremath{\mathrm{#1}}}
+
+\begin{document}
+
+\title{Lecture 16 - Molecular Orbitals of Diatomic Mole\-cules}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\author[2]{Selim Jochim}%
+\author[2]{Matthias Weidemüller}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+\affil[2]{Physikalisches Institut der Universität Heidelberg}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 07, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+In this lecture we will discuss a systematic approach to build up molecules from more complex atoms.%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+In the last lecture \cite{molecules} we discussed the existing orbits within the linear combination of orbitals. We will now try to systematically fill up the orbitals with electrons in order of their energy.
+
+
+\section{Molecular bindings}
+A good overview over the different mechanism for molecular binding is given in Fig. \ref{305992}
+In the last lecture we have seen two different binding processes of molecular bonding:
+\begin{enumerate}
+\item Ionic binding, which was important in the $H_2^+$ molecule.
+\item Kovalent binding, which dominated the $H_2$ molecule.
+\end{enumerate}
+Both are important for small distances. For large distance the van der Waals interaction can create weakly bound molecules.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-12-07-um-08-07-05/Bildschirmfoto-2018-12-07-um-08-07-05}
+\caption{{Different binding mechanisms in diatomic molecules. Figure taken from
+\protect\cite{Hertel_2015}
+{\label{305992}}%
+}}
+\end{center}
+\end{figure}
+
+\section{Van-der Vaals interaction}
+The question is then how can these systems interact ? They do not share electrons and they are neutral, so they do not have a permanent electric dipole moment. The magnetic dipole interaction is extremely weak anyway. 
+
+The key is induced dipole moment of the atom in in an electric field, seen in lecture 6 \cite{Jendrzejewski}. Each of the atoms can have a dipole moment $\mathbf{D}_i = q \mathbf{r}_i$.  As each atom is neutral, they interact through their dipole-dipole interaction:
+\begin{align}\label{Eq:DipoleDipoleInteraction}
+\hat{W}_{dd} =\frac{1}{4\pi \epsilon_0}\frac{e^2}{R^3}\left(\mathbf{r}_A\cdot \mathbf{r}_B-3(\mathbf{r}_A\cdot \mathbf{n})(\mathbf{r}_B\cdot \mathbf{n})\right)
+\end{align}
+We now have to perform the amplitude of this energy quantum mechanically.  In a first step, we express $\hat{W}_{dd}$ in terms of the operators $\hat{X}_{A,B}, \hat{Y}_{A,B}, \hat{Z}_{A,B}$.  The orientation of the atom is sketched in the inset in Fig. \ref{710038}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/DipoleAxes/DipoleAxes}
+\caption{{Configuration of two dipoles.
+{\label{710038}}%
+}}
+\end{center}
+\end{figure}
+
+We can write then:
+\begin{align}
+\hat{W}_{dd} &=\frac{1}{4\pi \epsilon_0}\frac{e^2}{R^3}\left(\hat{X}_A \hat{X}_B + \hat{Y}_A\hat{Y}_B - 2 \hat{Z}_A \hat{Z}_B\right)
+\end{align}
+
+We are only interested in their interaction at very large distances, such that we can treat the interaction perturbatively (see lecture 7 \cite{Jendrzejewskia}). To first order, we have to evaluate:
+\begin{align}
+E_1 = \bra{\phi_{n,0,0}^A, \phi_{n,0,0}^B} \hat{W}_{dd} 
+\ket{\phi_{n,0,0}^A, \phi_{n,0,0}^B} 
+\end{align}
+It only contains terms of the kind $\bra{\phi_{n,0,0}^i} \hat{X}_i \ket{\phi_{n,0,0}^i} $. As the dipole moment is zero, the first order correction in the energy is zero too. The idea is then that the mean electric field created by the atom might be zero. However, quantum mechanics allows for fluctuations of the type $\langle |e\mathbf{r}|^2\rangle$. They are taken into account through second order perturbation theory. We obtain directly: 
+\begin{align}
+E_2 &= \sum_{\phi,\phi'} \frac{|\bra{\psi_{\phi}^A,\psi_{\phi'}^B}\hat{W}_{dd}\ket{\psi_{0}^A,\psi_{0}^B}|^2}{(E_{0}^A+E_0^B -E_\phi^A -E_{\phi'}^B)}
+\end{align}
+And we can also pull out the $R^3$ dependence of each $W$, to obtain a general expression for the \textbf{van-der-Waals interaction}:
+\begin{align}
+E_2 &= - \frac{C_6}{R^6}
+\end{align}
+
+To get an estimate for the typical scale of the binding we can have a look into the prefactor $C_6$. We will do this here for highly excited states of hydrogen as it is relevant to the other alkalis too:
+\begin{itemize}
+\item Each $\hat{X}$ will be be proportional to the typical extension of its orbit, such that we have $\hat{X} \sim n^2 a_0 $ within the electronic shells.
+\item As for the energy difference, we know that the energy of high $n$ $E_n \approx \frac{ R_{y,\infty}}{n^2}$ (the screening makes all alkalis look very similiar for high energies). The energy difference is therefore in the order of $\delta E_n \approx \frac{ R_{y,\infty}}{n^3}$.
+\end{itemize} 
+ Putting it all together, we obtain
+\begin{align}
+C_6 \approx \frac{e^4 a_0^4 n^8}{R_{y,\infty}/n^3} \approx \frac{e^4 a_0^4}{R_{y,\infty} (4\pi\epsilon_0)^2} n^{11}
+\end{align}
+This prediction has been directly tested as shown in Fig. \ref{681790}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/DipoleConfigv2/DipoleConfigv2}
+\caption{{Direct measurement of the van-der-Waals force in \protect\cite{B_guin_2013}
+{\label{681790}}%
+}}
+\end{center}
+\end{figure}
+
+\section{Molecular orbit theory}
+We would like to put together more complex molecules step-by-step. Let's take a step back to the hydrogen molecule to formulate the problem.
+
+\subsection{The hydrogen molecule}
+
+ Let us have a brief look at H\textsubscript{2} again and consider only contributions from $1s$ atomic orbitals. We saw that we can distribute the two electrons within the gerade and ungerade orbital of the hydrogen ion. So our basic orbitals will be:
+\begin{align}
+\sigma_g \propto \left( \psi_{1s} (\vec{r}_\textrm{a}) + \psi_{1s} (\vec{r}_\textrm{b}) \right) \label{eq:psiplus}
+\end{align}
+\begin{align}
+\sigma_u \propto \left( \psi_{1s} (\vec{r}_\textrm{a}) - \psi_{1s} (\vec{r}_\textrm{b}) \right). \label{eq:psiminus}
+\end{align}
+ Lower case letters stand for the individual electrons while upper case letters characterize the whole system. We will now attempt to fill up the two orbitals  \eqref{eq:psiplus} and \eqref{eq:psiminus} with the two electrons. 
+ 
+We can now distribute the two electrons in different ways onto  the orbitals  \eqref{eq:psiplus} and \eqref{eq:psiminus}:
+\begin{itemize}
+\item Both electrons in a gerade orbital $1\sigma_g^{2}$.
+\item Both electrons in an ungerade orbital $1\sigma_u^{2}$.
+\item One electron in a gerade orbtial and one electron in an ungerade orbital: $\sigma_g^{1}1\sigma_u^{1}$.
+\end{itemize}
+
+In a second step, we need to respect the Pauli principle for the two electrons, which states that the full wavefunction should be anti-symmetric under exchange of particles. We had a detailled discussion of the topic on helium \cite{Jendrzejewskib}.
+So for the first configuration $1\sigma_g^{2}$ we have:
+\begin{align}
+\psi_1 \propto \sigma_g(1) \cdot \sigma_g(2) \qquad (S=0, ^1\Sigma_g)
+\end{align}
+The spin has to be in a singlet here as the wavefunction itself is symmetric. Further, the parity of the full wavefunction is gerade as $g \times g = g$. So $\psi_1$ is in a $^1\Sigma_g$ configuration.
+
+As one atom is in $1\sigma_g^{1}$ and the other one is in $1\sigma_u^{1}$, the parity of the full wavefunction is $g\times u = u$. Additionally, we can choose which atom to position in which orbital and then also the symmetry of the superposition. The symmetric superposition is:
+\begin{align}
+\psi_{2} &\propto \left (\sigma_g(1) \cdot \sigma_u(2) + \sigma_u(1) \cdot \sigma_u(2)\right) \quad \qquad (S=0, ^1\Sigma_u)
+\end{align}
+As the orbital superposition is symmetric, we once again have work in a spin singlet to achieve the overall anti-symmetry of the two-electron wavefunction. So $\psi_2$ is in a $^1\Sigma_u$ configuration.
+
+We can also choose anti-symmetric superposition of the two distinguishable orbitals:
+\begin{align}
+\psi_3 \propto \left( \sigma_g(1)\cdot \sigma_u(2)-\sigma_u(1) \cdot \sigma_g(2) \right) \qquad (S=1, ^3\Sigma_u)
+\end{align}
+As the orbital superposition is anti-symmetric, we have work in a spin triplet to achieve the overall anti-symmetry of the two-electron wavefunction. So $\psi_3$ is in a $^3\Sigma_u$ configuration.
+
+And finally we have for $1\sigma_u^{2}$:
+\begin{align}
+\psi_4 \propto \sigma_u(1)\cdot \sigma_u(2) \qquad (S=0, ^1\Sigma_g)
+\end{align}
+The spin has to be in a singlet here as the wavefunction itself is symmetric. Further, the parity of the full wavefunction is gerade as $u \times u = g$. So $\psi_4$ is in a $^1\Sigma_g$ configuration.
+
+
+At short distance the energy ordering is $E(\psi_1) < E(\psi_2) \sim E(\psi_3) < E(\psi_4)$.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=200]{figures/configuration/configuration}
+\caption{{Configuration interaction. The faded lines indicate how the energy
+of~\(\psi_1\) and~\(\psi_4\) would naively. If the
+system is diagonalized in a more flexible basis, that allows for
+superpositions, the orbits repel. Taken from~\protect\cite{mechanics}.
+{\label{953307}}%
+}}
+\end{center}
+\end{figure}
+
+However for larger distances the gerade or ungerade character of each wave function becomes of less importance and the two configurations $\psi_1$ and $\psi_4$ become of similiar energy. They are further both $^1\Sigma_g$ states. Therefore also all linear combinations of the two  states have the valid symmetries and and more flexibel trial solution would be of the form:
+\begin{align}
+c_1 \psi_1 + c_4 \psi_4
+\end{align}
+The full solution then shows clear level repulsion between the two uncoupled channels. This concept is called ``configuration interaction''.
+
+
+\subsection{Conditions for (anti-)binding of particular orbitals.}
+The conditions for the creating of (anti-)binding orbitals is viusalized in Fig  \ref{915399}.
+
+In a first step, there has to be sufficient wave function overlap, such that there can be constructive and destructive interference. This implies that the orbit has to be large enough to 'see' the other atom, but not to diffuse. This typically implies that only the valence shell has to be considered.
+
+Only orbits of the same symmetry group can form a bond. The main symmetry property here is the total $L_z$ with respect to the axis of the molecule. We have (table 4.5 of \cite{Demtr_der_2010}):
+\begin{itemize}
+\item $s$, $p_z$ and $d_{z^2}$ have $L_z = 0$ ($\Sigma$).
+\item $p_x$, $p_y$ as well as $d_{yz}$, $d_{zx}$ have $|L_z| = 1$($\Pi$)
+\end{itemize}
+Having a sufficient overlap is obviously not enough, the two orbits also have to have the same a similiar energy, which is easily fulfilled in a homonuclear molecule. But if we now have two different molecules the orbital energy of (A) might be different from the orbital energy of (B). The larger the difference, the smaller is the shift.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.84\columnwidth]{figures/Bildschirmfoto-2018-12-07-um-08-41-42/Bildschirmfoto-2018-12-07-um-08-41-42}
+\caption{{a) Two atomic orbitals with resonant energy form a binding and
+anti-binding orbital. b) Molecular orbitals of heteronuclear molecules.
+{\label{915399}}%
+}}
+\end{center}
+\end{figure}
+
+\section{Homo-nuclear shell structure}
+
+We can finally put all this together to build up the shell structure of homo-cuclear diatomic molecules as shown in Fig.  \ref{128321}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-12-07-um-12-44-04/Bildschirmfoto-2018-12-07-um-12-44-04}
+\caption{{The shell structure of some homonuclear diatomic molecules. Taken
+from~\protect\cite{mechanics}.
+{\label{128321}}%
+}}
+\end{center}
+\end{figure}
+
+
+
+The name of the molecule indicates the highest occupied molecular orbit (\textit{HOMO}). The next empty shell is then called the lowest occupied molecular orbit (\textit{LUMO}).
+
+\selectlanguage{english}
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

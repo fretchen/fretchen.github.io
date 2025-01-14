@@ -1,0 +1,334 @@
+\documentclass[10pt]{article}
+
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{breakcites}
+\usepackage{lineno}
+\usepackage{hyphenat}
+
+
+
+
+
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\@combinedblfloats{\box\@outputbox}{\unvbox\@outputbox}{}{%
+  \errmessage{\noexpand\@combinedblfloats could not be patched}%
+}%
+\makeatother
+
+
+\usepackage[round]{natbib}
+\let\cite\citep
+
+
+
+
+\renewenvironment{abstract}
+  {{\bfseries\noindent{\abstractname}\par\nobreak}\footnotesize}
+  {\bigskip}
+
+\titlespacing{\section}{0pt}{*3}{*1}
+\titlespacing{\subsection}{0pt}{*2}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*1.5}{0pt}
+
+
+\usepackage{authblk}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{latexsym}
+\usepackage{textcomp}
+\usepackage{longtable}
+\usepackage{tabulary}
+\usepackage{booktabs,array,multirow}
+\usepackage{amsfonts,amsmath,amssymb}
+\providecommand\citet{\cite}
+\providecommand\citep{\cite}
+\providecommand\citealt{\cite}
+% You can conditionalize code for latexml or normal latex using this.
+\newif\iflatexml\latexmlfalse
+\AtBeginDocument{\DeclareGraphicsExtensions{.pdf,.PDF,.eps,.EPS,.png,.PNG,.tif,.TIF,.jpg,.JPG,.jpeg,.JPEG}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,english]{babel}
+
+
+
+
+
+
+
+
+\usepackage{siunitx}
+\usepackage{amsmath}
+\newcommand{\bra}[1]{\ensuremath{\left\langle#1\right|}}
+\newcommand{\ket}[1]{\ensuremath{\left|#1\right\rangle}}
+\newcommand{\braket}[1]{\ensuremath{\left\langle#1\right\rangle}}
+\newcommand{\rhohat}{\hat{\rho}}
+\newcommand{\tr}[1]{\mathrm{tr}(#1)}
+\newcommand{\trarb}[2]{\mathrm{tr}_{#1}(#2)}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand*\dif{\mathop{}\!\mathrm{d}}
+\newcommand{\eexp}[1]{\mathrm{e}^{#1}}
+\newcommand*\ch[1]{\ensuremath{\mathrm{#1}}}
+
+\begin{document}
+
+\title{Lecture 13  - Atoms with many electrons}
+
+
+
+\author[1]{Fred Jendrzejewski}%
+\author[2]{Selim Jochim}%
+\author[2]{Matthias Weidemüller}%
+\affil[1]{Kirchhoff-Institut für Physik}%
+\affil[2]{Physikalisches Institut der Universität Heidelberg}%
+
+
+\vspace{-1em}
+
+
+
+  
+  \date{January 07, 2025}
+
+
+\begingroup
+\let\center\flushleft
+\let\endcenter\endflushleft
+\maketitle
+\endgroup
+
+
+
+
+
+\selectlanguage{english}
+\begin{abstract}
+After our discussion of extremely simple atoms like hydrogen and helium, we will now discuss the most important properties of more complex atoms. We will see, how we can categorize them and discuss some of the general properties%
+\end{abstract}%
+
+
+
+\sloppy
+
+
+We started the discussion of atoms in lecture 3 by an extremely simple and powerful model, the two-level system \cite{Jendrzejewski}. We then moved on to discuss how it can emerge within the hydrogen atom and the Helium atom. For both of these we dived again into simplified schemes. Especially for Hydrogen, we saw in lecture 7 the exploding complexity of the models as we tried to describe it \cite{Jendrzejewskia}. If we now want to leave these rather academic problems and turn to the other widely used atoms, molecules etc, we have towards effective models for two reasons:
+\begin{itemize}
+\item Analytical solutions do not exist.
+\item Full numerical solutions become extremely and expansive.
+\end{itemize}
+
+A particularly instructive discussion of the ineffeciency of brute force numerical methods was given by Kenneth Wilson, the father of the renormalization group, in Sec 3 of \cite{Wilson_1975}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-11-27-um-10-08-12/Bildschirmfoto-2018-11-27-um-10-08-12}
+\caption{{A toy model, exemplifying the problem of direct numerical analysis
+{\label{475459}}%
+}}
+\end{center}
+\end{figure}
+
+The main idea is plotted in Fig. \ref{475459} and its description in the words of Kenny Wilson can be found in Fig. \ref{139900}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-11-27-um-10-12-00/Bildschirmfoto-2018-11-27-um-10-12-00}
+\caption{{On the inefficiency of brute force numerics as described in Sec 3 of
+\protect\cite{Wilson_1975}
+{\label{139900}}%
+}}
+\end{center}
+\end{figure}
+
+We will come back to different experimental approaches to solve problems for which we cannot devise effective theories at a later stage, when we discuss quantum simulation and quantum computation with atomic systems. But first we will try to gain a good understanding of atoms with many electrons. 
+
+\section{Atoms with Many Electrons }
+As already discussed before, the N electron system cannot be solved in its full complexity, so we have to walk through the different levels of physical effects to understand what is going on. We will start out with the simplest model, which consists of  \begin{itemize}
+\item N electrons without spin
+\item Bound to the point-like nucleus of charge $Z$, which is supposed to be not moving.
+\end{itemize}
+
+In natural units, the Hamiltonian can be written as:
+\begin{align}
+\hat{H} = \sum_i^N \left(-\frac{1}{2} \vec{\nabla}^2_{r_i} - \frac{Z}{r_i} \right) + \sum_{i<j} \frac{1}{r_{ij}}. \label{eq:manyelectronhamiltonian}
+\end{align}
+%
+The system is visualized in Fig. \ref{613170}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.42\columnwidth]{figures/Bildschirmfoto-2018-11-27-um-10-30-52/Bildschirmfoto-2018-11-27-um-10.36.31}
+\caption{{Charge distribution of three electrons bound to the nucleus.
+{\label{613170}}%
+}}
+\end{center}
+\end{figure}
+
+As before the Hamiltonian has two contributions:
+\begin{itemize}
+\item The well understood binding of each electron to the nucleus, which allows us to make the connection with the hydrogen orbitals.
+\item The interaction between the electrons, which couples all the orbitals.
+\end{itemize}
+
+How can we deal with the $1/r_{ij}$ terms?  If many electrons are contained in the system we cannot ignore the influence of the electron-electron interaction on the system, which was already a questionable approximation in the Helium atom \cite{Jendrzejewskib}.
+
+\section{Central Field Approximation}
+
+ But we can bring back the system to the well-known problems with spherical symmetry by splitting the interaction into two parts. One will be assumed to have spherical symmetry and will be written as $\sum_i S(r_i)$ and the rest will be treated as a perturbation. So we obtain the Hamiltonian:
+\begin{align}
+\hat{H} = \hat{H}_s + \hat{H}_1\\
+\hat{H}_s = \sum_i^N \left(-\frac{1}{2} \vec{\nabla}^2_{r_i} + V_\textrm{cf}(r_i) \right)\\
+V_\textrm{cf} (r_i) = - \frac{Z}{r_i} + S(r_i),
+\end{align}
+The perturbation is then difference between the spherically symmetric part of the interaction and the true electron-electron interaction:
+\begin{align}
+\hat{H}_1 = \sum_{i<j} \frac{1}{r_{ij}} - \sum_i S(r_i)
+\end{align}
+$S(r_i)$ describes now the screening of the nucleus due to the other electrons. This function interpolates between (see \ref{342008}):
+\begin{align}
+V_\textrm{cf} (\vec{r}_i) = \left\{ \begin{array}{ccc} -\frac{Z}{r_i} &\text{for}& r\to 0 \\ \\ -\frac{Z-N+1}{r_i} & \text{for} & r\to\infty  \end{array} \right.
+\end{align}
+
+\begin{itemize}
+\item For very small distances the electron mainly sees the strong attraction of the nucleus.
+\item For very large distances the other electrons mostly screen the charge of the nucleus and electron feels the $1/r$ potential of the hydrogen atom.
+\end{itemize}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-10-01-um-13-13-46/Bildschirmfoto-2018-10-01-um-13-13-46}
+\caption{{The screening as a function of distance.
+{\label{342008}}%
+}}
+\end{center}
+\end{figure}
+
+We can now focus on the study of the part with spherical symmetry $\hat{H}_s$. Given its symmetry, we can once again use the conservation of orbital angular momentum (see Lecture 5 \cite{Jendrzejewskic}). As a result, the wave function can be a product state of single-particle wave functions:
+%
+\begin{align}
+\psi_\textrm{cf} (\vec{r}_1 , \cdots , \vec{r}_\textrm{n} ) = \psi_1 (\vec{r}_1) \cdot \psi_2(\vec{r}_2) \cdot \cdots \psi_\textrm{n}(\vec{r}_\textrm{n}),
+\end{align}
+%
+where $\psi_i(\vec{r}_i)$ are solutions of the Schr\selectlanguage{ngerman}ödinger equation:
+%
+\begin{align}
+\left( - \frac{1}{2} \vec{\nabla}^2_{\vec{r}_i} + V_\textrm{cf} (r_i) \right) \psi_i (\vec{r}_i) = E_i \psi_i(\vec{r}_i).
+\end{align}
+%
+$\psi_i$ can be split up into a radial and an angular part:
+%
+\begin{align}
+\psi_i = \psi(nlm)_i = Y_{lm} (\theta, \varphi) \cdot R_{nl} (r).
+\end{align}
+%
+For the radial part we get $u(r) = r\cdot R(r)$. Thus, $u(r)$ solves the radial Schrödinger equation:
+%
+\begin{align}
+\left( - \frac{1}{2} \frac{d^2}{dr^2} + V_\textrm{cf}(r) + \frac{l(l+1)}{2r^2}\right) u_{nl} = E_{nl} u_{nl} (r).
+\end{align}
+%
+The major difference to the \ch{H} atom is that the degeneracy of the $l$ levels is lifted because of $V_\textrm{cf}$. 
+
+\subsection{On the determination of the effective potential}
+We will not discuss here the different techniques to derive the central field in detail as this is quickly diving into the different numerical techniques of many-body systems. A first discussion of the different approaches can be found in chapter 10 of \cite{Hertel_2015}. The different levels of sophistication are:
+\begin{itemize}
+\item The \textit{Thomas-Fermi} model, which assumes that the $N$ electrons behave like a  Fermi gas inside the $Z/r$ potential.
+\item The Hartree method, in which the effective potential is iteratively recalculated based on the obtained solutions to the radial Schrödinger equation.
+\item The Hartree Fock method, in which we also take into account the proper symmetrization of the wavefunctions.
+\end{itemize}
+
+
+
+\section{Filling up the shells}
+
+If we can ignore the spin for the determination of the energy levels, we have the following quantum numbers:
+
+\begin{itemize}
+\item $n$, which is electron shell.
+\item $l$, which is the orbital angular momentum with $l<n$.
+\item $s$, which is the spin of the electron and it can be $\pm 1/2$
+\end{itemize}
+
+As the electrons are fermions we can fill up each of the $nl$ states with two of them. We then write down the configuration of the electron by writing down the numbers of electrons per $nl$ configuration. So we get the periodic table shown in Fig. \ref{783282}. We will typically use the following notation:
+\begin{itemize}
+\item A \textit{configuration} is the distribution of the electrons over the different orbits.
+\item Electrons with the same $n$ are part of the same \textit{shell}.
+\item Electrons with the same $n$ and $l$ are part of the same \textit{sub-shell}.
+\item The inner shells are typically filled and form the \textit{core}. 
+\item The outermost shell is typically named the \textit{valence} shell.
+\end{itemize}\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Detailiertes-Periodensystem-mit-Elektronenkonfiguration/Detailiertes-Periodensystem-mit-Elektronenkonfiguration}
+\caption{{Periodic table as taken from \protect\cite{commons}
+{\label{783282}}%
+}}
+\end{center}
+\end{figure}
+
+\section{Alkali Atoms}
+
+Alkali atoms are the simplest to understand and widely used in the field of laser cooling. The electron configurations are
+\paragraph{Examples.}
+\begin{itemize}
+\item \ch{Li}: 1s$^2$2s
+\item \ch{Na}: 1s$^2$2s$^2$2p$^6$3s
+\item \ch{K}: 1s$^2$2s$^2$2p$^6$3s$^2$3p$^6$4s, so we fill up the 4s orbitals before the 3d orbitals.
+\item \ch{Rb}: 1s$^2$2s$^2$2p$^6$3s$^2$3p$^6$3d$^{10}$4s$^2$4p$^6$5s, so we fill up the 5s orbitals before the 4d and 4f orbitals.
+\item \ch{Cs}: 1s$^2$2s$^2$2p$^6$3s$^2$3p$^6$3d$^{10}$4s$^2$4p$^6$4d$^{10}$5s$^{2}$5p$^6$6s, so we fill up the 6s orbitals before the 4f, 5d and 5f orbitals.
+\end{itemize}
+This structure can be nicely understood by the idea of screening as introduced in the central field approximation. Consider for example the \ch{Na} for which one electron has to be on the third shell. Within the hydrogen atom the 3s, 3p and 3d are degenerate, however the screening will lift this degeneracy.
+\begin{itemize}
+\item Electrons in the s-shell spend a lot of time close to the nucleus and fill a strong binding potential, i.e. they have a low energy.
+\item On the other extreme the electrons in the d-shell have large angular momentum, which hinders them from getting close to the core. The 10 electrons can therefore efficiently screen the nucleus from the electron. The energy of the d shell is therefore quite close to the energy of the hydrogen atom.
+\end{itemize}
+
+For \ch{K} the same principle applies. 
+\begin{itemize}
+\item The 4s orbital is strongly shifted down to the strong nuclear potential.
+\item The 3d orbital is well screened by the other electrons, such that it is of higher energy than the 4s orbit.
+\end{itemize}
+We can describe this effect empirically through the \textit{quantum defect}. We simply write down the energy levels as:
+\begin{align}
+E_{nl} \cong -  R_{y,\infty} \cdot \left( \frac{1}{n-\delta_l} \right)^2,
+\end{align}
+where $\delta_l$ is the quantum defect for a certain value of $l$. Some examples are summarized in Fig. \ref{610998}.\selectlanguage{english}
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.70\columnwidth]{figures/Bildschirmfoto-2018-11-27-um-12-35-18/Bildschirmfoto-2018-11-27-um-12-35-18}
+\caption{{The quantum defect for different alkali atoms. Table 3.4 from Ref
+\protect\cite{Hertel_2015a}
+{\label{610998}}%
+}}
+\end{center}
+\end{figure}
+
+The effect of the quantum defect is actually so substantial that it introduces optical transitions between the different subshells of Alkali atoms.
+\begin{itemize}
+\item For Li there is a $2s\rightarrow 2p$ transition at 671 nm.
+\item For Na there is a $3s\rightarrow 3p$ transition at 589 nm.
+\item For K there is a $4s\rightarrow 4p$ transition at 767 nm and 770nm.
+\item For Rb there is a $5s\rightarrow 5p$ transition at 780 nm and at 795nm.
+\item For Cs there is a $6s\rightarrow 6p$ transition at 852 nm and at 894nm.
+\end{itemize}
+
+What is the origin of these doublets ? The scaling of the splitting with the nucleus indicates relativistic origins and the splitting is indeed due to spin-orbit coupling, which we will discuss in the next lecture \cite{systems}.
+
+\selectlanguage{english}
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{bibliography/converted_to_latex.bib%
+}
+
+\end{document}
+

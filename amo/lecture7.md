@@ -2,9 +2,7 @@
 author:
   - Fred Jendrzejewski
   - Selim Jochim
-bibliography:
-  - bibliography/converted_to_latex.bib
-date: January 04, 2025
+order: 7
 title: Lecture 7 - Beyond the 'boring' hydrogen atom
 ---
 

@@ -43,5 +43,6 @@
     "vike": "^0.4.210",
     "vite": "^6.0.5"
   },
-  "type": "module"
+  "type": "module",
+  "homepage": "https://www.fretchen.eu"
 }

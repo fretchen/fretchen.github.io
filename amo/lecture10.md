@@ -14,7 +14,7 @@ Until now we focused on the properties of atoms and how can control them
 through external fields. In this lecture, we will focus much more on the
 properties of the light passing through a medium.
 
-# Introduction
+## Introduction
 
 We would like to study the propagation of a electric field through an
 ensemble of atoms as visualized in Fig.
@@ -90,7 +90,7 @@ $$
     $\langle D \rangle$, they can be complex. We will see that real and
     imaginary part have very different interpretations.
 
-# Propagation of light
+## Propagation of light
 
 At this stage we would like to understand the propagation of an electric
 field through such a polarized medium. The general Maxwell equation
@@ -131,7 +131,7 @@ $$
 \mathcal{E}(\omega, z) =E_0 e^{i\left(\frac{\omega}{c} +\frac{k}{2}\chi(\omega)\right)z} 
 $$
 
-## Absorption and refraction
+### Absorption and refraction
 
 The meaning of the susceptibility becomes especially clear for a
 continuous wave, where $\omega\rightarrow 0$ and we obtain:
@@ -149,7 +149,7 @@ We can then see that:
     $k \rightarrow k +\frac{k}{2}\text{Re}(\chi(0))$, so the dielectric
     medium has a refractive index $n = 1 + \frac{\text{Re}(\chi(0))}{2}$
 
-## Dispersion
+### Dispersion
 
 If the electric field has a certain frequency distribution, we might
 have to perform the proper integral to obtain the time evolution, i.e.:
@@ -173,7 +173,7 @@ $$
 So the group velocity is controlled by the derivative of the
 susceptibility !
 
-# Two level system
+## Two level system
 
 After this rather general discussion, we will now employ it to
 understand the action of two-level systems on the travelling beam. So we

@@ -1,6 +1,6 @@
 ---
 author:
-- Fred Jendrzejewski
+  - Fred Jendrzejewski
 order: 10
 title: Lecture 10 - Propagation of light in dielectric media
 ---
@@ -14,7 +14,7 @@ Until now we focused on the properties of atoms and how can control them
 through external fields. In this lecture, we will focus much more on the
 properties of the light passing through a medium.
 
-# Introduction
+## Introduction
 
 We would like to study the propagation of a electric field through an
 ensemble of atoms as visualized in Fig.
@@ -35,13 +35,13 @@ This incoming field will polarize the gas of dipoles.
 
 For the propagation we will do the following assumptions:
 
--   The atoms are independent.
--   We can describe them as small dipoles.
--   We can describe the light in the semi-classical approximation.
+- The atoms are independent.
+- We can describe them as small dipoles.
+- We can describe the light in the semi-classical approximation.
 
 We have already employed this picture in in the slightly abstract
 formulation in Lecture 4, where we studied the evolution of the atoms in
-electric fields and in Lecture 6 
+electric fields and in Lecture 6
 concerning the transition rules in hydrogen. This allows us to calculate
 the expectation value of the dipole operator through:
 
@@ -49,7 +49,7 @@ $$
 \langle \vec{D}\rangle = \left\langle\psi\right|\vec{D}\left|\psi\right\rangle
 $$
 
-As already discussed in Lecture 6  we can then write it down as:
+As already discussed in Lecture 6 we can then write it down as:
 
 $$
 \langle \vec{D}\rangle = E_0 \vec{\alpha}
@@ -82,7 +82,8 @@ To notes to this relation:
 
 $$
     P_i = \epsilon_0 \sum_{j}\chi_{ij}^{1}E_j+\epsilon_0 \sum_{jk}\chi_{ijk}^{2}E_jE_k + ...
-   
+
+
 
 $$
 
@@ -90,7 +91,7 @@ $$
     $\langle D \rangle$, they can be complex. We will see that real and
     imaginary part have very different interpretations.
 
-# Propagation of light
+## Propagation of light
 
 At this stage we would like to understand the propagation of an electric
 field through such a polarized medium. The general Maxwell equation
@@ -128,36 +129,39 @@ Finally, we can use the definition of the susceptibility to write:
 
 $$
 \frac{\partial}{\partial z}\mathcal{E}= i\left(\frac{\omega}{c} +\frac{k}{2} \chi(\omega)\right) \mathcal{E}\\
-\mathcal{E}(\omega, z) =E_0 e^{i\left(\frac{\omega}{c} +\frac{k}{2}\chi(\omega)\right)z} 
+\mathcal{E}(\omega, z) =E_0 e^{i\left(\frac{\omega}{c} +\frac{k}{2}\chi(\omega)\right)z}
 $$
 
-## Absorption and refraction
+### Absorption and refraction
 
 The meaning of the susceptibility becomes especially clear for a
 continuous wave, where $\omega\rightarrow 0$ and we obtain:
+
 $$
 \mathcal{E}(\omega\rightarrow 0, z) =E_0 e^{i\frac{k\chi(0)}{2} z}
 $$
 
 We can then see that:
 
--   The imaginary part of the susceptibility leads to absorption on a
-    scale $l^{-1} = \frac{k}{2}\text{Im}(\chi(0))$
+- The imaginary part of the susceptibility leads to absorption on a
+  scale $l^{-1} = \frac{k}{2}\text{Im}(\chi(0))$
 
--   The real part describes a phase shift. The evolution of the electric
-    field can be seen as propagating with a wavevector
-    $k \rightarrow k +\frac{k}{2}\text{Re}(\chi(0))$, so the dielectric
-    medium has a refractive index $n = 1 + \frac{\text{Re}(\chi(0))}{2}$
+- The real part describes a phase shift. The evolution of the electric
+  field can be seen as propagating with a wavevector
+  $k \rightarrow k +\frac{k}{2}\text{Re}(\chi(0))$, so the dielectric
+  medium has a refractive index $n = 1 + \frac{\text{Re}(\chi(0))}{2}$
 
-## Dispersion
+### Dispersion
 
 If the electric field has a certain frequency distribution, we might
 have to perform the proper integral to obtain the time evolution, i.e.:
+
 $$
 \mathcal{E}(t, z) =\int d\omega e^{-i\omega t}\mathcal{E}(\omega,0) e^{i\left(\frac{\omega}{c} +\frac{k}{2}\chi(\omega)\right)z}
 $$
 
 To solve the problem we can develop the susceptibility:
+
 $$
 \chi(\omega) = \chi(0)+\frac{d\chi}{d\omega}\omega
 $$
@@ -173,7 +177,7 @@ $$
 So the group velocity is controlled by the derivative of the
 susceptibility !
 
-# Two level system
+## Two level system
 
 After this rather general discussion, we will now employ it to
 understand the action of two-level systems on the travelling beam. So we
@@ -190,6 +194,7 @@ $$
 $$
 
 In this basis, the dipole element reads:
+
 $$
 \langle D\rangle = \left\langle e\right|D\left|g\right\rangle \gamma_e^*\gamma_g\\
 = d \sigma_{eg}
@@ -197,12 +202,12 @@ $$
 
 In the second line we introduced the notations:
 
--   $d = \left\langle e\right|D\left|g\right\rangle$
+- $d = \left\langle e\right|D\left|g\right\rangle$
 
--   The product $\gamma_e^*\gamma_g$ can identified with the
-    off-diagonal component of the density operator
-    $\sigma=\left|\psi\right\rangle\left\langle\psi\right|$.
-    We will often call it **coherence**.
+- The product $\gamma_e^*\gamma_g$ can identified with the
+  off-diagonal component of the density operator
+  $\sigma=\left|\psi\right\rangle\left\langle\psi\right|$.
+  We will often call it **coherence**.
 
 The Hamiltonian of this model reads then in the rotating
 wave-approximation:
@@ -249,14 +254,14 @@ $$
 This density operator approach allows us to introduce spontaneous decay
 in a very straight-forward fashion:
 
--   The time evolution of the excited state gets an additional term
-    $-\Gamma N_e$.
+- The time evolution of the excited state gets an additional term
+  $-\Gamma N_e$.
 
--   Atoms coming from the excited state relax to the ground state, so we
-    add a term $\Gamma N_e$.
+- Atoms coming from the excited state relax to the ground state, so we
+  add a term $\Gamma N_e$.
 
--   The coherence decays also through a term $-\Gamma_2 \sigma_{ge}$. We
-    will use here for simplicity the limit of $\Gamma_2 = \Gamma/2$
+- The coherence decays also through a term $-\Gamma_2 \sigma_{ge}$. We
+  will use here for simplicity the limit of $\Gamma_2 = \Gamma/2$
 
 So the full equations read now:
 

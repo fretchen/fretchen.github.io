@@ -1,6 +1,6 @@
 ---
 author:
-- Fred Jendrzejewski
+  - Fred Jendrzejewski
 order: 11
 title: Lecture 11 - Laser fundamentals
 ---
@@ -52,20 +52,20 @@ $$
 
 The definitions were:
 
--   $\Omega$ is the strength of the Rabi coupling.
+- $\Omega$ is the strength of the Rabi coupling.
 
--   $\delta$ the detuning.
+- $\delta$ the detuning.
 
--   $\Gamma$ is the lifetime of the excited state.
+- $\Gamma$ is the lifetime of the excited state.
 
--   $N_g$ the groundstate population.
+- $N_g$ the groundstate population.
 
--   And $\sigma_{g,e}$ is the coherence
-    $\sigma_{g,e} = \gamma_g^* \gamma_e$.
+- And $\sigma_{g,e}$ is the coherence
+  $\sigma_{g,e} = \gamma_g^* \gamma_e$.
 
--   $\Gamma_2$ is the lifetime of the coherence. For the moment we will
-    work in the limit $\Gamma_2 = \frac{\Gamma}{2}$. Let we will relax
-    this point a bit.
+- $\Gamma_2$ is the lifetime of the coherence. For the moment we will
+  work in the limit $\Gamma_2 = \frac{\Gamma}{2}$. Let we will relax
+  this point a bit.
 
 At this stage we can find the steady-state solutions by setting
 $\dot{N}_g = \dot{\sigma}_{ge} = 0$. This leads too:
@@ -119,17 +119,16 @@ $$
 
 We obtain now rather directly that:
 
--   Absorption is maximal on resonance.
+- Absorption is maximal on resonance.
 
--   There is no dephasing on resonance.
+- There is no dephasing on resonance.
 
--   For large detunings the absorption can be increasingly neglected and
-    the media becomes refractive as it only keeps an optical index.
+- For large detunings the absorption can be increasingly neglected and
+  the media becomes refractive as it only keeps an optical index.
 
 We can then also look for maximum dephasing and find the it happens
 close to the resonance. A summary can be found in Fig.
 [2](#fig-susc).
-
 
 <figure id="fig-susc">
 <img src="./lecture11_pic2.png" width="70%" />
@@ -201,6 +200,7 @@ In a substantial amount of situations the coherences
 reach the steady state much faster than the population. This can be due
 to technical noise, collisions or other effects. In this case we can
 assume $\dot{\sigma}_{ge}=0$ and the solve for the populations:
+
 $$
 \sigma_{ge}= i \frac{\Omega}{\Gamma_2} (N_g-N_e)\\
 \sigma_{eg}-\sigma_{ge} = -2i \frac{\Omega}{\Gamma_2} (N_g-N_e)
@@ -220,11 +220,11 @@ $$
 
 We can now identify the three terms as:
 
--   Stimulated emission.
+- Stimulated emission.
 
--   Stimulated absorption.
+- Stimulated absorption.
 
--   Spontaneous emission.
+- Spontaneous emission.
 
 We will then focus on the rate equation for the populations and attempt
 to find situations, where $N_g < N_e$.
@@ -255,6 +255,7 @@ $$
 $$
 
 This allows us to define an absorption rate:
+
 $$
 R_{ab} =  \frac{\sigma I}{\hbar \omega}\\
 = \frac{1}{N_g}\frac{dN_g}{dt}
@@ -290,32 +291,30 @@ population which is higher than the population of the ground state. This
 is not possible in the two-level system and in practice realized mostly
 in four-level systems.
 
-
 <figure id="fig-4level">
 <img src="./lecture11_pic3.png" width="70%" />
 <figcaption>The 4 level system.</figcaption>
 </figure>
 
-
 The idea of such a system is the following:
 
--   A strong pumping beam excites atoms into the state $e$.
+- A strong pumping beam excites atoms into the state $e$.
 
--   From $e$ they decay rapidely into the state b. This is the upper
-    state for the lasing transition $b\rightarrow a$.
+- From $e$ they decay rapidely into the state b. This is the upper
+  state for the lasing transition $b\rightarrow a$.
 
--   We obtain lasing on the transition $b\rightarrow a$, which has a
-    decay rate of $\tau_B$
+- We obtain lasing on the transition $b\rightarrow a$, which has a
+  decay rate of $\tau_B$
 
--   The lower state $a$ is easily depopulated through the fast
-    relaxation $a\rightarrow g$.
+- The lower state $a$ is easily depopulated through the fast
+  relaxation $a\rightarrow g$.
 
 We can now write down the rate equations for a weak laser, such that we
 can only keep terms in first order:
 
 $$
 \dot{N}_e = w(N_g-N_e)-N_e/\tau_e\\
-\dot{N}_b = \frac{N_e}{\tau_e}-N_b/\tau_b\\ 
+\dot{N}_b = \frac{N_e}{\tau_e}-N_b/\tau_b\\
 \dot{N}_a = \frac{N_b}{\tau_b}-N_a/\tau_a\\
 \dot{N}_g = \frac{N_a}{\tau_a}-w(N_g-N_e)
 $$
@@ -323,6 +322,7 @@ $$
 We can now find steady state solutions assuming that
 $\tau_e, \tau_a \ll \tau_b$. Further we assume that the pumping to $e$
 is not too strong, i.e. $w \tau_e\ll1$. We then obtain:
+
 $$
 N_e \simeq w\tau_e N_g\\
 N_b \simeq w\tau_b N_g\\
@@ -345,22 +345,23 @@ its steady-state behavior. Quite importantly, we have to have an
 electric field, which remains exactly constant after each round
 trip.This implies to conditions:
 
--   The gain has to cancel the losses:
+- The gain has to cancel the losses:
 
 $$
     G = \frac{1}{(1-T)(1-A)}
-   
+
+
 
 $$
 
--   The phase after the round trip has to be a multiple of $2\pi$
+- The phase after the round trip has to be a multiple of $2\pi$
 
 For a cavity of length $L$, the wavelength $\lambda_p$ has to be an
 integer fraction:
 
 $$
 L_{cav} = p\lambda_p\text{ with }p \in  \mathbb{N}\\
-\omega_p/2\pi =p \frac{c}{L} 
+\omega_p/2\pi =p \frac{c}{L}
 $$
 
 So the lasing will not happen at one single frequency,
@@ -379,6 +380,7 @@ We have seen in the last section that a laser might act in the multimode
 regime. So let us write down for simplicity the total field, where we
 assume that the relative phase between modes in uncorrelated and that
 the amplitude is the same for all of them. We then have:
+
 $$
 E(t) = \sum_{k=0}^{N-1}E_0 \cos(\omega_k t +\phi_k)
 $$
@@ -390,6 +392,7 @@ $$
 $$
 
 Summing the electric fields leads to an intensity:
+
 $$
 I(t)= \frac{NE_0^2}{2}+E_0^2\sum_{j_k}\cos\left[(\omega_j-\omega_k)t+\phi_j-\phi_k\right]
 $$
@@ -406,6 +409,7 @@ I = \frac{1}{2}\left|\sum_{k=0}^{N-1}E_0e^{-i\omega_k t}\right|^2\\
 $$
 
 The maximum intensity in this coherent sum is now
+
 $$
 I_{max} = N\overline{I}
 $$
@@ -414,7 +418,8 @@ We can then reach petawatt (!!) peak powers.
 
 In the next lecture, we will study how the laser is actually used for the study of entanglement
 
-[^1]: The sign change appears as we are now working with $\sigma_{eg}$
+[^1]:
+    The sign change appears as we are now working with $\sigma_{eg}$
     instead of $\sigma_{ge}$
 
 [^2]: We obtain actually a speckle pattern in time here.

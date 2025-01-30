@@ -1,8 +1,8 @@
 ---
 author:
-- Fred Jendrzejewski
-- Selim Jochim
-- Matthias Weidemüller
+  - Fred Jendrzejewski
+  - Selim Jochim
+  - Matthias Weidemüller
 order: 12
 title: Lecture 12- Entanglement
 ---
@@ -17,7 +17,6 @@ of the Bell inequalities.
 
 # Parametric down-conversion
 
-
 <figure id="fig-downcon">
 <img src="./lecture12_pic1.png" width="70%" />
 <figcaption>a) The process of spontaneous parametric down-conversion (SPDC).
@@ -31,7 +30,6 @@ counters. The detector indicates a coincidence when both photons arrive
 within roughly 30 ns.</figcaption>
 </figure>
 
-
 Fig. [1](#fig-downcon) shows the
 schematic setup of an experiment where pairs of entangled photons are
 created by a two-photon source. Two polarizers can be used to probe the
@@ -43,6 +41,7 @@ The crystal in the medium is a non-linear crystal, which means that we
 can write the polarization is not just linear, but higher order terms
 will play a role. We will consider for starters that there are actually
 two pump waves in the same direction, which allows us to write:
+
 $$
 P_{NL}(z) = 2\epsilon_0 \chi^{(2)}\mathcal{E}_1(z)\mathcal{E}_2(z)e^{i(k_1+k_2)z}
 $$
@@ -58,16 +57,17 @@ $$
 where $\omega_3 = \omega_1 + \omega_2$. We can now
 additionally assume that:
 
--   The effect of the medium does not change the strong pump to much.
+- The effect of the medium does not change the strong pump to much.
 
--   The amplified field is zero initially.
+- The amplified field is zero initially.
 
--   The oscillating phase factor $(k_1+k_2-k_3)z$ can be ignored, i.e.
-    where we have:
+- The oscillating phase factor $(k_1+k_2-k_3)z$ can be ignored, i.e.
+  where we have:
 
 $$
     \vec{k}_3 = \vec{k}_1 + \vec{k}_2
-   
+
+
 
 $$
 
@@ -102,8 +102,8 @@ reading through the complement 5.C of [Grynberg](https://www.cambridge.org/core/
 The first emitted photon is analyzed by a rotatable polarizers
 $\hat{A}(\theta)$, which has two detection paths $\pm1$. The other
 polarizer will be called $\hat{B}(\theta)$ the only difference is that
-he only acts on photon 2. Basically, we are following the *Alice* and
-*Bob* notation here.
+he only acts on photon 2. Basically, we are following the _Alice_ and
+_Bob_ notation here.
 
 We can express it then in our basis states of vertical polarization
 $\left|V\right\rangle$ and horizontal polarization
@@ -126,6 +126,7 @@ $$
 
 Taking as input states
 $\left|H\right\rangle$, we simply find Malus law:
+
 $$
 P_+(\theta) = \cos(\theta)^2\\
 P_-(\theta) = \sin(\theta)^2\\
@@ -166,6 +167,7 @@ $$
 $$
 
 For Bobs polarizer in the same position we would find:
+
 $$
 \left\langle\psi\right|\hat{B}\left|\psi\right\rangle=|c_0|^2+ |c_2|^2 - |c_1|^2 -|c_3|^2
 $$
@@ -175,7 +177,6 @@ $$
 The optics setup handles two independent photons, with two outcomes
 each. So we can also see the presented setup as a two qubit system. A
 circuit diagram would mostly look the following way.
-
 
 <figure id="fig-two-qubit">
 <img src="./lecture12_pic3.png" width="90%" />
@@ -196,6 +197,7 @@ We know that we have two photons in the system. Both can have some
 polarization and clearly they are propagation in different directions.
 So it does not seems to much of a stretch to guess that the total
 wavefunction is the product of two superposition states:
+
 $$
 
 \left|\psi\right\rangle_{p} = (c_{H,1}\left|H\right\rangle +c_{V,1} \left|V\right\rangle)\otimes(c_{H,2}\left|H\right\rangle+c_{V,2}\left|V\right\rangle) \\
@@ -204,19 +206,19 @@ $$
 
 ## The experimental observation of entanglement
 
--   We find a lot of counts if both polarizers are set vertical or
-    horizontal. So the state has a $VV$ and a $HH$ component, which
-    tells us that $c_0$ and $c_{3}$ are non-zero. The equal rate of
-    measuring further tells us that they are roughly similiar in
-    amplitude, so we can write for simplicity $|c_0| = |c_3|$
+- We find a lot of counts if both polarizers are set vertical or
+  horizontal. So the state has a $VV$ and a $HH$ component, which
+  tells us that $c_0$ and $c_{3}$ are non-zero. The equal rate of
+  measuring further tells us that they are roughly similiar in
+  amplitude, so we can write for simplicity $|c_0| = |c_3|$
 
--   We find zero correlation if the polarizers are opposite. So the
-    mixed terms are zero $c_1 = c_2 = 0$
+- We find zero correlation if the polarizers are opposite. So the
+  mixed terms are zero $c_1 = c_2 = 0$
 
 In summary we can expect the Bell state can to be written as:
 
 $$
-\left|\psi_B\right\rangle = \frac{\left|HH\right\rangle +\left|VV\right\rangle}{\sqrt{2}} 
+\left|\psi_B\right\rangle = \frac{\left|HH\right\rangle +\left|VV\right\rangle}{\sqrt{2}}
 $$
 
 This is quite clearly incompatible with our naive guess, which means that we have an entangled state.
@@ -232,20 +234,18 @@ $$
 $$
 
 The reduced density operator, which shows mixed states if there is
-    entanglement:
+entanglement:
 
 $$
     \hat{\rho}_1 = \mathrm{tr}_{2}(\hat{\rho})
 $$
 
-
-
 In this case, $\hat{\rho}$ is the density operator
-    of a pure state and $\textrm{tr}_2$ is the trace over the Hilbert
-    space of particle 2.
+of a pure state and $\textrm{tr}_2$ is the trace over the Hilbert
+space of particle 2.
 
 The von Neumann entropy, which measures the remaining uncertainty
-    within a quantum state:
+within a quantum state:
 
 $$
     S=-\mathrm{tr}(\hat{\rho}\ln\hat{\rho})\\
@@ -267,18 +267,18 @@ In the last sections we performed measurements on joined detection
 probabilities between two independent polarizers. Quite importantly we
 saw that:
 
--   Each photon is in a superposition of
-    $\left|H\right\rangle$ and
-    $\left|V\right\rangle$.
+- Each photon is in a superposition of
+  $\left|H\right\rangle$ and
+  $\left|V\right\rangle$.
 
--   Both photons are always detected in the same polarization state.
+- Both photons are always detected in the same polarization state.
 
--   From Fig. [2](#fig-polar-anal) it
-    seems as if 1 was a bit closer to the source than 2 [^1]. So 1 is
-    detected a bit earlier and projected onto one of the two states.
+- From Fig. [2](#fig-polar-anal) it
+  seems as if 1 was a bit closer to the source than 2 [^1]. So 1 is
+  detected a bit earlier and projected onto one of the two states.
 
--   Yet, 2 seems to instantaneously on which polarization 1 was
-    projected and choses the same one.
+- Yet, 2 seems to instantaneously on which polarization 1 was
+  projected and choses the same one.
 
 For our set-up the distances are small, but the same observations and
 arguments hold also for very large distances between the detectors.
@@ -293,6 +293,7 @@ angle $\lambda$ from the starting point, yet this polarization varies
 randomly from pair to pair between 0 and $2\pi$. Hence we have uniform
 probability distribution $\rho(\lambda) = \frac{1}{2\pi}$. The
 measurement of the polarizers can then simply be modelled through
+
 $$
 A_{hv}(\lambda, \theta) =\text{sign}\left(\cos2 (\theta-\lambda)\right)
 $$
@@ -340,6 +341,7 @@ $\theta$ as visualized in Fig. [5](#fig-bell).
 </figure>
 
 We will now calculate the the expectation value for joint detection:
+
 $$
 E(\theta_1, \theta_2)=\overline{A(\theta_1)B(\theta_2)}-\overline{A(\theta_1)}~\overline{B(\theta_2)}
 $$
@@ -385,6 +387,7 @@ We can now go again through the predictions of quantum mechanics and
 test if there is a region of interest in which we should observe a
 violation of the CHSH inequalities. Actually there is an important
 configuration at which we should break them rather violantly namely for:
+
 $$
 |\theta_1-\theta_2| =\frac{\pi}{8}(22.5^\circ)\\
 |\theta_1'-\theta_2| =\frac{\pi}{8}(22.5^\circ)\\
@@ -401,11 +404,11 @@ biggest differences are hard to see accidentally.
 ## The experimental test
 
 We can now study the correlations for the following configuration.
+
 $$
 \theta_1 = 0 \text{ and }\theta_1' = \frac{\pi}{4}\\
 \theta_2 = \frac{\pi}{8} \text{ and }\theta_2' = \frac{3\pi}{8}\\
 $$
-
 
 <figure id="fig-measure">
 <img src="./lecture12_pic5.png" width="70%" />
@@ -427,5 +430,6 @@ obvious ones are:
 Other loopholes exist, but all realistically known loopholes have been
 closed over the course of the last three decades with examples from [Gustina et al.](http://dx.doi.org/10.1103/physrevlett.115.250401), [Shalm et al.](http://dx.doi.org/10.1103/physrevlett.115.250402) and [Hensen et al.](http://dx.doi.org/10.1038/nature15759).
 
-[^1]: The exact order does not matter, but they are most certainly not
+[^1]:
+    The exact order does not matter, but they are most certainly not
     at exactly the same distance from the source

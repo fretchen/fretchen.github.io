@@ -34,7 +34,7 @@ which is bound to two nuclei as shown in Fig.
 [1](#fig-hydrogen-ion).
 
 <figure id="fig-hydrogen-ion">
-<img src="./lecture15_pic1.png" width="95%" />
+<img src="./lecture15_pic1.png" width="60%" />
 <figcaption>The molecular hydrogen ion as discussed in the main text.</figcaption>
 </figure>
 
@@ -203,7 +203,7 @@ should now move on to the case of two neutral particles binding
 together. What is here the relevant mechanism ?
 
 <figure id="fig-hydrogen">
-<img src="./lecture15_pic4.svg" width="70%" />
+<img src="./lecture15_pic4.svg" width="60%" />
 <figcaption>The hydrogen molecule.</figcaption>
 </figure>
 

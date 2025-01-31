@@ -244,6 +244,7 @@ $$
 
 
 
+
 $$
 
 - Only one electron can be electronically excited to a stable state.

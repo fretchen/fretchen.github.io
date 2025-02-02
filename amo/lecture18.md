@@ -51,9 +51,8 @@ has an inherent gauge freedom as we can basically perform the _local
 gauge transformation_:
 
 $$
-
-\vec{A} &\rightarrow \vec{A} + \vec{\nabla} f (\vec{r},t)\\
-\phi &\rightarrow \phi - \frac{\partial f}{\partial t}
+\vec{A} \rightarrow \vec{A} + \vec{\nabla} f (\vec{r},t)\\
+\phi \rightarrow \phi - \frac{\partial f}{\partial t}
 $$
 
 So we can transform the electromagnetic field and the
@@ -111,9 +110,7 @@ $$
 $$
 
 So the free radiation describes a travelling wave in the direction
-$\vec{k}$. The coulomb gauge
-[\[Eq:CouGauge\]](#Eq:CouGauge){reference-type="eqref"
-reference="Eq:CouGauge"} further tells us that the vector potential only
+$\vec{k}$. The coulomb gauge further tells us that the vector potential only
 has components, which are orthogonal to $\vec{k}$ as:
 
 $$
@@ -125,7 +122,7 @@ Given that these equations of motion for the vector potential look a lot
 like the ones of a harmonic oscillator, let us go through the
 quantization of the harmonic oscillator first.
 
-# Quantization procedure for the harmonic oscillator {#Eq:QuantHO}
+# Quantization procedure for the harmonic oscillator
 
 To the the problem, we first have to go back the cooking recipe for the
 quantization of a classical problem. In a first step, we have to obtain
@@ -191,8 +188,8 @@ $$
 # The lagrangien for the electromagnetism
 
 At this stage we would like to roll out the formalism for
-electromagnetism, following the discussion of Cohen-Tannoudji Vol 3
-(appendix of 18) [@laloe2017]. It adds sequentially the following new
+electromagnetism, following the discussion of [Cohen-Tannoudji Vol 3
+(appendix of 18)](https://laboutique.edpsciences.fr/produit/1061/9782759823369/mecanique-quantique-tome-3). It adds sequentially the following new
 problems, which we will tackle as we get to them:
 
 - The Lagrangien has plenty degrees of freedom.
@@ -235,8 +232,7 @@ $$
 As for the integral over $\vec{k}$, we will only
 integrate over the positive contributions. This avoids summing over
 identical terms at $\vec{k}$ and $-\vec{k}$. Finally, we can also use
-the polarization [\[Eq:PotPolar\]](#Eq:PotPolar){reference-type="eqref"
-reference="Eq:PotPolar"} to obtain:
+the polarization to obtain:
 
 $$
 \mathcal{L}(\vec{k},t)= \epsilon_0\sum_i \left( \dot{A}_i(\vec{k},t)\dot{A}_i^*(\vec{k},t)-c^2k^2 A_i(\vec{k},t)A_i^*(\vec{k},t)\right)
@@ -244,8 +240,7 @@ $$
 
 ## The conjugate moment and hamiltonian
 
-We have discussed in Sec. [2](#Eq:QuantHO){reference-type="ref"
-reference="Eq:QuantHO"} how to find the conjugate momentum for classical
+We have discussed in the section on the quantization of the harmonic oscillator how to find the conjugate momentum for classical
 variables. Here, we have complex variables. But, we can deduce the
 conjugate momentum through as decomposition $X = x_1 + i x_2$. We
 actually obtain:
@@ -355,13 +350,13 @@ $$
 H_I = \vec{D}\cdot\vec{E}
 $$
 
-This will be the content of the next lecture [@states].
+This will be the content of the next lecture.
 
 # The notion of the photon
 
 We can now get back to the interpretation of the eigenstates of the
 raising and lowering operators as a photon. We have seen previously in
-lecture 6[@Jendrzejewski] that the operator
+lecture 6 that the operator
 $\hat{n}_i(\vec{k}) = \hat{a}_i^\dag (\vec{k}) \hat{a}_i(\vec{k})$ is
 counting the occupation number in the Fock basis:
 
@@ -383,7 +378,7 @@ Watts($\sim 10^{-12}$ -- $10^{-15}$W).
 
 A rather nice discussion concerning the details of a proper quantization
 of the interacting field theory of quantum electromagnetism is given in
-the book by Kleinert [@electrodynamics]
+the [book by Kleinert](http://users.physik.fu-berlin.de/~kleinert/b6/psfiles/Chapter-11-qed.pdf).
 
 [^1]:
     Remember

@@ -12,18 +12,20 @@ from the simple two-level system up to molecules. We further studied,
 how they can be control by classical electromagnetic fields to a very
 high accuracy.
 
-In the last lecture [@field] we also studied how we can understand the
+In the last lecture we also studied how we can understand the
 electromagnetic field as an ensemble of quantum mechanical photon modes.
 So in today's lecture we will focus on the interaction between atoms and
 light, which is in a particularly clean set-up, namely cavity quantum
 electrodynamics. The fundamental ingredients are sketched in Fig.
-[1](#305911){reference-type="ref" reference="305911"}.
+[1](#fig-rydberg).
 
-![Rydberg atoms interacting with the photons confined in a high quality
+<figure id="fig-rydberg">
+<img src="./lecture19_pic1.png" width="60%" />
+<figcaption>Rydberg atoms interacting with the photons confined in a high quality
 cavity. Picture taken from the Nobel prize announcement for Serge
-Haroche [@2012a] []{#305911 label="305911"}
-](figures/Bildschirmfoto-2018-12-18-um-09-15-55/Bildschirmfoto-2018-12-18-um-09-15-55){#305911
-width="0.70\\columnwidth"}
+Haroche <a href="https://www.nobelprize.org/prizes/physics/2012/popular-information/">here</a>  </figcaption>
+</figure>
+
 
 They are:
 
@@ -61,7 +63,7 @@ The Rydberg states are highly excited states of Alkali atoms, which have
 only one electron on the outer shell. As such they are similiar to the
 hydrogen atom and hence they can be well described within atomic
 physics. In the hydrogen atom the energy states are described by the
-principle quantum number $n$ [@Jendrzejewski; @Jendrzejewskib]:
+principle quantum number $n$:
 
 $$
 E_n = -E_I \frac{1}{n^2} \text{ with }E_I = 13.6 eV
@@ -104,7 +106,7 @@ The next step is to couple qubit to a suitable cavity.
 # The cavity field
 
 The atom has be coupled to a suitable electric field. The electric field
-reads in general [@field]:
+reads in general:
 
 $$
 \hat{E}(\vec{r})= i \int \frac{d\vec{k}}{(2\pi)^{3/2}}\sum_i \left(\frac{\hbar\omega}{2\epsilon_0}\right)\vec{e}_i\left(\hat{a}_i(\vec{k})e^{i\vec{k}\vec{r}}-\hat{a}^\dag_i(\vec{k})e^{-i\vec{k}\vec{r}}\right)
@@ -125,7 +127,7 @@ For such high quality factors the electric field can be well reduced to
 a single relevant mode [^1]:
 
 $$
-\hat{E} &\sim (\hat{a} + \hat{a}^\dag)
+\hat{E} \sim (\hat{a} + \hat{a}^\dag)
 $$
 
 The full Hamiltonian of the electromagnetic field reads
@@ -216,7 +218,7 @@ the type:
 
 The other two processes are strongly off-resonant and we can typically
 ignore them. This approximation consists in the rotating wave
-approximation, discussed in lecture 4 [@Jendrzejewski]. The coupling
+approximation, discussed in lecture 4. The coupling
 hamiltonian reads then:
 
 $$
@@ -241,17 +243,17 @@ Let us first look at the unperturbed (\"bare\") states, ignoring
 $H_\textrm{af}$ and depict the ground and excited state
 $\left|g\right\rangle$ and
 $\left|e\right\rangle$ of the atom on an energy scale, as
-shown in [2](#231072){reference-type="ref" reference="231072"}.
+shown in below.
 
-![The ground and excited state $\left|g\right\rangle$
+<figure id="fig-rydberg">
+<img src="./lecture19_pic2.png" width="60%" />
+</figure>
+
+The ground and excited state $\left|g\right\rangle$
 and $\left|e\right\rangle$ of the atom on an energy scale. Here, the
 energy of the ground state is $E_g\ =\ 0$. The energy difference between
 the two states is $\hbar\omega_0$. A photon of the surrounding light
-field has an energy $\hbar\omega_L$. []{#231072 label="231072"}
-](figures/Bildschirmfoto-2018-10-01-um-15-24-39/Bildschirmfoto-2018-10-01-um-15-24-39){#231072
-width="0.70\\columnwidth"}
-
-The Hamiltonian of the system then reads
+field has an energy $\hbar\omega_L$. The Hamiltonian of the system then reads
 
 $$
 \hat{H} = \hat{H}_\textrm{a} + \hat{H}_\textrm{f} = \hbar \omega_0 \left|e\right\rangle \left\langle e\right| + \hbar \omega_\textrm{L} \hat{a}^\dag \hat{a}
@@ -280,14 +282,14 @@ $$
 |\delta_\textrm{l}| = |\omega_\textrm{L}- \omega_0 | \ll \omega_0
 $$
 
-![An energy diagram of the bare states. Note that the interaction
-between atom and light field has not yet been introduced! []{#871990
-label="871990"}
-](figures/Bildschirmfoto-2018-10-01-um-15-24-47/Bildschirmfoto-2018-10-01-um-15-24-47){#871990
-width="0.70\\columnwidth"}
+<figure id="fig-bare-diagram">
+<img src="./lecture19_pic3.png" width="60%" />
+<figcaption>An energy diagram of the bare states. Note that the interaction
+between atom and light field has not yet been introduced!</figcaption>
+</figure>
 
 We can draw another energy diagram (see
-[3](#871990){reference-type="ref" reference="871990"}), where the state
+[3](#fig-bare-diagram)), where the state
 of the atom and the state of the light field are contained in one "bare"
 state. It does _not_ yet include the interaction between the atom and
 the light field. From the diagram one can see that the states forming
@@ -304,7 +306,7 @@ are almost degenerate.
 $\hat{H}_\textrm{af}$ couples now only the two states within each
 manifold
 $\Sigma(n)= \left\{ \left|g,n+1\right\rangle, \left|e,n\right\rangle \right\}$.
-We thus obtain a two-state system (see lecture 3 [@Jendrzejewskia]) for
+We thus obtain a two-state system (see lecture 3) for
 which we can write:
 
 $$
@@ -314,13 +316,12 @@ $$
 The off-diagonal matric element reads:
 
 $$
-h_n = \left\langle e,n|\hat{H_\textrm{af}|g,n+1\right\rangle} = \frac{\hbar \Omega_0}{2} \sqrt{n+1}.
+h_n = \left\langle e,n|\hat{H_\textrm{af}|g,n+1}\right\rangle = \frac{\hbar \Omega_0}{2} \sqrt{n+1}.
 $$
 
 Note that the square of the matrix element is
 proportional to $I \propto (n+1) \approx n$ for large $n$. The three
-Hamiltonians in [\[eq:totham\]](#eq:totham){reference-type="eqref"
-reference="eq:totham"} can then be written in matrix notation and the
+Hamiltonians can then be written in matrix notation and the
 total Hamiltonian can be constructed:
 
 $$
@@ -332,7 +333,7 @@ $$
 
 The "dressed states" are obtained by diagonalizing
 $\hat{H}$ within $\Sigma(n)$, which es effectively once again a two
-level system [4](#180224){reference-type="ref" reference="180224"} shows
+level system [4](#fig-dressed-diagram) shows
 an energy diagram including the bare and the dressed states. The energy
 difference between the states $\left|1(n)\right\rangle$ and
 $\left|2(n)\right\rangle$ is
@@ -343,18 +344,19 @@ $$
 
 with the effective Rabi frequency $\Omega$.
 
-![An energy diagram showing the bare and the dressed states. []{#180224
-label="180224"}
-](figures/Bildschirmfoto-2018-10-01-um-15-24-57/Bildschirmfoto-2018-10-01-um-15-24-57){#180224
-width="0.70\\columnwidth"}
+<figure id="fig-dressed-diagram">
+<img src="./lecture19_pic4.png" width="60%" />
+<figcaption>An energy diagram showing the bare and the dressed states.</figcaption>
+</figure>
 
 The corresponding eigenvectors are then a mixture of atom and light as
-visualized in Fig [5](#633447){reference-type="ref" reference="633447"}.
+visualized in the figure below.
 
-![Energies of the bare and dressed states as a function of
-the $\delta_L$. []{#633447 label="633447"}
-](figures/Bildschirmfoto-2018-10-01-um-15-25-06/Bildschirmfoto-2018-10-01-um-15-25-06){#633447
-width="0.70\\columnwidth"}
+<figure id="fig-dressed-energies">
+<img src="./lecture19_pic5.png" width="60%" />
+<figcaption>Energies of the bare and dressed states as a function of
+the detuning.</figcaption>
+</figure>
 
 # Quantum Rabi oscillations
 
@@ -374,14 +376,13 @@ $$
 P_e(t)=\sum_n p_n\frac{1+\cos\left[\Omega_n t\right]}{2}
 $$
 
-This effect has been observed in Ref. [@Brune_1996] as
-summarized in Fig. [6](#910858){reference-type="ref"
-reference="910858"}.
+This effect has been observed in Ref. [Brune 1996](http://dx.doi.org/10.1103/physrevlett.76.1800) as
+summarized in Fig. [6](#fig-coherence).
 
-![Observation of quantum Rabi oscillations in [@Brune_1996] []{#910858
-label="910858"}
-](figures/Bildschirmfoto-2018-12-18-um-14-07-52/Bildschirmfoto-2018-12-18-um-14-07-52){#910858
-width="0.70\\columnwidth"}
+<figure id="fig-coherence">
+<img src="./lecture19_pic6.png" width="60%" />
+<figcaption>Observation of quantum Rabi oscillations in <a href="http://dx.doi.org/10.1038/22275"> Brune 1996</a>.</figcaption>
+</figure>
 
 # Making Schrödingers kitten
 
@@ -403,7 +404,7 @@ a kitten state the experiment goes as follows:
     end, the entangled state is created:
 
 $$
-\left|\Psi\right\rangle_1= \frac{e^{-i\Phi_0}\left|e, \alpha e^{-i\Phi_0\right\rangle}+\left|g,\alpha e^{i\Phi_0\right\rangle}}{\sqrt{2}}
+\left|\Psi\right\rangle_1= \frac{e^{-i\Phi_0}\left|e, \alpha e^{-i\Phi_0}\right\rangle+\left|g,\alpha e^{i\Phi_0}\right\rangle}{\sqrt{2}}
 $$
 
 This is the typical situation of Scrödingers cat.
@@ -424,7 +425,7 @@ $$
 The field now becomes:
 
 $$
-\left|\Psi_2\right\rangle = \frac{1}{2}\left|e\right\rangle\otimes\left[e^{-i\Phi_0}\left|\alpha e^{-i\Phi_0\right\rangle}-e^{-i\varphi}\left|\alpha e^{i\Phi_0\right\rangle}\right]+\frac{1}{2}\left|g\right\rangle\otimes\left[e^{i(\varphi-\Phi_0)}\left|\alpha e^{-i\Phi_0\right\rangle}+\left|\alpha e^{i\Phi_0\right\rangle}\right]
+\left|\Psi_2\right\rangle = \frac{1}{2}\left|e\right\rangle\otimes\left[e^{-i\Phi_0}\left|\alpha e^{-i\Phi_0}\right\rangle-e^{-i\varphi}\left|\alpha e^{i\Phi_0}\right\rangle\right]+\frac{1}{2}\left|g\right\rangle\otimes\left[e^{i(\varphi-\Phi_0)}\left|\alpha e^{-i\Phi_0}\right\rangle+\left|\alpha e^{i\Phi_0}\right\rangle\right]
 $$
 
 The final read-out is then given by:
@@ -456,7 +457,7 @@ a kitten state the experiment goes as follows:
     end, the entangled state is created:
 
 $$
-\left|\Psi\right\rangle_1= \frac{e^{-i\Phi_0}\left|e, \alpha e^{-i\Phi_0\right\rangle}+\left|g,\alpha e^{i\Phi_0\right\rangle}}{\sqrt{2}}
+\left|\Psi\right\rangle_1= \frac{e^{-i\Phi_0}\left|e, \alpha e^{-i\Phi_0}\right\rangle+\left|g,\alpha e^{i\Phi_0}\right\rangle}{\sqrt{2}}
 $$
 
 This is the typical situation of Scrödingers cat.
@@ -477,7 +478,7 @@ $$
 The field now becomes:
 
 $$
-\left|\Psi_2\right\rangle = \frac{1}{2}\left|e\right\rangle\otimes\left[e^{-i\Phi_0}\left|\alpha e^{-i\Phi_0\right\rangle}-e^{-i\varphi}\left|\alpha e^{i\Phi_0\right\rangle}\right]+\frac{1}{2}\left|g\right\rangle\otimes\left[e^{i(\varphi-\Phi_0)}\left|\alpha e^{-i\Phi_0\right\rangle}+\left|\alpha e^{i\Phi_0\right\rangle}\right]
+\left|\Psi_2\right\rangle = \frac{1}{2}\left|e\right\rangle\otimes\left[e^{-i\Phi_0}\left|\alpha e^{-i\Phi_0}\right\rangle-e^{-i\varphi}\left|\alpha e^{i\Phi_0}\right\rangle\right]+\frac{1}{2}\left|g\right\rangle\otimes\left[e^{i(\varphi-\Phi_0)}\left|\alpha e^{-i\Phi_0}\right\rangle+\left|\alpha e^{i\Phi_0}\right\rangle\right]
 $$
 
 The final read-out is then given by:
@@ -487,11 +488,7 @@ P_e = \frac{1}{2}\left(1- e^{-n(1-\cos(2\Phi_0))}\cos(\varphi-\Phi_0-n\sin(2\Phi
 $$
 
 So the presence of the cat leads to a phase shift and a
-decrease in fringe contrast. This was observed in the experiments
-[@Brune_1996a], which are partially visualized in Fig.
-[\[384136\]](#384136){reference-type="ref" reference="384136"}.
-
-![](figures/CavityCat/CavityCat){width="0.70\\columnwidth"}
+decrease in fringe contrast.
 
 Nowadays the entangled states have become an interesting platform to
 create increasingly large Schrödinger cats. A common example is here the
@@ -502,20 +499,19 @@ $$
 $$
 
 A interesting demonstration for up to 14 ions was performed in
-[@Monz_2011]. Importantly it also highlights the extremely fast
-decoherence of larger cat states. We will go into more detail on how to
+[Monz 2011](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.106.130506). Importantly it also highlights the extremely fast decoherence of larger cat states. We will go into more detail on how to
 create increasingly larger cats in the next lecture. However, I would
 like to finish the lecture with the discussion of quantum non-demolition
 measurements.
 
-As of the time of writing cold atom systems systems [@Omran_2019] cold
+As of the time of writing cold atom systems systems [rOmran 2019](https://arxiv.org/abs/1905.05721) cold
 the record of the largest cat with 20 atoms.
 
 # Seeing a photon without destroying it
 
 The tool of the Rabi oscillations has been extend to observe photons
 without destroying them as detailed in great detail in the book by
-Raymond and Haroche [@quantum]. The underlying principle is the
+[Raymond and Haroche](https://academic.oup.com/book/7346). The underlying principle is the
 following:
 
 - The atom is supposed to be in the ground state and the cavity is
@@ -530,17 +526,9 @@ following:
 If the cavity was empty at the atom does not acquire a phase shift.
 
 Finally, the phase is read out through a Ramsey sequence between the
-state $g$ and some unaffected independent state $i$ as visualized in
-Fig.
-
-![Projective measurment of a photon through with an atom. []{#338314
-label="338314"}
-](figures/Bildschirmfoto-2018-12-18-um-15-19-24/Bildschirmfoto-2018-12-18-um-15-19-24){#338314
-width="0.70\\columnwidth"}
-
-This was implemented in Ref. [@Nogues_1999]. Based on this technique,
-the team later observed quantum jumps [@Gleyzes_2007] and even the
-stabilization of a Fock state through quantum feedback [@Sayrin_2011].
+state $g$ and some unaffected independent state $i$ . This was implemented in Ref. [Nogues 1999](http://dx.doi.org/10.1038/22275). Based on this technique,
+the team later observed quantum jumps [Gleyzes 2007](http://dx.doi.org/10.1038/nature05589) and even the
+stabilization of a Fock state through quantum feedback [Sayrin 2011](http://dx.doi.org/10.1038/nature10376).
 
 [^1]:
     We chose the phase of the electric field such that we can

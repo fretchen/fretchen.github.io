@@ -9,7 +9,7 @@ const App: React.FC = function () {
       <p>
         {" "}
         Welcome, to my lecture notes on Atomic, Molecular and Optical physics that I prepared in my time in Heidelberg.
-        They consist of a total of 24 lectures, which I will recollect here again.
+        They consist of a total of 20 lectures, which I will recollect here again.
       </p>
       <AmoList />
     </div>

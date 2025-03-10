@@ -5,8 +5,7 @@ title: Are decentral websites a thing for me ?
 
 Over the last few years, I kept wondering what it might mean to host a "decentral" website very much like it is possible to decentralize certain financial services through smart contracts [^2]. What would be needed ?
 
-[^2]:
-    The stuff done on [Uniswap](https://app.uniswap.org/) for example is quite impressive.
+[^2]: The stuff done on [Uniswap](https://app.uniswap.org/) for example is quite impressive.
 
 - A decentral domain provider.
 - A simple way to update the website.
@@ -18,8 +17,7 @@ As we will see the first and last part are fairly straight-forward. For the dece
 
 Normally, each website is hosted on some servers and you can access them through some domain. Currently, this website is hosted by github, which also delivers me directly the domain address. And behind Github is simply a big company which handles the domain registration for me. If I want to go decentral, I try to avoid this company and simply register the domain on a blockchain. This is already possible with [ENS](https://ens.domains/). This is a great start as it gets us closer to have some fancy adress like `fretchen.eth`. To get this I needed to set up a wallet, where [Metamask](https://metamask.io/) seems to be the absolute standard nowadays. Once I have the wallet, I need to convert normal currency into the currency of the Blockchain, which is here [Eutherum](https://ethereum.org/en/) [^1].
 
-[^1]:
-    From my understanding Eutherum is THE biggest blockchain, which allows you to run smart contracts and quite energy efficient. It feels a bit like the Linux of the blockchain world.
+[^1]: From my understanding Eutherum is THE biggest blockchain, which allows you to run smart contracts and quite energy efficient. It feels a bit like the Linux of the blockchain world.
 
 To buy the euthereum, I had to go through [Kraken](https://www.kraken.com) and then send myself the ETH into the Metamask wallet. With the ETH I could quite simply register the domain of my choice with [ENS](https://ens.domains/). The purchase itself is fairly straight-forward and interestingly the domain is implemented as an NFT. This is the tech that is mostly used to allow people to claim ownership for weird pictures of bored apes. Here, it basically gets you exclusive access rights to the domain, which actually sounds quite smart. The other cool thing is that `ens.domains` is a DAO. So there is no single authority controlling it, but a community of people. Another fairly cool feature.
 

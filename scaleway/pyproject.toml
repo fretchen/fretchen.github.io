@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "scaleway"
+version = "0.1.0"
+description = "Some simple python runners"
+authors = ["fretchen <polka.99gefiedert@icloud.com>"]
+license = "UNLICENSE"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+scaleway-functions-python = "^0.2.2"
+requests = "^2.32.3"
+dotenv = "^0.9.9"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,11 +1,41 @@
 import React, { useState } from "react";
 
-export function ImageGenerator() {
+function ImageGenerator({ onGenerate }: { onGenerate: (text: string, imageBase64?: string) => void }) {
   const [prompt, setPrompt] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = () => {
-    console.log("Generating image for:", prompt);
-    // Hier später die Bildgenerierung implementieren
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // URL der API für die Bildgenerierung
+      const apiUrl = "https://mypersonalcloudmaqsyplo-ionosimagegen.functions.fnc.fr-par.scw.cloud";
+      
+      // GET-Anfrage mit prompt als Parameter
+      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Fehler: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("API Response:", data);
+      
+      // Extrahiere das Base64-Bild aus der Antwort
+      const imageBase64 = data.body?.b64_image;
+      
+      // Callback mit Prompt und Bilddaten aufrufen
+      onGenerate(prompt, imageBase64);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten");
+      console.error("Fehler beim API-Aufruf:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -26,27 +56,32 @@ export function ImageGenerator() {
         />
         <button
           onClick={handleGenerate}
+          disabled={isLoading || !prompt.trim()}
           style={{
             padding: "8px 16px",
             backgroundColor: "#0066cc",
             color: "white",
             border: "none",
             borderRadius: "4px",
-            cursor: "pointer",
+            cursor: isLoading || !prompt.trim() ? "not-allowed" : "pointer",
             width: "300px",
+            opacity: isLoading || !prompt.trim() ? 0.7 : 1,
           }}
         >
-          Generate image
+          {isLoading ? "Generating..." : "Generate image"}
         </button>
+        {error && <p style={{ color: "red", margin: "10px 0" }}>{error}</p>}
       </div>
     </div>
   );
 }
 
 interface ImageDisplayProps {
-  imageUrl?: string;
+  imageBase64?: string;
+  promptText?: string;
 }
-export function ImageDisplay({ imageUrl }: ImageDisplayProps) {
+
+export function ImageDisplay({ imageBase64, promptText }: ImageDisplayProps) {
   return (
     <div
       style={{
@@ -60,8 +95,14 @@ export function ImageDisplay({ imageUrl }: ImageDisplayProps) {
         marginTop: "20px",
       }}
     >
-      {imageUrl ? (
-        <img src={imageUrl} alt="Generated" style={{ maxWidth: "100%", maxHeight: "100%" }} />
+      {imageBase64 ? (
+        <img 
+          src={`data:image/jpeg;base64,${imageBase64}`}
+          alt="Generated" 
+          style={{ maxWidth: "100%", maxHeight: "100%" }} 
+        />
+      ) : promptText ? (
+        <p style={{ color: "#333", padding: "15px" }}>{promptText}</p>
       ) : (
         <p style={{ color: "#666" }}>Ihr Bild wird hier erscheinen</p>
       )}
@@ -70,11 +111,19 @@ export function ImageDisplay({ imageUrl }: ImageDisplayProps) {
 }
 
 export default function Page() {
+  const [generatedText, setGeneratedText] = useState<string>("");
+  const [generatedImage, setGeneratedImage] = useState<string>();
+
+  const handleGenerate = (text: string, imageBase64?: string) => {
+    setGeneratedText(text);
+    setGeneratedImage(imageBase64);
+  };
+
   return (
     <>
-      <p> This is the place, where we will generate images for you.</p>
-      <ImageGenerator />
-      <ImageDisplay />
+      <p>This is the place, where we will generate images for you.</p>
+      <ImageGenerator onGenerate={handleGenerate} />
+      <ImageDisplay promptText={generatedText} imageBase64={generatedImage} />
     </>
   );
 }

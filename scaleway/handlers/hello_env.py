@@ -1,11 +1,11 @@
-import requests
 import os
-
+import requests
 
 def handler(event, context):
-    MODEL_NAME = "black-forest-labs/FLUX.1-schnell"
+    query_params = event.get("queryStringParameters", {})
+
+    # test if the IONOS_API_TOKEN is set
     IONOS_API_TOKEN = os.getenv('IONOS_API_TOKEN')
-    
     if not IONOS_API_TOKEN:
         return {
             "body": {
@@ -16,41 +16,32 @@ def handler(event, context):
                 "Content-Type": ["application/json"]
             }
         }
-
-
-    query_params = event.get("queryStringParameters", {})
-    prompt = query_params.get("prompt")
-    endpoint = "https://openai.inference.de-txl.ionos.com/v1/images/generations"
-
-    header = {
-        "Authorization": f"Bearer {IONOS_API_TOKEN}", 
-        "Content-Type": "application/json"
-    }
-    body = {
-        "model": MODEL_NAME,
-        "prompt": prompt,
-        "size": "1024x1024"
-    }
-    response = requests.post(endpoint, json=body, headers=header)
+    
+    # test if we can run a minimal request
+    response = requests.get("https://example.com")
     if response.status_code != 200:
         return {
             "body": {
-                "error": "Could not reach ionos"
+                "error": "Could not reach example.com"
             },
-            "statusCode": 401,  # Internal Server Error
+            "statusCode": 500,  # Internal Server Error
             "headers": {
                 "Content-Type": ["application/json"]
             }
         }
+    
+    prompt = query_params.get("prompt")
     return {
         "body": {
-            "b64_image": response.json()['data'][0]['b64_json']
+            "message": prompt
         },
         "statusCode": 200,
         "headers": {
-            "Content-Type": ["application/json"]
+            "Content-Type": ["application/json"],
+            "your-header": "your-value"
         }
     }
+
 
 
 
@@ -61,7 +52,4 @@ if __name__ == "__main__":
     # The import is conditional so that you do not need
     # to package the library when deploying on Scaleway Functions.
     from scaleway_functions_python import local
-    from dotenv import load_dotenv
-    load_dotenv()
-
     local.serve_handler(handler, port=8080)

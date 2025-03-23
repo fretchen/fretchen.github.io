@@ -1,9 +1,6 @@
 import requests
-
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
 
 def handler(event, context):
     MODEL_NAME = "black-forest-labs/FLUX.1-schnell"
@@ -42,4 +39,7 @@ if __name__ == "__main__":
     # The import is conditional so that you do not need
     # to package the library when deploying on Scaleway Functions.
     from scaleway_functions_python import local
+    from dotenv import load_dotenv
+    load_dotenv()
+
     local.serve_handler(handler, port=8080)

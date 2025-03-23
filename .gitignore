@@ -2,6 +2,10 @@
 
 public/amo
 
+# the package folder
+scaleway/package
+scaleway/functions.zip
+
 # Logs
 logs
 *.log

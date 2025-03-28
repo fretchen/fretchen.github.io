@@ -7,33 +7,33 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string) => 
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // URL der API für die Bildgenerierung
+      // URL of the API for image generation
       const apiUrl = "https://mypersonalcloudmaqsyplo-ionosimagegen.functions.fnc.fr-par.scw.cloud";
-      
-      // GET-Anfrage mit prompt als Parameter
+
+      // GET request with prompt as parameter
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}`);
-      
+
       if (!response.ok) {
-        throw new Error(`Fehler: ${response.status} ${response.statusText}`);
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       console.log("API Response:", data);
-            
-      // Extrahiere das Base64-Bild aus der Antwort
+
+      // Extract the Base64 image from the response
       const imageBase64 = data.b64_image;
       console.log("Image Base64 (first 50 chars):", imageBase64?.substring(0, 50));
-      
-      // Nur das Bild übergeben
+
+      // Pass only the image
       onGenerate(imageBase64);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten");
-      console.error("Fehler beim API-Aufruf:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      console.error("Error during API call:", err);
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +81,7 @@ interface ImageDisplayProps {
   imageBase64?: string;
 }
 
-export function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
+function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
   return (
     <div
       style={{
@@ -96,13 +96,13 @@ export function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
       }}
     >
       {imageBase64 ? (
-        <img 
+        <img
           src={`data:image/jpeg;base64,${imageBase64}`}
-          alt="Generated" 
-          style={{ maxWidth: "100%", maxHeight: "100%" }} 
+          alt="Generated"
+          style={{ maxWidth: "100%", maxHeight: "100%" }}
         />
       ) : (
-        <p style={{ color: "#666" }}>Ihr Bild wird hier erscheinen</p>
+        <p style={{ color: "#666" }}>Your image will appear here</p>
       )}
     </div>
   );
@@ -118,7 +118,12 @@ export default function Page() {
 
   return (
     <>
-      <p>This is the place, where we will generate images for you.</p>
+      <h1>Image Generator</h1>
+      <p>On this page I have started to implement an image generator. Anything different to your standard setup ?</p>
+      <p>
+        It is a simple React component that sends a prompt to an API and displays the generated image. And it is fully
+        privacy conserving.
+      </p>
       <ImageGenerator onGenerate={handleGenerate} />
       <ImageDisplay imageBase64={generatedImage} />
     </>

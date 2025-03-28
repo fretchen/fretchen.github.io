@@ -18,6 +18,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         <Link href="/">Welcome</Link>
         <Link href="/blog">Blog</Link>
         <Link href="/amo">AMO</Link>
+        <Link href="/imagegen">ImageGen</Link>
         {""}
       </Appbar>
       <Content>{children}</Content>

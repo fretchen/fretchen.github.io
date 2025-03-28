@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function ImageGenerator({ onGenerate }: { onGenerate: (text: string, imageBase64?: string) => void }) {
+function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string) => void }) {
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +24,13 @@ function ImageGenerator({ onGenerate }: { onGenerate: (text: string, imageBase64
       
       const data = await response.json();
       console.log("API Response:", data);
-      
+            
       // Extrahiere das Base64-Bild aus der Antwort
-      const imageBase64 = data.body?.b64_image;
+      const imageBase64 = data.b64_image;
+      console.log("Image Base64 (first 50 chars):", imageBase64?.substring(0, 50));
       
-      // Callback mit Prompt und Bilddaten aufrufen
-      onGenerate(prompt, imageBase64);
+      // Nur das Bild übergeben
+      onGenerate(imageBase64);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten");
       console.error("Fehler beim API-Aufruf:", err);
@@ -78,10 +79,9 @@ function ImageGenerator({ onGenerate }: { onGenerate: (text: string, imageBase64
 
 interface ImageDisplayProps {
   imageBase64?: string;
-  promptText?: string;
 }
 
-export function ImageDisplay({ imageBase64, promptText }: ImageDisplayProps) {
+export function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
   return (
     <div
       style={{
@@ -101,8 +101,6 @@ export function ImageDisplay({ imageBase64, promptText }: ImageDisplayProps) {
           alt="Generated" 
           style={{ maxWidth: "100%", maxHeight: "100%" }} 
         />
-      ) : promptText ? (
-        <p style={{ color: "#333", padding: "15px" }}>{promptText}</p>
       ) : (
         <p style={{ color: "#666" }}>Ihr Bild wird hier erscheinen</p>
       )}
@@ -111,11 +109,10 @@ export function ImageDisplay({ imageBase64, promptText }: ImageDisplayProps) {
 }
 
 export default function Page() {
-  const [generatedText, setGeneratedText] = useState<string>("");
   const [generatedImage, setGeneratedImage] = useState<string>();
 
-  const handleGenerate = (text: string, imageBase64?: string) => {
-    setGeneratedText(text);
+  const handleGenerate = (imageBase64?: string) => {
+    console.log("Received image base64:", imageBase64 ? "yes (length: " + imageBase64.length + ")" : "no");
     setGeneratedImage(imageBase64);
   };
 
@@ -123,7 +120,7 @@ export default function Page() {
     <>
       <p>This is the place, where we will generate images for you.</p>
       <ImageGenerator onGenerate={handleGenerate} />
-      <ImageDisplay promptText={generatedText} imageBase64={generatedImage} />
+      <ImageDisplay imageBase64={generatedImage} />
     </>
   );
 }

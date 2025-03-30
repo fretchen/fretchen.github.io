@@ -34,6 +34,10 @@ def upload_json(json_obj:dict, file_name:str) -> None:
 
 def handler(event, context):
     MODEL_NAME = "black-forest-labs/FLUX.1-schnell"
+    endpoint = "https://openai.inference.de-txl.ionos.com/v1/images/generations"
+    json_base_path = "https://my-imagestore.s3.nl-ams.scw.cloud/"
+
+
     IONOS_API_TOKEN = os.getenv('IONOS_API_TOKEN')
     
     if not IONOS_API_TOKEN:
@@ -50,7 +54,6 @@ def handler(event, context):
 
     query_params = event.get("queryStringParameters", {})
     prompt = query_params.get("prompt")
-    endpoint = "https://openai.inference.de-txl.ionos.com/v1/images/generations"
 
     header = {
         "Authorization": f"Bearer {IONOS_API_TOKEN}", 
@@ -74,9 +77,7 @@ def handler(event, context):
         }
     
     b64_json = {
-        "body": {
             "b64_image": response.json()['data'][0]['b64_json']
-        }
     }
 
     # create a uuid for the file
@@ -85,13 +86,10 @@ def handler(event, context):
     # upload the json to s3
     upload_json(b64_json, file_name)
     
-
-    json_base_path = "https://my-imagestore.s3.nl-ams.scw.cloud/"
     json_path = f"{json_base_path}{file_name}"
     return {
         "body": {
-            "image_path": json_path,
-            "b64_image": response.json()['data'][0]['b64_json']
+            "image_url": json_path
         },
         "statusCode": 200,
         "headers": {

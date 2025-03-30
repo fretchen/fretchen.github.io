@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 export default function Page() {
   const [url, setUrl] = useState("https://jsonplaceholder.typicode.com/todos/1");
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,11 +14,11 @@ export default function Page() {
 
     try {
       const response = await fetch(apiUrl);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
-      
+
       const jsonData = await response.json();
       setData(jsonData);
       console.log("API Response:", jsonData);
@@ -33,7 +33,7 @@ export default function Page() {
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
       <h1>JSON Data Viewer</h1>
-      
+
       <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
@@ -42,7 +42,7 @@ export default function Page() {
           style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
           placeholder="API URL eingeben"
         />
-        
+
         <button
           onClick={() => fetchJsonData(url)}
           style={{
@@ -51,17 +51,17 @@ export default function Page() {
             color: "white",
             border: "none",
             borderRadius: "4px",
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           Daten abrufen
         </button>
       </div>
-      
+
       {isLoading && <p>Lade Daten...</p>}
-      
+
       {error && <p style={{ color: "red" }}>{error}</p>}
-      
+
       {data && (
         <div>
           <h2>JSON Response:</h2>
@@ -70,7 +70,7 @@ export default function Page() {
               backgroundColor: "#f5f5f5",
               padding: "15px",
               borderRadius: "4px",
-              overflowX: "auto"
+              overflowX: "auto",
             }}
           >
             {JSON.stringify(data, null, 2)}

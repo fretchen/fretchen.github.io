@@ -2,6 +2,7 @@ import requests
 import os
 from cloudpathlib import CloudPath, S3Client
 import json
+import logging
 
 import uuid 
 
@@ -12,9 +13,9 @@ def upload_json(json_obj:dict, file_name:str) -> None:
     json_obj: The JSON object to upload.
     file_name: The name of the file to save the JSON object as.
     """
-    
-    access_key = os.environ.get("SCW_ACCESS_KEY")
-    secret_key = os.environ.get("SCW_SECRET_KEY")
+    logging.info(f"Uploading JSON to S3: {file_name}")
+    access_key = os.getenv("SCW_ACCESS_KEY")
+    secret_key = os.getenv("SCW_SECRET_KEY")
     
     # Convert the JSON object to a string
     json_str = json.dumps(json_obj)
@@ -31,6 +32,7 @@ def upload_json(json_obj:dict, file_name:str) -> None:
     # Write the JSON string to a file
     with CloudPath(path_str, client=s3_client).open("w") as f:
         f.write(json_str)
+    logging.info(f"Uploaded JSON to S3: {file_name}")
 
 def handler(event, context):
     MODEL_NAME = "black-forest-labs/FLUX.1-schnell"
@@ -75,6 +77,9 @@ def handler(event, context):
             },
             "statusCode": 401,  # Internal Server Error
             "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "*",
                 "Content-Type": ["application/json"]
             }
         }
@@ -82,13 +87,14 @@ def handler(event, context):
     b64_json = {
             "b64_image": response.json()['data'][0]['b64_json']
     }
-
+    logging.info(f"Got the image")
     # create a uuid for the file
     file_name = f"image{uuid.uuid4().hex[:6]}.json"
 
     # upload the json to s3
     upload_json(b64_json, file_name)
-    
+    logging.info(f"Finished the upload")
+
     json_path = f"{json_base_path}{file_name}"
     return {
         "body": {
@@ -96,6 +102,9 @@ def handler(event, context):
         },
         "statusCode": 200,
         "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "*",
             "Content-Type": ["application/json"]
         }
     }
@@ -106,5 +115,8 @@ if __name__ == "__main__":
     from scaleway_functions_python import local
     from dotenv import load_dotenv
     load_dotenv()
+    
+    # Set logging level to INFO
+    logging.basicConfig(level=logging.INFO)
 
     local.serve_handler(handler, port=8080)

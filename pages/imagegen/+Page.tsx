@@ -14,7 +14,8 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string) => 
     try {
       // URL of the API for image generation
       const apiUrl = "https://mypersonalcloudmaqsyplo-ionosimagegen.functions.fnc.fr-par.scw.cloud";
-
+      
+      // the image ur
       // GET request with prompt as parameter
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}`);
 

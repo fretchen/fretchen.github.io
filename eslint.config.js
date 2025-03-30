@@ -10,6 +10,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist/*",
+      "scaleway/*",
       // Temporary compiled files
       "**/*.ts.build-*.mjs",
 

@@ -4,6 +4,7 @@ A subset to interact with the Scaleway API.
 
 - The functions live in the `handlers`directory.
 - I manage the dependencies with `poetry`.
+- You can start the handlers with `poetry run python handlers/dec_ai.py` in a test environment and then see if things work out in th `request_tests.ipynb`.
 
 ## Deployment
 

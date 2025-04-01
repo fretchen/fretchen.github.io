@@ -43,7 +43,7 @@ def upload_json(json_obj: dict, file_name: str) -> None:
     logging.info("Uploaded JSON to S3: %s", file_name)
 
 
-def handler(event, _context):
+def handler(event, context):
     """
     A small module to test if we can upload a JSON object to S3
     and if we can run a minimal request.

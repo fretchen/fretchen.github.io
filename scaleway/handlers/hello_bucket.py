@@ -8,12 +8,12 @@ import logging
 import os
 
 import requests
-from cloudpathlib import CloudPath, S3Client
+import boto3
 
 
-def upload_json(json_obj: dict, file_name: str) -> None:
+def upload_json(json_obj: dict, file_name: str) -> str:
     """
-    Uploads a JSON object to S3.
+    Uploads a JSON object to S3 using boto3 directly.
 
     json_obj: The JSON object to upload.
     file_name: The name of the file to save the JSON object as.
@@ -27,20 +27,32 @@ def upload_json(json_obj: dict, file_name: str) -> None:
         )
     # Convert the JSON object to a string
     json_str = json.dumps(json_obj)
-
-    path_str = f"s3://my-imagestore/{file_name}"
-
-    # create the s3 client
-    s3_client = S3Client(
+    
+    bucket_name = "my-imagestore"
+    
+    # Create boto3 client directly
+    s3_client = boto3.client(
+        's3',
         endpoint_url="https://s3.nl-ams.scw.cloud",
+        use_ssl=True,
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-        extra_args={"ACL": "public-read"},
+        region_name="nl-ams"  # Optional, Scaleway region
     )
-    # Write the JSON string to a file
-    with CloudPath(path_str, client=s3_client).open("w") as f:
-        f.write(json_str)
+    
+    # Upload the object directly
+    s3_client.put_object(
+        Bucket=bucket_name,
+        Key=file_name,
+        Body=json_str,
+        ContentType='application/json',
+        ACL='public-read'
+    )
+    
     logging.info("Uploaded JSON to S3: %s", file_name)
+    
+    # Rückgabe der öffentlichen URL (optional)
+    return f"https://{bucket_name}.s3.nl-ams.scw.cloud/{file_name}"
 
 
 def handler(event, context):

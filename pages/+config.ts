@@ -12,6 +12,6 @@ export default {
   // https://vike.dev/head-tags
   title: "Notes by fretchen",
   description: "Blog, notepad, whatever you want to call it.",
-
+  prerender: true,
   extends: vikeReact,
 } satisfies Config;

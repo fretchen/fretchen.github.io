@@ -4,13 +4,7 @@ import { defineConfig } from "vite";
 import vike from "vike/plugin";
 
 export default defineConfig({
-  plugins: [
-    vike({
-      prerender: true,
-    }),
-    mdx(),
-    react({}),
-  ],
+  plugins: [vike(), mdx(), react({})],
   build: {
     outDir: "build",
   },

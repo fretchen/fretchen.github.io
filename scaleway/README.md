@@ -4,6 +4,7 @@ A subset to interact with the Scaleway API.
 
 - The functions live in the `handlers`directory.
 - I manage the dependencies with `poetry`.
+- You can start the handlers with `poetry run python handlers/dec_ai.py` in a test environment and then see if things work out in th `request_tests.ipynb`.
 
 ## Deployment
 
@@ -11,4 +12,6 @@ A subset to interact with the Scaleway API.
 - Export the functions to the package folder with `pip install -r requirements.txt --target ./package`
 - Zip the content of the two folder folder with `zip -r functions.zip handlers/ package/`
 - Upload the zip file to the Scaleway console.
-- Set the handler to handlers.<gen_ai/hello_world>.handler
+- Set the handler to handlers.<gen_ai/hello_world/dec_ai>.handler
+
+I also had to set up the cors header for the bucket. This is well described [here](https://www.scaleway.com/en/docs/object-storage/api-cli/setting-cors-rules/)

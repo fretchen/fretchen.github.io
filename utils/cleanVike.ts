@@ -6,7 +6,6 @@
 
 import fs from "fs";
 
-const serverDirectory = "./build/server";
 const clientDirectory = "./build/client";
 const assetsFile = "./build/assets.json";
 
@@ -16,16 +15,7 @@ const moveFiles = (source: string, destination: string) => {
   });
 };
 
-fs.readdirSync(serverDirectory).forEach((file) => {
-  fs.rmSync(`${serverDirectory}/${file}`, { recursive: true });
-});
-
 export function cleanVike() {
-  // Entfernt den übrig gebliebenen 'server'-Ordner
-  if (fs.existsSync(serverDirectory)) {
-    fs.rmSync(serverDirectory, { recursive: true, force: true });
-  }
-
   // Entfernt die übrig gebliebene 'assets.json' Datei
   if (fs.existsSync(assetsFile)) {
     fs.unlinkSync(assetsFile);

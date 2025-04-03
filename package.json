@@ -1,10 +1,10 @@
 {
   "scripts": {
-    "dev": "vite",
+    "dev": "vike dev",
     "prebuild": "tsx ./utils/preBuild.ts",
-    "build": "vite build",
+    "build": "vike build",
     "postbuild": "tsx ./utils/cleanVike.ts",
-    "preview": "vite preview",
+    "preview": "vike preview",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "test": "mocha"

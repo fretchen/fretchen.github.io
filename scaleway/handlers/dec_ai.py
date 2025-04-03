@@ -1,3 +1,6 @@
+"""
+A module that allows us to generate and image and upload it to S3.
+"""
 import json
 import logging
 import os
@@ -14,7 +17,6 @@ def upload_json(json_obj: dict, file_name: str) -> None:
     json_obj: The JSON object to upload.
     file_name: The name of the file to save the JSON object as.
     """
-    logging.info(f"Uploading JSON to S3: {file_name}")
     access_key = os.getenv("SCW_ACCESS_KEY")
     secret_key = os.getenv("SCW_SECRET_KEY")
 
@@ -33,49 +35,74 @@ def upload_json(json_obj: dict, file_name: str) -> None:
     # Write the JSON string to a file
     with CloudPath(path_str, client=s3_client).open("w") as f:
         f.write(json_str)
-    logging.info(f"Uploaded JSON to S3: {file_name}")
 
 
 def handler(event, context):
-    MODEL_NAME = "black-forest-labs/FLUX.1-schnell"
-    IONOS_API_TOKEN = os.getenv("IONOS_API_TOKEN")
+    """
+    A small module to test if we can upload a JSON object to S3
+    and if we can run a minimal request.
+    """
+    model_name = "black-forest-labs/FLUX.1-schnell"
+    endpoint = "https://openai.inference.de-txl.ionos.com/v1/images/generations"
     json_base_path = "https://my-imagestore.s3.nl-ams.scw.cloud/"
 
-    if not IONOS_API_TOKEN:
+    ionos_api_token = os.getenv("IONOS_API_TOKEN")
+
+    if not ionos_api_token:
         return {
             "body": {
-                "error": "API Token not found. Please configure IONOS_API_TOKEN environment variable."
+                "error":("API Token not found."
+                         " Please configure IONOS_API_TOKEN environment variable.") 
             },
             "statusCode": 401,  # Unauthorized
-            "headers": {"Content-Type": ["application/json"]},
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Content-Type": ["application/json"],
+            },
         }
 
     query_params = event.get("queryStringParameters", {})
     prompt = query_params.get("prompt")
-    endpoint = "https://openai.inference.de-txl.ionos.com/v1/images/generations"
 
     header = {
-        "Authorization": f"Bearer {IONOS_API_TOKEN}",
+        "Authorization": f"Bearer {ionos_api_token}",
         "Content-Type": "application/json",
     }
-    body = {"model": MODEL_NAME, "prompt": prompt, "size": "1024x1024"}
-    response = requests.post(endpoint, json=body, headers=header)
+    body = {"model": model_name, "prompt": prompt, "size": "1024x1024"}
+    response = requests.post(endpoint, json=body, headers=header, timeout=60)
     if response.status_code != 200:
         return {
             "body": {"error": "Could not reach ionos"},
             "statusCode": 401,  # Internal Server Error
-            "headers": {"Content-Type": ["application/json"]},
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Content-Type": ["application/json"],
+            },
         }
+
+    b64_json = {"b64_image": response.json()["data"][0]["b64_json"]}
+    logging.info("Got the image")
     # create a uuid for the file
     file_name = f"image{uuid.uuid4().hex[:6]}.json"
+
+    # upload the json to s3
+    upload_json(b64_json, file_name)
+    logging.info("Finished the upload")
+
     json_path = f"{json_base_path}{file_name}"
     return {
-        "body": {
-            "b64_image": response.json()["data"][0]["b64_json"],
-            "image_url": json_path,
-        },
+        "body": {"image_url": json_path},
         "statusCode": 200,
-        "headers": {"Content-Type": ["application/json"]},
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Content-Type": ["application/json"],
+        },
     }
 
 
@@ -86,5 +113,8 @@ if __name__ == "__main__":
     from scaleway_functions_python import local
 
     load_dotenv()
+
+    # Set logging level to INFO
+    logging.basicConfig(level=logging.INFO)
 
     local.serve_handler(handler, port=8080)

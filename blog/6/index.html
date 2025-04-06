@@ -26,7 +26,7 @@
         <link rel="preload" href="/assets/static/KaTeX_Typewriter-Regular.CO6r4hn1.woff2" as="font" type="font/woff2" crossorigin>
         <meta charset="UTF-8" />
         
-    <title>Hello World</title><meta property="og:title" content="Hello World" />
+    <title>Running an image generator</title><meta property="og:title" content="Running an image generator" />
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="icon" href=" "/><script defer="" src="https://cloud.umami.is/script.js" data-website-id="e41ae7d9-a536-426d-b40e-f2488b11bf95"></script>
     
@@ -36,9 +36,23 @@
       </head>
       <body>
         
-        <div id="root"><div style="display:flex;flex-direction:column;max-width:900px;margin:auto"><h1 style="text-align:center;margin:20px 0;padding:10px">Website by fretchen</h1><div id="Appbar" style="padding:10px 20px;width:100%;display:flex;flex-direction:row;gap:20px;border-bottom:2px solid #eee;align-items:center"><a href="/">Welcome</a><a href="/blog" class="is-active">Blog</a><a href="/amo">AMO</a><a href="/imagegen">ImageGen</a></div><div id="page-container"><div id="page-content" style="padding:20px;padding-bottom:50px;min-height:100vh"><div><h1>Hello World</h1><p>Published on: <!-- -->2024-12-02</p><p>This is the first post. It shows that the whole thing is working out nicely.</p><div style="display:flex;justify-content:space-between;margin-top:20px"><a href="/blog/1">Next post: <!-- -->Ideas behind the blog stack</a></div></div></div></div></div></div>
+        <div id="root"><div style="display:flex;flex-direction:column;max-width:900px;margin:auto"><h1 style="text-align:center;margin:20px 0;padding:10px">Website by fretchen</h1><div id="Appbar" style="padding:10px 20px;width:100%;display:flex;flex-direction:row;gap:20px;border-bottom:2px solid #eee;align-items:center"><a href="/">Welcome</a><a href="/blog" class="is-active">Blog</a><a href="/amo">AMO</a><a href="/imagegen">ImageGen</a></div><div id="page-container"><div id="page-content" style="padding:20px;padding-bottom:50px;min-height:100vh"><div><h1>Running an image generator</h1><p>Published on: <!-- -->2025-04-06</p><p>Just as about every other person on the planet, I have been playing around with <a href="https://stability.ai/">stable diffusion</a> and other image generators. But I personally do not care too much about the exact details, which model is best etc. I wanted to have my own personal system. I made some good progress on it and I felt that it could be time to share some of my findings.</p>
+<h2>My goal</h2>
+<p>When I set up my system, I started with a few conditions:</p>
+<ol>
+<li>I want it to be accessible really easily my own website, which is static.</li>
+<li>I want to use open source models.</li>
+<li>The infrastructure to run the system should be hosted in Europe.</li>
+<li>At some point I must be able to limit access to the system or let people pay for it.</li>
+</ol>
+<h2>Using model for image generation</h2>
+<p>To generate the images I need to have some back-end that is non-static and that I can easily call through some API. Several options exist, but for the moment I really like the system  by <a href="https://cloud.ionos.de/managed/ai-model-hub">Ionos</a>. It is a straight-forward API with several open source models for image generation like <a href="https://stability.ai/">Stable Diffusion</a> or FLUX. The system is hosted in Europe, which I personally like these days and the costs are ok. You can get started within minutes on a local setup.</p>
+<h2>Using the model in a static website</h2>
+<p>However, to use the model you need to have some kind of API key. And on a static website there is no really nice way to store such keys. Therefore, I decided to go with a serverless setup. Here, I must admit that I was surprised how hard it was to find something that was not run by an American company. If you go with the American companies you have an almost infinite choice between Amazon, Vercel and so on. However, on the European side, I could only find <a href="https://www.scaleway.com/en/">Scaleway</a> with their functions. This setup works quite nicely. Now I have a simple website that calls Scaleway, which then calls the Ionos API and returns the image. The whole thing is hosted in Europe.</p>
+<h2>Decentral payments</h2>
+<p>The generation of each image has a cost of less than one euro. However, somehow I need to pass the cost to the user. I really do not want to go with weird advertisement things. So I could go with some traditional payment services. However, it would be substantially more fun to use some web3 payment. I am now quite sure that ChainLink functions are an interesting way to go. It is just a slightly steep learning curve and a fairly new technology. Let&#x27;s see how it goes. I will keep you updated on the progress.</p><div style="display:flex;justify-content:space-between;margin-top:20px"><a href="/blog/5">Previous post: <!-- -->Can I have interactive python pages ?</a></div></div></div></div></div></div>
         
-        <script id="vike_pageContext" type="application/json">{"_urlRewrite":null,"pageId":"/pages/blog/@id","routeParams":{"id":"0"}}</script>
+        <script id="vike_pageContext" type="application/json">{"_urlRewrite":null,"pageId":"/pages/blog/@id","routeParams":{"id":"6"}}</script>
         <script src="/assets/entries/entry-client-routing.Btqw-MKB.js" type="module" async></script>
         <link rel="modulepreload" href="/assets/entries/pages_blog_-id.B4iOciQR.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-DZ6Xj57n.js" as="script" type="text/javascript">

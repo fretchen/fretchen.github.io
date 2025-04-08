@@ -1,6 +1,7 @@
 def handler(event, context):
     query_params = event.get("queryStringParameters", {})
     prompt = query_params.get("prompt")
+    prompt = prompt if prompt else "No message"
     print(f"Prompt: {prompt}")
     return {
         "body": {"message": prompt},

@@ -6,6 +6,11 @@ public/amo
 scaleway/package
 scaleway/functions.zip
 
+
+# solidity
+cache
+artifacts
+
 # Logs
 logs
 *.log

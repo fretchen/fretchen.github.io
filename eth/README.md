@@ -1,11 +1,13 @@
-# Sample Hardhat Project
+# My Hardhat Project
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+This project is based on the Hardhat sample. It has the standard examples `Token.sol` and `Lock.sol` contract. For me interesting is for the moment the new contract `Support.sol` which starts to implement the logic behind a simple like button.
 
-Try running some of the following tasks:
+I really like to follow the documentation [Hardhat Runner](https://hardhat.org/hardhat-runner/docs/guides/compile-contracts) here.
+
+The typical commands to run are:
 
 ```shell
-npx hardhat help
+npx hardhat compile
 npx hardhat test
 REPORT_GAS=true npx hardhat test
 npx hardhat node

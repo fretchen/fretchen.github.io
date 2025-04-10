@@ -18,16 +18,8 @@
       },
       "outputSelection": {
         "*": {
-          "*": [
-            "abi",
-            "evm.bytecode",
-            "evm.deployedBytecode",
-            "evm.methodIdentifiers",
-            "metadata"
-          ],
-          "": [
-            "ast"
-          ]
+          "*": ["abi", "evm.bytecode", "evm.deployedBytecode", "evm.methodIdentifiers", "metadata"],
+          "": ["ast"]
         }
       }
     }
@@ -38,9 +30,7 @@
         "ast": {
           "absolutePath": "contracts/Lock.sol",
           "exportedSymbols": {
-            "Lock": [
-              78
-            ]
+            "Lock": [78]
           },
           "id": 79,
           "license": "UNLICENSED",
@@ -48,12 +38,7 @@
           "nodes": [
             {
               "id": 1,
-              "literals": [
-                "solidity",
-                "^",
-                "0.8",
-                ".28"
-              ],
+              "literals": ["solidity", "^", "0.8", ".28"],
               "nodeType": "PragmaDirective",
               "src": "39:24:0"
             },
@@ -65,9 +50,7 @@
               "contractKind": "contract",
               "fullyImplemented": true,
               "id": 78,
-              "linearizedBaseContracts": [
-                78
-              ],
+              "linearizedBaseContracts": [78],
               "name": "Lock",
               "nameLocation": "172:4:0",
               "nodeType": "ContractDefinition",
@@ -298,11 +281,7 @@
                             "id": 16,
                             "name": "require",
                             "nodeType": "Identifier",
-                            "overloadedDeclarations": [
-                              -18,
-                              -18,
-                              -18
-                            ],
+                            "overloadedDeclarations": [-18, -18, -18],
                             "referencedDeclaration": -18,
                             "src": "341:7:0",
                             "typeDescriptions": {
@@ -629,11 +608,7 @@
                             "id": 40,
                             "name": "require",
                             "nodeType": "Identifier",
-                            "overloadedDeclarations": [
-                              -18,
-                              -18,
-                              -18
-                            ],
+                            "overloadedDeclarations": [-18, -18, -18],
                             "referencedDeclaration": -18,
                             "src": "780:7:0",
                             "typeDescriptions": {
@@ -752,11 +727,7 @@
                             "id": 48,
                             "name": "require",
                             "nodeType": "Identifier",
-                            "overloadedDeclarations": [
-                              -18,
-                              -18,
-                              -18
-                            ],
+                            "overloadedDeclarations": [-18, -18, -18],
                             "referencedDeclaration": -18,
                             "src": "854:7:0",
                             "typeDescriptions": {
@@ -1090,9 +1061,7 @@
               "scope": 79,
               "src": "163:866:0",
               "usedErrors": [],
-              "usedEvents": [
-                11
-              ]
+              "usedEvents": [11]
             }
           ],
           "src": "39:991:0"

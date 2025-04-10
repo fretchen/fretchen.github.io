@@ -11,5 +11,22 @@ npx hardhat compile
 npx hardhat test
 REPORT_GAS=true npx hardhat test
 npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.ts
+```
+
+Then you can deploy the contract to a local network with:
+
+```shell
+npx hardhat ignition deploy ./ignition/modules/Support.ts
+```
+
+The final step is to deploy to the sepolia testnet.
+
+```shell
+npx hardhat ignition deploy ignition/modules/Support.ts --network sepolia --deployment-id <YOUR-ID>
+```
+
+And we can check the deployment with:
+
+```shell
+npx hardhat ignition verify <THE-ID-FROM-ABOVE>
 ```

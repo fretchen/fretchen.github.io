@@ -1,8 +1,8 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 export default buildModule("SupportModule", (m) => {
-  // Token-Contract ohne Parameter deployen
-  const token = m.contract("Support", []);
+  // Support-Contract ohne Parameter deployen
+  const support = m.contract("Support", []);
 
-  return { token };
+  return { support };
 });

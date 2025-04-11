@@ -17,8 +17,9 @@ jobs:
           cd website
           npm ci
           npm run build
+          mv build ../build
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: website/build # The folder the action should deploy.
+          folder: build # The folder the action should deploy.

@@ -1,6 +1,6 @@
 # the public repo images
 
-public/amo
+website/public/amo
 
 # the package folder
 scaleway/package

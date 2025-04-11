@@ -3,6 +3,9 @@ import "./style.css";
 import React from "react";
 import { Link } from "../components/Link.js";
 
+import { WagmiProvider } from "wagmi";
+import { config } from "../wagmi.config";
+
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -21,7 +24,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         <Link href="/imagegen">ImageGen</Link>
         {""}
       </Appbar>
-      <Content>{children}</Content>
+      <WagmiProvider config={config}>
+        <Content>{children}</Content>
+      </WagmiProvider>
     </div>
   );
 }

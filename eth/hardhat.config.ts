@@ -20,7 +20,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: { seoplia: ETHERSCAN_API_KEY, optsepolia: OPTIMISTIC_ETHERSCAN_API_KEY },
+    apiKey: { sepolia: ETHERSCAN_API_KEY, optsepolia: OPTIMISTIC_ETHERSCAN_API_KEY },
     customChains: [
       {
         network: "optsepolia",

@@ -7,7 +7,7 @@ export default function Page() {
       <p>
         {" "}
         Welcome to my website with all kinds of notes etc. For the moment it is mostly a blog, but let us see how it
-        evolves.
+        evolves. So mostly fun for me, maybe for you too.
       </p>
       <BlogList />
     </>

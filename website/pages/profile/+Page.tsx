@@ -1,12 +1,12 @@
 import * as React from "react";
-import { useAccount, useEnsName } from "wagmi";
+import { useAccount } from "wagmi";
 
+import WalletOptions from "../../components/WalletOptions";
+import Account from "../../components/Account";
 const App: React.FC = function () {
-  const { address } = useAccount();
-  const { data, error, status } = useEnsName({ address });
-  if (status === "pending") return <div>Loading ENS name</div>;
-  if (status === "error") return <div>Error fetching ENS name: {error.message}</div>;
-  return <div>ENS name: {data}</div>;
+  const { isConnected } = useAccount();
+  if (isConnected) return <Account />;
+  return <WalletOptions />;
 };
 
 export default App;

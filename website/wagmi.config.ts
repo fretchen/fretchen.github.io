@@ -6,7 +6,7 @@ const projectId = "dc4827db33b6cb0234280a0ca3521e5c";
 
 export const config = createConfig({
   chains: [mainnet, sepolia, optimism],
-  connectors: [injected(), walletConnect({ projectId }), metaMask(), safe()],
+  connectors: [injected(), walletConnect({ projectId }), metaMask()],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),

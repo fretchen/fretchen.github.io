@@ -1,10 +1,15 @@
 import * as React from "react";
 import { Connector, useConnect } from "wagmi";
 
+import { useAccount } from "wagmi";
+import Account from "./Account";
+
 export default function WalletOptions() {
   const { connectors, connect } = useConnect();
   const [isOpen, setIsOpen] = React.useState(false);
   const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
+  const { isConnected } = useAccount();
+
   const dropdownStyle: React.CSSProperties = {
     position: "relative",
     display: "inline-block",
@@ -42,6 +47,8 @@ export default function WalletOptions() {
     borderBottom: "1px solid #ddd",
     backgroundColor: isHovered ? "#e9e9e9" : "transparent", // Hintergrundfarbe bei Hover
   });
+
+  if (isConnected) return <Account />;
 
   return (
     <div style={dropdownStyle} onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>

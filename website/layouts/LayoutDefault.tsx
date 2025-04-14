@@ -1,7 +1,8 @@
 import "./style.css";
 
 import React from "react";
-import { Link } from "../components/Link.js";
+import { Link } from "../components/Link";
+import WalletOptions from "../components/WalletOptions";
 
 import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
@@ -16,15 +17,17 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         margin: "auto",
       }}
     >
-      <h1 style={{ textAlign: "center", margin: "20px 0", padding: "10px" }}>Website by fretchen</h1>
-      <Appbar>
-        <Link href="/">Welcome</Link>
-        <Link href="/blog">Blog</Link>
-        <Link href="/amo">AMO</Link>
-        <Link href="/imagegen">ImageGen</Link>
-        {""}
-      </Appbar>
       <WagmiProvider config={config}>
+        <h1 style={{ textAlign: "center", margin: "20px 0", padding: "10px" }}>Website by fretchen</h1>
+        <Appbar>
+          <Link href="/">Welcome</Link>
+          <Link href="/blog">Blog</Link>
+          <Link href="/amo">AMO</Link>
+          <Link href="/imagegen">ImageGen</Link>
+          <div style={{ marginLeft: "auto" }}>
+            <WalletOptions />
+          </div>
+        </Appbar>
         <Content>{children}</Content>
       </WagmiProvider>
     </div>

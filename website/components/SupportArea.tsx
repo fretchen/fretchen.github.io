@@ -1,15 +1,20 @@
 import * as React from "react";
 
+import WriteSupport from "./WriteSupport";
+
 import { type BaseError, useReadContract } from "wagmi";
 import { supportContractConfig } from "../wagmi.config";
-
 import { sepolia } from "wagmi/chains";
+
+type SupportAreaProps = {
+  url: string;
+};
 
 type ReadSupportProps = {
   url: string;
 };
 
-export default function ReadSupport({ url }: ReadSupportProps) {
+function ReadSupport({ url }: ReadSupportProps) {
   console.log("ReadSupport", url);
   const { data, error, isPending } = useReadContract({
     ...supportContractConfig,
@@ -22,5 +27,22 @@ export default function ReadSupport({ url }: ReadSupportProps) {
 
   if (error) return <div>Error: {(error as BaseError).shortMessage || error.message}</div>;
 
-  return <div>Supports: {data?.toString()}</div>;
+  return <div>{data?.toString()}</div>;
+}
+
+export default function SupportArea({ url }: SupportAreaProps) {
+  console.log("SupportArea", url);
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        margin: "16px 0",
+      }}
+    >
+      <WriteSupport url={url} />
+      <ReadSupport url={url} />
+    </div>
+  );
 }

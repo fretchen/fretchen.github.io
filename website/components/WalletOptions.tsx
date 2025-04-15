@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Connector, useConnect } from "wagmi";
+import { useConnect } from "wagmi";
 
 import { useAccount } from "wagmi";
 import Account from "./Account";

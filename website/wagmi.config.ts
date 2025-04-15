@@ -1,6 +1,6 @@
 import { http, createConfig } from "wagmi";
 import { mainnet, optimism, sepolia } from "wagmi/chains";
-import { injected, metaMask, safe, walletConnect } from "wagmi/connectors";
+import { injected, metaMask, walletConnect } from "wagmi/connectors";
 
 const projectId = "dc4827db33b6cb0234280a0ca3521e5c";
 

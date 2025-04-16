@@ -54,7 +54,6 @@ Such computations are then typically nicely visualized through circuit
 diagrams as used them already for the study of Bell inequalities and
 visualized below.
 
-
 <figure id="fig-circuit">
 <img src="./lecture20_pic1.png" width="60%" />
 <figcaption>A simple circuit diagram. It show the initial state, an entanglement
@@ -228,7 +227,6 @@ all-important Laser cooling, which was pioneered for ions in the 1970s
 (!!) by the Wineland group. For cooling transition we couple the ground
 state to an excited state of finitie lifetime $\tau= \frac{1}{\Gamma}$.
 
-
 <figure id="fig-laser-cooling">
 <img src="./lecture20_pic2.png" width="60%" />
 </figure>
@@ -286,13 +284,11 @@ and internal states:
 
 The full energy diagram is summarized in the figure below.
 
-
 <figure id="fig-paul-exp">
 <img src="./lecture20_pic5.png" width="60%" />
 <figcaption>Level structure of an two-level system coupled to a laser field as
 discussed in the text.</figcaption>
 </figure>
-
 
 This scheme is used to perform **Raman side-band cooling**. The laser is
 tuned on the transition
@@ -433,7 +429,7 @@ that is most adapted to our work.
 
 # Practical considerations
 
-A commonly used ion is $\mathrm{Ca+} \, (Z=20)$.  The level scheme of the calcium atom is shown below. The different
+A commonly used ion is $\mathrm{Ca+} \, (Z=20)$. The level scheme of the calcium atom is shown below. The different
 transitions are used for different purposes:
 
 - The broad transition at 397nm is used for cooling.

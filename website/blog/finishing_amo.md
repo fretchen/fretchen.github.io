@@ -3,7 +3,7 @@ publishing_date: 2025-03-11
 title: Can I have interactive python pages ?
 ---
 
-_The original post on mirror can be found [here](https://mirror.xyz/fretchen.eth/iglgKZeAeHcUc_-Ya9cjQQ1vUNqhJTRUswredn-53e8?referrerAddress=0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20)._
+_The original post on mirror can be found [here](https://mirror.xyz/fretchen.eth/iglgKZeAeHcUc_-Ya9cjQQ1vUNqhJTRUswredn-53e8?referrerAddress=0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20).\_
 
 One of my main motivations to start this website was to consolidate different lectures, writings and other things that accumulated over the years in different places. The first project was to actually move my AMO lectures. This is now finished and can be found over [here](https://www.fretchen.eu/amo). I started with this as it was a really simple test case without anything interactive components.
 

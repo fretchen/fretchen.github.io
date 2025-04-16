@@ -1,11 +1,10 @@
 import * as React from "react";
-import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
+import { useAccount, useDisconnect, useEnsName } from "wagmi";
 
 export default function Account() {
   const { address } = useAccount();
   const { disconnect } = useDisconnect();
   const { data: ensName } = useEnsName({ address });
-  const { data: ensAvatar } = useEnsAvatar({ name: ensName! });
   const [isOpen, setIsOpen] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
 
@@ -57,12 +56,7 @@ export default function Account() {
 
   return (
     <div style={dropdownStyle} onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>
-      <button style={buttonStyle}>
-        {ensAvatar && (
-          <img alt="ENS Avatar" src={ensAvatar} style={{ width: "20px", height: "20px", borderRadius: "50%" }} />
-        )}
-        {displayAddress}
-      </button>
+      <button style={buttonStyle}>{displayAddress}</button>
       <div style={menuStyle}>
         <div
           style={menuItemStyle(isHovered)}

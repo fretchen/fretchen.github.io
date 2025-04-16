@@ -26,7 +26,6 @@ cavity. Picture taken from the Nobel prize announcement for Serge
 Haroche <a href="https://www.nobelprize.org/prizes/physics/2012/popular-information/">here</a>  </figcaption>
 </figure>
 
-
 They are:
 
 - The electric field confined in a high finesse cavity. It will

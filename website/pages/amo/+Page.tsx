@@ -1,11 +1,11 @@
 import * as React from "react";
 
 import AmoList from "../../components/AmoList";
-
+import TitleBar from "../../components/TitleBar";
 const App: React.FC = function () {
   return (
     <div className="AMO">
-      <h1>AMO lecture notes</h1>
+      <TitleBar title="AMO lecture notes" />
       <p>
         {" "}
         Welcome, to my lecture notes on Atomic, Molecular and Optical physics that I prepared in my time in Heidelberg.

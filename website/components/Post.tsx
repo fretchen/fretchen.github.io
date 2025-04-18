@@ -9,6 +9,7 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { BlogPost } from "../types/BlogPost";
+import TitleBar from "./TitleBar";
 import "katex/dist/katex.min.css";
 
 import Giscus from "@giscus/react";
@@ -16,7 +17,7 @@ import Giscus from "@giscus/react";
 export function Post({ title, content, publishing_date }: BlogPost) {
   return (
     <>
-      <h1>{title}</h1>
+      <TitleBar title={title} />
       {publishing_date && <p>Published on: {publishing_date}</p>}
       <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
         {content}

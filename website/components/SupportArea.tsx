@@ -3,8 +3,7 @@ import * as React from "react";
 import WriteSupport from "./WriteSupport";
 
 import { type BaseError, useReadContract } from "wagmi";
-import { supportContractConfig } from "../wagmi.config";
-import { sepolia } from "wagmi/chains";
+import { getChain, getSupportContractConfig } from "../utils/getChain";
 
 type SupportAreaProps = {
   url: string;
@@ -16,11 +15,14 @@ type ReadSupportProps = {
 
 function ReadSupport({ url }: ReadSupportProps) {
   console.log("ReadSupport", url);
+
+  const chain = getChain();
+  const supportContractConfig = getSupportContractConfig();
   const { data, error, isPending } = useReadContract({
     ...supportContractConfig,
     functionName: "getLikesForUrl",
     args: [url],
-    chainId: sepolia.id,
+    chainId: chain.id,
   });
 
   if (isPending) return <div>Loading...</div>;

@@ -5,7 +5,6 @@ import TitleBar from "../../components/TitleBar";
 const App: React.FC = function () {
   return (
     <div className="AMO">
-
       <TitleBar title="AMO lecture notes" />
       <p>
         {" "}

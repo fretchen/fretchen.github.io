@@ -18,7 +18,7 @@ export default function SupportArea() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showTooltip, setShowTooltip] = React.useState(false);
-  
+
   // WriteSupport Hooks
   const { isConnected } = useAccount();
   const chainId = useChainId();
@@ -39,9 +39,22 @@ export default function SupportArea() {
   // Chain und Contract Konfiguration
   const chain = getChain();
   const supportContractConfig = getSupportContractConfig();
-  
+
   // Netzwerk-Check
   const isCorrectNetwork = chainId === chain.id;
+
+  // READ SUPPORT LOGIK - Hier die refetch-Funktion mit extrahieren
+  const {
+    data,
+    error: readError,
+    isPending: isReadPending,
+    refetch,
+  } = useReadContract({
+    ...supportContractConfig,
+    functionName: "getLikesForUrl",
+    args: [fullUrl],
+    chainId: chain.id,
+  });
 
   // WriteSupport Handler
   const handleSupport = async () => {
@@ -71,25 +84,23 @@ export default function SupportArea() {
     if (isSuccess) {
       setIsLoading(false);
       setErrorMessage(null);
+
+      // Nach erfolgreicher Transaktion die Likes neu abrufen
+      // Verzögerung hinzufügen, um sicherzustellen, dass die Blockchain Zeit hat, sich zu aktualisieren
+      setTimeout(() => {
+        refetch();
+      }, 2000); // 2 Sekunden Verzögerung
     }
     if (writeError) {
       setIsLoading(false);
       setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
     }
-  }, [isSuccess, writeError]);
+  }, [isSuccess, writeError, refetch]);
 
   // WriteSupport Warnungs-Logik
   const warningMessage =
     errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
   const tooltipColor = errorMessage ? "red" : "orange";
-
-  // READ SUPPORT LOGIK
-  const { data, error: readError, isPending: isReadPending } = useReadContract({
-    ...supportContractConfig,
-    functionName: "getLikesForUrl",
-    args: [fullUrl],
-    chainId: chain.id,
-  });
 
   // Gemeinsame Basis-Stile
   const baseButtonStyle: React.CSSProperties = {
@@ -125,7 +136,8 @@ export default function SupportArea() {
   // Render-Komponente für ReadSupport basierend auf Status
   const renderReadSupport = () => {
     if (isReadPending) return <div style={readSupportStyle}>Loading...</div>;
-    if (readError) return <div style={readSupportStyle}>Error: {(readError as BaseError).shortMessage || readError.message}</div>;
+    if (readError)
+      return <div style={readSupportStyle}>Error: {(readError as BaseError).shortMessage || readError.message}</div>;
     return <div style={readSupportStyle}>{data?.toString() || "0"}</div>;
   };
 
@@ -174,7 +186,7 @@ export default function SupportArea() {
             </div>
           )}
         </div>
-        
+
         {/* ReadSupport direkt hier */}
         {renderReadSupport()}
       </div>

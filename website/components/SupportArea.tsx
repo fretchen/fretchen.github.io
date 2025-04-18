@@ -14,8 +14,6 @@ type ReadSupportProps = {
 };
 
 function ReadSupport({ url }: ReadSupportProps) {
-  console.log("ReadSupport", url);
-
   const chain = getChain();
   const supportContractConfig = getSupportContractConfig();
   const { data, error, isPending } = useReadContract({
@@ -33,7 +31,6 @@ function ReadSupport({ url }: ReadSupportProps) {
 }
 
 export default function SupportArea({ url }: SupportAreaProps) {
-  console.log("SupportArea", url);
   return (
     <div
       style={{

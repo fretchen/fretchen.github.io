@@ -6,9 +6,16 @@ import SupportArea from "../../components/SupportArea";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
-  // console.log(pageContext.urlParsed.origin);
   const currentUrl = pageContext.urlPathname;
-  const fullUrl = typeof window !== "undefined" ? window.location.origin + currentUrl : currentUrl;
+
+  // Initialer State ist nur der Pfad (wird auf Server und Client identisch sein)
+  const [fullUrl, setFullUrl] = React.useState(currentUrl);
+
+  // Nach der Hydration den vollständigen URL setzen
+  React.useEffect(() => {
+    setFullUrl(window.location.origin + currentUrl);
+  }, [currentUrl]);
+
   return (
     <div className="Blog">
       <h1>Welcome to my blog!</h1>

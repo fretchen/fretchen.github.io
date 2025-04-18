@@ -1,47 +1,195 @@
 import * as React from "react";
 
-import WriteSupport from "./WriteSupport";
+import { usePageContext } from "vike-react/usePageContext";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
+import { parseEther } from "viem";
 
 import { type BaseError, useReadContract } from "wagmi";
 import { getChain, getSupportContractConfig } from "../utils/getChain";
 
-type SupportAreaProps = {
-  url: string;
-};
+export default function SupportArea() {
+  const pageContext = usePageContext();
+  const currentUrl = pageContext.urlPathname;
 
-type ReadSupportProps = {
-  url: string;
-};
+  // Initialer State ist nur der Pfad (wird auf Server und Client identisch sein)
+  const [fullUrl, setFullUrl] = React.useState(currentUrl);
 
-function ReadSupport({ url }: ReadSupportProps) {
+  // WriteSupport Zustände
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = React.useState(false);
+
+  // WriteSupport Hooks
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const donationAmount = parseEther("0.0002");
+  const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  // Nach der Hydration den vollständigen URL setzen und trailing slashes entfernen
+  React.useEffect(() => {
+    const rawUrl = window.location.origin + currentUrl;
+    // Entferne nachstehenden Schrägstrich, falls vorhanden
+    const cleanUrl = rawUrl.replace(/\/+$/, "");
+    setFullUrl(cleanUrl);
+  }, [currentUrl]);
+
+  // Chain und Contract Konfiguration
   const chain = getChain();
   const supportContractConfig = getSupportContractConfig();
-  const { data, error, isPending } = useReadContract({
+
+  // Netzwerk-Check
+  const isCorrectNetwork = chainId === chain.id;
+
+  // READ SUPPORT LOGIK - Hier die refetch-Funktion mit extrahieren
+  const {
+    data,
+    error: readError,
+    isPending: isReadPending,
+    refetch,
+  } = useReadContract({
     ...supportContractConfig,
     functionName: "getLikesForUrl",
-    args: [url],
+    args: [fullUrl],
     chainId: chain.id,
   });
 
-  if (isPending) return <div>Loading...</div>;
+  // WriteSupport Handler
+  const handleSupport = async () => {
+    setErrorMessage(null);
+    if (!fullUrl) {
+      setErrorMessage("URL ist erforderlich");
+      return;
+    }
 
-  if (error) return <div>Error: {(error as BaseError).shortMessage || error.message}</div>;
+    if (!isCorrectNetwork) {
+      setErrorMessage(`Bitte wechsle zum ${chain.name} Netzwerk`);
+      return;
+    }
 
-  return <div>{data?.toString()}</div>;
-}
+    setIsLoading(true);
 
-export default function SupportArea({ url }: SupportAreaProps) {
+    writeContract({
+      ...supportContractConfig,
+      functionName: "donate",
+      args: [fullUrl],
+      value: donationAmount,
+    });
+  };
+
+  // WriteSupport Effekt für Status-Updates
+  React.useEffect(() => {
+    if (isSuccess) {
+      setIsLoading(false);
+      setErrorMessage(null);
+
+      // Nach erfolgreicher Transaktion die Likes neu abrufen
+      // Verzögerung hinzufügen, um sicherzustellen, dass die Blockchain Zeit hat, sich zu aktualisieren
+      setTimeout(() => {
+        refetch();
+      }, 2000); // 2 Sekunden Verzögerung
+    }
+    if (writeError) {
+      setIsLoading(false);
+      setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
+    }
+  }, [isSuccess, writeError, refetch]);
+
+  // WriteSupport Warnungs-Logik
+  const warningMessage =
+    errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
+  const tooltipColor = errorMessage ? "red" : "orange";
+
+  // Gemeinsame Basis-Stile
+  const baseButtonStyle: React.CSSProperties = {
+    padding: "8px 16px",
+    backgroundColor: "#3a5a8c",
+    color: "white",
+    fontWeight: "bold",
+    height: "36px", // Feste Höhe für beide Elemente
+    boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
+  };
+
+  // Stile definieren
+  const writeSupportStyle: React.CSSProperties = {
+    ...baseButtonStyle,
+    borderRadius: "4px 0 0 4px",
+    borderRight: "1px solid white", // Behält nur die weiße Trennlinie
+    borderLeft: "none", // Entfernt den linken Rand
+    borderTop: "none", // Entfernt den oberen Rand
+    borderBottom: "none", // Entfernt den unteren Rand
+    cursor: isLoading ? "not-allowed" : "pointer",
+    backgroundColor: isLoading ? "#5a7aac" : "#3a5a8c", // Helleres Blau für Loading-Zustand
+  };
+
+  const readSupportStyle: React.CSSProperties = {
+    ...baseButtonStyle,
+    borderRadius: "0 4px 4px 0",
+    border: "none", // Entfernt alle Ränder
+    minWidth: "10px", // Minimale Breite für gleichmäßiges Aussehen
+  };
+
+  // Render-Komponente für ReadSupport basierend auf Status
+  const renderReadSupport = () => {
+    if (isReadPending) return <div style={readSupportStyle}>Loading...</div>;
+    if (readError)
+      return <div style={readSupportStyle}>Error: {(readError as BaseError).shortMessage || readError.message}</div>;
+    return <div style={readSupportStyle}>{data?.toString() || "0"}</div>;
+  };
+
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "16px",
         margin: "16px 0",
       }}
     >
-      <WriteSupport url={url} />
-      <ReadSupport url={url} />
+      <div style={{ display: "flex" }}>
+        {/* WriteSupport-Button */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={handleSupport}
+            disabled={!isConnected || isLoading || isPending || isConfirming}
+            style={writeSupportStyle}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            {isLoading || isPending ? "Processing..." : isSuccess ? "Supported!" : "Support"}
+          </button>
+
+          {/* Tooltip */}
+          {showTooltip && warningMessage && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "100%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                marginBottom: "8px",
+                padding: "8px",
+                backgroundColor: "white",
+                border: `1px solid ${tooltipColor}`,
+                borderRadius: "4px",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                color: tooltipColor,
+                width: "max-content",
+                maxWidth: "250px",
+                zIndex: 100,
+              }}
+            >
+              {warningMessage}
+            </div>
+          )}
+        </div>
+
+        {/* ReadSupport direkt hier */}
+        {renderReadSupport()}
+      </div>
     </div>
   );
 }

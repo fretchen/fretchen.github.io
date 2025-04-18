@@ -1,8 +1,8 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import "@nomicfoundation/hardhat-verify";
-import 'hardhat-abi-exporter';
-import "hardhat-gas-reporter"
+import "hardhat-abi-exporter";
+import "hardhat-gas-reporter";
 import { vars } from "hardhat/config";
 
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
@@ -13,7 +13,7 @@ const COINMARKETCAP_API_KEY = vars.get("COINMARKETCAP_API_KEY");
 const config: HardhatUserConfig = {
   solidity: "0.8.28",
   gasReporter: {
-    currency: 'EUR',
+    currency: "EUR",
     L1: "ethereum",
     L2: "optimism",
     L2Etherscan: OPTIMISTIC_ETHERSCAN_API_KEY,
@@ -35,7 +35,11 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: { sepolia: ETHERSCAN_API_KEY, optsepolia: OPTIMISTIC_ETHERSCAN_API_KEY, optimisticEthereum: OPTIMISTIC_ETHERSCAN_API_KEY },
+    apiKey: {
+      sepolia: ETHERSCAN_API_KEY,
+      optsepolia: OPTIMISTIC_ETHERSCAN_API_KEY,
+      optimisticEthereum: OPTIMISTIC_ETHERSCAN_API_KEY,
+    },
     customChains: [
       {
         network: "optsepolia",

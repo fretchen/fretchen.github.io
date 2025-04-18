@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
-import { supportContractConfig } from "../wagmi.config";
-import { sepolia } from "wagmi/chains";
 import { parseEther } from "viem";
+import { getChain, getSupportContractConfig } from "../utils/getChain";
 
 export default function WriteSupport({ url }: { url: string }) {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -17,9 +16,12 @@ export default function WriteSupport({ url }: { url: string }) {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
+  // get the chain
+  const chain = getChain();
+  const supportContractConfig = getSupportContractConfig();
 
   // Prüfen, ob das richtige Netzwerk verwendet wird
-  const isCorrectNetwork = chainId === sepolia.id;
+  const isCorrectNetwork = chainId === chain.id;
 
   const handleSupport = async () => {
     setErrorMessage(null);
@@ -29,7 +31,7 @@ export default function WriteSupport({ url }: { url: string }) {
     }
 
     if (!isCorrectNetwork) {
-      setErrorMessage(`Bitte wechsle zum ${sepolia.name} Netzwerk`);
+      setErrorMessage(`Bitte wechsle zum ${chain.name} Netzwerk`);
       return;
     }
 
@@ -56,7 +58,7 @@ export default function WriteSupport({ url }: { url: string }) {
 
   // Bestimme die Warnung, die angezeigt werden soll (wenn vorhanden)
   const warningMessage =
-    errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${sepolia.name} Netzwerk` : null);
+    errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
 
   // Bestimme die Farbe des Tooltips
   const tooltipColor = errorMessage ? "red" : "orange";

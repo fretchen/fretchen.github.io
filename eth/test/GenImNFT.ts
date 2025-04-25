@@ -22,22 +22,22 @@ function createMetadataFile(tokenId: number | bigint, prompt: string): string {
   if (!fs.existsSync(METADATA_DIR)) {
     fs.mkdirSync(METADATA_DIR, { recursive: true });
   }
-  
+
   // Erstelle die Metadaten
   const metadata = {
     name: `GenImNFT #${tokenId}`,
     description: prompt,
-    image: "" // Leerer Image-Link, würde später gefüllt
+    image: "", // Leerer Image-Link, würde später gefüllt
   };
-  
+
   // Speichere die Metadaten in einer Datei
   const fileName = `token_${tokenId}.json`;
   const filePath = path.join(METADATA_DIR, fileName);
   fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2));
-  
+
   // Datei zur Liste der zu löschenden Dateien hinzufügen
   createdFiles.push(filePath);
-  
+
   // In einem echten Szenario würdest du eine URL zurückgeben
   // Für Tests können wir den lokalen Pfad oder einen relativen Pfad verwenden
   return `file://${filePath}`;
@@ -52,20 +52,20 @@ describe("GenImNFT", function () {
     // Deploy the contract
     const genImNFT = await hre.viem.deployContract("GenImNFT", [owner.account.address]);
     const genImNFTPublic = await hre.viem.getContractAt("GenImNFT", genImNFT.address);
-    
-    return { 
-      genImNFT, 
+
+    return {
+      genImNFT,
       genImNFTPublic,
-      owner, 
-      otherAccount, 
-      recipient 
+      owner,
+      otherAccount,
+      recipient,
     };
   }
 
   describe("Deployment", function () {
     it("Should set the right owner", async function () {
       const { genImNFTPublic, owner } = await loadFixture(deployGenImNFTFixture);
-      
+
       // read the owner address from the contract
       const ownerAddress = await genImNFTPublic.read.owner();
       // Normalisiere beide Adressen mit getAddress
@@ -82,30 +82,30 @@ describe("GenImNFT", function () {
   describe("Minting", function () {
     it("Should allow the owner to mint a new NFT", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
-      
+
       const tokenURI = "https://example.com/metadata/1.json";
-      
+
       const tx = await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
       await tx;
-      
+
       // Check that the NFT was minted to the correct address
       const ownerOfToken = await genImNFT.read.ownerOf([0n]);
       expect(getAddress(ownerOfToken)).to.equal(getAddress(recipient.account.address));
-      
+
       // Check that the token URI is set correctly
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
     });
 
     it("Should increment token ID after each mint", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
-      
+
       await genImNFT.write.safeMint([recipient.account.address, "uri1"]);
       await genImNFT.write.safeMint([recipient.account.address, "uri2"]);
-      
+
       // First token ID should be 0
       const ownerOfToken0 = await genImNFT.read.ownerOf([0n]);
       expect(getAddress(ownerOfToken0)).to.equal(getAddress(recipient.account.address));
-      
+
       // Second token ID should be 1
       const ownerOfToken1 = await genImNFT.read.ownerOf([1n]);
       expect(getAddress(ownerOfToken1)).to.equal(getAddress(recipient.account.address));
@@ -113,102 +113,160 @@ describe("GenImNFT", function () {
 
     it("Should return the token ID when minting", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
-      
+
       // This requires capturing the return value from the transaction
       // In Viem we need to simulate the call to get the return value
       const tokenIdResponse = await genImNFT.simulate.safeMint([
-        recipient.account.address, 
-        "https://example.com/metadata/1.json"
+        recipient.account.address,
+        "https://example.com/metadata/1.json",
       ]);
-            
+
       expect(tokenIdResponse.result).to.equal(0n);
-      
+
       // Actually execute the mint
       await genImNFT.write.safeMint([recipient.account.address, "https://example.com/metadata/1.json"]);
-      
+
       // Simulate the next mint to check incrementing
       const nextTokenIdResponse = await genImNFT.simulate.safeMint([
-        recipient.account.address, 
-        "https://example.com/metadata/2.json"
+        recipient.account.address,
+        "https://example.com/metadata/2.json",
       ]);
-      
+
       expect(nextTokenIdResponse.result).to.equal(1n);
     });
-
   });
 
   describe("Token URI", function () {
     it("Should return the correct token URI", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
-      
+
       const tokenURI = "https://example.com/metadata/special.json";
       await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
-      
+
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
     });
 
     it("Should revert when querying non-existent token", async function () {
       const { genImNFT } = await loadFixture(deployGenImNFTFixture);
-      
+
       // Should revert with an ERC721 error about nonexistent token
       await expect(genImNFT.read.tokenURI([999n])).to.be.rejected;
     });
   });
 
-  describe("Metadata Storage", function() {
-    it("Should create and use local metadata files", async function() {
+  describe("Metadata Storage", function () {
+    it("Should create and use local metadata files", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
-      
+
       // Erstelle eine Metadaten-Datei
       const prompt = "A futuristic city skyline at night with neon lights";
       const tokenURI = createMetadataFile(0, prompt);
-      
+
       console.log("Created metadata at:", tokenURI);
-      
+
       // Mint NFT mit dem lokalen URI
       await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
-      
+
       // Überprüfe, dass der Token URI richtig gesetzt wurde
       const storedURI = await genImNFT.read.tokenURI([0n]);
       expect(storedURI).to.equal(tokenURI);
-      
+
       // Überprüfe, dass die Datei existiert
       expect(fs.existsSync(tokenURI.replace("file://", ""))).to.be.true;
-      
+
       // Optional: Lese die Datei und überprüfe den Inhalt
-      const fileContent = JSON.parse(fs.readFileSync(tokenURI.replace("file://", ""), 'utf8'));
+      const fileContent = JSON.parse(fs.readFileSync(tokenURI.replace("file://", ""), "utf8"));
       expect(fileContent.description).to.equal(prompt);
     });
-    
-    it("Should mint multiple NFTs with different metadata files", async function() {
+
+    it("Should mint multiple NFTs with different metadata files", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
-      
+
       // Erstelle mehrere Metadaten-Dateien
-      const prompts = [
-        "A serene mountain landscape at sunset",
-        "An abstract digital artwork with geometric patterns"
-      ];
-      
+      const prompts = ["A serene mountain landscape at sunset", "An abstract digital artwork with geometric patterns"];
+
       // Mint mehrere NFTs mit verschiedenen Metadaten
       for (let i = 0; i < prompts.length; i++) {
         const tokenURI = createMetadataFile(i, prompts[i]);
         await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
       }
-      
+
       // Überprüfe, dass alle URIs richtig gesetzt wurden
       for (let i = 0; i < prompts.length; i++) {
         const storedURI = await genImNFT.read.tokenURI([BigInt(i)]);
         expect(storedURI).to.include(`token_${i}.json`);
-        
+
         // Lese die Datei und überprüfe den Inhalt
-        const fileContent = JSON.parse(fs.readFileSync(storedURI.replace("file://", ""), 'utf8'));
+        const fileContent = JSON.parse(fs.readFileSync(storedURI.replace("file://", ""), "utf8"));
         expect(fileContent.description).to.equal(prompts[i]);
       }
     });
   });
 
+  describe("Image Updates", function () {
+    it("Should allow another wallet to update the image for a token", async function () {
+      const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
+
+      // 1. Erstelle ein NFT mit leerem Bild
+      const prompt = "A cyberpunk city with flying cars in the rain";
+      const tokenURI = createMetadataFile(7, prompt);
+      const tokenId = await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+
+      // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
+      const recipientClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
+        client: { wallet: recipient },
+      });
+
+      await recipientClient.write.authorizeImageUpdater([0n, otherAccount.account.address]);
+
+      // 4. Die autorisierte Wallet fordert ein Bild-Update an
+      const updaterClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+
+      const imageUrl = "https://example.com/generated-image-12345.png";
+      const tx = await updaterClient.write.requestImageUpdate([0n, imageUrl]);
+
+      // 5. Überprüfe, dass das Bild als aktualisiert markiert wurde
+      const isImageUpdated = await genImNFT.read.isImageUpdated([0n]);
+      expect(isImageUpdated).to.be.true;
+
+      // 6. Simuliere einen Off-Chain-Service, der das Event abfängt und die Metadaten aktualisiert
+      // In einer echten Umgebung würde dies durch einen Event-Listener geschehen
+      const filePath = tokenURI.replace("file://", "");
+      const metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+      // Aktualisiere das Bild in den Metadaten
+      metadata.image = imageUrl;
+      fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2));
+
+      // 7. Überprüfe, dass das Bild in den Metadaten aktualisiert wurde
+      const updatedMetadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      expect(updatedMetadata.image).to.equal(imageUrl);
+
+      console.log("Image updated successfully in metadata:", updatedMetadata);
+    });
+
+    it("Should prevent unauthorized wallets from updating images", async function () {
+      const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
+
+      // 1. Erstelle ein NFT mit leerem Bild
+      const prompt = "An ancient temple in a mystical forest";
+      const tokenURI = createMetadataFile(0, prompt);
+      await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+
+      // 2. Nicht autorisierte Wallet (otherAccount) versucht zu aktualisieren
+      const notAuthorizedClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+
+      // Sollte mit einem Berechtigungsfehler fehlschlagen
+      await expect(notAuthorizedClient.write.requestImageUpdate([0n, "https://example.com/image.png"])).to.be.rejected; // oder spezifischer: .to.be.revertedWith("Not authorized to update image");
+    });
+  });
+
   // Aufräumen nach jedem Test
-  afterEach(function() {
+  afterEach(function () {
     // Lösche alle erstellten Dateien
     for (const file of createdFiles) {
       if (fs.existsSync(file)) {
@@ -216,13 +274,13 @@ describe("GenImNFT", function () {
         console.log(`Deleted test file: ${file}`);
       }
     }
-    
+
     // Lösche den Ordner, wenn er leer ist
     if (fs.existsSync(METADATA_DIR) && fs.readdirSync(METADATA_DIR).length === 0) {
       fs.rmdirSync(METADATA_DIR);
       console.log(`Removed empty directory: ${METADATA_DIR}`);
     }
-    
+
     // Leere die Liste der erstellten Dateien
     createdFiles.length = 0;
   });

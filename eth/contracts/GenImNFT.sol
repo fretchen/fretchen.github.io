@@ -10,7 +10,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
 
     constructor(address initialOwner)
-        ERC721("GeneratedImageNFT", "GENIMG")
+        ERC721("GenImNFT", "GENIMG")
         Ownable(initialOwner)
     {}
 

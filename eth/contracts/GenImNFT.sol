@@ -8,13 +8,16 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
-    
+
+    // Preis für das Minten eines NFTs
+    uint256 public mintPrice = 0.01 ether;
+
     // Autorisierte Adressen, die Bilder für Tokens aktualisieren dürfen
     mapping(uint256 => address) private _authorizedImageUpdaters;
-    
+
     // Flag, ob das Bild bereits aktualisiert wurde
     mapping(uint256 => bool) private _imageUpdated;
-    
+
     // Events
     event ImageUpdaterAuthorized(uint256 indexed tokenId, address indexed updater);
     event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater);
@@ -24,17 +27,27 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
         Ownable(initialOwner)
     {}
 
-    function safeMint(address to, string memory uri)
+    // Der Owner kann den Preis anpassen
+    function setMintPrice(uint256 newPrice) public onlyOwner {
+        mintPrice = newPrice;
+    }
+
+    // Jeder kann minten, wenn er die Gebühr bezahlt
+    function safeMint(string memory uri)
         public
-        onlyOwner
+        payable
         returns (uint256)
     {
+        require(msg.value >= mintPrice, "Insufficient payment");
+
         uint256 tokenId = _nextTokenId++;
-        _safeMint(to, tokenId);
+        _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, uri);
         return tokenId;
     }
-    
+
+
+
     /**
      * @dev Erlaubt einem Token-Eigentümer, eine Adresse zu autorisieren,
      * die das Bild für sein Token aktualisieren darf
@@ -43,11 +56,11 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
         require(_exists(tokenId), "Token does not exist");
         require(ownerOf(tokenId) == msg.sender, "Only token owner can authorize");
         require(!_imageUpdated[tokenId], "Image already updated");
-        
+
         _authorizedImageUpdaters[tokenId] = updater;
         emit ImageUpdaterAuthorized(tokenId, updater);
     }
-    
+
     /**
      * @dev Markiert ein Token als mit Bild aktualisiert und emittiert ein Event.
      * Der offchain-Service nutzt dieses Event, um die Metadaten zu aktualisieren.
@@ -60,13 +73,13 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
             msg.sender == _authorizedImageUpdaters[tokenId],
             "Not authorized to update image"
         );
-        
+
         _imageUpdated[tokenId] = true;
         emit ImageUpdateRequested(tokenId, msg.sender);
-        
+
         // Die tatsächliche Aktualisierung der Datei geschieht offchain
     }
-    
+
     /**
      * @dev Prüft, ob ein Bild für ein Token bereits aktualisiert wurde
      */
@@ -74,7 +87,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
         require(_exists(tokenId), "Token does not exist");
         return _imageUpdated[tokenId];
     }
-    
+
     /**
      * @dev Prüft, ob eine Adresse berechtigt ist, das Bild eines Tokens zu aktualisieren
      */
@@ -84,7 +97,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
             updater == _authorizedImageUpdaters[tokenId]
         ) && !_imageUpdated[tokenId];
     }
-    
+
     /**
      * @dev Prüft, ob ein Token existiert
      */

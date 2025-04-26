@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { getAddress } from "viem"; // getAddress für Address-Normalisierung importieren
+import { formatEther, getAddress } from "viem"; // getAddress für Address-Normalisierung importieren
 import * as fs from "fs";
 import * as path from "path";
 
@@ -85,13 +85,17 @@ describe("GenImNFT", function () {
 
       const tokenURI = "https://example.com/metadata/1.json";
 
-      const tx = await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+      // Prägen mit Gebühr und als Owner
+      const tx = await genImNFT.write.safeMint([tokenURI], {
+        account: owner.account,
+        value: BigInt(10000000000000000) // 0.01 ETH
+      });
       await tx;
 
-      // Check that the NFT was minted to the correct address
+      // NFT gehört jetzt dem Owner, nicht dem Empfänger
       const ownerOfToken = await genImNFT.read.ownerOf([0n]);
-      expect(getAddress(ownerOfToken)).to.equal(getAddress(recipient.account.address));
-
+      expect(getAddress(ownerOfToken)).to.equal(getAddress(owner.account.address));
+      
       // Check that the token URI is set correctly
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
     });
@@ -99,38 +103,46 @@ describe("GenImNFT", function () {
     it("Should increment token ID after each mint", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
 
-      await genImNFT.write.safeMint([recipient.account.address, "uri1"]);
-      await genImNFT.write.safeMint([recipient.account.address, "uri2"]);
+      // Erste Münzung
+      await genImNFT.write.safeMint(["uri1"], {
+        value: BigInt(10000000000000000) // 0.01 ETH
+      });
 
-      // First token ID should be 0
+      // Zweite Münzung
+      await genImNFT.write.safeMint(["uri2"], {
+        value: BigInt(10000000000000000) // 0.01 ETH
+      });
+
+      // Überprüfungen bleiben gleich, aber die Owner sind jetzt immer der Sender
       const ownerOfToken0 = await genImNFT.read.ownerOf([0n]);
-      expect(getAddress(ownerOfToken0)).to.equal(getAddress(recipient.account.address));
+      expect(getAddress(ownerOfToken0)).to.equal(getAddress(owner.account.address));
 
-      // Second token ID should be 1
       const ownerOfToken1 = await genImNFT.read.ownerOf([1n]);
-      expect(getAddress(ownerOfToken1)).to.equal(getAddress(recipient.account.address));
+      expect(getAddress(ownerOfToken1)).to.equal(getAddress(owner.account.address));
     });
 
     it("Should return the token ID when minting", async function () {
-      const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
+      const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
 
-      // This requires capturing the return value from the transaction
-      // In Viem we need to simulate the call to get the return value
-      const tokenIdResponse = await genImNFT.simulate.safeMint([
-        recipient.account.address,
-        "https://example.com/metadata/1.json",
-      ]);
+      // Simuliere mit korrekter Gebühr
+      const tokenIdResponse = await genImNFT.simulate.safeMint(
+        ["https://example.com/metadata/1.json"],
+        { value: BigInt(10000000000000000) } // 0.01 ETH
+      );
 
       expect(tokenIdResponse.result).to.equal(0n);
 
-      // Actually execute the mint
-      await genImNFT.write.safeMint([recipient.account.address, "https://example.com/metadata/1.json"]);
+      // Führe tatsächlich aus
+      await genImNFT.write.safeMint(
+        ["https://example.com/metadata/1.json"],
+        { value: BigInt(10000000000000000) } // 0.01 ETH
+      );
 
-      // Simulate the next mint to check incrementing
-      const nextTokenIdResponse = await genImNFT.simulate.safeMint([
-        recipient.account.address,
-        "https://example.com/metadata/2.json",
-      ]);
+      // Simuliere den nächsten Mint
+      const nextTokenIdResponse = await genImNFT.simulate.safeMint(
+        ["https://example.com/metadata/2.json"],
+        { value: BigInt(10000000000000000) } // 0.01 ETH
+      );
 
       expect(nextTokenIdResponse.result).to.equal(1n);
     });
@@ -138,10 +150,12 @@ describe("GenImNFT", function () {
 
   describe("Token URI", function () {
     it("Should return the correct token URI", async function () {
-      const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
+      const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
 
       const tokenURI = "https://example.com/metadata/special.json";
-      await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+      await genImNFT.write.safeMint([tokenURI], {
+        value: BigInt(10000000000000000) // 0.01 ETH
+      });
 
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
     });
@@ -165,7 +179,11 @@ describe("GenImNFT", function () {
       console.log("Created metadata at:", tokenURI);
 
       // Mint NFT mit dem lokalen URI
-      await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+      await genImNFT.write.safeMint([tokenURI], {
+        value: BigInt(10000000000000000), // 0.01 ETH
+        account: recipient.account,
+      });
+        
 
       // Überprüfe, dass der Token URI richtig gesetzt wurde
       const storedURI = await genImNFT.read.tokenURI([0n]);
@@ -188,7 +206,10 @@ describe("GenImNFT", function () {
       // Mint mehrere NFTs mit verschiedenen Metadaten
       for (let i = 0; i < prompts.length; i++) {
         const tokenURI = createMetadataFile(i, prompts[i]);
-        await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+         await genImNFT.write.safeMint([tokenURI], {
+        value: BigInt(10000000000000000), // 0.01 ETH
+        account: recipient.account,
+      });
       }
 
       // Überprüfe, dass alle URIs richtig gesetzt wurden
@@ -207,10 +228,18 @@ describe("GenImNFT", function () {
     it("Should allow another wallet to update the image for a token", async function () {
       const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
 
-      // 1. Erstelle ein NFT mit leerem Bild
+      // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
       const prompt = "A cyberpunk city with flying cars in the rain";
       const tokenURI = createMetadataFile(7, prompt);
-      const tokenId = await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+      
+      await genImNFT.write.safeMint([tokenURI], {
+        value: BigInt(10000000000000000) // 0.01 ETH
+      });
+      
+      // NFT an recipient übertragen
+      await genImNFT.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
+      
+      // Rest des Tests kann unverändert bleiben...
 
       // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
       const recipientClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
@@ -253,7 +282,10 @@ describe("GenImNFT", function () {
       // 1. Erstelle ein NFT mit leerem Bild
       const prompt = "An ancient temple in a mystical forest";
       const tokenURI = createMetadataFile(0, prompt);
-      await genImNFT.write.safeMint([recipient.account.address, tokenURI]);
+       await genImNFT.write.safeMint([tokenURI], {
+        value: BigInt(10000000000000000), // 0.01 ETH
+        account: recipient.account,
+      });
 
       // 2. Nicht autorisierte Wallet (otherAccount) versucht zu aktualisieren
       const notAuthorizedClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
@@ -263,6 +295,41 @@ describe("GenImNFT", function () {
       // Sollte mit einem Berechtigungsfehler fehlschlagen
       await expect(notAuthorizedClient.write.requestImageUpdate([0n, "https://example.com/image.png"])).to.be.rejected; // oder spezifischer: .to.be.revertedWith("Not authorized to update image");
     });
+  });
+
+  describe("Public Minting", function () {
+    it("Should allow anyone to mint an NFT if they pay the fee", async function () {
+      const { genImNFT, otherAccount } = await loadFixture(deployGenImNFTFixture);
+
+      const tokenURI = "https://example.com/metadata/public-mint.json";
+
+      // Minte als normaler Benutzer (nicht Owner) mit korrekter Gebühr
+      const mintTx = await genImNFT.write.safeMint([tokenURI], {
+        account: otherAccount.account,
+        value: BigInt(10000000000000000), // 0.01 ETH
+      });
+
+      // Prüfe, dass der NFT dem Sender gehört
+      const ownerOfToken = await genImNFT.read.ownerOf([0n]);
+      expect(getAddress(ownerOfToken)).to.equal(getAddress(otherAccount.account.address));
+
+      // Prüfe, dass der Token-URI korrekt gesetzt wurde
+      expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
+    });
+
+    it("Should fail if payment is insufficient", async function () {
+      const { genImNFT, otherAccount } = await loadFixture(deployGenImNFTFixture);
+
+      const tokenURI = "https://example.com/metadata/insufficient-payment.json";
+
+      // Versuche zu minten mit zu wenig Gebühr
+      await expect(
+        genImNFT.write.safeMint([tokenURI], {
+          account: otherAccount.account,
+          value: BigInt(5000000000000000), // 0.005 ETH, weniger als mintPrice
+        }),
+      ).to.be.rejectedWith("Insufficient payment");
+    });    
   });
 
   // Aufräumen nach jedem Test

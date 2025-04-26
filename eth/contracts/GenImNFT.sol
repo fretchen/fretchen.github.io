@@ -21,6 +21,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     // Events
     event ImageUpdaterAuthorized(uint256 indexed tokenId, address indexed updater);
     event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater);
+    event UpdaterPaid(uint256 indexed tokenId, address indexed updater, uint256 amount);
 
     constructor(address initialOwner)
         ERC721("GenImNFT", "GENIMG")
@@ -46,8 +47,6 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
         return tokenId;
     }
 
-
-
     /**
      * @dev Erlaubt einem Token-Eigentümer, eine Adresse zu autorisieren,
      * die das Bild für sein Token aktualisieren darf
@@ -62,10 +61,10 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev Markiert ein Token als mit Bild aktualisiert und emittiert ein Event.
-     * Der offchain-Service nutzt dieses Event, um die Metadaten zu aktualisieren.
+     * @dev Markiert ein Token als mit Bild aktualisiert, emittiert ein Event 
+     * und zahlt dem Updater eine Vergütung.
      */
-    function requestImageUpdate(uint256 tokenId, string memory imageUrl) public {
+    function requestImageUpdate(uint256 tokenId) public {
         require(_exists(tokenId), "Token does not exist");
         require(!_imageUpdated[tokenId], "Image already updated");
         require(
@@ -74,10 +73,33 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
             "Not authorized to update image"
         );
 
+        // Markiere das Token als aktualisiert
         _imageUpdated[tokenId] = true;
+        
+        // Emittiere Event für den Off-Chain-Service
         emit ImageUpdateRequested(tokenId, msg.sender);
 
+        // Sende die Zahlung an den Updater (msg.sender)
+        (bool success, ) = payable(msg.sender).call{value: mintPrice}("");
+            
+        // Emittiere Event für erfolgreiche Zahlung
+        if (success) {
+                emit UpdaterPaid(tokenId, msg.sender, mintPrice);
+        }
+        // Wenn die Zahlung fehlschlägt, wird kein Event emittiert, aber der Rest der Funktion wird trotzdem ausgeführt
+
         // Die tatsächliche Aktualisierung der Datei geschieht offchain
+    }
+
+    /**
+     * @dev Erlaubt dem Owner, die verbleibenden Gebühren abzuheben
+     */
+    function withdraw() public onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        require(success, "Withdrawal to owner failed");
     }
 
     /**

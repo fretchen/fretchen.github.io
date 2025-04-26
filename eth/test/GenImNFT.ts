@@ -88,14 +88,14 @@ describe("GenImNFT", function () {
       // Prägen mit Gebühr und als Owner
       const tx = await genImNFT.write.safeMint([tokenURI], {
         account: owner.account,
-        value: BigInt(10000000000000000) // 0.01 ETH
+        value: BigInt(10000000000000000), // 0.01 ETH
       });
       await tx;
 
       // NFT gehört jetzt dem Owner, nicht dem Empfänger
       const ownerOfToken = await genImNFT.read.ownerOf([0n]);
       expect(getAddress(ownerOfToken)).to.equal(getAddress(owner.account.address));
-      
+
       // Check that the token URI is set correctly
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
     });
@@ -105,12 +105,12 @@ describe("GenImNFT", function () {
 
       // Erste Münzung
       await genImNFT.write.safeMint(["uri1"], {
-        value: BigInt(10000000000000000) // 0.01 ETH
+        value: BigInt(10000000000000000), // 0.01 ETH
       });
 
       // Zweite Münzung
       await genImNFT.write.safeMint(["uri2"], {
-        value: BigInt(10000000000000000) // 0.01 ETH
+        value: BigInt(10000000000000000), // 0.01 ETH
       });
 
       // Überprüfungen bleiben gleich, aber die Owner sind jetzt immer der Sender
@@ -127,7 +127,7 @@ describe("GenImNFT", function () {
       // Simuliere mit korrekter Gebühr
       const tokenIdResponse = await genImNFT.simulate.safeMint(
         ["https://example.com/metadata/1.json"],
-        { value: BigInt(10000000000000000) } // 0.01 ETH
+        { value: BigInt(10000000000000000) }, // 0.01 ETH
       );
 
       expect(tokenIdResponse.result).to.equal(0n);
@@ -135,13 +135,13 @@ describe("GenImNFT", function () {
       // Führe tatsächlich aus
       await genImNFT.write.safeMint(
         ["https://example.com/metadata/1.json"],
-        { value: BigInt(10000000000000000) } // 0.01 ETH
+        { value: BigInt(10000000000000000) }, // 0.01 ETH
       );
 
       // Simuliere den nächsten Mint
       const nextTokenIdResponse = await genImNFT.simulate.safeMint(
         ["https://example.com/metadata/2.json"],
-        { value: BigInt(10000000000000000) } // 0.01 ETH
+        { value: BigInt(10000000000000000) }, // 0.01 ETH
       );
 
       expect(nextTokenIdResponse.result).to.equal(1n);
@@ -154,7 +154,7 @@ describe("GenImNFT", function () {
 
       const tokenURI = "https://example.com/metadata/special.json";
       await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000) // 0.01 ETH
+        value: BigInt(10000000000000000), // 0.01 ETH
       });
 
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
@@ -183,7 +183,6 @@ describe("GenImNFT", function () {
         value: BigInt(10000000000000000), // 0.01 ETH
         account: recipient.account,
       });
-        
 
       // Überprüfe, dass der Token URI richtig gesetzt wurde
       const storedURI = await genImNFT.read.tokenURI([0n]);
@@ -206,10 +205,10 @@ describe("GenImNFT", function () {
       // Mint mehrere NFTs mit verschiedenen Metadaten
       for (let i = 0; i < prompts.length; i++) {
         const tokenURI = createMetadataFile(i, prompts[i]);
-         await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000), // 0.01 ETH
-        account: recipient.account,
-      });
+        await genImNFT.write.safeMint([tokenURI], {
+          value: BigInt(10000000000000000), // 0.01 ETH
+          account: recipient.account,
+        });
       }
 
       // Überprüfe, dass alle URIs richtig gesetzt wurden
@@ -227,19 +226,18 @@ describe("GenImNFT", function () {
   describe("Image Updates", function () {
     it("Should allow another wallet to update the image for a token", async function () {
       const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
+      const provider = await hre.viem.getPublicClient();
 
       // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
       const prompt = "A cyberpunk city with flying cars in the rain";
       const tokenURI = createMetadataFile(7, prompt);
-      
+
       await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000) // 0.01 ETH
+        value: BigInt(10000000000000000), // 0.01 ETH
       });
-      
+
       // NFT an recipient übertragen
       await genImNFT.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
-      
-      // Rest des Tests kann unverändert bleiben...
 
       // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
       const recipientClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
@@ -248,20 +246,34 @@ describe("GenImNFT", function () {
 
       await recipientClient.write.authorizeImageUpdater([0n, otherAccount.account.address]);
 
+      // 3. Erfasse den Kontostand des Updaters VOR dem Update
+      const updaterBalanceBefore = await provider.getBalance({
+        address: otherAccount.account.address,
+      });
+      console.log(`Updater balance before: ${formatEther(updaterBalanceBefore)} ETH`);
+
       // 4. Die autorisierte Wallet fordert ein Bild-Update an
       const updaterClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
         client: { wallet: otherAccount },
       });
 
       const imageUrl = "https://example.com/generated-image-12345.png";
-      const tx = await updaterClient.write.requestImageUpdate([0n, imageUrl]);
+      const tx = await updaterClient.write.requestImageUpdate([0n]);
 
-      // 5. Überprüfe, dass das Bild als aktualisiert markiert wurde
+      // 5. Erfasse den Kontostand des Updaters NACH dem Update
+      const updaterBalanceAfter = await provider.getBalance({
+        address: otherAccount.account.address,
+      });
+      console.log(`Updater balance after: ${formatEther(updaterBalanceAfter)} ETH`);
+
+      // 6. Überprüfe, dass das Bild als aktualisiert markiert wurde
       const isImageUpdated = await genImNFT.read.isImageUpdated([0n]);
       expect(isImageUpdated).to.be.true;
 
-      // 6. Simuliere einen Off-Chain-Service, der das Event abfängt und die Metadaten aktualisiert
-      // In einer echten Umgebung würde dies durch einen Event-Listener geschehen
+      // Der Kontostand sollte höher sein als vorher abzüglich der Gaskosten
+      expect(Number(updaterBalanceAfter)).to.be.gt(Number(updaterBalanceBefore));
+
+      // 8. Simuliere einen Off-Chain-Service, der das Event abfängt und die Metadaten aktualisiert
       const filePath = tokenURI.replace("file://", "");
       const metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
@@ -269,7 +281,7 @@ describe("GenImNFT", function () {
       metadata.image = imageUrl;
       fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2));
 
-      // 7. Überprüfe, dass das Bild in den Metadaten aktualisiert wurde
+      // 9. Überprüfe, dass das Bild in den Metadaten aktualisiert wurde
       const updatedMetadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
       expect(updatedMetadata.image).to.equal(imageUrl);
 
@@ -282,7 +294,7 @@ describe("GenImNFT", function () {
       // 1. Erstelle ein NFT mit leerem Bild
       const prompt = "An ancient temple in a mystical forest";
       const tokenURI = createMetadataFile(0, prompt);
-       await genImNFT.write.safeMint([tokenURI], {
+      await genImNFT.write.safeMint([tokenURI], {
         value: BigInt(10000000000000000), // 0.01 ETH
         account: recipient.account,
       });
@@ -293,7 +305,7 @@ describe("GenImNFT", function () {
       });
 
       // Sollte mit einem Berechtigungsfehler fehlschlagen
-      await expect(notAuthorizedClient.write.requestImageUpdate([0n, "https://example.com/image.png"])).to.be.rejected; // oder spezifischer: .to.be.revertedWith("Not authorized to update image");
+      await expect(notAuthorizedClient.write.requestImageUpdate([0n])).to.be.rejected; // oder spezifischer: .to.be.revertedWith("Not authorized to update image");
     });
   });
 
@@ -329,7 +341,7 @@ describe("GenImNFT", function () {
           value: BigInt(5000000000000000), // 0.005 ETH, weniger als mintPrice
         }),
       ).to.be.rejectedWith("Insufficient payment");
-    });    
+    });
   });
 
   // Aufräumen nach jedem Test

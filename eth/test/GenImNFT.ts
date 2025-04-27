@@ -84,11 +84,12 @@ describe("GenImNFT", function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
 
       const tokenURI = "https://example.com/metadata/1.json";
+      const mintPrice = await genImNFT.read.mintPrice();
 
       // Prägen mit Gebühr und als Owner
       const tx = await genImNFT.write.safeMint([tokenURI], {
         account: owner.account,
-        value: BigInt(10000000000000000), // 0.01 ETH
+        value: mintPrice,
       });
       await tx;
 
@@ -103,14 +104,16 @@ describe("GenImNFT", function () {
     it("Should increment token ID after each mint", async function () {
       const { genImNFT, owner, recipient } = await loadFixture(deployGenImNFTFixture);
 
+      const mintPrice = await genImNFT.read.mintPrice();
       // Erste Münzung
       await genImNFT.write.safeMint(["uri1"], {
-        value: BigInt(10000000000000000), // 0.01 ETH
+                value: mintPrice,
+
       });
 
       // Zweite Münzung
       await genImNFT.write.safeMint(["uri2"], {
-        value: BigInt(10000000000000000), // 0.01 ETH
+                value: mintPrice,
       });
 
       // Überprüfungen bleiben gleich, aber die Owner sind jetzt immer der Sender
@@ -123,11 +126,12 @@ describe("GenImNFT", function () {
 
     it("Should return the token ID when minting", async function () {
       const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
+      const mintPrice = await genImNFT.read.mintPrice();
 
       // Simuliere mit korrekter Gebühr
       const tokenIdResponse = await genImNFT.simulate.safeMint(
         ["https://example.com/metadata/1.json"],
-        { value: BigInt(10000000000000000) }, // 0.01 ETH
+        { value: mintPrice }, // 0.01 ETH
       );
 
       expect(tokenIdResponse.result).to.equal(0n);
@@ -135,13 +139,13 @@ describe("GenImNFT", function () {
       // Führe tatsächlich aus
       await genImNFT.write.safeMint(
         ["https://example.com/metadata/1.json"],
-        { value: BigInt(10000000000000000) }, // 0.01 ETH
+        { value: mintPrice }, // 0.01 ETH
       );
 
       // Simuliere den nächsten Mint
       const nextTokenIdResponse = await genImNFT.simulate.safeMint(
         ["https://example.com/metadata/2.json"],
-        { value: BigInt(10000000000000000) }, // 0.01 ETH
+        { value: mintPrice }, // 0.01 ETH
       );
 
       expect(nextTokenIdResponse.result).to.equal(1n);
@@ -153,8 +157,9 @@ describe("GenImNFT", function () {
       const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
 
       const tokenURI = "https://example.com/metadata/special.json";
+      const mintPrice = await genImNFT.read.mintPrice();
       await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000), // 0.01 ETH
+        value: mintPrice,
       });
 
       expect(await genImNFT.read.tokenURI([0n])).to.equal(tokenURI);
@@ -177,10 +182,10 @@ describe("GenImNFT", function () {
       const tokenURI = createMetadataFile(0, prompt);
 
       console.log("Created metadata at:", tokenURI);
-
+      const mintPrice = await genImNFT.read.mintPrice();
       // Mint NFT mit dem lokalen URI
       await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000), // 0.01 ETH
+        value: mintPrice, // 0.01 ETH
         account: recipient.account,
       });
 
@@ -201,12 +206,12 @@ describe("GenImNFT", function () {
 
       // Erstelle mehrere Metadaten-Dateien
       const prompts = ["A serene mountain landscape at sunset", "An abstract digital artwork with geometric patterns"];
-
+      const mintPrice = await genImNFT.read.mintPrice();
       // Mint mehrere NFTs mit verschiedenen Metadaten
       for (let i = 0; i < prompts.length; i++) {
         const tokenURI = createMetadataFile(i, prompts[i]);
         await genImNFT.write.safeMint([tokenURI], {
-          value: BigInt(10000000000000000), // 0.01 ETH
+          value:mintPrice,
           account: recipient.account,
         });
       }
@@ -231,9 +236,10 @@ describe("GenImNFT", function () {
       // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
       const prompt = "A cyberpunk city with flying cars in the rain";
       const tokenURI = createMetadataFile(7, prompt);
-
+      const mintPrice = await genImNFT.read.mintPrice();
+      console.log("Mint price:", formatEther(mintPrice), "ETH");
       await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000), // 0.01 ETH
+        value: mintPrice,
       });
 
       // NFT an recipient übertragen
@@ -256,7 +262,7 @@ describe("GenImNFT", function () {
       });
 
       const imageUrl = "https://example.com/generated-image-12345.png";
-      const tx = await updaterClient.write.requestImageUpdate([0n]);
+      const tx = await updaterClient.write.requestImageUpdate([0n, imageUrl]);
 
       // 5. Erfasse den Kontostand des Updaters NACH dem Update
       const updaterBalanceAfter = await provider.getBalance({
@@ -293,11 +299,12 @@ describe("GenImNFT", function () {
       const { genImNFT, otherAccount } = await loadFixture(deployGenImNFTFixture);
 
       const tokenURI = "https://example.com/metadata/public-mint.json";
+      const mintPrice = await genImNFT.read.mintPrice();
 
       // Minte als normaler Benutzer (nicht Owner) mit korrekter Gebühr
       const mintTx = await genImNFT.write.safeMint([tokenURI], {
         account: otherAccount.account,
-        value: BigInt(10000000000000000), // 0.01 ETH
+        value: mintPrice, // 0.01 ETH
       });
 
       // Prüfe, dass der NFT dem Sender gehört
@@ -312,12 +319,12 @@ describe("GenImNFT", function () {
       const { genImNFT, otherAccount } = await loadFixture(deployGenImNFTFixture);
 
       const tokenURI = "https://example.com/metadata/insufficient-payment.json";
-
+      const mintPrice = await genImNFT.read.mintPrice();
       // Versuche zu minten mit zu wenig Gebühr
       await expect(
         genImNFT.write.safeMint([tokenURI], {
           account: otherAccount.account,
-          value: BigInt(5000000000000000), // 0.005 ETH, weniger als mintPrice
+          value: mintPrice - 1n,
         }),
       ).to.be.rejectedWith("Insufficient payment");
     });

@@ -20,7 +20,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
 
     // Events
     event ImageUpdaterAuthorized(uint256 indexed tokenId, address indexed updater);
-    event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater);
+    event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater, string imageUrl);
     event UpdaterPaid(uint256 indexed tokenId, address indexed updater, uint256 amount);
 
     constructor(address initialOwner)
@@ -50,16 +50,18 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     /**
      * @dev Markiert ein Token als mit Bild aktualisiert, emittiert ein Event 
      * und zahlt dem Updater eine Vergütung.
+     * @param tokenId Die ID des Tokens, das aktualisiert wird
+     * @param imageUrl Die URL des aktualisierten Bildes
      */
-    function requestImageUpdate(uint256 tokenId) public {
+    function requestImageUpdate(uint256 tokenId, string memory imageUrl) public {
         require(_exists(tokenId), "Token does not exist");
         require(!_imageUpdated[tokenId], "Image already updated");
 
         // Markiere das Token als aktualisiert
         _imageUpdated[tokenId] = true;
         
-        // Emittiere Event für den Off-Chain-Service
-        emit ImageUpdateRequested(tokenId, msg.sender);
+        // Emittiere Event für den Off-Chain-Service mit der imageUrl
+        emit ImageUpdateRequested(tokenId, msg.sender, imageUrl);
 
         // Sende die Zahlung an den Updater (msg.sender)
         (bool success, ) = payable(msg.sender).call{value: mintPrice}("");

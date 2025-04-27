@@ -48,30 +48,12 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev Erlaubt einem Token-Eigentümer, eine Adresse zu autorisieren,
-     * die das Bild für sein Token aktualisieren darf
-     */
-    function authorizeImageUpdater(uint256 tokenId, address updater) public {
-        require(_exists(tokenId), "Token does not exist");
-        require(ownerOf(tokenId) == msg.sender, "Only token owner can authorize");
-        require(!_imageUpdated[tokenId], "Image already updated");
-
-        _authorizedImageUpdaters[tokenId] = updater;
-        emit ImageUpdaterAuthorized(tokenId, updater);
-    }
-
-    /**
      * @dev Markiert ein Token als mit Bild aktualisiert, emittiert ein Event 
      * und zahlt dem Updater eine Vergütung.
      */
     function requestImageUpdate(uint256 tokenId) public {
         require(_exists(tokenId), "Token does not exist");
         require(!_imageUpdated[tokenId], "Image already updated");
-        require(
-            msg.sender == ownerOf(tokenId) || 
-            msg.sender == _authorizedImageUpdaters[tokenId],
-            "Not authorized to update image"
-        );
 
         // Markiere das Token als aktualisiert
         _imageUpdated[tokenId] = true;
@@ -110,15 +92,6 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
         return _imageUpdated[tokenId];
     }
 
-    /**
-     * @dev Prüft, ob eine Adresse berechtigt ist, das Bild eines Tokens zu aktualisieren
-     */
-    function canUpdateImage(uint256 tokenId, address updater) public view returns (bool) {
-        return (
-            updater == ownerOf(tokenId) || 
-            updater == _authorizedImageUpdaters[tokenId]
-        ) && !_imageUpdated[tokenId];
-    }
 
     /**
      * @dev Prüft, ob ein Token existiert

@@ -244,8 +244,6 @@ describe("GenImNFT", function () {
         client: { wallet: recipient },
       });
 
-      await recipientClient.write.authorizeImageUpdater([0n, otherAccount.account.address]);
-
       // 3. Erfasse den Kontostand des Updaters VOR dem Update
       const updaterBalanceBefore = await provider.getBalance({
         address: otherAccount.account.address,
@@ -288,25 +286,6 @@ describe("GenImNFT", function () {
       console.log("Image updated successfully in metadata:", updatedMetadata);
     });
 
-    it("Should prevent unauthorized wallets from updating images", async function () {
-      const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
-
-      // 1. Erstelle ein NFT mit leerem Bild
-      const prompt = "An ancient temple in a mystical forest";
-      const tokenURI = createMetadataFile(0, prompt);
-      await genImNFT.write.safeMint([tokenURI], {
-        value: BigInt(10000000000000000), // 0.01 ETH
-        account: recipient.account,
-      });
-
-      // 2. Nicht autorisierte Wallet (otherAccount) versucht zu aktualisieren
-      const notAuthorizedClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
-        client: { wallet: otherAccount },
-      });
-
-      // Sollte mit einem Berechtigungsfehler fehlschlagen
-      await expect(notAuthorizedClient.write.requestImageUpdate([0n])).to.be.rejected; // oder spezifischer: .to.be.revertedWith("Not authorized to update image");
-    });
   });
 
   describe("Public Minting", function () {

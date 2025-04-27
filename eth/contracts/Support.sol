@@ -2,13 +2,19 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Support Contract for URL content
 /// @author fretchen
 /// @notice This contract allows users to support URLs by sending ETH donations and adding likes
 /// @dev Uses OpenZeppelin's Ownable for ownership management and ReentrancyGuard for security
 contract Support is Ownable, ReentrancyGuard {
+    /// @notice Constructor to initialize the contract
+    /// @dev Sets the deployer as the initial owner
+    constructor() Ownable(msg.sender) {
+        // Keine weiteren Initialisierungen nötig
+    }
+
     /// @notice Mapping of URL hashes to their like counts
     /// @dev Strings are converted to bytes32 hashes for efficient storage
     mapping(bytes32 => uint256) public urlLikes;

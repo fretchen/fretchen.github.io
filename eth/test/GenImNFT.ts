@@ -50,7 +50,7 @@ describe("GenImNFT", function () {
     const [owner, otherAccount, recipient] = await hre.viem.getWalletClients();
 
     // Deploy the contract
-    const genImNFT = await hre.viem.deployContract("GenImNFT", [owner.account.address]);
+    const genImNFT = await hre.viem.deployContract("GenImNFT", []);
     const genImNFTPublic = await hre.viem.getContractAt("GenImNFT", genImNFT.address);
 
     return {
@@ -107,13 +107,12 @@ describe("GenImNFT", function () {
       const mintPrice = await genImNFT.read.mintPrice();
       // Erste Münzung
       await genImNFT.write.safeMint(["uri1"], {
-                value: mintPrice,
-
+        value: mintPrice,
       });
 
       // Zweite Münzung
       await genImNFT.write.safeMint(["uri2"], {
-                value: mintPrice,
+        value: mintPrice,
       });
 
       // Überprüfungen bleiben gleich, aber die Owner sind jetzt immer der Sender
@@ -211,7 +210,7 @@ describe("GenImNFT", function () {
       for (let i = 0; i < prompts.length; i++) {
         const tokenURI = createMetadataFile(i, prompts[i]);
         await genImNFT.write.safeMint([tokenURI], {
-          value:mintPrice,
+          value: mintPrice,
           account: recipient.account,
         });
       }
@@ -291,7 +290,6 @@ describe("GenImNFT", function () {
 
       console.log("Image updated successfully in metadata:", updatedMetadata);
     });
-
   });
 
   describe("Public Minting", function () {

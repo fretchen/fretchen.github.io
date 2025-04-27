@@ -23,9 +23,9 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater, string imageUrl);
     event UpdaterPaid(uint256 indexed tokenId, address indexed updater, uint256 amount);
 
-    constructor(address initialOwner)
+    constructor()
         ERC721("GenImNFT", "GENIMG")
-        Ownable(initialOwner)
+        Ownable(msg.sender)
     {}
 
     // Der Owner kann den Preis anpassen

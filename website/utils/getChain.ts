@@ -7,7 +7,7 @@ import type { Chain } from "wagmi/chains";
  */
 export function getChain(): Chain {
   // Environmentvariable lesen, Fallback auf 'mainnet'
-  const chainName = import.meta.env.CHAIN_NAME || "optimism";
+  const chainName = import.meta.env.PUBLIC_ENV__CHAIN_NAME || "optimism";
   // Chain-Objekt je nach Umgebungsvariable auswählen
   switch (chainName) {
     case "sepolia":
@@ -217,7 +217,7 @@ const optimismSupportABI = [
   },
 ];
 export function getSupportContractConfig() {
-  const chainName = import.meta.env.CHAIN_NAME || "optimism";
+  const chainName = import.meta.env.PUBLIC_ENV__CHAIN_NAME || "optimism";
   // ChainConfig based on Env Variable
   switch (chainName) {
     case "sepolia":

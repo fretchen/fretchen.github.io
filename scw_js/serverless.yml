@@ -13,8 +13,5 @@ package:
     - "!.git/**"
 
 functions:
-  first:
-    handler: handler.handle
-
   readnft:
     handler: readhandler.handle

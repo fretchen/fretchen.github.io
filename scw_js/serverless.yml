@@ -9,7 +9,6 @@ plugins:
 
 package:
   patterns:
-    - "!node_modules/**"
     - "!.gitignore"
     - "!.git/**"
 

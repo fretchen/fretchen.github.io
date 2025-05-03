@@ -1,4 +1,7 @@
-export const nftAbi = [
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.nftAbi = void 0;
+exports.nftAbi = [
     {
         inputs: [],
         stateMutability: "nonpayable",

@@ -15,9 +15,9 @@ async function handle(event, context, cb) {
     client: publicClient,
   });
 
-  const result = await contract.read.mintPrice();
+  const mintPrice = await contract.read.mintPrice();
   return {
-    body: `Mint-Preis: ${result} Wei`,
+    body: `Mint-Preis: ${mintPrice} Wei`,
     headers: { "Content-Type": ["application/json"] },
     statusCode: 200,
   };

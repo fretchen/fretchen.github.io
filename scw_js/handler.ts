@@ -1,8 +1,4 @@
-import {
-  Callback,
-  Context,
-  Event,
-} from "@scaleway/serverless-functions/framework/types/types";
+import { Callback, Context, Event } from "@scaleway/serverless-functions/framework/types/types";
 
 export { handle };
 

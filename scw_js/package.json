@@ -10,9 +10,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^18.15.11",
     "@scaleway/serverless-functions": ">=1.0.2",
+    "@types/node": "^18.15.11",
     "serverless-scaleway-functions": ">=0.4.14",
     "typescript": "^5.0.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "tsx": "^4.19.4",
+    "viem": "^2.28.3"
   }
 }

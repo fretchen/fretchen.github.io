@@ -16,3 +16,6 @@ package:
 functions:
   first:
     handler: handler.handle
+
+  readnft:
+    handler: readhandler.handle

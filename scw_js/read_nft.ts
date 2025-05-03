@@ -3,7 +3,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
 import { getContract } from "viem";
 import dotenv from "dotenv";
-import { nftAbi } from "./nft_abi";
+import { nftAbi } from "./nft_abi.js";
 dotenv.config();
 
 // set up the account and client

@@ -1,11 +1,10 @@
-import { Callback, Context, Event } from "@scaleway/serverless-functions/framework/types/types";
-import { nftAbi } from "./nft_abi";
+import { nftAbi } from "./nft_abi.js";
 import { getContract } from "viem";
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 export { handle };
 
-async function handle(event: Event, context: Context, cb: Callback) {
+async function handle(event: any, context: any, cb: any) {
     const publicClient = createPublicClient({
       chain: sepolia,
       transport: http(),

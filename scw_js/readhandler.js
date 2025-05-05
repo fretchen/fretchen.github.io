@@ -15,9 +15,10 @@ async function handle(event, context, cb) {
     client: publicClient,
   });
 
+  const json_path = "https://raw.githubusercontent.com/Scaleway/nft/main/scw_nft.json";
   const mintPrice = await contract.read.mintPrice();
   return {
-    body: `Mint-Preis: ${mintPrice} Wei`,
+    body: { image_url: json_path, mintPrice: mintPrice },
     headers: { "Content-Type": ["application/json"] },
     statusCode: 200,
   };

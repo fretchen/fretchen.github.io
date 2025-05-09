@@ -3,7 +3,7 @@ publishing_date: 2025-01-03
 title: My short lived contact with the world of VCs in Germany
 ---
 
-For a number of years, I worked in academia on the topic of quantum et al. You can find the remainders of these activities sprinkeled over this blog. But over time it became increasingly clear to me that I would like to venture outside of this well trotten path. As this was the time where names like IonQ, IBM or Pasqal really where a super new and exciting thing to look at, I obviously also investigated the possibility of a startup.
+For a number of years, I worked in academia on the topic of quantum hardware. You can find the remainders of these activities sprinkeled over this blog. But over time it became increasingly clear to me that I would like to venture outside of this well trotten path. As this was the time where names like IonQ, IBM or Pasqal really where a super new and exciting thing to look at, I obviously also investigated the possibility of a startup.
 
 My research experience was really quite focused on hardware development, so it felt natural to look into possibilities around this direction and I left the topic of software on the side. However, this obviously comes with  quite enormous drawbacks:
 

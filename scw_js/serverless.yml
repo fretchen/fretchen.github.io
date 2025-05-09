@@ -1,8 +1,16 @@
 service: my-personal-js-cloud
+
+# Read environment variables from a .env file
+useDotenv: true
+
 configValidationMode: off
 provider:
   name: scaleway
-  runtime: node20
+  runtime: node22
+  environment:
+    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
+    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
+    IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
 
 plugins:
   - serverless-scaleway-functions
@@ -15,3 +23,5 @@ package:
 functions:
   readnft:
     handler: readhandler.handle
+  classicai:
+    handler: dec_ai.handle

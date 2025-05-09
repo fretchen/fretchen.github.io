@@ -4,7 +4,38 @@ import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 export { handle };
 
+async function isTokenMinted(contract, tokenId) {
+  try {
+    // Der ownerOf-Aufruf schlägt fehl, wenn das Token nicht existiert
+    await contract.read.ownerOf([BigInt(tokenId)]);
+    return true; // Token existiert
+  } catch (error) {
+    return false; // Token existiert nicht
+  }
+}
+
 async function handle(event, context, cb) {
+  // get the prompt from the event
+  const prompt = event.queryStringParameters.prompt;
+  if (!prompt) {
+    return {
+      body: { error: "No prompt provided" },
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 400,
+    };
+  }
+  console.log("Prompt: ", prompt);
+  // get the tokenID from the event
+  const tokenId = event.queryStringParameters.tokenId;
+  if (!tokenId) {
+    return {
+      body: { error: "No tokenId provided" },
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 400,
+    };
+  }
+  console.log("TokenId: ", tokenId);
+
   const publicClient = createPublicClient({
     chain: sepolia,
     transport: http(),
@@ -17,8 +48,34 @@ async function handle(event, context, cb) {
 
   const json_path = "https://raw.githubusercontent.com/Scaleway/nft/main/scw_nft.json";
   const mintPrice = await contract.read.mintPrice();
+  console.log("Mint price: ", mintPrice.toString());
+
+  // now test if the NFT exists
+  const tokenExists = await isTokenMinted(contract, tokenId);
+  if (!tokenExists) {
+    return {
+      body: JSON.stringify({ error: "Token does not exist" }),
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 404,
+    };
+  }
+  console.log("Token exists: ", tokenExists);
+
+  //  if the image  is valid and if the was alreay
+  // updated through isImageUpdated function
+  const isUpdated = await contract.read.isImageUpdated([BigInt(tokenId)]);
+  console.log(`Token ${tokenId} existiert. Bild-Update-Status: ${isUpdated}`);
+  // if the image is already updated raise an error
+  if (isUpdated) {
+    return {
+      body: JSON.stringify({ error: "Image already updated" }),
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 400,
+    };
+  }
+
   return {
-    body: { image_url: json_path, mintPrice: mintPrice },
+    body: JSON.stringify({ image_url: json_path, mintPrice: mintPrice.toString() }),
     headers: { "Content-Type": ["application/json"] },
     statusCode: 200,
   };

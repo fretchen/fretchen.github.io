@@ -2,7 +2,6 @@
  * Ein Modul zum Generieren von Bildern und Hochladen auf S3.
  */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import fetch from "node-fetch";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -166,13 +165,14 @@ export async function handle(event, context) {
 
 /* This is used to test locally and will not be executed on Scaleway Functions */
 if (process.env.NODE_ENV === "test") {
-  // Lade und konfiguriere dotenv zuerst
-  import("dotenv").then((dotenvModule) => {
+  // Eine IIFE (Immediately Invoked Function Expression) mit async
+  (async () => {
+    // Dotenv laden und konfigurieren
+    const dotenvModule = await import("dotenv");
     dotenvModule.config();
 
-    // Dann lade das Serverless-Functions-Modul
-    import("@scaleway/serverless-functions").then((scw_fnc_node) => {
-      scw_fnc_node.serveHandler(handle, 8080);
-    });
-  });
+    // Serverless-Funktionen laden und Server starten
+    const scw_fnc_node = await import("@scaleway/serverless-functions");
+    scw_fnc_node.serveHandler(handle, 8080);
+  })().catch((err) => console.error("Fehler beim Starten des lokalen Servers:", err));
 }

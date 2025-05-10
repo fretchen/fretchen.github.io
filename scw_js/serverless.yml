@@ -11,6 +11,7 @@ provider:
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
+    NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     
 plugins:
   - serverless-scaleway-functions

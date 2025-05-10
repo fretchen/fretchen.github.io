@@ -2,6 +2,7 @@ import { nftAbi } from "./nft_abi.js";
 import { getContract } from "viem";
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
+import { generateAndUploadImage } from "./image_service.js";
 export { handle };
 
 async function isTokenMinted(contract, tokenId) {
@@ -46,7 +47,6 @@ async function handle(event, context, cb) {
     client: publicClient,
   });
 
-  const json_path = "https://raw.githubusercontent.com/Scaleway/nft/main/scw_nft.json";
   const mintPrice = await contract.read.mintPrice();
   console.log("Mint price: ", mintPrice.toString());
 
@@ -74,11 +74,31 @@ async function handle(event, context, cb) {
     };
   }
 
-  return {
-    body: JSON.stringify({ image_url: json_path, mintPrice: mintPrice.toString() }),
-    headers: { "Content-Type": ["application/json"] },
-    statusCode: 200,
-  };
+  // Wenn das Token existiert und noch nicht aktualisiert wurde
+  try {
+    // Generiere ein Bild basierend auf dem Prompt und lade es hoch
+    const imageUrl = await generateAndUploadImage(prompt);
+
+    return {
+      body: JSON.stringify({
+        image_url: imageUrl,
+        mintPrice: mintPrice.toString(),
+        message: "Bild erfolgreich generiert",
+      }),
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 200,
+    };
+  } catch (error) {
+    console.error(`Fehler bei der Bildgenerierung: ${error}`);
+    return {
+      body: JSON.stringify({
+        error: `Bildgenerierung fehlgeschlagen: ${error.message}`,
+        mintPrice: mintPrice.toString(),
+      }),
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 500,
+    };
+  }
 }
 
 /* This is used to test locally and will not be executed on Scaleway Functions */

@@ -1,7 +1,7 @@
 import { nftAbi } from "./nft_abi.js";
 import { getContract, createWalletClient, parseEther } from "viem";
 import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { sepolia, optimism } from "viem/chains";
 import { generateAndUploadImage } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 export { handle };
@@ -56,7 +56,7 @@ async function handle(event, context, cb) {
   console.log("TokenId: ", tokenId);
 
   const publicClient = createPublicClient({
-    chain: sepolia,
+    chain: optimism,
     transport: http(),
   });
 
@@ -72,12 +72,12 @@ async function handle(event, context, cb) {
   // Wallet-Client mit dem Account erstellen
   const walletClient = createWalletClient({
     account,
-    chain: sepolia,
+    chain: optimism,
     transport: http(),
   });
 
   const contract = getContract({
-    address: "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6",
+    address: "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68",
     abi: nftAbi,
     client: {
       public: publicClient,

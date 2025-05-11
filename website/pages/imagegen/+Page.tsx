@@ -285,7 +285,7 @@ export default function Page() {
           </p>
           <p>
             <a
-              href={`https://sepolia.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
+              href={`https://optimistic.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: "#0066cc", textDecoration: "none" }}

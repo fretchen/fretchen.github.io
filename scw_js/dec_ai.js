@@ -21,6 +21,11 @@ export async function handle(event, context) {
     const queryParams = event.queryStringParameters || {};
     const prompt = queryParams.prompt;
 
+    // Extrahiere die tokenId aus den Abfrageparametern, falls vorhanden
+    // Setze sie auf "0", wenn sie nicht vorhanden ist oder ungültig
+    let tokenId = queryParams.tokenId || "0";
+
+    // Validiere den Prompt
     if (!prompt) {
       return {
         body: JSON.stringify({ error: "Kein Prompt angegeben." }),
@@ -29,10 +34,16 @@ export async function handle(event, context) {
       };
     }
 
-    const imageUrl = await generateAndUploadImage(prompt);
+    console.log(`Generiere Bild für Prompt: "${prompt}" und TokenID: ${tokenId}`);
+
+    // Übergebe sowohl den Prompt als auch die tokenId an die Funktion
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId);
 
     return {
-      body: JSON.stringify({ image_url: imageUrl }),
+      body: JSON.stringify({
+        metadata_url: metadataUrl,
+        token_id: tokenId,
+      }),
       statusCode: 200,
       headers,
     };

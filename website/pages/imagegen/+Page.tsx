@@ -94,7 +94,8 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
       setMintingStatus("generating");
 
       // URL des API-Services für die Bildgenerierung
-      const apiUrl = "http://localhost:8080";
+      //const apiUrl = "http://localhost:8080";
+      const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
 
       // GET-Anfrage mit Prompt und Token ID als Parameter
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
 
 import { getChain, getGenAiNFTContractConfig } from "../../utils/getChain";
 
@@ -241,8 +240,6 @@ function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
 
 export default function Page() {
   // Chain and Contract configuration
-  const chainId = useChainId();
-  const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
 
@@ -258,8 +255,8 @@ export default function Page() {
 
   return (
     <>
-      <h1>AI Image NFT Generator</h1>
-      <p>Create unique AI-generated art and own it as an NFT. The process:</p>
+      <h1>Decentral AI Image Generator</h1>
+      <p>Create your AI image and pay for it with ETH. The process:</p>
       <ol>
         <li>Enter a prompt</li>
         <li>Click on "Mint & Generate"</li>

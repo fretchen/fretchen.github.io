@@ -301,6 +301,43 @@ describe("GenImNFT", function () {
 
       console.log("Image updated successfully in metadata:", updatedMetadata);
     });
+
+    it("Should update the tokenURI when requestImageUpdate is called", async function () {
+      const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
+      
+      // 1. Erstelle ein NFT mit initialem Metadaten-Pfad
+      const prompt = "A futuristic space station orbiting Jupiter";
+      const initialTokenURI = createMetadataFile(42, prompt);
+      const mintPrice = await genImNFT.read.mintPrice();
+      
+      await genImNFT.write.safeMint([initialTokenURI], {
+        value: mintPrice,
+      });
+      
+      // Bestätige die initiale TokenURI
+      const originalTokenURI = await genImNFT.read.tokenURI([0n]);
+      expect(originalTokenURI).to.equal(initialTokenURI);
+      
+      // 2. Updater fordert ein Bild-Update an mit neuer URL
+      const updaterClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+      
+      const newMetadataUrl = "https://example.com/metadata/updated-token-42.json";
+      await updaterClient.write.requestImageUpdate([0n, newMetadataUrl]);
+      
+      // 3. Überprüfe, ob die tokenURI aktualisiert wurde
+      const updatedTokenURI = await genImNFT.read.tokenURI([0n]);
+      
+      // Der Test wird fehlschlagen, wenn der Contract die tokenURI nicht aktualisiert
+      expect(updatedTokenURI).to.equal(newMetadataUrl, 
+        "Die tokenURI wurde nicht aktualisiert. Die requestImageUpdate-Funktion " +
+        "aktualisiert möglicherweise nicht automatisch die tokenURI.");
+      
+      // 4. Bestätige, dass das Bild als aktualisiert markiert wurde
+      const isImageUpdated = await genImNFT.read.isImageUpdated([0n]);
+      expect(isImageUpdated).to.be.true;
+    });
   });
 
   describe("Public Minting", function () {

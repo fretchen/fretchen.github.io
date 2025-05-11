@@ -929,9 +929,9 @@ export function getGenAiNFTContractConfig() {
     case "sepolia":
       return { address: "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6", abi: nftAbi } as const;
     case "optimism":
-      return { address: "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68", abi: nftAbi } as const;
+      return { address: "0x7F8eB9F5084AfA2e389D13B9CD6E3097C485bF8D", abi: nftAbi } as const;
     default:
-      return { address: "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68", abi: nftAbi } as const;
+      return { address: "0x7F8eB9F5084AfA2e389D13B9CD6E3097C485bF8D", abi: nftAbi } as const;
   }
 }
 

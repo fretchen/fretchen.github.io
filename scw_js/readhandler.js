@@ -17,17 +17,17 @@ async function isTokenMinted(contract, tokenId) {
 }
 
 /**
- * Aktualisiert ein Token mit einer neuen Image-URL
+ * Aktualisiert ein Token mit einer neuen Metadaten-URL
  * @param {Object} contract - Der Smart-Contract
  * @param {string} tokenId - Die Token-ID
- * @param {string} imageUrl - Die URL des neuen Bildes
+ * @param {string} metadataUrl - Die URL der neuen Metadaten
  * @returns {Object} - Die Transaktionsdetails
  */
-async function updateTokenWithImage(contract, tokenId, imageUrl) {
-  console.log(`Aktualisiere Token ${tokenId} mit Image-URL: ${imageUrl}`);
+async function updateTokenWithImage(contract, tokenId, metadataUrl) {
+  console.log(`Aktualisiere Token ${tokenId} mit Metadaten-URL: ${metadataUrl}`);
 
   // Die Transaktion vorbereiten und senden
-  const hash = await contract.write.requestImageUpdate([BigInt(tokenId), imageUrl]);
+  const hash = await contract.write.requestImageUpdate([BigInt(tokenId), metadataUrl]);
 
   console.log(`Transaktion gesendet: ${hash}`);
   return hash;
@@ -99,11 +99,11 @@ async function handle(event, context, cb) {
   }
   console.log("Token exists: ", tokenExists);
 
-  //  if the image  is valid and if the was alreay
-  // updated through isImageUpdated function
+  // Prüfen, ob das Bild bereits aktualisiert wurde
   const isUpdated = await contract.read.isImageUpdated([BigInt(tokenId)]);
   console.log(`Token ${tokenId} existiert. Bild-Update-Status: ${isUpdated}`);
-  // if the image is already updated raise an error
+
+  // Wenn das Bild bereits aktualisiert wurde, geben wir einen Fehler zurück
   if (isUpdated) {
     return {
       body: JSON.stringify({ error: "Image already updated" }),
@@ -115,13 +115,24 @@ async function handle(event, context, cb) {
   // Wenn das Token existiert und noch nicht aktualisiert wurde
   try {
     // Generiere ein Bild basierend auf dem Prompt und lade es hoch
-    const imageUrl = await generateAndUploadImage(prompt);
+    // Übergebe jetzt auch die tokenId an die Funktion
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId);
 
-    // Jetzt aktualisieren wir das Token mit der neuen Image-URL
-    const txHash = await updateTokenWithImage(contract, tokenId, imageUrl);
+    // Metadaten laden, um die Bild-URL zu extrahieren
+    const metadataResponse = await fetch(metadataUrl);
+    if (!metadataResponse.ok) {
+      throw new Error(`Fehler beim Laden der Metadaten: ${metadataResponse.status}`);
+    }
+
+    const metadata = await metadataResponse.json();
+    const imageUrl = metadata.image;
+
+    // Jetzt aktualisieren wir das Token mit der neuen Metadaten-URL
+    const txHash = await updateTokenWithImage(contract, tokenId, metadataUrl);
 
     return {
       body: JSON.stringify({
+        metadata_url: metadataUrl,
         image_url: imageUrl,
         mintPrice: mintPrice.toString(),
         message: "Bild erfolgreich generiert und Token aktualisiert",

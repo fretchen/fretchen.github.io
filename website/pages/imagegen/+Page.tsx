@@ -55,7 +55,7 @@ const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionRecei
   });
 };
 
-function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tokenId?: bigint) => void }) {
+function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenId?: bigint) => void }) {
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mintingStatus, setMintingStatus] = useState<"idle" | "minting" | "generating" | "error">("idle");
@@ -139,7 +139,7 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
       setMintingStatus("generating");
 
       // URL of the API service for image generation
-      //const apiUrl = "http://localhost:8080";
+      // const apiUrl = "http://localhost:8080";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
 
       // GET request with prompt and token ID as parameters
@@ -150,23 +150,13 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
       }
 
       const data = await response.json();
-      console.log("Image generation completed");
+      console.log("Image generation completed", data);
 
-      // Extract the image URL from the response
+      // Extract the image URL directly from the response
       const imageUrl = data.image_url;
 
-      // Get the image as a JSON object
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
-        throw new Error(`Error retrieving the image: ${imageResponse.status} ${imageResponse.statusText}`);
-      }
-
-      const imageData = await imageResponse.json();
-      // Extract the Base64 image from the response
-      const imageBase64 = imageData.b64_image;
-
-      // Pass image and token ID to the parent component
-      onGenerate(imageBase64, tokenId);
+      // Pass image URL and token ID to the parent component
+      onGenerate(imageUrl, tokenId);
 
       setMintingStatus("idle");
     } catch (err) {
@@ -229,11 +219,13 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
   );
 }
 
+// Aktualisiere die Props, um direkte Bild-URLs zu unterstützen
 interface ImageDisplayProps {
-  imageBase64?: string;
+  imageUrl?: string;
 }
 
-function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
+// Aktualisierte Komponente zur Anzeige des Bildes
+function ImageDisplay({ imageUrl }: ImageDisplayProps) {
   return (
     <div
       style={{
@@ -247,12 +239,8 @@ function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
         marginTop: "20px",
       }}
     >
-      {imageBase64 ? (
-        <img
-          src={`data:image/jpeg;base64,${imageBase64}`}
-          alt="Generated"
-          style={{ maxWidth: "100%", maxHeight: "100%" }}
-        />
+      {imageUrl ? (
+        <img src={imageUrl} alt="Generated" style={{ maxWidth: "100%", maxHeight: "100%" }} />
       ) : (
         <p style={{ color: "#666" }}>Your image will appear here</p>
       )}
@@ -264,11 +252,11 @@ export default function Page() {
   // Chain and Contract configuration
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  const [generatedImage, setGeneratedImage] = useState<string>();
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
-  const handleGenerate = (imageBase64?: string, mintedTokenId?: bigint) => {
-    setGeneratedImage(imageBase64);
+  const handleGenerate = (imageUrl?: string, mintedTokenId?: bigint) => {
+    setGeneratedImageUrl(imageUrl);
     if (mintedTokenId) {
       setTokenId(mintedTokenId);
     }
@@ -285,7 +273,7 @@ export default function Page() {
       </ol>
 
       <ImageGenerator onGenerate={handleGenerate} />
-      <ImageDisplay imageBase64={generatedImage} />
+      <ImageDisplay imageUrl={generatedImageUrl} />
 
       {tokenId && (
         <div style={{ marginTop: "20px", padding: "15px", border: "1px solid #28a745", borderRadius: "4px" }}>

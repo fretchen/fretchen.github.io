@@ -1,48 +1,67 @@
 /**
- * Gemeinsames Modul für Bildgenerierung und S3-Upload
+ * Shared module for image generation and S3 upload
  */
 if (process.env.NODE_ENV === "test") {
   try {
-    // Da wir in einem ESM-Kontext sind, müssen wir dynamischen Import verwenden
+    // Since we're in an ESM context, we need to use dynamic import
     await import("dotenv").then((dotenv) => {
       dotenv.config();
-      console.log("Umgebungsvariablen aus .env geladen");
+      console.log("Environment variables loaded from .env");
     });
   } catch (error) {
-    console.error("Fehler beim Laden von dotenv:", error);
+    console.error("Error loading dotenv:", error);
   }
 }
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 
-// Konfigurationskonstanten
+// Configuration constants
 const MODEL_NAME = "black-forest-labs/FLUX.1-schnell";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/images/generations";
 const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
 
 /**
- * Generiert einen zufälligen String für Dateinamen
+ * Generates a random string for filenames
  */
 function getRandomString(length = 6) {
   return randomBytes(length).toString("hex");
 }
 
 /**
- * Lädt ein JSON-Objekt auf S3 hoch.
- * @param {Object} jsonObj - Das hochzuladende JSON-Objekt.
- * @param {string} fileName - Der Name der Datei, unter dem das JSON-Objekt gespeichert werden soll.
- * @returns {Promise<string>} - Pfad zur hochgeladenen Datei
+ * Converts a Base64 string to a Buffer for binary upload
+ * @param {string} base64String - The Base64 string to convert
+ * @returns {Buffer} - Binary buffer
  */
-export async function uploadJson(jsonObj, fileName) {
+function base64ToBuffer(base64String) {
+  // Remove potential data URL prefix
+  const base64Data = base64String.replace(/^data:image\/\w+;base64,/, "");
+  return Buffer.from(base64Data, "base64");
+}
+
+/**
+ * Uploads any data object to S3.
+ * @param {Object|string|Buffer} data - The data to upload
+ * @param {string} fileName - The filename to save the data as
+ * @param {string} contentType - MIME type of the content
+ * @returns {Promise<string>} - Path to the uploaded file
+ */
+export async function uploadToS3(data, fileName, contentType = "application/json") {
   const accessKey = process.env.SCW_ACCESS_KEY;
   const secretKey = process.env.SCW_SECRET_KEY;
 
-  // Konvertiere das JSON-Objekt in einen String
-  const jsonStr = JSON.stringify(jsonObj);
+  // Prepare data for upload based on type
+  let dataToUpload;
+  if (Buffer.isBuffer(data)) {
+    dataToUpload = data;
+  } else if (typeof data === "object") {
+    dataToUpload = JSON.stringify(data);
+  } else {
+    dataToUpload = data;
+  }
 
-  // Erstelle den S3-Client
+  // Create the S3 client
   const s3Client = new S3Client({
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
@@ -52,40 +71,41 @@ export async function uploadJson(jsonObj, fileName) {
     },
   });
 
-  // Konfiguriere den Upload
+  // Configure the upload
   const params = {
     Bucket: BUCKET_NAME,
     Key: fileName,
-    Body: jsonStr,
-    ContentType: "application/json",
+    Body: dataToUpload,
+    ContentType: contentType,
     ACL: "public-read",
   };
 
-  // Führe den Upload durch
+  // Perform the upload
   try {
     await s3Client.send(new PutObjectCommand(params));
-    console.log(`JSON erfolgreich als ${fileName} hochgeladen`);
+    console.log(`Successfully uploaded ${fileName}`);
     return `${JSON_BASE_PATH}${fileName}`;
   } catch (error) {
-    console.error(`Fehler beim Hochladen der JSON-Datei: ${error}`);
+    console.error(`Error uploading file: ${error}`);
     throw error;
   }
 }
 
 /**
- * Generiert ein Bild basierend auf dem Prompt und lädt es auf S3 hoch
- * @param {string} prompt - Der Prompt für die Bildgenerierung
- * @returns {Promise<string>} - Pfad zur generierten Bilddatei
+ * Generates an image based on the prompt and uploads it to S3 along with ERC-721 metadata
+ * @param {string} prompt - The prompt for image generation
+ * @param {string|number} tokenId - The NFT token ID to include in metadata
+ * @returns {Promise<string>} - Path to the generated metadata file
  */
-export async function generateAndUploadImage(prompt) {
+export async function generateAndUploadImage(prompt, tokenId = "unknown") {
   const ionosApiToken = process.env.IONOS_API_TOKEN;
 
   if (!ionosApiToken) {
-    throw new Error("API Token nicht gefunden. Bitte konfigurieren Sie die IONOS_API_TOKEN Umgebungsvariable.");
+    throw new Error("API token not found. Please configure the IONOS_API_TOKEN environment variable.");
   }
 
   if (!prompt) {
-    throw new Error("Kein Prompt angegeben.");
+    throw new Error("No prompt provided.");
   }
 
   const headers = {
@@ -99,7 +119,7 @@ export async function generateAndUploadImage(prompt) {
     size: "1024x1024",
   };
 
-  console.log("Senden des Bildgenerierungsrequests...");
+  console.log("Sending image generation request...");
   const response = await fetch(ENDPOINT, {
     method: "POST",
     headers: headers,
@@ -108,17 +128,48 @@ export async function generateAndUploadImage(prompt) {
   });
 
   if (!response.ok) {
-    console.error(`IONOS API Fehler: ${response.status} ${response.statusText}`);
-    throw new Error(`Konnte IONOS nicht erreichen: ${response.status} ${response.statusText}`);
+    console.error(`IONOS API Error: ${response.status} ${response.statusText}`);
+    throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
   }
 
   const responseData = await response.json();
-  const b64Json = { b64_image: responseData.data[0].b64_json };
-  console.log("Bild erhalten");
+  const imageBase64 = responseData.data[0].b64_json;
+  console.log("Image received");
 
-  // Erstelle einen eindeutigen Dateinamen
-  const fileName = `image${getRandomString()}.json`;
+  // Upload the image as PNG in the images subfolder
+  const imageFileName = `images/image_${tokenId}_${getRandomString()}.png`;
+  const imageBuffer = base64ToBuffer(imageBase64);
+  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/png");
 
-  // Lade das JSON auf S3 hoch und gib den Pfad zurück
-  return await uploadJson(b64Json, fileName);
+  // Create and upload ERC-721 compliant metadata in the metadata subfolder
+  const metadataFileName = `metadata/metadata_${tokenId}_${getRandomString()}.json`;
+
+  // Create metadata following ERC-721 standard
+  const metadata = {
+    name: `AI Generated Art #${tokenId}`,
+    description: `AI generated artwork based on the prompt: "${prompt}"`,
+    image: imageUrl, // Reference to the PNG image
+    attributes: [
+      {
+        trait_type: "Prompt",
+        value: prompt,
+      },
+      {
+        trait_type: "Model",
+        value: MODEL_NAME,
+      },
+      {
+        trait_type: "Creation Date",
+        value: new Date().toISOString(),
+      },
+    ],
+  };
+
+  // Upload the metadata
+  const metadataUrl = await uploadToS3(metadata, metadataFileName);
+
+  console.log(`Image and metadata uploaded successfully for token ${tokenId}`);
+
+  // Return the metadata URL (which contains a reference to the image)
+  return metadataUrl;
 }

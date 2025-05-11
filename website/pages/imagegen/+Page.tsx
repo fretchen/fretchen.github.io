@@ -11,46 +11,46 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
   const [error, setError] = useState<string | null>(null);
   const [currentTokenId, setCurrentTokenId] = useState<bigint | undefined>(undefined);
 
-  // Blockchain-Interaktion
+  // Blockchain interaction
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  // Lese Mint-Preis vom Contract
+  // Read mint price from contract
   const { data: mintPrice } = useReadContract({
     ...genAiNFTContractConfig,
     functionName: "mintPrice",
     args: [],
     chainId: chain.id,
   });
-  console.log("2. Mintpreis:", mintPrice ? mintPrice.toString() : "Lade...");
+  console.log("2. Mint price:", mintPrice ? mintPrice.toString() : "Loading...");
   // transform the mintPrice to eth
   const mintPriceEth = mintPrice ? parseFloat(mintPrice.toString()) / 1e18 : undefined;
-  console.log("3. Mintpreis in ETH:", mintPriceEth ? mintPriceEth.toString() : "Lade...");
+  console.log("3. Mint price in ETH:", mintPriceEth ? mintPriceEth.toString() : "Loading...");
 
-  // Contract-Schreiboperationen
+  // Contract write operations
   const { writeContractAsync, isPending: isWritePending } = useWriteContract();
 
-  // Warten auf Transaktionsbestätigung
+  // Wait for transaction confirmation
   const { data: txReceipt, isLoading: isWaitingForTx } = useWaitForTransactionReceipt({
     hash: mintingStatus === "minting" ? undefined : undefined,
   });
 
   const handleMintAndGenerate = async () => {
-    // Prüfe Bedingungen einzeln mit präzisen Fehlermeldungen
+    // Check conditions individually with precise error messages
     if (!isConnected || !address) {
-      setError("Bitte verbinde deine Wallet zuerst");
+      setError("Please connect your wallet first");
       return;
     }
 
     if (!prompt.trim()) {
-      setError("Bitte gib einen Prompt ein");
+      setError("Please enter a prompt");
       return;
     }
 
     if (!mintPrice) {
-      setError("Mint-Preis konnte nicht vom Contract geladen werden");
+      setError("Could not load mint price from contract");
       return;
     }
 
@@ -59,10 +59,10 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
     setMintingStatus("minting");
 
     try {
-      // Wir beginnen mit dem Minting - mit einem temporären URI
+      // We start with minting - with a temporary URI
       const tempUri = `ipfs://tempURI/${Date.now()}`;
 
-      // Führe safeMint mit temporärer URI aus
+      // Execute safeMint with temporary URI
       const txHash = await writeContractAsync({
         ...genAiNFTContractConfig,
         functionName: "safeMint",
@@ -71,33 +71,33 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
         chainId: chain.id,
       });
 
-      console.log("Minting Transaktion gesendet:", txHash);
+      console.log("Minting transaction sent:", txHash);
 
-      // Warte auf Bestätigung und extrahiere Token ID
+      // Wait for confirmation and extract Token ID
       const receipt = await waitForTransaction(txHash);
 
-      // Token ID aus dem Transfer-Event extrahieren
+      // Extract Token ID from transfer event
       const transferEvent = receipt?.logs.find(
         (log) => log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
       );
 
       if (!transferEvent || transferEvent.topics.length < 4) {
-        throw new Error("Konnte Token ID nicht aus Transaktion extrahieren");
+        throw new Error("Could not extract token ID from transaction");
       }
 
       const tokenIdHex = transferEvent.topics[3];
       const tokenId = BigInt(tokenIdHex);
-      console.log("Gemintete Token ID:", tokenId);
+      console.log("Minted token ID:", tokenId);
       setCurrentTokenId(tokenId);
 
-      // Jetzt mit der Bildgenerierung fortfahren
+      // Now proceed with image generation
       setMintingStatus("generating");
 
-      // URL des API-Services für die Bildgenerierung
+      // URL of the API service for image generation
       //const apiUrl = "http://localhost:8080";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
 
-      // GET-Anfrage mit Prompt und Token ID als Parameter
+      // GET request with prompt and token ID as parameters
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
 
       if (!response.ok) {
@@ -105,35 +105,35 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
       }
 
       const data = await response.json();
-      console.log("Bildgenerierung abgeschlossen");
+      console.log("Image generation completed");
 
-      // Extrahiere die Bild-URL aus der Antwort
+      // Extract the image URL from the response
       const imageUrl = data.image_url;
 
-      // Hole das Bild als JSON-Objekt
+      // Get the image as a JSON object
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
-        throw new Error(`Fehler beim Abrufen des Bildes: ${imageResponse.status} ${imageResponse.statusText}`);
+        throw new Error(`Error retrieving the image: ${imageResponse.status} ${imageResponse.statusText}`);
       }
 
       const imageData = await imageResponse.json();
-      // Extrahiere das Base64-Bild aus der Antwort
+      // Extract the Base64 image from the response
       const imageBase64 = imageData.b64_image;
 
-      // Übergebe Bild und Token ID an die übergeordnete Komponente
+      // Pass image and token ID to the parent component
       onGenerate(imageBase64, tokenId);
 
       setMintingStatus("idle");
     } catch (err) {
-      console.error("Fehler:", err);
-      setError(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten");
+      console.error("Error:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
       setMintingStatus("error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Hilfsfunktion zum Warten auf Transaktionsbestätigung
+  // Helper function to wait for transaction confirmation
   const waitForTransaction = async (hash: `0x${string}`) => {
     return new Promise<any>((resolve, reject) => {
       const checkReceipt = async () => {
@@ -146,7 +146,7 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
           if (receipt) {
             resolve(receipt);
           } else {
-            setTimeout(checkReceipt, 2000); // Alle 2 Sekunden prüfen
+            setTimeout(checkReceipt, 2000); // Check every 2 seconds
           }
         } catch (error) {
           reject(error);
@@ -163,7 +163,7 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Beschreibe dein Bild..."
+          placeholder="Describe your image..."
           disabled={isLoading || mintingStatus !== "idle"}
           style={{
             padding: "8px",
@@ -191,17 +191,17 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
         >
           {isLoading
             ? mintingStatus === "minting"
-              ? "NFT wird geminted..."
-              : "Bild wird generiert..."
+              ? "NFT is being minted..."
+              : "Image is being generated..."
             : "Mint & Generate"}
         </button>
 
-        {!isConnected && <p style={{ color: "#666" }}>Verbinde deine Wallet, um ein NFT zu erzeugen</p>}
+        {!isConnected && <p style={{ color: "#666" }}>Connect your wallet to create an NFT</p>}
 
         {error && <p style={{ color: "red", margin: "10px 0" }}>{error}</p>}
 
         {currentTokenId && mintingStatus === "idle" && (
-          <p style={{ color: "green" }}>NFT erfolgreich erstellt! Token ID: {currentTokenId.toString()}</p>
+          <p style={{ color: "green" }}>NFT successfully created! Token ID: {currentTokenId.toString()}</p>
         )}
       </div>
     </div>
@@ -233,27 +233,19 @@ function ImageDisplay({ imageBase64 }: ImageDisplayProps) {
           style={{ maxWidth: "100%", maxHeight: "100%" }}
         />
       ) : (
-        <p style={{ color: "#666" }}>Dein Bild wird hier erscheinen</p>
+        <p style={{ color: "#666" }}>Your image will appear here</p>
       )}
     </div>
   );
 }
 
 export default function Page() {
-  // Chain und Contract Konfiguration
+  // Chain and Contract configuration
   const chainId = useChainId();
   const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  // Mintpreis abrufen
-  //const { data: mintPrice } = useReadContract({
-  //  ...genAiNFTContractConfig,
-  //  functionName: "mintPrice",
-  //  args: [],
-  //  chainId: chain.id,
-  // });
 
-  // console.log("Mintpreis:", mintPrice ? mintPrice.toString() : "Lade...");
   const [generatedImage, setGeneratedImage] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
@@ -266,12 +258,12 @@ export default function Page() {
 
   return (
     <>
-      <h1>KI-Bild NFT Generator</h1>
-      <p>Erstelle einzigartige KI-generierte Kunst und besitze sie als NFT. Der Prozess:</p>
+      <h1>AI Image NFT Generator</h1>
+      <p>Create unique AI-generated art and own it as an NFT. The process:</p>
       <ol>
-        <li>Gib einen Prompt ein</li>
-        <li>Klicke auf "Mint & Generate"</li>
-        <li>Zuerst wird ein NFT erstellt, dann das Bild generiert</li>
+        <li>Enter a prompt</li>
+        <li>Click on "Mint & Generate"</li>
+        <li>First an NFT is created, then the image is generated</li>
       </ol>
 
       <ImageGenerator onGenerate={handleGenerate} />
@@ -279,7 +271,7 @@ export default function Page() {
 
       {tokenId && (
         <div style={{ marginTop: "20px", padding: "15px", border: "1px solid #28a745", borderRadius: "4px" }}>
-          <h3>🎉 NFT erfolgreich erstellt!</h3>
+          <h3>🎉 NFT successfully created!</h3>
           <p>
             <strong>Token ID:</strong> {tokenId.toString()}
           </p>
@@ -291,7 +283,7 @@ export default function Page() {
               style={{ color: "#0066cc", textDecoration: "none" }}
             >
               {" "}
-              Auf Etherscan anzeigen →
+              View on Etherscan →
             </a>
           </p>
         </div>

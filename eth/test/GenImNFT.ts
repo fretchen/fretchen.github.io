@@ -152,6 +152,17 @@ describe("GenImNFT", function () {
   });
 
   describe("Token URI", function () {
+    it("Should be possible to create an NFT without the token URI at minting", async function () {
+      const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
+      const mintPrice = await genImNFT.read.mintPrice();
+      // Mint NFT ohne URI
+      await genImNFT.write.safeMint([""], {
+        value: mintPrice,
+      });
+      // Überprüfe, dass der Token URI leer ist
+      const tokenURI = await genImNFT.read.tokenURI([0n]);
+      expect(tokenURI).to.equal("");
+    });
     it("Should return the correct token URI", async function () {
       const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
 

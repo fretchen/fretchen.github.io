@@ -60,6 +60,9 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
         // Markiere das Token als aktualisiert
         _imageUpdated[tokenId] = true;
         
+        // Aktualisiere die Token-URI
+        _setTokenURI(tokenId, imageUrl);
+        
         // Emittiere Event für den Off-Chain-Service mit der imageUrl
         emit ImageUpdateRequested(tokenId, msg.sender, imageUrl);
 

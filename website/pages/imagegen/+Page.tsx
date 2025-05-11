@@ -1,7 +1,59 @@
 import React, { useState } from "react";
-import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 
 import { getChain, getGenAiNFTContractConfig } from "../../utils/getChain";
+
+// Definiere einen korrekten Typen für die Ethereum-Transaktionsquittung
+interface TransactionReceipt {
+  blockHash: string;
+  blockNumber: string;
+  contractAddress: string | null;
+  cumulativeGasUsed: string;
+  effectiveGasPrice: string;
+  from: string;
+  gasUsed: string;
+  logs: Array<{
+    address: string;
+    topics: string[];
+    data: string;
+    blockNumber: string;
+    transactionHash: string;
+    transactionIndex: string;
+    blockHash: string;
+    logIndex: string;
+    removed: boolean;
+  }>;
+  logsBloom: string;
+  status: string;
+  to: string;
+  transactionHash: string;
+  transactionIndex: string;
+  type: string;
+}
+
+// Helper function to wait for transaction confirmation
+const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
+  return new Promise<TransactionReceipt>((resolve, reject) => {
+    const checkReceipt = async () => {
+      try {
+        const receipt = await window.ethereum.request({
+          method: "eth_getTransactionReceipt",
+          params: [hash],
+        });
+
+        if (receipt) {
+          resolve(receipt as TransactionReceipt);
+        } else {
+          setTimeout(checkReceipt, 2000); // Check every 2 seconds
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    checkReceipt();
+  });
+};
 
 function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tokenId?: bigint) => void }) {
   const [prompt, setPrompt] = useState("");
@@ -12,7 +64,6 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
 
   // Blockchain interaction
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
   const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
@@ -29,12 +80,7 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
   console.log("3. Mint price in ETH:", mintPriceEth ? mintPriceEth.toString() : "Loading...");
 
   // Contract write operations
-  const { writeContractAsync, isPending: isWritePending } = useWriteContract();
-
-  // Wait for transaction confirmation
-  const { data: txReceipt, isLoading: isWaitingForTx } = useWaitForTransactionReceipt({
-    hash: mintingStatus === "minting" ? undefined : undefined,
-  });
+  const { writeContractAsync } = useWriteContract();
 
   const handleMintAndGenerate = async () => {
     // Check conditions individually with precise error messages
@@ -132,30 +178,6 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageBase64?: string, tok
     }
   };
 
-  // Helper function to wait for transaction confirmation
-  const waitForTransaction = async (hash: `0x${string}`) => {
-    return new Promise<any>((resolve, reject) => {
-      const checkReceipt = async () => {
-        try {
-          const receipt = await window.ethereum.request({
-            method: "eth_getTransactionReceipt",
-            params: [hash],
-          });
-
-          if (receipt) {
-            resolve(receipt);
-          } else {
-            setTimeout(checkReceipt, 2000); // Check every 2 seconds
-          }
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      checkReceipt();
-    });
-  };
-
   return (
     <div style={{ padding: "20px" }}>
       <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexDirection: "column" }}>
@@ -242,7 +264,6 @@ export default function Page() {
   // Chain and Contract configuration
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-
   const [generatedImage, setGeneratedImage] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
@@ -259,7 +280,7 @@ export default function Page() {
       <p>Create your AI image and pay for it with ETH. The process:</p>
       <ol>
         <li>Enter a prompt</li>
-        <li>Click on "Mint & Generate"</li>
+        <li>Click on `&quot;`Mint & Generate`&quot;`</li>
         <li>First an NFT is created, then the image is generated</li>
       </ol>
 

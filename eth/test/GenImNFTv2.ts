@@ -49,8 +49,12 @@ describe("GenImNFT", function () {
     // Get accounts
     const [owner, otherAccount, recipient] = await hre.viem.getWalletClients();
 
-    // Deploy the contract
+    // Deploy the contract (ohne initialize aufzurufen)
     const genImNFT = await hre.viem.deployContract("GenImNFTv2", []);
+    
+    // Manuelle Initialisierung nach dem Deployment
+    await genImNFT.write.initialize();
+    
     const genImNFTPublic = await hre.viem.getContractAt("GenImNFTv2", genImNFT.address);
 
     return {
@@ -74,8 +78,17 @@ describe("GenImNFT", function () {
 
     it("Should have the correct name and symbol", async function () {
       const { genImNFTPublic } = await loadFixture(deployGenImNFTFixture);
-      expect(await genImNFTPublic.read.name()).to.equal("GenImNFT");
+      expect(await genImNFTPublic.read.name()).to.equal("GenImNFTv2");
       expect(await genImNFTPublic.read.symbol()).to.equal("GENIMG");
+    });
+
+    it("Should not allow re-initialization", async function () {
+      const { genImNFT } = await loadFixture(deployGenImNFTFixture);
+      
+      // Versuche, initialize() erneut aufzurufen
+      await expect(
+        genImNFT.write.initialize()
+      ).to.be.rejected; // Sollte mit einem "bereits initialisiert"-Fehler fehlschlagen
     });
   });
 

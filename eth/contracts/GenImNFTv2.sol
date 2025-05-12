@@ -5,8 +5,14 @@ pragma solidity ^0.8.27;
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721URIStorageUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract GenImNFTv2 is ERC721Upgradeable, ERC721URIStorageUpgradeable, OwnableUpgradeable {
+contract GenImNFTv2 is 
+    ERC721Upgradeable, 
+    ERC721URIStorageUpgradeable, 
+    OwnableUpgradeable,
+    UUPSUpgradeable 
+{
     uint256 private _nextTokenId;
 
     // Price for minting an NFT
@@ -27,9 +33,20 @@ contract GenImNFTv2 is ERC721Upgradeable, ERC721URIStorageUpgradeable, OwnableUp
         __ERC721_init("GenImNFTv2", "GENIMG");
         __ERC721URIStorage_init();
         __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         
         // Initialize storage variables here
         mintPrice = 0.01 ether;
+    }
+
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     * 
+     * Normally only the owner should be able to upgrade the contract.
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+        // Additional authorization logic could be added here if needed
     }
 
     // The owner can adjust the price
@@ -114,7 +131,7 @@ contract GenImNFTv2 is ERC721Upgradeable, ERC721URIStorageUpgradeable, OwnableUp
     function tokenURI(uint256 tokenId)
         public
         view
-        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)  // Correct
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
         returns (string memory)
     {
         return super.tokenURI(tokenId);
@@ -123,7 +140,7 @@ contract GenImNFTv2 is ERC721Upgradeable, ERC721URIStorageUpgradeable, OwnableUp
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)  // Correct
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

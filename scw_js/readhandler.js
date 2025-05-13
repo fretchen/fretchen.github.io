@@ -77,7 +77,7 @@ async function handle(event, context, cb) {
   });
 
   const contract = getContract({
-    address: "0x7F8eB9F5084AfA2e389D13B9CD6E3097C485bF8D",
+    address: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
     abi: nftAbi,
     client: {
       public: publicClient,

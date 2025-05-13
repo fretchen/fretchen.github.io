@@ -51,10 +51,10 @@ describe("GenImNFT", function () {
 
     // Deploy the contract (ohne initialize aufzurufen)
     const genImNFT = await hre.viem.deployContract("GenImNFT", []);
-    
+
     // Manuelle Initialisierung nach dem Deployment
     await genImNFT.write.initialize();
-    
+
     const genImNFTPublic = await hre.viem.getContractAt("GenImNFT", genImNFT.address);
 
     return {
@@ -84,11 +84,9 @@ describe("GenImNFT", function () {
 
     it("Should not allow re-initialization", async function () {
       const { genImNFT } = await loadFixture(deployGenImNFTFixture);
-      
+
       // Versuche, initialize() erneut aufzurufen
-      await expect(
-        genImNFT.write.initialize()
-      ).to.be.rejected; // Sollte mit einem "bereits initialisiert"-Fehler fehlschlagen
+      await expect(genImNFT.write.initialize()).to.be.rejected; // Sollte mit einem "bereits initialisiert"-Fehler fehlschlagen
     });
   });
 
@@ -317,36 +315,38 @@ describe("GenImNFT", function () {
 
     it("Should update the tokenURI when requestImageUpdate is called", async function () {
       const { genImNFT, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTFixture);
-      
+
       // 1. Erstelle ein NFT mit initialem Metadaten-Pfad
       const prompt = "A futuristic space station orbiting Jupiter";
       const initialTokenURI = createMetadataFile(42, prompt);
       const mintPrice = await genImNFT.read.mintPrice();
-      
+
       await genImNFT.write.safeMint([initialTokenURI], {
         value: mintPrice,
       });
-      
+
       // Bestätige die initiale TokenURI
       const originalTokenURI = await genImNFT.read.tokenURI([0n]);
       expect(originalTokenURI).to.equal(initialTokenURI);
-      
+
       // 2. Updater fordert ein Bild-Update an mit neuer URL
       const updaterClient = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
         client: { wallet: otherAccount },
       });
-      
+
       const newMetadataUrl = "https://example.com/metadata/updated-token-42.json";
       await updaterClient.write.requestImageUpdate([0n, newMetadataUrl]);
-      
+
       // 3. Überprüfe, ob die tokenURI aktualisiert wurde
       const updatedTokenURI = await genImNFT.read.tokenURI([0n]);
-      
+
       // Der Test wird fehlschlagen, wenn der Contract die tokenURI nicht aktualisiert
-      expect(updatedTokenURI).to.equal(newMetadataUrl, 
+      expect(updatedTokenURI).to.equal(
+        newMetadataUrl,
         "Die tokenURI wurde nicht aktualisiert. Die requestImageUpdate-Funktion " +
-        "aktualisiert möglicherweise nicht automatisch die tokenURI.");
-      
+          "aktualisiert möglicherweise nicht automatisch die tokenURI.",
+      );
+
       // 4. Bestätige, dass das Bild als aktualisiert markiert wurde
       const isImageUpdated = await genImNFT.read.isImageUpdated([0n]);
       expect(isImageUpdated).to.be.true;
@@ -386,6 +386,55 @@ describe("GenImNFT", function () {
           value: mintPrice - 1n,
         }),
       ).to.be.rejectedWith("Insufficient payment");
+    });
+  });
+
+  describe("Token Burning", function () {
+    it("Should allow the owner to burn their token", async function () {
+      const { genImNFT, owner } = await loadFixture(deployGenImNFTFixture);
+
+      // 1. Zuerst ein NFT prägen
+      const tokenURI = "https://example.com/metadata/to-be-burned.json";
+      const mintPrice = await genImNFT.read.mintPrice();
+
+      await genImNFT.write.safeMint([tokenURI], {
+        value: mintPrice,
+      });
+
+      // 2. Überprüfe, dass das Token existiert
+      const ownerBefore = await genImNFT.read.ownerOf([0n]);
+      expect(getAddress(ownerBefore)).to.equal(getAddress(owner.account.address));
+
+      // 3. Verbrenne das Token
+      await genImNFT.write.burn([0n]);
+
+      // 4. Überprüfe, dass das Token wirklich verbrannt wurde
+      // Der ownerOf-Aufruf sollte fehlschlagen, da das Token nicht mehr existiert
+      await expect(genImNFT.read.ownerOf([0n])).to.be.rejected;
+    });
+
+    it("Should prevent non-owners from burning tokens", async function () {
+      const { genImNFT, owner, otherAccount } = await loadFixture(deployGenImNFTFixture);
+
+      // 1. Präge ein Token als Owner
+      const tokenURI = "https://example.com/metadata/not-yours-to-burn.json";
+      const mintPrice = await genImNFT.read.mintPrice();
+
+      await genImNFT.write.safeMint([tokenURI], {
+        value: mintPrice,
+      });
+
+      // 2. Versuche, das Token als Nicht-Besitzer zu verbrennen
+      const otherClientContract = await hre.viem.getContractAt("GenImNFT", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+
+      // Sollte fehlschlagen, da otherAccount nicht der Besitzer ist
+      await expect(otherClientContract.write.burn([0n])).to.be.rejected;
+
+      // 3. Das Token sollte noch existieren
+      const ownerAfter = await genImNFT.read.ownerOf([0n]);
+      expect(getAddress(ownerAfter)).to.equal(getAddress(owner.account.address));
     });
   });
 

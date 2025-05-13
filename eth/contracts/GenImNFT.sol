@@ -4,12 +4,14 @@ pragma solidity ^0.8.27;
 
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721URIStorageUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import {ERC721BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol"; // Neuer Import
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract GenImNFT is 
     ERC721Upgradeable, 
     ERC721URIStorageUpgradeable, 
+    ERC721BurnableUpgradeable, // Neue Vererbung
     OwnableUpgradeable,
     UUPSUpgradeable 
 {
@@ -32,6 +34,7 @@ contract GenImNFT is
     function initialize() initializer public {
         __ERC721_init("GenImNFT", "GENIMG");
         __ERC721URIStorage_init();
+        __ERC721Burnable_init(); // Neue Initialisierung
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         
@@ -125,7 +128,6 @@ contract GenImNFT is
     function _exists(uint256 tokenId) internal view returns (bool) {
         return _ownerOf(tokenId) != address(0);
     }
-
 
     // The following functions are overrides required by Solidity.
     function tokenURI(uint256 tokenId)

@@ -3,6 +3,7 @@ import "@nomicfoundation/hardhat-toolbox-viem";
 import "@nomicfoundation/hardhat-verify";
 import "hardhat-abi-exporter";
 import "hardhat-gas-reporter";
+import "@openzeppelin/hardhat-upgrades";
 import { vars } from "hardhat/config";
 
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");

@@ -2,20 +2,28 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.27;
 
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721URIStorageUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import {ERC721BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol"; // Neuer Import
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
+contract GenImNFT is 
+    ERC721Upgradeable, 
+    ERC721URIStorageUpgradeable, 
+    ERC721BurnableUpgradeable, // Neue Vererbung
+    OwnableUpgradeable,
+    UUPSUpgradeable 
+{
     uint256 private _nextTokenId;
 
-    // Preis für das Minten eines NFTs
-    uint256 public mintPrice = 0.01 ether;
+    // Price for minting an NFT
+    uint256 public mintPrice;
 
-    // Autorisierte Adressen, die Bilder für Tokens aktualisieren dürfen
+    // Authorized addresses that can update images for tokens
     mapping(uint256 => address) private _authorizedImageUpdaters;
 
-    // Flag, ob das Bild bereits aktualisiert wurde
+    // Flag indicating if the image has already been updated
     mapping(uint256 => bool) private _imageUpdated;
 
     // Events
@@ -23,17 +31,33 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater, string imageUrl);
     event UpdaterPaid(uint256 indexed tokenId, address indexed updater, uint256 amount);
 
-    constructor()
-        ERC721("GenImNFT", "GENIMG")
-        Ownable(msg.sender)
-    {}
+    function initialize() initializer public {
+        __ERC721_init("GenImNFT", "GENIMG");
+        __ERC721URIStorage_init();
+        __ERC721Burnable_init(); // Neue Initialisierung
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+        
+        // Initialize storage variables here
+        mintPrice = 0.01 ether;
+    }
 
-    // Der Owner kann den Preis anpassen
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     * 
+     * Normally only the owner should be able to upgrade the contract.
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+        // Additional authorization logic could be added here if needed
+    }
+
+    // The owner can adjust the price
     function setMintPrice(uint256 newPrice) public onlyOwner {
         mintPrice = newPrice;
     }
 
-    // Jeder kann minten, wenn er die Gebühr bezahlt
+    // Anyone can mint by paying the fee
     function safeMint(string memory uri)
         public
         payable
@@ -48,38 +72,38 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev Markiert ein Token als mit Bild aktualisiert, emittiert ein Event 
-     * und zahlt dem Updater eine Vergütung.
-     * @param tokenId Die ID des Tokens, das aktualisiert wird
-     * @param imageUrl Die URL des aktualisierten Bildes
+     * @dev Marks a token as updated with an image, emits an event
+     * and pays a compensation to the updater.
+     * @param tokenId The ID of the token being updated
+     * @param imageUrl The URL of the updated image
      */
     function requestImageUpdate(uint256 tokenId, string memory imageUrl) public {
         require(_exists(tokenId), "Token does not exist");
         require(!_imageUpdated[tokenId], "Image already updated");
 
-        // Markiere das Token als aktualisiert
+        // Mark the token as updated
         _imageUpdated[tokenId] = true;
         
-        // Aktualisiere die Token-URI
+        // Update the token URI
         _setTokenURI(tokenId, imageUrl);
         
-        // Emittiere Event für den Off-Chain-Service mit der imageUrl
+        // Emit event for the off-chain service with the imageUrl
         emit ImageUpdateRequested(tokenId, msg.sender, imageUrl);
 
-        // Sende die Zahlung an den Updater (msg.sender)
+        // Send the payment to the updater (msg.sender)
         (bool success, ) = payable(msg.sender).call{value: mintPrice}("");
             
-        // Emittiere Event für erfolgreiche Zahlung
+        // Emit event for successful payment
         if (success) {
                 emit UpdaterPaid(tokenId, msg.sender, mintPrice);
         }
-        // Wenn die Zahlung fehlschlägt, wird kein Event emittiert, aber der Rest der Funktion wird trotzdem ausgeführt
+        // If the payment fails, no event is emitted, but the rest of the function still executes
 
-        // Die tatsächliche Aktualisierung der Datei geschieht offchain
+        // The actual file update happens off-chain
     }
 
     /**
-     * @dev Erlaubt dem Owner, die verbleibenden Gebühren abzuheben
+     * @dev Allows the owner to withdraw the remaining fees
      */
     function withdraw() public onlyOwner {
         uint256 balance = address(this).balance;
@@ -90,7 +114,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev Prüft, ob ein Bild für ein Token bereits aktualisiert wurde
+     * @dev Checks if an image for a token has already been updated
      */
     function isImageUpdated(uint256 tokenId) public view returns (bool) {
         require(_exists(tokenId), "Token does not exist");
@@ -99,7 +123,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
 
 
     /**
-     * @dev Prüft, ob ein Token existiert
+     * @dev Checks if a token exists
      */
     function _exists(uint256 tokenId) internal view returns (bool) {
         return _ownerOf(tokenId) != address(0);
@@ -109,7 +133,7 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     function tokenURI(uint256 tokenId)
         public
         view
-        override(ERC721, ERC721URIStorage)
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
         returns (string memory)
     {
         return super.tokenURI(tokenId);
@@ -118,9 +142,12 @@ contract GenImNFT is ERC721, ERC721URIStorage, Ownable {
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, ERC721URIStorage)
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
+
+    // Add at the end of the contract
+    uint256[50] private __gap;
 }

@@ -19,6 +19,12 @@ body {
   box-sizing: border-box;
 }
 
+/* Typography */
+h1 {
+  font-weight: bold;
+  font-size: 2em;
+}
+
 /* Page Transition Animation */
 #page-content {
   opacity: 1;

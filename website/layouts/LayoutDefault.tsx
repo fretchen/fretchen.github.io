@@ -1,24 +1,26 @@
 import "./style.css";
 
+import "./panda.css";
 import React from "react";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";
 
 import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
+import { css } from "../styled-system/css";
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   return (
     <div
-      style={{
+      className={css({
         display: "flex",
         flexDirection: "column",
         maxWidth: 900,
         margin: "auto",
-      }}
+      })}
     >
       <WagmiProvider config={config}>
-        <h1 style={{ textAlign: "center", margin: "20px 0", padding: "10px" }}>Website by fretchen</h1>
+        <h1 className={css({ textAlign: "center", margin: "20px 0", padding: "10px" })}>Website by fretchen</h1>
         <Appbar>
           <Link href="/">Welcome</Link>
           <Link href="/blog">Blog</Link>
@@ -38,7 +40,7 @@ function Appbar({ children }: { children: React.ReactNode }) {
   return (
     <div
       id="Appbar"
-      style={{
+      className={css({
         padding: "10px 20px",
         width: "100%",
         display: "flex",
@@ -46,7 +48,7 @@ function Appbar({ children }: { children: React.ReactNode }) {
         gap: "20px",
         borderBottom: "2px solid #eee",
         alignItems: "center",
-      }}
+      })}
     >
       {children}
     </div>
@@ -58,11 +60,11 @@ function Content({ children }: { children: React.ReactNode }) {
     <div id="page-container">
       <div
         id="page-content"
-        style={{
+        className={css({
           padding: 20,
           paddingBottom: 50,
           minHeight: "100vh",
-        }}
+        })}
       >
         {children}
       </div>

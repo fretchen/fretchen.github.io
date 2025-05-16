@@ -26,7 +26,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
           <Link href="/blog">Blog</Link>
           <Link href="/amo">AMO</Link>
           <Link href="/imagegen">ImageGen</Link>
-          <div style={{ marginLeft: "auto" }}>
+          <div className={css({ marginLeft: "auto" })}>
             <WalletOptions />
           </div>
         </Appbar>

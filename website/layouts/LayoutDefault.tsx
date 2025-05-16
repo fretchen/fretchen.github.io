@@ -1,5 +1,4 @@
 import "./style.css";
-
 import "./panda.css";
 import React from "react";
 import { Link } from "../components/Link";
@@ -15,12 +14,20 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
       className={css({
         display: "flex",
         flexDirection: "column",
-        maxWidth: 900,
+        maxWidth: "token(sizes.container)",
         margin: "auto",
       })}
     >
       <WagmiProvider config={config}>
-        <h1 className={css({ textAlign: "center", margin: "20px 0", padding: "10px" })}>Website by fretchen</h1>
+        <h1
+          className={css({
+            textAlign: "center",
+            margin: "token(spacing.md) token(spacing.0)",
+            padding: "token(spacing.sm)",
+          })}
+        >
+          Website by fretchen
+        </h1>
         <Appbar>
           <Link href="/">Welcome</Link>
           <Link href="/blog">Blog</Link>
@@ -41,12 +48,12 @@ function Appbar({ children }: { children: React.ReactNode }) {
     <div
       id="Appbar"
       className={css({
-        padding: "10px 20px",
-        width: "100%",
+        padding: "token(spacing.sm) token(spacing.md)",
+        width: "token(sizes.full)",
         display: "flex",
         flexDirection: "row",
-        gap: "20px",
-        borderBottom: "2px solid #eee",
+        gap: "token(spacing.md)",
+        borderBottom: "token(borders.light)",
         alignItems: "center",
       })}
     >
@@ -61,9 +68,9 @@ function Content({ children }: { children: React.ReactNode }) {
       <div
         id="page-content"
         className={css({
-          padding: 20,
-          paddingBottom: 50,
-          minHeight: "100vh",
+          padding: "token(spacing.md)",
+          paddingBottom: "token(spacing.xl)",
+          minHeight: "token(sizes.screen)",
         })}
       >
         {children}

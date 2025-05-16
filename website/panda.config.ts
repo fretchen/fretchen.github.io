@@ -15,12 +15,38 @@ export default defineConfig({
   // Files to exclude
   exclude: [],
 
+  strictTokens: true,
+
   // Useful for theme customization
   theme: {
-    extend: {},
+    extend: {
+      tokens: {
+        colors: {
+          brand: { value: "#0066cc" },
+          border: { value: "#eeeeee" },
+          text: { value: "#333333" },
+          background: { value: "#ffffff" },
+        },
+        spacing: {
+          xs: { value: "5px" },
+          sm: { value: "10px" },
+          md: { value: "20px" },
+          lg: { value: "40px" },
+          xl: { value: "50px" },
+        },
+        sizes: {
+          container: { value: "900px" },
+        },
+        borders: {
+          light: { value: "2px solid {colors.border}" },
+        },
+        radii: {
+          sm: { value: "4px" },
+        },
+      },
+    },
   },
 
-  presets: ['@pandacss/preset-panda'],
   // The output directory for your css system
   outdir: "styled-system",
 });

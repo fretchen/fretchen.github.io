@@ -1,30 +1,39 @@
 import "./style.css";
-
+import "./panda.css";
 import React from "react";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";
 
 import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
+import { css } from "../styled-system/css";
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   return (
     <div
-      style={{
+      className={css({
         display: "flex",
         flexDirection: "column",
-        maxWidth: 900,
+        maxWidth: "token(sizes.container)",
         margin: "auto",
-      }}
+      })}
     >
       <WagmiProvider config={config}>
-        <h1 style={{ textAlign: "center", margin: "20px 0", padding: "10px" }}>Website by fretchen</h1>
+        <h1
+          className={css({
+            textAlign: "center",
+            margin: "token(spacing.md) token(spacing.0)",
+            padding: "token(spacing.sm)",
+          })}
+        >
+          Website by fretchen
+        </h1>
         <Appbar>
           <Link href="/">Welcome</Link>
           <Link href="/blog">Blog</Link>
           <Link href="/amo">AMO</Link>
           <Link href="/imagegen">ImageGen</Link>
-          <div style={{ marginLeft: "auto" }}>
+          <div className={css({ marginLeft: "auto" })}>
             <WalletOptions />
           </div>
         </Appbar>
@@ -38,15 +47,15 @@ function Appbar({ children }: { children: React.ReactNode }) {
   return (
     <div
       id="Appbar"
-      style={{
-        padding: "10px 20px",
-        width: "100%",
+      className={css({
+        padding: "token(spacing.sm) token(spacing.md)",
+        width: "token(sizes.full)",
         display: "flex",
         flexDirection: "row",
-        gap: "20px",
-        borderBottom: "2px solid #eee",
+        gap: "token(spacing.md)",
+        borderBottom: "token(borders.light)",
         alignItems: "center",
-      }}
+      })}
     >
       {children}
     </div>
@@ -58,11 +67,11 @@ function Content({ children }: { children: React.ReactNode }) {
     <div id="page-container">
       <div
         id="page-content"
-        style={{
-          padding: 20,
-          paddingBottom: 50,
-          minHeight: "100vh",
-        }}
+        className={css({
+          padding: "token(spacing.md)",
+          paddingBottom: "token(spacing.xl)",
+          minHeight: "token(sizes.screen)",
+        })}
       >
         {children}
       </div>

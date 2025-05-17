@@ -30,10 +30,10 @@ export default function WalletOptions() {
     if (isConnected) {
       return [{ id: "disconnect", label: "Disconnect", action: () => disconnect() }];
     } else {
-      return connectors.map(connector => ({
+      return connectors.map((connector) => ({
         id: connector.uid,
         label: connector.name,
-        action: () => connect({ connector })
+        action: () => connect({ connector }),
       }));
     }
   };
@@ -83,16 +83,12 @@ export default function WalletOptions() {
   };
 
   return (
-    <div 
-      className={styles.dropdown} 
-      onMouseEnter={() => setIsOpen(true)} 
-      onMouseLeave={() => setIsOpen(false)}
-    >
+    <div className={styles.dropdown} onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>
       <button className={styles.button}>{displayText}</button>
 
       {isOpen && (
         <div className={styles.menu}>
-          {getMenuItems().map(item => (
+          {getMenuItems().map((item) => (
             <div
               key={item.id}
               className={`${styles.menuItem} ${hoveredItem === item.id ? styles.menuItemHover : ""}`}

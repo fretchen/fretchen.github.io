@@ -15,8 +15,6 @@ export default defineConfig({
   // Files to exclude
   exclude: [],
 
-  strictTokens: true,
-
   // Useful for theme customization
   theme: {
     extend: {
@@ -28,6 +26,7 @@ export default defineConfig({
           background: { value: "#ffffff" },
         },
         spacing: {
+          "0": { value: "0px" },
           xs: { value: "5px" },
           sm: { value: "10px" },
           md: { value: "20px" },

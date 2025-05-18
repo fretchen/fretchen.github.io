@@ -1,7 +1,6 @@
 import React from "react";
 
 import BlogList from "../../components/BlogList";
-import { css } from "../../styled-system/css";
 
 export default function Page() {
   return (

@@ -24,6 +24,7 @@ export default defineConfig({
           border: { value: "#eeeeee" },
           text: { value: "#333333" },
           background: { value: "#ffffff" },
+          light: { value: "#ffffff" },
         },
         spacing: {
           "0": { value: "0px" },

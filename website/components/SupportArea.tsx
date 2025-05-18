@@ -1,49 +1,47 @@
 import * as React from "react";
-
 import { usePageContext } from "vike-react/usePageContext";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { parseEther } from "viem";
-
 import { type BaseError, useReadContract } from "wagmi";
 import { getChain, getSupportContractConfig } from "../utils/getChain";
+import { css } from "../styled-system/css";
 
+/**
+ * SupportArea Component
+ *
+ * Allows users to support content by donating a small amount of ETH.
+ * Displays the current support count for the URL.
+ */
 export default function SupportArea() {
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
 
-  // Initialer State ist nur der Pfad (wird auf Server und Client identisch sein)
+  // States
   const [fullUrl, setFullUrl] = React.useState(currentUrl);
-
-  // WriteSupport Zustände
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showTooltip, setShowTooltip] = React.useState(false);
 
-  // WriteSupport Hooks
+  // Wagmi hooks
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const donationAmount = parseEther("0.0002");
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash,
-  });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Nach der Hydration den vollständigen URL setzen und trailing slashes entfernen
+  // Set full URL after hydration
   React.useEffect(() => {
     const rawUrl = window.location.origin + currentUrl;
-    // Entferne nachstehenden Schrägstrich, falls vorhanden
     const cleanUrl = rawUrl.replace(/\/+$/, "");
     setFullUrl(cleanUrl);
   }, [currentUrl]);
 
-  // Chain und Contract Konfiguration
+  // Chain and contract configuration
   const chain = getChain();
   const supportContractConfig = getSupportContractConfig();
-
-  // Netzwerk-Check
   const isCorrectNetwork = chainId === chain.id;
 
-  // READ SUPPORT LOGIK - Hier die refetch-Funktion mit extrahieren
+  // Read support data
   const {
     data,
     error: readError,
@@ -56,7 +54,7 @@ export default function SupportArea() {
     chainId: chain.id,
   });
 
-  // WriteSupport Handler
+  // Handle support action
   const handleSupport = async () => {
     setErrorMessage(null);
     if (!fullUrl) {
@@ -79,17 +77,14 @@ export default function SupportArea() {
     });
   };
 
-  // WriteSupport Effekt für Status-Updates
+  // Update state after transaction
   React.useEffect(() => {
     if (isSuccess) {
       setIsLoading(false);
       setErrorMessage(null);
-
-      // Nach erfolgreicher Transaktion die Likes neu abrufen
-      // Verzögerung hinzufügen, um sicherzustellen, dass die Blockchain Zeit hat, sich zu aktualisieren
       setTimeout(() => {
         refetch();
-      }, 2000); // 2 Sekunden Verzögerung
+      }, 2000);
     }
     if (writeError) {
       setIsLoading(false);
@@ -97,65 +92,100 @@ export default function SupportArea() {
     }
   }, [isSuccess, writeError, refetch]);
 
-  // WriteSupport Warnungs-Logik
+  // Warning message logic
   const warningMessage =
     errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
-  const tooltipColor = errorMessage ? "red" : "orange";
 
-  // Gemeinsame Basis-Stile
-  const baseButtonStyle: React.CSSProperties = {
-    padding: "8px 16px",
-    backgroundColor: "#3a5a8c",
-    color: "white",
-    fontWeight: "bold",
-    height: "36px", // Feste Höhe für beide Elemente
-    boxSizing: "border-box",
-    display: "flex",
-    alignItems: "center",
+  // PandaCSS styles
+  const styles = {
+    container: css({
+      display: "flex",
+      alignItems: "center",
+      margin: "md 0",
+    }),
+    buttonGroup: css({
+      display: "flex",
+    }),
+    buttonBase: css({
+      padding: "sm",
+      backgroundColor: "brand",
+      color: "light",
+      fontWeight: "bold",
+      height: "36px",
+      boxSizing: "border-box",
+      display: "flex",
+      alignItems: "center",
+    }),
+    writeButton: css({
+      padding: "sm",
+      backgroundColor: isLoading ? "#5a7aac" : "brand",
+      color: "light",
+      fontWeight: "bold",
+      height: "36px",
+      borderRadius: "4px 0 0 4px",
+      borderRight: "1px solid white",
+      borderLeft: "none",
+      borderTop: "none",
+      borderBottom: "none",
+      boxSizing: "border-box",
+      display: "flex",
+      alignItems: "center",
+      cursor: isLoading ? "not-allowed" : "pointer",
+    }),
+    readDisplay: css({
+      padding: "sm",
+      backgroundColor: "brand",
+      color: "light",
+      fontWeight: "bold",
+      height: "36px",
+      borderRadius: "0 4px 4px 0",
+      border: "none",
+      minWidth: "20px",
+      boxSizing: "border-box",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }),
+    tooltipContainer: css({
+      position: "relative",
+    }),
+    tooltip: css({
+      position: "absolute",
+      bottom: "100%",
+      left: "50%",
+      transform: "translateX(-50%)",
+      marginBottom: "xs",
+      padding: "sm",
+      backgroundColor: "background",
+      border: `1px solid ${errorMessage ? "red" : "orange"}`,
+      borderRadius: "sm",
+      boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+      color: errorMessage ? "red" : "orange",
+      width: "max-content",
+      maxWidth: "250px",
+      zIndex: "100",
+    }),
   };
 
-  // Stile definieren
-  const writeSupportStyle: React.CSSProperties = {
-    ...baseButtonStyle,
-    borderRadius: "4px 0 0 4px",
-    borderRight: "1px solid white", // Behält nur die weiße Trennlinie
-    borderLeft: "none", // Entfernt den linken Rand
-    borderTop: "none", // Entfernt den oberen Rand
-    borderBottom: "none", // Entfernt den unteren Rand
-    cursor: isLoading ? "not-allowed" : "pointer",
-    backgroundColor: isLoading ? "#5a7aac" : "#3a5a8c", // Helleres Blau für Loading-Zustand
-  };
-
-  const readSupportStyle: React.CSSProperties = {
-    ...baseButtonStyle,
-    borderRadius: "0 4px 4px 0",
-    border: "none", // Entfernt alle Ränder
-    minWidth: "10px", // Minimale Breite für gleichmäßiges Aussehen
-  };
-
-  // Render-Komponente für ReadSupport basierend auf Status
+  // Render ReadSupport based on status
   const renderReadSupport = () => {
-    if (isReadPending) return <div style={readSupportStyle}>Loading...</div>;
+    if (isReadPending) return <div className={styles.readDisplay}>Loading...</div>;
     if (readError)
-      return <div style={readSupportStyle}>Error: {(readError as BaseError).shortMessage || readError.message}</div>;
-    return <div style={readSupportStyle}>{data?.toString() || "0"}</div>;
+      return (
+        <div className={styles.readDisplay}>Error: {(readError as BaseError).shortMessage || readError.message}</div>
+      );
+    return <div className={styles.readDisplay}>{data?.toString() || "0"}</div>;
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        margin: "16px 0",
-      }}
-    >
-      <div style={{ display: "flex" }}>
-        {/* WriteSupport-Button */}
-        <div style={{ position: "relative" }}>
+    <div className={styles.container}>
+      <div className={styles.buttonGroup}>
+        {/* WriteSupport Button */}
+        <div className={styles.tooltipContainer}>
           <button
             onClick={handleSupport}
             disabled={!isConnected || isLoading || isPending || isConfirming}
-            style={writeSupportStyle}
+            className={styles.writeButton}
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
           >
@@ -163,31 +193,10 @@ export default function SupportArea() {
           </button>
 
           {/* Tooltip */}
-          {showTooltip && warningMessage && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: "100%",
-                left: "50%",
-                transform: "translateX(-50%)",
-                marginBottom: "8px",
-                padding: "8px",
-                backgroundColor: "white",
-                border: `1px solid ${tooltipColor}`,
-                borderRadius: "4px",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-                color: tooltipColor,
-                width: "max-content",
-                maxWidth: "250px",
-                zIndex: 100,
-              }}
-            >
-              {warningMessage}
-            </div>
-          )}
+          {showTooltip && warningMessage && <div className={styles.tooltip}>{warningMessage}</div>}
         </div>
 
-        {/* ReadSupport direkt hier */}
+        {/* ReadSupport */}
         {renderReadSupport()}
       </div>
     </div>

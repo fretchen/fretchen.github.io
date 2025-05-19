@@ -50,7 +50,9 @@ The payment system works in two steps: first, the user pays the contract when mi
 
 ## The total costs
 
-All in all, the costs for the serverless system and the transactions is almost negligible. If I wanted to optimize the system, it would most likely be possible to offer the service for 1 cents above the price charged by the image generation services. However, for the moment I have set up a buffer against the rather hefty fluctuations of ethereum such that I can currently offer the service for roughly 10 cents an image.
+All in all, the costs for the serverless system and the transactions is almost negligible. On this part, I built up directly on the very positive experience I had with the [support button](7) that works on the [optimism](https://www.optimism.io/) chain.
+
+ If I wanted to optimize the system, it would most likely be possible to offer the service for 1 cents above the price charged by the image generation services. However, for the moment I have set up a buffer against the rather hefty fluctuations of ethereum such that I can currently offer the service for roughly 10 cents an image.
 
 ## Some nice side effects of the system
 

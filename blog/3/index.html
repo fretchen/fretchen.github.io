@@ -3,7 +3,7 @@
       <head>
         <link rel="stylesheet" type="text/css" href="/assets/static/vike-react-b64a028b.BcWtY8Ol.css">
         <link rel="stylesheet" type="text/css" href="/assets/static/layouts_style-b34a8e57.vWSLfzzf.css">
-        <link rel="stylesheet" type="text/css" href="/assets/static/layouts_panda-c5b34b81.C9Lqq47x.css">
+        <link rel="stylesheet" type="text/css" href="/assets/static/layouts_panda-c5b34b81.BXwCUAqV.css">
         <link rel="stylesheet" type="text/css" href="/assets/static/katex-afcc0501.DQPljH7n.css">
         <link rel="preload" href="/assets/static/KaTeX_AMS-Regular.BQhdFMY1.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="/assets/static/KaTeX_Caligraphic-Bold.Dq_IR9rO.woff2" as="font" type="font/woff2" crossorigin>
@@ -45,12 +45,12 @@
 </ul>
 <p>As we will see the first and last part are fairly straight-forward. For the decentral storage I continue to have some doubts.</p>
 <h2>Get an ENS domain</h2>
-<p>Normally, each website is hosted on some servers and you can access them through some domain. Currently, this website is hosted by github, which also delivers me directly the domain address. And behind Github is simply a big company which handles the domain registration for me. If I want to go decentral, I try to avoid this company and simply register the domain on a blockchain. This is already possible with <a href="https://ens.domains/">ENS</a>. This is a great start as it gets us closer to have some fancy adress like <code>fretchen.eth</code>. To get this I needed to set up a wallet, where <a href="https://metamask.io/">Metamask</a> seems to be the absolute standard nowadays. Once I have the wallet, I need to convert normal currency into the currency of the Blockchain, which is here <a href="https://ethereum.org/en/">Eutherum</a> <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>.</p>
-<p>To buy the euthereum, I had to go through <a href="https://www.kraken.com">Kraken</a> and then send myself the ETH into the Metamask wallet. With the ETH I could quite simply register the domain of my choice with <a href="https://ens.domains/">ENS</a>. The purchase itself is fairly straight-forward and interestingly the domain is implemented as an NFT. This is the tech that is mostly used to allow people to claim ownership for weird pictures of bored apes. Here, it basically gets you exclusive access rights to the domain, which actually sounds quite smart. The other cool thing is that <code>ens.domains</code> is a DAO. So there is no single authority controlling it, but a community of people. Another fairly cool feature.</p>
+<p>Normally, each website is hosted on some servers and you can access them through some domain. Currently, this website is hosted by github, which also delivers me directly the domain address. And behind Github is simply a big company which handles the domain registration for me. If I want to go decentral, I try to avoid this company and simply register the domain on a blockchain. This is already possible with <a href="https://ens.domains/">ENS</a>. This is a great start as it gets us closer to have some fancy adress like <code>fretchen.eth</code>. To get this I needed to set up a wallet, where <a href="https://metamask.io/">Metamask</a> seems to be the absolute standard nowadays. Once I have the wallet, I need to convert normal currency into the currency of the Blockchain, which is here <a href="https://ethereum.org/en/">ethereum</a> <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>.</p>
+<p>To buy the ethereum, I had to go through <a href="https://www.kraken.com">Kraken</a> and then send myself the ETH into the Metamask wallet. With the ETH I could quite simply register the domain of my choice with <a href="https://ens.domains/">ENS</a>. The purchase itself is fairly straight-forward and interestingly the domain is implemented as an NFT. This is the tech that is mostly used to allow people to claim ownership for weird pictures of bored apes. Here, it basically gets you exclusive access rights to the domain, which actually sounds quite smart. The other cool thing is that <code>ens.domains</code> is a DAO. So there is no single authority controlling it, but a community of people. Another fairly cool feature.</p>
 <h2>A simple way to update the website</h2>
 <p>This is the part where it started to get slightly non-trivial. In the centralized world we have simple no-code systems like <a href="https://wordpress.org/">wordpress</a> that run on a server. All of this is not really available on decentral systes. So we need some way to fall back into static website generation very much like I do here. But once, you can host a static website on <a href="https://pages.github.com/">github pages</a>, it should also be theoretically ready to host it decentrally. Given that this is clearly solved (otherwise you would not read this), it was time to try to get this onto the block-chain.</p>
 <h2>A decentralized storage system</h2>
-<p>And this is now the part which was really quite annoying. At first, you think &quot;Let me put it onto the blockchain&quot;. Well you quite quickly realize that this is totally cost-prohibitive and that you need some kind of alternative. The most famous and commonly used solution there is the <a href="https://ipfs.tech/">IPFS</a>. As you put a file / folder into the IPFS it gets a CID and becomes discoverable for others. But in contrast to systems like euthereum it feels quite different:</p>
+<p>And this is now the part which was really quite annoying. At first, you think &quot;Let me put it onto the blockchain&quot;. Well you quite quickly realize that this is totally cost-prohibitive and that you need some kind of alternative. The most famous and commonly used solution there is the <a href="https://ipfs.tech/">IPFS</a>. As you put a file / folder into the IPFS it gets a CID and becomes discoverable for others. But in contrast to systems like ethereum it feels quite different:</p>
 <ul>
 <li>Either you have to run your own IPFS node, which is quite a bit of work. I never was able to have relible notes with acceptable download speeds.</li>
 <li>Or you use a service like <a href="https://pinata.cloud/">Pinata</a>, which is a centralized service that pins your files for you. This is quite a bit of a bummer, as it is not really decentralized anymore. Further you mostly have to pay through dollars etc. So there is really no clear difference to the world of standard cloud storages there.</li>
@@ -68,7 +68,7 @@
 <p>The stuff done on <a href="https://app.uniswap.org/">Uniswap</a> for example is quite impressive. <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
 </li>
 <li id="user-content-fn-1">
-<p>From my understanding Eutherum is THE biggest blockchain, which allows you to run smart contracts and quite energy efficient. It feels a bit like the Linux of the blockchain world. <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+<p>From my understanding Ethereum is THE biggest blockchain, which allows you to run smart contracts and quite energy efficient. It feels a bit like the Linux of the blockchain world. <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
 </li>
 </ol>
 </section><div style="display:flex;justify-content:space-between;margin-top:20px"><a href="/blog/2" class="c_token(colors.primary) hover:bg-c_token(colors.background)">Previous post: <!-- -->Moving old lectures</a><a href="/blog/4" class="c_token(colors.primary) hover:bg-c_token(colors.background)">Next post: <!-- -->Is mirror.xyz a thing ?</a></div></div></div></div></div><script class="_rqd_">_rqd_=[];_rqc_=()=>{Array.from(
@@ -77,13 +77,13 @@
         
         <script id="vike_pageContext" type="application/json">{"_urlRewrite":null,"pageId":"/pages/blog/@id","routeParams":{"id":"3"}}</script>
         <script id="vike_globalContext" type="application/json">{}</script>
-        <script src="/assets/entries/entry-client-routing.CmTgbqNQ.js" type="module" async></script>
-        <link rel="modulepreload" href="/assets/entries/pages_blog_-id.B05O_4Zy.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-9c4k0BVr.js" as="script" type="text/javascript">
+        <script src="/assets/entries/entry-client-routing.BTBR9990.js" type="module" async></script>
+        <link rel="modulepreload" href="/assets/entries/pages_blog_-id.CfMkaag4.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-Bh18XQD2.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-DQ3hQvvF.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-CyDWoXKl.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-C90aEAim.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-DnNdHm8P.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-ClYt2vms.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-C2Vqrf2U.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-DgL5VNyo.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-CqzRG4us.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-Z0dFSHj9.js" as="script" type="text/javascript">
       </body>
     </html>

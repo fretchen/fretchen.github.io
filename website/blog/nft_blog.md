@@ -1,5 +1,5 @@
 ---
-publishing_date: 2025-05-15
+publishing_date: 2025-05-20
 title: Generating AI images, paying anonymously and little
 ---
 

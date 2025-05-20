@@ -74,16 +74,16 @@
     margin-bottom: 1em;
     padding-left: 2em;
   }
-  
+
   /* Listenpunkte - explizit den Stil für Listenelemente festlegen */
   ul {
     list-style-type: disc; /* Punkte für ungeordnete Listen */
   }
-  
+
   ol {
     list-style-type: decimal; /* Zahlen für geordnete Listen */
   }
-  
+
   li {
     display: list-item; /* Sorgt dafür, dass das Element als Listenelement angezeigt wird */
     margin-bottom: 0.5em; /* Etwas Abstand zwischen Listenpunkten */

@@ -268,8 +268,9 @@ export default function Page() {
       <p>Create your AI image and pay for it with ETH. The process:</p>
       <ol>
         <li>Enter a prompt</li>
-        <li>Click on `&quot;`Mint & Generate`&quot;`</li>
+        <li>Click on &quot;Mint & Generate&quot;</li>
         <li>First an NFT is created, then the image is generated</li>
+        <li>Your image shows up after roughly 30s in the placeholder below</li>
       </ol>
 
       <ImageGenerator onGenerate={handleGenerate} />

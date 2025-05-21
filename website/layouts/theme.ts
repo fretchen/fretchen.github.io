@@ -1,17 +1,24 @@
 import { css } from "../styled-system/css";
 
-// Gemeinsame Layouts
-export const layouts = {
-  container: css({
+// Gemeinsame Layouts als reine Objekte definieren
+export const layoutStyles = {
+  container: {
     maxWidth: "900px",
     mx: "auto",
     px: "md",
-  }),
-  flexColumn: css({
+  },
+  flexColumn: {
     display: "flex",
     flexDirection: "column",
     gap: "md",
-  }),
+  },
+  // ...weitere Layouts
+};
+
+// Fertige CSS-Klassen für direkte Verwendung
+export const layouts = {
+  container: css(layoutStyles.container),
+  flexColumn: css(layoutStyles.flexColumn),
   flexCenter: css({
     display: "flex",
     justifyContent: "center",
@@ -52,13 +59,15 @@ export const elements = {
     border: "1px solid token(colors.border)",
   }),
   button: css({
-    padding: "sm md",
+    padding: "sm", // Mehr horizontales Padding
     backgroundColor: "brand",
     color: "light",
     border: "none",
     borderRadius: "sm",
     cursor: "pointer",
     fontWeight: "bold",
+    width: "100%", // Volle Breite im Container
+    margin: "xs 0", // Abstand oben/unten
     _disabled: {
       opacity: 0.7,
       cursor: "not-allowed",

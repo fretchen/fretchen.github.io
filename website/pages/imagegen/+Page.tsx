@@ -286,8 +286,6 @@ export default function Page() {
     chainId: chain.id,
   });
 
-  const mintPriceEth = mintPrice ? parseFloat(mintPrice.toString()) / 1e18 : undefined;
-
   // Contract write operations
   const { writeContractAsync } = useWriteContract();
 
@@ -430,54 +428,40 @@ export default function Page() {
         <div className={styles.column}>
           <h2 className={styles.columnHeading}>Your Generated Image</h2>
 
-          {/* Bildvorschau mit Statusanzeige */}
-          <div className={styles.imagePreview}>
-            {mintingStatus !== "idle" && !generatedImageUrl && (
-              <div className={styles.imageOverlay}>
-                <div className={styles.largeSpinner}></div>
-                <p className={css({ fontWeight: "medium" })}>
-                  {mintingStatus === "minting" ? "Creating NFT..." : "AI is drawing..."}
-                </p>
-              </div>
-            )}
+          {/* Vereinfachte Bildvorschau */}
+          <div
+            className={css({
+              width: "100%",
+              aspectRatio: "1/1",
+              border: "2px dashed #ccc",
+              borderRadius: "md",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: "md",
+              backgroundColor: mintingStatus !== "idle" ? "rgba(0, 102, 204, 0.05)" : "#f9f9f9",
+              textAlign: "center",
+              position: "relative",
+            })}
+          >
+            {/* Bild oder Platzhalter */}
             {generatedImageUrl ? (
-              <img src={generatedImageUrl} alt="Generated" className={styles.generatedImage} />
+              <img
+                src={generatedImageUrl}
+                alt="Generated"
+                className={css({ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" })}
+              />
             ) : (
-              <div className={styles.placeholderContent}>
-                <svg
-                  width="64"
-                  height="64"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={styles.placeholderIcon}
-                >
-                  <path
-                    d="M4 16L8.586 11.414C8.96106 11.0391 9.46967 10.8284 10 10.8284C10.5303 10.8284 11.0389 11.0391 11.414 11.414L16 16"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M14 14L15.586 12.414C15.9611 12.0391 16.4697 11.8284 17 11.8284C17.5303 11.8284 18.0389 12.0391 18.414 12.414L20 14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M3 22H21C21.5304 22 22.0391 21.7893 22.4142 21.4142C22.7893 21.0391 23 20.5304 23 20V4C23 3.46957 22.7893 2.96086 22.4142 2.58579C22.0391 2.21071 21.5304 2 21 2H3C2.46957 2 1.96086 2.21071 1.58579 2.58579C1.21071 2.96086 1 3.46957 1 4V20C1 20.5304 1.21071 21.0391 1.58579 21.4142C1.96086 21.7893 2.46957 22 3 22Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
-                </svg>
-                <p>Your image will appear here</p>
-                <p className={styles.placeholderCaption}>After generation, you will own it as an NFT</p>
-              </div>
+              <>
+                {mintingStatus !== "idle" ? (
+                  <p className={css({ fontWeight: "medium" })}>
+                    {mintingStatus === "minting" ? "Creating NFT..." : "Generating your image..."}
+                  </p>
+                ) : (
+                  <p>Your image will appear here</p>
+                )}
+              </>
             )}
           </div>
 

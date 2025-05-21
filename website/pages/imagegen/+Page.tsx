@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../../utils/getChain";
 import { css } from "../../styled-system/css";
-import { layouts, typography, elements, layoutStyles } from "../../layouts/theme";
 
 // Define the correct type for transaction receipt
 interface TransactionReceipt {
@@ -54,30 +53,216 @@ const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionRecei
   });
 };
 
-interface ImageDisplayProps {
-  imageUrl?: string;
-}
+// Konsolidierte Styles direkt in der Komponente definiert
+const styles = {
+  // Layout-Styles
+  container: css({
+    maxWidth: "900px",
+    mx: "auto",
+    px: "md",
+  }),
+  flexColumn: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "md",
+  }),
+  flexCenter: css({
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  }),
 
-function ImageDisplay({ imageUrl }: ImageDisplayProps) {
-  const displayStyle = css({
-    width: "300px",
-    height: "300px",
+  // Typografie-Styles
+  heading: css({
+    fontSize: "2xl",
+    fontWeight: "bold",
+    marginBottom: "sm",
+    color: "text",
+  }),
+  paragraph: css({
+    marginBottom: "sm",
+    lineHeight: "1.5",
+  }),
+  list: css({
+    paddingLeft: "2em",
+    marginBottom: "sm",
+  }),
+
+  // Element-Styles
+  button: css({
+    padding: "md",
+    backgroundColor: "brand",
+    color: "light",
+    border: "none",
+    borderRadius: "sm",
+    cursor: "pointer",
+    fontWeight: "bold",
+    width: "100%",
+    margin: "xs 0",
+    transition: "all 0.2s",
+    _hover: { backgroundColor: "#0052a3" },
+    _disabled: {
+      opacity: 0.7,
+      cursor: "not-allowed",
+    },
+  }),
+  errorMessage: css({
+    padding: "sm",
+    borderRadius: "sm",
+    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    border: "1px solid #dc3545",
+    color: "#dc3545",
+    marginTop: "md",
+  }),
+  successMessage: css({
+    padding: "md",
+    backgroundColor: "rgba(40, 167, 69, 0.1)",
+    border: "1px solid #28a745",
+    borderRadius: "sm",
+    marginTop: "sm",
+  }),
+  link: css({
+    display: "inline-block",
+    color: "brand",
+    textDecoration: "none",
+    marginTop: "xs",
+    fontWeight: "medium",
+    _hover: { textDecoration: "underline" },
+  }),
+
+  // Komponenten-spezifische Styles
+  cardLayout: css({
+    display: "flex",
+    flexDirection: ["column", "column", "row"],
+    gap: "lg",
+    marginTop: "md",
+    backgroundColor: "background",
+    borderRadius: "md",
+    border: "1px solid token(colors.border)",
+    padding: "md",
+  }),
+  column: css({
+    flex: "1",
+    display: "flex",
+    flexDirection: "column",
+    gap: "md",
+  }),
+  columnHeading: css({
+    fontSize: "lg",
+    margin: 0,
+  }),
+  stepsList: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "xs",
+    marginBottom: "sm",
+  }),
+  stepItem: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+  }),
+  stepNumber: css({
+    backgroundColor: "brand",
+    color: "light",
+    width: "24px",
+    height: "24px",
+    borderRadius: "full",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+  }),
+  promptTextarea: css({
+    padding: "md",
+    height: "150px",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    resize: "vertical",
+    marginBottom: "sm",
+    width: "100%",
+  }),
+  statusIndicator: css({
+    padding: "sm",
+    backgroundColor: "rgba(0, 102, 204, 0.1)",
+    border: "1px solid token(colors.brand)",
+    borderRadius: "sm",
+    marginBottom: "sm",
+  }),
+  statusRow: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+  }),
+  spinner: css({
+    width: "16px",
+    height: "16px",
+    borderRadius: "full",
+    border: "2px solid token(colors.brand)",
+    borderRightColor: "transparent",
+    animation: "spin 1s linear infinite",
+  }),
+  statusText: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginTop: "xs",
+  }),
+  imagePreview: css({
+    width: "100%",
+    aspectRatio: "1/1",
     border: "2px dashed token(colors.border)",
     borderRadius: "sm",
-    ...layouts.flexCenter,
-    marginTop: "md",
-  });
-
-  return (
-    <div className={displayStyle}>
-      {imageUrl ? (
-        <img src={imageUrl} alt="Generated" className={css({ maxWidth: "100%", maxHeight: "100%" })} />
-      ) : (
-        <p className={css({ color: "text" })}>Your image will appear here</p>
-      )}
-    </div>
-  );
-}
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "#f9f9f9",
+    position: "relative",
+  }),
+  imageOverlay: css({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.8)",
+    zIndex: 1,
+  }),
+  largeSpinner: css({
+    width: "40px",
+    height: "40px",
+    borderRadius: "full",
+    border: "4px solid token(colors.brand)",
+    borderRightColor: "transparent",
+    animation: "spin 1s linear infinite",
+    marginBottom: "md",
+  }),
+  generatedImage: css({
+    maxWidth: "100%",
+    maxHeight: "100%",
+    objectFit: "contain",
+  }),
+  placeholderContent: css({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "md",
+    textAlign: "center",
+    color: "text",
+  }),
+  placeholderIcon: css({
+    marginBottom: "sm",
+    opacity: 0.5,
+  }),
+  placeholderCaption: css({
+    fontSize: "sm",
+    color: "gray.500",
+  }),
+};
 
 export default function Page() {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
@@ -168,114 +353,29 @@ export default function Page() {
   };
 
   return (
-    <div className={layouts.container}>
-      <h1 className={typography.heading}>Decentral AI Image Generator</h1>
+    <div className={styles.container}>
+      <h1 className={styles.heading}>Decentral AI Image Generator</h1>
 
       {/* Card-basiertes Layout mit zwei Spalten */}
-      <div
-        className={css({
-          display: "flex",
-          flexDirection: ["column", "column", "row"],
-          gap: "lg",
-          marginTop: "md",
-          backgroundColor: "background",
-          borderRadius: "md",
-          border: "1px solid token(colors.border)",
-          padding: "md",
-        })}
-      >
+      <div className={styles.cardLayout}>
         {/* Linke Spalte: Eingabe und Steuerung */}
-        <div
-          className={css({
-            flex: "1",
-            display: "flex",
-            flexDirection: "column",
-            gap: "md",
-          })}
-        >
-          <h2 className={css({ fontSize: "lg", margin: 0 })}>Create Your Image</h2>
+        <div className={styles.column}>
+          <h2 className={styles.columnHeading}>Create Your Image</h2>
 
           {/* Schritte als nummerierte Karten */}
-          <div
-            className={css({
-              display: "flex",
-              flexDirection: "column",
-              gap: "xs",
-              marginBottom: "sm",
-            })}
-          >
-            <div
-              className={css({
-                display: "flex",
-                alignItems: "center",
-                gap: "sm",
-              })}
-            >
-              <span
-                className={css({
-                  backgroundColor: "brand",
-                  color: "light",
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "full",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: "bold",
-                })}
-              >
-                1
-              </span>
+          <div className={styles.stepsList}>
+            <div className={styles.stepItem}>
+              <span className={styles.stepNumber}>1</span>
               <span>Enter a descriptive prompt below</span>
             </div>
 
-            <div
-              className={css({
-                display: "flex",
-                alignItems: "center",
-                gap: "sm",
-              })}
-            >
-              <span
-                className={css({
-                  backgroundColor: "brand",
-                  color: "light",
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "full",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: "bold",
-                })}
-              >
-                2
-              </span>
-              <span>Click "Mint & Generate" (costs ~10¢ in ETH)</span>
+            <div className={styles.stepItem}>
+              <span className={styles.stepNumber}>2</span>
+              <span>Click &quot;Mint & Generate&quot; (costs ~10¢ in ETH)</span>
             </div>
 
-            <div
-              className={css({
-                display: "flex",
-                alignItems: "center",
-                gap: "sm",
-              })}
-            >
-              <span
-                className={css({
-                  backgroundColor: "brand",
-                  color: "light",
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "full",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: "bold",
-                })}
-              >
-                3
-              </span>
+            <div className={styles.stepItem}>
+              <span className={styles.stepNumber}>3</span>
               <span>Wait ~30s for your image to appear</span>
             </div>
           </div>
@@ -286,42 +386,17 @@ export default function Page() {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe your image in detail... (e.g. 'A futuristic city skyline at sunset with flying cars')"
             disabled={isLoading || mintingStatus !== "idle"}
-            className={css({
-              padding: "md",
-              height: "150px",
-              borderRadius: "sm",
-              border: "1px solid token(colors.border)",
-              resize: "vertical",
-              marginBottom: "sm",
-              opacity: isLoading || mintingStatus !== "idle" ? 0.7 : 1,
-            })}
+            className={`${styles.promptTextarea} ${isLoading || mintingStatus !== "idle" ? css({ opacity: 0.7 }) : ""}`}
           />
 
           {/* Status-Anzeige */}
           {mintingStatus !== "idle" && (
-            <div
-              className={css({
-                padding: "sm",
-                backgroundColor: "rgba(0, 102, 204, 0.1)",
-                border: "1px solid token(colors.brand)",
-                borderRadius: "sm",
-                marginBottom: "sm",
-              })}
-            >
-              <div className={css({ display: "flex", alignItems: "center", gap: "sm" })}>
-                <div
-                  className={css({
-                    width: "16px",
-                    height: "16px",
-                    borderRadius: "full",
-                    border: "2px solid token(colors.brand)",
-                    borderRightColor: "transparent",
-                    animation: "spin 1s linear infinite",
-                  })}
-                ></div>
+            <div className={styles.statusIndicator}>
+              <div className={styles.statusRow}>
+                <div className={styles.spinner}></div>
                 <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating your image..."}</span>
               </div>
-              <div className={css({ fontSize: "sm", color: "gray.600", marginTop: "xs" })}>
+              <div className={styles.statusText}>
                 {mintingStatus === "minting"
                   ? "Confirm the transaction in your wallet"
                   : "This may take up to 30 seconds"}
@@ -333,18 +408,11 @@ export default function Page() {
           <button
             onClick={handleMintAndGenerate}
             disabled={isLoading || !prompt.trim() || !isConnected || !address}
-            className={css({
-              padding: "md",
-              backgroundColor: "brand",
-              color: "light",
-              border: "none",
-              borderRadius: "sm",
-              cursor: isLoading || !prompt.trim() || !isConnected || !address ? "not-allowed" : "pointer",
-              fontWeight: "bold",
-              opacity: isLoading || !prompt.trim() || !isConnected || !address ? 0.7 : 1,
-              transition: "all 0.2s",
-              _hover: { backgroundColor: "brand" },
-            })}
+            className={`${styles.button} ${
+              isLoading || !prompt.trim() || !isConnected || !address
+                ? css({ opacity: 0.7, cursor: "not-allowed" })
+                : ""
+            }`}
           >
             {isLoading ? (mintingStatus === "minting" ? "Creating NFT..." : "Generating Image...") : "Mint & Generate"}
           </button>
@@ -355,91 +423,34 @@ export default function Page() {
               Connect your wallet to create an NFT
             </p>
           )}
-          {error && <div className={elements.errorMessage}>{error}</div>}
+          {error && <div className={styles.errorMessage}>{error}</div>}
         </div>
 
         {/* Rechte Spalte: Bildvorschau und NFT-Details */}
-        <div
-          className={css({
-            flex: "1",
-            display: "flex",
-            flexDirection: "column",
-            gap: "md",
-          })}
-        >
-          <h2 className={css({ fontSize: "lg", margin: 0 })}>Your Generated Image</h2>
+        <div className={styles.column}>
+          <h2 className={styles.columnHeading}>Your Generated Image</h2>
 
           {/* Bildvorschau mit Statusanzeige */}
-          <div
-            className={css({
-              width: "100%",
-              aspectRatio: "1/1",
-              border: "2px dashed token(colors.border)",
-              borderRadius: "sm",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              overflow: "hidden",
-              backgroundColor: "#f9f9f9",
-              position: "relative",
-            })}
-          >
+          <div className={styles.imagePreview}>
             {mintingStatus !== "idle" && !generatedImageUrl && (
-              <div
-                className={css({
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: "rgba(255,255,255,0.8)",
-                  zIndex: 1,
-                })}
-              >
-                <div
-                  className={css({
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "full",
-                    border: "4px solid token(colors.brand)",
-                    borderRightColor: "transparent",
-                    animation: "spin 1s linear infinite",
-                    marginBottom: "md",
-                  })}
-                ></div>
+              <div className={styles.imageOverlay}>
+                <div className={styles.largeSpinner}></div>
                 <p className={css({ fontWeight: "medium" })}>
                   {mintingStatus === "minting" ? "Creating NFT..." : "AI is drawing..."}
                 </p>
               </div>
             )}
             {generatedImageUrl ? (
-              <img
-                src={generatedImageUrl}
-                alt="Generated"
-                className={css({ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" })}
-              />
+              <img src={generatedImageUrl} alt="Generated" className={styles.generatedImage} />
             ) : (
-              <div
-                className={css({
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  padding: "md",
-                  textAlign: "center",
-                  color: "text",
-                })}
-              >
+              <div className={styles.placeholderContent}>
                 <svg
                   width="64"
                   height="64"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  className={css({ marginBottom: "sm", opacity: 0.5 })}
+                  className={styles.placeholderIcon}
                 >
                   <path
                     d="M4 16L8.586 11.414C8.96106 11.0391 9.46967 10.8284 10 10.8284C10.5303 10.8284 11.0389 11.0391 11.414 11.414L16 16"
@@ -465,22 +476,14 @@ export default function Page() {
                   <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
                 </svg>
                 <p>Your image will appear here</p>
-                <p className={css({ fontSize: "sm", color: "gray.500" })}>After generation, you'll own it as an NFT</p>
+                <p className={styles.placeholderCaption}>After generation, you will own it as an NFT</p>
               </div>
             )}
           </div>
 
           {/* NFT-Details */}
           {tokenId && (
-            <div
-              className={css({
-                padding: "md",
-                backgroundColor: "rgba(40, 167, 69, 0.1)",
-                border: "1px solid #28a745",
-                borderRadius: "sm",
-                marginTop: "sm",
-              })}
-            >
+            <div className={styles.successMessage}>
               <h3 className={css({ margin: 0, fontSize: "md" })}>🎉 NFT successfully created!</h3>
               <p className={css({ margin: "xs 0" })}>
                 <strong>Token ID:</strong> {tokenId.toString()}
@@ -489,14 +492,7 @@ export default function Page() {
                 href={`https://optimistic.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={css({
-                  display: "inline-block",
-                  color: "brand",
-                  textDecoration: "none",
-                  marginTop: "xs",
-                  fontWeight: "medium",
-                  _hover: { textDecoration: "underline" },
-                })}
+                className={styles.link}
               >
                 View on Etherscan →
               </a>

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
-
 import { getChain, getGenAiNFTContractConfig } from "../../utils/getChain";
+import { css } from "../../styled-system/css";
 
-// Definiere einen korrekten Typen für die Ethereum-Transaktionsquittung
+// Define the correct type for transaction receipt
 interface TransactionReceipt {
   blockHash: string;
   blockNumber: string;
@@ -40,32 +40,243 @@ const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionRecei
           method: "eth_getTransactionReceipt",
           params: [hash],
         });
-
         if (receipt) {
           resolve(receipt as TransactionReceipt);
         } else {
-          setTimeout(checkReceipt, 2000); // Check every 2 seconds
+          setTimeout(checkReceipt, 2000);
         }
       } catch (error) {
         reject(error);
       }
     };
-
     checkReceipt();
   });
 };
 
-function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenId?: bigint) => void }) {
+// Konsolidierte Styles direkt in der Komponente definiert
+const styles = {
+  // Layout-Styles
+  container: css({
+    maxWidth: "900px",
+    mx: "auto",
+    px: "md",
+  }),
+  flexColumn: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "md",
+  }),
+  flexCenter: css({
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  }),
+
+  // Typografie-Styles
+  heading: css({
+    fontSize: "2xl",
+    fontWeight: "bold",
+    marginBottom: "sm",
+    color: "text",
+  }),
+  paragraph: css({
+    marginBottom: "sm",
+    lineHeight: "1.5",
+  }),
+  list: css({
+    paddingLeft: "2em",
+    marginBottom: "sm",
+  }),
+
+  // Element-Styles
+  button: css({
+    padding: "md",
+    backgroundColor: "brand",
+    color: "light",
+    border: "none",
+    borderRadius: "sm",
+    cursor: "pointer",
+    fontWeight: "bold",
+    width: "100%",
+    margin: "xs 0",
+    transition: "all 0.2s",
+    _hover: { backgroundColor: "#0052a3" },
+    _disabled: {
+      opacity: 0.7,
+      cursor: "not-allowed",
+    },
+  }),
+  errorMessage: css({
+    padding: "sm",
+    borderRadius: "sm",
+    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    border: "1px solid #dc3545",
+    color: "#dc3545",
+    marginTop: "md",
+  }),
+  successMessage: css({
+    padding: "md",
+    backgroundColor: "rgba(40, 167, 69, 0.1)",
+    border: "1px solid #28a745",
+    borderRadius: "sm",
+    marginTop: "sm",
+  }),
+  link: css({
+    display: "inline-block",
+    color: "brand",
+    textDecoration: "none",
+    marginTop: "xs",
+    fontWeight: "medium",
+    _hover: { textDecoration: "underline" },
+  }),
+
+  // Komponenten-spezifische Styles
+  cardLayout: css({
+    display: "flex",
+    flexDirection: ["column", "column", "row"],
+    gap: "lg",
+    marginTop: "md",
+    backgroundColor: "background",
+    borderRadius: "md",
+    border: "1px solid token(colors.border)",
+    padding: "md",
+  }),
+  column: css({
+    flex: "1",
+    display: "flex",
+    flexDirection: "column",
+    gap: "md",
+  }),
+  columnHeading: css({
+    fontSize: "lg",
+    margin: 0,
+  }),
+  stepsList: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "xs",
+    marginBottom: "sm",
+  }),
+  stepItem: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+  }),
+  stepNumber: css({
+    backgroundColor: "brand",
+    color: "light",
+    width: "24px",
+    height: "24px",
+    borderRadius: "full",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+  }),
+  promptTextarea: css({
+    padding: "md",
+    height: "150px",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    resize: "vertical",
+    marginBottom: "sm",
+    width: "100%",
+  }),
+  statusIndicator: css({
+    padding: "sm",
+    backgroundColor: "rgba(0, 102, 204, 0.1)",
+    border: "1px solid token(colors.brand)",
+    borderRadius: "sm",
+    marginBottom: "sm",
+  }),
+  statusRow: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+  }),
+  spinner: css({
+    width: "16px",
+    height: "16px",
+    borderRadius: "full",
+    border: "2px solid token(colors.brand)",
+    borderRightColor: "transparent",
+    animation: "spin 1s linear infinite",
+  }),
+  statusText: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginTop: "xs",
+  }),
+  imagePreview: css({
+    width: "100%",
+    aspectRatio: "1/1",
+    border: "2px dashed token(colors.border)",
+    borderRadius: "sm",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "#f9f9f9",
+    position: "relative",
+  }),
+  imageOverlay: css({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.8)",
+    zIndex: 1,
+  }),
+  largeSpinner: css({
+    width: "40px",
+    height: "40px",
+    borderRadius: "full",
+    border: "4px solid token(colors.brand)",
+    borderRightColor: "transparent",
+    animation: "spin 1s linear infinite",
+    marginBottom: "md",
+  }),
+  generatedImage: css({
+    maxWidth: "100%",
+    maxHeight: "100%",
+    objectFit: "contain",
+  }),
+  placeholderContent: css({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "md",
+    textAlign: "center",
+    color: "text",
+  }),
+  placeholderIcon: css({
+    marginBottom: "sm",
+    opacity: 0.5,
+  }),
+  placeholderCaption: css({
+    fontSize: "sm",
+    color: "gray.500",
+  }),
+};
+
+export default function Page() {
+  const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
+  const [tokenId, setTokenId] = useState<bigint>();
+
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mintingStatus, setMintingStatus] = useState<"idle" | "minting" | "generating" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [currentTokenId, setCurrentTokenId] = useState<bigint | undefined>(undefined);
 
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const chain = getChain();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
   // Read mint price from contract
   const { data: mintPrice } = useReadContract({
@@ -74,40 +285,29 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenI
     args: [],
     chainId: chain.id,
   });
-  console.log("2. Mint price:", mintPrice ? mintPrice.toString() : "Loading...");
-  // transform the mintPrice to eth
-  const mintPriceEth = mintPrice ? parseFloat(mintPrice.toString()) / 1e18 : undefined;
-  console.log("3. Mint price in ETH:", mintPriceEth ? mintPriceEth.toString() : "Loading...");
 
   // Contract write operations
   const { writeContractAsync } = useWriteContract();
 
   const handleMintAndGenerate = async () => {
-    // Check conditions individually with precise error messages
     if (!isConnected || !address) {
       setError("Please connect your wallet first");
       return;
     }
-
     if (!prompt.trim()) {
       setError("Please enter a prompt");
       return;
     }
-
     if (!mintPrice) {
       setError("Could not load mint price from contract");
       return;
     }
-
     setIsLoading(true);
     setError(null);
     setMintingStatus("minting");
-
     try {
-      // We start with minting - with a temporary URI
+      // Start minting with a temporary URI
       const tempUri = `ipfs://tempURI/${Date.now()}`;
-
-      // Execute safeMint with temporary URI
       const txHash = await writeContractAsync({
         ...genAiNFTContractConfig,
         functionName: "safeMint",
@@ -115,49 +315,31 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenI
         value: mintPrice,
         chainId: chain.id,
       });
-
       console.log("Minting transaction sent:", txHash);
-
-      // Wait for confirmation and extract Token ID
       const receipt = await waitForTransaction(txHash);
-
       // Extract Token ID from transfer event
       const transferEvent = receipt?.logs.find(
         (log) => log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
       );
-
       if (!transferEvent || transferEvent.topics.length < 4) {
         throw new Error("Could not extract token ID from transaction");
       }
-
       const tokenIdHex = transferEvent.topics[3];
-      const tokenId = BigInt(tokenIdHex);
-      console.log("Minted token ID:", tokenId);
-      setCurrentTokenId(tokenId);
+      const newTokenId = BigInt(tokenIdHex);
+      console.log("Minted token ID:", newTokenId);
+      setTokenId(newTokenId);
 
-      // Now proceed with image generation
+      // Proceed with image generation
       setMintingStatus("generating");
-
-      // URL of the API service for image generation
-      // const apiUrl = "http://localhost:8080";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-
-      // GET request with prompt and token ID as parameters
-      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
-
+      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}`);
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
-
       const data = await response.json();
       console.log("Image generation completed", data);
-
-      // Extract the image URL directly from the response
       const imageUrl = data.image_url;
-
-      // Pass image URL and token ID to the parent component
-      onGenerate(imageUrl, tokenId);
-
+      setGeneratedImageUrl(imageUrl);
       setMintingStatus("idle");
     } catch (err) {
       console.error("Error:", err);
@@ -169,132 +351,139 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenI
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexDirection: "column" }}>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe your image..."
-          disabled={isLoading || mintingStatus !== "idle"}
-          style={{
-            padding: "8px",
-            width: "300px",
-            height: "150px",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-            resize: "vertical",
-            opacity: isLoading || mintingStatus !== "idle" ? 0.7 : 1,
-          }}
-        />
-        <button
-          onClick={handleMintAndGenerate}
-          disabled={isLoading || !prompt.trim() || !isConnected || !address}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#0066cc",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: isLoading || !prompt.trim() || !isConnected || !address ? "not-allowed" : "pointer",
-            width: "300px",
-            opacity: isLoading || !prompt.trim() || !isConnected || !address ? 0.7 : 1,
-          }}
-        >
-          {isLoading
-            ? mintingStatus === "minting"
-              ? "NFT is being minted..."
-              : "Image is being generated..."
-            : "Mint & Generate"}
-        </button>
+    <div className={styles.container}>
+      <h1 className={styles.heading}>Decentral AI Image Generator</h1>
 
-        {!isConnected && <p style={{ color: "#666" }}>Connect your wallet to create an NFT</p>}
+      {/* Card-basiertes Layout mit zwei Spalten */}
+      <div className={styles.cardLayout}>
+        {/* Linke Spalte: Eingabe und Steuerung */}
+        <div className={styles.column}>
+          <h2 className={styles.columnHeading}>Create Your Image</h2>
 
-        {error && <p style={{ color: "red", margin: "10px 0" }}>{error}</p>}
+          {/* Schritte als nummerierte Karten */}
+          <div className={styles.stepsList}>
+            <div className={styles.stepItem}>
+              <span className={styles.stepNumber}>1</span>
+              <span>Enter a descriptive prompt below</span>
+            </div>
 
-        {currentTokenId && mintingStatus === "idle" && (
-          <p style={{ color: "green" }}>NFT successfully created! Token ID: {currentTokenId.toString()}</p>
-        )}
+            <div className={styles.stepItem}>
+              <span className={styles.stepNumber}>2</span>
+              <span>Click &quot;Mint & Generate&quot; (costs ~10¢ in ETH)</span>
+            </div>
+
+            <div className={styles.stepItem}>
+              <span className={styles.stepNumber}>3</span>
+              <span>Wait ~30s for your image to appear</span>
+            </div>
+          </div>
+
+          {/* Eingabeformular */}
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Describe your image in detail... (e.g. 'A futuristic city skyline at sunset with flying cars')"
+            disabled={isLoading || mintingStatus !== "idle"}
+            className={`${styles.promptTextarea} ${isLoading || mintingStatus !== "idle" ? css({ opacity: 0.7 }) : ""}`}
+          />
+
+          {/* Status-Anzeige */}
+          {mintingStatus !== "idle" && (
+            <div className={styles.statusIndicator}>
+              <div className={styles.statusRow}>
+                <div className={styles.spinner}></div>
+                <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating your image..."}</span>
+              </div>
+              <div className={styles.statusText}>
+                {mintingStatus === "minting"
+                  ? "Confirm the transaction in your wallet"
+                  : "This may take up to 30 seconds"}
+              </div>
+            </div>
+          )}
+
+          {/* Mint-Button */}
+          <button
+            onClick={handleMintAndGenerate}
+            disabled={isLoading || !prompt.trim() || !isConnected || !address}
+            className={`${styles.button} ${
+              isLoading || !prompt.trim() || !isConnected || !address
+                ? css({ opacity: 0.7, cursor: "not-allowed" })
+                : ""
+            }`}
+          >
+            {isLoading ? (mintingStatus === "minting" ? "Creating NFT..." : "Generating Image...") : "Mint & Generate"}
+          </button>
+
+          {/* Fehlermeldungen */}
+          {!isConnected && (
+            <p className={css({ fontSize: "sm", color: "#666", margin: "xs 0" })}>
+              Connect your wallet to create an NFT
+            </p>
+          )}
+          {error && <div className={styles.errorMessage}>{error}</div>}
+        </div>
+
+        {/* Rechte Spalte: Bildvorschau und NFT-Details */}
+        <div className={styles.column}>
+          <h2 className={styles.columnHeading}>Your Generated Image</h2>
+
+          {/* Vereinfachte Bildvorschau */}
+          <div
+            className={css({
+              width: "100%",
+              aspectRatio: "1/1",
+              border: "2px dashed #ccc",
+              borderRadius: "md",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: "md",
+              backgroundColor: mintingStatus !== "idle" ? "rgba(0, 102, 204, 0.05)" : "#f9f9f9",
+              textAlign: "center",
+              position: "relative",
+            })}
+          >
+            {/* Bild oder Platzhalter */}
+            {generatedImageUrl ? (
+              <img
+                src={generatedImageUrl}
+                alt="Generated"
+                className={css({ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" })}
+              />
+            ) : (
+              <>
+                {mintingStatus !== "idle" ? (
+                  <p className={css({ fontWeight: "medium" })}>
+                    {mintingStatus === "minting" ? "Creating NFT..." : "Generating your image..."}
+                  </p>
+                ) : (
+                  <p>Your image will appear here</p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* NFT-Details */}
+          {tokenId && (
+            <div className={styles.successMessage}>
+              <h3 className={css({ margin: 0, fontSize: "md" })}>🎉 NFT successfully created!</h3>
+              <p className={css({ margin: "xs 0" })}>
+                <strong>Token ID:</strong> {tokenId.toString()}
+              </p>
+              <a
+                href={`https://optimistic.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.link}
+              >
+                View on Etherscan →
+              </a>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  );
-}
-
-// Aktualisiere die Props, um direkte Bild-URLs zu unterstützen
-interface ImageDisplayProps {
-  imageUrl?: string;
-}
-
-// Aktualisierte Komponente zur Anzeige des Bildes
-function ImageDisplay({ imageUrl }: ImageDisplayProps) {
-  return (
-    <div
-      style={{
-        width: "300px",
-        height: "300px",
-        border: "2px dashed #ccc",
-        borderRadius: "4px",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        marginTop: "20px",
-      }}
-    >
-      {imageUrl ? (
-        <img src={imageUrl} alt="Generated" style={{ maxWidth: "100%", maxHeight: "100%" }} />
-      ) : (
-        <p style={{ color: "#666" }}>Your image will appear here</p>
-      )}
-    </div>
-  );
-}
-
-export default function Page() {
-  // Chain and Contract configuration
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
-
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
-  const [tokenId, setTokenId] = useState<bigint>();
-
-  const handleGenerate = (imageUrl?: string, mintedTokenId?: bigint) => {
-    setGeneratedImageUrl(imageUrl);
-    if (mintedTokenId) {
-      setTokenId(mintedTokenId);
-    }
-  };
-
-  return (
-    <>
-      <h1>Decentral AI Image Generator</h1>
-      <p>Create your AI image and pay for it with ETH. The process:</p>
-      <ol>
-        <li>Enter a prompt</li>
-        <li>Click on &quot;Mint & Generate&quot;</li>
-        <li>First an NFT is created, then the image is generated</li>
-        <li>Your image shows up after roughly 30s in the placeholder below</li>
-      </ol>
-
-      <ImageGenerator onGenerate={handleGenerate} />
-      <ImageDisplay imageUrl={generatedImageUrl} />
-
-      {tokenId && (
-        <div style={{ marginTop: "20px", padding: "15px", border: "1px solid #28a745", borderRadius: "4px" }}>
-          <h3>🎉 NFT successfully created!</h3>
-          <p>
-            <strong>Token ID:</strong> {tokenId.toString()}
-          </p>
-          <p>
-            <a
-              href={`https://optimistic.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#0066cc", textDecoration: "none" }}
-            >
-              {" "}
-              View on Etherscan →
-            </a>
-          </p>
-        </div>
-      )}
-    </>
   );
 }

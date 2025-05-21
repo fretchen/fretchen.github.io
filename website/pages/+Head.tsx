@@ -1,11 +1,11 @@
 // https://vike.dev/Head
 
 import React from "react";
-
+import favicon from "./image_3_1fc7cfc7b9e9.jpg";
 export default function HeadDefault() {
   return (
     <>
-      <link rel="icon" href={" "} />
+      <link rel="icon" href={favicon} />
       {
         // umami analytics script
       }

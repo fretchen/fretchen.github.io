@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../../utils/getChain";
 import { css } from "../../styled-system/css";
+import { layouts, typography, elements } from "../../layouts/theme";
 
 // Define the correct type for transaction receipt
 interface TransactionReceipt {
@@ -110,7 +111,7 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenI
       const receipt = await waitForTransaction(txHash);
       // Extract Token ID from transfer event
       const transferEvent = receipt?.logs.find(
-        (log) => log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+        (log) => log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
       );
       if (!transferEvent || transferEvent.topics.length < 4) {
         throw new Error("Could not extract token ID from transaction");
@@ -141,34 +142,22 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenI
     }
   };
 
-  // PandaCSS styles for ImageGenerator
-  const containerStyle = css({ padding: "md" });
-  const formStyle = css({ display: "flex", flexDirection: "column", gap: "sm", marginTop: "md" });
+  // Simplified styles using theme tokens
+  const formStyle = css({
+    ...layouts.flexColumn,
+    alignItems: "flex-start",
+    gap: "sm",
+  });
+
   const textareaStyle = css({
-    padding: "sm",
-    width: "300px",
+    ...elements.input,
     height: "150px",
-    borderRadius: "4px",
-    border: "1px solid #ccc",
     resize: "vertical",
     opacity: isLoading || mintingStatus !== "idle" ? 0.7 : 1,
   });
-  const buttonStyle = css({
-    padding: "8px 16px",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
-    borderRadius: "4px",
-    cursor: isLoading || !prompt.trim() || !isConnected || !address ? "not-allowed" : "pointer",
-    width: "300px",
-    opacity: isLoading || !prompt.trim() || !isConnected || !address ? 0.7 : 1,
-  });
-  const infoTextStyle = css({ color: "#666" });
-  const errorStyle = css({ color: "red", margin: "10px 0" });
-  const tokenMessageStyle = css({ color: "green", marginTop: "md", padding: "sm", border: "1px solid #28a745", borderRadius: "4px" });
 
   return (
-    <div className={containerStyle}>
+    <div className={layouts.container}>
       <div className={formStyle}>
         <textarea
           value={prompt}
@@ -177,17 +166,21 @@ function ImageGenerator({ onGenerate }: { onGenerate: (imageUrl?: string, tokenI
           disabled={isLoading || mintingStatus !== "idle"}
           className={textareaStyle}
         />
-        <button onClick={handleMintAndGenerate} disabled={isLoading || !prompt.trim() || !isConnected || !address} className={buttonStyle}>
+        <button
+          onClick={handleMintAndGenerate}
+          disabled={isLoading || !prompt.trim() || !isConnected || !address}
+          className={elements.button}
+        >
           {isLoading
             ? mintingStatus === "minting"
               ? "NFT is being minted..."
               : "Image is being generated..."
             : "Mint & Generate"}
         </button>
-        {!isConnected && <p className={infoTextStyle}>Connect your wallet to create an NFT</p>}
-        {error && <p className={errorStyle}>{error}</p>}
+        {!isConnected && <p className={css({ color: "#666" })}>Connect your wallet to create an NFT</p>}
+        {error && <p className={elements.errorMessage}>{error}</p>}
         {currentTokenId && mintingStatus === "idle" && (
-          <p className={tokenMessageStyle}>NFT successfully created! Token ID: {currentTokenId.toString()}</p>
+          <p className={elements.successMessage}>NFT successfully created! Token ID: {currentTokenId.toString()}</p>
         )}
       </div>
     </div>
@@ -202,20 +195,18 @@ function ImageDisplay({ imageUrl }: ImageDisplayProps) {
   const displayStyle = css({
     width: "300px",
     height: "300px",
-    border: "2px dashed #ccc",
-    borderRadius: "4px",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
+    border: "2px dashed token(colors.border)",
+    borderRadius: "sm",
+    ...layouts.flexCenter,
     marginTop: "md",
   });
-  const placeholderTextStyle = css({ color: "#666" });
+
   return (
     <div className={displayStyle}>
       {imageUrl ? (
-        <img src={imageUrl} alt="Generated" style={{ maxWidth: "100%", maxHeight: "100%" }} />
+        <img src={imageUrl} alt="Generated" className={css({ maxWidth: "100%", maxHeight: "100%" })} />
       ) : (
-        <p className={placeholderTextStyle}>Your image will appear here</p>
+        <p className={css({ color: "text" })}>Your image will appear here</p>
       )}
     </div>
   );
@@ -233,25 +224,24 @@ export default function Page() {
     }
   };
 
-  const headingStyle = css({ fontSize: "2xl", fontWeight: "bold", marginBottom: "sm" });
-  const paragraphStyle = css({ marginBottom: "sm" });
-  const listStyle = css({ paddingLeft: "2em", marginBottom: "sm" });
-  const linkStyle = css({ color: "brand", textDecoration: "none" });
-
   return (
-    <>
-      <h1 className={headingStyle}>Decentral AI Image Generator</h1>
-      <p className={paragraphStyle}>Create your AI image and pay for it with ETH. The process:</p>
-      <ol className={listStyle}>
+    <div className={layouts.container}>
+      <h1 className={typography.heading}>Decentral AI Image Generator</h1>
+      <p className={typography.paragraph}>Create your AI image and pay for it with ETH. The process:</p>
+      <ol className={typography.list}>
         <li>Enter a prompt</li>
         <li>Click on &quot;Mint & Generate&quot;</li>
         <li>First an NFT is created, then the image is generated</li>
         <li>Your image shows up after roughly 30s in the placeholder below</li>
       </ol>
-      <ImageGenerator onGenerate={handleGenerate} />
-      <ImageDisplay imageUrl={generatedImageUrl} />
+
+      <div className={layouts.flexColumn}>
+        <ImageGenerator onGenerate={handleGenerate} />
+        <ImageDisplay imageUrl={generatedImageUrl} />
+      </div>
+
       {tokenId && (
-        <div className={css({ marginTop: "md", padding: "sm", border: "1px solid #28a745", borderRadius: "4px" })}>
+        <div className={elements.successMessage}>
           <h3>🎉 NFT successfully created!</h3>
           <p>
             <strong>Token ID:</strong> {tokenId.toString()}
@@ -261,13 +251,13 @@ export default function Page() {
               href={`https://optimistic.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className={linkStyle}
+              className={elements.link}
             >
               View on Etherscan →
             </a>
           </p>
         </div>
       )}
-    </>
+    </div>
   );
 }

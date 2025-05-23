@@ -1,10 +1,10 @@
 import * as React from "react";
 
 // Direkte Imports der benötigten Komponenten und Daten
-import EntryList from "../../components/EntryList";
-import blogs from "../../amo/blogs.json";
-import TitleBar from "../../components/TitleBar";
-import { css } from "../../styled-system/css";
+import EntryList from "../../../components/EntryList";
+import blogs from "../../../amo/blogs.json";
+import TitleBar from "../../../components/TitleBar";
+import { css } from "../../../styled-system/css";
 
 const App: React.FC = function () {
   return (
@@ -15,7 +15,7 @@ const App: React.FC = function () {
         They consist of a total of 20 lectures, which I will recollect here again.
       </p>
 
-      <EntryList blogs={blogs} basePath="/amo" />
+      <EntryList blogs={blogs} basePath="/quantum/amo" />
     </div>
   );
 };

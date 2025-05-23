@@ -1,8 +1,8 @@
 import * as React from "react";
-import blogs from "../../../amo/blogs.json";
+import blogs from "../../../../amo/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
-import { Post } from "../../../components/Post";
-import { css } from "../../../styled-system/css";
+import { Post } from "../../../../components/Post";
+import { css } from "../../../../styled-system/css";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
@@ -27,7 +27,7 @@ const App: React.FC = function () {
         publishing_date={blog.publishing_date}
         prevPost={prevPost}
         nextPost={nextPost}
-        basePath="/amo" // Korrekter Pfad für AMO-Blog
+        basePath="/quantum/amo" // Korrekter Pfad für AMO-Blog
       />
     </div>
   );

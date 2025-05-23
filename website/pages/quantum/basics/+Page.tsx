@@ -9,7 +9,7 @@ import { css } from "../../../styled-system/css";
 const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
-      <TitleBar title="Quantum Physics Basics" />
+      <TitleBar title="Quantum Basics" />
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         The hipster role is rather new to the quantum sector which has largely evolved under the radar to the greater
         public for the last one hundred years. To bring this into context, we will summarize some basic concepts of

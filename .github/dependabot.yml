@@ -6,6 +6,9 @@
 version: 2
 updates:
   - package-ecosystem: "npm" # See documentation for possible values
-    directories: "website", "eth" # Location of package manifests
+    directories: 
+      - "website"
+      - "eth" 
+      - "scw_js"
     schedule:
       interval: "weekly"

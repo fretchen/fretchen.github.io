@@ -1,4 +1,9 @@
-# Tutorial 5 -Quantum simulation with cold atoms
+---
+author:
+  - Fred Jendrzejewski
+order: 5
+title: Tutorial 5 - Quantum simulation with cold atoms
+---
 
 In the previous lessons we talked about [trapped ions](qhw3) and [superconducting qubits](qhw4). They are the leading platforms for the creation of **universal quantum computers**, which hold the premise of exponential speed-up for a variety of NP-hard problems. However, this universality usually comes at the price of algorithmic overhead for a wide range of tasks which generally leads to worse overall fidelity. If we give up the constraint of a universal quantum computer, we can build specialized quantum hardware for the problems of interest. Such systems are called quantum simulators. Cold atoms have become a leading platform of such quantum simulators at a large scale. Already demonstrated applications involve an enormous variety of condensed-matter problems like e.g. the [Hubbard model](https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.80.885), topological systems, [superfluidity](https://www.sciencedirect.com/science/article/abs/pii/S1049250X06540017?via%3Dihub) and [disorder](https://physicstoday.scitation.org/doi/10.1063/1.3206091). More recently, cold atoms started to find applications to [Ising models](https://arxiv.org/abs/2002.07413) and [high-energy physics](https://royalsocietypublishing.org/doi/full/10.1098/rsta.2021.0064). 
 

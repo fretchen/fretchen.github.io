@@ -1,4 +1,9 @@
-# Tutorial 2 - Quantum metrology
+---
+author:
+  - Fred Jendrzejewski
+order: 2
+title: Tutorial 2 - Quantum metrology
+---
 
 Welcome back to our second lesson on quantum technologies. In this lesson, we will discuss how quantum systems are used for precise measurements in a variety of situations. We saw in the last lesson, that quantum physics was initially developed to explain some observations in the laboratory. However, in the 1960s and 1970s more and more lasers became accessible as a new tool for experimental physicists. They allowed brave pioneers to cool and trap individual particles. This work was purely curiosity-driven and was launched in a tiny number of university and government laboratories. It suddenly allowed people like Dave Wineland, Bill Phillipps or Claude Cohen-Tannoudji a previously unimaginable degree of control over atoms and ions. This kind of work had such an important impact on physics that it was recognized with several nobel prizes and is now used to define our measurement units like the second, the meter etc.
 

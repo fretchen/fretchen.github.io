@@ -7,9 +7,10 @@ const QuantumPage: React.FC = () => {
   return (
     <div className={css({ padding: "8", maxWidth: "1200px", margin: "0 auto" })}>
       <div className={stack({ marginBottom: "8", textAlign: "center" })}>
-        <h1 className={css({ fontSize: "3xl", fontWeight: "bold" })}>Quantum Physics</h1>
+        <h1 className={css({ fontSize: "3xl", fontWeight: "bold" })}>Quantum</h1>
         <p className={css({ fontSize: "lg", color: "gray.600" })}>
-          Explore the fascinating world of quantum physics through our specialized topics.
+          Over the years, I worked on various projects in the field of quantum physics. Here, I collect some of the
+          resulting notes.
         </p>
       </div>
 
@@ -20,11 +21,7 @@ const QuantumPage: React.FC = () => {
           justifyContent: "center",
         })}
       >
-        <Card
-          title="Quantum Basics"
-          description="Fundamentals of quantum mechanics, superposition, entanglement and more."
-          link="/quantum/basics"
-        />
+        <Card title="Quantum Basics " description="Fundamentals of quantum mechanics." link="/quantum/basics" />
 
         <Card
           title="AMO Physics"

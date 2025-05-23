@@ -1,4 +1,9 @@
-# Tutorial 1 - Basic concepts of quantum technologies
+---
+author:
+  - Fred Jendrzejewski
+order: 1
+title: Tutorial 1 - Basic concepts of quantum technologies
+---
 
 In today's world, the word “quantum” evokes similar dreams, hopes and reactions like the words “blockchain” or “artificial intelligence”. Enthusiasts focus exclusively on the disruptive potential while the greater public sees it mostly as a big hype which is impossible to understand for normal people. This hipster role is rather new to the quantum sector which has largely evolved under the radar to the greater public for the last one hundred years. In this tutorial series, we will summarize some basic concepts of quantum physics and then  discuss the four pillars of quantum technologies:
 

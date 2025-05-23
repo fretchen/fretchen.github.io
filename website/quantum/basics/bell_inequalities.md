@@ -1,6 +1,9 @@
-(bell)=
-
-# Tutorial on the nobel prize 2022 - How to win Bell's game
+---
+author:
+  - Fred Jendrzejewski
+order: 3
+title: Tutorial on the nobel prize 2022 - How to win Bell's game
+---
 
 The nobel prize of physics for the year 2022 was awarded to three physicists for the test of Bell inequalities. As this work is foundational to any kind of modern quantum technology, we decided to provide you here with a description of the experiments in terms of a game. While the game is slightly odd it shows you nicely how quantum mechanics allow you to break the casino and what the experiments demonstrated specifically.
 

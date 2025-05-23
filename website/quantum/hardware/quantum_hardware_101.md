@@ -134,7 +134,7 @@ ax.set_xlabel("detuning $\Delta$")
 ax.set_ylabel("energy $E$");
 ```
 
-![png](quantum_hardware_101_files/quantum_hardware_101_3_0.png)
+![png](quantum_hardware_101_3_0.png)
 
 The Eigenstates then read:
 
@@ -242,7 +242,7 @@ ax.set_ylabel("probability $P_1$")
 
     Text(0, 0.5, 'probability $P_1$')
 
-![png](quantum_hardware_101_files/quantum_hardware_101_6_1.png)
+![png](quantum_hardware_101_6_1.png)
 
 A few key words concerning Rabi oscillations are in order:
 

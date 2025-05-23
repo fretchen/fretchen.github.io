@@ -118,6 +118,9 @@ async function handle(event, context, cb) {
     // Übergebe jetzt auch die tokenId an die Funktion
     const metadataUrl = await generateAndUploadImage(prompt, tokenId);
 
+    // Validieren Sie die Metadaten-URL, bevor Sie sie verwenden
+    validateUrl(metadataUrl, ["trusted-domain.com"]);
+
     // Metadaten laden, um die Bild-URL zu extrahieren
     const metadataResponse = await fetch(metadataUrl);
     if (!metadataResponse.ok) {
@@ -165,4 +168,21 @@ if (process.env.NODE_ENV === "test") {
       scw_fnc_node.serveHandler(handle, 8080);
     });
   });
+}
+
+/**
+ * Validates a URL against a list of trusted domains.
+ * @param {string} url - The URL to validate.
+ * @param {string[]} trustedDomains - A list of trusted domains.
+ * @throws {Error} If the URL is not valid or not trusted.
+ */
+function validateUrl(url, trustedDomains) {
+  try {
+    const parsedUrl = new URL(url);
+    if (!trustedDomains.includes(parsedUrl.hostname)) {
+      throw new Error(`Untrusted URL: ${url}`);
+    }
+  } catch (error) {
+    throw new Error(`Invalid URL: ${url}`);
+  }
 }

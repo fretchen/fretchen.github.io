@@ -28,6 +28,12 @@ const QuantumPage: React.FC = () => {
           description="Atomic, Molecular, and Optical Physics: experiments and applications."
           link="/quantum/amo"
         />
+
+        <Card
+          title="Quantum Hardware"
+          description="Introduction to quantum hardware platforms."
+          link="/quantum/hardware"
+        />
       </div>
     </div>
   );

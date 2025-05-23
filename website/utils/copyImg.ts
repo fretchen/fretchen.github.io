@@ -11,7 +11,7 @@ export const copyImg = (imgDirectory: string = "amo") => {
   const imgFiles = fs.readdirSync(`./${imgDirectory}`);
   const destFolder = `${publicFolder}/${imgDirectory}`;
   if (!fs.existsSync(destFolder)) {
-    fs.mkdirSync(destFolder);
+    fs.mkdirSync(destFolder, { recursive: true });
   }
   console.log(imgFiles);
   imgFiles.forEach((file) => {

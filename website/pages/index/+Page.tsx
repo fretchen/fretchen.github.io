@@ -1,6 +1,7 @@
 import React from "react";
 
-import BlogList from "../../components/BlogList";
+import EntryList from "../../components/EntryList";
+import blogs from "../../blog/blogs.json";
 
 export default function Page() {
   return (
@@ -10,7 +11,7 @@ export default function Page() {
         Welcome to my website with all kinds of notes etc. For the moment it is mostly a blog, but let us see how it
         evolves. So mostly fun for me, maybe for you too.
       </p>
-      <BlogList />
+      <EntryList blogs={blogs} basePath="/blog" showDate={true} reverseOrder={true} />
     </>
   );
 }

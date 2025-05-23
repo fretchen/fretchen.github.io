@@ -1,29 +1,36 @@
 import * as React from "react";
-
 import blogs from "../../../blog/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../components/Post";
-import { Link } from "../../../components/Link";
+import { css } from "../../../styled-system/css";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
   const id = Number(pageContext.routeParams.id);
-  const prevBlog = id > 0 ? blogs[id - 1] : null;
-  const nextBlog = id < blogs.length - 1 ? blogs[id + 1] : null;
 
   if (isNaN(id)) {
     throw new Error("Invalid blog post ID");
   }
-  // select the t`th blog post from blogs.json
+
+  // Blog-Einträge und Navigation
   const blog = blogs[id];
+  const prevBlog = id > 0 ? blogs[id - 1] : null;
+  const nextBlog = id < blogs.length - 1 ? blogs[id + 1] : null;
+
+  // Navigations-Objekte für erweiterte Post-Komponente
+  const prevPost = prevBlog ? { title: prevBlog.title, id: id - 1 } : null;
+  const nextPost = nextBlog ? { title: nextBlog.title, id: id + 1 } : null;
 
   return (
-    <div>
-      <Post title={blog.title} content={blog.content} publishing_date={blog.publishing_date} />
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
-        {prevBlog && <Link href={`/blog/${id - 1}`}>Previous post: {prevBlog.title}</Link>}
-        {nextBlog && <Link href={`/blog/${id + 1}`}>Next post: {nextBlog.title}</Link>}
-      </div>
+    <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+      <Post
+        title={blog.title}
+        content={blog.content}
+        publishing_date={blog.publishing_date}
+        prevPost={prevPost}
+        nextPost={nextPost}
+        basePath="/blog"
+      />
     </div>
   );
 };

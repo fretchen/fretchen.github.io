@@ -13,7 +13,7 @@ const App: React.FC = function () {
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         The hipster role is rather new to the quantum sector which has largely evolved under the radar to the greater
         public for the last one hundred years. To bring this into context, we will summarize some basic concepts of
-        quantum physics and then  discuss the four pillars of quantum technologies. Finishing this series of tutorials,
+        quantum physics and then discuss the four pillars of quantum technologies. Finishing this series of tutorials,
         will provide you a better background on large government programs like the European flagship on quantum
         technologies.
       </p>

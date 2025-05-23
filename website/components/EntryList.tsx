@@ -2,22 +2,66 @@ import * as React from "react";
 import { Link } from "./Link";
 import { css } from "../styled-system/css";
 
-// Definiere den Typ für Blog-Einträge
+/**
+ * Represents a blog entry with title and optional publishing date
+ */
 export interface BlogEntry {
+  /**
+   * The title of the blog entry
+   */
   title: string;
-  publishing_date?: string; // Optional für Einträge mit Datum
-  // Weitere Eigenschaften können hier hinzugefügt werden
-  [key: string]: any;
+
+  /**
+   * Optional publishing date of the entry
+   */
+  publishing_date?: string;
+
+  /**
+   * Optional slug for custom URL paths
+   */
+  slug?: string;
+
+  /**
+   * Optional description or excerpt
+   */
+  description?: string;
 }
 
+/**
+ * Props for the EntryList component
+ */
 interface EntryListProps {
+  /**
+   * Array of blog entries to display
+   */
   blogs: BlogEntry[];
+
+  /**
+   * Base path for entry links
+   */
   basePath: string;
+
+  /**
+   * Optional CSS class name for title elements
+   */
   titleClassName?: string;
-  showDate?: boolean; // Flag zum Anzeigen des Datums
-  reverseOrder?: boolean; // Flag zum Umkehren der Reihenfolge
+
+  /**
+   * Whether to display the publishing date
+   * @default false
+   */
+  showDate?: boolean;
+
+  /**
+   * Whether to reverse the order of entries
+   * @default false
+   */
+  reverseOrder?: boolean;
 }
 
+/**
+ * Component that renders a list of blog entries with links
+ */
 const EntryList: React.FC<EntryListProps> = ({
   blogs,
   basePath,
@@ -25,7 +69,7 @@ const EntryList: React.FC<EntryListProps> = ({
   showDate = false,
   reverseOrder = false,
 }) => {
-  // Erzeugt eine Kopie der Blogs-Liste, eventuell in umgekehrter Reihenfolge
+  // Creates a copy of the blogs list, possibly in reverse order
   const displayBlogs = reverseOrder ? [...blogs].reverse() : blogs;
 
   return (
@@ -37,7 +81,7 @@ const EntryList: React.FC<EntryListProps> = ({
       })}
     >
       {displayBlogs.map((blog, index) => {
-        // Berechnet den korrekten Index für Links, wenn die Reihenfolge umgekehrt ist
+        // Calculates the correct index for links when order is reversed
         const linkIndex = reverseOrder ? blogs.length - 1 - index : index;
 
         return (
@@ -50,7 +94,7 @@ const EntryList: React.FC<EntryListProps> = ({
               _last: { borderBottom: "none" },
             })}
           >
-            {/* Zeigt das Datum an, wenn showDate aktiviert ist und ein Datum vorhanden ist */}
+            {/* Displays the date if showDate is enabled and a date exists */}
             {showDate && blog.publishing_date && (
               <p
                 className={css({

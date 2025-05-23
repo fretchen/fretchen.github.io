@@ -1,10 +1,8 @@
 # the public repo images
 
 website/public/amo
+website/public/quantum
 
-# the package folder
-scaleway/package
-scaleway/functions.zip
 
 
 # solidity

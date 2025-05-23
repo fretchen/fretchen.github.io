@@ -31,7 +31,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         <Appbar>
           <Link href="/">Welcome</Link>
           <Link href="/blog">Blog</Link>
-          <Link href="/amo">AMO</Link>
+          <Link href="/quantum">Quantum</Link>
           <Link href="/imagegen">ImageGen</Link>
           <div className={css({ marginLeft: "auto" })}>
             <WalletOptions />

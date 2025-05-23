@@ -1,8 +1,8 @@
 import * as React from "react";
-import blogs from "../../../blog/blogs.json";
+import blogs from "../../../../quantum/basics/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
-import { Post } from "../../../components/Post";
-import { css } from "../../../styled-system/css";
+import { Post } from "../../../../components/Post";
+import { css } from "../../../../styled-system/css";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
@@ -12,12 +12,12 @@ const App: React.FC = function () {
     throw new Error("Invalid blog post ID");
   }
 
-  // Blog-Einträge und Navigation
+  // Aktuelle, vorherige und nächste Blogeinträge
   const blog = blogs[id];
   const prevBlog = id > 0 ? blogs[id - 1] : null;
   const nextBlog = id < blogs.length - 1 ? blogs[id + 1] : null;
 
-  // Navigations-Objekte für erweiterte Post-Komponente
+  // Navigations-Objekte für Post-Komponente
   const prevPost = prevBlog ? { title: prevBlog.title, id: id - 1 } : null;
   const nextPost = nextBlog ? { title: nextBlog.title, id: id + 1 } : null;
 
@@ -29,7 +29,7 @@ const App: React.FC = function () {
         publishing_date={blog.publishing_date}
         prevPost={prevPost}
         nextPost={nextPost}
-        basePath="/blog"
+        basePath="/quantum/basics" // Korrekter Pfad für diese Blog-Kategorie
       />
     </div>
   );

@@ -77,7 +77,7 @@ ax2.set_ylabel('velocity $v$')
 
     Text(0, 0.5, 'velocity $v$')
 
-![png](quantum_hardware_102_files/quantum_hardware_102_3_1.png)
+![png](quantum_hardware_102_3_1.png)
 
 We learn a few things from this example:
 
@@ -112,7 +112,7 @@ ax2.set_xlabel('initial velocity $v$')
 f.tight_layout()
 ```
 
-![png](quantum_hardware_102_files/quantum_hardware_102_6_0.png)
+![png](quantum_hardware_102_6_0.png)
 
 \And depending on these initial conditions, we will obtain some final distributions $P(x_f)$ and $P(v_f)$
 
@@ -144,7 +144,7 @@ ax2.set_ylabel('velocity $v$')
 
     Text(0, 0.5, 'velocity $v$')
 
-![png](quantum_hardware_102_files/quantum_hardware_102_8_1.png)
+![png](qquantum_hardware_102_8_1.png)
 
 quite importantly we can only test one set of initial conditions for each trajectory. The particle cannot be at several positions at the same time. With quantum mechanics, we can now look into a system where this restriction gets lifted.
 
@@ -305,7 +305,7 @@ ax.set_ylabel('$\psi$')
 
     Text(0, 0.5, '$\\psi$')
 
-![png](quantum_hardware_102_files/quantum_hardware_102_15_1.png)
+![png](quantum_hardware_102_15_1.png)
 
 But what about the momentum distribution ? In the same way as we were able to assign some values to the initial distribution of the position, we can associate some distribution for the distribution in momentum:
 
@@ -360,7 +360,7 @@ ax2.set_ylabel('$\psi(k)$')
 f.tight_layout()
 ```
 
-![png](quantum_hardware_102_files/quantum_hardware_102_17_0.png)
+![png](quantum_hardware_102_17_0.png)
 
 It is of fundamental importance to recognize that we can now choose initial conditions in which the particle is in several initial conditions at the same time. As an example it is perfectly valid to have a particle which is centered at zero, but is in a super position of opposite velocities.
 
@@ -407,7 +407,7 @@ f.tight_layout()
 
     1.0000000000000124
 
-![png](quantum_hardware_102_files/quantum_hardware_102_19_1.png)
+![png](quantum_hardware_102_19_1.png)
 
 ## Connection the dots
 
@@ -518,7 +518,7 @@ f, ax = plt.subplots()
 ax.pcolormesh(ts, xvec, n_t);
 ```
 
-![png](quantum_hardware_102_files/quantum_hardware_102_21_0.png)
+![png](quantum_hardware_102_21_0.png)
 
 ## So what is discrete or quanitized in the quantum harmonic oscillator ?
 

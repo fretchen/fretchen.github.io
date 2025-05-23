@@ -29,7 +29,7 @@ const App: React.FC = function () {
         publishing_date={blog.publishing_date}
         prevPost={prevPost}
         nextPost={nextPost}
-        basePath="/quantum/basics" // Korrekter Pfad für diese Blog-Kategorie
+        basePath="/quantum/hardware" // Korrekter Pfad für diese Blog-Kategorie
       />
     </div>
   );

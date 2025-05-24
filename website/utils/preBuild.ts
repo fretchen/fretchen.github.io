@@ -21,3 +21,6 @@ copyImg("quantum/basics");
 // prepare the quantum part of the website
 getBlogs({ blogDirectory: "./quantum/hardware", sortBy: "order" });
 copyImg("quantum/hardware");
+
+getBlogs({ blogDirectory: "./quantum/qml", sortBy: "order" });
+copyImg("quantum/qml");

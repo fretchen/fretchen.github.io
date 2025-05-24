@@ -34,6 +34,11 @@ const QuantumPage: React.FC = () => {
           description="Introduction to quantum hardware platforms."
           link="/quantum/hardware"
         />
+        <Card
+          title="Quantum Machine Learning for Beginners"
+          description="Introduction to quantum machine learning."
+          link="/quantum/qml"
+        />
       </div>
     </div>
   );

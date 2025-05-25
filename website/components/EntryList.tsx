@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "./Link";
-import { css } from "../styled-system/css";
+import { entryList } from "../layouts/styles";
 
 /**
  * Represents a blog entry with title and optional publishing date
@@ -93,90 +93,24 @@ const EntryList: React.FC<EntryListProps> = ({
   }
 
   return (
-    <div
-      className={css({
-        display: "flex",
-        flexDirection: "column",
-        gap: "4",
-      })}
-    >
+    <div className={entryList.container}>
       {displayBlogs.map((blog, index) => {
         // Calculates the correct index for links when order is reversed
         const linkIndex = reverseOrder ? blogs.length - 1 - index : index;
 
         return (
-          <div
-            key={linkIndex}
-            className={css({
-              width: "100%",
-              borderRadius: "md",
-              overflow: "hidden",
-              boxShadow: "sm",
-              transition: "all 0.3s ease",
-              _hover: {
-                boxShadow: "md",
-                transform: "translateX(4px)",
-              },
-              bg: "white",
-              marginY: "3", // Vertikaler Abstand oben und unten
-            })}
-          >
-            <div
-              className={css({
-                padding: "6",
-                display: "flex",
-                flexDirection: "row",
-                gap: "4",
-                alignItems: "center",
-              })}
-            >
-              <div className={css({ flex: 1 })}>
+          <div key={linkIndex} className={entryList.entry}>
+            <div className={entryList.entryContent}>
+              <div className={entryList.entryText}>
                 {/* Displays the date if showDate is enabled and a date exists */}
-                {showDate && blog.publishing_date && (
-                  <p
-                    className={css({
-                      margin: "0",
-                      fontSize: "sm",
-                      color: "gray.600",
-                      marginBottom: "1",
-                    })}
-                  >
-                    {blog.publishing_date}
-                  </p>
-                )}
+                {showDate && blog.publishing_date && <p className={entryList.entryDate}>{blog.publishing_date}</p>}
 
-                <h3
-                  className={`${css({
-                    fontSize: "xl",
-                    fontWeight: "semibold",
-                    margin: 0,
-                  })} ${titleClassName || ""}`}
-                >
-                  {blog.title}
-                </h3>
+                <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
 
-                {blog.description && (
-                  <p
-                    className={css({
-                      margin: "1 0 0 0",
-                      fontSize: "sm",
-                      color: "gray.600",
-                    })}
-                  >
-                    {blog.description}
-                  </p>
-                )}
+                {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
               </div>
 
-              <Link
-                href={`${basePath}/${linkIndex}`}
-                className={css({
-                  whiteSpace: "nowrap",
-                  fontWeight: "medium",
-                })}
-              >
-                Read more →
-              </Link>
+              <Link href={`${basePath}/${linkIndex}`}>Read more →</Link>
             </div>
           </div>
         );
@@ -184,18 +118,8 @@ const EntryList: React.FC<EntryListProps> = ({
 
       {/* View All Link */}
       {hasMore && showViewAllLink && (
-        <div className={css({ textAlign: "right", marginTop: "2" })}>
-          <Link
-            href={basePath}
-            className={css({
-              fontSize: "sm",
-              fontWeight: "medium",
-              color: "brand",
-              _hover: { textDecoration: "underline" },
-            })}
-          >
-            View all entries →
-          </Link>
+        <div className={entryList.viewAllContainer}>
+          <Link href={basePath}>View all entries →</Link>
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId 
 import { parseEther } from "viem";
 import { type BaseError, useReadContract } from "wagmi";
 import { getChain, getSupportContractConfig } from "../utils/getChain";
-import { css } from "../styled-system/css";
+import { supportArea } from "../layouts/styles";
 
 /**
  * SupportArea Component
@@ -97,75 +97,7 @@ export default function SupportArea() {
     errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
 
   // PandaCSS styles
-  const styles = {
-    container: css({
-      display: "flex",
-      alignItems: "center",
-      margin: "md 0",
-    }),
-    buttonGroup: css({
-      display: "flex",
-    }),
-    buttonBase: css({
-      padding: "sm",
-      backgroundColor: "brand",
-      color: "light",
-      fontWeight: "bold",
-      height: "36px",
-      boxSizing: "border-box",
-      display: "flex",
-      alignItems: "center",
-    }),
-    writeButton: css({
-      padding: "sm",
-      backgroundColor: isLoading ? "#5a7aac" : "brand",
-      color: "light",
-      fontWeight: "bold",
-      height: "36px",
-      borderRadius: "4px 0 0 4px",
-      borderRight: "1px solid white",
-      borderLeft: "none",
-      borderTop: "none",
-      borderBottom: "none",
-      boxSizing: "border-box",
-      display: "flex",
-      alignItems: "center",
-      cursor: isLoading ? "not-allowed" : "pointer",
-    }),
-    readDisplay: css({
-      padding: "sm",
-      backgroundColor: "brand",
-      color: "light",
-      fontWeight: "bold",
-      height: "36px",
-      borderRadius: "0 4px 4px 0",
-      border: "none",
-      minWidth: "20px",
-      boxSizing: "border-box",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }),
-    tooltipContainer: css({
-      position: "relative",
-    }),
-    tooltip: css({
-      position: "absolute",
-      bottom: "100%",
-      left: "50%",
-      transform: "translateX(-50%)",
-      marginBottom: "xs",
-      padding: "sm",
-      backgroundColor: "background",
-      border: `1px solid ${errorMessage ? "red" : "orange"}`,
-      borderRadius: "sm",
-      boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-      color: errorMessage ? "red" : "orange",
-      width: "max-content",
-      maxWidth: "250px",
-      zIndex: "100",
-    }),
-  };
+  const styles = supportArea;
 
   // Render ReadSupport based on status
   const renderReadSupport = () => {

@@ -28,11 +28,7 @@ export function Post({ title, content, publishing_date, prevPost, nextPost, base
   return (
     <>
       <TitleBar title={title} />
-      {publishing_date && (
-        <p className={post.publishingDate}>
-          Published on: {publishing_date}
-        </p>
-      )}
+      {publishing_date && <p className={post.publishingDate}>Published on: {publishing_date}</p>}
 
       <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
         {content}

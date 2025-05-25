@@ -1,5 +1,5 @@
 import { css } from "../styled-system/css";
-import { stack, flex } from "../styled-system/patterns";
+import { stack } from "../styled-system/patterns";
 
 // ===== ALLGEMEINE LAYOUTSTILE =====
 

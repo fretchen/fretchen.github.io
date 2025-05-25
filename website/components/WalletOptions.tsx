@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useConnect, useAccount, useDisconnect, useEnsName } from "wagmi";
-import { css } from "../styled-system/css";
+import { walletOptions } from "../layouts/styles";
 
 /**
  * WalletOptions Component
@@ -39,48 +39,7 @@ export default function WalletOptions() {
   };
 
   // Common styles
-  const styles = {
-    dropdown: css({
-      position: "relative",
-      display: "inline-block",
-    }),
-    button: css({
-      padding: "8px 16px",
-      backgroundColor: "brand",
-      color: "light",
-      border: "none",
-      borderRadius: "sm",
-      cursor: "pointer",
-      fontWeight: "bold",
-      display: "flex",
-      alignItems: "center",
-      gap: "xs",
-    }),
-    menu: css({
-      position: "absolute",
-      backgroundColor: "background",
-      minWidth: "160px",
-      boxShadow: "0px 8px 16px 0px rgba(0,0,0,0.2)",
-      zIndex: "1",
-      right: "0",
-      borderRadius: "sm",
-      marginTop: "xs",
-    }),
-    menuItem: css({
-      padding: "sm",
-      textDecoration: "none",
-      display: "block",
-      color: "text",
-      textAlign: "left",
-      cursor: "pointer",
-      borderBottom: "1px solid token(colors.border)",
-      transition: "background-color 0.2s ease",
-      _last: { borderBottom: "none" },
-    }),
-    menuItemHover: css({
-      backgroundColor: "border",
-    }),
-  };
+  const styles = walletOptions;
 
   return (
     <div className={styles.dropdown} onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>

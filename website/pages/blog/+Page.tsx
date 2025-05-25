@@ -4,15 +4,13 @@ import * as React from "react";
 import EntryList from "../../components/EntryList";
 import blogs from "../../blog/blogs.json";
 import TitleBar from "../../components/TitleBar";
-import { css } from "../../styled-system/css";
+import * as styles from "../../layouts/styles";
 
 const App: React.FC = function () {
   return (
-    <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+    <div className={styles.container}>
       <TitleBar title="Welcome to my blog!" />
-      <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
-        It contains notes about all kind of topic, ideas etc.
-      </p>
+      <p className={styles.paragraph}>It contains notes about all kind of topic, ideas etc.</p>
 
       {/* Direkte Verwendung von EntryList ohne Umweg über BlogList */}
       <EntryList blogs={blogs} basePath="/blog" showDate={true} reverseOrder={true} />

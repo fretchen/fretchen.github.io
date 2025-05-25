@@ -1,17 +1,48 @@
 import React from "react";
-
+import { Card } from "../../components/Card";
 import EntryList from "../../components/EntryList";
 import blogs from "../../blog/blogs.json";
+import * as styles from "../../layouts/styles";
 
 export default function Page() {
   return (
-    <>
-      <p>
-        {" "}
-        Welcome to my website with all kinds of notes etc. For the moment it is mostly a blog, but let us see how it
-        evolves. So mostly fun for me, maybe for you too.
-      </p>
-      <EntryList blogs={blogs} basePath="/blog" showDate={true} reverseOrder={true} />
-    </>
+    <div className={styles.container}>
+      {/* Hero section */}
+      <div className={styles.heroContainer}>
+        <h2>Welcome</h2>
+        <p className={styles.heroText}>
+          Welcome to my website with all kinds of notes etc. Nothing fancy, just me thinking out loudly.
+        </p>
+      </div>
+
+      {/* Main areas */}
+      <section>
+        <h2 className={styles.sectionHeading}>Explore the main areas</h2>
+
+        <div className={styles.cardStack}>
+          <Card title="Blog" description="My thoughts on various topics." link="/blog" />
+          <Card title="Quantum" description="Tutorials and notes on quantum, AMO and more." link="/quantum" />
+          <Card
+            title="AI Image Generator"
+            description="Create your own images with AI and receive them as NFTs on the blockchain."
+            link="/imagegen"
+          />
+        </div>
+      </section>
+
+      {/* Latest blog posts */}
+      <section className={styles.blogSection}>
+        <h2 className={styles.sectionHeading}>Latest Blog Posts</h2>
+
+        <EntryList
+          blogs={blogs}
+          basePath="/blog"
+          showDate={true}
+          reverseOrder={true}
+          limit={3}
+          showViewAllLink={true}
+        />
+      </section>
+    </div>
   );
 }

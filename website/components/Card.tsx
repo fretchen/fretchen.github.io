@@ -13,29 +13,42 @@ export const Card: React.FC<CardProps> = ({ title, description, link }) => {
   return (
     <div
       className={css({
-        width: "300px",
+        width: "100%",
         borderRadius: "md",
         overflow: "hidden",
         boxShadow: "sm",
-        transition: "transform 0.3s ease, box-shadow 0.3s ease",
+        transition: "all 0.3s ease",
         _hover: {
-          transform: "translateY(-5px)",
           boxShadow: "md",
+          transform: "translateX(4px)",
         },
         bg: "white",
+        marginY: "3", // Vertikaler Abstand oben und unten
+        marginX: "1", // Horizontaler Abstand links und rechts (optional)
       })}
     >
       <div
         className={css({
           padding: "6",
           display: "flex",
-          flexDirection: "column",
-          gap: "2",
+          flexDirection: "row",
+          gap: "4",
+          alignItems: "center",
         })}
       >
-        <h3 className={css({ fontSize: "xl", fontWeight: "semibold", margin: 0 })}>{title}</h3>
-        <p className={css({ color: "gray.600", fontSize: "sm" })}>{description}</p>
-        <Link href={link}>Read more</Link>
+        <div className={css({ flex: 1 })}>
+          <h3 className={css({ fontSize: "xl", fontWeight: "semibold", margin: 0 })}>{title}</h3>
+          <p className={css({ color: "gray.600", fontSize: "sm", marginTop: "1" })}>{description}</p>
+        </div>
+        <Link
+          href={link}
+          className={css({
+            whiteSpace: "nowrap",
+            fontWeight: "medium",
+          })}
+        >
+          Read more →
+        </Link>
       </div>
     </div>
   );

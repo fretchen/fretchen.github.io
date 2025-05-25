@@ -57,6 +57,18 @@ interface EntryListProps {
    * @default false
    */
   reverseOrder?: boolean;
+
+  /**
+   * Maximum number of entries to display
+   * @default undefined (show all)
+   */
+  limit?: number;
+
+  /**
+   * Whether to show a "View all" link when entries are limited
+   * @default false
+   */
+  showViewAllLink?: boolean;
 }
 
 /**
@@ -68,16 +80,24 @@ const EntryList: React.FC<EntryListProps> = ({
   titleClassName,
   showDate = false,
   reverseOrder = false,
+  limit,
+  showViewAllLink = false,
 }) => {
   // Creates a copy of the blogs list, possibly in reverse order
-  const displayBlogs = reverseOrder ? [...blogs].reverse() : blogs;
+  let displayBlogs = reverseOrder ? [...blogs].reverse() : blogs;
+
+  // Limit the number of entries if specified
+  const hasMore = limit && blogs.length > limit;
+  if (limit) {
+    displayBlogs = displayBlogs.slice(0, limit);
+  }
 
   return (
     <div
       className={css({
         display: "flex",
         flexDirection: "column",
-        gap: "md",
+        gap: "4",
       })}
     >
       {displayBlogs.map((blog, index) => {
@@ -88,35 +108,96 @@ const EntryList: React.FC<EntryListProps> = ({
           <div
             key={linkIndex}
             className={css({
-              marginBottom: "md",
-              borderBottom: "1px solid token(colors.border)",
-              paddingBottom: "sm",
-              _last: { borderBottom: "none" },
+              width: "100%",
+              borderRadius: "md",
+              overflow: "hidden",
+              boxShadow: "sm",
+              transition: "all 0.3s ease",
+              _hover: {
+                boxShadow: "md",
+                transform: "translateX(4px)",
+              },
+              bg: "white",
+              marginY: "3", // Vertikaler Abstand oben und unten
             })}
           >
-            {/* Displays the date if showDate is enabled and a date exists */}
-            {showDate && blog.publishing_date && (
-              <p
+            <div
+              className={css({
+                padding: "6",
+                display: "flex",
+                flexDirection: "row",
+                gap: "4",
+                alignItems: "center",
+              })}
+            >
+              <div className={css({ flex: 1 })}>
+                {/* Displays the date if showDate is enabled and a date exists */}
+                {showDate && blog.publishing_date && (
+                  <p
+                    className={css({
+                      margin: "0",
+                      fontSize: "sm",
+                      color: "gray.600",
+                      marginBottom: "1",
+                    })}
+                  >
+                    {blog.publishing_date}
+                  </p>
+                )}
+
+                <h3
+                  className={`${css({
+                    fontSize: "xl",
+                    fontWeight: "semibold",
+                    margin: 0,
+                  })} ${titleClassName || ""}`}
+                >
+                  {blog.title}
+                </h3>
+
+                {blog.description && (
+                  <p
+                    className={css({
+                      margin: "1 0 0 0",
+                      fontSize: "sm",
+                      color: "gray.600",
+                    })}
+                  >
+                    {blog.description}
+                  </p>
+                )}
+              </div>
+
+              <Link
+                href={`${basePath}/${linkIndex}`}
                 className={css({
-                  margin: "0",
-                  fontSize: "sm",
-                  color: "text",
+                  whiteSpace: "nowrap",
+                  fontWeight: "medium",
                 })}
               >
-                {blog.publishing_date}
-              </p>
-            )}
-
-            <Link href={`${basePath}/${linkIndex}`}>
-              <h2
-                className={`${css({ margin: "0", marginTop: showDate && blog.publishing_date ? "xs" : "0" })} ${titleClassName || ""}`}
-              >
-                {blog.title}
-              </h2>
-            </Link>
+                Read more →
+              </Link>
+            </div>
           </div>
         );
       })}
+
+      {/* View All Link */}
+      {hasMore && showViewAllLink && (
+        <div className={css({ textAlign: "right", marginTop: "2" })}>
+          <Link
+            href={basePath}
+            className={css({
+              fontSize: "sm",
+              fontWeight: "medium",
+              color: "brand",
+              _hover: { textDecoration: "underline" },
+            })}
+          >
+            View all entries →
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

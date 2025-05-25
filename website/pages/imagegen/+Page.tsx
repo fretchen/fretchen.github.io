@@ -2,34 +2,8 @@ import React, { useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../../utils/getChain";
 import { css } from "../../styled-system/css";
-
-// Define the correct type for transaction receipt
-interface TransactionReceipt {
-  blockHash: string;
-  blockNumber: string;
-  contractAddress: string | null;
-  cumulativeGasUsed: string;
-  effectiveGasPrice: string;
-  from: string;
-  gasUsed: string;
-  logs: Array<{
-    address: string;
-    topics: string[];
-    data: string;
-    blockNumber: string;
-    transactionHash: string;
-    transactionIndex: string;
-    blockHash: string;
-    logIndex: string;
-    removed: boolean;
-  }>;
-  logsBloom: string;
-  status: string;
-  to: string;
-  transactionHash: string;
-  transactionIndex: string;
-  type: string;
-}
+import { TransactionReceipt, MintingStatus } from "../../types/blockchain";
+import * as styles from "../../layouts/styles";
 
 // Helper function to wait for transaction confirmation
 const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
@@ -53,217 +27,6 @@ const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionRecei
   });
 };
 
-// Konsolidierte Styles direkt in der Komponente definiert
-const styles = {
-  // Layout-Styles
-  container: css({
-    maxWidth: "900px",
-    mx: "auto",
-    px: "md",
-  }),
-  flexColumn: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "md",
-  }),
-  flexCenter: css({
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  }),
-
-  // Typografie-Styles
-  heading: css({
-    fontSize: "2xl",
-    fontWeight: "bold",
-    marginBottom: "sm",
-    color: "text",
-  }),
-  paragraph: css({
-    marginBottom: "sm",
-    lineHeight: "1.5",
-  }),
-  list: css({
-    paddingLeft: "2em",
-    marginBottom: "sm",
-  }),
-
-  // Element-Styles
-  button: css({
-    padding: "md",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
-    borderRadius: "sm",
-    cursor: "pointer",
-    fontWeight: "bold",
-    width: "100%",
-    margin: "xs 0",
-    transition: "all 0.2s",
-    _hover: { backgroundColor: "#0052a3" },
-    _disabled: {
-      opacity: 0.7,
-      cursor: "not-allowed",
-    },
-  }),
-  errorMessage: css({
-    padding: "sm",
-    borderRadius: "sm",
-    backgroundColor: "rgba(220, 53, 69, 0.1)",
-    border: "1px solid #dc3545",
-    color: "#dc3545",
-    marginTop: "md",
-  }),
-  successMessage: css({
-    padding: "md",
-    backgroundColor: "rgba(40, 167, 69, 0.1)",
-    border: "1px solid #28a745",
-    borderRadius: "sm",
-    marginTop: "sm",
-  }),
-  link: css({
-    display: "inline-block",
-    color: "brand",
-    textDecoration: "none",
-    marginTop: "xs",
-    fontWeight: "medium",
-    _hover: { textDecoration: "underline" },
-  }),
-
-  // Komponenten-spezifische Styles
-  cardLayout: css({
-    display: "flex",
-    flexDirection: ["column", "column", "row"],
-    gap: "lg",
-    marginTop: "md",
-    backgroundColor: "background",
-    borderRadius: "md",
-    border: "1px solid token(colors.border)",
-    padding: "md",
-  }),
-  column: css({
-    flex: "1",
-    display: "flex",
-    flexDirection: "column",
-    gap: "md",
-  }),
-  columnHeading: css({
-    fontSize: "lg",
-    margin: 0,
-  }),
-  stepsList: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "xs",
-    marginBottom: "sm",
-  }),
-  stepItem: css({
-    display: "flex",
-    alignItems: "center",
-    gap: "sm",
-  }),
-  stepNumber: css({
-    backgroundColor: "brand",
-    color: "light",
-    width: "24px",
-    height: "24px",
-    borderRadius: "full",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "bold",
-  }),
-  promptTextarea: css({
-    padding: "md",
-    height: "150px",
-    borderRadius: "sm",
-    border: "1px solid token(colors.border)",
-    resize: "vertical",
-    marginBottom: "sm",
-    width: "100%",
-  }),
-  statusIndicator: css({
-    padding: "sm",
-    backgroundColor: "rgba(0, 102, 204, 0.1)",
-    border: "1px solid token(colors.brand)",
-    borderRadius: "sm",
-    marginBottom: "sm",
-  }),
-  statusRow: css({
-    display: "flex",
-    alignItems: "center",
-    gap: "sm",
-  }),
-  spinner: css({
-    width: "16px",
-    height: "16px",
-    borderRadius: "full",
-    border: "2px solid token(colors.brand)",
-    borderRightColor: "transparent",
-    animation: "spin 1s linear infinite",
-  }),
-  statusText: css({
-    fontSize: "sm",
-    color: "gray.600",
-    marginTop: "xs",
-  }),
-  imagePreview: css({
-    width: "100%",
-    aspectRatio: "1/1",
-    border: "2px dashed token(colors.border)",
-    borderRadius: "sm",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    backgroundColor: "#f9f9f9",
-    position: "relative",
-  }),
-  imageOverlay: css({
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.8)",
-    zIndex: 1,
-  }),
-  largeSpinner: css({
-    width: "40px",
-    height: "40px",
-    borderRadius: "full",
-    border: "4px solid token(colors.brand)",
-    borderRightColor: "transparent",
-    animation: "spin 1s linear infinite",
-    marginBottom: "md",
-  }),
-  generatedImage: css({
-    maxWidth: "100%",
-    maxHeight: "100%",
-    objectFit: "contain",
-  }),
-  placeholderContent: css({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "md",
-    textAlign: "center",
-    color: "text",
-  }),
-  placeholderIcon: css({
-    marginBottom: "sm",
-    opacity: 0.5,
-  }),
-  placeholderCaption: css({
-    fontSize: "sm",
-    color: "gray.500",
-  }),
-};
-
 export default function Page() {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
@@ -271,7 +34,7 @@ export default function Page() {
 
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [mintingStatus, setMintingStatus] = useState<"idle" | "minting" | "generating" | "error">("idle");
+  const [mintingStatus, setMintingStatus] = useState<MintingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
   // Blockchain interaction
@@ -355,25 +118,25 @@ export default function Page() {
       <h1 className={styles.heading}>Decentral AI Image Generator</h1>
 
       {/* Card-basiertes Layout mit zwei Spalten */}
-      <div className={styles.cardLayout}>
+      <div className={styles.imageGen.cardLayout}>
         {/* Linke Spalte: Eingabe und Steuerung */}
-        <div className={styles.column}>
-          <h2 className={styles.columnHeading}>Create Your Image</h2>
+        <div className={styles.imageGen.column}>
+          <h2 className={styles.imageGen.columnHeading}>Create Your Image</h2>
 
           {/* Schritte als nummerierte Karten */}
-          <div className={styles.stepsList}>
-            <div className={styles.stepItem}>
-              <span className={styles.stepNumber}>1</span>
+          <div className={styles.imageGen.stepsList}>
+            <div className={styles.imageGen.stepItem}>
+              <span className={styles.imageGen.stepNumber}>1</span>
               <span>Enter a descriptive prompt below</span>
             </div>
 
-            <div className={styles.stepItem}>
-              <span className={styles.stepNumber}>2</span>
+            <div className={styles.imageGen.stepItem}>
+              <span className={styles.imageGen.stepNumber}>2</span>
               <span>Click &quot;Mint & Generate&quot; (costs ~10¢ in ETH)</span>
             </div>
 
-            <div className={styles.stepItem}>
-              <span className={styles.stepNumber}>3</span>
+            <div className={styles.imageGen.stepItem}>
+              <span className={styles.imageGen.stepNumber}>3</span>
               <span>Wait ~30s for your image to appear</span>
             </div>
           </div>
@@ -384,17 +147,17 @@ export default function Page() {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe your image in detail... (e.g. 'A futuristic city skyline at sunset with flying cars')"
             disabled={isLoading || mintingStatus !== "idle"}
-            className={`${styles.promptTextarea} ${isLoading || mintingStatus !== "idle" ? css({ opacity: 0.7 }) : ""}`}
+            className={`${styles.imageGen.promptTextarea} ${isLoading || mintingStatus !== "idle" ? css({ opacity: 0.7 }) : ""}`}
           />
 
           {/* Status-Anzeige */}
           {mintingStatus !== "idle" && (
-            <div className={styles.statusIndicator}>
-              <div className={styles.statusRow}>
-                <div className={styles.spinner}></div>
+            <div className={styles.imageGen.statusIndicator}>
+              <div className={styles.imageGen.statusRow}>
+                <div className={styles.imageGen.spinner}></div>
                 <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating your image..."}</span>
               </div>
-              <div className={styles.statusText}>
+              <div className={styles.imageGen.statusText}>
                 {mintingStatus === "minting"
                   ? "Confirm the transaction in your wallet"
                   : "This may take up to 30 seconds"}
@@ -425,33 +188,14 @@ export default function Page() {
         </div>
 
         {/* Rechte Spalte: Bildvorschau und NFT-Details */}
-        <div className={styles.column}>
-          <h2 className={styles.columnHeading}>Your Generated Image</h2>
+        <div className={styles.imageGen.column}>
+          <h2 className={styles.imageGen.columnHeading}>Your Generated Image</h2>
 
           {/* Vereinfachte Bildvorschau */}
-          <div
-            className={css({
-              width: "100%",
-              aspectRatio: "1/1",
-              border: "2px dashed #ccc",
-              borderRadius: "md",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "md",
-              backgroundColor: mintingStatus !== "idle" ? "rgba(0, 102, 204, 0.05)" : "#f9f9f9",
-              textAlign: "center",
-              position: "relative",
-            })}
-          >
+          <div className={styles.imageGen.imagePreview}>
             {/* Bild oder Platzhalter */}
             {generatedImageUrl ? (
-              <img
-                src={generatedImageUrl}
-                alt="Generated"
-                className={css({ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" })}
-              />
+              <img src={generatedImageUrl} alt="Generated" className={styles.imageGen.generatedImage} />
             ) : (
               <>
                 {mintingStatus !== "idle" ? (

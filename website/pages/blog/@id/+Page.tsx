@@ -2,7 +2,7 @@ import * as React from "react";
 import blogs from "../../../blog/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../components/Post";
-import { css } from "../../../styled-system/css";
+import { pageContainer } from "../../../layouts/styles";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
@@ -22,7 +22,7 @@ const App: React.FC = function () {
   const nextPost = nextBlog ? { title: nextBlog.title, id: id + 1 } : null;
 
   return (
-    <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+    <div className={pageContainer}>
       <Post
         title={blog.title}
         content={blog.content}

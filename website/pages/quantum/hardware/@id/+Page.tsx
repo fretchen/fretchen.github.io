@@ -2,7 +2,7 @@ import * as React from "react";
 import blogs from "../../../../quantum/hardware/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../../components/Post";
-import { css } from "../../../../styled-system/css";
+import { pageContainer } from "../../../../layouts/styles";
 
 const App: React.FC = function () {
   const pageContext = usePageContext();
@@ -22,11 +22,10 @@ const App: React.FC = function () {
   const nextPost = nextBlog ? { title: nextBlog.title, id: id + 1 } : null;
 
   return (
-    <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+    <div className={pageContainer}>
       <Post
         title={blog.title}
         content={blog.content}
-        publishing_date={blog.publishing_date}
         prevPost={prevPost}
         nextPost={nextPost}
         basePath="/quantum/hardware" // Korrekter Pfad für diese Blog-Kategorie

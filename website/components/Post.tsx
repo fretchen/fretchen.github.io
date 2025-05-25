@@ -11,7 +11,7 @@ import rehypeRaw from "rehype-raw";
 import { BlogPost } from "../types/BlogPost";
 import TitleBar from "./TitleBar";
 import { Link } from "./Link";
-import { css } from "../styled-system/css";
+import { post } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 
 import Giscus from "@giscus/react";
@@ -28,17 +28,7 @@ export function Post({ title, content, publishing_date, prevPost, nextPost, base
   return (
     <>
       <TitleBar title={title} />
-      {publishing_date && (
-        <p
-          className={css({
-            color: "gray.600",
-            fontSize: "sm",
-            marginBottom: "md",
-          })}
-        >
-          Published on: {publishing_date}
-        </p>
-      )}
+      {publishing_date && <p className={post.publishingDate}>Published on: {publishing_date}</p>}
 
       <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
         {content}
@@ -46,44 +36,25 @@ export function Post({ title, content, publishing_date, prevPost, nextPost, base
 
       {/* Navigation zwischen Posts, nur angezeigt wenn vorhanden */}
       {(prevPost || nextPost) && (
-        <div
-          className={css({
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: "xl",
-            borderTop: "1px solid token(colors.border)",
-            paddingTop: "md",
-          })}
-        >
+        <div className={post.navigation}>
           {prevPost ? (
-            <Link
-              href={`${basePath}/${prevPost.id}`}
-              className={css({
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-              })}
-            >
-              <span className={css({ color: "gray.600" })}>Previous: </span>
-              <span className={css({ fontWeight: "medium", color: "brand" })}>{prevPost.title}</span>
-            </Link>
+            <div className={`${post.navLink} ${post.navLinkPrev}`}>
+              <Link href={`${basePath}/${prevPost.id}`}>
+                <span className={post.navLabel}>Previous: </span>
+                <span className={post.navTitle}>{prevPost.title}</span>
+              </Link>
+            </div>
           ) : (
             <div></div> // Platzhalter für Flex-Layout
           )}
 
           {nextPost ? (
-            <Link
-              href={`${basePath}/${nextPost.id}`}
-              className={css({
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
-                textAlign: "right",
-              })}
-            >
-              <span className={css({ color: "gray.600" })}>Next: </span>
-              <span className={css({ fontWeight: "medium", color: "brand" })}>{nextPost.title}</span>
-            </Link>
+            <div className={`${post.navLink} ${post.navLinkNext}`}>
+              <Link href={`${basePath}/${nextPost.id}`}>
+                <span className={post.navLabel}>Next: </span>
+                <span className={post.navTitle}>{nextPost.title}</span>
+              </Link>
+            </div>
           ) : (
             <div></div> // Platzhalter für Flex-Layout
           )}

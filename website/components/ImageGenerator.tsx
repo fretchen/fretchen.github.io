@@ -12,14 +12,8 @@ export interface ImageGeneratorProps {
 }
 
 // Helper function to wait for transaction confirmation
-export const waitForTransaction = async (
-  hash: `0x${string}`,
-  maxRetries: number = 15,
-  timeoutMs: number = 30000
-): Promise<TransactionReceipt> => {
+export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
   return new Promise<TransactionReceipt>((resolve, reject) => {
-    let retries = 0;
-    const startTime = Date.now();
     const checkReceipt = async () => {
       try {
         const receipt = await window.ethereum.request({

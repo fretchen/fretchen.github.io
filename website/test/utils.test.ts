@@ -1,11 +1,27 @@
 import { describe, it, expect } from "vitest";
 
+/**
+ * Utility function tests for blog-related operations
+ * Tests basic functionality and string processing utilities
+ * 
+ * @fileoverview Unit tests covering blog data structures, file processing,
+ * and frontmatter parsing for blog utility functions
+ */
 describe("Blog Utilities", () => {
   describe("Basic functionality", () => {
+    /**
+     * Tests basic test functionality to ensure test setup works
+     * @test {boolean} result - Simple boolean assertion test
+     */
     it("should pass a basic test", () => {
       expect(true).toBe(true);
     });
 
+    /**
+     * Tests blog data structure handling
+     * @test {Object} mockBlog - Blog entry object with required properties
+     * @test {string} properties - Individual blog entry property validation
+     */
     it("should be able to work with blog data structures", () => {
       const mockBlog = {
         title: "Test Post",

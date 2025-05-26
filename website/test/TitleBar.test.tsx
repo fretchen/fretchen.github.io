@@ -11,7 +11,7 @@ vi.mock("../components/SupportArea", () => ({
 /**
  * Component tests for the TitleBar component
  * Tests title rendering, layout structure, and edge cases
- * 
+ *
  * @fileoverview Unit tests covering title display, SupportArea integration,
  * layout validation, and various title input scenarios for the TitleBar component
  */

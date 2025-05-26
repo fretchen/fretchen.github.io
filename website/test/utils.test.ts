@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 /**
  * Utility function tests for blog-related operations
  * Tests basic functionality and string processing utilities
- * 
+ *
  * @fileoverview Unit tests covering blog data structures, file processing,
  * and frontmatter parsing for blog utility functions
  */

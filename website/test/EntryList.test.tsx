@@ -11,7 +11,7 @@ vi.mock("../components/Link", () => ({
 /**
  * Component tests for the EntryList component
  * Tests blog entry rendering, navigation links, and edge cases
- * 
+ *
  * @fileoverview Unit tests covering blog list display, link generation,
  * custom styling, and various data scenarios for the EntryList component
  */

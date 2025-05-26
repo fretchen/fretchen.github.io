@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * Integration tests for the ImageGenerator API
  * Tests the Scaleway Cloud Functions API based on readhandler.js
- * 
+ *
  * @fileoverview Integration tests covering successful API responses, error handling,
  * network issues, response validation, and URL construction for the ImageGenerator API
  */

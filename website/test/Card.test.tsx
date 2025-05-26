@@ -5,7 +5,7 @@ import { Card } from "../components/Card";
 /**
  * Basic component tests for the Card component
  * Tests component importability and props interface
- * 
+ *
  * @fileoverview Simple unit tests covering component structure and prop validation
  * for the Card component without complex rendering tests
  */

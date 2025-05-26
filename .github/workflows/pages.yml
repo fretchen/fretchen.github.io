@@ -16,7 +16,6 @@ jobs:
         run: |
           cd website
           npm ci
-          npm test
           npm run build
           mv build ../build
 

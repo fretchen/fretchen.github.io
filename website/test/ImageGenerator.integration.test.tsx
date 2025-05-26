@@ -16,12 +16,12 @@ describe("ImageGenerator API Integration", () => {
 
   describe("Successful API Response", () => {
     it("should handle successful image generation", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.resolve(mockApiResponse),
-      });
+      } as Response);
 
       const prompt = "A beautiful landscape with mountains";
       const tokenId = "123";
@@ -37,12 +37,12 @@ describe("ImageGenerator API Integration", () => {
     });
 
     it("should handle special characters in prompt", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.resolve(mockApiResponse),
-      });
+      } as Response);
 
       const prompt = "A city with 50% more details & symbols!";
       const tokenId = "456";
@@ -57,13 +57,13 @@ describe("ImageGenerator API Integration", () => {
 
   describe("API Error Responses", () => {
     it("should handle 400 - No prompt provided", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: false,
         status: 400,
         statusText: "Bad Request",
         json: () => Promise.resolve({ error: "No prompt provided" }),
-      });
+      } as Response);
 
       const tokenId = "123";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
@@ -77,13 +77,13 @@ describe("ImageGenerator API Integration", () => {
     });
 
     it("should handle 400 - No tokenId provided", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: false,
         status: 400,
         statusText: "Bad Request",
         json: () => Promise.resolve({ error: "No tokenId provided" }),
-      });
+      } as Response);
 
       const prompt = "A beautiful landscape";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
@@ -97,13 +97,13 @@ describe("ImageGenerator API Integration", () => {
     });
 
     it("should handle 404 - Token does not exist", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
         statusText: "Not Found",
         json: () => Promise.resolve({ error: "Token does not exist" }),
-      });
+      } as Response);
 
       const prompt = "A beautiful landscape";
       const tokenId = "999999"; // Non-existent token
@@ -118,13 +118,13 @@ describe("ImageGenerator API Integration", () => {
     });
 
     it("should handle 400 - Image already updated", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: false,
         status: 400,
         statusText: "Bad Request",
         json: () => Promise.resolve({ error: "Image already updated" }),
-      });
+      } as Response);
 
       const prompt = "A beautiful landscape";
       const tokenId = "123"; // Token with already updated image
@@ -139,7 +139,7 @@ describe("ImageGenerator API Integration", () => {
     });
 
     it("should handle 500 - Internal server error", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -149,7 +149,7 @@ describe("ImageGenerator API Integration", () => {
             error: "Operation fehlgeschlagen: Image generation failed",
             mintPrice: "10000000000000000",
           }),
-      });
+      } as Response);
 
       const prompt = "A beautiful landscape";
       const tokenId = "123";
@@ -167,7 +167,7 @@ describe("ImageGenerator API Integration", () => {
 
   describe("Network and Timeout Handling", () => {
     it("should handle network timeout", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockRejectedValue(new Error("Network timeout"));
 
       const prompt = "A beautiful landscape";
@@ -180,7 +180,7 @@ describe("ImageGenerator API Integration", () => {
     });
 
     it("should handle connection refused", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockRejectedValue(new Error("Connection refused"));
 
       const prompt = "A beautiful landscape";
@@ -213,12 +213,12 @@ describe("ImageGenerator API Integration", () => {
         // Missing other fields
       };
 
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.resolve(incompleteResponse),
-      });
+      } as Response);
 
       const response = await fetch("https://api.example.com");
       const data = await response.json();

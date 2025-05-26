@@ -33,10 +33,10 @@ export const waitForTransaction = async (hash: `0x${string}`): Promise<Transacti
   });
 };
 
-export function ImageGenerator({ 
+export function ImageGenerator({
   apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud",
   onSuccess,
-  onError 
+  onError,
 }: ImageGeneratorProps) {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
@@ -81,11 +81,11 @@ export function ImageGenerator({
       onError?.(errorMsg);
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
     setMintingStatus("minting");
-    
+
     try {
       // Start minting with a temporary URI
       const tempUri = `ipfs://tempURI/${Date.now()}`;
@@ -96,19 +96,19 @@ export function ImageGenerator({
         value: mintPrice,
         chainId: chain.id,
       });
-      
+
       console.log("Minting transaction sent:", txHash);
       const receipt = await waitForTransaction(txHash);
-      
+
       // Extract Token ID from transfer event
       const transferEvent = receipt?.logs.find(
         (log) => log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
       );
-      
+
       if (!transferEvent || transferEvent.topics.length < 4) {
         throw new Error("Could not extract token ID from transaction");
       }
-      
+
       const tokenIdHex = transferEvent.topics[3];
       const newTokenId = BigInt(tokenIdHex);
       console.log("Minted token ID:", newTokenId);
@@ -117,17 +117,17 @@ export function ImageGenerator({
       // Proceed with image generation
       setMintingStatus("generating");
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}`);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       console.log("Image generation completed", data);
       const imageUrl = data.image_url;
       setGeneratedImageUrl(imageUrl);
       setMintingStatus("idle");
-      
+
       onSuccess?.(newTokenId, imageUrl);
     } catch (err) {
       console.error("Error:", err);
@@ -193,9 +193,7 @@ export function ImageGenerator({
           onClick={handleMintAndGenerate}
           disabled={isLoading}
           className={`${styles.button} ${
-            isLoading || !prompt.trim() || !isConnected || !address
-              ? css({ opacity: 0.7, cursor: "not-allowed" })
-              : ""
+            isLoading || !prompt.trim() || !isConnected || !address ? css({ opacity: 0.7, cursor: "not-allowed" }) : ""
           }`}
         >
           {isLoading ? (mintingStatus === "minting" ? "Creating NFT..." : "Generating Image...") : "Mint & Generate"}
@@ -203,9 +201,7 @@ export function ImageGenerator({
 
         {/* Fehlermeldungen */}
         {!isConnected && (
-          <p className={css({ fontSize: "sm", color: "#666", margin: "xs 0" })}>
-            Connect your wallet to create an NFT
-          </p>
+          <p className={css({ fontSize: "sm", color: "#666", margin: "xs 0" })}>Connect your wallet to create an NFT</p>
         )}
         {error && <div className={styles.errorMessage}>{error}</div>}
       </div>

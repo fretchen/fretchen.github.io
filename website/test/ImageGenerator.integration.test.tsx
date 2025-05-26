@@ -26,7 +26,7 @@ describe("ImageGenerator API Integration", () => {
       const prompt = "A beautiful landscape with mountains";
       const tokenId = "123";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
       const data = await response.json();
 
@@ -47,15 +47,11 @@ describe("ImageGenerator API Integration", () => {
       const prompt = "A city with 50% more details & symbols!";
       const tokenId = "456";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent(prompt))
-      );
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("tokenId=456")
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining(encodeURIComponent(prompt)));
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("tokenId=456"));
     });
   });
 
@@ -71,7 +67,7 @@ describe("ImageGenerator API Integration", () => {
 
       const tokenId = "123";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       const response = await fetch(`${apiUrl}?tokenId=${tokenId}`); // No prompt
       const data = await response.json();
 
@@ -91,7 +87,7 @@ describe("ImageGenerator API Integration", () => {
 
       const prompt = "A beautiful landscape";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}`); // No tokenId
       const data = await response.json();
 
@@ -112,7 +108,7 @@ describe("ImageGenerator API Integration", () => {
       const prompt = "A beautiful landscape";
       const tokenId = "999999"; // Non-existent token
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
       const data = await response.json();
 
@@ -133,7 +129,7 @@ describe("ImageGenerator API Integration", () => {
       const prompt = "A beautiful landscape";
       const tokenId = "123"; // Token with already updated image
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
       const data = await response.json();
 
@@ -148,16 +144,17 @@ describe("ImageGenerator API Integration", () => {
         ok: false,
         status: 500,
         statusText: "Internal Server Error",
-        json: () => Promise.resolve({ 
-          error: "Operation fehlgeschlagen: Image generation failed",
-          mintPrice: "10000000000000000"
-        }),
+        json: () =>
+          Promise.resolve({
+            error: "Operation fehlgeschlagen: Image generation failed",
+            mintPrice: "10000000000000000",
+          }),
       });
 
       const prompt = "A beautiful landscape";
       const tokenId = "123";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
+
       const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`);
       const data = await response.json();
 
@@ -176,10 +173,10 @@ describe("ImageGenerator API Integration", () => {
       const prompt = "A beautiful landscape";
       const tokenId = "123";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
-      await expect(
-        fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`)
-      ).rejects.toThrow("Network timeout");
+
+      await expect(fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`)).rejects.toThrow(
+        "Network timeout",
+      );
     });
 
     it("should handle connection refused", async () => {
@@ -189,10 +186,10 @@ describe("ImageGenerator API Integration", () => {
       const prompt = "A beautiful landscape";
       const tokenId = "123";
       const apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud";
-      
-      await expect(
-        fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`)
-      ).rejects.toThrow("Connection refused");
+
+      await expect(fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`)).rejects.toThrow(
+        "Connection refused",
+      );
     });
   });
 
@@ -237,18 +234,18 @@ describe("ImageGenerator API Integration", () => {
       {
         prompt: "Simple prompt",
         tokenId: "1",
-        expected: "prompt=Simple%20prompt&tokenId=1"
+        expected: "prompt=Simple%20prompt&tokenId=1",
       },
       {
         prompt: "Complex prompt with special chars: !@#$%^&*()",
         tokenId: "123",
-        expected: "prompt=Complex%20prompt%20with%20special%20chars%3A%20!%40%23%24%25%5E%26*()&tokenId=123"
+        expected: "prompt=Complex%20prompt%20with%20special%20chars%3A%20!%40%23%24%25%5E%26*()&tokenId=123",
       },
       {
         prompt: "Prompt with unicode: café résumé naïve",
         tokenId: "456",
-        expected: "prompt=Prompt%20with%20unicode%3A%20caf%C3%A9%20r%C3%A9sum%C3%A9%20na%C3%AFve&tokenId=456"
-      }
+        expected: "prompt=Prompt%20with%20unicode%3A%20caf%C3%A9%20r%C3%A9sum%C3%A9%20na%C3%AFve&tokenId=456",
+      },
     ];
 
     testCases.forEach(({ prompt, tokenId, expected }) => {

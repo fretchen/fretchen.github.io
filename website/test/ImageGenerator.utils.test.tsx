@@ -20,14 +20,14 @@ describe("ImageGenerator Utilities", () => {
         logs: [],
       };
 
-      (window.ethereum.request as any).mockResolvedValue(mockReceipt);
+      vi.mocked(window.ethereum.request).mockResolvedValue(mockReceipt);
 
       // Import function dynamically to ensure fresh module state
       const { waitForTransaction } = await import("../components/ImageGenerator");
-      
+
       const result = await waitForTransaction("0x123" as `0x${string}`);
       expect(result).toEqual(mockReceipt);
-      
+
       expect(window.ethereum.request).toHaveBeenCalledWith({
         method: "eth_getTransactionReceipt",
         params: ["0x123"],
@@ -41,32 +41,32 @@ describe("ImageGenerator Utilities", () => {
         logs: [],
       };
 
-      (window.ethereum.request as any)
+      vi.mocked(window.ethereum.request)
         .mockResolvedValueOnce(null) // First call returns null
         .mockResolvedValueOnce(mockReceipt); // Second call returns receipt
 
       // Mock setTimeout to resolve immediately for testing
-      vi.spyOn(global, "setTimeout").mockImplementation((callback: any) => {
+      vi.spyOn(global, "setTimeout").mockImplementation((callback: () => void) => {
         callback();
-        return 1 as any;
+        return 1 as unknown as NodeJS.Timeout;
       });
 
       const { waitForTransaction } = await import("../components/ImageGenerator");
-      
+
       const result = await waitForTransaction("0x123" as `0x${string}`);
       expect(result).toEqual(mockReceipt);
-      
+
       expect(window.ethereum.request).toHaveBeenCalledTimes(2);
-      
+
       vi.restoreAllMocks();
     });
 
     it("should reject on ethereum request error", async () => {
       const mockError = new Error("Network error");
-      (window.ethereum.request as any).mockRejectedValue(mockError);
+      vi.mocked(window.ethereum.request).mockRejectedValue(mockError);
 
       const { waitForTransaction } = await import("../components/ImageGenerator");
-      
+
       await expect(waitForTransaction("0x123" as `0x${string}`)).rejects.toThrow("Network error");
     });
   });
@@ -96,7 +96,7 @@ describe("ImageGenerator Utilities", () => {
 
       const tokenIdHex = transferEvent?.topics[3];
       const tokenId = BigInt(tokenIdHex!);
-      
+
       expect(tokenId).toBe(BigInt(123));
     });
 
@@ -132,7 +132,7 @@ describe("ImageGenerator Utilities", () => {
       const tokenId = BigInt(456);
 
       const url = `${baseUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${tokenId}`;
-      
+
       expect(url).toContain("50%25"); // % should be encoded
       expect(url).toContain("%26"); // & should be encoded
       expect(url).toContain("symbols!"); // ! is allowed in URLs, not encoded
@@ -175,8 +175,8 @@ describe("ImageGenerator Utilities", () => {
   describe("State Management", () => {
     it("should validate MintingStatus type values", () => {
       const validStatuses = ["idle", "minting", "generating", "error"];
-      
-      validStatuses.forEach(status => {
+
+      validStatuses.forEach((status) => {
         expect(["idle", "minting", "generating", "error"]).toContain(status);
       });
     });
@@ -185,7 +185,7 @@ describe("ImageGenerator Utilities", () => {
       const tokenId = BigInt(123);
       const serialized = tokenId.toString();
       const deserialized = BigInt(serialized);
-      
+
       expect(serialized).toBe("123");
       expect(deserialized).toBe(tokenId);
     });
@@ -199,17 +199,13 @@ describe("ImageGenerator Utilities", () => {
         "Portrait of a cat in Renaissance style",
       ];
 
-      const invalidPrompts = [
-        "",
-        "   ",
-        "\n\t",
-      ];
+      const invalidPrompts = ["", "   ", "\n\t"];
 
-      validPrompts.forEach(prompt => {
+      validPrompts.forEach((prompt) => {
         expect(prompt.trim().length > 0).toBe(true);
       });
 
-      invalidPrompts.forEach(prompt => {
+      invalidPrompts.forEach((prompt) => {
         expect(prompt.trim().length > 0).toBe(false);
       });
     });
@@ -225,7 +221,7 @@ describe("ImageGenerator Utilities", () => {
     it("should handle ETH value calculations", () => {
       const mintPrice = BigInt("10000000000000000"); // 0.01 ETH in wei
       const ethValue = Number(mintPrice) / 1e18;
-      
+
       expect(ethValue).toBe(0.01);
     });
 

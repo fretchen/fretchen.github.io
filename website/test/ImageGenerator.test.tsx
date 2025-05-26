@@ -48,22 +48,22 @@ describe("ImageGenerator Component", () => {
   beforeEach(() => {
     // Reset mocks
     vi.clearAllMocks();
-    
+
     // Set up default mock returns
     mockGetGenAiNFTContractConfig.mockReturnValue(mockContractConfig);
     mockGetChain.mockReturnValue(mockChain);
-    
+
     mockUseAccount.mockReturnValue({
       address: "0x123456789abcdef",
       isConnected: true,
     });
-    
+
     mockUseReadContract.mockReturnValue({
       data: BigInt("10000000000000000"), // 0.01 ETH
       error: null,
       isLoading: false,
     });
-    
+
     mockUseWriteContract.mockReturnValue({
       writeContractAsync: vi.fn(),
       isPending: false,
@@ -78,7 +78,7 @@ describe("ImageGenerator Component", () => {
   describe("Component Rendering", () => {
     it("renders the basic component structure", () => {
       render(<ImageGenerator />);
-      
+
       expect(screen.getByText("Create Your Image")).toBeInTheDocument();
       expect(screen.getByText("Your Generated Image")).toBeInTheDocument();
       expect(screen.getByText("Enter a descriptive prompt below")).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("ImageGenerator Component", () => {
 
     it("renders the prompt textarea", () => {
       render(<ImageGenerator />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       expect(textarea).toBeInTheDocument();
       expect(textarea).toHaveAttribute("placeholder", expect.stringContaining("A futuristic city skyline"));
@@ -96,14 +96,14 @@ describe("ImageGenerator Component", () => {
 
     it("renders the mint button", () => {
       render(<ImageGenerator />);
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       expect(button).toBeInTheDocument();
     });
 
     it("shows placeholder message when no image is generated", () => {
       render(<ImageGenerator />);
-      
+
       expect(screen.getByText("Your image will appear here")).toBeInTheDocument();
     });
   });
@@ -111,10 +111,10 @@ describe("ImageGenerator Component", () => {
   describe("User Interactions", () => {
     it("allows entering text in the prompt textarea", () => {
       render(<ImageGenerator />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "A beautiful sunset" } });
-      
+
       expect(textarea).toHaveValue("A beautiful sunset");
     });
 
@@ -123,9 +123,9 @@ describe("ImageGenerator Component", () => {
         address: null,
         isConnected: false,
       });
-      
+
       render(<ImageGenerator />);
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       expect(button).not.toBeDisabled(); // Button is clickable but shows error when clicked
       expect(screen.getByText("Connect your wallet to create an NFT")).toBeInTheDocument();
@@ -133,17 +133,17 @@ describe("ImageGenerator Component", () => {
 
     it("shows visual feedback when prompt is empty", () => {
       render(<ImageGenerator />);
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       expect(button).not.toBeDisabled(); // Button is clickable but shows error when clicked
     });
 
     it("enables button when wallet is connected and prompt is provided", () => {
       render(<ImageGenerator />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "A test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       expect(button).not.toBeDisabled();
     });
@@ -155,16 +155,16 @@ describe("ImageGenerator Component", () => {
         address: null,
         isConnected: false,
       });
-      
+
       const onError = vi.fn();
       render(<ImageGenerator onError={onError} />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith("Please connect your wallet first");
       });
@@ -173,10 +173,10 @@ describe("ImageGenerator Component", () => {
     it("shows error when prompt is empty", async () => {
       const onError = vi.fn();
       render(<ImageGenerator onError={onError} />);
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith("Please enter a prompt");
       });
@@ -188,16 +188,16 @@ describe("ImageGenerator Component", () => {
         error: null,
         isLoading: false,
       });
-      
+
       const onError = vi.fn();
       render(<ImageGenerator onError={onError} />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith("Could not load mint price from contract");
       });
@@ -218,9 +218,9 @@ describe("ImageGenerator Component", () => {
 
       // Mock successful transaction
       mockWriteContractAsync.mockResolvedValue(mockTransactionHash);
-      
+
       // Mock ethereum.request for transaction receipt
-      (window.ethereum.request as any).mockResolvedValue({
+      vi.mocked(window.ethereum.request).mockResolvedValue({
         logs: [
           {
             topics: [
@@ -235,20 +235,22 @@ describe("ImageGenerator Component", () => {
     });
 
     it("calls writeContractAsync with correct parameters", async () => {
-      const mockFetch = global.fetch as any;
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ image_url: "https://example.com/image.png" }),
-      });
+      const mockFetch = vi.mocked(global.fetch);
+      mockFetch.mockResolvedValue(
+        new Response(JSON.stringify({ image_url: "https://example.com/image.png" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
 
       render(<ImageGenerator />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       await waitFor(() => {
         expect(mockWriteContractAsync).toHaveBeenCalledWith({
           ...mockContractConfig,
@@ -261,40 +263,42 @@ describe("ImageGenerator Component", () => {
     });
 
     it("handles successful minting and image generation", async () => {
-      const mockFetch = global.fetch as any;
+      const mockFetch = vi.mocked(global.fetch);
       const mockImageUrl = "https://example.com/generated-image.png";
-      
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ image_url: mockImageUrl }),
-      });
+
+      mockFetch.mockResolvedValue(
+        new Response(JSON.stringify({ image_url: mockImageUrl }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
 
       const onSuccess = vi.fn();
       render(<ImageGenerator onSuccess={onSuccess} />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       // Should show minting status
       await waitFor(() => {
         expect(screen.getByText("Creating your NFT...")).toBeInTheDocument();
       });
-      
+
       // Should show generating status or success message (since it happens quickly)
       await waitFor(() => {
         const hasGeneratingText = screen.queryByText("Generating your image...");
         const hasSuccessText = screen.queryByText("🎉 NFT successfully created!");
         expect(hasGeneratingText || hasSuccessText).toBeTruthy();
       });
-      
+
       // Should call onSuccess callback
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledWith(BigInt(mockTokenId), mockImageUrl);
       });
-      
+
       // Should display success message
       await waitFor(() => {
         expect(screen.getByText("🎉 NFT successfully created!")).toBeInTheDocument();
@@ -303,22 +307,23 @@ describe("ImageGenerator Component", () => {
     });
 
     it("handles API errors gracefully", async () => {
-      const mockFetch = global.fetch as any;
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-      });
+      const mockFetch = vi.mocked(global.fetch);
+      mockFetch.mockResolvedValue(
+        new Response("Internal Server Error", {
+          status: 500,
+          statusText: "Internal Server Error",
+        }),
+      );
 
       const onError = vi.fn();
       render(<ImageGenerator onError={onError} />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith("Error: 500 Internal Server Error");
       });
@@ -328,12 +333,14 @@ describe("ImageGenerator Component", () => {
   describe("Custom API URL", () => {
     it("uses custom API URL when provided", async () => {
       const customApiUrl = "https://custom-api.example.com";
-      const mockFetch = global.fetch as any;
-      
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ image_url: "https://example.com/image.png" }),
-      });
+      const mockFetch = vi.mocked(global.fetch);
+
+      mockFetch.mockResolvedValue(
+        new Response(JSON.stringify({ image_url: "https://example.com/image.png" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
 
       const mockWriteContractAsync = vi.fn().mockResolvedValue("0x123");
       mockUseWriteContract.mockReturnValue({
@@ -342,7 +349,7 @@ describe("ImageGenerator Component", () => {
         error: null,
       });
 
-      (window.ethereum.request as any).mockResolvedValue({
+      vi.mocked(window.ethereum.request).mockResolvedValue({
         logs: [
           {
             topics: [
@@ -356,27 +363,25 @@ describe("ImageGenerator Component", () => {
       });
 
       render(<ImageGenerator apiUrl={customApiUrl} />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining(customApiUrl)
-        );
+        expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining(customApiUrl));
       });
     });
   });
 
   describe("Component States", () => {
     it("shows loading state during minting", async () => {
-      const mockWriteContractAsync = vi.fn().mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve("0x123"), 100))
-      );
-      
+      const mockWriteContractAsync = vi
+        .fn()
+        .mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve("0x123"), 100)));
+
       mockUseWriteContract.mockReturnValue({
         writeContractAsync: mockWriteContractAsync,
         isPending: false,
@@ -384,23 +389,23 @@ describe("ImageGenerator Component", () => {
       });
 
       render(<ImageGenerator />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       // Should show loading state immediately
       expect(screen.getAllByText("Creating NFT...").length).toBeGreaterThan(0);
       expect(screen.getByText("Confirm the transaction in your wallet")).toBeInTheDocument();
     });
 
     it("disables form elements during loading", async () => {
-      const mockWriteContractAsync = vi.fn().mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve("0x123"), 100))
-      );
-      
+      const mockWriteContractAsync = vi
+        .fn()
+        .mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve("0x123"), 100)));
+
       mockUseWriteContract.mockReturnValue({
         writeContractAsync: mockWriteContractAsync,
         isPending: false,
@@ -408,13 +413,13 @@ describe("ImageGenerator Component", () => {
       });
 
       render(<ImageGenerator />);
-      
+
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       const button = screen.getByRole("button", { name: "Mint & Generate" });
       fireEvent.click(button);
-      
+
       // Should disable textarea and button during loading
       expect(textarea).toBeDisabled();
       expect(button).toBeDisabled();

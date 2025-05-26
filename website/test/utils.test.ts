@@ -10,9 +10,9 @@ describe("Blog Utilities", () => {
       const mockBlog = {
         title: "Test Post",
         content: "Test content",
-        publishing_date: "2024-01-01"
+        publishing_date: "2024-01-01",
       };
-      
+
       expect(mockBlog.title).toBe("Test Post");
       expect(mockBlog.content).toBe("Test content");
       expect(mockBlog.publishing_date).toBe("2024-01-01");
@@ -22,7 +22,7 @@ describe("Blog Utilities", () => {
       const testString = "test.md";
       const withoutExtension = testString.replace(".md", "");
       expect(withoutExtension).toBe("test");
-      
+
       const testMdxString = "example.mdx";
       const withoutMdxExtension = testMdxString.replace(".mdx", "");
       expect(withoutMdxExtension).toBe("example");
@@ -34,10 +34,10 @@ title: Test Title
 publishing_date: 2024-01-01
 ---
 Content here`;
-      
+
       const frontMatterMatch = testContent.match(/---([\s\S]*?)---/);
       expect(frontMatterMatch).toBeTruthy();
-      
+
       const titleMatch = frontMatterMatch?.[1].match(/title: (.*)/);
       expect(titleMatch?.[1]?.trim()).toBe("Test Title");
     });

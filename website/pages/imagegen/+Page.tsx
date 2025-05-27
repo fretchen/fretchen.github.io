@@ -1,5 +1,6 @@
 import React from "react";
 import ImageGenerator from "../../components/ImageGenerator";
+import NFTList from "../../components/NFTList";
 import * as styles from "../../layouts/styles";
 
 export default function Page() {
@@ -15,6 +16,7 @@ export default function Page() {
     <div className={styles.container}>
       <h1 className={styles.heading}>Decentral AI Image Generator</h1>
       <ImageGenerator onSuccess={handleSuccess} onError={handleError} />
+      <NFTList />
     </div>
   );
 }

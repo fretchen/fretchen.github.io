@@ -351,6 +351,60 @@ describe("GenImNFTv2", function () {
       const isImageUpdated = await genImNFT.read.isImageUpdated([0n]);
       expect(isImageUpdated).to.be.true;
     });
+
+    it("Should return correct authorized image updater information", async function () {
+      const { genImNFT, owner, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
+      const mintPrice = await genImNFT.read.mintPrice();
+
+      // 1. Mint ein Token
+      await genImNFT.write.safeMint(["test-uri"], { value: mintPrice });
+
+      // 2. Initialer Zustand - kein autorisierter Updater
+      const initialAuthorizedUpdater = await genImNFT.read.getAuthorizedImageUpdater([0n]);
+      expect(initialAuthorizedUpdater).to.equal("0x0000000000000000000000000000000000000000");
+
+      // 3. Führe Image-Update durch
+      const otherClient = await hre.viem.getContractAt("GenImNFTv2", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+      
+      await otherClient.write.requestImageUpdate([0n, "https://example.com/updated.png"]);
+
+      // 4. Image sollte als updated markiert sein
+      const isImageUpdated = await genImNFT.read.isImageUpdated([0n]);
+      expect(isImageUpdated).to.be.true;
+    });
+
+    it("Should fail when querying non-existent token for image update status", async function () {
+      const { genImNFT } = await loadFixture(deployGenImNFTv2Fixture);
+
+      // Versuche, Status eines nicht-existierenden Tokens abzufragen
+      await expect(genImNFT.read.isImageUpdated([999n])).to.be.rejectedWith("Token does not exist");
+      await expect(genImNFT.read.getAuthorizedImageUpdater([999n])).to.be.rejectedWith("Token does not exist");
+    });
+
+    it("Should prevent double image updates", async function () {
+      const { genImNFT, owner, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
+      const mintPrice = await genImNFT.read.mintPrice();
+
+      // 1. Mint ein Token
+      await genImNFT.write.safeMint(["test-uri"], { value: mintPrice });
+
+      // 2. Erstes Update
+      const otherClient = await hre.viem.getContractAt("GenImNFTv2", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+      
+      await otherClient.write.requestImageUpdate([0n, "https://example.com/first-update.png"]);
+
+      // 3. Image sollte als updated markiert sein
+      expect(await genImNFT.read.isImageUpdated([0n])).to.be.true;
+
+      // 4. Zweites Update sollte fehlschlagen
+      await expect(
+        otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"])
+      ).to.be.rejectedWith("Image already updated");
+    });
   });
 
   describe("Public Minting", function () {
@@ -435,6 +489,110 @@ describe("GenImNFTv2", function () {
       // 3. Das Token sollte noch existieren
       const ownerAfter = await genImNFT.read.ownerOf([0n]);
       expect(getAddress(ownerAfter)).to.equal(getAddress(owner.account.address));
+    });
+
+    it("Should clean up mappings when burning tokens", async function () {
+      const { genImNFT, owner, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
+
+      // 1. Mint ein Token
+      const tokenURI = "https://example.com/metadata/burn-cleanup-test.json";
+      const mintPrice = await genImNFT.read.mintPrice();
+      await genImNFT.write.safeMint([tokenURI], { value: mintPrice });
+
+      // 2. Führe ein Image-Update durch, um die Mappings zu setzen
+      const otherClient = await hre.viem.getContractAt("GenImNFTv2", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+      
+      const imageUrl = "https://example.com/updated-image.png";
+      await otherClient.write.requestImageUpdate([0n, imageUrl]);
+
+      // 3. Überprüfe, dass die Mappings gesetzt sind
+      const isUpdatedBefore = await genImNFT.read.isImageUpdated([0n]);
+      expect(isUpdatedBefore).to.be.true;
+
+      // 4. Verbrenne das Token
+      await genImNFT.write.burn([0n]);
+
+      // 5. Versuche, die Mappings abzufragen - sollte fehlschlagen, da Token nicht existiert
+      await expect(genImNFT.read.isImageUpdated([0n])).to.be.rejectedWith("Token does not exist");
+      await expect(genImNFT.read.getAuthorizedImageUpdater([0n])).to.be.rejectedWith("Token does not exist");
+    });
+
+    it("Should clean up mappings for multiple tokens when burned", async function () {
+      const { genImNFT, owner, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
+      const mintPrice = await genImNFT.read.mintPrice();
+
+      // 1. Mint mehrere Tokens
+      await genImNFT.write.safeMint(["uri1"], { value: mintPrice });
+      await genImNFT.write.safeMint(["uri2"], { value: mintPrice });
+      await genImNFT.write.safeMint(["uri3"], { value: mintPrice });
+
+      // 2. Update Images für alle Tokens
+      const otherClient = await hre.viem.getContractAt("GenImNFTv2", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+
+      for (let i = 0; i < 3; i++) {
+        await otherClient.write.requestImageUpdate([BigInt(i), `https://example.com/image${i}.png`]);
+      }
+
+      // 3. Überprüfe, dass alle Mappings gesetzt sind
+      for (let i = 0; i < 3; i++) {
+        const isUpdated = await genImNFT.read.isImageUpdated([BigInt(i)]);
+        expect(isUpdated).to.be.true;
+      }
+
+      // 4. Verbrenne Token 1 (mittleres Token)
+      await genImNFT.write.burn([1n]);
+
+      // 5. Überprüfe, dass Token 0 und 2 noch existieren und ihre Mappings intakt sind
+      expect(await genImNFT.read.isImageUpdated([0n])).to.be.true;
+      expect(await genImNFT.read.isImageUpdated([2n])).to.be.true;
+
+      // 6. Token 1 sollte nicht mehr existieren
+      await expect(genImNFT.read.isImageUpdated([1n])).to.be.rejectedWith("Token does not exist");
+
+      // 7. Verbrenne die restlichen Tokens
+      await genImNFT.write.burn([0n]);
+      await genImNFT.write.burn([2n]);
+
+      // 8. Alle Tokens sollten nicht mehr existieren
+      await expect(genImNFT.read.isImageUpdated([0n])).to.be.rejectedWith("Token does not exist");
+      await expect(genImNFT.read.isImageUpdated([2n])).to.be.rejectedWith("Token does not exist");
+    });
+
+    it("Should not affect other tokens when burning one token", async function () {
+      const { genImNFT, owner, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
+      const mintPrice = await genImNFT.read.mintPrice();
+
+      // 1. Mint drei Tokens
+      await genImNFT.write.safeMint(["uri1"], { value: mintPrice });
+      await genImNFT.write.safeMint(["uri2"], { value: mintPrice });
+      await genImNFT.write.safeMint(["uri3"], { value: mintPrice });
+
+      // 2. Update nur Token 0 und 2
+      const otherClient = await hre.viem.getContractAt("GenImNFTv2", genImNFT.address, {
+        client: { wallet: otherAccount },
+      });
+
+      await otherClient.write.requestImageUpdate([0n, "https://example.com/image0.png"]);
+      await otherClient.write.requestImageUpdate([2n, "https://example.com/image2.png"]);
+
+      // 3. Überprüfe Initial-Status
+      expect(await genImNFT.read.isImageUpdated([0n])).to.be.true;
+      expect(await genImNFT.read.isImageUpdated([1n])).to.be.false; // Nicht updated
+      expect(await genImNFT.read.isImageUpdated([2n])).to.be.true;
+
+      // 4. Verbrenne Token 1 (das nicht-updated Token)
+      await genImNFT.write.burn([1n]);
+
+      // 5. Token 0 und 2 sollten unverändert bleiben
+      expect(await genImNFT.read.isImageUpdated([0n])).to.be.true;
+      expect(await genImNFT.read.isImageUpdated([2n])).to.be.true;
+
+      // 6. Token 1 sollte nicht mehr existieren
+      await expect(genImNFT.read.isImageUpdated([1n])).to.be.rejectedWith("Token does not exist");
     });
   });
 

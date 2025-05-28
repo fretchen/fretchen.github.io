@@ -124,6 +124,16 @@ contract GenImNFTv2 is
         return _imageUpdated[tokenId];
     }
 
+    /**
+     * @dev Gets the authorized image updater for a token
+     * @param tokenId The ID of the token
+     * @return The address of the authorized updater (address(0) if none)
+     */
+    function getAuthorizedImageUpdater(uint256 tokenId) public view returns (address) {
+        require(_exists(tokenId), "Token does not exist");
+        return _authorizedImageUpdaters[tokenId];
+    }
+
 
     /**
      * @dev Checks if a token exists
@@ -138,6 +148,12 @@ contract GenImNFTv2 is
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
         returns (address)
     {
+        // Clean up mappings when burning (to == address(0))
+        if (to == address(0)) {
+            delete _imageUpdated[tokenId];
+            delete _authorizedImageUpdaters[tokenId];
+        }
+        
         return super._update(to, tokenId, auth);
     }
 

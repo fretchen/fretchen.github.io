@@ -20,7 +20,7 @@ interface ContractInfo {
 
 async function validateContract(proxyAddress: string): Promise<ContractInfo> {
   console.log(`\n🔍 Validating contract at: ${proxyAddress}`);
-  console.log("=" * 50);
+  console.log("=".repeat(50));
 
   // Get contract instance
   const contract = await ethers.getContractAt("GenImNFTv2", proxyAddress);

@@ -34,7 +34,8 @@ export const waitForTransaction = async (hash: `0x${string}`): Promise<Transacti
 };
 
 export function ImageGenerator({
-  apiUrl = "https://mypersonaljscloudivnad9dy-readnft.functions.fnc.fr-par.scw.cloud",
+  
+  apiUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud",
   onSuccess,
   onError,
 }: ImageGeneratorProps) {

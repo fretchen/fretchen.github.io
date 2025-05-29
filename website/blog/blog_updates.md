@@ -15,7 +15,7 @@ In the middle of the refactoring, I also made my first experiences with the [Cop
 
 > The code within the website folder uses pandacss. However in a lot of the components and pages similiar styles are defined independently and hence not consistent. The code should have all the style definitions in a consistent way in the `styles.ts` file.
 
-Then I let Copilot run with [Sonnet 4](https://www.anthropic.com/claude/sonnet) for about 20 minutes. Quite amazingly, it did a remarkable job involving fifteen files and hundreds of lines of code. All I had to do was a lint fix and [that's it](https://github.com/fretchen/fretchen.github.io/commit/8b9f37cb0ce2ef54bed23b034a40cebde72608b4).  This really makes you wonder which projects are now possible that I put on the backburner before because they were just to long and not fun enough.
+Then I let Copilot run with [Sonnet 4](https://www.anthropic.com/claude/sonnet) for about 20 minutes. Quite amazingly, it did a remarkable job involving fifteen files and hundreds of lines of code. All I had to do was a lint fix and [that's it](https://github.com/fretchen/fretchen.github.io/commit/8b9f37cb0ce2ef54bed23b034a40cebde72608b4). This really makes you wonder which projects are now possible that I put on the backburner before because they were just to long and not fun enough.
 
 ## More lecture notes
 

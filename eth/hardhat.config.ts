@@ -6,11 +6,12 @@ import "hardhat-gas-reporter";
 import "@openzeppelin/hardhat-upgrades";
 import { vars } from "hardhat/config";
 
-const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
-const SEPOLIA_PRIVATE_KEY = vars.get("SEPOLIA_PRIVATE_KEY");
-const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
-const OPTIMISTIC_ETHERSCAN_API_KEY = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY");
-const COINMARKETCAP_API_KEY = vars.get("COINMARKETCAP_API_KEY");
+// Use default values for CI/testing if environment variables are not set
+const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY", "dummy-key-for-testing");
+const SEPOLIA_PRIVATE_KEY = vars.get("SEPOLIA_PRIVATE_KEY", "0x1234567890123456789012345678901234567890123456789012345678901234");
+const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
+const OPTIMISTIC_ETHERSCAN_API_KEY = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY", "dummy-optimistic-key");
+const COINMARKETCAP_API_KEY = vars.get("COINMARKETCAP_API_KEY", "dummy-cmc-key");
 const config: HardhatUserConfig = {
   solidity: "0.8.28",
   gasReporter: {

@@ -79,11 +79,8 @@ describe("ImageGenerator Component", () => {
     it("renders the basic component structure", () => {
       render(<ImageGenerator />);
 
-      expect(screen.getByText("Create Your Image")).toBeInTheDocument();
-      expect(screen.getByText("Your Generated Image")).toBeInTheDocument();
-      expect(screen.getByText("Enter a descriptive prompt below")).toBeInTheDocument();
-      expect(screen.getByText('Click "Mint & Generate" (costs ~10¢ in ETH)')).toBeInTheDocument();
-      expect(screen.getByText("Wait ~30s for your image to appear")).toBeInTheDocument();
+      expect(screen.getByText("Create NFT")).toBeInTheDocument();
+      expect(screen.getByText("Enter prompt and generate your unique image (~10¢ in ETH)")).toBeInTheDocument();
     });
 
     it("renders the prompt textarea", () => {
@@ -97,14 +94,14 @@ describe("ImageGenerator Component", () => {
     it("renders the mint button", () => {
       render(<ImageGenerator />);
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       expect(button).toBeInTheDocument();
     });
 
-    it("shows placeholder message when no image is generated", () => {
+    it("shows compact layout", () => {
       render(<ImageGenerator />);
 
-      expect(screen.getByText("Your image will appear here")).toBeInTheDocument();
+      expect(screen.getByText("Create NFT")).toBeInTheDocument();
     });
   });
 
@@ -126,16 +123,16 @@ describe("ImageGenerator Component", () => {
 
       render(<ImageGenerator />);
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
-      expect(button).not.toBeDisabled(); // Button is clickable but shows error when clicked
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
+      expect(button).toBeDisabled(); // Button should be disabled when wallet not connected
       expect(screen.getByText("Connect your wallet to create an NFT")).toBeInTheDocument();
     });
 
     it("shows visual feedback when prompt is empty", () => {
       render(<ImageGenerator />);
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
-      expect(button).not.toBeDisabled(); // Button is clickable but shows error when clicked
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
+      expect(button).toBeDisabled(); // Button should be disabled when prompt is empty
     });
 
     it("enables button when wallet is connected and prompt is provided", () => {
@@ -144,42 +141,40 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "A test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       expect(button).not.toBeDisabled();
     });
   });
 
   describe("Error Handling", () => {
-    it("shows error when wallet is not connected", async () => {
+    it("shows helpful message when wallet is not connected", async () => {
       mockUseAccount.mockReturnValue({
         address: null,
         isConnected: false,
       });
 
-      const onError = vi.fn();
-      render(<ImageGenerator onError={onError} />);
+      render(<ImageGenerator />);
 
-      const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
-      fireEvent.change(textarea, { target: { value: "Test prompt" } });
+      // Should show persistent message about connecting wallet
+      expect(screen.getByText("Connect your wallet to create an NFT")).toBeInTheDocument();
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
-      fireEvent.click(button);
-
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith("Please connect your wallet first");
-      });
+      // Button should be disabled
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
+      expect(button).toBeDisabled();
     });
 
-    it("shows error when prompt is empty", async () => {
-      const onError = vi.fn();
-      render(<ImageGenerator onError={onError} />);
+    it("prevents action when prompt is empty", async () => {
+      render(<ImageGenerator />);
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      // Button should be disabled when prompt is empty
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
+      expect(button).toBeDisabled();
+
+      // Clicking disabled button shouldn't do anything
       fireEvent.click(button);
 
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith("Please enter a prompt");
-      });
+      // Button remains disabled
+      expect(button).toBeDisabled();
     });
 
     it("shows error when mint price is not available", async () => {
@@ -195,7 +190,7 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       await waitFor(() => {
@@ -248,7 +243,7 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       await waitFor(() => {
@@ -279,7 +274,7 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       // Should show minting status
@@ -289,8 +284,8 @@ describe("ImageGenerator Component", () => {
 
       // Should show generating status or success message (since it happens quickly)
       await waitFor(() => {
-        const hasGeneratingText = screen.queryByText("Generating your image...");
-        const hasSuccessText = screen.queryByText("🎉 NFT successfully created!");
+        const hasGeneratingText = screen.queryByText("Generating image...");
+        const hasSuccessText = screen.queryByText("✅ NFT created successfully!");
         expect(hasGeneratingText || hasSuccessText).toBeTruthy();
       });
 
@@ -301,8 +296,10 @@ describe("ImageGenerator Component", () => {
 
       // Should display success message
       await waitFor(() => {
-        expect(screen.getByText("🎉 NFT successfully created!")).toBeInTheDocument();
-        expect(screen.getByText(mockTokenId.toString())).toBeInTheDocument();
+        expect(screen.getByText("✅ NFT created successfully!")).toBeInTheDocument();
+        expect(
+          screen.getByText("Token ID: " + mockTokenId.toString() + " - Check your gallery below"),
+        ).toBeInTheDocument();
       });
     });
 
@@ -321,7 +318,7 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       await waitFor(() => {
@@ -367,7 +364,7 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       await waitFor(() => {
@@ -393,12 +390,12 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       // Should show loading state immediately
-      expect(screen.getAllByText("Creating NFT...").length).toBeGreaterThan(0);
-      expect(screen.getByText("Confirm the transaction in your wallet")).toBeInTheDocument();
+      expect(screen.getAllByText("Creating...").length).toBeGreaterThan(0);
+      expect(screen.getByText("Creating your NFT...")).toBeInTheDocument();
     });
 
     it("disables form elements during loading", async () => {
@@ -417,7 +414,7 @@ describe("ImageGenerator Component", () => {
       const textarea = screen.getByPlaceholderText(/Describe your image in detail/);
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
-      const button = screen.getByRole("button", { name: "Mint & Generate" });
+      const button = screen.getByRole("button", { name: "🎨 Create NFT" });
       fireEvent.click(button);
 
       // Should disable textarea and button during loading

@@ -9,7 +9,6 @@ export interface ImageGeneratorProps {
   apiUrl?: string;
   onSuccess?: (tokenId: bigint, imageUrl: string) => void;
   onError?: (error: string) => void;
-  isCompact?: boolean;
 }
 
 // Helper function to wait for transaction confirmation
@@ -38,7 +37,6 @@ export function ImageGenerator({
   apiUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud",
   onSuccess,
   onError,
-  isCompact = false,
 }: ImageGeneratorProps) {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
@@ -130,7 +128,16 @@ export function ImageGenerator({
       setGeneratedImageUrl(imageUrl);
       setMintingStatus("idle");
 
+      // Erfolgreich - rufe Callback auf und reset Form
       onSuccess?.(newTokenId, imageUrl);
+      
+      // Reset form für nächste Erstellung
+      setTimeout(() => {
+        setPrompt("");
+        setGeneratedImageUrl(undefined);
+        setTokenId(undefined);
+        setError(null);
+      }, 3000);
     } catch (err) {
       console.error("Error:", err);
       const errorMsg = err instanceof Error ? err.message : "An unknown error occurred";
@@ -142,20 +149,21 @@ export function ImageGenerator({
     }
   };
 
-  return isCompact ? (
-    /* Kompaktes Layout für wiederholte Nutzung */
+  return (
     <div className={styles.imageGen.compactLayout}>
       <div className={styles.imageGen.compactContainer}>
         <div className={styles.imageGen.compactHeader}>
-          <h3 className={styles.imageGen.compactTitle}>Create Another NFT</h3>
-          <span className={styles.imageGen.compactSubtitle}>Enter prompt and click generate (~10¢ in ETH)</span>
+          <h3 className={styles.imageGen.compactTitle}>Create NFT</h3>
+          <span className={styles.imageGen.compactSubtitle}>
+            Enter prompt and generate your unique image (~10¢ in ETH)
+          </span>
         </div>
 
         <div className={styles.imageGen.compactForm}>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your next image..."
+            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset')"
             disabled={isLoading || mintingStatus !== "idle"}
             className={styles.imageGen.compactTextarea}
           />
@@ -171,7 +179,7 @@ export function ImageGenerator({
           </button>
         </div>
 
-        {/* Status-Anzeige für kompakten Modus */}
+        {/* Status-Anzeige */}
         {mintingStatus !== "idle" && (
           <div className={styles.imageGen.compactStatus}>
             <div className={styles.imageGen.spinner}></div>
@@ -182,103 +190,13 @@ export function ImageGenerator({
         {!isConnected && <div className={styles.imageGen.compactError}>Connect your wallet to create an NFT</div>}
 
         {error && <div className={styles.imageGen.compactError}>{error}</div>}
-      </div>
-    </div>
-  ) : (
-    /* Vollständiges Layout für ersten Gebrauch */
-    <div className={styles.imageGen.cardLayout}>
-      {/* Linke Spalte: Eingabe und Steuerung */}
-      <div className={styles.imageGen.column}>
-        <h2 className={styles.imageGen.columnHeading}>Create Your Image</h2>
 
-        {/* Schritte als nummerierte Karten */}
-        <div className={styles.imageGen.stepsList}>
-          <div className={styles.imageGen.stepItem}>
-            <span className={styles.imageGen.stepNumber}>1</span>
-            <span>Enter a descriptive prompt below</span>
-          </div>
-
-          <div className={styles.imageGen.stepItem}>
-            <span className={styles.imageGen.stepNumber}>2</span>
-            <span>Click &quot;Mint & Generate&quot; (costs ~10¢ in ETH)</span>
-          </div>
-
-          <div className={styles.imageGen.stepItem}>
-            <span className={styles.imageGen.stepNumber}>3</span>
-            <span>Wait ~30s for your image to appear</span>
-          </div>
-        </div>
-
-        {/* Eingabeformular */}
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe your image in detail... (e.g. 'A futuristic city skyline at sunset with flying cars')"
-          disabled={isLoading || mintingStatus !== "idle"}
-          className={`${styles.imageGen.promptTextarea} ${isLoading || mintingStatus !== "idle" ? css({ opacity: 0.7 }) : ""}`}
-        />
-
-        {/* Status-Anzeige */}
-        {mintingStatus !== "idle" && (
-          <div className={styles.imageGen.statusIndicator}>
-            <div className={styles.imageGen.statusRow}>
-              <div className={styles.imageGen.spinner}></div>
-              <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating your image..."}</span>
-            </div>
-            <div className={styles.imageGen.statusText}>
-              {mintingStatus === "minting"
-                ? "Confirm the transaction in your wallet"
-                : "This may take up to 30 seconds"}
-            </div>
-          </div>
-        )}
-
-        {/* Mint-Button */}
-        <button
-          onClick={handleMintAndGenerate}
-          disabled={isLoading}
-          className={`${styles.button} ${
-            isLoading || !prompt.trim() || !isConnected || !address ? css({ opacity: 0.7, cursor: "not-allowed" }) : ""
-          }`}
-        >
-          {isLoading ? (mintingStatus === "minting" ? "Creating NFT..." : "Generating Image...") : "Mint & Generate"}
-        </button>
-
-        {/* Fehlermeldungen */}
-        {!isConnected && (
-          <p className={css({ fontSize: "sm", color: "#666", margin: "xs 0" })}>Connect your wallet to create an NFT</p>
-        )}
-        {error && <div className={styles.errorMessage}>{error}</div>}
-      </div>
-
-      {/* Rechte Spalte: Bildvorschau und NFT-Details */}
-      <div className={styles.imageGen.column}>
-        <h2 className={styles.imageGen.columnHeading}>Your Generated Image</h2>
-
-        {/* Vereinfachte Bildvorschau */}
-        <div className={styles.imageGen.imagePreview}>
-          {/* Bild oder Platzhalter */}
-          {generatedImageUrl ? (
-            <img src={generatedImageUrl} alt="Generated" className={styles.imageGen.generatedImage} />
-          ) : (
-            <>
-              {mintingStatus !== "idle" ? (
-                <p className={css({ fontWeight: "medium" })}>
-                  {mintingStatus === "minting" ? "Creating NFT..." : "Generating your image..."}
-                </p>
-              ) : (
-                <p>Your image will appear here</p>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* NFT-Details */}
-        {tokenId && (
+        {/* Erfolgreiche Erstellung */}
+        {tokenId && generatedImageUrl && (
           <div className={styles.successMessage}>
-            <h3 className={css({ margin: 0, fontSize: "md" })}>🎉 NFT successfully created!</h3>
-            <p className={css({ margin: "xs 0" })}>
-              <strong>Token ID:</strong> {tokenId.toString()}
+            <h4 className={css({ margin: 0, fontSize: "sm" })}>✅ NFT created successfully!</h4>
+            <p className={css({ margin: "xs 0", fontSize: "sm" })}>
+              Token ID: {tokenId.toString()} - Check your gallery below
             </p>
           </div>
         )}

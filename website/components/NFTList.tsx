@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
@@ -201,8 +201,20 @@ interface NFTCardProps {
 }
 
 function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
-  const { writeContract, isPending: isBurning } = useWriteContract();
+  const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  
+  // Warte auf Transaktionsbestätigung
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  // Aktualisiere die NFT-Liste nach erfolgreicher Bestätigung
+  useEffect(() => {
+    if (isConfirmed) {
+      onNftBurned();
+    }
+  }, [isConfirmed, onNftBurned]);
   
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -250,9 +262,6 @@ function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
         functionName: "burn",
         args: [nft.tokenId],
       });
-
-      // Erfolg wird durch den onSuccess-Callback von useWriteContract gehandhabt
-      onNftBurned();
     } catch (error) {
       console.error("Burn failed:", error);
       alert("Failed to burn NFT. Please try again.");
@@ -332,11 +341,11 @@ function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
             )}
             <button
               onClick={handleBurn}
-              disabled={isBurning}
-              className={`${styles.nftCard.actionButton} ${isBurning ? styles.nftCard.disabledButton : styles.nftCard.burnButton}`}
+              disabled={isBurning || isConfirming}
+              className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.nftCard.disabledButton : styles.nftCard.burnButton}`}
               title="Burn NFT (permanent)"
             >
-              {isBurning ? "🔥..." : "🔥 Burn"}
+              {isBurning ? "🔥 Burning..." : isConfirming ? "⏳ Confirming..." : "🔥 Burn"}
             </button>
           </div>
         </>

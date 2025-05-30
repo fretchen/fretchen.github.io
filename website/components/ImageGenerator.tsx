@@ -9,6 +9,7 @@ export interface ImageGeneratorProps {
   apiUrl?: string;
   onSuccess?: (tokenId: bigint, imageUrl: string) => void;
   onError?: (error: string) => void;
+  isCompact?: boolean;
 }
 
 // Helper function to wait for transaction confirmation
@@ -37,6 +38,7 @@ export function ImageGenerator({
   apiUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud",
   onSuccess,
   onError,
+  isCompact = false,
 }: ImageGeneratorProps) {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
@@ -56,7 +58,7 @@ export function ImageGenerator({
     ...genAiNFTContractConfig,
     functionName: "mintPrice",
     args: [],
-    chainId: chain.id,
+    ...(chain?.id && { chainId: chain.id }),
   });
 
   // Contract write operations
@@ -93,8 +95,8 @@ export function ImageGenerator({
         ...genAiNFTContractConfig,
         functionName: "safeMint",
         args: [tempUri],
-        value: mintPrice,
-        chainId: chain.id,
+        value: mintPrice as bigint,
+        ...(chain?.id && { chainId: chain.id }),
       });
 
       console.log("Minting transaction sent:", txHash);
@@ -140,7 +142,50 @@ export function ImageGenerator({
     }
   };
 
-  return (
+  return isCompact ? (
+    /* Kompaktes Layout für wiederholte Nutzung */
+    <div className={styles.imageGen.compactLayout}>
+      <div className={styles.imageGen.compactContainer}>
+        <div className={styles.imageGen.compactHeader}>
+          <h3 className={styles.imageGen.compactTitle}>Create Another NFT</h3>
+          <span className={styles.imageGen.compactSubtitle}>Enter prompt and click generate (~10¢ in ETH)</span>
+        </div>
+
+        <div className={styles.imageGen.compactForm}>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Describe your next image..."
+            disabled={isLoading || mintingStatus !== "idle"}
+            className={styles.imageGen.compactTextarea}
+          />
+
+          <button
+            onClick={handleMintAndGenerate}
+            disabled={isLoading || !prompt.trim() || !isConnected}
+            className={`${styles.imageGen.compactButton} ${
+              isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
+            }`}
+          >
+            {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create NFT"}
+          </button>
+        </div>
+
+        {/* Status-Anzeige für kompakten Modus */}
+        {mintingStatus !== "idle" && (
+          <div className={styles.imageGen.compactStatus}>
+            <div className={styles.imageGen.spinner}></div>
+            <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating image..."}</span>
+          </div>
+        )}
+
+        {!isConnected && <div className={styles.imageGen.compactError}>Connect your wallet to create an NFT</div>}
+
+        {error && <div className={styles.imageGen.compactError}>{error}</div>}
+      </div>
+    </div>
+  ) : (
+    /* Vollständiges Layout für ersten Gebrauch */
     <div className={styles.imageGen.cardLayout}>
       {/* Linke Spalte: Eingabe und Steuerung */}
       <div className={styles.imageGen.column}>
@@ -235,14 +280,6 @@ export function ImageGenerator({
             <p className={css({ margin: "xs 0" })}>
               <strong>Token ID:</strong> {tokenId.toString()}
             </p>
-            <a
-              href={`https://optimistic.etherscan.io/token/${genAiNFTContractConfig.address}?a=${tokenId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.link}
-            >
-              View on Etherscan →
-            </a>
           </div>
         )}
       </div>

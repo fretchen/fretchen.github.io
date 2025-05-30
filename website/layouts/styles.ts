@@ -250,6 +250,90 @@ export const imageGen = {
     fontSize: "sm",
     color: "gray.500",
   }),
+
+  // Kompaktes Layout für wiederholte Nutzung
+  compactLayout: css({
+    background: "background",
+    borderRadius: "md",
+    border: "1px solid token(colors.border)",
+    padding: "md",
+    marginBottom: "xl",
+  }),
+  compactContainer: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "sm",
+  }),
+  compactHeader: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "xs",
+  }),
+  compactTitle: css({
+    fontSize: "md",
+    fontWeight: "semibold",
+    margin: 0,
+    color: "brand",
+  }),
+  compactSubtitle: css({
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  compactForm: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "flex-end",
+  }),
+  compactTextarea: css({
+    flex: 1,
+    padding: "sm",
+    border: "1px solid token(colors.border)",
+    borderRadius: "sm",
+    fontSize: "sm",
+    minHeight: "40px",
+    maxHeight: "80px",
+    resize: "vertical",
+    _focus: {
+      outline: "none",
+      borderColor: "brand",
+    },
+  }),
+  compactButton: css({
+    padding: "sm md",
+    backgroundColor: "brand",
+    color: "light",
+    border: "none",
+    borderRadius: "sm",
+    cursor: "pointer",
+    fontWeight: "medium",
+    fontSize: "sm",
+    whiteSpace: "nowrap",
+    transition: "all 0.2s",
+    _hover: {
+      backgroundColor: "#0052a3",
+    },
+  }),
+  compactButtonDisabled: css({
+    opacity: 0.6,
+    cursor: "not-allowed",
+  }),
+  compactStatus: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+    padding: "sm",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: "sm",
+    fontSize: "sm",
+  }),
+  compactError: css({
+    padding: "sm",
+    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    border: "1px solid #dc3545",
+    color: "#dc3545",
+    borderRadius: "sm",
+    fontSize: "sm",
+  }),
 };
 
 // ===== KOMPONENTEN-SPEZIFISCHE STILE =====
@@ -585,6 +669,12 @@ export const nftCard = {
       transform: "translateY(-2px)",
       boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
     },
+  }),
+  highlighted: css({
+    border: "2px solid rgba(34, 197, 94, 1)",
+    background: "rgba(240, 253, 244, 1)",
+    animation: "pulse 2s ease-in-out infinite",
+    boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)",
   }),
   loadingContainer: css({
     textAlign: "center",

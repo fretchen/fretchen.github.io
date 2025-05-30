@@ -21,13 +21,19 @@ interface NFT {
   error?: string;
 }
 
-export function NFTList() {
+export interface NFTListProps {
+  newlyCreatedNFT?: { tokenId: bigint; imageUrl: string };
+  onNewNFTDisplayed?: () => void;
+}
+
+export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
   const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [highlightedNFT, setHighlightedNFT] = useState<bigint | null>(null);
   const [selectedImage, setSelectedImage] = useState<{
     src: string;
     alt: string;
@@ -69,7 +75,7 @@ export function NFTList() {
   };
 
   // Load user's NFTs using enumerable functions
-  const loadUserNFTs = async () => {
+  const loadUserNFTs = async (preserveTemporary = false) => {
     if (!isConnected || !address || !userBalance || userBalance === 0n) {
       setNfts([]);
       return;
@@ -78,6 +84,9 @@ export function NFTList() {
     setIsLoadingMetadata(true);
 
     try {
+      // Store temporary NFTs that we want to preserve
+      const tempNFTs = preserveTemporary ? nfts.filter((nft) => nft.tokenURI === "" && nft.imageUrl && !nft.error) : [];
+
       const nftList: NFT[] = [];
 
       // Create placeholder NFTs first
@@ -88,7 +97,10 @@ export function NFTList() {
           isLoading: true,
         });
       }
-      setNfts([...nftList]);
+      
+      // Add temporary NFTs at the beginning if preserving
+      const finalList = preserveTemporary ? [...tempNFTs, ...nftList] : nftList;
+      setNfts([...finalList]);
 
       // Load each NFT's data sequentially
       for (let i = 0; i < Number(userBalance); i++) {
@@ -115,7 +127,8 @@ export function NFTList() {
           const metadata = await fetchNFTMetadata(tokenURI);
 
           // Update NFT in list
-          nftList[i] = {
+          const adjustedIndex = preserveTemporary ? i + tempNFTs.length : i;
+          const updatedNFT = {
             tokenId,
             tokenURI,
             metadata: metadata || undefined,
@@ -123,21 +136,35 @@ export function NFTList() {
             isLoading: false,
           };
 
-          setNfts([...nftList]);
+          setNfts((prev) => {
+            const updated = [...prev];
+            if (adjustedIndex < updated.length) {
+              updated[adjustedIndex] = updatedNFT;
+            }
+            return updated;
+          });
         } catch (error) {
           console.error(`Error loading NFT at index ${i}:`, error);
-          nftList[i] = {
-            tokenId: 0n,
-            tokenURI: "",
-            isLoading: false,
-            error: `Failed to load NFT #${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
-          };
-          setNfts([...nftList]);
+          const adjustedIndex = preserveTemporary ? i + tempNFTs.length : i;
+          setNfts((prev) => {
+            const updated = [...prev];
+            if (adjustedIndex < updated.length) {
+              updated[adjustedIndex] = {
+                tokenId: 0n,
+                tokenURI: "",
+                isLoading: false,
+                error: `Failed to load NFT #${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
+              };
+            }
+            return updated;
+          });
         }
       }
     } catch (error) {
       console.error("Error loading NFTs:", error);
-      setNfts([]);
+      if (!preserveTemporary) {
+        setNfts([]);
+      }
     } finally {
       setIsLoadingMetadata(false);
     }
@@ -146,6 +173,48 @@ export function NFTList() {
   useEffect(() => {
     loadUserNFTs();
   }, [address, isConnected, userBalance]);
+
+  // Handle newly created NFT
+  useEffect(() => {
+    if (newlyCreatedNFT) {
+      // Set highlighting for the new NFT
+      setHighlightedNFT(newlyCreatedNFT.tokenId);
+      
+      // Create temporary NFT for immediate display
+      const tempNFT: NFT = {
+        tokenId: newlyCreatedNFT.tokenId,
+        tokenURI: "",
+        imageUrl: newlyCreatedNFT.imageUrl,
+        isLoading: false,
+      };
+      
+      // Add to top of list, but ensure we don't duplicate if it already exists
+      setNfts((prevNfts) => {
+        const existingIndex = prevNfts.findIndex((nft) => nft.tokenId === newlyCreatedNFT.tokenId);
+        if (existingIndex !== -1) {
+          // Update existing NFT with image
+          const updatedNfts = [...prevNfts];
+          updatedNfts[existingIndex] = { ...updatedNfts[existingIndex], imageUrl: newlyCreatedNFT.imageUrl };
+          return updatedNfts;
+        } else {
+          // Add new NFT at the top
+          return [tempNFT, ...prevNfts];
+        }
+      });
+      
+      // Remove highlighting after 5 seconds
+      setTimeout(() => {
+        setHighlightedNFT(null);
+        onNewNFTDisplayed?.();
+      }, 5000);
+
+      // Refresh list after a longer delay to ensure blockchain consistency
+      // But preserve the newly created NFT by ensuring it doesn't get overwritten
+      setTimeout(() => {
+        loadUserNFTs(true); // Preserve temporary NFTs during refresh
+      }, 10000); // Increased to 10 seconds for better stability
+    }
+  }, [newlyCreatedNFT, onNewNFTDisplayed]);
 
   if (!isConnected) {
     return (
@@ -182,6 +251,7 @@ export function NFTList() {
               nft={nft}
               onImageClick={setSelectedImage}
               onNftBurned={() => loadUserNFTs()}
+              isHighlighted={highlightedNFT === nft.tokenId}
             />
           ))}
         </div>
@@ -198,12 +268,13 @@ interface NFTCardProps {
   nft: NFT;
   onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
   onNftBurned: () => void;
+  isHighlighted?: boolean;
 }
 
-function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
+function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
-  
+
   // Warte auf Transaktionsbestätigung
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
@@ -215,7 +286,7 @@ function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
       onNftBurned();
     }
   }, [isConfirmed, onNftBurned]);
-  
+
   const handleImageClick = () => {
     if (nft.imageUrl) {
       onImageClick({
@@ -269,7 +340,7 @@ function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
   };
 
   return (
-    <div className={styles.nftCard.container}>
+    <div className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""}`}>
       {nft.isLoading ? (
         <div className={styles.nftCard.loadingContainer}>
           <div className={styles.imageGen.spinner}></div>
@@ -312,11 +383,6 @@ function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
 
           <div className={styles.nftCard.footer}>
             <span>Token ID: {nft.tokenId.toString()}</span>
-            {nft.tokenURI && (
-              <a href={nft.tokenURI} target="_blank" rel="noopener noreferrer" className={styles.nftCard.metadataLink}>
-                Metadata
-              </a>
-            )}
           </div>
 
           {/* Aktions-Buttons */}

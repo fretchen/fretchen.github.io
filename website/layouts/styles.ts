@@ -750,14 +750,17 @@ export const nftCard = {
     maxHeight: "90vh",
     background: "white",
     borderRadius: "md",
-    overflow: "hidden",
+    overflow: "auto",
     boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    display: "flex",
+    flexDirection: "column",
   }),
   modalImage: css({
     width: "100%",
     height: "auto",
-    maxHeight: "80vh",
+    maxHeight: "60vh",
     objectFit: "contain",
+    flexShrink: 0,
   }),
   modalClose: css({
     position: "absolute",
@@ -781,6 +784,9 @@ export const nftCard = {
   modalInfo: css({
     padding: "md",
     borderTop: "1px solid rgba(229, 231, 235, 1)",
+    flex: "1",
+    minHeight: "0",
+    overflow: "auto",
   }),
   modalTitle: css({
     fontSize: "lg",

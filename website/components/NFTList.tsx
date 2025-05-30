@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
@@ -28,6 +28,12 @@ export function NFTList() {
 
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{
+    src: string;
+    alt: string;
+    title?: string;
+    description?: string;
+  } | null>(null);
 
   // Get user's NFT balance
   const { data: userBalance, isLoading: isLoadingBalance } = useReadContract({
@@ -171,16 +177,88 @@ export function NFTList() {
       ) : (
         <div className={styles.nftList.grid}>
           {nfts.map((nft, index) => (
-            <NFTCard key={`${nft.tokenId}-${index}`} nft={nft} />
+            <NFTCard
+              key={`${nft.tokenId}-${index}`}
+              nft={nft}
+              onImageClick={setSelectedImage}
+              onNftBurned={() => loadUserNFTs()}
+            />
           ))}
         </div>
       )}
+
+      {/* Bildvergrößerungs-Modal */}
+      {selectedImage && <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />}
     </div>
   );
 }
 
 // NFT Card Component
-function NFTCard({ nft }: { nft: NFT }) {
+interface NFTCardProps {
+  nft: NFT;
+  onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
+  onNftBurned: () => void;
+}
+
+function NFTCard({ nft, onImageClick, onNftBurned }: NFTCardProps) {
+  const { writeContract, isPending: isBurning } = useWriteContract();
+  const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  
+  const handleImageClick = () => {
+    if (nft.imageUrl) {
+      onImageClick({
+        src: nft.imageUrl,
+        alt: nft.metadata?.name || `NFT #${nft.tokenId}`,
+        title: nft.metadata?.name,
+        description: nft.metadata?.description,
+      });
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!nft.imageUrl) return;
+
+    try {
+      const response = await fetch(nft.imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${nft.metadata?.name || `NFT-${nft.tokenId}`}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const handleBurn = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to burn NFT "${nft.metadata?.name || `#${nft.tokenId}`}"? This action cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await writeContract({
+        ...genAiNFTContractConfig,
+        functionName: "burn",
+        args: [nft.tokenId],
+      });
+
+      // Erfolg wird durch den onSuccess-Callback von useWriteContract gehandhabt
+      onNftBurned();
+    } catch (error) {
+      console.error("Burn failed:", error);
+      alert("Failed to burn NFT. Please try again.");
+    }
+  };
+
   return (
     <div className={styles.nftCard.container}>
       {nft.isLoading ? (
@@ -203,6 +281,8 @@ function NFTCard({ nft }: { nft: NFT }) {
                 src={nft.imageUrl}
                 alt={nft.metadata?.name || `NFT #${nft.tokenId}`}
                 className={styles.nftCard.image}
+                onClick={handleImageClick}
+                style={{ cursor: "pointer" }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = "none";
@@ -229,8 +309,106 @@ function NFTCard({ nft }: { nft: NFT }) {
               </a>
             )}
           </div>
+
+          {/* Aktions-Buttons */}
+          <div className={styles.nftCard.actions}>
+            {nft.imageUrl && (
+              <button
+                onClick={handleImageClick}
+                className={`${styles.nftCard.actionButton} ${styles.nftCard.zoomButton}`}
+                title="View full size"
+              >
+                🔍 Zoom
+              </button>
+            )}
+            {nft.imageUrl && (
+              <button
+                onClick={handleDownload}
+                className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
+                title="Download image"
+              >
+                ⬇️ Save
+              </button>
+            )}
+            <button
+              onClick={handleBurn}
+              disabled={isBurning}
+              className={`${styles.nftCard.actionButton} ${isBurning ? styles.nftCard.disabledButton : styles.nftCard.burnButton}`}
+              title="Burn NFT (permanent)"
+            >
+              {isBurning ? "🔥..." : "🔥 Burn"}
+            </button>
+          </div>
         </>
       )}
+    </div>
+  );
+}
+
+// Bildvergrößerungs-Modal Komponente
+interface ImageModalProps {
+  image: {
+    src: string;
+    alt: string;
+    title?: string;
+    description?: string;
+  };
+  onClose: () => void;
+}
+
+function ImageModal({ image, onClose }: ImageModalProps) {
+  // Schließen bei Escape-Taste
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(image.src);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${image.title || "NFT-image"}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  return (
+    <div className={styles.nftCard.modalOverlay} onClick={onClose}>
+      <div className={styles.nftCard.modalContent} onClick={(e) => e.stopPropagation()}>
+        <button className={styles.nftCard.modalClose} onClick={onClose}>
+          ✕
+        </button>
+        <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} />
+        {(image.title || image.description) && (
+          <div className={styles.nftCard.modalInfo}>
+            {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}
+            {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
+            <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
+              <button
+                onClick={handleDownload}
+                className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
+              >
+                ⬇️ Download Full Size
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

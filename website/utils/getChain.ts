@@ -246,6 +246,11 @@ const nftAbi = [
     type: "error",
   },
   {
+    inputs: [],
+    name: "ERC721EnumerableForbiddenBatchMint",
+    type: "error",
+  },
+  {
     inputs: [
       {
         internalType: "address",
@@ -346,6 +351,22 @@ const nftAbi = [
       },
     ],
     name: "ERC721NonexistentToken",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "owner",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "index",
+        type: "uint256",
+      },
+    ],
+    name: "ERC721OutOfBoundsIndex",
     type: "error",
   },
   {
@@ -705,6 +726,25 @@ const nftAbi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+    ],
+    name: "getAuthorizedImageUpdater",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "initialize",
     outputs: [],
@@ -987,6 +1027,49 @@ const nftAbi = [
     inputs: [
       {
         internalType: "uint256",
+        name: "index",
+        type: "uint256",
+      },
+    ],
+    name: "tokenByIndex",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "owner",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "index",
+        type: "uint256",
+      },
+    ],
+    name: "tokenOfOwnerByIndex",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
         name: "tokenId",
         type: "uint256",
       },
@@ -997,6 +1080,19 @@ const nftAbi = [
         internalType: "string",
         name: "",
         type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "totalSupply",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -1072,9 +1168,9 @@ export function getGenAiNFTContractConfig() {
     case "sepolia":
       return { address: "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6", abi: nftAbi } as const;
     case "optimism":
-      return { address: "0x9859431b682e861b19e87Db14a04944BC747AB6d", abi: nftAbi } as const;
+      return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: nftAbi } as const;
     default:
-      return { address: "0x9859431b682e861b19e87Db14a04944BC747AB6d", abi: nftAbi } as const;
+      return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: nftAbi } as const;
   }
 }
 

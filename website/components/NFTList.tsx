@@ -87,79 +87,82 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
       // Store temporary NFTs that we want to preserve
       const tempNFTs = preserveTemporary ? nfts.filter((nft) => nft.tokenURI === "" && nft.imageUrl && !nft.error) : [];
 
-      const nftList: NFT[] = [];
-
-      // Create placeholder NFTs first
-      for (let i = 0; i < Number(userBalance); i++) {
-        nftList.push({
-          tokenId: 0n,
-          tokenURI: "",
-          isLoading: true,
-        });
-      }
+      // Show loading placeholders initially
+      const placeholderNFTs = Array.from({ length: Number(userBalance) }, () => ({
+        tokenId: 0n,
+        tokenURI: "",
+        isLoading: true,
+      }));
       
       // Add temporary NFTs at the beginning if preserving
-      const finalList = preserveTemporary ? [...tempNFTs, ...nftList] : nftList;
-      setNfts([...finalList]);
+      const initialList = preserveTemporary ? [...tempNFTs, ...placeholderNFTs] : placeholderNFTs;
+      setNfts(initialList);
 
-      // Load each NFT's data sequentially
+      // Load all NFT data first, then sort by tokenId
+      const nftPromises: Promise<NFT>[] = [];
+      
       for (let i = 0; i < Number(userBalance); i++) {
-        try {
-          // Get token ID at index using wagmi's readContract
-          const tokenIdResult = await readContract(config, {
-            ...genAiNFTContractConfig,
-            functionName: "tokenOfOwnerByIndex",
-            args: [address, BigInt(i)],
-          });
+        const nftPromise = (async () => {
+          try {
+            // Get token ID at index using wagmi's readContract
+            const tokenIdResult = await readContract(config, {
+              ...genAiNFTContractConfig,
+              functionName: "tokenOfOwnerByIndex",
+              args: [address, BigInt(i)],
+            });
 
-          const tokenId = tokenIdResult as bigint;
+            const tokenId = tokenIdResult as bigint;
 
-          // Get token URI
-          const tokenURIResult = await readContract(config, {
-            ...genAiNFTContractConfig,
-            functionName: "tokenURI",
-            args: [tokenId],
-          });
+            // Get token URI
+            const tokenURIResult = await readContract(config, {
+              ...genAiNFTContractConfig,
+              functionName: "tokenURI",
+              args: [tokenId],
+            });
 
-          const tokenURI = tokenURIResult as string;
+            const tokenURI = tokenURIResult as string;
 
-          // Fetch metadata
-          const metadata = await fetchNFTMetadata(tokenURI);
+            // Fetch metadata
+            const metadata = await fetchNFTMetadata(tokenURI);
 
-          // Update NFT in list
-          const adjustedIndex = preserveTemporary ? i + tempNFTs.length : i;
-          const updatedNFT = {
-            tokenId,
-            tokenURI,
-            metadata: metadata || undefined,
-            imageUrl: metadata?.image,
-            isLoading: false,
-          };
-
-          setNfts((prev) => {
-            const updated = [...prev];
-            if (adjustedIndex < updated.length) {
-              updated[adjustedIndex] = updatedNFT;
-            }
-            return updated;
-          });
-        } catch (error) {
-          console.error(`Error loading NFT at index ${i}:`, error);
-          const adjustedIndex = preserveTemporary ? i + tempNFTs.length : i;
-          setNfts((prev) => {
-            const updated = [...prev];
-            if (adjustedIndex < updated.length) {
-              updated[adjustedIndex] = {
-                tokenId: 0n,
-                tokenURI: "",
-                isLoading: false,
-                error: `Failed to load NFT #${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
-              };
-            }
-            return updated;
-          });
-        }
+            return {
+              tokenId,
+              tokenURI,
+              metadata: metadata || undefined,
+              imageUrl: metadata?.image,
+              isLoading: false,
+            };
+          } catch (error) {
+            console.error(`Error loading NFT at index ${i}:`, error);
+            return {
+              tokenId: 0n,
+              tokenURI: "",
+              isLoading: false,
+              error: `Failed to load NFT #${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            };
+          }
+        })();
+        
+        nftPromises.push(nftPromise);
       }
+
+      // Wait for all NFTs to load
+      const loadedNFTs = await Promise.all(nftPromises);
+      
+      // Sort by tokenId in descending order (newest first)
+      const sortedNFTs = loadedNFTs.sort((a, b) => {
+        // Handle error cases - put them at the end
+        if (a.error && !b.error) return 1;
+        if (!a.error && b.error) return -1;
+        if (a.error && b.error) return 0;
+        
+        // Sort by tokenId (descending - newest first)
+        return Number(b.tokenId - a.tokenId);
+      });
+
+      // Update state with sorted NFTs
+      const sortedList = preserveTemporary ? [...tempNFTs, ...sortedNFTs] : sortedNFTs;
+      setNfts(sortedList);
     } catch (error) {
       console.error("Error loading NFTs:", error);
       if (!preserveTemporary) {

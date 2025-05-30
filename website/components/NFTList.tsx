@@ -75,7 +75,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   };
 
   // Load user's NFTs using enumerable functions
-  const loadUserNFTs = async (preserveTemporary = false) => {
+  const loadUserNFTs = async () => {
     if (!isConnected || !address || !userBalance || userBalance === 0n) {
       setNfts([]);
       return;
@@ -84,9 +84,6 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     setIsLoadingMetadata(true);
 
     try {
-      // Store temporary NFTs that we want to preserve
-      const tempNFTs = preserveTemporary ? nfts.filter((nft) => nft.tokenURI === "" && nft.imageUrl && !nft.error) : [];
-
       // Show loading placeholders initially
       const placeholderNFTs = Array.from({ length: Number(userBalance) }, () => ({
         tokenId: 0n,
@@ -94,9 +91,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         isLoading: true,
       }));
       
-      // Add temporary NFTs at the beginning if preserving
-      const initialList = preserveTemporary ? [...tempNFTs, ...placeholderNFTs] : placeholderNFTs;
-      setNfts(initialList);
+      setNfts(placeholderNFTs);
 
       // Load all NFT data first, then sort by tokenId
       const nftPromises: Promise<NFT>[] = [];
@@ -161,13 +156,10 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
       });
 
       // Update state with sorted NFTs
-      const sortedList = preserveTemporary ? [...tempNFTs, ...sortedNFTs] : sortedNFTs;
-      setNfts(sortedList);
+      setNfts(sortedNFTs);
     } catch (error) {
       console.error("Error loading NFTs:", error);
-      if (!preserveTemporary) {
-        setNfts([]);
-      }
+      setNfts([]);
     } finally {
       setIsLoadingMetadata(false);
     }
@@ -205,17 +197,11 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         }
       });
       
-      // Remove highlighting after 5 seconds
+      // Remove highlighting after 5 seconds - no automatic reload needed
       setTimeout(() => {
         setHighlightedNFT(null);
         onNewNFTDisplayed?.();
       }, 5000);
-
-      // Refresh list after a longer delay to ensure blockchain consistency
-      // But preserve the newly created NFT by ensuring it doesn't get overwritten
-      setTimeout(() => {
-        loadUserNFTs(true); // Preserve temporary NFTs during refresh
-      }, 10000); // Increased to 10 seconds for better stability
     }
   }, [newlyCreatedNFT, onNewNFTDisplayed]);
 

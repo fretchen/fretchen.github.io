@@ -3,7 +3,6 @@ import { useAccount, useReadContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
-import { css } from "../styled-system/css";
 import * as styles from "../layouts/styles";
 
 interface NFTMetadata {
@@ -144,8 +143,8 @@ export function NFTList() {
 
   if (!isConnected) {
     return (
-      <div className={css({ textAlign: "center", padding: "xl" })}>
-        <p className={css({ color: "#666" })}>Connect your wallet to view your NFTs</p>
+      <div className={styles.nftList.walletPrompt}>
+        <p>Connect your wallet to view your NFTs</p>
       </div>
     );
   }
@@ -153,61 +152,24 @@ export function NFTList() {
   const isLoading = isLoadingBalance || isLoadingMetadata;
 
   return (
-    <div className={css({ marginTop: "2xl" })}>
-      <div
-        className={css({
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "xl",
-        })}
-      >
+    <div className={styles.nftList.container}>
+      <div className={styles.nftList.heading}>
         <h2 className={styles.imageGen.columnHeading}>Your Generated NFTs ({userBalance?.toString() || "0"})</h2>
-        <button
-          onClick={loadUserNFTs}
-          disabled={isLoading}
-          className={css({
-            padding: "sm md",
-            background: "#f5f5f5",
-            border: "1px solid #ddd",
-            borderRadius: "md",
-            cursor: "pointer",
-            fontSize: "sm",
-            "&:hover": { background: "#e5e5e5" },
-            "&:disabled": { opacity: 0.5, cursor: "not-allowed" },
-          })}
-        >
-          {isLoading ? "Loading..." : "Refresh"}
-        </button>
       </div>
 
       {isLoading && nfts.length === 0 ? (
-        <div className={css({ textAlign: "center", padding: "xl" })}>
+        <div className={styles.nftList.loadingContainer}>
           <div className={styles.imageGen.spinner}></div>
           <p>Loading your NFTs...</p>
         </div>
       ) : userBalance === 0n || !userBalance ? (
-        <div
-          className={css({
-            textAlign: "center",
-            padding: "xl",
-            background: "#f9f9f9",
-            borderRadius: "md",
-          })}
-        >
-          <p className={css({ color: "#666" })}>
+        <div className={styles.nftList.emptyStateContainer}>
+          <p className={styles.nftList.emptyStateText}>
             You haven&apos;t created any NFTs yet. Use the generator above to create your first one!
           </p>
         </div>
       ) : (
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-            gap: "lg",
-            marginTop: "lg",
-          })}
-        >
+        <div className={styles.nftList.grid}>
           {nfts.map((nft, index) => (
             <NFTCard key={`${nft.tokenId}-${index}`} nft={nft} />
           ))}
@@ -220,150 +182,49 @@ export function NFTList() {
 // NFT Card Component
 function NFTCard({ nft }: { nft: NFT }) {
   return (
-    <div
-      className={css({
-        border: "1px solid #ddd",
-        borderRadius: "md",
-        padding: "md",
-        background: "white",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-        "&:hover": {
-          transform: "translateY(-2px)",
-          boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
-        },
-      })}
-    >
+    <div className={styles.nftCard.container}>
       {nft.isLoading ? (
-        <div className={css({ textAlign: "center", padding: "lg" })}>
+        <div className={styles.nftCard.loadingContainer}>
           <div className={styles.imageGen.spinner}></div>
-          <p className={css({ fontSize: "sm", color: "#666", marginTop: "sm" })}>Loading NFT...</p>
+          <p className={styles.nftCard.loadingText}>Loading NFT...</p>
         </div>
       ) : nft.error ? (
-        <div className={css({ textAlign: "center", padding: "lg" })}>
-          <div
-            className={css({
-              background: "#fee",
-              border: "1px solid #fcc",
-              borderRadius: "sm",
-              padding: "sm",
-              marginBottom: "sm",
-            })}
-          >
-            <p className={css({ fontSize: "sm", color: "#d33" })}>{nft.error}</p>
+        <div className={styles.nftCard.errorContainer}>
+          <div className={styles.nftCard.errorBox}>
+            <p className={styles.nftCard.errorText}>{nft.error}</p>
           </div>
-          <p className={css({ fontSize: "sm", color: "#666" })}>Token ID: {nft.tokenId.toString()}</p>
+          <p className={styles.nftCard.tokenIdText}>Token ID: {nft.tokenId.toString()}</p>
         </div>
       ) : (
         <>
           {nft.imageUrl ? (
-            <div
-              className={css({
-                width: "100%",
-                height: "200px",
-                background: "#f5f5f5",
-                borderRadius: "sm",
-                marginBottom: "sm",
-                overflow: "hidden",
-              })}
-            >
+            <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
                 alt={nft.metadata?.name || `NFT #${nft.tokenId}`}
-                className={css({
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                })}
+                className={styles.nftCard.image}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = "none";
                   target.nextElementSibling!.classList.remove("hidden");
                 }}
               />
-              <div
-                className={css({
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "100%",
-                  color: "#666",
-                  fontSize: "sm",
-                })}
-                style={{ display: "none" }}
-              >
+              <div className={styles.nftCard.imageError} style={{ display: "none" }}>
                 Image not available
               </div>
             </div>
           ) : (
-            <div
-              className={css({
-                width: "100%",
-                height: "200px",
-                background: "#f5f5f5",
-                borderRadius: "sm",
-                marginBottom: "sm",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#666",
-                fontSize: "sm",
-              })}
-            >
-              No image available
-            </div>
+            <div className={styles.nftCard.imagePlaceholder}>No image available</div>
           )}
 
-          <h3
-            className={css({
-              fontSize: "md",
-              fontWeight: "bold",
-              marginBottom: "xs",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            })}
-          >
-            {nft.metadata?.name || `NFT #${nft.tokenId}`}
-          </h3>
+          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `NFT #${nft.tokenId}`}</h3>
 
-          {nft.metadata?.description && (
-            <p
-              className={css({
-                fontSize: "sm",
-                color: "#666",
-                marginBottom: "sm",
-                lineHeight: "1.4",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxHeight: "2.8em",
-              })}
-            >
-              {nft.metadata.description}
-            </p>
-          )}
+          {nft.metadata?.description && <p className={styles.nftCard.description}>{nft.metadata.description}</p>}
 
-          <div
-            className={css({
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              fontSize: "xs",
-              color: "#888",
-            })}
-          >
+          <div className={styles.nftCard.footer}>
             <span>Token ID: {nft.tokenId.toString()}</span>
             {nft.tokenURI && (
-              <a
-                href={nft.tokenURI}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={css({
-                  color: "#007acc",
-                  textDecoration: "none",
-                  "&:hover": { textDecoration: "underline" },
-                })}
-              >
+              <a href={nft.tokenURI} target="_blank" rel="noopener noreferrer" className={styles.nftCard.metadataLink}>
                 Metadata
               </a>
             )}

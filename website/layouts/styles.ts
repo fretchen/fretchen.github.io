@@ -536,6 +536,148 @@ export const layout = {
   }),
 };
 
+// ===== NFT COMPONENT STILE =====
+
+// NFT List component styles
+export const nftList = {
+  container: css({
+    marginTop: "2xl",
+  }),
+  heading: css({
+    marginBottom: "xl",
+  }),
+  loadingContainer: css({
+    textAlign: "center",
+    padding: "xl",
+  }),
+  emptyStateContainer: css({
+    textAlign: "center",
+    padding: "xl",
+    background: "rgba(249, 249, 249, 1)",
+    borderRadius: "md",
+  }),
+  emptyStateText: css({
+    color: "gray.600",
+  }),
+  grid: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+    gap: "lg",
+    marginTop: "lg",
+  }),
+  walletPrompt: css({
+    textAlign: "center",
+    padding: "xl",
+    color: "gray.600",
+  }),
+};
+
+// NFT Card component styles
+export const nftCard = {
+  container: css({
+    border: "1px solid token(colors.border)",
+    borderRadius: "md",
+    padding: "md",
+    background: "background",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    _hover: {
+      transform: "translateY(-2px)",
+      boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+    },
+  }),
+  loadingContainer: css({
+    textAlign: "center",
+    padding: "lg",
+  }),
+  loadingText: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginTop: "sm",
+  }),
+  errorContainer: css({
+    textAlign: "center",
+    padding: "lg",
+  }),
+  errorBox: css({
+    background: "rgba(254, 238, 238, 1)",
+    border: "1px solid rgba(252, 204, 204, 1)",
+    borderRadius: "sm",
+    padding: "sm",
+    marginBottom: "sm",
+  }),
+  errorText: css({
+    fontSize: "sm",
+    color: "rgba(221, 51, 51, 1)",
+  }),
+  tokenIdText: css({
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  imageContainer: css({
+    width: "100%",
+    height: "200px",
+    background: "rgba(245, 245, 245, 1)",
+    borderRadius: "sm",
+    marginBottom: "sm",
+    overflow: "hidden",
+  }),
+  image: css({
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  }),
+  imagePlaceholder: css({
+    width: "100%",
+    height: "200px",
+    background: "rgba(245, 245, 245, 1)",
+    borderRadius: "sm",
+    marginBottom: "sm",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "gray.600",
+    fontSize: "sm",
+  }),
+  imageError: css({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    color: "gray.600",
+    fontSize: "sm",
+  }),
+  title: css({
+    fontSize: "md",
+    fontWeight: "bold",
+    marginBottom: "xs",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  description: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginBottom: "sm",
+    lineHeight: "1.4",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxHeight: "2.8em",
+  }),
+  footer: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "xs",
+    color: "gray.400",
+  }),
+  metadataLink: css({
+    color: "brand",
+    textDecoration: "none",
+    _hover: { textDecoration: "underline" },
+  }),
+};
+
 // Page-specific styles for blog entries
 export const pageContainer = css({
   maxWidth: "900px",

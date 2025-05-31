@@ -3,28 +3,8 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { NFT, NFTListProps, ModalImageData, NFTMetadata, NFTCardProps, ImageModalProps } from "../types/components";
 import * as styles from "../layouts/styles";
-
-interface NFTMetadata {
-  name?: string;
-  description?: string;
-  image?: string;
-  attributes?: Array<{ trait_type: string; value: string | number }>;
-}
-
-interface NFT {
-  tokenId: bigint;
-  tokenURI: string;
-  metadata?: NFTMetadata;
-  imageUrl?: string;
-  isLoading?: boolean;
-  error?: string;
-}
-
-export interface NFTListProps {
-  newlyCreatedNFT?: { tokenId: bigint; imageUrl: string };
-  onNewNFTDisplayed?: () => void;
-}
 
 export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
@@ -34,12 +14,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [highlightedNFT, setHighlightedNFT] = useState<bigint | null>(null);
-  const [selectedImage, setSelectedImage] = useState<{
-    src: string;
-    alt: string;
-    title?: string;
-    description?: string;
-  } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
   // Get user's NFT balance
   const { data: userBalance, isLoading: isLoadingBalance } = useReadContract({
@@ -267,13 +242,6 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 }
 
 // NFT Card Component
-interface NFTCardProps {
-  nft: NFT;
-  onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
-  onNftBurned: () => void;
-  isHighlighted?: boolean;
-}
-
 function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
@@ -427,16 +395,6 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
 }
 
 // Bildvergrößerungs-Modal Komponente
-interface ImageModalProps {
-  image: {
-    src: string;
-    alt: string;
-    title?: string;
-    description?: string;
-  };
-  onClose: () => void;
-}
-
 function ImageModal({ image, onClose }: ImageModalProps) {
   // Schließen bei Escape-Taste
   useEffect(() => {

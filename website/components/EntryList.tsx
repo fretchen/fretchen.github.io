@@ -1,75 +1,7 @@
 import * as React from "react";
 import { Link } from "./Link";
+import { EntryListProps } from "../types/components";
 import { entryList } from "../layouts/styles";
-
-/**
- * Represents a blog entry with title and optional publishing date
- */
-export interface BlogEntry {
-  /**
-   * The title of the blog entry
-   */
-  title: string;
-
-  /**
-   * Optional publishing date of the entry
-   */
-  publishing_date?: string;
-
-  /**
-   * Optional slug for custom URL paths
-   */
-  slug?: string;
-
-  /**
-   * Optional description or excerpt
-   */
-  description?: string;
-}
-
-/**
- * Props for the EntryList component
- */
-interface EntryListProps {
-  /**
-   * Array of blog entries to display
-   */
-  blogs: BlogEntry[];
-
-  /**
-   * Base path for entry links
-   */
-  basePath: string;
-
-  /**
-   * Optional CSS class name for title elements
-   */
-  titleClassName?: string;
-
-  /**
-   * Whether to display the publishing date
-   * @default false
-   */
-  showDate?: boolean;
-
-  /**
-   * Whether to reverse the order of entries
-   * @default false
-   */
-  reverseOrder?: boolean;
-
-  /**
-   * Maximum number of entries to display
-   * @default undefined (show all)
-   */
-  limit?: number;
-
-  /**
-   * Whether to show a "View all" link when entries are limited
-   * @default false
-   */
-  showViewAllLink?: boolean;
-}
 
 /**
  * Component that renders a list of blog entries with links

@@ -3,13 +3,8 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
 import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
+import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
-
-export interface ImageGeneratorProps {
-  apiUrl?: string;
-  onSuccess?: (tokenId: bigint, imageUrl: string) => void;
-  onError?: (error: string) => void;
-}
 
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {

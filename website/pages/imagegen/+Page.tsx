@@ -12,7 +12,7 @@ export default function Page() {
   const handleSuccess = (tokenId: bigint, imageUrl: string) => {
     console.log("Image generation succeeded:", { tokenId, imageUrl });
 
-    // Setze das neu erstellte NFT für Highlighting in der Galerie
+    // Set the newly created NFT for highlighting in the gallery
     setNewlyCreatedNFT({
       tokenId,
       imageUrl,

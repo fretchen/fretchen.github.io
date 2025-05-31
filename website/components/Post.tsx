@@ -1,28 +1,16 @@
-/**
- * This component is used to display a blog post.
- */
-
 import React from "react";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { BlogPost } from "../types/BlogPost";
+import { PostProps } from "../types/components";
 import TitleBar from "./TitleBar";
 import { Link } from "./Link";
 import { post } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 
 import Giscus from "@giscus/react";
-
-// Erweiterte Props für die Post-Komponente
-interface PostProps extends BlogPost {
-  // Navigation Props
-  prevPost?: { title: string; id: number } | null;
-  nextPost?: { title: string; id: number } | null;
-  basePath?: string; // z.B. "/amo", "/quantum/basics", etc.
-}
 
 export function Post({ title, content, publishing_date, prevPost, nextPost, basePath = "" }: PostProps) {
   return (

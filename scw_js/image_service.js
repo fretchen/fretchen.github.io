@@ -1,7 +1,8 @@
 /**
  * Shared module for image generation and S3 upload
  */
-if (process.env.NODE_ENV === "test") {
+// Only load dotenv if .env file exists and not in CI environment
+if (process.env.NODE_ENV === "test" && !process.env.CI) {
   try {
     // Since we're in an ESM context, we need to use dynamic import
     await import("dotenv").then((dotenv) => {

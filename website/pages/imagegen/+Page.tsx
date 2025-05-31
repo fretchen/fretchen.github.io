@@ -29,7 +29,7 @@ export default function Page() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>Decentral AI Image Generator</h1>
+      <h1 className={styles.heading}>AI Image Creator</h1>
 
       {/* Einfacher, konstanter Generator */}
       <ImageGenerator onSuccess={handleSuccess} onError={handleError} />

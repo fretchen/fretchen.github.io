@@ -3,28 +3,8 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { NFT, NFTListProps, ModalImageData, NFTMetadata, NFTCardProps, ImageModalProps } from "../types/components";
 import * as styles from "../layouts/styles";
-
-interface NFTMetadata {
-  name?: string;
-  description?: string;
-  image?: string;
-  attributes?: Array<{ trait_type: string; value: string | number }>;
-}
-
-interface NFT {
-  tokenId: bigint;
-  tokenURI: string;
-  metadata?: NFTMetadata;
-  imageUrl?: string;
-  isLoading?: boolean;
-  error?: string;
-}
-
-export interface NFTListProps {
-  newlyCreatedNFT?: { tokenId: bigint; imageUrl: string };
-  onNewNFTDisplayed?: () => void;
-}
 
 export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
@@ -34,12 +14,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [highlightedNFT, setHighlightedNFT] = useState<bigint | null>(null);
-  const [selectedImage, setSelectedImage] = useState<{
-    src: string;
-    alt: string;
-    title?: string;
-    description?: string;
-  } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
   // Get user's NFT balance
   const { data: userBalance, isLoading: isLoadingBalance } = useReadContract({
@@ -222,7 +197,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   if (!isConnected) {
     return (
       <div className={styles.nftList.walletPrompt}>
-        <p>Connect your wallet to view your NFTs</p>
+        <p>Connect your account to view your artworks</p>
       </div>
     );
   }
@@ -232,18 +207,18 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   return (
     <div className={styles.nftList.container}>
       <div className={styles.nftList.heading}>
-        <h2 className={styles.imageGen.columnHeading}>Your Generated NFTs ({userBalance?.toString() || "0"})</h2>
+        <h2 className={styles.imageGen.columnHeading}>Your Digital Artworks ({userBalance?.toString() || "0"})</h2>
       </div>
 
       {isLoading && nfts.length === 0 ? (
         <div className={styles.nftList.loadingContainer}>
-          <div className={styles.imageGen.spinner}></div>
-          <p>Loading your NFTs...</p>
+          <div className={styles.spinner}></div>
+          <p>Loading your artworks...</p>
         </div>
       ) : userBalance === 0n || !userBalance ? (
         <div className={styles.nftList.emptyStateContainer}>
           <p className={styles.nftList.emptyStateText}>
-            You haven&apos;t created any NFTs yet. Use the generator above to create your first one!
+            You haven&apos;t created any artworks yet. Use the generator above to create your first one!
           </p>
         </div>
       ) : (
@@ -267,13 +242,6 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 }
 
 // NFT Card Component
-interface NFTCardProps {
-  nft: NFT;
-  onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
-  onNftBurned: () => void;
-  isHighlighted?: boolean;
-}
-
 function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
@@ -297,7 +265,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     if (nft.imageUrl) {
       onImageClick({
         src: nft.imageUrl,
-        alt: nft.metadata?.name || `NFT #${nft.tokenId}`,
+        alt: nft.metadata?.name || `Artwork #${nft.tokenId}`,
         title: nft.metadata?.name,
         description: nft.metadata?.description,
       });
@@ -313,7 +281,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${nft.metadata?.name || `NFT-${nft.tokenId}`}.png`;
+      link.download = `${nft.metadata?.name || `Artwork-${nft.tokenId}`}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -327,7 +295,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
   const handleBurn = async () => {
     if (
       !confirm(
-        `Are you sure you want to burn NFT "${nft.metadata?.name || `#${nft.tokenId}`}"? This action cannot be undone.`,
+        `Are you sure you want to permanently delete "${nft.metadata?.name || `Artwork #${nft.tokenId}`}"? This action cannot be undone.`,
       )
     ) {
       return;
@@ -340,8 +308,8 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
         args: [nft.tokenId],
       });
     } catch (error) {
-      console.error("Burn failed:", error);
-      alert("Failed to burn NFT. Please try again.");
+      console.error("Delete failed:", error);
+      alert("Failed to delete artwork. Please try again.");
     }
   };
 
@@ -349,15 +317,15 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     <div className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""}`}>
       {nft.isLoading ? (
         <div className={styles.nftCard.loadingContainer}>
-          <div className={styles.imageGen.spinner}></div>
-          <p className={styles.nftCard.loadingText}>Loading NFT...</p>
+          <div className={styles.spinner}></div>
+          <p className={styles.nftCard.loadingText}>Loading artwork...</p>
         </div>
       ) : nft.error ? (
         <div className={styles.nftCard.errorContainer}>
           <div className={styles.nftCard.errorBox}>
             <p className={styles.nftCard.errorText}>{nft.error}</p>
           </div>
-          <p className={styles.nftCard.tokenIdText}>Token ID: {nft.tokenId.toString()}</p>
+          <p className={styles.nftCard.tokenIdText}>ID: {nft.tokenId.toString()}</p>
         </div>
       ) : (
         <>
@@ -365,7 +333,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
-                alt={nft.metadata?.name || `NFT #${nft.tokenId}`}
+                alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
                 className={styles.nftCard.image}
                 onClick={handleImageClick}
                 style={{ cursor: "pointer" }}
@@ -383,12 +351,12 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             <div className={styles.nftCard.imagePlaceholder}>No image available</div>
           )}
 
-          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `NFT #${nft.tokenId}`}</h3>
+          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `Artwork #${nft.tokenId}`}</h3>
 
           {nft.metadata?.description && <p className={styles.nftCard.description}>{nft.metadata.description}</p>}
 
           <div className={styles.nftCard.footer}>
-            <span>Token ID: {nft.tokenId.toString()}</span>
+            <span>ID: {nft.tokenId.toString()}</span>
           </div>
 
           {/* Aktions-Buttons */}
@@ -396,7 +364,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             {nft.imageUrl && (
               <button
                 onClick={handleImageClick}
-                className={`${styles.nftCard.actionButton} ${styles.nftCard.zoomButton}`}
+                className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
                 title="View full size"
               >
                 🔍 Zoom
@@ -405,7 +373,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             {nft.imageUrl && (
               <button
                 onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
+                className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
                 title="Download image"
               >
                 ⬇️ Download
@@ -414,10 +382,11 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             <button
               onClick={handleBurn}
               disabled={isBurning || isConfirming}
-              className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.nftCard.disabledButton : styles.nftCard.burnButton}`}
-              title="Burn NFT (permanent)"
+              className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
+              title="Delete artwork (permanent)"
+              style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
             >
-              {isBurning ? "🔥 Burning..." : isConfirming ? "⏳ Confirming..." : "🔥 Burn"}
+              {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : "🗑️ Delete"}
             </button>
           </div>
         </>
@@ -427,16 +396,6 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
 }
 
 // Bildvergrößerungs-Modal Komponente
-interface ImageModalProps {
-  image: {
-    src: string;
-    alt: string;
-    title?: string;
-    description?: string;
-  };
-  onClose: () => void;
-}
-
 function ImageModal({ image, onClose }: ImageModalProps) {
   // Schließen bei Escape-Taste
   useEffect(() => {
@@ -480,10 +439,7 @@ function ImageModal({ image, onClose }: ImageModalProps) {
             {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}
             {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
             <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
-              <button
-                onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
-              >
+              <button onClick={handleDownload} className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}>
                 ⬇️ Download Full Size
               </button>
             </div>

@@ -155,8 +155,8 @@ async function handle(event, context, cb) {
 }
 
 /* This is used to test locally and will not be executed on Scaleway Functions */
-if (process.env.NODE_ENV === "test") {
-  // Zuerst dotenv laden, um den privaten Schlüssel zu laden
+if (process.env.NODE_ENV === "test" && !process.env.CI) {
+  // Only load dotenv if not in CI environment
   import("dotenv").then((dotenv) => {
     dotenv.config();
 

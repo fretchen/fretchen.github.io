@@ -75,7 +75,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
     mockContract.read.mintPrice.mockResolvedValue(BigInt("1000000000000000000"));
     mockContract.read.isImageUpdated.mockResolvedValue(false);
     mockContract.read.ownerOf.mockResolvedValue("0x123456789");
-    mockContract.write.requestImageUpdate.mockResolvedValue("0xTransactionHash123");
+    mockContract.write.requestImageUpdate.mockResolvedValue("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
 
     mockS3Send.mockResolvedValue({});
     mockPutObjectCommand.mockImplementation((params) => params);
@@ -135,7 +135,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
         image_url: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_1_abcdef123456.png",
         mintPrice: "1000000000000000000",
         message: "Bild erfolgreich generiert und Token aktualisiert",
-        transaction_hash: "0xTransactionHash123",
+        transaction_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       });
 
       // Überprüfe IONOS API-Aufruf

@@ -195,7 +195,7 @@ describe("End-to-End Mock Tests", () => {
         image_url: "https://example.com/image.png",
         mintPrice: "1000000000000000000",
         message: "Bild erfolgreich generiert und Token aktualisiert",
-        transaction_hash: "0xTransactionHash123",
+        transaction_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       };
 
       expect(successResponse).toHaveProperty("metadata_url");

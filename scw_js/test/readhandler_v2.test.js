@@ -68,7 +68,7 @@ describe("readhandler_v2.js Tests", () => {
     mockContract.read.isImageUpdated.mockResolvedValue(false);
     mockContract.read.ownerOf.mockResolvedValue("0x123456789");
     mockGenerateAndUploadImage.mockResolvedValue("https://example.com/metadata.json");
-    mockContract.write.requestImageUpdate.mockResolvedValue("0xTransactionHash123");
+    mockContract.write.requestImageUpdate.mockResolvedValue("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
   });
 
   afterEach(() => {
@@ -157,7 +157,7 @@ describe("readhandler_v2.js Tests", () => {
       const responseBody = JSON.parse(result.body);
       expect(responseBody.metadata_url).toBe("https://example.com/metadata.json");
       expect(responseBody.image_url).toBe("https://example.com/image.png");
-      expect(responseBody.transaction_hash).toBe("0xTransactionHash123");
+      expect(responseBody.transaction_hash).toBe("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
       expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert");
 
       // Verifikation der Funktionsaufrufe

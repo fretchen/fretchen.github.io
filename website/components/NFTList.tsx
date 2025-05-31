@@ -76,7 +76,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 
   // Load user's NFTs using enumerable functions
   const loadUserNFTs = async () => {
-    if (!isConnected || !address || !userBalance || userBalance === 0n) {
+    if (!isConnected || !address) {
       setNfts([]);
       return;
     }
@@ -84,8 +84,20 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     setIsLoadingMetadata(true);
 
     try {
+      // Get fresh balance directly from contract to avoid stale state
+      const freshBalance = await readContract(config, {
+        ...genAiNFTContractConfig,
+        functionName: "balanceOf",
+        args: [address],
+      });
+
+      if (!freshBalance || freshBalance === 0n) {
+        setNfts([]);
+        return;
+      }
+
       // Show loading placeholders initially
-      const placeholderNFTs = Array.from({ length: Number(userBalance) }, () => ({
+      const placeholderNFTs = Array.from({ length: Number(freshBalance) }, () => ({
         tokenId: 0n,
         tokenURI: "",
         isLoading: true,
@@ -96,7 +108,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
       // Load all NFT data first, then sort by tokenId
       const nftPromises: Promise<NFT>[] = [];
       
-      for (let i = 0; i < Number(userBalance); i++) {
+      for (let i = 0; i < Number(freshBalance); i++) {
         const nftPromise = (async () => {
           try {
             // Get token ID at index using wagmi's readContract
@@ -166,8 +178,10 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   };
 
   useEffect(() => {
-    loadUserNFTs();
-  }, [address, isConnected, userBalance]);
+    if (isConnected && address) {
+      loadUserNFTs();
+    }
+  }, [address, isConnected, userBalance]); // Keep userBalance for automatic updates
 
   // Handle newly created NFT
   useEffect(() => {
@@ -272,7 +286,10 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
   // Aktualisiere die NFT-Liste nach erfolgreicher Bestätigung
   useEffect(() => {
     if (isConfirmed) {
-      onNftBurned();
+      // Add a small delay to ensure blockchain state is consistent
+      setTimeout(() => {
+        onNftBurned();
+      }, 1000);
     }
   }, [isConfirmed, onNftBurned]);
 

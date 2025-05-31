@@ -212,7 +212,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 
       {isLoading && nfts.length === 0 ? (
         <div className={styles.nftList.loadingContainer}>
-          <div className={styles.imageGen.spinner}></div>
+          <div className={styles.spinner}></div>
           <p>Loading your NFTs...</p>
         </div>
       ) : userBalance === 0n || !userBalance ? (
@@ -317,7 +317,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     <div className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""}`}>
       {nft.isLoading ? (
         <div className={styles.nftCard.loadingContainer}>
-          <div className={styles.imageGen.spinner}></div>
+          <div className={styles.spinner}></div>
           <p className={styles.nftCard.loadingText}>Loading NFT...</p>
         </div>
       ) : nft.error ? (
@@ -364,7 +364,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             {nft.imageUrl && (
               <button
                 onClick={handleImageClick}
-                className={`${styles.nftCard.actionButton} ${styles.nftCard.zoomButton}`}
+                className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
                 title="View full size"
               >
                 🔍 Zoom
@@ -373,7 +373,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             {nft.imageUrl && (
               <button
                 onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
+                className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
                 title="Download image"
               >
                 ⬇️ Download
@@ -382,8 +382,9 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             <button
               onClick={handleBurn}
               disabled={isBurning || isConfirming}
-              className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.nftCard.disabledButton : styles.nftCard.burnButton}`}
+              className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
               title="Burn NFT (permanent)"
+              style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
             >
               {isBurning ? "🔥 Burning..." : isConfirming ? "⏳ Confirming..." : "🔥 Burn"}
             </button>
@@ -438,10 +439,7 @@ function ImageModal({ image, onClose }: ImageModalProps) {
             {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}
             {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
             <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
-              <button
-                onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
-              >
+              <button onClick={handleDownload} className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}>
                 ⬇️ Download Full Size
               </button>
             </div>

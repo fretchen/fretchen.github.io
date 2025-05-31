@@ -177,7 +177,7 @@ export function ImageGenerator({
         {/* Status-Anzeige */}
         {mintingStatus !== "idle" && (
           <div className={styles.imageGen.compactStatus}>
-            <div className={styles.imageGen.spinner}></div>
+            <div className={styles.spinner}></div>
             <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating image..."}</span>
           </div>
         )}

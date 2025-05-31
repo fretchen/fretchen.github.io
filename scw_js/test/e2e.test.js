@@ -19,7 +19,12 @@ describe("End-to-End Mock Tests", () => {
 
   describe("Environment Configuration Tests", () => {
     test("sollte alle erforderlichen Environment-Variablen validieren", () => {
-      const requiredEnvVars = ["NFT_WALLET_PRIVATE_KEY", "SCW_ACCESS_KEY", "SCW_SECRET_KEY", "IONOS_API_TOKEN"];
+      const requiredEnvVars = [
+        "NFT_WALLET_PRIVATE_KEY",
+        "SCW_ACCESS_KEY",
+        "SCW_SECRET_KEY",
+        "IONOS_API_TOKEN",
+      ];
 
       requiredEnvVars.forEach((envVar) => {
         // Test ohne env var
@@ -110,11 +115,22 @@ describe("End-to-End Mock Tests", () => {
       });
 
       invalidTokenIds.forEach((tokenId) => {
-        if (tokenId === "" || isNaN(Number(tokenId)) || tokenId.includes(".") || tokenId.includes("-")) {
+        if (
+          tokenId === "" ||
+          isNaN(Number(tokenId)) ||
+          tokenId.includes(".") ||
+          tokenId.includes("-")
+        ) {
           expect(() => {
-            if (tokenId === "") throw new Error("Empty token ID");
-            if (tokenId.includes(".")) throw new Error("Decimal not allowed");
-            if (tokenId.includes("-")) throw new Error("Negative not allowed");
+            if (tokenId === "") {
+              throw new Error("Empty token ID");
+            }
+            if (tokenId.includes(".")) {
+              throw new Error("Decimal not allowed");
+            }
+            if (tokenId.includes("-")) {
+              throw new Error("Negative not allowed");
+            }
             BigInt(tokenId);
           }).toThrow();
         }
@@ -158,7 +174,8 @@ describe("End-to-End Mock Tests", () => {
         const isSqlInjection = input.includes("DROP TABLE");
         const isJndiInjection = input.includes("${jndi:");
 
-        const isDangerous = isScript || isJavascript || isPathTraversal || isSqlInjection || isJndiInjection;
+        const isDangerous =
+          isScript || isJavascript || isPathTraversal || isSqlInjection || isJndiInjection;
         expect(isDangerous).toBeTruthy();
       });
     });

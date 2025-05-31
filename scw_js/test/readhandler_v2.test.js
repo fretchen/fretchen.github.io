@@ -26,6 +26,7 @@ vi.mock("viem/accounts", () => ({
 }));
 vi.mock("../image_service.js", () => ({
   generateAndUploadImage: mockGenerateAndUploadImage,
+  JSON_BASE_PATH: "https://my-imagestore.s3.nl-ams.scw.cloud/",
 }));
 
 describe("readhandler_v2.js Tests", () => {
@@ -67,8 +68,12 @@ describe("readhandler_v2.js Tests", () => {
     mockContract.read.mintPrice.mockResolvedValue(BigInt("1000000000000000000")); // 1 ETH
     mockContract.read.isImageUpdated.mockResolvedValue(false);
     mockContract.read.ownerOf.mockResolvedValue("0x123456789");
-    mockGenerateAndUploadImage.mockResolvedValue("https://example.com/metadata.json");
-    mockContract.write.requestImageUpdate.mockResolvedValue("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+    mockGenerateAndUploadImage.mockResolvedValue(
+      "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
+    );
+    mockContract.write.requestImageUpdate.mockResolvedValue(
+      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    );
   });
 
   afterEach(() => {
@@ -138,7 +143,7 @@ describe("readhandler_v2.js Tests", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            image: "https://example.com/image.png",
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
             name: "Test NFT",
           }),
       });
@@ -155,16 +160,22 @@ describe("readhandler_v2.js Tests", () => {
       expect(result.statusCode).toBe(200);
 
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.metadata_url).toBe("https://example.com/metadata.json");
-      expect(responseBody.image_url).toBe("https://example.com/image.png");
-      expect(responseBody.transaction_hash).toBe("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+      expect(responseBody.metadata_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
+      );
+      expect(responseBody.image_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+      );
+      expect(responseBody.transaction_hash).toBe(
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      );
       expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert");
 
       // Verifikation der Funktionsaufrufe
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("beautiful landscape", "1");
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
         BigInt("1"),
-        "https://example.com/metadata.json",
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
       ]);
     });
 
@@ -182,7 +193,9 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body).error).toBe("Operation fehlgeschlagen: Image generation failed");
+      expect(JSON.parse(result.body).error).toBe(
+        "Operation fehlgeschlagen: Image generation failed",
+      );
     });
 
     test("sollte Fehler behandeln wenn private key fehlt", async () => {
@@ -195,7 +208,9 @@ describe("readhandler_v2.js Tests", () => {
         },
       };
 
-      await expect(handle(event, {}, () => {})).rejects.toThrow("NFT_WALLET_PRIVATE_KEY nicht konfiguriert");
+      await expect(handle(event, {}, () => {})).rejects.toThrow(
+        "NFT_WALLET_PRIVATE_KEY nicht konfiguriert",
+      );
     });
 
     test("sollte Fehler behandeln wenn Metadaten-Fetch fehlschlägt", async () => {
@@ -234,7 +249,10 @@ describe("readhandler_v2.js Tests", () => {
       // Mock fetch für erfolgreiche Ausführung
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ image: "https://example.com/image.png" }),
+        json: () =>
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       const result = await handle(event, {}, () => {});
@@ -254,7 +272,10 @@ describe("readhandler_v2.js Tests", () => {
 
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ image: "https://example.com/image.png" }),
+        json: () =>
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       await handle(event, {}, () => {});
@@ -274,7 +295,10 @@ describe("readhandler_v2.js Tests", () => {
     test("sollte große Token-IDs korrekt verarbeiten", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ image: "https://example.com/image.png" }),
+        json: () =>
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       const event = {
@@ -310,7 +334,10 @@ describe("readhandler_v2.js Tests", () => {
 
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ image: "https://example.com/image.png" }),
+        json: () =>
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       const event = {

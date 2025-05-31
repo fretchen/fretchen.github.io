@@ -22,8 +22,6 @@ package:
     - "!.git/**"
 
 functions:
-  readnft:
-    handler: readhandler.handle
   readnftv2:
     handler: readhandler_v2.handle
   classicai:

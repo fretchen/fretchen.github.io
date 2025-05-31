@@ -6,16 +6,26 @@
   "scripts": {
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
-    "test:coverage": "NODE_ENV=test vitest run --coverage"
+    "test:coverage": "NODE_ENV=test vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check && npm run test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@eslint/js": "^9.28.0",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^22.15.21",
     "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-vitest": "^0.5.4",
+    "prettier": "^3.5.3",
     "serverless-scaleway-functions": ">=0.4.15",
     "typescript": "^5.0.2",
     "vitest": "^1.6.0"

@@ -20,7 +20,7 @@ import { randomBytes } from "crypto";
 // Configuration constants
 const MODEL_NAME = "black-forest-labs/FLUX.1-schnell";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/images/generations";
-const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
+export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
 
 /**
@@ -102,7 +102,9 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown") {
   const ionosApiToken = process.env.IONOS_API_TOKEN;
 
   if (!ionosApiToken) {
-    throw new Error("API token not found. Please configure the IONOS_API_TOKEN environment variable.");
+    throw new Error(
+      "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
+    );
   }
 
   if (!prompt) {
@@ -116,14 +118,14 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown") {
 
   const body = {
     model: MODEL_NAME,
-    prompt: prompt,
+    prompt,
     size: "1024x1024",
   };
 
   console.log("Sending image generation request...");
   const response = await fetch(ENDPOINT, {
     method: "POST",
-    headers: headers,
+    headers,
     body: JSON.stringify(body),
     timeout: 60000,
   });

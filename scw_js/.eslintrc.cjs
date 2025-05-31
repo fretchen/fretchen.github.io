@@ -13,7 +13,7 @@ module.exports = {
     "no-unused-vars": [
       "error",
       {
-        argsIgnorePattern: "^_",
+        argsIgnorePattern: "^(_|context|cb|_context|_cb)$",
         varsIgnorePattern: "^_",
         caughtErrorsIgnorePattern: "^_",
       },

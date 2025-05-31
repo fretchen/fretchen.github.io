@@ -32,7 +32,7 @@ async function updateTokenWithImage(contract, tokenId, metadataUrl) {
   return hash;
 }
 
-async function handle(event, _context, _cb) {
+async function handle(event, context, cb) {
   // get the prompt from the event
   const prompt = event.queryStringParameters.prompt;
   if (!prompt) {

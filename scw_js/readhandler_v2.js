@@ -119,6 +119,13 @@ async function handle(event, context, cb) {
     const metadataUrl = await generateAndUploadImage(prompt, tokenId);
 
     // Metadaten laden, um die Bild-URL zu extrahieren
+    // Validate the metadataUrl against a trusted allow-list
+    const allowedHostnames = ["trusted-domain.com", "another-trusted-domain.com"];
+    const url = new URL(metadataUrl);
+    if (!allowedHostnames.includes(url.hostname)) {
+      throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
+    }
+
     const metadataResponse = await fetch(metadataUrl);
     if (!metadataResponse.ok) {
       throw new Error(`Fehler beim Laden der Metadaten: ${metadataResponse.status}`);

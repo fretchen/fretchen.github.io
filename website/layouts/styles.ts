@@ -250,6 +250,90 @@ export const imageGen = {
     fontSize: "sm",
     color: "gray.500",
   }),
+
+  // Kompaktes Layout für wiederholte Nutzung
+  compactLayout: css({
+    background: "background",
+    borderRadius: "md",
+    border: "1px solid token(colors.border)",
+    padding: "md",
+    marginBottom: "xl",
+  }),
+  compactContainer: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "sm",
+  }),
+  compactHeader: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "xs",
+  }),
+  compactTitle: css({
+    fontSize: "md",
+    fontWeight: "semibold",
+    margin: 0,
+    color: "brand",
+  }),
+  compactSubtitle: css({
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  compactForm: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "flex-end",
+  }),
+  compactTextarea: css({
+    flex: 1,
+    padding: "sm",
+    border: "1px solid token(colors.border)",
+    borderRadius: "sm",
+    fontSize: "sm",
+    minHeight: "40px",
+    maxHeight: "80px",
+    resize: "vertical",
+    _focus: {
+      outline: "none",
+      borderColor: "brand",
+    },
+  }),
+  compactButton: css({
+    padding: "sm md",
+    backgroundColor: "brand",
+    color: "light",
+    border: "none",
+    borderRadius: "sm",
+    cursor: "pointer",
+    fontWeight: "medium",
+    fontSize: "sm",
+    whiteSpace: "nowrap",
+    transition: "all 0.2s",
+    _hover: {
+      backgroundColor: "#0052a3",
+    },
+  }),
+  compactButtonDisabled: css({
+    opacity: 0.6,
+    cursor: "not-allowed",
+  }),
+  compactStatus: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+    padding: "sm",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: "sm",
+    fontSize: "sm",
+  }),
+  compactError: css({
+    padding: "sm",
+    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    border: "1px solid #dc3545",
+    color: "#dc3545",
+    borderRadius: "sm",
+    fontSize: "sm",
+  }),
 };
 
 // ===== KOMPONENTEN-SPEZIFISCHE STILE =====
@@ -533,6 +617,276 @@ export const layout = {
     padding: "token(spacing.md)",
     paddingBottom: "token(spacing.xl)",
     minHeight: "token(sizes.screen)",
+  }),
+};
+
+// ===== NFT COMPONENT STILE =====
+
+// NFT List component styles
+export const nftList = {
+  container: css({
+    marginTop: "2xl",
+  }),
+  heading: css({
+    marginBottom: "xl",
+  }),
+  loadingContainer: css({
+    textAlign: "center",
+    padding: "xl",
+  }),
+  emptyStateContainer: css({
+    textAlign: "center",
+    padding: "xl",
+    background: "rgba(249, 249, 249, 1)",
+    borderRadius: "md",
+  }),
+  emptyStateText: css({
+    color: "gray.600",
+  }),
+  grid: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+    gap: "lg",
+    marginTop: "lg",
+  }),
+  walletPrompt: css({
+    textAlign: "center",
+    padding: "xl",
+    color: "gray.600",
+  }),
+};
+
+// NFT Card component styles
+export const nftCard = {
+  container: css({
+    border: "1px solid token(colors.border)",
+    borderRadius: "md",
+    padding: "md",
+    background: "background",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    _hover: {
+      transform: "translateY(-2px)",
+      boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+    },
+  }),
+  highlighted: css({
+    border: "2px solid rgba(34, 197, 94, 1)",
+    background: "rgba(240, 253, 244, 1)",
+    animation: "pulse 2s ease-in-out infinite",
+    boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)",
+  }),
+  loadingContainer: css({
+    textAlign: "center",
+    padding: "lg",
+  }),
+  loadingText: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginTop: "sm",
+  }),
+  errorContainer: css({
+    textAlign: "center",
+    padding: "lg",
+  }),
+  errorBox: css({
+    background: "rgba(254, 238, 238, 1)",
+    border: "1px solid rgba(252, 204, 204, 1)",
+    borderRadius: "sm",
+    padding: "sm",
+    marginBottom: "sm",
+  }),
+  errorText: css({
+    fontSize: "sm",
+    color: "rgba(221, 51, 51, 1)",
+  }),
+  tokenIdText: css({
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  imageContainer: css({
+    width: "100%",
+    height: "200px",
+    background: "rgba(245, 245, 245, 1)",
+    borderRadius: "sm",
+    marginBottom: "sm",
+    overflow: "hidden",
+  }),
+  image: css({
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  }),
+  imagePlaceholder: css({
+    width: "100%",
+    height: "200px",
+    background: "rgba(245, 245, 245, 1)",
+    borderRadius: "sm",
+    marginBottom: "sm",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "gray.600",
+    fontSize: "sm",
+  }),
+  imageError: css({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    color: "gray.600",
+    fontSize: "sm",
+  }),
+  title: css({
+    fontSize: "md",
+    fontWeight: "bold",
+    marginBottom: "xs",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  }),
+  description: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginBottom: "sm",
+    lineHeight: "1.4",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxHeight: "2.8em",
+  }),
+  footer: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "xs",
+    color: "gray.400",
+    flexWrap: "wrap",
+    gap: "xs",
+  }),
+  metadataLink: css({
+    color: "brand",
+    textDecoration: "none",
+    _hover: { textDecoration: "underline" },
+  }),
+  // Neue Stile für erweiterte Funktionen
+  actions: css({
+    display: "flex",
+    gap: "xs",
+    marginTop: "sm",
+    justifyContent: "center",
+  }),
+  actionButton: css({
+    padding: "xs sm",
+    fontSize: "xs",
+    border: "1px solid",
+    borderRadius: "sm",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    textDecoration: "none",
+    textAlign: "center",
+    minWidth: "60px",
+  }),
+  downloadButton: css({
+    background: "rgba(59, 130, 246, 1)",
+    borderColor: "rgba(59, 130, 246, 1)",
+    color: "white",
+    _hover: {
+      background: "rgba(37, 99, 235, 1)",
+      borderColor: "rgba(37, 99, 235, 1)",
+    },
+  }),
+  burnButton: css({
+    background: "rgba(239, 68, 68, 1)",
+    borderColor: "rgba(239, 68, 68, 1)",
+    color: "white",
+    _hover: {
+      background: "rgba(220, 38, 38, 1)",
+      borderColor: "rgba(220, 38, 38, 1)",
+    },
+  }),
+  zoomButton: css({
+    background: "rgba(34, 197, 94, 1)",
+    borderColor: "rgba(34, 197, 94, 1)",
+    color: "white",
+    _hover: {
+      background: "rgba(22, 163, 74, 1)",
+      borderColor: "rgba(22, 163, 74, 1)",
+    },
+  }),
+  disabledButton: css({
+    background: "rgba(156, 163, 175, 1)",
+    borderColor: "rgba(156, 163, 175, 1)",
+    color: "white",
+    cursor: "not-allowed",
+    opacity: 0.6,
+  }),
+  // Modal-Stile für Bildvergrößerung
+  modalOverlay: css({
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "lg",
+  }),
+  modalContent: css({
+    position: "relative",
+    maxWidth: "90vw",
+    maxHeight: "90vh",
+    background: "white",
+    borderRadius: "md",
+    overflow: "auto",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    display: "flex",
+    flexDirection: "column",
+  }),
+  modalImage: css({
+    width: "100%",
+    height: "auto",
+    maxHeight: "60vh",
+    objectFit: "contain",
+    flexShrink: 0,
+  }),
+  modalClose: css({
+    position: "absolute",
+    top: "sm",
+    right: "sm",
+    background: "rgba(0, 0, 0, 0.5)",
+    color: "white",
+    border: "none",
+    borderRadius: "50%",
+    width: "40px",
+    height: "40px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "lg",
+    _hover: {
+      background: "rgba(0, 0, 0, 0.7)",
+    },
+  }),
+  modalInfo: css({
+    padding: "md",
+    borderTop: "1px solid rgba(229, 231, 235, 1)",
+    flex: "1",
+    minHeight: "0",
+    overflow: "auto",
+  }),
+  modalTitle: css({
+    fontSize: "lg",
+    fontWeight: "bold",
+    marginBottom: "xs",
+  }),
+  modalDescription: css({
+    fontSize: "sm",
+    color: "gray.600",
+    lineHeight: "1.4",
   }),
 };
 

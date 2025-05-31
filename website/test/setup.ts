@@ -34,6 +34,22 @@ vi.mock("wagmi", () => ({
   useEnsName: vi.fn(() => ({
     data: null,
   })),
+  createConfig: vi.fn(() => ({})),
+  http: vi.fn(),
+}));
+
+// Mock wagmi/chains
+vi.mock("wagmi/chains", () => ({
+  mainnet: { id: 1, name: "Ethereum" },
+  sepolia: { id: 11155111, name: "Sepolia" },
+  optimism: { id: 10, name: "Optimism" },
+}));
+
+// Mock wagmi/connectors
+vi.mock("wagmi/connectors", () => ({
+  injected: vi.fn(() => ({})),
+  walletConnect: vi.fn(() => ({})),
+  metaMask: vi.fn(() => ({})),
 }));
 
 // Mock vike-react hooks

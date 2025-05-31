@@ -408,7 +408,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
                 className={`${styles.nftCard.actionButton} ${styles.nftCard.downloadButton}`}
                 title="Download image"
               >
-                ⬇️ Save
+                ⬇️ Download
               </button>
             )}
             <button

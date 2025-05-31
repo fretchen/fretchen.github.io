@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch"
   },
   "keywords": [],
   "author": "",
@@ -14,7 +16,9 @@
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^22.15.21",
     "serverless-scaleway-functions": ">=0.4.15",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.2",
+    "vitest": "^2.0.0",
+    "@vitest/ui": "^2.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.816.0",

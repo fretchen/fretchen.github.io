@@ -34,6 +34,15 @@ async function updateTokenWithImage(contract, tokenId, metadataUrl) {
 }
 
 async function handle(event, context, cb) {
+  // Check if queryStringParameters exists
+  if (!event.queryStringParameters) {
+    return {
+      body: JSON.stringify({ error: "No prompt provided" }),
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 400,
+    };
+  }
+
   // get the prompt from the event
   const prompt = event.queryStringParameters.prompt;
   if (!prompt) {
@@ -159,6 +168,9 @@ async function handle(event, context, cb) {
 
 /* This is used to test locally and will not be executed on Scaleway Functions */
 if (process.env.NODE_ENV === "test") {
+  // Don't start the server during tests to avoid port conflicts
+  console.log("Test environment detected - skipping server startup");
+} else if (process.env.NODE_ENV === "dev") {
   // Zuerst dotenv laden, um den privaten Schlüssel zu laden
   import("dotenv").then((dotenv) => {
     dotenv.config();
@@ -183,6 +195,9 @@ function validateUrl(url, trustedDomains) {
       throw new Error(`Untrusted URL: ${url}`);
     }
   } catch (error) {
+    if (error.message.startsWith('Untrusted URL:')) {
+      throw error; // Re-throw untrusted URL errors
+    }
     throw new Error(`Invalid URL: ${url}`);
   }
 }

@@ -130,7 +130,7 @@ export function ImageGenerator({
 
       // Erfolgreich - rufe Callback auf und reset Form
       onSuccess?.(newTokenId, imageUrl);
-      
+
       // Reset form für nächste Erstellung
       setTimeout(() => {
         setPrompt("");

@@ -102,12 +102,12 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         tokenURI: "",
         isLoading: true,
       }));
-      
+
       setNfts(placeholderNFTs);
 
       // Load all NFT data first, then sort by tokenId
       const nftPromises: Promise<NFT>[] = [];
-      
+
       for (let i = 0; i < Number(freshBalance); i++) {
         const nftPromise = (async () => {
           try {
@@ -149,20 +149,20 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
             };
           }
         })();
-        
+
         nftPromises.push(nftPromise);
       }
 
       // Wait for all NFTs to load
       const loadedNFTs = await Promise.all(nftPromises);
-      
+
       // Sort by tokenId in descending order (newest first)
       const sortedNFTs = loadedNFTs.sort((a, b) => {
         // Handle error cases - put them at the end
         if (a.error && !b.error) return 1;
         if (!a.error && b.error) return -1;
         if (a.error && b.error) return 0;
-        
+
         // Sort by tokenId (descending - newest first)
         return Number(b.tokenId - a.tokenId);
       });
@@ -188,7 +188,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     if (newlyCreatedNFT) {
       // Set highlighting for the new NFT
       setHighlightedNFT(newlyCreatedNFT.tokenId);
-      
+
       // Create temporary NFT for immediate display
       const tempNFT: NFT = {
         tokenId: newlyCreatedNFT.tokenId,
@@ -196,7 +196,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         imageUrl: newlyCreatedNFT.imageUrl,
         isLoading: false,
       };
-      
+
       // Add to top of list, but ensure we don't duplicate if it already exists
       setNfts((prevNfts) => {
         const existingIndex = prevNfts.findIndex((nft) => nft.tokenId === newlyCreatedNFT.tokenId);
@@ -210,7 +210,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
           return [tempNFT, ...prevNfts];
         }
       });
-      
+
       // Remove highlighting after 5 seconds - no automatic reload needed
       setTimeout(() => {
         setHighlightedNFT(null);

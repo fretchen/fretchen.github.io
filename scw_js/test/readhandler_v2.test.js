@@ -69,10 +69,10 @@ describe("readhandler_v2.js Tests", () => {
     mockContract.read.isImageUpdated.mockResolvedValue(false);
     mockContract.read.ownerOf.mockResolvedValue("0x123456789");
     mockGenerateAndUploadImage.mockResolvedValue(
-      "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json"
+      "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
     );
     mockContract.write.requestImageUpdate.mockResolvedValue(
-      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     );
   });
 
@@ -161,10 +161,14 @@ describe("readhandler_v2.js Tests", () => {
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.metadata_url).toBe(
-        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json"
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
       );
-      expect(responseBody.image_url).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png");
-      expect(responseBody.transaction_hash).toBe("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+      expect(responseBody.image_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+      );
+      expect(responseBody.transaction_hash).toBe(
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      );
       expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert");
 
       // Verifikation der Funktionsaufrufe
@@ -189,7 +193,9 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body).error).toBe("Operation fehlgeschlagen: Image generation failed");
+      expect(JSON.parse(result.body).error).toBe(
+        "Operation fehlgeschlagen: Image generation failed",
+      );
     });
 
     test("sollte Fehler behandeln wenn private key fehlt", async () => {
@@ -202,7 +208,9 @@ describe("readhandler_v2.js Tests", () => {
         },
       };
 
-      await expect(handle(event, {}, () => {})).rejects.toThrow("NFT_WALLET_PRIVATE_KEY nicht konfiguriert");
+      await expect(handle(event, {}, () => {})).rejects.toThrow(
+        "NFT_WALLET_PRIVATE_KEY nicht konfiguriert",
+      );
     });
 
     test("sollte Fehler behandeln wenn Metadaten-Fetch fehlschlägt", async () => {
@@ -242,7 +250,9 @@ describe("readhandler_v2.js Tests", () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
-          Promise.resolve({ image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png" }),
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       const result = await handle(event, {}, () => {});
@@ -263,7 +273,9 @@ describe("readhandler_v2.js Tests", () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
-          Promise.resolve({ image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png" }),
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       await handle(event, {}, () => {});
@@ -284,7 +296,9 @@ describe("readhandler_v2.js Tests", () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
-          Promise.resolve({ image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png" }),
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       const event = {
@@ -321,7 +335,9 @@ describe("readhandler_v2.js Tests", () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
-          Promise.resolve({ image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png" }),
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+          }),
       });
 
       const event = {

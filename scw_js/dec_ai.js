@@ -9,7 +9,7 @@ import { generateAndUploadImage } from "./image_service.js";
  * @param {Object} context - Der Kontext des Aufrufs.
  * @returns {Object} - Die HTTP-Antwort.
  */
-export async function handle(event, context) {
+export async function handle(event, _context) {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "*",
@@ -23,7 +23,7 @@ export async function handle(event, context) {
 
     // Extrahiere die tokenId aus den Abfrageparametern, falls vorhanden
     // Setze sie auf "0", wenn sie nicht vorhanden ist oder ungültig
-    let tokenId = queryParams.tokenId || "0";
+    const tokenId = queryParams.tokenId || "0";
 
     // Validiere den Prompt
     if (!prompt) {

@@ -1,7 +1,6 @@
 import { nftAbi } from "./nft_abi.js";
-import { getContract, createWalletClient, parseEther } from "viem";
-import { createPublicClient, http } from "viem";
-import { sepolia, optimism } from "viem/chains";
+import { getContract, createWalletClient, createPublicClient, http } from "viem";
+import { optimism } from "viem/chains";
 import { generateAndUploadImage } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 export { handle };
@@ -33,7 +32,7 @@ async function updateTokenWithImage(contract, tokenId, metadataUrl) {
   return hash;
 }
 
-async function handle(event, context, cb) {
+async function handle(event, _context, _cb) {
   // get the prompt from the event
   const prompt = event.queryStringParameters.prompt;
   if (!prompt) {

@@ -125,8 +125,12 @@ describe("image_service.js Tests", () => {
       await expect(uploadToS3(testData, fileName)).rejects.toThrow();
 
       // Stelle ursprüngliche Werte wieder her
-      if (originalAccessKey) process.env.SCW_ACCESS_KEY = originalAccessKey;
-      if (originalSecretKey) process.env.SCW_SECRET_KEY = originalSecretKey;
+      if (originalAccessKey) {
+        process.env.SCW_ACCESS_KEY = originalAccessKey;
+      }
+      if (originalSecretKey) {
+        process.env.SCW_SECRET_KEY = originalSecretKey;
+      }
     });
   });
 
@@ -167,10 +171,10 @@ describe("image_service.js Tests", () => {
           },
           body: JSON.stringify({
             model: "black-forest-labs/FLUX.1-schnell",
-            prompt: prompt,
+            prompt,
             size: "1024x1024",
           }),
-        })
+        }),
       );
 
       // Verify S3 uploads (image + metadata)
@@ -178,7 +182,7 @@ describe("image_service.js Tests", () => {
 
       // Check result
       expect(result).toMatch(
-        /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_123_[a-f0-9]{12}\.json$/
+        /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_123_[a-f0-9]{12}\.json$/,
       );
     });
 
@@ -192,7 +196,7 @@ describe("image_service.js Tests", () => {
       delete process.env.IONOS_API_TOKEN;
 
       await expect(generateAndUploadImage("test prompt", "123")).rejects.toThrow(
-        "API token not found. Please configure the IONOS_API_TOKEN environment variable."
+        "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
       );
     });
 
@@ -204,7 +208,7 @@ describe("image_service.js Tests", () => {
       });
 
       await expect(generateAndUploadImage("test prompt", "123")).rejects.toThrow(
-        "Could not reach IONOS: 401 Unauthorized"
+        "Could not reach IONOS: 401 Unauthorized",
       );
     });
 
@@ -215,7 +219,9 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId);
 
       // Überprüfe, dass die Metadaten-Upload mit korrektem Format aufgerufen wurde
-      const metadataCall = mockPutObjectCommand.mock.calls.find((call) => call[0].Key.startsWith("metadata/"));
+      const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
+        call[0].Key.startsWith("metadata/"),
+      );
 
       expect(metadataCall).toBeDefined();
 
@@ -224,7 +230,7 @@ describe("image_service.js Tests", () => {
         name: `AI Generated Art #${tokenId}`,
         description: `AI generated artwork based on the prompt: "${prompt}"`,
         image: expect.stringMatching(
-          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.png$/
+          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.png$/,
         ),
         attributes: [
           {
@@ -252,8 +258,12 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId);
 
       // Überprüfe, dass verschiedene Dateinamen verwendet wurden
-      const imageCalls = mockPutObjectCommand.mock.calls.filter((call) => call[0].Key.startsWith("images/"));
-      const metadataCalls = mockPutObjectCommand.mock.calls.filter((call) => call[0].Key.startsWith("metadata/"));
+      const imageCalls = mockPutObjectCommand.mock.calls.filter((call) =>
+        call[0].Key.startsWith("images/"),
+      );
+      const metadataCalls = mockPutObjectCommand.mock.calls.filter((call) =>
+        call[0].Key.startsWith("metadata/"),
+      );
 
       expect(imageCalls).toHaveLength(2);
       expect(metadataCalls).toHaveLength(2);
@@ -271,7 +281,7 @@ describe("image_service.js Tests", () => {
 
       // Finde den Bild-Upload-Aufruf
       const imageCall = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/png"
+        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/png",
       );
 
       expect(imageCall).toBeDefined();
@@ -286,7 +296,9 @@ describe("image_service.js Tests", () => {
       expect(result).toMatch(/metadata_unknown_[a-f0-9]{12}\.json$/);
 
       // Überprüfe Metadaten
-      const metadataCall = mockPutObjectCommand.mock.calls.find((call) => call[0].Key.startsWith("metadata/"));
+      const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
+        call[0].Key.startsWith("metadata/"),
+      );
       const metadata = JSON.parse(metadataCall[0].Body);
       expect(metadata.name).toBe("AI Generated Art #unknown");
     });
@@ -311,7 +323,8 @@ describe("image_service.js Tests", () => {
       for (const testCase of testCases) {
         await uploadToS3(testCase.data, "test-file", testCase.contentType);
 
-        const lastCall = mockPutObjectCommand.mock.calls[mockPutObjectCommand.mock.calls.length - 1];
+        const lastCall =
+          mockPutObjectCommand.mock.calls[mockPutObjectCommand.mock.calls.length - 1];
         expect(lastCall[0].ContentType).toBe(testCase.contentType);
       }
     });

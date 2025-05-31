@@ -76,7 +76,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
     mockContract.read.isImageUpdated.mockResolvedValue(false);
     mockContract.read.ownerOf.mockResolvedValue("0x123456789");
     mockContract.write.requestImageUpdate.mockResolvedValue(
-      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     );
 
     mockS3Send.mockResolvedValue({});
@@ -132,7 +132,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       const responseBody = JSON.parse(result.body);
       expect(responseBody).toEqual({
         metadata_url: expect.stringMatching(
-          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_42_[a-f0-9]{12}\.json$/
+          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_42_[a-f0-9]{12}\.json$/,
         ),
         image_url: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_1_abcdef123456.png",
         mintPrice: "1000000000000000000",
@@ -154,19 +154,23 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
             prompt: "beautiful cyberpunk cityscape at night",
             size: "1024x1024",
           }),
-        })
+        }),
       );
 
       // Überprüfe S3-Uploads (Bild + Metadaten)
       expect(mockS3Send).toHaveBeenCalledTimes(2);
 
       // Überprüfe Bild-Upload
-      const imageUpload = mockPutObjectCommand.mock.calls.find((call) => call[0].ContentType === "image/png");
+      const imageUpload = mockPutObjectCommand.mock.calls.find(
+        (call) => call[0].ContentType === "image/png",
+      );
       expect(imageUpload).toBeDefined();
       expect(imageUpload[0].Key).toMatch(/^images\/image_42_[a-f0-9]{12}\.png$/);
 
       // Überprüfe Metadaten-Upload
-      const metadataUpload = mockPutObjectCommand.mock.calls.find((call) => call[0].ContentType === "application/json");
+      const metadataUpload = mockPutObjectCommand.mock.calls.find(
+        (call) => call[0].ContentType === "application/json",
+      );
       expect(metadataUpload).toBeDefined();
       expect(metadataUpload[0].Key).toMatch(/^metadata\/metadata_42_[a-f0-9]{12}\.json$/);
 
@@ -174,7 +178,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
         BigInt("42"),
         expect.stringMatching(
-          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_42_[a-f0-9]{12}\.json$/
+          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_42_[a-f0-9]{12}\.json$/,
         ),
       ]);
     });
@@ -261,7 +265,9 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body).error).toContain("Could not reach IONOS: 429 Too Many Requests");
+      expect(JSON.parse(result.body).error).toContain(
+        "Could not reach IONOS: 429 Too Many Requests",
+      );
     });
 
     test("sollte Metadaten-Konsistenz zwischen Service und Response prüfen", async () => {
@@ -280,7 +286,9 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(result.statusCode).toBe(200);
 
       // Hole die hochgeladenen Metadaten
-      const metadataUpload = mockPutObjectCommand.mock.calls.find((call) => call[0].ContentType === "application/json");
+      const metadataUpload = mockPutObjectCommand.mock.calls.find(
+        (call) => call[0].ContentType === "application/json",
+      );
 
       const uploadedMetadata = JSON.parse(metadataUpload[0].Body);
 
@@ -303,7 +311,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
             trait_type: "Model",
             value: "black-forest-labs/FLUX.1-schnell",
           }),
-        ])
+        ]),
       );
     });
   });
@@ -348,8 +356,8 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(results.length).toBe(5);
 
       // Mindestens eine sollte erfolgreich sein ODER alle können fehlschlagen (bei Mock-Limitationen)
-      const successfulResults = results.filter((result) => result.statusCode === 200);
-      const failedResults = results.filter((result) => result.statusCode !== 200);
+      const _successfulResults = results.filter((result) => result.statusCode === 200);
+      const _failedResults = results.filter((result) => result.statusCode !== 200);
 
       // Prüfe, dass alle Results eine gültige Response haben
       results.forEach((result) => {
@@ -392,7 +400,9 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(result.statusCode).toBe(200);
 
       // Überprüfe dass große Datei korrekt verarbeitet wurde
-      const imageUpload = mockPutObjectCommand.mock.calls.find((call) => call[0].ContentType === "image/png");
+      const imageUpload = mockPutObjectCommand.mock.calls.find(
+        (call) => call[0].ContentType === "image/png",
+      );
       expect(Buffer.isBuffer(imageUpload[0].Body)).toBe(true);
       expect(imageUpload[0].Body.length).toBeGreaterThan(40000);
     });

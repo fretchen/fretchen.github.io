@@ -59,7 +59,7 @@ export function ImageGenerator({
 
   const handleMintAndGenerate = async () => {
     if (!isConnected || !address) {
-      const errorMsg = "Please connect your wallet first";
+      const errorMsg = "Please connect your account first";
       setError(errorMsg);
       onError?.(errorMsg);
       return;
@@ -71,7 +71,7 @@ export function ImageGenerator({
       return;
     }
     if (!mintPrice) {
-      const errorMsg = "Could not load mint price from contract";
+      const errorMsg = "Could not load creation fee from system";
       setError(errorMsg);
       onError?.(errorMsg);
       return;
@@ -101,12 +101,12 @@ export function ImageGenerator({
       );
 
       if (!transferEvent || transferEvent.topics.length < 4) {
-        throw new Error("Could not extract token ID from transaction");
+        throw new Error("Could not extract artwork ID from transaction");
       }
 
       const tokenIdHex = transferEvent.topics[3];
       const newTokenId = BigInt(tokenIdHex);
-      console.log("Minted token ID:", newTokenId);
+      console.log("Created artwork ID:", newTokenId);
       setTokenId(newTokenId);
 
       // Proceed with image generation
@@ -148,9 +148,9 @@ export function ImageGenerator({
     <div className={styles.imageGen.compactLayout}>
       <div className={styles.imageGen.compactContainer}>
         <div className={styles.imageGen.compactHeader}>
-          <h3 className={styles.imageGen.compactTitle}>Create NFT</h3>
+          <h3 className={styles.imageGen.compactTitle}>Create Your Art</h3>
           <span className={styles.imageGen.compactSubtitle}>
-            Enter prompt and generate your unique image (~10¢ in ETH)
+            Describe what you want and generate your unique digital artwork (~10¢)
           </span>
         </div>
 
@@ -170,7 +170,7 @@ export function ImageGenerator({
               isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
             }`}
           >
-            {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create NFT"}
+            {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create Art"}
           </button>
         </div>
 
@@ -178,20 +178,20 @@ export function ImageGenerator({
         {mintingStatus !== "idle" && (
           <div className={styles.imageGen.compactStatus}>
             <div className={styles.spinner}></div>
-            <span>{mintingStatus === "minting" ? "Creating your NFT..." : "Generating image..."}</span>
+            <span>{mintingStatus === "minting" ? "Creating your artwork..." : "Generating image..."}</span>
           </div>
         )}
 
-        {!isConnected && <div className={styles.imageGen.compactError}>Connect your wallet to create an NFT</div>}
+        {!isConnected && <div className={styles.imageGen.compactError}>Connect your account to create artwork</div>}
 
         {error && <div className={styles.imageGen.compactError}>{error}</div>}
 
         {/* Erfolgreiche Erstellung */}
         {tokenId && generatedImageUrl && (
           <div className={styles.successMessage}>
-            <h4 className={css({ margin: 0, fontSize: "sm" })}>✅ NFT created successfully!</h4>
+            <h4 className={css({ margin: 0, fontSize: "sm" })}>✅ Artwork created successfully!</h4>
             <p className={css({ margin: "xs 0", fontSize: "sm" })}>
-              Token ID: {tokenId.toString()} - Check your gallery below
+              ID: {tokenId.toString()} - Check your gallery below
             </p>
           </div>
         )}

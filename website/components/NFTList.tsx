@@ -197,7 +197,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   if (!isConnected) {
     return (
       <div className={styles.nftList.walletPrompt}>
-        <p>Connect your wallet to view your NFTs</p>
+        <p>Connect your account to view your artworks</p>
       </div>
     );
   }
@@ -207,18 +207,18 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   return (
     <div className={styles.nftList.container}>
       <div className={styles.nftList.heading}>
-        <h2 className={styles.imageGen.columnHeading}>Your Generated NFTs ({userBalance?.toString() || "0"})</h2>
+        <h2 className={styles.imageGen.columnHeading}>Your Digital Artworks ({userBalance?.toString() || "0"})</h2>
       </div>
 
       {isLoading && nfts.length === 0 ? (
         <div className={styles.nftList.loadingContainer}>
           <div className={styles.spinner}></div>
-          <p>Loading your NFTs...</p>
+          <p>Loading your artworks...</p>
         </div>
       ) : userBalance === 0n || !userBalance ? (
         <div className={styles.nftList.emptyStateContainer}>
           <p className={styles.nftList.emptyStateText}>
-            You haven&apos;t created any NFTs yet. Use the generator above to create your first one!
+            You haven&apos;t created any artworks yet. Use the generator above to create your first one!
           </p>
         </div>
       ) : (
@@ -265,7 +265,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     if (nft.imageUrl) {
       onImageClick({
         src: nft.imageUrl,
-        alt: nft.metadata?.name || `NFT #${nft.tokenId}`,
+        alt: nft.metadata?.name || `Artwork #${nft.tokenId}`,
         title: nft.metadata?.name,
         description: nft.metadata?.description,
       });
@@ -281,7 +281,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${nft.metadata?.name || `NFT-${nft.tokenId}`}.png`;
+      link.download = `${nft.metadata?.name || `Artwork-${nft.tokenId}`}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -295,7 +295,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
   const handleBurn = async () => {
     if (
       !confirm(
-        `Are you sure you want to burn NFT "${nft.metadata?.name || `#${nft.tokenId}`}"? This action cannot be undone.`,
+        `Are you sure you want to permanently delete "${nft.metadata?.name || `Artwork #${nft.tokenId}`}"? This action cannot be undone.`,
       )
     ) {
       return;
@@ -308,8 +308,8 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
         args: [nft.tokenId],
       });
     } catch (error) {
-      console.error("Burn failed:", error);
-      alert("Failed to burn NFT. Please try again.");
+      console.error("Delete failed:", error);
+      alert("Failed to delete artwork. Please try again.");
     }
   };
 
@@ -318,14 +318,14 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       {nft.isLoading ? (
         <div className={styles.nftCard.loadingContainer}>
           <div className={styles.spinner}></div>
-          <p className={styles.nftCard.loadingText}>Loading NFT...</p>
+          <p className={styles.nftCard.loadingText}>Loading artwork...</p>
         </div>
       ) : nft.error ? (
         <div className={styles.nftCard.errorContainer}>
           <div className={styles.nftCard.errorBox}>
             <p className={styles.nftCard.errorText}>{nft.error}</p>
           </div>
-          <p className={styles.nftCard.tokenIdText}>Token ID: {nft.tokenId.toString()}</p>
+          <p className={styles.nftCard.tokenIdText}>ID: {nft.tokenId.toString()}</p>
         </div>
       ) : (
         <>
@@ -333,7 +333,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
-                alt={nft.metadata?.name || `NFT #${nft.tokenId}`}
+                alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
                 className={styles.nftCard.image}
                 onClick={handleImageClick}
                 style={{ cursor: "pointer" }}
@@ -351,12 +351,12 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             <div className={styles.nftCard.imagePlaceholder}>No image available</div>
           )}
 
-          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `NFT #${nft.tokenId}`}</h3>
+          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `Artwork #${nft.tokenId}`}</h3>
 
           {nft.metadata?.description && <p className={styles.nftCard.description}>{nft.metadata.description}</p>}
 
           <div className={styles.nftCard.footer}>
-            <span>Token ID: {nft.tokenId.toString()}</span>
+            <span>ID: {nft.tokenId.toString()}</span>
           </div>
 
           {/* Aktions-Buttons */}
@@ -383,10 +383,10 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
               onClick={handleBurn}
               disabled={isBurning || isConfirming}
               className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
-              title="Burn NFT (permanent)"
+              title="Delete artwork (permanent)"
               style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
             >
-              {isBurning ? "🔥 Burning..." : isConfirming ? "⏳ Confirming..." : "🔥 Burn"}
+              {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : "🗑️ Delete"}
             </button>
           </div>
         </>

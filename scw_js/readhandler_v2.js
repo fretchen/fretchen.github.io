@@ -1,8 +1,7 @@
 import { nftAbi } from "./nft_abi.js";
-import { getContract, createWalletClient, parseEther } from "viem";
-import { createPublicClient, http } from "viem";
-import { sepolia, optimism } from "viem/chains";
-import { generateAndUploadImage } from "./image_service.js";
+import { getContract, createWalletClient, createPublicClient, http } from "viem";
+import { optimism } from "viem/chains";
+import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 export { handle };
 
@@ -119,6 +118,15 @@ async function handle(event, context, cb) {
     const metadataUrl = await generateAndUploadImage(prompt, tokenId);
 
     // Metadaten laden, um die Bild-URL zu extrahieren
+    // Validate the metadataUrl against a trusted allow-list
+    // Dynamically derive allowed hostname from JSON_BASE_PATH
+    const baseDomain = new URL(JSON_BASE_PATH);
+    const allowedHostnames = [baseDomain.hostname];
+    const url = new URL(metadataUrl);
+    if (!allowedHostnames.includes(url.hostname)) {
+      throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
+    }
+
     const metadataResponse = await fetch(metadataUrl);
     if (!metadataResponse.ok) {
       throw new Error(`Fehler beim Laden der Metadaten: ${metadataResponse.status}`);

@@ -19,7 +19,9 @@ describe("NFT ABI Tests", () => {
     });
 
     test("sollte erforderliche Funktionen enthalten", () => {
-      const functionNames = nftAbi.filter((item) => item.type === "function").map((item) => item.name);
+      const functionNames = nftAbi
+        .filter((item) => item.type === "function")
+        .map((item) => item.name);
 
       const requiredFunctions = ["ownerOf", "mintPrice", "isImageUpdated", "requestImageUpdate"];
 
@@ -29,7 +31,9 @@ describe("NFT ABI Tests", () => {
     });
 
     test("sollte korrekte Funktions-Signaturen haben", () => {
-      const ownerOfFunction = nftAbi.find((item) => item.type === "function" && item.name === "ownerOf");
+      const ownerOfFunction = nftAbi.find(
+        (item) => item.type === "function" && item.name === "ownerOf",
+      );
 
       expect(ownerOfFunction).toBeDefined();
       expect(ownerOfFunction.inputs).toHaveLength(1);
@@ -38,7 +42,7 @@ describe("NFT ABI Tests", () => {
       expect(ownerOfFunction.outputs[0].type).toBe("address");
 
       const requestImageUpdateFunction = nftAbi.find(
-        (item) => item.type === "function" && item.name === "requestImageUpdate"
+        (item) => item.type === "function" && item.name === "requestImageUpdate",
       );
 
       expect(requestImageUpdateFunction).toBeDefined();

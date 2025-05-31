@@ -75,7 +75,9 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
     mockContract.read.mintPrice.mockResolvedValue(BigInt("1000000000000000000"));
     mockContract.read.isImageUpdated.mockResolvedValue(false);
     mockContract.read.ownerOf.mockResolvedValue("0x123456789");
-    mockContract.write.requestImageUpdate.mockResolvedValue("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+    mockContract.write.requestImageUpdate.mockResolvedValue(
+      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    );
 
     mockS3Send.mockResolvedValue({});
     mockPutObjectCommand.mockImplementation((params) => params);
@@ -219,7 +221,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
             ok: true,
             json: () =>
               Promise.resolve({
-                image: `https://example.com/image_${testCase.tokenId}.png`,
+                image: `https://my-imagestore.s3.nl-ams.scw.cloud/images/image_${testCase.tokenId}.png`,
               }),
           });
 
@@ -325,7 +327,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
             ok: true,
             json: () =>
               Promise.resolve({
-                image: `https://example.com/image_${i}.png`,
+                image: `https://my-imagestore.s3.nl-ams.scw.cloud/images/image_${i}.png`,
               }),
           });
 
@@ -374,7 +376,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              image: "https://example.com/large_image.png",
+              image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/large_image.png",
             }),
         });
 

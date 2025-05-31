@@ -20,7 +20,7 @@ import { randomBytes } from "crypto";
 // Configuration constants
 const MODEL_NAME = "black-forest-labs/FLUX.1-schnell";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/images/generations";
-const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
+export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
 
 /**

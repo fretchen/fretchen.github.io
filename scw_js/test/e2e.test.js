@@ -206,7 +206,7 @@ describe("End-to-End Mock Tests", () => {
 
       expect(successResponse.metadata_url).toMatch(/^https?:\/\/.+/);
       expect(successResponse.image_url).toMatch(/^https?:\/\/.+/);
-      expect(successResponse.transaction_hash).toMatch(/^0x[a-fA-F0-9A-Z]+/); // Erlaubt auch Großbuchstaben und kürzere Hashes
+      expect(successResponse.transaction_hash).toMatch(/^0x[a-fA-F0-9]+/); // Erlaubt nur gültige Hexadezimalzeichen
     });
 
     test("sollte korrekte Error-Response-Struktur validieren", () => {

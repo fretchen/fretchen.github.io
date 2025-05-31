@@ -54,7 +54,7 @@ describe("ImageGen Page", () => {
     );
 
     // Check if all main elements are rendered
-    expect(screen.getByText("Decentral AI Image Generator")).toBeInTheDocument();
+    expect(screen.getByText("AI Image Creator")).toBeInTheDocument();
     expect(screen.getByTestId("image-generator")).toBeInTheDocument();
     expect(screen.getByTestId("nft-list")).toBeInTheDocument();
 
@@ -109,10 +109,10 @@ describe("ImageGen Page", () => {
     );
 
     // Check if the components are in the expected order
-    const container = screen.getByText("Decentral AI Image Generator").parentElement;
+    const container = screen.getByText("AI Image Creator").parentElement;
     expect(container).toHaveClass("mock-container-class");
 
-    const heading = screen.getByText("Decentral AI Image Generator");
+    const heading = screen.getByText("AI Image Creator");
     expect(heading).toHaveClass("mock-heading-class");
   });
 });

@@ -1,9 +1,7 @@
 import * as React from "react";
+import { TitleBarProps } from "../types/components";
 import SupportArea from "./SupportArea";
 
-interface TitleBarProps {
-  title: string;
-}
 const TitleBar: React.FC<TitleBarProps> = function ({ title }) {
   return (
     <div

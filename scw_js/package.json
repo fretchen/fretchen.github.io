@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test vitest run",
+    "test:watch": "NODE_ENV=test vitest",
+    "test:coverage": "NODE_ENV=test vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -13,8 +15,10 @@
   "devDependencies": {
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^22.15.21",
+    "@vitest/coverage-v8": "^1.6.1",
     "serverless-scaleway-functions": ">=0.4.15",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.2",
+    "vitest": "^1.6.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.816.0",

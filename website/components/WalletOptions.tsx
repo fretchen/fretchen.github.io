@@ -23,7 +23,7 @@ export default function WalletOptions() {
   // Display address or connect message
   const displayText = isConnected
     ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
-    : "Connect Wallet";
+    : "Connect Account";
 
   // Get menu items based on connection status
   const getMenuItems = () => {

@@ -251,6 +251,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showToast, setShowToast] = useState(false);
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Warte auf Transaktionsbestätigung
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -266,6 +267,15 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       }, 1000);
     }
   }, [isConfirmed, onNftBurned]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -310,7 +320,17 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       await navigator.clipboard.writeText(openSeaUrl);
       // Show modern toast notification
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      
+      // Clear any existing timeout
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+      
+      // Set new timeout and store reference
+      toastTimeoutRef.current = setTimeout(() => {
+        setShowToast(false);
+        toastTimeoutRef.current = null;
+      }, 3000);
     } catch (error) {
       console.error("Failed to copy URL:", error);
       // Fallback: open in new tab if clipboard fails

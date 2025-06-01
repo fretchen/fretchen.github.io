@@ -155,7 +155,7 @@ export interface NFTCardProps extends BaseComponentProps {
  * Props for the NFTList component
  */
 export interface NFTListProps extends BaseComponentProps {
-  newlyCreatedNFT?: { tokenId: bigint; imageUrl: string };
+  newlyCreatedNFT?: { tokenId: bigint; imageUrl: string; metadata?: NFTMetadata };
   onNewNFTDisplayed?: () => void;
 }
 
@@ -164,7 +164,7 @@ export interface NFTListProps extends BaseComponentProps {
  */
 export interface ImageGeneratorProps extends BaseComponentProps {
   apiUrl?: string;
-  onSuccess?: (tokenId: bigint, imageUrl: string) => void;
+  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
   onError?: (error: string) => void;
 }
 

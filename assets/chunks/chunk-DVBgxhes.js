@@ -1,0 +1,1 @@
+import{j as s,C as e,D as i}from"./chunk-DVUYG-jY.js";const t=({title:a,description:r,link:c})=>s.jsx("div",{className:e.container,children:s.jsxs("div",{className:e.content,children:[s.jsxs("div",{className:e.text,children:[s.jsx("h3",{className:e.title,children:a}),s.jsx("p",{className:e.description,children:r})]}),s.jsx(i,{href:c,children:"Read more →"})]})});export{t as C};

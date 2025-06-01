@@ -169,6 +169,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         tokenId: newlyCreatedNFT.tokenId,
         tokenURI: "",
         imageUrl: newlyCreatedNFT.imageUrl,
+        metadata: newlyCreatedNFT.metadata,
         isLoading: false,
       };
 
@@ -176,9 +177,13 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
       setNfts((prevNfts) => {
         const existingIndex = prevNfts.findIndex((nft) => nft.tokenId === newlyCreatedNFT.tokenId);
         if (existingIndex !== -1) {
-          // Update existing NFT with image
+          // Update existing NFT with image and metadata
           const updatedNfts = [...prevNfts];
-          updatedNfts[existingIndex] = { ...updatedNfts[existingIndex], imageUrl: newlyCreatedNFT.imageUrl };
+          updatedNfts[existingIndex] = {
+            ...updatedNfts[existingIndex],
+            imageUrl: newlyCreatedNFT.imageUrl,
+            metadata: newlyCreatedNFT.metadata,
+          };
           return updatedNfts;
         } else {
           // Add new NFT at the top

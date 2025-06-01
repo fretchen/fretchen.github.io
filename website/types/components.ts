@@ -120,12 +120,18 @@ export interface TitleBarProps extends BaseComponentProps {
 // ===== IMAGE AND MODAL INTERFACES =====
 
 /**
- * NFT Metadata structure
+ * NFT Metadata structure following ERC721 metadata standard.
+ * This interface represents the metadata returned by the ImageGenerator API
+ * and stored for each NFT, containing descriptive information and attributes.
  */
 export interface NFTMetadata {
+  /** The name/title of the NFT (e.g., "AI Generated Artwork #123") */
   name?: string;
+  /** Detailed description of the NFT, typically includes the generation prompt */
   description?: string;
+  /** URL to the NFT's image asset */
   image?: string;
+  /** Array of trait/attribute objects describing the NFT's characteristics */
   attributes?: Array<{ trait_type: string; value: string | number }>;
 }
 
@@ -155,7 +161,21 @@ export interface NFTCardProps extends BaseComponentProps {
  * Props for the NFTList component
  */
 export interface NFTListProps extends BaseComponentProps {
-  newlyCreatedNFT?: { tokenId: bigint; imageUrl: string };
+  /**
+   * Newly created NFT data to be immediately displayed in the list.
+   * When provided, the NFT will be highlighted and added to the top of the list.
+   * The metadata field contains the complete NFT metadata from the ImageGenerator API response,
+   * allowing immediate display of the description without waiting for blockchain events.
+   */
+  newlyCreatedNFT?: {
+    /** The blockchain token ID of the newly created NFT */
+    tokenId: bigint;
+    /** The generated image URL from the API response */
+    imageUrl: string;
+    /** Optional metadata containing name, description, and attributes from the ImageGenerator */
+    metadata?: NFTMetadata;
+  };
+  /** Callback fired when the newly created NFT has been displayed and highlighting is removed */
   onNewNFTDisplayed?: () => void;
 }
 
@@ -163,8 +183,16 @@ export interface NFTListProps extends BaseComponentProps {
  * Props for the ImageGenerator component
  */
 export interface ImageGeneratorProps extends BaseComponentProps {
+  /** API URL for the image generation service */
   apiUrl?: string;
-  onSuccess?: (tokenId: bigint, imageUrl: string) => void;
+  /**
+   * Callback fired when image generation completes successfully.
+   * @param tokenId - The blockchain token ID of the created NFT
+   * @param imageUrl - The generated image URL from the API response
+   * @param metadata - Optional complete metadata object including name, description, and attributes
+   */
+  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
+  /** Callback fired when an error occurs during image generation */
   onError?: (error: string) => void;
 }
 

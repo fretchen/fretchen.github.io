@@ -123,8 +123,26 @@ export function ImageGenerator({
       setGeneratedImageUrl(imageUrl);
       setMintingStatus("idle");
 
-      // Erfolgreich - rufe Callback auf und reset Form
-      onSuccess?.(newTokenId, imageUrl);
+      // Erstelle Metadaten-Objekt aus der API-Antwort
+      const metadata = {
+        name: `AI Generated Artwork #${newTokenId}`,
+        description: `AI generated artwork based on the prompt: "${prompt}"`,
+        image: imageUrl,
+        external_url: data.metadata_url || "",
+        attributes: [
+          {
+            trait_type: "Prompt",
+            value: prompt,
+          },
+          {
+            trait_type: "Generation Method",
+            value: "AI Generated",
+          },
+        ],
+      };
+
+      // Erfolgreich - rufe Callback auf mit erweiterten Daten
+      onSuccess?.(newTokenId, imageUrl, metadata);
 
       // Reset form für nächste Erstellung
       setTimeout(() => {

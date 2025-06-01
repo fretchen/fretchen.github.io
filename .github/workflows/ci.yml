@@ -3,8 +3,14 @@ name: Lint
 on:
   push:
     branches: ["main"]
+    paths:
+      - 'website/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: ["main"]
+    paths:
+      - 'website/**'
+      - '.github/workflows/ci.yml'
 
 permissions:
   contents: read

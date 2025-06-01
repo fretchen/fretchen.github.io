@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import ImageGenerator from "../../components/ImageGenerator";
 import NFTList from "../../components/NFTList";
+import { NFTMetadata } from "../../types/components";
 import * as styles from "../../layouts/styles";
 
 export default function Page() {
   const [newlyCreatedNFT, setNewlyCreatedNFT] = useState<{
     tokenId: bigint;
     imageUrl: string;
+    metadata?: NFTMetadata;
   } | null>(null);
 
-  const handleSuccess = (tokenId: bigint, imageUrl: string) => {
-    console.log("Image generation succeeded:", { tokenId, imageUrl });
+  const handleSuccess = (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => {
+    console.log("Image generation succeeded:", { tokenId, imageUrl, metadata });
 
     // Set the newly created NFT for highlighting in the gallery
     setNewlyCreatedNFT({
       tokenId,
       imageUrl,
+      metadata,
     });
   };
 

@@ -250,6 +250,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  const [showToast, setShowToast] = useState(false);
 
   // Warte auf Transaktionsbestätigung
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -301,19 +302,15 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
    * Copies the OpenSea marketplace URL to clipboard for easy sharing
    * Uses the Optimism network OpenSea URL format
    */
-  const handleShare = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleShare = async () => {
     const contractAddress = genAiNFTContractConfig.address;
     const openSeaUrl = `https://opensea.io/item/optimism/${contractAddress}/${nft.tokenId}`;
-    
+
     try {
       await navigator.clipboard.writeText(openSeaUrl);
-      // Show temporary success feedback on the clicked button
-      const button = event.currentTarget;
-      const originalText = button.textContent || "📤 Share";
-      button.textContent = "✅ Copied!";
-      setTimeout(() => {
-        button.textContent = originalText;
-      }, 2000);
+      // Show modern toast notification
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     } catch (error) {
       console.error("Failed to copy URL:", error);
       // Fallback: open in new tab if clipboard fails
@@ -426,6 +423,16 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             </button>
           </div>
         </>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className={styles.toast.container}>
+          <div className={styles.toast.content}>
+            <span className={styles.toast.icon}>✅</span>
+            <span className={styles.toast.message}>OpenSea URL copied to clipboard!</span>
+          </div>
+        </div>
       )}
     </div>
   );

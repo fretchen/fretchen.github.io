@@ -250,6 +250,8 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  const [showToast, setShowToast] = useState(false);
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Warte auf Transaktionsbestätigung
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -265,6 +267,15 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       }, 1000);
     }
   }, [isConfirmed, onNftBurned]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -294,6 +305,36 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     } catch (error) {
       console.error("Download failed:", error);
       alert("Download failed. Please try again.");
+    }
+  };
+
+  /**
+   * Copies the OpenSea marketplace URL to clipboard for easy sharing
+   * Uses the Optimism network OpenSea URL format
+   */
+  const handleShare = async () => {
+    const contractAddress = genAiNFTContractConfig.address;
+    const openSeaUrl = `https://opensea.io/item/optimism/${contractAddress}/${nft.tokenId}`;
+
+    try {
+      await navigator.clipboard.writeText(openSeaUrl);
+      // Show modern toast notification
+      setShowToast(true);
+
+      // Clear any existing timeout
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+
+      // Set new timeout and store reference
+      toastTimeoutRef.current = setTimeout(() => {
+        setShowToast(false);
+        toastTimeoutRef.current = null;
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
+      // Fallback: open in new tab if clipboard fails
+      window.open(openSeaUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -385,6 +426,13 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
               </button>
             )}
             <button
+              onClick={handleShare}
+              className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
+              title="Share your artwork on the marketplace"
+            >
+              📤 Share
+            </button>
+            <button
               onClick={handleBurn}
               disabled={isBurning || isConfirming}
               className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
@@ -395,6 +443,16 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             </button>
           </div>
         </>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className={styles.toast.container}>
+          <div className={styles.toast.content}>
+            <span className={styles.toast.icon}>✅</span>
+            <span className={styles.toast.message}>OpenSea URL copied to clipboard!</span>
+          </div>
+        </div>
       )}
     </div>
   );

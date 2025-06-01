@@ -126,6 +126,14 @@ async function handle(event, context, cb) {
     if (!allowedHostnames.includes(url.hostname)) {
       throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
     }
+    // Additional validation for pathname and query parameters
+    const forbiddenPatterns = ["../", "..\\"];
+    if (forbiddenPatterns.some(pattern => url.pathname.includes(pattern))) {
+      throw new Error(`Invalid metadata URL pathname: ${metadataUrl}`);
+    }
+    if (url.search && url.search.includes("redirect")) {
+      throw new Error(`Invalid metadata URL query parameters: ${metadataUrl}`);
+    }
 
     const metadataResponse = await fetch(metadataUrl);
     if (!metadataResponse.ok) {

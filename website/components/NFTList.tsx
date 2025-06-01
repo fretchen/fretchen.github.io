@@ -320,12 +320,12 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       await navigator.clipboard.writeText(openSeaUrl);
       // Show modern toast notification
       setShowToast(true);
-      
+
       // Clear any existing timeout
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
       }
-      
+
       // Set new timeout and store reference
       toastTimeoutRef.current = setTimeout(() => {
         setShowToast(false);

@@ -297,6 +297,30 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     }
   };
 
+  /**
+   * Copies the OpenSea marketplace URL to clipboard for easy sharing
+   * Uses the Optimism network OpenSea URL format
+   */
+  const handleShare = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const contractAddress = genAiNFTContractConfig.address;
+    const openSeaUrl = `https://opensea.io/item/optimism/${contractAddress}/${nft.tokenId}`;
+    
+    try {
+      await navigator.clipboard.writeText(openSeaUrl);
+      // Show temporary success feedback on the clicked button
+      const button = event.currentTarget;
+      const originalText = button.textContent || "📤 Share";
+      button.textContent = "✅ Copied!";
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
+      // Fallback: open in new tab if clipboard fails
+      window.open(openSeaUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
   const handleBurn = async () => {
     if (
       !confirm(
@@ -384,6 +408,13 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
                 ⬇️ Download
               </button>
             )}
+            <button
+              onClick={handleShare}
+              className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
+              title="Share your artwork on the marketplace"
+            >
+              📤 Share
+            </button>
             <button
               onClick={handleBurn}
               disabled={isBurning || isConfirming}

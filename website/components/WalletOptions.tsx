@@ -6,6 +6,7 @@ import { walletOptions } from "../layouts/styles";
  * WalletOptions Component
  *
  * Handles wallet connection and display with unified styling.
+ * Prevents hydration mismatches by waiting for client-side mount.
  *
  * @returns {JSX.Element} Dropdown menu for wallet management
  */
@@ -19,15 +20,22 @@ export default function WalletOptions() {
   // UI state
   const [isOpen, setIsOpen] = React.useState(false);
   const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  // Prevent hydration mismatch by only showing wallet data after client-side mount
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Display address or connect message
-  const displayText = isConnected
-    ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
-    : "Connect Account";
+  const displayText =
+    isMounted && isConnected
+      ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
+      : "Connect Account";
 
   // Get menu items based on connection status
   const getMenuItems = () => {
-    if (isConnected) {
+    if (isMounted && isConnected) {
       return [{ id: "disconnect", label: "Disconnect", action: () => disconnect() }];
     } else {
       return connectors.map((connector) => ({

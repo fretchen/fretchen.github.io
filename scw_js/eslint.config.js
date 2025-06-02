@@ -5,10 +5,10 @@ export default [
   {
     ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"],
   },
-  
+
   // Base recommended configuration
   js.configs.recommended,
-  
+
   // Custom configuration for all JS files
   {
     files: ["**/*.js"],
@@ -63,7 +63,7 @@ export default [
       "object-shorthand": "error",
     },
   },
-  
+
   // Test files configuration
   {
     files: ["test/**/*.js", "**/*.test.js"],

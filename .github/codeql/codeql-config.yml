@@ -28,6 +28,6 @@ paths:
   - "website/utils/**"
   - "website/types/**"
   - "website/layouts/**"
-  - "scw_js/*.js"
+  - "scw_js/**/*.js"
   - "eth/contracts/**"
   - "eth/scripts/**"

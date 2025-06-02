@@ -8,7 +8,7 @@ In one of my [previous posts](9), I described how I set up a system to generate 
 
 ## Modernizing the contract
 
-The images were previouslycreated with a standard [ERC-721](https://docs.openzeppelin.com/contracts/5.x/erc721) contract, which allows you to own Non-fungible tokens.  But this ran into trouble once I tried to collect all the NFTs that were created by a single wallet. The details of the problems are rather technical and it took me some time to understand the issue, but luckily I was not the only one that ran into this problem. The solution was to use the [ERC-721 Enumerable](https://docs.openzeppelin.com/contracts/5.x/api/token/erc721#ERC721Enumerable) extension. This extension allows you to enumerate all the tokens owned by a specific address, which is exactly what I needed for the gallery.
+The images were previouslycreated with a standard [ERC-721](https://docs.openzeppelin.com/contracts/5.x/erc721) contract, which allows you to own Non-fungible tokens. But this ran into trouble once I tried to collect all the NFTs that were created by a single wallet. The details of the problems are rather technical and it took me some time to understand the issue, but luckily I was not the only one that ran into this problem. The solution was to use the [ERC-721 Enumerable](https://docs.openzeppelin.com/contracts/5.x/api/token/erc721#ERC721Enumerable) extension. This extension allows you to enumerate all the tokens owned by a specific address, which is exactly what I needed for the gallery.
 
 Now, I thought that this would be just a simple upgrade to the previous contract. However, the internal data structure is substantially different from the "normal" ERC-721 contract. Therefore, I simply created a new contract, wrote some tests and deployed it. The new contract is called [`GenImNFTv2`](https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code) and it is a replacement for the previous contract. It has all the features of the previous contract, but it also allows you to enumerate all the tokens owned by a specific address.
 
@@ -20,7 +20,7 @@ Once, it was possible to enumerate the tokens, I could set up the gallery. At fi
 
 The component now fulfills a lot of my personal needs. If I wanted to extend it further, this would most likely mean that I want to make it more social with features like:
 
-- User profiles to browse other people's AI art galleries  
+- User profiles to browse other people's AI art galleries
 - Simple social features like favorites or comments
 - Better discovery and search functionality
 

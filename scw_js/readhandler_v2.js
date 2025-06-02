@@ -10,7 +10,7 @@ async function isTokenMinted(contract, tokenId) {
     // Der ownerOf-Aufruf schlägt fehl, wenn das Token nicht existiert
     await contract.read.ownerOf([BigInt(tokenId)]);
     return true; // Token existiert
-  } catch (error) {
+  } catch (_error) {
     return false; // Token existiert nicht
   }
 }

@@ -1,0 +1,33 @@
+name: "Custom CodeQL Configuration"
+
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality  
+    uses: security-and-quality
+
+paths-ignore:
+  - "website/node_modules/**"
+  - "scw_js/node_modules/**"
+  - "website/dist/**"
+  - "website/build/**"
+  - "scw_js/coverage/**"
+  - "scw_js/.serverless/**"
+  - "eth/node_modules/**"
+  - "eth/artifacts/**"
+  - "eth/cache/**"
+  - "website/coverage/**"
+  - "website/styled-system/**"
+  - "**/*.test.js"
+  - "**/*.test.ts"
+  - "**/test/**"
+
+paths:
+  - "website/components/**"
+  - "website/pages/**"
+  - "website/utils/**"
+  - "website/types/**"
+  - "website/layouts/**"
+  - "scw_js/**/*.js"
+  - "eth/contracts/**"
+  - "eth/scripts/**"

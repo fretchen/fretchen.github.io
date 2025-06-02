@@ -2,7 +2,7 @@
   "name": "hardhat-project",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
-    "@nomicfoundation/hardhat-verify": "^2.0.13",
+    "@nomicfoundation/hardhat-verify": "^2.0.14",
     "@openzeppelin/hardhat-upgrades": "^3.9.0",
     "hardhat": "^2.24.0"
   },

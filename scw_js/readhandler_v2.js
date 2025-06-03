@@ -43,7 +43,7 @@ async function handle(event, context, cb) {
     };
   }
   console.log("Prompt: ", prompt);
-  
+
   // get the tokenID from the event
   const tokenId = event.queryStringParameters.tokenId;
   if (!tokenId) {
@@ -57,12 +57,12 @@ async function handle(event, context, cb) {
 
   // get the size parameter with default value
   const size = event.queryStringParameters.size || "1024x1024";
-  
+
   // Validate size parameter
   const validSizes = ["1024x1024", "1792x1024"];
   if (!validSizes.includes(size)) {
     return {
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
       }),
       headers: { "Content-Type": ["application/json"] },

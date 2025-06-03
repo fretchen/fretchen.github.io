@@ -39,8 +39,9 @@ export async function handle(event, _context) {
 
     // Validiere den size Parameter
     const validSizes = ["1024x1024", "1792x1024"];
-    if (!validSizes.includes(size)) {      return {
-        body: JSON.stringify({ 
+    if (!validSizes.includes(size)) {
+      return {
+        body: JSON.stringify({
           error: `Ungültige Bildgröße. Erlaubt sind: ${validSizes.join(", ")}`,
         }),
         statusCode: 400,

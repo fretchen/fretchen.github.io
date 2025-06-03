@@ -172,7 +172,11 @@ describe("readhandler_v2.js Tests", () => {
       expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert");
 
       // Verifikation der Funktionsaufrufe
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("beautiful landscape", "1", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "1",
+        "1024x1024",
+      );
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
         BigInt("1"),
         "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
@@ -245,7 +249,9 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body).error).toBe("Invalid size parameter. Must be one of: 1024x1024, 1792x1024");
+      expect(JSON.parse(result.body).error).toBe(
+        "Invalid size parameter. Must be one of: 1024x1024, 1792x1024",
+      );
     });
 
     test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
@@ -270,7 +276,7 @@ describe("readhandler_v2.js Tests", () => {
 
       expect(result.statusCode).toBe(200);
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "1024x1024");
-      
+
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1024x1024");
     });
@@ -298,7 +304,7 @@ describe("readhandler_v2.js Tests", () => {
 
       expect(result.statusCode).toBe(200);
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "1792x1024");
-      
+
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1792x1024");
     });

@@ -54,7 +54,9 @@ describe("dec_ai.js Tests", () => {
       const result = await handle(event, {});
 
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body).error).toBe("Ungültige Bildgröße. Erlaubt sind: 1024x1024, 1792x1024");
+      expect(JSON.parse(result.body).error).toBe(
+        "Ungültige Bildgröße. Erlaubt sind: 1024x1024, 1792x1024",
+      );
     });
 
     test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
@@ -68,9 +70,11 @@ describe("dec_ai.js Tests", () => {
 
       expect(result.statusCode).toBe(200);
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "0", "1024x1024");
-      
+
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.metadata_url).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_0.json");
+      expect(responseBody.metadata_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_0.json",
+      );
       expect(responseBody.token_id).toBe("0");
       expect(responseBody.size).toBe("1024x1024");
     });
@@ -86,10 +90,16 @@ describe("dec_ai.js Tests", () => {
       const result = await handle(event, {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("beautiful landscape", "0", "1792x1024");
-      
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "1792x1024",
+      );
+
       const responseBody = JSON.parse(result.body);
-      expect(responseBody.metadata_url).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_0.json");
+      expect(responseBody.metadata_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_0.json",
+      );
       expect(responseBody.token_id).toBe("0");
       expect(responseBody.size).toBe("1792x1024");
     });

@@ -96,9 +96,10 @@ export async function uploadToS3(data, fileName, contentType = "application/json
  * Generates an image based on the prompt and uploads it to S3 along with ERC-721 metadata
  * @param {string} prompt - The prompt for image generation
  * @param {string|number} tokenId - The NFT token ID to include in metadata
+ * @param {string} size - Image size, either "1024x1024" or "1792x1024"
  * @returns {Promise<string>} - Path to the generated metadata file
  */
-export async function generateAndUploadImage(prompt, tokenId = "unknown") {
+export async function generateAndUploadImage(prompt, tokenId = "unknown", size = "1024x1024") {
   const ionosApiToken = process.env.IONOS_API_TOKEN;
 
   if (!ionosApiToken) {
@@ -111,6 +112,12 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown") {
     throw new Error("No prompt provided.");
   }
 
+  // Validate size parameter
+  const validSizes = ["1024x1024", "1792x1024"];
+  if (!validSizes.includes(size)) {
+    throw new Error(`Invalid size parameter. Must be one of: ${validSizes.join(", ")}`);
+  }
+
   const headers = {
     Authorization: `Bearer ${ionosApiToken}`,
     "Content-Type": "application/json",
@@ -119,7 +126,7 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown") {
   const body = {
     model: MODEL_NAME,
     prompt,
-    size: "1024x1024",
+    size,
   };
 
   console.log("Sending image generation request...");

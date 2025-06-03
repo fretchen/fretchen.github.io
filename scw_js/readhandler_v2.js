@@ -65,7 +65,7 @@ async function handle(event, context, cb) {
       body: JSON.stringify({
         error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
       }),
-      headers: { "Content-Type": ["application/json"] },
+      headers,
       statusCode: 400,
     };
   }

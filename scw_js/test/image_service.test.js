@@ -242,6 +242,10 @@ describe("image_service.js Tests", () => {
             value: "black-forest-labs/FLUX.1-schnell",
           },
           {
+            trait_type: "Image Size",
+            value: "1024x1024",
+          },
+          {
             trait_type: "Creation Date",
             value: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
           },
@@ -307,6 +311,146 @@ describe("image_service.js Tests", () => {
       global.fetch.mockRejectedValue(new Error("Network timeout"));
 
       await expect(generateAndUploadImage("test prompt", "123")).rejects.toThrow("Network timeout");
+    });
+
+    test("sollte custom size Parameter verwenden", async () => {
+      const prompt = "beautiful landscape";
+      const tokenId = "123";
+      const size = "1792x1024";
+
+      const result = await generateAndUploadImage(prompt, tokenId, size);
+
+      // Verify IONOS API call with custom size
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://openai.inference.de-txl.ionos.com/v1/images/generations",
+        expect.objectContaining({
+          method: "POST",
+          headers: {
+            Authorization: "Bearer test-ionos-token",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "black-forest-labs/FLUX.1-schnell",
+            prompt,
+            size: "1792x1024",
+          }),
+        }),
+      );
+
+      expect(result).toMatch(
+        /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_123_[a-f0-9]{12}\.json$/,
+      );
+    });
+
+    test("sollte standard size verwenden wenn keine size angegeben", async () => {
+      const prompt = "beautiful landscape";
+      const tokenId = "123";
+
+      await generateAndUploadImage(prompt, tokenId);
+
+      // Verify IONOS API call with default size
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://openai.inference.de-txl.ionos.com/v1/images/generations",
+        expect.objectContaining({
+          body: JSON.stringify({
+            model: "black-forest-labs/FLUX.1-schnell",
+            prompt,
+            size: "1024x1024",
+          }),
+        }),
+      );
+    });
+
+    test("sollte Fehler werfen bei ungültiger size", async () => {
+      const prompt = "beautiful landscape";
+      const tokenId = "123";
+      const invalidSize = "invalid_size";
+
+      await expect(generateAndUploadImage(prompt, tokenId, invalidSize)).rejects.toThrow(
+        "Invalid size parameter. Must be one of: 1024x1024, 1792x1024",
+      );
+    });
+
+    test("sollte beide gültige sizes akzeptieren", async () => {
+      const prompt = "test prompt";
+      const tokenId = "123";
+
+      // Test 1024x1024
+      await generateAndUploadImage(prompt, tokenId, "1024x1024");
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: JSON.stringify({
+            model: "black-forest-labs/FLUX.1-schnell",
+            prompt,
+            size: "1024x1024",
+          }),
+        }),
+      );
+
+      // Test 1792x1024
+      await generateAndUploadImage(prompt, tokenId, "1792x1024");
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: JSON.stringify({
+            model: "black-forest-labs/FLUX.1-schnell",
+            prompt,
+            size: "1792x1024",
+          }),
+        }),
+      );
+    });
+
+    test("sollte size Parameter in Metadaten-Attributen einschließen", async () => {
+      // Test mit 1024x1024 size
+      await generateAndUploadImage("test prompt", "123", "1024x1024");
+
+      // Überprüfe den Metadaten-Upload Call
+      const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
+        call[0].Key.startsWith("metadata/"),
+      );
+
+      expect(metadataCall).toBeDefined();
+      const metadataJson = JSON.parse(metadataCall[0].Body);
+
+      // Überprüfe dass size Attribut vorhanden ist
+      const sizeAttribute = metadataJson.attributes.find(
+        (attr) => attr.trait_type === "Image Size",
+      );
+
+      expect(sizeAttribute).toBeDefined();
+      expect(sizeAttribute.value).toBe("1024x1024");
+
+      // Test mit 1792x1024 size
+      vi.clearAllMocks();
+      mockS3Send.mockResolvedValue({});
+      mockPutObjectCommand.mockImplementation((params) => params);
+      global.fetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: [
+              {
+                b64_json:
+                  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+              },
+            ],
+          }),
+      });
+
+      await generateAndUploadImage("test prompt", "456", "1792x1024");
+
+      const metadataCall2 = mockPutObjectCommand.mock.calls.find((call) =>
+        call[0].Key.startsWith("metadata/"),
+      );
+
+      const metadataJson2 = JSON.parse(metadataCall2[0].Body);
+      const sizeAttribute2 = metadataJson2.attributes.find(
+        (attr) => attr.trait_type === "Image Size",
+      );
+
+      expect(sizeAttribute2.value).toBe("1792x1024");
     });
   });
 

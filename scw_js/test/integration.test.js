@@ -136,6 +136,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
         ),
         image_url: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_1_abcdef123456.png",
         mintPrice: "1000000000000000000",
+        size: "1024x1024",
         message: "Bild erfolgreich generiert und Token aktualisiert",
         transaction_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       });

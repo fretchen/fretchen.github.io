@@ -172,7 +172,11 @@ describe("readhandler_v2.js Tests", () => {
       expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert");
 
       // Verifikation der Funktionsaufrufe
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("beautiful landscape", "1");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "1",
+        "1024x1024",
+      );
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
         BigInt("1"),
         "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
@@ -231,6 +235,78 @@ describe("readhandler_v2.js Tests", () => {
 
       expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body).error).toContain("Operation fehlgeschlagen");
+    });
+
+    test("sollte Fehler zurückgeben wenn ungültige size bereitgestellt wird", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "test prompt",
+          tokenId: "1",
+          size: "invalid_size",
+        },
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe(
+        "Invalid size parameter. Must be one of: 1024x1024, 1792x1024",
+      );
+    });
+
+    test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
+      // Mock fetch für Metadaten
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+            name: "Test NFT",
+          }),
+      });
+
+      const event = {
+        queryStringParameters: {
+          prompt: "test prompt",
+          tokenId: "1",
+        },
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "1024x1024");
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.size).toBe("1024x1024");
+    });
+
+    test("sollte custom size verwenden wenn gültige size bereitgestellt wird", async () => {
+      // Mock fetch für Metadaten
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
+            name: "Test NFT",
+          }),
+      });
+
+      const event = {
+        queryStringParameters: {
+          prompt: "test prompt",
+          tokenId: "1",
+          size: "1792x1024",
+        },
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "1792x1024");
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.size).toBe("1792x1024");
     });
   });
 
@@ -350,7 +426,7 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "1024x1024");
     });
   });
 });

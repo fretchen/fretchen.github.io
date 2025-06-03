@@ -43,6 +43,7 @@ async function handle(event, context, cb) {
     };
   }
   console.log("Prompt: ", prompt);
+
   // get the tokenID from the event
   const tokenId = event.queryStringParameters.tokenId;
   if (!tokenId) {
@@ -53,6 +54,22 @@ async function handle(event, context, cb) {
     };
   }
   console.log("TokenId: ", tokenId);
+
+  // get the size parameter with default value
+  const size = event.queryStringParameters.size || "1024x1024";
+
+  // Validate size parameter
+  const validSizes = ["1024x1024", "1792x1024"];
+  if (!validSizes.includes(size)) {
+    return {
+      body: JSON.stringify({
+        error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
+      }),
+      headers,
+      statusCode: 400,
+    };
+  }
+  console.log("Size: ", size);
 
   const publicClient = createPublicClient({
     chain: optimism,
@@ -114,8 +131,8 @@ async function handle(event, context, cb) {
   // Wenn das Token existiert und noch nicht aktualisiert wurde
   try {
     // Generiere ein Bild basierend auf dem Prompt und lade es hoch
-    // Übergebe jetzt auch die tokenId an die Funktion
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId);
+    // Übergebe jetzt auch die tokenId und size an die Funktion
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId, size);
 
     // Metadaten laden, um die Bild-URL zu extrahieren
     // Validate the metadataUrl against a trusted allow-list
@@ -142,6 +159,7 @@ async function handle(event, context, cb) {
       body: JSON.stringify({
         metadata_url: metadataUrl,
         image_url: imageUrl,
+        size,
         mintPrice: mintPrice.toString(),
         message: "Bild erfolgreich generiert und Token aktualisiert",
         transaction_hash: txHash,

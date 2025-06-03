@@ -25,6 +25,9 @@ export async function handle(event, _context) {
     // Setze sie auf "0", wenn sie nicht vorhanden ist oder ungültig
     const tokenId = queryParams.tokenId || "0";
 
+    // Extrahiere den size Parameter, mit Standardwert "1024x1024"
+    const size = queryParams.size || "1024x1024";
+
     // Validiere den Prompt
     if (!prompt) {
       return {
@@ -34,15 +37,28 @@ export async function handle(event, _context) {
       };
     }
 
-    console.log(`Generiere Bild für Prompt: "${prompt}" und TokenID: ${tokenId}`);
+    // Validiere den size Parameter
+    const validSizes = ["1024x1024", "1792x1024"];
+    if (!validSizes.includes(size)) {
+      return {
+        body: JSON.stringify({
+          error: `Ungültige Bildgröße. Erlaubt sind: ${validSizes.join(", ")}`,
+        }),
+        statusCode: 400,
+        headers,
+      };
+    }
 
-    // Übergebe sowohl den Prompt als auch die tokenId an die Funktion
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId);
+    console.log(`Generiere Bild für Prompt: "${prompt}", TokenID: ${tokenId}, Größe: ${size}`);
+
+    // Übergebe Prompt, tokenId und size an die Funktion
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId, size);
 
     return {
       body: JSON.stringify({
         metadata_url: metadataUrl,
         token_id: tokenId,
+        size,
       }),
       statusCode: 200,
       headers,

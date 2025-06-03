@@ -195,7 +195,30 @@ export const imageGen = {
   }),
   compactForm: css({
     display: "flex",
+    flexDirection: "column",
     gap: "sm",
+  }),
+  compactFormRow: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "center",
+  }),
+  compactSelect: css({
+    padding: "sm",
+    border: "1px solid token(colors.border)",
+    borderRadius: "sm",
+    fontSize: "sm",
+    backgroundColor: "white",
+    minWidth: "120px",
+    _focus: {
+      borderColor: "brand",
+    },
+  }),
+  compactLabel: css({
+    fontSize: "sm",
+    fontWeight: "medium",
+    color: "gray.700",
+    minWidth: "60px",
   }),
   compactTextarea: css({
     flex: 1,

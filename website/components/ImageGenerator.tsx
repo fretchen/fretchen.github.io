@@ -38,6 +38,7 @@ export function ImageGenerator({
   const [tokenId, setTokenId] = useState<bigint>();
 
   const [prompt, setPrompt] = useState("");
+  const [size, setSize] = useState<"1024x1024" | "1792x1024">("1024x1024");
   const [isLoading, setIsLoading] = useState(false);
   const [mintingStatus, setMintingStatus] = useState<MintingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +112,7 @@ export function ImageGenerator({
 
       // Proceed with image generation
       setMintingStatus("generating");
-      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}`);
+      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}&size=${size}`);
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
@@ -147,6 +148,7 @@ export function ImageGenerator({
       // Reset form für nächste Erstellung
       setTimeout(() => {
         setPrompt("");
+        setSize("1024x1024");
         setGeneratedImageUrl(undefined);
         setTokenId(undefined);
         setError(null);
@@ -181,15 +183,28 @@ export function ImageGenerator({
             className={styles.imageGen.compactTextarea}
           />
 
-          <button
-            onClick={handleMintAndGenerate}
-            disabled={isLoading || !prompt.trim() || !isConnected}
-            className={`${styles.imageGen.compactButton} ${
-              isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
-            }`}
-          >
-            {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create Art"}
-          </button>
+          <div className={styles.imageGen.compactFormRow}>
+            <label className={styles.imageGen.compactLabel}>Format:</label>
+            <select
+              value={size}
+              onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
+              disabled={isLoading || mintingStatus !== "idle"}
+              className={styles.imageGen.compactSelect}
+            >
+              <option value="1024x1024">Square (1024×1024)</option>
+              <option value="1792x1024">Wide (1792×1024)</option>
+            </select>
+
+            <button
+              onClick={handleMintAndGenerate}
+              disabled={isLoading || !prompt.trim() || !isConnected}
+              className={`${styles.imageGen.compactButton} ${
+                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
+              }`}
+            >
+              {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create Art"}
+            </button>
+          </div>
         </div>
 
         {/* Status-Anzeige */}

@@ -169,6 +169,10 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown", size =
         value: MODEL_NAME,
       },
       {
+        trait_type: "Image Size",
+        value: size,
+      },
+      {
         trait_type: "Creation Date",
         value: new Date().toISOString(),
       },

@@ -186,10 +186,12 @@ export function ImageGenerator({
 
           <div className={styles.imageGen.compactFormRow}>
             <select
+              id="imageSizeSelect"
               value={size}
               onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
               disabled={isLoading || mintingStatus !== "idle"}
               className={styles.imageGen.compactSelect}
+              aria-label="Select image format for your artwork"
             >
               <option value="1024x1024">◼ Square</option>
               <option value="1792x1024">▬ Wide</option>

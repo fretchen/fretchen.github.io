@@ -38,6 +38,7 @@ export function ImageGenerator({
   const [tokenId, setTokenId] = useState<bigint>();
 
   const [prompt, setPrompt] = useState("");
+  const [size, setSize] = useState<"1024x1024" | "1792x1024">("1024x1024");
   const [isLoading, setIsLoading] = useState(false);
   const [mintingStatus, setMintingStatus] = useState<MintingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +112,7 @@ export function ImageGenerator({
 
       // Proceed with image generation
       setMintingStatus("generating");
-      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}`);
+      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}&size=${size}`);
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
@@ -147,6 +148,7 @@ export function ImageGenerator({
       // Reset form für nächste Erstellung
       setTimeout(() => {
         setPrompt("");
+        setSize("1024x1024");
         setGeneratedImageUrl(undefined);
         setTokenId(undefined);
         setError(null);
@@ -166,9 +168,10 @@ export function ImageGenerator({
     <div className={styles.imageGen.compactLayout}>
       <div className={styles.imageGen.compactContainer}>
         <div className={styles.imageGen.compactHeader}>
-          <h3 className={styles.imageGen.compactTitle}>Create Your Art</h3>
+          <h3 className={styles.imageGen.compactTitle}>🎨 Create Your Digital Artwork</h3>
           <span className={styles.imageGen.compactSubtitle}>
-            Describe what you want and generate your unique digital artwork (~10¢)
+            Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on
+            the blockchain.
           </span>
         </div>
 
@@ -176,20 +179,41 @@ export function ImageGenerator({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset')"
+            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset with neon lights reflecting in the water')"
             disabled={isLoading || mintingStatus !== "idle"}
             className={styles.imageGen.compactTextarea}
           />
 
-          <button
-            onClick={handleMintAndGenerate}
-            disabled={isLoading || !prompt.trim() || !isConnected}
-            className={`${styles.imageGen.compactButton} ${
-              isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
-            }`}
-          >
-            {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create Art"}
-          </button>
+          <div className={styles.imageGen.compactFormRow}>
+            <select
+              id="imageSizeSelect"
+              value={size}
+              onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
+              disabled={isLoading || mintingStatus !== "idle"}
+              className={styles.imageGen.compactSelect}
+              aria-label="Select image format for your artwork"
+            >
+              <option value="1024x1024">◼ Square</option>
+              <option value="1792x1024">▬ Wide</option>
+            </select>
+
+            <button
+              onClick={handleMintAndGenerate}
+              disabled={isLoading || !prompt.trim() || !isConnected}
+              className={`${styles.imageGen.compactButton} ${
+                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <div className={styles.spinner}></div>
+                  {mintingStatus === "minting" ? "Creating..." : "Generating..."}
+                </>
+              ) : (
+                "🎨 Create Artwork"
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Status-Anzeige */}

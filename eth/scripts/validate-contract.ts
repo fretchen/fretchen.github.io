@@ -174,7 +174,7 @@ async function main() {
     await checkUpgradeReadiness(proxyAddress);
 
     console.log("\n📋 Summary:");
-    console.log("=" * 20);
+    console.log("=".repeat(20));
     console.log(JSON.stringify(info, null, 2));
 
   } catch (error) {

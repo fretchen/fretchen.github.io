@@ -168,9 +168,9 @@ export function ImageGenerator({
     <div className={styles.imageGen.compactLayout}>
       <div className={styles.imageGen.compactContainer}>
         <div className={styles.imageGen.compactHeader}>
-          <h3 className={styles.imageGen.compactTitle}>Create Your Art</h3>
+          <h3 className={styles.imageGen.compactTitle}>🎨 Create Your Digital Artwork</h3>
           <span className={styles.imageGen.compactSubtitle}>
-            Describe what you want and generate your unique digital artwork (~10¢)
+            Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on the blockchain.
           </span>
         </div>
 
@@ -178,21 +178,20 @@ export function ImageGenerator({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset')"
+            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset with neon lights reflecting in the water')"
             disabled={isLoading || mintingStatus !== "idle"}
             className={styles.imageGen.compactTextarea}
           />
 
           <div className={styles.imageGen.compactFormRow}>
-            <label className={styles.imageGen.compactLabel}>Format:</label>
             <select
               value={size}
               onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
               disabled={isLoading || mintingStatus !== "idle"}
               className={styles.imageGen.compactSelect}
             >
-              <option value="1024x1024">Square (1024×1024)</option>
-              <option value="1792x1024">Wide (1792×1024)</option>
+              <option value="1024x1024">◼ Square</option>
+              <option value="1792x1024">▬ Wide</option>
             </select>
 
             <button
@@ -202,7 +201,14 @@ export function ImageGenerator({
                 isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
             >
-              {isLoading ? (mintingStatus === "minting" ? "Creating..." : "Generating...") : "🎨 Create Art"}
+              {isLoading ? (
+                <>
+                  <div className={styles.spinner}></div>
+                  {mintingStatus === "minting" ? "Creating..." : "Generating..."}
+                </>
+              ) : (
+                "🎨 Create Artwork"
+              )}
             </button>
           </div>
         </div>

@@ -33,6 +33,7 @@ export default defineConfig({
           md: { value: "20px" },
           lg: { value: "40px" },
           xl: { value: "50px" },
+          "2xl": { value: "60px" },
         },
         sizes: {
           container: { value: "900px" },

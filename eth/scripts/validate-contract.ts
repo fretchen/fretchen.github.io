@@ -105,7 +105,7 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
 
 async function checkUpgradeReadiness(proxyAddress: string): Promise<void> {
   console.log("\n🔄 Checking upgrade readiness...");
-  console.log("=" * 30);
+  console.log("=".repeat(30));
 
   const [signer] = await ethers.getSigners();
   const contract = await ethers.getContractAt("GenImNFTv2", proxyAddress);

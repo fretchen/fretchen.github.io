@@ -170,7 +170,8 @@ export function ImageGenerator({
         <div className={styles.imageGen.compactHeader}>
           <h3 className={styles.imageGen.compactTitle}>🎨 Create Your Digital Artwork</h3>
           <span className={styles.imageGen.compactSubtitle}>
-            Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on the blockchain.
+            Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on
+            the blockchain.
           </span>
         </div>
 

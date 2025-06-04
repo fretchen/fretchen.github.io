@@ -173,10 +173,10 @@ export const imageGen = {
     border: "1px solid token(colors.border)",
     padding: "lg",
     marginBottom: "xl",
-    boxShadow: sharedStyles.boxShadow.default,
-    transition: sharedStyles.transition,
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+    transition: "all 0.2s ease",
     _hover: {
-      boxShadow: sharedStyles.boxShadow.hover,
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
     },
   }),
   compactContainer: css({

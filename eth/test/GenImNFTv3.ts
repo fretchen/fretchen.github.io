@@ -7,8 +7,6 @@ import hre from "hardhat";
 import { 
   createBasicNFTTests, 
   createImageUpdateTests, 
-  createBasicNFTTestsEthers,
-  createImageUpdateTestsEthers,
   cleanupTestFiles,
   ContractFixture
 } from "./shared/GenImNFTSharedTests";
@@ -66,6 +64,58 @@ describe("GenImNFTv3", function () {
       owner,
       otherAccount,
       thirdAccount,
+    };
+  }
+
+  async function deployGenImNFTv3ViemFixture(): Promise<ContractFixture> {
+    // Deploy using ethers.js for upgrades support
+    const [ethersOwner] = await ethers.getSigners();
+
+    const GenImNFTv3 = await ethers.getContractFactory("GenImNFTv3");
+    const proxy = await upgrades.deployProxy(GenImNFTv3, [], {
+      initializer: "initialize",
+      kind: "uups"
+    });
+    await proxy.waitForDeployment();
+
+    // Get viem clients for all testing
+    const [viemOwner, viemOtherAccount, viemRecipient] = await hre.viem.getWalletClients();
+
+    // Create viem contract interface at the proxy address
+    const viemContract = await hre.viem.getContractAt("GenImNFTv3", await proxy.getAddress());
+
+    return {
+      contract: viemContract,
+      genImNFTPublic: viemContract,
+      owner: viemOwner,
+      otherAccount: viemOtherAccount,
+      recipient: viemRecipient,
+    };
+  }
+
+  async function deployGenImNFTv3DirectFixtureViem(): Promise<ContractFixture> {
+    // Deploy using ethers.js (required for upgrades)
+    const [ethersOwner] = await ethers.getSigners();
+
+    const GenImNFTv3 = await ethers.getContractFactory("GenImNFTv3");
+    const proxy = await upgrades.deployProxy(GenImNFTv3, [], {
+      initializer: "initialize",
+      kind: "uups"
+    });
+    await proxy.waitForDeployment();
+
+    // Get viem clients for testing
+    const [viemOwner, viemOtherAccount, viemRecipient] = await hre.viem.getWalletClients();
+
+    // Create viem contract interface
+    const viemContract = await hre.viem.getContractAt("GenImNFTv3", await proxy.getAddress());
+
+    return {
+      contract: viemContract,
+      genImNFTPublic: viemContract,
+      owner: viemOwner,
+      otherAccount: viemOtherAccount,
+      recipient: viemRecipient,
     };
   }
 
@@ -163,11 +213,15 @@ describe("GenImNFTv3", function () {
     });
   });
 
-  // Use shared basic NFT tests for v3 (when deployed directly)
-  describe("Basic NFT Functionality (Direct V3 Deployment)", createBasicNFTTestsEthers(deployGenImNFTv3DirectFixture, "GenImNFTv3"));
+  // Use shared basic NFT tests for v3 with viem (like V2)
+  describe("Basic NFT Functionality (Direct V3 Deployment)", function () {
+    createBasicNFTTests(deployGenImNFTv3DirectFixtureViem);
+  });
 
-  // Use shared image update tests for v3 (when deployed directly)  
-  describe("Image Updates (Direct V3 Deployment)", createImageUpdateTestsEthers(deployGenImNFTv3DirectFixture, "GenImNFTv3"));
+  // Use shared image update tests for v3 with viem (like V2)  
+  describe("Image Updates (Direct V3 Deployment)", function () {
+    createImageUpdateTests(deployGenImNFTv3DirectFixtureViem);
+  });
 
   describe("V3 Specific Features", function () {
     it("Should support privacy settings for new tokens", async function () {
@@ -260,6 +314,16 @@ describe("GenImNFTv3", function () {
       expect(await proxy.tokenURI(0)).to.equal(newImageUrl);
     });
   });
+
+  // Use shared basic NFT tests for v3 with viem (like V2)
+  describe("Basic NFT Functionality (Direct V3 Deployment)", 
+    createBasicNFTTests(deployGenImNFTv3DirectFixtureViem)
+  );
+
+  // Use shared image update tests for v3 with viem (like V2)  
+  describe("Image Updates (Direct V3 Deployment)", 
+    createImageUpdateTests(deployGenImNFTv3DirectFixtureViem)
+  );
 
   // Aufräumen nach jedem Test
   afterEach(function () {

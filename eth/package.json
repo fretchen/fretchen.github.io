@@ -1,5 +1,10 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "test": "hardhat test",
+    "test:upgrade": "hardhat test test/GenImNFTv3_Viem_Ignition_Upgrade.ts",
+    "test:oz-upgrade": "hardhat test test/GenImNFTv3_OpenZeppelin_Upgrade.ts"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.14",

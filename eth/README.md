@@ -33,19 +33,14 @@ npx hardhat ignition verify <THE-ID-FROM-ABOVE>
 
 ## GenImNFTv3 - OpenZeppelin Upgrades
 
-For GenImNFTv3, we use OpenZeppelin upgrades which don't create Ignition deployments. Use these commands instead:
+GenImNFTv3 can **only** be deployed as an upgrade from GenImNFTv2. There is no direct deployment of V3.
 
-### Deploy V3 (first time):
-```shell
-npx hardhat run scripts/deploy-v3.ts --network sepolia
-```
-
-### Upgrade from V2 to V3:
+### Upgrade existing V2 to V3:
 ```shell
 PROXY_ADDRESS=0x123... npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
 ```
 
-### Verify V3 contracts on Etherscan:
+### Verify upgraded V3 contracts on Etherscan:
 ```shell
 PROXY_ADDRESS=0x123... npx hardhat run scripts/verify-v3.ts --network sepolia
 ```
@@ -55,7 +50,18 @@ PROXY_ADDRESS=0x123... npx hardhat run scripts/verify-v3.ts --network sepolia
 IMPLEMENTATION_ADDRESS=0x456... npx hardhat run scripts/verify-manual.ts --network sepolia
 ```
 
-### Validate contracts before deployment:
+### Get ABI for frontend integration:
+```shell
+# Export V3 ABI in multiple formats
+npx hardhat run scripts/export-abi.ts
+
+# ABI files will be available at:
+# - artifacts/contracts/GenImNFTv3.sol/GenImNFTv3.json (full artifact)
+# - abi/contracts/GenImNFTv3.json (ABI only)
+# - abi/contracts/GenImNFTv3.ts (TypeScript)
+```
+
+### Validate upgrade compatibility before upgrading:
 ```shell
 npx hardhat run scripts/validate-contract.ts --network sepolia
 ```

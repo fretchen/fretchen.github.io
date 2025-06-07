@@ -9,8 +9,7 @@ import {
   createImageUpdateTests, 
   createAdvancedImageUpdateTests,
   createEnumerationTests,
-  createMetadataFile, 
-  getAllNFTsForWallet,
+  createWalletEnumerationTests,
   cleanupTestFiles,
   ContractFixture
 } from "./shared/GenImNFTSharedTests";
@@ -65,44 +64,8 @@ describe("GenImNFTv2", function () {
   // Use shared enumeration tests
   describe("Token Transfers and Burns", createEnumerationTests(deployGenImNFTv2Fixture, "GenImNFTv2"));
 
-  describe("Wallet NFT Enumeration Helper", function () {
-    it("Should get all NFTs with metadata for a wallet", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
-      const mintPrice = await contract.read.mintPrice();
-
-      // Mint tokens with metadata
-      const prompts = [
-        "A beautiful sunset over mountains",
-        "A futuristic city at night",
-        "An abstract digital artwork"
-      ];
-
-      for (let i = 0; i < prompts.length; i++) {
-        const tokenURI = createMetadataFile(i, prompts[i]);
-        if (i === 1) {
-          // Mint one token to otherAccount
-          const otherClient = await hre.viem.getContractAt("GenImNFTv2", contract.address, {
-            client: { wallet: otherAccount },
-          });
-          await otherClient.write.safeMint([tokenURI], { value: mintPrice });
-        } else {
-          await contract.write.safeMint([tokenURI], { value: mintPrice });
-        }
-      }
-
-      // Get all NFTs for owner
-      const ownerNFTs = await getAllNFTsForWallet(contract, owner.account.address);
-      expect(ownerNFTs).to.have.length(2);
-      expect(ownerNFTs[0].tokenId).to.equal(0);
-      expect(ownerNFTs[1].tokenId).to.equal(2);
-
-      // Get all NFTs for otherAccount
-      const otherNFTs = await getAllNFTsForWallet(contract, otherAccount.account.address);
-      expect(otherNFTs).to.have.length(1);
-      expect(otherNFTs[0].tokenId).to.equal(1);
-      expect(otherNFTs[0].tokenURI).to.include("token_1.json");
-    });
-  });
+  // Use shared wallet enumeration tests
+  describe("Wallet NFT Enumeration Helper", createWalletEnumerationTests(deployGenImNFTv2Fixture, "GenImNFTv2"));
 
   // Aufräumen nach jedem Test
   afterEach(function () {

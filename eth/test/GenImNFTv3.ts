@@ -9,6 +9,7 @@ import {
   createImageUpdateTests, 
   createAdvancedImageUpdateTests,
   createEnumerationTests,
+  createWalletEnumerationTests,
   cleanupTestFiles,
   ContractFixture
 } from "./shared/GenImNFTSharedTests";
@@ -335,6 +336,11 @@ describe("GenImNFTv3", function () {
   // Use shared enumeration tests for v3 with viem (like V2)  
   describe("Token Transfers and Burns (Direct V3 Deployment)", 
     createEnumerationTests(deployGenImNFTv3DirectFixtureViem)
+  );
+
+  // Use shared wallet enumeration tests for v3 with viem (like V2)  
+  describe("Wallet NFT Enumeration Helper (Direct V3 Deployment)", 
+    createWalletEnumerationTests(deployGenImNFTv3DirectFixtureViem, "GenImNFTv3")
   );
 
   // Aufräumen nach jedem Test

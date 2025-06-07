@@ -996,3 +996,54 @@ export function createEnumerationTests(
     });
   };
 }
+
+/**
+ * Creates shared wallet enumeration helper tests for NFT contracts
+ * Tests the getAllNFTsForWallet helper function with metadata
+ * @param fixtureFunction Function that returns a ContractFixture
+ * @param contractName Optional contract name for logging/debugging
+ * @returns Function that creates the test suite
+ */
+export function createWalletEnumerationTests(
+  fixtureFunction: () => Promise<ContractFixture>,
+  contractName: string = "Contract"
+): () => void {
+  return function() {
+    it("Should get all NFTs with metadata for a wallet", async function () {
+      const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
+      const mintPrice = await contract.read.mintPrice();
+
+      // Mint tokens with metadata
+      const prompts = [
+        "A beautiful sunset over mountains",
+        "A futuristic city at night",
+        "An abstract digital artwork"
+      ];
+
+      for (let i = 0; i < prompts.length; i++) {
+        const tokenURI = createMetadataFile(i, prompts[i]);
+        if (i === 1) {
+          // Mint one token to otherAccount
+          const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+            client: { wallet: otherAccount },
+          });
+          await otherClient.write.safeMint([tokenURI], { value: mintPrice });
+        } else {
+          await contract.write.safeMint([tokenURI], { value: mintPrice });
+        }
+      }
+
+      // Get all NFTs for owner
+      const ownerNFTs = await getAllNFTsForWallet(contract, owner.account.address);
+      expect(ownerNFTs).to.have.length(2);
+      expect(ownerNFTs[0].tokenId).to.equal(0);
+      expect(ownerNFTs[1].tokenId).to.equal(2);
+
+      // Get all NFTs for otherAccount
+      const otherNFTs = await getAllNFTsForWallet(contract, otherAccount.account.address);
+      expect(otherNFTs).to.have.length(1);
+      expect(otherNFTs[0].tokenId).to.equal(1);
+      expect(otherNFTs[0].tokenURI).to.include("token_1.json");
+    });
+  };
+}

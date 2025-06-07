@@ -8,6 +8,7 @@ import {
   createBasicNFTTests, 
   createImageUpdateTests, 
   createAdvancedImageUpdateTests,
+  createEnumerationTests,
   cleanupTestFiles,
   ContractFixture
 } from "./shared/GenImNFTSharedTests";
@@ -329,6 +330,11 @@ describe("GenImNFTv3", function () {
   // Use shared advanced image update tests for v3 with viem (like V2)  
   describe("Advanced Image Updates (Direct V3 Deployment)", 
     createAdvancedImageUpdateTests(deployGenImNFTv3DirectFixtureViem)
+  );
+
+  // Use shared enumeration tests for v3 with viem (like V2)  
+  describe("Token Transfers and Burns (Direct V3 Deployment)", 
+    createEnumerationTests(deployGenImNFTv3DirectFixtureViem)
   );
 
   // Aufräumen nach jedem Test

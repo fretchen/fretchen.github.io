@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -922,6 +923,76 @@ export function createAdvancedImageUpdateTests(getFixture: () => Promise<Contrac
         expect(finalMetadata.image).to.equal(newImageUrl);
         expect(finalMetadata.description).to.equal(prompt); // Should be preserved
       });
+    });
+  };
+}
+
+/**
+ * Creates shared enumeration tests for NFT contracts
+ * Tests token enumeration after transfers and burns
+ * @param fixtureFunction Function that returns a ContractFixture
+ * @param contractName Optional contract name for logging/debugging
+ * @returns Function that creates the test suite
+ */
+export function createEnumerationTests(
+  fixtureFunction: () => Promise<ContractFixture>,
+  contractName: string = "Contract"
+): () => void {
+  return function() {
+    it("Should update enumeration after token transfer", async function () {
+      const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
+      const mintPrice = await contract.read.mintPrice();
+
+      // Mint token to owner
+      await contract.write.safeMint(["uri1"], { value: mintPrice });
+      await contract.write.safeMint(["uri2"], { value: mintPrice });
+
+      // Initially owner has 2 tokens
+      expect(await contract.read.balanceOf([owner.account.address])).to.equal(2n);
+      expect(await contract.read.balanceOf([otherAccount.account.address])).to.equal(0n);
+
+      // Transfer one token
+      await contract.write.transferFrom([owner.account.address, otherAccount.account.address, 0n]);
+
+      // Check updated balances
+      expect(await contract.read.balanceOf([owner.account.address])).to.equal(1n);
+      expect(await contract.read.balanceOf([otherAccount.account.address])).to.equal(1n);
+
+      // Check owner still has token 1
+      const ownerToken = await contract.read.tokenOfOwnerByIndex([owner.account.address, 0n]);
+      expect(ownerToken).to.equal(1n);
+
+      // Check otherAccount now has token 0
+      const otherToken = await contract.read.tokenOfOwnerByIndex([otherAccount.account.address, 0n]);
+      expect(otherToken).to.equal(0n);
+    });
+
+    it("Should update enumeration after token burn", async function () {
+      const { contract, owner } = await loadFixture(fixtureFunction);
+      const mintPrice = await contract.read.mintPrice();
+
+      // Mint 3 tokens
+      await contract.write.safeMint(["uri1"], { value: mintPrice });
+      await contract.write.safeMint(["uri2"], { value: mintPrice });
+      await contract.write.safeMint(["uri3"], { value: mintPrice });
+
+      // Check initial state
+      expect(await contract.read.totalSupply()).to.equal(3n);
+      expect(await contract.read.balanceOf([owner.account.address])).to.equal(3n);
+
+      // Burn middle token
+      await contract.write.burn([1n]);
+
+      // Check updated state
+      expect(await contract.read.totalSupply()).to.equal(2n);
+      expect(await contract.read.balanceOf([owner.account.address])).to.equal(2n);
+
+      // Check remaining tokens are still accessible
+      const token0 = await contract.read.tokenOfOwnerByIndex([owner.account.address, 0n]);
+      const token1 = await contract.read.tokenOfOwnerByIndex([owner.account.address, 1n]);
+      
+      // Should be tokens 0 and 2 (since token 1 was burned)
+      expect([Number(token0), Number(token1)].sort()).to.deep.equal([0, 2]);
     });
   };
 }

@@ -52,6 +52,20 @@ contract GenImNFTv3 is
     }
 
     /**
+     * @dev Reinitializer function for upgrading from v2 to v3
+     * This function adds the new functionality while preserving existing state
+     */
+    function reinitializeV3() reinitializer(3) public {
+        // Mark all existing tokens as publicly listed (opt-out system)
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (_exists(i)) {
+                _isListed[i] = true;
+                emit TokenListingChanged(i, true);
+            }
+        }
+    }
+
+    /**
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
      * Called by {upgradeTo} and {upgradeToAndCall}.
      * 
@@ -218,20 +232,6 @@ contract GenImNFTv3 is
     function getAuthorizedImageUpdater(uint256 tokenId) public view returns (address) {
         require(_exists(tokenId), "Token does not exist");
         return _authorizedImageUpdaters[tokenId];
-    }
-
-    /**
-     * @dev Migration function to set all existing tokens as publicly listed
-     * Can only be called once by owner during upgrade
-     */
-    function migrateToV3() external onlyOwner {
-        // Mark all existing tokens as publicly listed (opt-out system)
-        for (uint256 i = 0; i < _nextTokenId; i++) {
-            if (_exists(i)) {
-                _isListed[i] = true;
-                emit TokenListingChanged(i, true);
-            }
-        }
     }
 
     /**

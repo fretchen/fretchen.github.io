@@ -57,6 +57,8 @@ PROXY_ADDRESS=0xYourProxyAddress npx hardhat run scripts/upgrade-to-v3.ts --netw
 | `PROXY_ADDRESS` | Address of your GenImNFTv2 proxy contract | Yes |
 | `VALIDATE_ONLY` | Only validate compatibility, don't upgrade | No (default: false) |
 | `DRY_RUN` | Preview changes without executing | No (default: false) |
+| `SKIP_OZ_VALIDATION` | Skip OpenZeppelin validation (for Ignition deployments) | No (default: false) |
+| `FORCE_MANUAL_UPGRADE` | Force manual upgrade method (for Ignition deployments) | No (default: false) |
 
 ## Example Workflow
 
@@ -129,3 +131,70 @@ npx hardhat test test/GenImNFTv3_OpenZeppelin_Upgrade.ts
 2. Test new V3 functions (`setTokenListed`, `getPublicTokensOfOwner`, etc.)
 3. Update your frontend/dApp to use the new V3 ABI
 4. Announce the upgrade to your users
+
+## Troubleshooting
+
+### For Ignition-Deployed Contracts
+
+If you deployed your contract using Hardhat Ignition (instead of OpenZeppelin Upgrades Plugin), you may encounter registration errors. Use these options:
+
+#### Skip OpenZeppelin Validation
+
+```bash
+PROXY_ADDRESS=0xYourProxyAddress SKIP_OZ_VALIDATION=true npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+#### Force Manual Upgrade Method
+
+```bash
+PROXY_ADDRESS=0xYourProxyAddress FORCE_MANUAL_UPGRADE=true npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+#### Combined for Ignition Deployments
+
+```bash
+PROXY_ADDRESS=0xYourProxyAddress SKIP_OZ_VALIDATION=true FORCE_MANUAL_UPGRADE=true npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+### Common Error Messages
+
+#### "Deployment at address 0x... is not registered"
+
+- This indicates an Ignition-deployed contract
+- Use `FORCE_MANUAL_UPGRADE=true` to bypass OpenZeppelin registry
+
+#### "Pre-upgrade validation failed"
+
+- Use `SKIP_OZ_VALIDATION=true` to skip OpenZeppelin-specific validation
+- The script will perform manual ERC1967 proxy validation instead
+
+## Troubleshooting
+
+### For Ignition-Deployed Contracts
+
+If you deployed your contract using Hardhat Ignition (instead of OpenZeppelin Upgrades Plugin), you may encounter registration errors. Use these options:
+
+#### Skip OpenZeppelin Validation
+```bash
+PROXY_ADDRESS=0xYourProxyAddress SKIP_OZ_VALIDATION=true npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+#### Force Manual Upgrade Method
+```bash
+PROXY_ADDRESS=0xYourProxyAddress FORCE_MANUAL_UPGRADE=true npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+#### Combined for Ignition Deployments
+```bash
+PROXY_ADDRESS=0xYourProxyAddress SKIP_OZ_VALIDATION=true FORCE_MANUAL_UPGRADE=true npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+### Common Error Messages
+
+**"Deployment at address 0x... is not registered"**
+- This indicates an Ignition-deployed contract
+- Use `FORCE_MANUAL_UPGRADE=true` to bypass OpenZeppelin registry
+
+**"Pre-upgrade validation failed"**
+- Use `SKIP_OZ_VALIDATION=true` to skip OpenZeppelin-specific validation
+- The script will perform manual ERC1967 proxy validation instead

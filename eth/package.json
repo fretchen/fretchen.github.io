@@ -3,7 +3,12 @@
   "scripts": {
     "test": "hardhat test",
     "test:upgrade": "hardhat test test/GenImNFTv3_Viem_Ignition_Upgrade.ts",
-    "test:oz-upgrade": "hardhat test test/GenImNFTv3_OpenZeppelin_Upgrade.ts"
+    "test:oz-upgrade": "hardhat test test/GenImNFTv3_OpenZeppelin_Upgrade.ts",
+    "test:upgrade-script": "hardhat test test/UpgradeScript_Integration.ts",
+    "test:all-upgrades": "hardhat test test/*Upgrade*.ts",
+    "upgrade:validate": "hardhat run scripts/upgrade-to-v3.ts --env VALIDATE_ONLY=true",
+    "upgrade:dry-run": "hardhat run scripts/upgrade-to-v3.ts --env DRY_RUN=true",
+    "upgrade:execute": "hardhat run scripts/upgrade-to-v3.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",

@@ -62,33 +62,63 @@ async function main() {
       }
     }
 
-    // Verify the proxy contract (ERC1967Proxy)
+    // Verify the proxy contract
     console.log("\n🔄 Verifying proxy contract...");
     
     try {
-      // For proxy verification, we need the constructor arguments:
-      // 1. Implementation address
-      // 2. Initialization data (encoded initialize() call)
+      // For Ignition-deployed contracts, we need to try different verification strategies
       
-      // Get the initialize function signature
-      const initializeData = ethers.interface.encodeFunctionData(
-        proxy.interface.getFunction("initialize"),
-        []
-      );
+      // Strategy 1: Try as OpenZeppelin ERC1967Proxy
+      try {
+        // Get the GenImNFTv3 contract factory to access the interface
+        const GenImNFTv3Factory = await ethers.getContractFactory("GenImNFTv3");
+        const initializeData = GenImNFTv3Factory.interface.encodeFunctionData(
+          "initialize",
+          []
+        );
 
-      await run("verify:verify", {
-        address: proxyAddress,
-        constructorArguments: [cleanImplementationAddress, initializeData],
-        contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-      });
-      console.log("✅ Proxy contract verified successfully!");
-    } catch (error: any) {
-      if (error.message.includes("Already Verified")) {
-        console.log("✅ Proxy contract already verified!");
-      } else {
-        console.log("⚠️ Proxy verification failed (this is often expected):", error.message);
-        console.log("💡 The proxy might have been deployed with different constructor arguments.");
+        await run("verify:verify", {
+          address: proxyAddress,
+          constructorArguments: [cleanImplementationAddress, initializeData],
+          contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+        });
+        console.log("✅ Proxy contract verified as OpenZeppelin ERC1967Proxy!");
+      } catch (ozError: any) {
+        console.log("⚠️ OpenZeppelin proxy verification failed, trying Ignition-deployed proxy...");
+        
+        // Strategy 2: Try as custom ERC1967Proxy (Ignition deployment)
+        try {
+          await run("verify:verify", {
+            address: proxyAddress,
+            constructorArguments: [],
+            contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy"
+          });
+          console.log("✅ Proxy contract verified as custom ERC1967Proxy!");
+        } catch (customError: any) {
+          console.log("⚠️ Custom proxy verification failed, trying without contract specification...");
+          
+          // Strategy 3: Try without specifying contract
+          try {
+            await run("verify:verify", {
+              address: proxyAddress,
+              constructorArguments: []
+            });
+            console.log("✅ Proxy contract verified without contract specification!");
+          } catch (noSpecError: any) {
+            if (noSpecError.message.includes("Already Verified")) {
+              console.log("✅ Proxy contract already verified!");
+            } else {
+              console.log("⚠️ All proxy verification strategies failed:");
+              console.log(`   - OpenZeppelin: ${ozError.message.split('\n')[0]}`);
+              console.log(`   - Custom: ${customError.message.split('\n')[0]}`);
+              console.log(`   - No spec: ${noSpecError.message.split('\n')[0]}`);
+              console.log("💡 This is often normal for proxy contracts - the implementation is what matters.");
+            }
+          }
+        }
       }
+    } catch (error: any) {
+      console.log("⚠️ Proxy verification process failed:", error.message);
     }
 
     // Test contract functionality

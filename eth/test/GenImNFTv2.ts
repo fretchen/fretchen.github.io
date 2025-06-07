@@ -2,13 +2,12 @@ import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { formatEther, getAddress } from "viem";
-import * as fs from "fs";
-import * as path from "path";
 
 // Import shared test utilities
 import { 
   createBasicNFTTests, 
   createImageUpdateTests, 
+  createAdvancedImageUpdateTests,
   createMetadataFile, 
   getAllNFTsForWallet,
   cleanupTestFiles,
@@ -59,70 +58,8 @@ describe("GenImNFTv2", function () {
   // Use shared image update tests
   describe("Image Updates", createImageUpdateTests(deployGenImNFTv2Fixture, "GenImNFTv2"));
 
-  describe("Advanced Image Updates (V2 specific)", function () {
-    it("Should allow another wallet to update the image for a token", async function () {
-      const { contract, owner, recipient, otherAccount } = await loadFixture(deployGenImNFTv2Fixture);
-      const provider = await hre.viem.getPublicClient();
-
-      // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
-      const prompt = "A cyberpunk city with flying cars in the rain";
-      const tokenURI = createMetadataFile(7, prompt);
-      const mintPrice = await contract.read.mintPrice();
-      console.log("Mint price:", formatEther(mintPrice), "ETH");
-      await contract.write.safeMint([tokenURI], {
-        value: mintPrice,
-      });
-
-      // NFT an recipient übertragen
-      await contract.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
-
-      // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
-      const recipientClient = await hre.viem.getContractAt("GenImNFTv2", contract.address, {
-        client: { wallet: recipient },
-      });
-
-      // 3. Erfasse den Kontostand des Updaters VOR dem Update
-      const updaterBalanceBefore = await provider.getBalance({
-        address: otherAccount.account.address,
-      });
-      console.log(`Updater balance before: ${formatEther(updaterBalanceBefore)} ETH`);
-
-      // 4. Die autorisierte Wallet fordert ein Bild-Update an
-      const updaterClient = await hre.viem.getContractAt("GenImNFTv2", contract.address, {
-        client: { wallet: otherAccount },
-      });
-
-      const imageUrl = "https://example.com/generated-image-12345.png";
-      const tx = await updaterClient.write.requestImageUpdate([0n, imageUrl]);
-
-      // 5. Erfasse den Kontostand des Updaters NACH dem Update
-      const updaterBalanceAfter = await provider.getBalance({
-        address: otherAccount.account.address,
-      });
-      console.log(`Updater balance after: ${formatEther(updaterBalanceAfter)} ETH`);
-
-      // 6. Überprüfe, dass das Bild als aktualisiert markiert wurde
-      const isImageUpdated = await contract.read.isImageUpdated([0n]);
-      expect(isImageUpdated).to.be.true;
-
-      // Der Kontostand sollte höher sein als vorher abzüglich der Gaskosten
-      expect(Number(updaterBalanceAfter)).to.be.gt(Number(updaterBalanceBefore));
-
-      // 8. Simuliere einen Off-Chain-Service, der das Event abfängt und die Metadaten aktualisiert
-      const filePath = tokenURI.replace("file://", "");
-      const metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
-
-      // Aktualisiere das Bild in den Metadaten
-      metadata.image = imageUrl;
-      fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2));
-
-      // 9. Überprüfe, dass das Bild in den Metadaten aktualisiert wurde
-      const updatedMetadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
-      expect(updatedMetadata.image).to.equal(imageUrl);
-
-      console.log("Image updated successfully in metadata:", updatedMetadata);
-    });
-  });
+  // Use shared advanced image update tests (includes the complex wallet balance test)
+  describe("Advanced Image Updates", createAdvancedImageUpdateTests(deployGenImNFTv2Fixture, "GenImNFTv2"));
 
   describe("Token Transfers and Burns", function () {
     it("Should update enumeration after token transfer", async function () {

@@ -788,3 +788,140 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
     });
   };
 }
+
+/**
+ * Erweiterte Tests für Image Update Funktionalität mit komplexeren Szenarien
+ */
+export function createAdvancedImageUpdateTests(getFixture: () => Promise<ContractFixture>, contractName: string = "GenImNFT") {
+  return function() {
+    describe("Advanced Image Updates", function () {
+      it("Should allow another wallet to update the image for a token with balance checks", async function () {
+        const { contract, owner, recipient, otherAccount } = await getFixture();
+        const provider = await hre.viem.getPublicClient();
+
+        // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
+        const prompt = "A cyberpunk city with flying cars in the rain";
+        const tokenURI = createMetadataFile(7, prompt);
+        const mintPrice = await contract.read.mintPrice();
+        console.log("Mint price:", formatEther(mintPrice), "ETH");
+        
+        await contract.write.safeMint([tokenURI], {
+          value: mintPrice,
+        });
+
+        // NFT an recipient übertragen
+        await contract.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
+
+        // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
+        const recipientClient = await hre.viem.getContractAt(contractName, contract.address, {
+          client: { wallet: recipient },
+        });
+
+        // 3. Erfasse den Kontostand des Updaters VOR dem Update
+        const updaterBalanceBefore = await provider.getBalance({
+          address: otherAccount.account.address,
+        });
+        console.log(`Updater balance before: ${formatEther(updaterBalanceBefore)} ETH`);
+
+        // 4. Die autorisierte Wallet fordert ein Bild-Update an
+        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+          client: { wallet: otherAccount },
+        });
+
+        const imageUrl = "https://example.com/generated-image-12345.png";
+        await updaterClient.write.requestImageUpdate([0n, imageUrl]);
+
+        // 5. Erfasse den Kontostand des Updaters NACH dem Update
+        const updaterBalanceAfter = await provider.getBalance({
+          address: otherAccount.account.address,
+        });
+        console.log(`Updater balance after: ${formatEther(updaterBalanceAfter)} ETH`);
+
+        // 6. Überprüfe, dass das Bild als aktualisiert markiert wurde
+        const isImageUpdated = await contract.read.isImageUpdated([0n]);
+        expect(isImageUpdated).to.be.true;
+
+        // Der Kontostand sollte höher sein als vorher abzüglich der Gaskosten
+        expect(Number(updaterBalanceAfter)).to.be.gt(Number(updaterBalanceBefore));
+
+        // 8. Simuliere einen Off-Chain-Service, der das Event abfängt und die Metadaten aktualisiert
+        const filePath = tokenURI.replace("file://", "");
+        const metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+        // Aktualisiere das Bild in den Metadaten
+        metadata.image = imageUrl;
+        fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2));
+
+        // 9. Überprüfe, dass das Bild in den Metadaten aktualisiert wurde
+        const updatedMetadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        expect(updatedMetadata.image).to.equal(imageUrl);
+
+        console.log("Image updated successfully in metadata:", updatedMetadata);
+      });
+
+      it("Should handle token transfers and image update authorization correctly", async function () {
+        const { contract, owner, recipient, otherAccount } = await getFixture();
+        
+        // Mint token to owner
+        const tokenURI = createMetadataFile(1, "A beautiful sunset");
+        const mintPrice = await contract.read.mintPrice();
+        await contract.write.safeMint([tokenURI], { value: mintPrice });
+
+        // Transfer to recipient
+        await contract.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
+
+        // Verify ownership transfer
+        const newOwner = await contract.read.ownerOf([0n]);
+        expect(getAddress(newOwner)).to.equal(getAddress(recipient.account.address));
+
+        // Other account should be able to update image (anyone can update)
+        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+          client: { wallet: otherAccount },
+        });
+
+        const newImageUrl = "https://example.com/transferred-token-image.png";
+        await updaterClient.write.requestImageUpdate([0n, newImageUrl]);
+
+        // Verify the update was successful
+        expect(await contract.read.isImageUpdated([0n])).to.be.true;
+        expect(await contract.read.tokenURI([0n])).to.equal(newImageUrl);
+      });
+
+      it("Should handle metadata file operations correctly", async function () {
+        const { contract, otherAccount } = await getFixture();
+        
+        // Create and mint token with metadata file
+        const prompt = "A magical forest with glowing mushrooms";
+        const tokenURI = createMetadataFile(2, prompt);
+        const mintPrice = await contract.read.mintPrice();
+        await contract.write.safeMint([tokenURI], { value: mintPrice });
+
+        // Verify metadata file was created
+        const filePath = tokenURI.replace("file://", "");
+        expect(fs.existsSync(filePath)).to.be.true;
+
+        // Read original metadata
+        const originalMetadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        expect(originalMetadata.description).to.equal(prompt);
+        expect(originalMetadata.image).to.equal(""); // Initially empty
+
+        // Update image
+        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+          client: { wallet: otherAccount },
+        });
+
+        const newImageUrl = "https://example.com/magical-forest.png";
+        await updaterClient.write.requestImageUpdate([0n, newImageUrl]);
+
+        // Simulate off-chain metadata update
+        const updatedMetadata = { ...originalMetadata, image: newImageUrl };
+        fs.writeFileSync(filePath, JSON.stringify(updatedMetadata, null, 2));
+
+        // Verify the update
+        const finalMetadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        expect(finalMetadata.image).to.equal(newImageUrl);
+        expect(finalMetadata.description).to.equal(prompt); // Should be preserved
+      });
+    });
+  };
+}

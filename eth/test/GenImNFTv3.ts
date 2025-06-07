@@ -7,6 +7,7 @@ import hre from "hardhat";
 import { 
   createBasicNFTTests, 
   createImageUpdateTests, 
+  createAdvancedImageUpdateTests,
   cleanupTestFiles,
   ContractFixture
 } from "./shared/GenImNFTSharedTests";
@@ -323,6 +324,11 @@ describe("GenImNFTv3", function () {
   // Use shared image update tests for v3 with viem (like V2)  
   describe("Image Updates (Direct V3 Deployment)", 
     createImageUpdateTests(deployGenImNFTv3DirectFixtureViem)
+  );
+
+  // Use shared advanced image update tests for v3 with viem (like V2)  
+  describe("Advanced Image Updates (Direct V3 Deployment)", 
+    createAdvancedImageUpdateTests(deployGenImNFTv3DirectFixtureViem)
   );
 
   // Aufräumen nach jedem Test

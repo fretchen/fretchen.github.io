@@ -356,15 +356,7 @@ describe("GenImNFTv3", function () {
   });
 
   // Use shared basic NFT tests for v3 with viem (like V2)
-  describe("Basic NFT Functionality (Direct V3 Deployment)", 
-    createBasicNFTTests(deployGenImNFTv3DirectFixtureViem)
-  );
-
-  // Use shared image update tests for v3 with viem (like V2)  
-  describe("Image Updates (Direct V3 Deployment)", 
-    createImageUpdateTests(deployGenImNFTv3DirectFixtureViem)
-  );
-
+// Removed duplicate describe blocks for "Basic NFT Functionality" and "Image Updates" as they are already defined earlier in the file.
   // Use shared advanced image update tests for v3 with viem (like V2)  
   describe("Advanced Image Updates (Direct V3 Deployment)", 
     createAdvancedImageUpdateTests(deployGenImNFTv3DirectFixtureViem)

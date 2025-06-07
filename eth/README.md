@@ -30,3 +30,32 @@ And we can check the deployment with:
 ```shell
 npx hardhat ignition verify <THE-ID-FROM-ABOVE>
 ```
+
+## GenImNFTv3 - OpenZeppelin Upgrades
+
+For GenImNFTv3, we use OpenZeppelin upgrades which don't create Ignition deployments. Use these commands instead:
+
+### Deploy V3 (first time):
+```shell
+npx hardhat run scripts/deploy-v3.ts --network sepolia
+```
+
+### Upgrade from V2 to V3:
+```shell
+PROXY_ADDRESS=0x123... npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
+```
+
+### Verify V3 contracts on Etherscan:
+```shell
+PROXY_ADDRESS=0x123... npx hardhat run scripts/verify-v3.ts --network sepolia
+```
+
+### Manual verification (if automatic fails):
+```shell
+IMPLEMENTATION_ADDRESS=0x456... npx hardhat run scripts/verify-manual.ts --network sepolia
+```
+
+### Validate contracts before deployment:
+```shell
+npx hardhat run scripts/validate-contract.ts --network sepolia
+```

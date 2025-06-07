@@ -175,6 +175,33 @@ contract GenImNFTv3 is
     }
 
     /**
+     * @dev Gets all publicly listed token IDs regardless of owner
+     * @return Array of all publicly listed token IDs
+     */
+    function getAllPublicTokens() external view returns (uint256[] memory) {
+        uint256 publicCount = 0;
+        
+        // First pass: count public tokens
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (_exists(i) && _isListed[i]) {
+                publicCount++;
+            }
+        }
+        
+        // Second pass: populate public tokens array
+        uint256[] memory publicTokens = new uint256[](publicCount);
+        uint256 currentIndex = 0;
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (_exists(i) && _isListed[i]) {
+                publicTokens[currentIndex] = i;
+                currentIndex++;
+            }
+        }
+        
+        return publicTokens;
+    }
+
+    /**
      * @dev Marks a token as updated with an image, emits an event
      * and pays a compensation to the updater.
      * @param tokenId The ID of the token being updated

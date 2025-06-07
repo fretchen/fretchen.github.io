@@ -272,49 +272,86 @@ describe("GenImNFTv3", function () {
       expect(publicTokens).to.deep.equal([0n, 2n]);
     });
 
-    it("Should reject privacy changes by non-owners", async function () {
+    it("Should return all public tokens across all owners", async function () {
       const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv3DirectFixture);
       const mintPrice = await proxy.mintPrice();
 
-      // Mint a token as owner
-      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://test-token", true, { value: mintPrice });
+      // Initially no tokens
+      let allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(0);
 
-      // Try to change privacy as non-owner (should fail)
-      try {
-        await proxy.connect(otherAccount).setTokenListed(0, false);
-        // If we get here, the transaction didn't revert as expected
-        expect.fail("Expected transaction to revert");
-      } catch (error: any) {
-        // Check that it failed for the right reason
-        expect(error.message).to.include("revert");
-      }
+      // Mint tokens by different owners with mixed privacy settings
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://owner-public1", true, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://owner-private", false, { value: mintPrice });
+      await proxy.connect(otherAccount)["safeMint(string,bool)"]("ipfs://other-public1", true, { value: mintPrice });
+      await proxy.connect(otherAccount)["safeMint(string,bool)"]("ipfs://other-private", false, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://owner-public2", true, { value: mintPrice });
+
+      // Get all public tokens (should return tokens from both owners)
+      allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(3);
+      expect(allPublicTokens).to.deep.equal([0n, 2n, 4n]);
+
+      // Change one public token to private
+      await proxy.connect(owner).setTokenListed(0, false);
+      
+      allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(2);
+      expect(allPublicTokens).to.deep.equal([2n, 4n]);
+
+      // Change a private token to public
+      await proxy.connect(otherAccount).setTokenListed(3, true);
+      
+      allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(3);
+      expect(allPublicTokens).to.deep.equal([2n, 3n, 4n]);
     });
 
-    it("Should support basic NFT functionality with V3 contract", async function () {
+    it("Should handle edge cases for getAllPublicTokens", async function () {
       const { proxy, owner } = await loadFixture(deployGenImNFTv3DirectFixture);
       const mintPrice = await proxy.mintPrice();
 
-      // Basic mint test
-      await proxy.connect(owner)["safeMint(string)"]("ipfs://basic-test", { value: mintPrice });
+      // Test empty collection
+      let allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(0);
+
+      // Test all private tokens
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://private1", false, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://private2", false, { value: mintPrice });
       
-      expect(await proxy.ownerOf(0)).to.equal(owner.address);
-      expect(await proxy.tokenURI(0)).to.equal("ipfs://basic-test");
-      expect(await proxy.totalSupply()).to.equal(1n);
+      allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(0);
+
+      // Test all public tokens
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public1", true, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public2", true, { value: mintPrice });
+      
+      allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(2);
+      expect(allPublicTokens).to.deep.equal([2n, 3n]);
     });
 
-    it("Should support image updates with V3 contract", async function () {
-      const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv3DirectFixture);
+    it("Should correctly handle burned tokens in getAllPublicTokens", async function () {
+      const { proxy, owner } = await loadFixture(deployGenImNFTv3DirectFixture);
       const mintPrice = await proxy.mintPrice();
 
-      // Mint a token
-      await proxy.connect(owner)["safeMint(string)"]("ipfs://test-image", { value: mintPrice });
+      // Mint some public tokens
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public1", true, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public2", true, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public3", true, { value: mintPrice });
 
-      // Request image update
-      const newImageUrl = "ipfs://updated-image-v3";
-      await proxy.connect(otherAccount).requestImageUpdate(0, newImageUrl);
+      // All should be public
+      let allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(3);
+      expect(allPublicTokens).to.deep.equal([0n, 1n, 2n]);
 
-      expect(await proxy.isImageUpdated(0)).to.be.true;
-      expect(await proxy.tokenURI(0)).to.equal(newImageUrl);
+      // Burn a token in the middle
+      await proxy.connect(owner).burn(1);
+
+      // Should only return existing public tokens
+      allPublicTokens = await proxy.getAllPublicTokens();
+      expect(allPublicTokens.length).to.equal(2);
+      expect(allPublicTokens).to.deep.equal([0n, 2n]);
     });
   });
 

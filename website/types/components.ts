@@ -145,6 +145,7 @@ export interface NFT {
   imageUrl?: string;
   isLoading?: boolean;
   error?: string;
+  isListed?: boolean;
 }
 
 /**
@@ -159,6 +160,8 @@ export interface NFTCardProps extends BaseComponentProps {
   isPublicView?: boolean;
   /** Owner address for public NFTs */
   owner?: string;
+  /** Callback when the listed status changes */
+  onListedStatusChanged?: (tokenId: bigint, isListed: boolean) => void;
 }
 
 /**

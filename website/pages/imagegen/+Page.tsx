@@ -32,7 +32,6 @@ export default function Page() {
 
   return (
     <div className={styles.container}>
-
       {/* Einfacher, konstanter Generator */}
       <ImageGenerator onSuccess={handleSuccess} onError={handleError} />
 

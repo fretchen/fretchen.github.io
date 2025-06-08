@@ -235,6 +235,31 @@ export const imageGen = {
       borderColor: "gray.400",
     },
   }),
+  compactCheckboxLabel: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    fontSize: "sm",
+    color: "gray.700",
+    cursor: "pointer",
+    userSelect: "none",
+    whiteSpace: "nowrap",
+    transition: "color 0.2s ease",
+    _hover: {
+      color: "brand",
+    },
+  }),
+  compactCheckbox: css({
+    width: "16px",
+    height: "16px",
+    cursor: "pointer",
+    accentColor: "brand",
+    margin: 0,
+    _disabled: {
+      cursor: "not-allowed",
+      opacity: 0.6,
+    },
+  }),
   compactLabel: css({
     fontSize: "sm",
     fontWeight: "semibold",

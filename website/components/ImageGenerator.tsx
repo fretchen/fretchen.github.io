@@ -3,7 +3,7 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
 import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
-import { ImageGeneratorProps } from "../types/components";
+import { NFTMetadata } from "../types/components";
 import * as styles from "../layouts/styles";
 
 // Helper function to wait for transaction confirmation
@@ -32,7 +32,11 @@ export function ImageGenerator({
   apiUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud",
   onSuccess,
   onError,
-}: ImageGeneratorProps) {
+}: {
+  apiUrl?: string;
+  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
+  onError?: (error: string) => void;
+}) {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
@@ -198,15 +202,22 @@ export function ImageGenerator({
               <option value="1792x1024">▬ Wide</option>
             </select>
 
-            <label className={styles.imageGen.compactCheckboxLabel}>
+            <label
+              className={styles.nftCard.checkboxLabel}
+              title={
+                isListed
+                  ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
+                  : "NFT will remain unlisted from the 'All Public Artworks' gallery"
+              }
+            >
               <input
                 type="checkbox"
                 checked={isListed}
                 onChange={(e) => setIsListed(e.target.checked)}
                 disabled={isLoading || mintingStatus !== "idle"}
-                className={styles.imageGen.compactCheckbox}
+                className={styles.nftCard.checkbox}
               />
-              <span>📋 List publicly</span>
+              Listed
             </label>
 
             <button

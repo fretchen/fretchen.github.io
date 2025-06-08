@@ -3,7 +3,7 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
 import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
-import { NFTMetadata } from "../types/components";
+import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 
 // Helper function to wait for transaction confirmation
@@ -32,11 +32,7 @@ export function ImageGenerator({
   apiUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud",
   onSuccess,
   onError,
-}: {
-  apiUrl?: string;
-  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
-  onError?: (error: string) => void;
-}) {
+}: ImageGeneratorProps) {
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
@@ -225,8 +221,8 @@ export function ImageGenerator({
             <button
               onClick={handleMintAndGenerate}
               disabled={isLoading || !prompt.trim() || !isConnected}
-              className={`${styles.imageGen.generatorButton} ${
-                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.generatorButtonDisabled : ""
+              className={`${styles.imageGen.compactButton} ${
+                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
             >
               {isLoading ? (

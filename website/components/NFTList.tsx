@@ -157,7 +157,10 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         if (a.error && b.error) return 0;
 
         // Sort by tokenId (descending - newest first)
-        return Number(b.tokenId - a.tokenId);
+        // Use BigInt comparison to avoid precision loss for large token IDs
+        if (b.tokenId > a.tokenId) return 1;
+        if (b.tokenId < a.tokenId) return -1;
+        return 0;
       });
 
       setPublicNfts(sortedNFTs);
@@ -269,7 +272,10 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         if (a.error && b.error) return 0;
 
         // Sort by tokenId (descending - newest first)
-        return Number(b.tokenId - a.tokenId);
+        // Use BigInt comparison to avoid precision loss for large token IDs
+        if (b.tokenId > a.tokenId) return 1;
+        if (b.tokenId < a.tokenId) return -1;
+        return 0;
       });
 
       // Update state with sorted NFTs

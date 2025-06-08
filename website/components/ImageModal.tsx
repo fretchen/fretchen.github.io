@@ -1,41 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { ImageModalProps } from "../types/components";
+import { useToast } from "./Toast";
 import * as styles from "../layouts/styles";
 
 // Bildvergrößerungs-Modal Komponente
 export function ImageModal({ image, onClose }: ImageModalProps) {
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string>("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  // Use the new toast hook
+  const { showToast, ToastComponent } = useToast();
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Helper function to show toast notifications
-  const showToastNotification = (message: string, type: "success" | "error" = "error") => {
-    setToastMessage(message);
-    setToastType(type);
-    setShowToast(true);
-
-    // Clear any existing timeout
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    // Set new timeout and store reference
-    const duration = type === "error" ? 4000 : 3000; // Longer duration for errors
-    toastTimeoutRef.current = setTimeout(() => {
-      setShowToast(false);
-      toastTimeoutRef.current = null;
-    }, duration);
-  };
+  // Cleanup timeout on unmount (removed as useToast handles cleanup)
 
   // Schließen bei Escape-Taste
   useEffect(() => {
@@ -63,7 +36,7 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      showToastNotification("Download failed. Please try again.");
+      showToast("Download failed. Please try again.", "error");
     }
   };
 
@@ -87,15 +60,8 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
         )}
       </div>
 
-      {/* Toast Notifications */}
-      {showToast && (
-        <div className={styles.toast.container}>
-          <div className={styles.toast.content}>
-            <span className={styles.toast.icon}>{toastType === "success" ? "✅" : "❌"}</span>
-            <span className={styles.toast.message}>{toastMessage}</span>
-          </div>
-        </div>
-      )}
+      {/* Toast Component */}
+      {ToastComponent}
     </div>
   );
 }

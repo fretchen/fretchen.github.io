@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { getGenAiNFTContractConfig } from "../utils/getChain";
 import { NFTCardProps } from "../types/components";
+import { useToast } from "./Toast";
 import * as styles from "../layouts/styles";
 
 // NFT Card Component
@@ -17,10 +18,10 @@ export function NFTCard({
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string>("");
-  const [toastType, setToastType] = useState<"success" | "error">("success");
-  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+  // Use the new toast hook
+  const { showToast, ToastComponent } = useToast();
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -46,37 +47,9 @@ export function NFTCard({
   useEffect(() => {
     if (isListingConfirmed && onListedStatusChanged) {
       // The UI is already updated optimistically, just show success toast
-      showToastNotification("Listing status updated successfully!", "success");
+      showToast("Listing status updated successfully!", "success");
     }
-  }, [isListingConfirmed, onListedStatusChanged]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Helper function to show toast notifications
-  const showToastNotification = (message: string, type: "success" | "error" = "error") => {
-    setToastMessage(message);
-    setToastType(type);
-    setShowToast(true);
-
-    // Clear any existing timeout
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    // Set new timeout and store reference
-    const duration = type === "error" ? 4000 : 3000; // Longer duration for errors
-    toastTimeoutRef.current = setTimeout(() => {
-      setShowToast(false);
-      toastTimeoutRef.current = null;
-    }, duration);
-  };
+  }, [isListingConfirmed, onListedStatusChanged, showToast]);
 
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -105,7 +78,7 @@ export function NFTCard({
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      showToastNotification("Download failed. Please try again.");
+      showToast("Download failed. Please try again.", "error");
     }
   };
 
@@ -120,7 +93,7 @@ export function NFTCard({
     try {
       await navigator.clipboard.writeText(openSeaUrl);
       // Show modern toast notification
-      showToastNotification("OpenSea URL copied to clipboard!", "success");
+      showToast("OpenSea URL copied to clipboard!", "success");
     } catch (error) {
       console.error("Failed to copy URL:", error);
       // Fallback: open in new tab if clipboard fails
@@ -129,13 +102,24 @@ export function NFTCard({
   };
 
   const handleBurn = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to permanently delete "${nft.metadata?.name || `Artwork #${nft.tokenId}`}"? This action cannot be undone.`,
-      )
-    ) {
+    if (!showDeleteConfirmation) {
+      // First click: Show warning and ask for confirmation
+      setShowDeleteConfirmation(true);
+      showToast(
+        `⚠️ Click Delete again to permanently remove "${nft.metadata?.name || `Artwork #${nft.tokenId}`}"`,
+        "warning",
+      );
+
+      // Reset confirmation state after 5 seconds
+      setTimeout(() => {
+        setShowDeleteConfirmation(false);
+      }, 5000);
+
       return;
     }
+
+    // Second click: Proceed with deletion
+    setShowDeleteConfirmation(false);
 
     try {
       await writeContract({
@@ -145,7 +129,7 @@ export function NFTCard({
       });
     } catch (error) {
       console.error("Delete failed:", error);
-      showToastNotification("Failed to delete artwork. Please try again.");
+      showToast("Failed to delete artwork. Please try again.", "error");
     }
   };
 
@@ -169,7 +153,7 @@ export function NFTCard({
       console.error("Failed to update listing status:", error);
       // Revert optimistic update on error
       onListedStatusChanged(nft.tokenId, !newListedStatus);
-      showToastNotification(`Failed to set artwork as ${statusText}. Please try again.`);
+      showToast(`Failed to set artwork as ${statusText}. Please try again.`, "error");
     }
   };
 
@@ -281,15 +265,8 @@ export function NFTCard({
         </>
       )}
 
-      {/* Toast Notifications */}
-      {showToast && (
-        <div className={styles.toast.container}>
-          <div className={styles.toast.content}>
-            <span className={styles.toast.icon}>{toastType === "success" ? "✅" : "❌"}</span>
-            <span className={styles.toast.message}>{toastMessage}</span>
-          </div>
-        </div>
-      )}
+      {/* Toast Component */}
+      {ToastComponent}
     </div>
   );
 }

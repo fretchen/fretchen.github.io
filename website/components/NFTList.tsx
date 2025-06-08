@@ -3,16 +3,44 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
-import { NFT, NFTListProps, ModalImageData, NFTMetadata, NFTCardProps, ImageModalProps } from "../types/components";
+import {
+  NFT,
+  NFTListProps,
+  ModalImageData,
+  NFTMetadata,
+  NFTCardProps,
+  ImageModalProps,
+  TabProps,
+  PublicNFT,
+} from "../types/components";
 import * as styles from "../layouts/styles";
+
+// Tab Component
+function Tab({ label, isActive, onClick }: TabProps) {
+  return (
+    <button className={`${styles.tabs.tab} ${isActive ? styles.tabs.activeTab : ""}`} onClick={onClick}>
+      {label}
+    </button>
+  );
+}
 
 export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
   const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
+  // Tab state - start with "my" as default
+  const [activeTab, setActiveTab] = useState<"my" | "public">("my");
+
+  // My NFTs state
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  // Public NFTs state
+  const [publicNfts, setPublicNfts] = useState<PublicNFT[]>([]);
+  const [isLoadingPublicNfts, setIsLoadingPublicNfts] = useState(false);
+
+  // Common state
   const [highlightedNFT, setHighlightedNFT] = useState<bigint | null>(null);
   const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
@@ -46,6 +74,101 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     } catch (error) {
       console.error("Error fetching NFT metadata:", error);
       return null;
+    }
+  };
+
+  // Load all public NFTs using getAllPublicTokens
+  const loadPublicNFTs = async () => {
+    setIsLoadingPublicNfts(true);
+
+    try {
+      // Get all public token IDs
+      const publicTokenIds = (await readContract(config, {
+        ...genAiNFTContractConfig,
+        functionName: "getAllPublicTokens",
+      })) as bigint[];
+
+      if (!publicTokenIds || publicTokenIds.length === 0) {
+        setPublicNfts([]);
+        return;
+      }
+
+      // Show loading placeholders initially
+      const placeholderNFTs = publicTokenIds.map((tokenId) => ({
+        tokenId,
+        tokenURI: "",
+        isLoading: true,
+        owner: "",
+      }));
+
+      setPublicNfts(placeholderNFTs as PublicNFT[]);
+
+      // Load all NFT data
+      const nftPromises: Promise<PublicNFT>[] = publicTokenIds.map(async (tokenId) => {
+        try {
+          // Get token owner
+          const ownerResult = await readContract(config, {
+            ...genAiNFTContractConfig,
+            functionName: "ownerOf",
+            args: [tokenId],
+          });
+
+          // Get token URI
+          const tokenURIResult = await readContract(config, {
+            ...genAiNFTContractConfig,
+            functionName: "tokenURI",
+            args: [tokenId],
+          });
+
+          const tokenURI = tokenURIResult as string;
+          const owner = ownerResult as string;
+
+          // Fetch metadata
+          const metadata = await fetchNFTMetadata(tokenURI);
+
+          return {
+            tokenId,
+            tokenURI,
+            metadata: metadata || undefined,
+            imageUrl: metadata?.image,
+            isLoading: false,
+            owner,
+          };
+        } catch (error) {
+          console.error(`Error loading public NFT ${tokenId}:`, error);
+          return {
+            tokenId,
+            tokenURI: "",
+            isLoading: false,
+            error: `Failed to load NFT #${tokenId}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            owner: "",
+          };
+        }
+      });
+
+      // Wait for all NFTs to load
+      const loadedNFTs = await Promise.all(nftPromises);
+
+      // Sort by tokenId in descending order (newest first)
+      const sortedNFTs = loadedNFTs.sort((a, b) => {
+        // Handle error cases - put them at the end
+        if (a.error && !b.error) return 1;
+        if (!a.error && b.error) return -1;
+        if (a.error && b.error) return 0;
+
+        // Sort by tokenId (descending - newest first)
+        // Use BigInt comparison to avoid precision loss for large token IDs
+        if (b.tokenId > a.tokenId) return 1;
+        if (b.tokenId < a.tokenId) return -1;
+        return 0;
+      });
+
+      setPublicNfts(sortedNFTs);
+    } catch (error) {
+      console.error("Error loading public NFTs:", error);
+      setPublicNfts([]);
+    } finally {
+      setIsLoadingPublicNfts(false);
     }
   };
 
@@ -104,6 +227,15 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 
             const tokenURI = tokenURIResult as string;
 
+            // Get listing status
+            const isListedResult = await readContract(config, {
+              ...genAiNFTContractConfig,
+              functionName: "isTokenListed",
+              args: [tokenId],
+            });
+
+            const isListed = isListedResult as boolean;
+
             // Fetch metadata
             const metadata = await fetchNFTMetadata(tokenURI);
 
@@ -113,6 +245,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
               metadata: metadata || undefined,
               imageUrl: metadata?.image,
               isLoading: false,
+              isListed,
             };
           } catch (error) {
             console.error(`Error loading NFT at index ${i}:`, error);
@@ -139,7 +272,10 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         if (a.error && b.error) return 0;
 
         // Sort by tokenId (descending - newest first)
-        return Number(b.tokenId - a.tokenId);
+        // Use BigInt comparison to avoid precision loss for large token IDs
+        if (b.tokenId > a.tokenId) return 1;
+        if (b.tokenId < a.tokenId) return -1;
+        return 0;
       });
 
       // Update state with sorted NFTs
@@ -152,11 +288,22 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     }
   };
 
+  // Handle listed status change for user NFTs
+  const handleListedStatusChanged = async (tokenId: bigint, isListed: boolean) => {
+    // Update the local state immediately for better UX
+    setNfts((prevNfts) => prevNfts.map((nft) => (nft.tokenId === tokenId ? { ...nft, isListed } : nft)));
+  };
+
+  // Load data based on active tab
   useEffect(() => {
-    if (isConnected && address) {
-      loadUserNFTs();
+    if (activeTab === "my") {
+      if (isConnected && address) {
+        loadUserNFTs();
+      }
+    } else if (activeTab === "public") {
+      loadPublicNFTs();
     }
-  }, [address, isConnected, userBalance]); // Keep userBalance for automatic updates
+  }, [activeTab, address, isConnected, userBalance]); // Keep userBalance for automatic updates
 
   // Handle newly created NFT
   useEffect(() => {
@@ -171,6 +318,7 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
         imageUrl: newlyCreatedNFT.imageUrl,
         metadata: newlyCreatedNFT.metadata,
         isLoading: false,
+        isListed: false, // New NFTs are private by default
       };
 
       // Add to top of list, but ensure we don't duplicate if it already exists
@@ -199,46 +347,90 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     }
   }, [newlyCreatedNFT, onNewNFTDisplayed]);
 
-  if (!isConnected) {
-    return (
-      <div className={styles.nftList.walletPrompt}>
-        <p>Connect your account to view your artworks</p>
-      </div>
-    );
-  }
-
-  const isLoading = isLoadingBalance || isLoadingMetadata;
+  const isMyTabLoading = activeTab === "my" && (isLoadingBalance || isLoadingMetadata);
+  const isPublicTabLoading = activeTab === "public" && isLoadingPublicNfts;
 
   return (
     <div className={styles.nftList.container}>
-      <div className={styles.nftList.heading}>
-        <h2 className={styles.imageGen.columnHeading}>Your Digital Artworks ({userBalance?.toString() || "0"})</h2>
+      {/* Tab Navigation */}
+      <div className={styles.tabs.container}>
+        <div className={styles.tabs.tabList}>
+          <Tab
+            label={isConnected ? `My Artworks (${userBalance?.toString() || "0"})` : "My Artworks"}
+            isActive={activeTab === "my"}
+            onClick={() => setActiveTab("my")}
+          />
+          <Tab label="All Public Artworks" isActive={activeTab === "public"} onClick={() => setActiveTab("public")} />
+        </div>
       </div>
 
-      {isLoading && nfts.length === 0 ? (
-        <div className={styles.nftList.loadingContainer}>
-          <div className={styles.spinner}></div>
-          <p>Loading your artworks...</p>
-        </div>
-      ) : userBalance === 0n || !userBalance ? (
-        <div className={styles.nftList.emptyStateContainer}>
-          <p className={styles.nftList.emptyStateText}>
-            You haven&apos;t created any artworks yet. Use the generator above to create your first one!
-          </p>
-        </div>
-      ) : (
-        <div className={styles.nftList.grid}>
-          {nfts.map((nft, index) => (
-            <NFTCard
-              key={`${nft.tokenId}-${index}`}
-              nft={nft}
-              onImageClick={setSelectedImage}
-              onNftBurned={() => loadUserNFTs()}
-              isHighlighted={highlightedNFT === nft.tokenId}
-            />
-          ))}
-        </div>
-      )}
+      {/* My NFTs Tab Panel */}
+      <div className={`${styles.tabs.tabPanel} ${activeTab === "my" ? "" : styles.tabs.hiddenPanel}`}>
+        {!isConnected ? (
+          <div className={styles.nftList.walletPrompt}>
+            <h3>🔗 Connect Your Wallet</h3>
+            <p>To view and manage your personal NFT artworks, please connect your wallet using the button above.</p>
+            <p>Your artworks are stored on the blockchain and linked to your wallet address.</p>
+            <p style={{ marginTop: "1rem", fontSize: "0.9em", opacity: 0.8 }}>
+              💡 Tip: You can explore public artworks from other users in the &ldquo;All Public Artworks&rdquo; tab
+              without connecting your wallet.
+            </p>
+          </div>
+        ) : isMyTabLoading && nfts.length === 0 ? (
+          <div className={styles.nftList.loadingContainer}>
+            <div className={styles.spinner}></div>
+            <p>Loading your artworks...</p>
+          </div>
+        ) : userBalance === 0n || !userBalance ? (
+          <div className={styles.nftList.emptyStateContainer}>
+            <p className={styles.nftList.emptyStateText}>
+              You haven&apos;t created any artworks yet. Use the generator above to create your first one!
+            </p>
+          </div>
+        ) : (
+          <div className={styles.nftList.grid}>
+            {nfts.map((nft, index) => (
+              <NFTCard
+                key={`my-${nft.tokenId}-${index}`}
+                nft={nft}
+                onImageClick={setSelectedImage}
+                onNftBurned={() => loadUserNFTs()}
+                onListedStatusChanged={handleListedStatusChanged}
+                isHighlighted={highlightedNFT === nft.tokenId}
+                isPublicView={false}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Public NFTs Tab Panel */}
+      <div className={`${styles.tabs.tabPanel} ${activeTab === "public" ? "" : styles.tabs.hiddenPanel}`}>
+        {isPublicTabLoading && publicNfts.length === 0 ? (
+          <div className={styles.nftList.loadingContainer}>
+            <div className={styles.spinner}></div>
+            <p>Loading public artworks...</p>
+          </div>
+        ) : publicNfts.length === 0 ? (
+          <div className={styles.nftList.emptyStateContainer}>
+            <p className={styles.nftList.emptyStateText}>No public artworks available yet.</p>
+          </div>
+        ) : (
+          <div className={styles.nftList.grid}>
+            {publicNfts.map((nft, index) => (
+              <NFTCard
+                key={`public-${nft.tokenId}-${index}`}
+                nft={nft}
+                onImageClick={setSelectedImage}
+                onNftBurned={() => {}} // No burn functionality for public view
+                isHighlighted={false}
+                isPublicView={true}
+                owner={nft.owner}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Bildvergrößerungs-Modal */}
       {selectedImage && <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />}
@@ -247,18 +439,34 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
 }
 
 // NFT Card Component
-function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTCardProps) {
+function NFTCard({
+  nft,
+  onImageClick,
+  onNftBurned,
+  onListedStatusChanged,
+  isHighlighted = false,
+  isPublicView = false,
+  owner,
+}: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
+  const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Warte auf Transaktionsbestätigung
+  // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
   });
 
-  // Aktualisiere die NFT-Liste nach erfolgreicher Bestätigung
+  // Warte auf Transaktionsbestätigung für Listing-Toggle
+  const { isLoading: isListingConfirming, isSuccess: isListingConfirmed } = useWaitForTransactionReceipt({
+    hash: listingHash,
+  });
+
+  // Aktualisiere die NFT-Liste nach erfolgreicher Burn-Bestätigung
   useEffect(() => {
     if (isConfirmed) {
       // Add a small delay to ensure blockchain state is consistent
@@ -268,6 +476,14 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     }
   }, [isConfirmed, onNftBurned]);
 
+  // Handle successful listing status change
+  useEffect(() => {
+    if (isListingConfirmed && onListedStatusChanged) {
+      // The UI is already updated optimistically, just show success toast
+      showToastNotification("Listing status updated successfully!", "success");
+    }
+  }, [isListingConfirmed, onListedStatusChanged]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -276,6 +492,25 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       }
     };
   }, []);
+
+  // Helper function to show toast notifications
+  const showToastNotification = (message: string, type: "success" | "error" = "error") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+
+    // Clear any existing timeout
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    // Set new timeout and store reference
+    const duration = type === "error" ? 4000 : 3000; // Longer duration for errors
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+      toastTimeoutRef.current = null;
+    }, duration);
+  };
 
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -304,7 +539,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      showToastNotification("Download failed. Please try again.");
     }
   };
 
@@ -319,18 +554,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     try {
       await navigator.clipboard.writeText(openSeaUrl);
       // Show modern toast notification
-      setShowToast(true);
-
-      // Clear any existing timeout
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-
-      // Set new timeout and store reference
-      toastTimeoutRef.current = setTimeout(() => {
-        setShowToast(false);
-        toastTimeoutRef.current = null;
-      }, 3000);
+      showToastNotification("OpenSea URL copied to clipboard!", "success");
     } catch (error) {
       console.error("Failed to copy URL:", error);
       // Fallback: open in new tab if clipboard fails
@@ -355,7 +579,31 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       });
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("Failed to delete artwork. Please try again.");
+      showToastNotification("Failed to delete artwork. Please try again.");
+    }
+  };
+
+  const handleToggleListing = async () => {
+    if (!onListedStatusChanged) return;
+
+    const newListedStatus = !nft.isListed;
+    const statusText = newListedStatus ? "public" : "private";
+
+    try {
+      // Update UI optimistically
+      onListedStatusChanged(nft.tokenId, newListedStatus);
+
+      // Call contract
+      await writeListingContract({
+        ...genAiNFTContractConfig,
+        functionName: "setTokenListed",
+        args: [nft.tokenId, newListedStatus],
+      });
+    } catch (error) {
+      console.error("Failed to update listing status:", error);
+      // Revert optimistic update on error
+      onListedStatusChanged(nft.tokenId, !newListedStatus);
+      showToastNotification(`Failed to set artwork as ${statusText}. Please try again.`);
     }
   };
 
@@ -403,6 +651,26 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
 
           <div className={styles.nftCard.footer}>
             <span>ID: {nft.tokenId.toString()}</span>
+            {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
+              <label
+                className={styles.nftCard.checkboxLabel}
+                title={`${nft.isListed ? "NFT is publicly listed" : "NFT is private"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={nft.isListed}
+                  onChange={handleToggleListing}
+                  disabled={isToggling || isListingConfirming}
+                  className={styles.nftCard.checkbox}
+                />
+                Listed
+              </label>
+            )}
+            {isPublicView && owner && (
+              <span title={`Owned by ${owner}`}>
+                Owner: {owner.slice(0, 6)}...{owner.slice(-4)}
+              </span>
+            )}
           </div>
 
           {/* Aktions-Buttons */}
@@ -432,25 +700,27 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
             >
               📤 Share
             </button>
-            <button
-              onClick={handleBurn}
-              disabled={isBurning || isConfirming}
-              className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
-              title="Delete artwork (permanent)"
-              style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
-            >
-              {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : "🗑️ Delete"}
-            </button>
+            {!isPublicView && (
+              <button
+                onClick={handleBurn}
+                disabled={isBurning || isConfirming}
+                className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
+                title="Delete artwork (permanent)"
+                style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
+              >
+                {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : "🗑️ Delete"}
+              </button>
+            )}
           </div>
         </>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast Notifications */}
       {showToast && (
         <div className={styles.toast.container}>
           <div className={styles.toast.content}>
-            <span className={styles.toast.icon}>✅</span>
-            <span className={styles.toast.message}>OpenSea URL copied to clipboard!</span>
+            <span className={styles.toast.icon}>{toastType === "success" ? "✅" : "❌"}</span>
+            <span className={styles.toast.message}>{toastMessage}</span>
           </div>
         </div>
       )}
@@ -460,6 +730,38 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
 
 // Bildvergrößerungs-Modal Komponente
 function ImageModal({ image, onClose }: ImageModalProps) {
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Helper function to show toast notifications
+  const showToastNotification = (message: string, type: "success" | "error" = "error") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+
+    // Clear any existing timeout
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    // Set new timeout and store reference
+    const duration = type === "error" ? 4000 : 3000; // Longer duration for errors
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+      toastTimeoutRef.current = null;
+    }, duration);
+  };
   // Schließen bei Escape-Taste
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -486,7 +788,7 @@ function ImageModal({ image, onClose }: ImageModalProps) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      showToastNotification("Download failed. Please try again.");
     }
   };
 
@@ -509,6 +811,16 @@ function ImageModal({ image, onClose }: ImageModalProps) {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      {showToast && (
+        <div className={styles.toast.container}>
+          <div className={styles.toast.content}>
+            <span className={styles.toast.icon}>{toastType === "success" ? "✅" : "❌"}</span>
+            <span className={styles.toast.message}>{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

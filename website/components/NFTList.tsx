@@ -11,8 +11,10 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
   const { address, isConnected } = useAccount();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  // Tab state - start with "my" as default
-  const [activeTab, setActiveTab] = useState<"my" | "public">("my");
+  // Tab state - start with "public" if wallet not connected, otherwise "my"
+  const [activeTab, setActiveTab] = useState<"my" | "public">(() => {
+    return isConnected ? "my" : "public";
+  });
 
   // Get user's NFT balance for display in tab
   const { data: userBalance } = useReadContract({

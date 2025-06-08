@@ -768,6 +768,30 @@ export const nftCard = {
     _hover: { textDecoration: "underline" },
   }),
 
+  // Checkbox für Listed Status
+  checkboxLabel: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    fontSize: "xs",
+    color: "gray.600",
+    cursor: "pointer",
+    userSelect: "none",
+    _hover: {
+      color: "gray.800",
+    },
+  }),
+  checkbox: css({
+    width: "14px",
+    height: "14px",
+    cursor: "pointer",
+    accentColor: "brand",
+    _disabled: {
+      cursor: "not-allowed",
+      opacity: 0.6,
+    },
+  }),
+
   // Vereinfachte Action-Buttons
   actions: css({
     display: "flex",

@@ -644,13 +644,20 @@ function NFTCard({
 
           <div className={styles.nftCard.footer}>
             <span>ID: {nft.tokenId.toString()}</span>
-            {!isPublicView && nft.isListed !== undefined && (
-              <span
-                className={nft.isListed ? styles.successStatus : styles.infoStatus}
-                title={`This artwork is ${nft.isListed ? "public and visible to everyone" : "private and only visible to you"}`}
+            {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
+              <label
+                className={styles.nftCard.checkboxLabel}
+                title={`${nft.isListed ? "NFT is publicly listed" : "NFT is private"}`}
               >
-                {nft.isListed ? "🌍 Public" : "🔒 Private"}
-              </span>
+                <input
+                  type="checkbox"
+                  checked={nft.isListed}
+                  onChange={handleToggleListing}
+                  disabled={isToggling || isListingConfirming}
+                  className={styles.nftCard.checkbox}
+                />
+                Listed
+              </label>
             )}
             {isPublicView && owner && (
               <span title={`Owned by ${owner}`}>
@@ -686,29 +693,6 @@ function NFTCard({
             >
               📤 Share
             </button>
-            {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
-              <button
-                onClick={handleToggleListing}
-                disabled={isToggling || isListingConfirming}
-                className={`${styles.nftCard.actionButton} ${
-                  isToggling || isListingConfirming
-                    ? styles.secondaryButton
-                    : nft.isListed
-                      ? styles.errorStatus
-                      : styles.successStatus
-                }`}
-                title={`Make artwork ${nft.isListed ? "private" : "public"}`}
-                style={{ opacity: isToggling || isListingConfirming ? 0.6 : 1 }}
-              >
-                {isToggling
-                  ? "⏳ Updating..."
-                  : isListingConfirming
-                    ? "⏳ Confirming..."
-                    : nft.isListed
-                      ? "🔒 Make Private"
-                      : "🌍 Make Public"}
-              </button>
-            )}
             {!isPublicView && (
               <button
                 onClick={handleBurn}

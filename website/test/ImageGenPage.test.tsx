@@ -110,7 +110,7 @@ describe("ImageGen Page", () => {
     // Check if the components are properly structured within the container
     const container = screen.getByTestId("image-generator").parentElement;
     expect(container).toHaveClass("mock-container-class");
-    
+
     // Verify both main components are present
     expect(screen.getByTestId("image-generator")).toBeInTheDocument();
     expect(screen.getByTestId("nft-list")).toBeInTheDocument();

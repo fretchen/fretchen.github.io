@@ -33,7 +33,7 @@ vi.mock("../utils/getChain", () => ({
 vi.mock("../layouts/styles", () => ({
   nftList: {
     container: "nft-list-container",
-    loadingContainer: "loading-container", 
+    loadingContainer: "loading-container",
     emptyStateContainer: "empty-state-container",
     emptyStateText: "empty-state-text",
     grid: "nft-grid",
@@ -131,7 +131,7 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
       return Promise.reject(new Error(`Unexpected function: ${functionName}`));
     });
 
-    // Mock fetch for metadata  
+    // Mock fetch for metadata
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockMetadata),
@@ -146,7 +146,7 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
     // Wait for NFTs to load and display
     await waitFor(() => {
       expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
-      expect(screen.getByTestId("nft-card-2")).toBeInTheDocument(); 
+      expect(screen.getByTestId("nft-card-2")).toBeInTheDocument();
       expect(screen.getByTestId("nft-card-3")).toBeInTheDocument();
     });
 
@@ -161,10 +161,10 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
     expect(screen.getByText("Token ID: 1")).toBeInTheDocument();
     expect(screen.getByText("Token ID: 2")).toBeInTheDocument();
     expect(screen.getByText("Token ID: 3")).toBeInTheDocument();
-    
+
     // Verify owner information is displayed for public view
     expect(screen.getAllByText(`Owner: ${mockOwner}`)).toHaveLength(3);
-    
+
     // Verify metadata is displayed
     expect(screen.getAllByText("Public Artwork Without Wallet")).toHaveLength(3);
   });
@@ -190,10 +190,11 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ 
-        name: "Wallet-Independent NFT",
-        description: "This proves the fix works without wallet connection"
-      }),
+      json: () =>
+        Promise.resolve({
+          name: "Wallet-Independent NFT",
+          description: "This proves the fix works without wallet connection",
+        }),
     });
 
     render(
@@ -209,7 +210,7 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
 
     // Verify that only the Viem public client was used (no wagmi wallet dependencies)
     expect(mockReadContract).toHaveBeenCalled();
-    
+
     // This succeeds, proving the component works without wallet dependencies
     expect(screen.getByText("Wallet-Independent NFT")).toBeInTheDocument();
   });
@@ -237,10 +238,10 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
 
   it("should verify the architectural fix: uses createPublicClient instead of wagmi", () => {
     // This test documents the architectural decision that enables wallet independence
-    
+
     // BEFORE: Component would fail because wagmi's readContract requires wallet connection
     // AFTER: Component uses Viem's createPublicClient which works without wallet
-    
+
     const architecturalFix = {
       before: "wagmi readContract (requires wallet)",
       after: "viem createPublicClient (wallet independent)",

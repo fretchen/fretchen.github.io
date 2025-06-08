@@ -49,11 +49,11 @@ export function PublicNFTList() {
 
     try {
       // Get all public token IDs using the public client
-      const publicTokenIds = await publicClient.readContract({
+      const publicTokenIds = (await publicClient.readContract({
         address: genAiNFTContractConfig.address,
         abi: genAiNFTContractConfig.abi,
         functionName: "getAllPublicTokens",
-      }) as bigint[];
+      })) as bigint[];
 
       if (!publicTokenIds || publicTokenIds.length === 0) {
         setPublicNfts([]);

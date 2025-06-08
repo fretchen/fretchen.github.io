@@ -25,7 +25,7 @@ describe("Toast Component", () => {
 
   it("should render with correct message and type", () => {
     const mockOnClose = vi.fn();
-    
+
     render(<Toast message="Test message" type="success" onClose={mockOnClose} />);
 
     expect(screen.getByText("Test message")).toBeInTheDocument();
@@ -45,14 +45,14 @@ describe("Toast Component", () => {
 
       expect(screen.getByText(icon)).toBeInTheDocument();
       expect(screen.getByText(`${type} message`)).toBeInTheDocument();
-      
+
       unmount();
     });
   });
 
   it("should auto-dismiss after default duration", () => {
     const mockOnClose = vi.fn();
-    
+
     render(<Toast message="Auto dismiss test" type="success" onClose={mockOnClose} />);
 
     expect(mockOnClose).not.toHaveBeenCalled();
@@ -67,7 +67,7 @@ describe("Toast Component", () => {
   it("should auto-dismiss after custom duration", () => {
     const mockOnClose = vi.fn();
     const customDuration = 1500;
-    
+
     render(<Toast message="Custom duration test" type="success" duration={customDuration} onClose={mockOnClose} />);
 
     expect(mockOnClose).not.toHaveBeenCalled();
@@ -92,9 +92,9 @@ describe("useToast Hook", () => {
 
   it("should be importable and return correct structure", () => {
     expect(typeof useToast).toBe("function");
-    
+
     const { result } = renderHook(() => useToast());
-    
+
     expect(typeof result.current.showToast).toBe("function");
     expect(typeof result.current.hideToast).toBe("function");
     expect(result.current.ToastComponent).toBe(null);
@@ -102,63 +102,63 @@ describe("useToast Hook", () => {
 
   it("should show toast when showToast is called", () => {
     const { result } = renderHook(() => useToast());
-    
+
     expect(result.current.ToastComponent).toBe(null);
-    
+
     act(() => {
       result.current.showToast("Test message", "success");
     });
-    
+
     expect(result.current.ToastComponent).not.toBe(null);
   });
 
   it("should hide toast when hideToast is called", () => {
     const { result } = renderHook(() => useToast());
-    
+
     act(() => {
       result.current.showToast("Test message", "success");
     });
-    
+
     expect(result.current.ToastComponent).not.toBe(null);
-    
+
     act(() => {
       result.current.hideToast();
     });
-    
+
     expect(result.current.ToastComponent).toBe(null);
   });
 
   it("should have timer functionality (basic test)", () => {
     const { result } = renderHook(() => useToast());
-    
+
     act(() => {
       result.current.showToast("Test message", "success");
     });
-    
+
     expect(result.current.ToastComponent).not.toBe(null);
-    
+
     // Test that hideToast works manually
     act(() => {
       result.current.hideToast();
     });
-    
+
     expect(result.current.ToastComponent).toBe(null);
   });
 
   it("should replace previous toast when showToast is called again", () => {
     const { result } = renderHook(() => useToast());
-    
+
     act(() => {
       result.current.showToast("First message", "success");
     });
-    
+
     const firstToast = result.current.ToastComponent;
     expect(firstToast).not.toBe(null);
-    
+
     act(() => {
       result.current.showToast("Second message", "error");
     });
-    
+
     const secondToast = result.current.ToastComponent;
     expect(secondToast).not.toBe(null);
     expect(secondToast).not.toBe(firstToast);

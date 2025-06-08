@@ -251,6 +251,8 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Warte auf Transaktionsbestätigung
@@ -276,6 +278,24 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       }
     };
   }, []);
+
+  // Hilfsfunktion zum Anzeigen von Toast-Benachrichtigungen
+  const showToastNotification = (message: string, type: "success" | "error" = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+
+    // Clear any existing timeout
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    // Set new timeout and store reference
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+      toastTimeoutRef.current = null;
+    }, 4000); // 4 seconds for error messages
+  };
 
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -304,7 +324,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      showToastNotification("Download failed. Please try again.", "error");
     }
   };
 
@@ -319,18 +339,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
     try {
       await navigator.clipboard.writeText(openSeaUrl);
       // Show modern toast notification
-      setShowToast(true);
-
-      // Clear any existing timeout
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-
-      // Set new timeout and store reference
-      toastTimeoutRef.current = setTimeout(() => {
-        setShowToast(false);
-        toastTimeoutRef.current = null;
-      }, 3000);
+      showToastNotification("OpenSea URL copied to clipboard!", "success");
     } catch (error) {
       console.error("Failed to copy URL:", error);
       // Fallback: open in new tab if clipboard fails
@@ -355,7 +364,7 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       });
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("Failed to delete artwork. Please try again.");
+      showToastNotification("Failed to delete artwork. Please try again.", "error");
     }
   };
 
@@ -449,8 +458,8 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
       {showToast && (
         <div className={styles.toast.container}>
           <div className={styles.toast.content}>
-            <span className={styles.toast.icon}>✅</span>
-            <span className={styles.toast.message}>OpenSea URL copied to clipboard!</span>
+            <span className={styles.toast.icon}>{toastType === "success" ? "✅" : "❌"}</span>
+            <span className={styles.toast.message}>{toastMessage}</span>
           </div>
         </div>
       )}
@@ -460,6 +469,11 @@ function NFTCard({ nft, onImageClick, onNftBurned, isHighlighted = false }: NFTC
 
 // Bildvergrößerungs-Modal Komponente
 function ImageModal({ image, onClose }: ImageModalProps) {
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   // Schließen bei Escape-Taste
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -469,8 +483,32 @@ function ImageModal({ image, onClose }: ImageModalProps) {
     };
 
     document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      // Cleanup timeout on unmount
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
   }, [onClose]);
+
+  // Hilfsfunktion zum Anzeigen von Toast-Benachrichtigungen
+  const showToastNotification = (message: string, type: "success" | "error" = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+
+    // Clear any existing timeout
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    // Set new timeout and store reference
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+      toastTimeoutRef.current = null;
+    }, 4000); // 4 seconds for error messages
+  };
 
   const handleDownload = async () => {
     try {
@@ -486,7 +524,7 @@ function ImageModal({ image, onClose }: ImageModalProps) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      showToastNotification("Download failed. Please try again.", "error");
     }
   };
 
@@ -509,6 +547,16 @@ function ImageModal({ image, onClose }: ImageModalProps) {
           </div>
         )}
       </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className={styles.toast.container}>
+          <div className={styles.toast.content}>
+            <span className={styles.toast.icon}>{toastType === "success" ? "✅" : "❌"}</span>
+            <span className={styles.toast.message}>{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -216,14 +216,34 @@ export const imageGen = {
       gap: "sm",
     },
   }),
+  // Diskrete Kontrollleiste
+  controlBar: css({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "md",
+    "@media (max-width: 640px)": {
+      flexDirection: "column",
+      alignItems: "stretch",
+      gap: "sm",
+    },
+  }),
+  optionsGroup: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "md",
+    "@media (max-width: 640px)": {
+      width: "100%",
+      justifyContent: "space-between",
+    },
+  }),
   compactSelect: css({
     padding: "sm md",
     border: "1px solid token(colors.border)",
     borderRadius: "md",
     fontSize: "sm",
     backgroundColor: "white",
-    minWidth: "100px",
-    maxWidth: "110px",
+    minWidth: "110px",
     cursor: "pointer",
     transition: "all 0.2s ease",
     _focus: {
@@ -233,6 +253,48 @@ export const imageGen = {
     },
     _hover: {
       borderColor: "gray.400",
+    },
+  }),
+  // Kompakter Generator Button
+  generatorButton: css({
+    paddingY: "xs",
+    paddingX: "md",
+    backgroundColor: "brand",
+    color: "light",
+    border: "none",
+    borderRadius: "md",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "sm",
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
+    _hover: {
+      backgroundColor: "#0052a3",
+      transform: "translateY(-1px)",
+      boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
+    },
+    _active: {
+      transform: "translateY(0)",
+      boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
+    },
+    "@media (max-width: 640px)": {
+      width: "100%",
+      justifyContent: "center",
+    },
+  }),
+  generatorButtonDisabled: css({
+    backgroundColor: "gray.300",
+    color: "gray.500",
+    cursor: "not-allowed",
+    boxShadow: "none",
+    _hover: {
+      backgroundColor: "gray.300",
+      transform: "none",
+      boxShadow: "none",
     },
   }),
   compactLabel: css({

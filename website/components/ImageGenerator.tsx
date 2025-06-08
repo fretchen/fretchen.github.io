@@ -39,6 +39,7 @@ export function ImageGenerator({
 
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState<"1024x1024" | "1792x1024">("1024x1024");
+  const [isListed, setIsListed] = useState(false); // Default: not publicly listed
   const [isLoading, setIsLoading] = useState(false);
   const [mintingStatus, setMintingStatus] = useState<MintingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -83,12 +84,12 @@ export function ImageGenerator({
     setMintingStatus("minting");
 
     try {
-      // Start minting with a temporary URI
+      // Start minting with a temporary URI and listing preference
       const tempUri = `ipfs://tempURI/${Date.now()}`;
       const txHash = await writeContractAsync({
         ...genAiNFTContractConfig,
         functionName: "safeMint",
-        args: [tempUri],
+        args: [tempUri, isListed], // Use the new safeMint(uri, isListed) function
         value: mintPrice as bigint,
         ...(chain?.id && { chainId: chain.id }),
       });
@@ -184,18 +185,38 @@ export function ImageGenerator({
             className={styles.imageGen.compactTextarea}
           />
 
-          <div className={styles.imageGen.compactFormRow}>
-            <select
-              id="imageSizeSelect"
-              value={size}
-              onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
-              disabled={isLoading || mintingStatus !== "idle"}
-              className={styles.imageGen.compactSelect}
-              aria-label="Select image format for your artwork"
-            >
-              <option value="1024x1024">◼ Square</option>
-              <option value="1792x1024">▬ Wide</option>
-            </select>
+          <div className={styles.imageGen.controlBar}>
+            <div className={styles.imageGen.optionsGroup}>
+              <select
+                id="imageSizeSelect"
+                value={size}
+                onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
+                disabled={isLoading || mintingStatus !== "idle"}
+                className={styles.imageGen.compactSelect}
+                aria-label="Select image format for your artwork"
+              >
+                <option value="1024x1024">◼ Square</option>
+                <option value="1792x1024">▬ Wide</option>
+              </select>
+
+              <label
+                className={styles.nftCard.checkboxLabel}
+                title={
+                  isListed
+                    ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
+                    : "NFT will remain unlisted from the 'All Public Artworks' gallery"
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={isListed}
+                  onChange={(e) => setIsListed(e.target.checked)}
+                  disabled={isLoading || mintingStatus !== "idle"}
+                  className={styles.nftCard.checkbox}
+                />
+                Listed
+              </label>
+            </div>
 
             <button
               onClick={handleMintAndGenerate}

@@ -120,6 +120,18 @@ export interface TitleBarProps extends BaseComponentProps {
 // ===== IMAGE AND MODAL INTERFACES =====
 
 /**
+ * Props for the ImageGenerator component
+ */
+export interface ImageGeneratorProps extends BaseComponentProps {
+  /** API URL for image generation service */
+  apiUrl?: string;
+  /** Callback when image generation and NFT creation succeeds */
+  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
+  /** Callback when image generation or NFT creation fails */
+  onError?: (error: string) => void;
+}
+
+/**
  * NFT Metadata structure following ERC721 metadata standard.
  * This interface represents the metadata returned by the ImageGenerator API
  * and stored for each NFT, containing descriptive information and attributes.

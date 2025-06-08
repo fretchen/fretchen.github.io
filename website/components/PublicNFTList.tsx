@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { readContract } from "wagmi/actions";
-import { config } from "../wagmi.config";
+import { createPublicClient, http } from "viem";
+import { optimism } from "viem/chains";
 import { getGenAiNFTContractConfig } from "../utils/getChain";
 import { PublicNFT, NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
@@ -14,6 +14,12 @@ export function PublicNFTList() {
   const [publicNfts, setPublicNfts] = useState<PublicNFT[]>([]);
   const [isLoadingPublicNfts, setIsLoadingPublicNfts] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
+
+  // Create a public client for reading contract data without wallet connection
+  const publicClient = createPublicClient({
+    chain: optimism,
+    transport: http(),
+  });
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -42,11 +48,12 @@ export function PublicNFTList() {
     setIsLoadingPublicNfts(true);
 
     try {
-      // Get all public token IDs
-      const publicTokenIds = (await readContract(config, {
-        ...genAiNFTContractConfig,
+      // Get all public token IDs using the public client
+      const publicTokenIds = await publicClient.readContract({
+        address: genAiNFTContractConfig.address,
+        abi: genAiNFTContractConfig.abi,
         functionName: "getAllPublicTokens",
-      })) as bigint[];
+      }) as bigint[];
 
       if (!publicTokenIds || publicTokenIds.length === 0) {
         setPublicNfts([]);
@@ -66,16 +73,18 @@ export function PublicNFTList() {
       // Load all NFT data
       const nftPromises: Promise<PublicNFT>[] = publicTokenIds.map(async (tokenId) => {
         try {
-          // Get token owner
-          const ownerResult = await readContract(config, {
-            ...genAiNFTContractConfig,
+          // Get token owner using public client
+          const ownerResult = await publicClient.readContract({
+            address: genAiNFTContractConfig.address,
+            abi: genAiNFTContractConfig.abi,
             functionName: "ownerOf",
             args: [tokenId],
           });
 
-          // Get token URI
-          const tokenURIResult = await readContract(config, {
-            ...genAiNFTContractConfig,
+          // Get token URI using public client
+          const tokenURIResult = await publicClient.readContract({
+            address: genAiNFTContractConfig.address,
+            abi: genAiNFTContractConfig.abi,
             functionName: "tokenURI",
             args: [tokenId],
           });

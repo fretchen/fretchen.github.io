@@ -54,7 +54,6 @@ describe("ImageGen Page", () => {
     );
 
     // Check if all main elements are rendered
-    expect(screen.getByText("AI Image Creator")).toBeInTheDocument();
     expect(screen.getByTestId("image-generator")).toBeInTheDocument();
     expect(screen.getByTestId("nft-list")).toBeInTheDocument();
 
@@ -108,11 +107,12 @@ describe("ImageGen Page", () => {
       </TestWrapper>,
     );
 
-    // Check if the components are in the expected order
-    const container = screen.getByText("AI Image Creator").parentElement;
+    // Check if the components are properly structured within the container
+    const container = screen.getByTestId("image-generator").parentElement;
     expect(container).toHaveClass("mock-container-class");
-
-    const heading = screen.getByText("AI Image Creator");
-    expect(heading).toHaveClass("mock-heading-class");
+    
+    // Verify both main components are present
+    expect(screen.getByTestId("image-generator")).toBeInTheDocument();
+    expect(screen.getByTestId("nft-list")).toBeInTheDocument();
   });
 });

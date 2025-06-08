@@ -189,42 +189,44 @@ export function ImageGenerator({
             className={styles.imageGen.compactTextarea}
           />
 
-          <div className={styles.imageGen.compactFormRow}>
-            <select
-              id="imageSizeSelect"
-              value={size}
-              onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
-              disabled={isLoading || mintingStatus !== "idle"}
-              className={styles.imageGen.compactSelect}
-              aria-label="Select image format for your artwork"
-            >
-              <option value="1024x1024">◼ Square</option>
-              <option value="1792x1024">▬ Wide</option>
-            </select>
-
-            <label
-              className={styles.nftCard.checkboxLabel}
-              title={
-                isListed
-                  ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
-                  : "NFT will remain unlisted from the 'All Public Artworks' gallery"
-              }
-            >
-              <input
-                type="checkbox"
-                checked={isListed}
-                onChange={(e) => setIsListed(e.target.checked)}
+          <div className={styles.imageGen.controlBar}>
+            <div className={styles.imageGen.optionsGroup}>
+              <select
+                id="imageSizeSelect"
+                value={size}
+                onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
                 disabled={isLoading || mintingStatus !== "idle"}
-                className={styles.nftCard.checkbox}
-              />
-              Listed
-            </label>
+                className={styles.imageGen.compactSelect}
+                aria-label="Select image format for your artwork"
+              >
+                <option value="1024x1024">◼ Square</option>
+                <option value="1792x1024">▬ Wide</option>
+              </select>
+
+              <label
+                className={styles.nftCard.checkboxLabel}
+                title={
+                  isListed
+                    ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
+                    : "NFT will remain unlisted from the 'All Public Artworks' gallery"
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={isListed}
+                  onChange={(e) => setIsListed(e.target.checked)}
+                  disabled={isLoading || mintingStatus !== "idle"}
+                  className={styles.nftCard.checkbox}
+                />
+                Listed
+              </label>
+            </div>
 
             <button
               onClick={handleMintAndGenerate}
               disabled={isLoading || !prompt.trim() || !isConnected}
-              className={`${styles.imageGen.compactButton} ${
-                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
+              className={`${styles.imageGen.generatorButton} ${
+                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.generatorButtonDisabled : ""
               }`}
             >
               {isLoading ? (

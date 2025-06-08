@@ -890,3 +890,42 @@ export const toast = {
     whiteSpace: "nowrap",
   }),
 };
+
+// Tab component styles
+export const tabs = {
+  container: css({
+    marginTop: "2xl",
+  }),
+  tabList: css({
+    display: "flex",
+    borderBottom: "2px solid token(colors.border)",
+    marginBottom: "lg",
+    gap: "xs",
+  }),
+  tab: css({
+    padding: "sm lg",
+    backgroundColor: "transparent",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    color: "gray.600",
+    transition: "all 0.2s ease",
+    _hover: {
+      color: "brand",
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+    },
+  }),
+  activeTab: css({
+    color: "brand",
+    borderBottomColor: "brand",
+    backgroundColor: "rgba(59, 130, 246, 0.05)",
+  }),
+  tabPanel: css({
+    display: "block",
+  }),
+  hiddenPanel: css({
+    display: "none",
+  }),
+};

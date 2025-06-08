@@ -155,6 +155,10 @@ export interface NFTCardProps extends BaseComponentProps {
   onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
   onNftBurned: () => void;
   isHighlighted?: boolean;
+  /** Whether this card is shown in the public gallery (disables burn functionality) */
+  isPublicView?: boolean;
+  /** Owner address for public NFTs */
+  owner?: string;
 }
 
 /**
@@ -180,24 +184,26 @@ export interface NFTListProps extends BaseComponentProps {
 }
 
 /**
- * Props for the ImageGenerator component
+ * Props for Tab component
  */
-export interface ImageGeneratorProps extends BaseComponentProps {
-  /** API URL for the image generation service */
-  apiUrl?: string;
-  /**
-   * Callback fired when image generation completes successfully.
-   * @param tokenId - The blockchain token ID of the created NFT
-   * @param imageUrl - The generated image URL from the API response
-   * @param metadata - Optional complete metadata object including name, description, and attributes
-   */
-  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
-  /** Callback fired when an error occurs during image generation */
-  onError?: (error: string) => void;
+export interface TabProps extends BaseComponentProps {
+  /** Tab label */
+  label: string;
+  /** Whether this tab is currently active */
+  isActive: boolean;
+  /** Callback when tab is clicked */
+  onClick: () => void;
 }
 
 /**
- * Image data for modal display
+ * Public NFT with owner information
+ */
+export interface PublicNFT extends NFT {
+  owner: string;
+}
+
+/**
+ * Modal image data for image display
  */
 export interface ModalImageData {
   src: string;
@@ -207,7 +213,7 @@ export interface ModalImageData {
 }
 
 /**
- * Props for image modal components
+ * Props for the ImageModal component
  */
 export interface ImageModalProps {
   image: ModalImageData;

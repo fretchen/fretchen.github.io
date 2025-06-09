@@ -12,3 +12,7 @@ updates:
       - "scw_js"
     schedule:
       interval: "weekly"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"

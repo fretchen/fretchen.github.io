@@ -52,14 +52,96 @@ IMPLEMENTATION_ADDRESS=0x456... npx hardhat run scripts/verify-manual.ts --netwo
 
 ### Get ABI for frontend integration:
 ```shell
-# Export V3 ABI in multiple formats
+# Export ABIs for both GenImNFTv3 and CollectorNFT in multiple formats
 npx hardhat run scripts/export-abi.ts
 
 # ABI files will be available at:
-# - artifacts/contracts/GenImNFTv3.sol/GenImNFTv3.json (full artifact)
 # - abi/contracts/GenImNFTv3.json (ABI only)
 # - abi/contracts/GenImNFTv3.ts (TypeScript)
+# - abi/contracts/CollectorNFT.json (ABI only)
+# - abi/contracts/CollectorNFT.ts (TypeScript)
 ```
+
+## CollectorNFT - Community Collection Contract
+
+CollectorNFT allows anyone to create NFTs based on existing GenImNFT tokens. When someone mints a CollectorNFT, the payment goes directly to the current owner of the referenced GenImNFT.
+
+### Key Features
+
+- **Community-Driven**: Anyone can mint CollectorNFTs based on any GenImNFT
+- **Creator Rewards**: Payments go directly to GenImNFT owners
+- **Dynamic Pricing**: Price increases as more CollectorNFTs are minted for the same GenImNFT
+- **Upgradeable**: Uses OpenZeppelin UUPS proxy pattern
+
+### Deployment
+
+```shell
+# Deploy CollectorNFT (requires existing GenImNFT address)
+GENIMNFv3_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+```
+
+### Testing
+
+```shell
+# Run deployment tests
+npx hardhat test --grep "CollectorNFT - Deployment Tests"
+
+# Run functional tests  
+npx hardhat test --grep "CollectorNFT - Functional Tests"
+```
+
+### Key Scripts
+
+#### `deploy-collector-nft.ts`
+Deploys CollectorNFT as an upgradeable proxy contract.
+
+**Usage:**
+```shell
+# Validation only (dry run)
+npx hardhat run scripts/deploy-collector-nft.ts --network sepolia -- --validate-only
+
+# Full deployment
+GENIMNIFL_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+```
+
+#### `upgrade-collector-nft.ts`
+Upgrades existing CollectorNFT deployments (when available).
+
+**Usage:**
+```shell
+PROXY_ADDRESS=0x456... npx hardhat run scripts/upgrade-collector-nft.ts --network sepolia
+```
+
+### Contract Interaction Examples
+
+```typescript
+// Mint a CollectorNFT based on GenImNFT token #0
+const currentPrice = await collectorNFT.getCurrentPrice(0);
+await collectorNFT.mintCollectorNFT(0, "ipfs://metadata-uri", { value: currentPrice });
+
+// Get pricing information
+const [mintCount, currentPrice, nextPrice] = await collectorNFT.getMintStats(0);
+
+// Get all CollectorNFTs for a specific GenImNFT
+const collectorTokens = await collectorNFT.getCollectorTokensForGenIm(0);
+```
+
+### Pricing Model
+
+- **Base Price**: 0.001 ETH (configurable)
+- **Price Tiers**: Doubles every 5 mints
+  - Mints 1-5: 1x base price (0.001 ETH)
+  - Mints 6-10: 2x base price (0.002 ETH)  
+  - Mints 11-15: 4x base price (0.004 ETH)
+  - And so on...
+
+### Integration with GenImNFT
+
+CollectorNFT works seamlessly with any GenImNFT version:
+- References GenImNFT by contract address
+- Validates token ownership before minting
+- Sends payments to current GenImNFT token owners
+- Independent pricing per GenImNFT token
 
 ### Validate upgrade compatibility before upgrading
 

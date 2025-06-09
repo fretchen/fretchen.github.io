@@ -1,4 +1,8 @@
-[
+// Auto-generated ABI for CollectorNFT
+// NFT collection based on GenImNFT tokens
+// Generated on: 2025-06-09T19:02:50.035Z
+
+export const CollectorNFTABI = [
   {
     "inputs": [
       {
@@ -278,42 +282,35 @@
       {
         "indexed": true,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "collectorTokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "genImTokenId",
         "type": "uint256"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "updater",
+        "name": "collector",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "imageUrl",
-        "type": "string"
-      }
-    ],
-    "name": "ImageUpdateRequested",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "price",
         "type": "uint256"
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "updater",
-        "type": "address"
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "mintNumber",
+        "type": "uint256"
       }
     ],
-    "name": "ImageUpdaterAuthorized",
+    "name": "CollectorNFTMinted",
     "type": "event"
   },
   {
@@ -367,17 +364,23 @@
       {
         "indexed": true,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "genImTokenId",
         "type": "uint256"
       },
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "creator",
+        "type": "address"
+      },
+      {
         "indexed": false,
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       }
     ],
-    "name": "TokenListingChanged",
+    "name": "PaymentSentToCreator",
     "type": "event"
   },
   {
@@ -403,31 +406,6 @@
       }
     ],
     "name": "Transfer",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "updater",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "UpdaterPaid",
     "type": "event"
   },
   {
@@ -494,26 +472,50 @@
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "baseMintPrice",
+    "outputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "burn",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "collectorTokensByGenImToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getAllPublicTokens",
+    "name": "genImNFTContract",
     "outputs": [
       {
-        "internalType": "uint256[]",
+        "internalType": "contract IERC721",
         "name": "",
-        "type": "uint256[]"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -542,30 +544,11 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "genImTokenId",
         "type": "uint256"
       }
     ],
-    "name": "getAuthorizedImageUpdater",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "getPublicTokensOfOwner",
+    "name": "getCollectorTokensForGenIm",
     "outputs": [
       {
         "internalType": "uint256[]",
@@ -577,7 +560,66 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "genImTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCurrentPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "genImTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getMintStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "mintCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "nextPrice",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_genImNFTContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_baseMintPrice",
+        "type": "uint256"
+      }
+    ],
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -611,43 +653,35 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "genImTokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "uri",
+        "type": "string"
+      }
+    ],
+    "name": "mintCollectorNFT",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "isImageUpdated",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "isTokenListed",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "mintPrice",
+    "name": "mintCountPerGenImToken",
     "outputs": [
       {
         "internalType": "uint256",
@@ -718,77 +752,9 @@
   },
   {
     "inputs": [],
-    "name": "reinitializeV3",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "imageUrl",
-        "type": "string"
-      }
-    ],
-    "name": "requestImageUpdate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "uri",
-        "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "name": "safeMint",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "uri",
-        "type": "string"
-      }
-    ],
-    "name": "safeMint",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -864,47 +830,11 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "newPrice",
+        "name": "_baseMintPrice",
         "type": "uint256"
       }
     ],
-    "name": "setMintPrice",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "tokenIds",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "name": "setMultipleTokensListed",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "name": "setTokenListed",
+    "name": "setBaseMintPrice",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1056,6 +986,19 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "_genImNFTContract",
+        "type": "address"
+      }
+    ],
+    "name": "updateGenImNFTContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "newImplementation",
         "type": "address"
       },
@@ -1069,12 +1012,8 @@
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "withdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
   }
-]
+];
+
+// For CommonJS compatibility
+module.exports = { CollectorNFTABI };

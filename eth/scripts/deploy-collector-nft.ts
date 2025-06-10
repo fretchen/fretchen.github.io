@@ -1,63 +1,122 @@
 #!/usr/bin/env npx hardhat run
 import { ethers, upgrades, network } from "hardhat";
 import { getAddress } from "viem";
+import * as fs from "fs";
+import * as path from "path";
 
 interface DeployOptions {
-  genImNFTAddress?: string;
-  baseMintPrice?: string;
   validateOnly?: boolean;
   dryRun?: boolean;
+  verify?: boolean;
+  waitConfirmations?: number;
+}
+
+interface DeployConfig {
+  genImNFTAddress: string;
+  baseMintPrice: string;
+  options?: DeployOptions;
+  metadata?: {
+    description?: string;
+    version?: string;
+    environment?: string;
+  };
 }
 
 /**
- * Deploy CollectorNFT using OpenZeppelin Upgrades Plugin
+ * Load deployment configuration from JSON file
+ */
+function loadDeployConfig(configPath?: string): DeployConfig {
+  // Determine config file path
+  const defaultConfigPath = path.join(__dirname, "deploy-config.json");
+  const finalConfigPath = configPath || process.env.DEPLOY_CONFIG || defaultConfigPath;
+
+  console.log(`📋 Loading configuration from: ${finalConfigPath}`);
+
+  if (!fs.existsSync(finalConfigPath)) {
+    throw new Error(`Configuration file not found: ${finalConfigPath}`);
+  }
+
+  try {
+    const configContent = fs.readFileSync(finalConfigPath, "utf8");
+    const config: DeployConfig = JSON.parse(configContent);
+
+    // Validate required fields
+    if (!config.genImNFTAddress) {
+      throw new Error("genImNFTAddress is required in configuration");
+    }
+    if (!config.baseMintPrice) {
+      throw new Error("baseMintPrice is required in configuration");
+    }
+
+    // Validate address format
+    try {
+      getAddress(config.genImNFTAddress);
+    } catch (error) {
+      throw new Error(`Invalid genImNFTAddress format: ${config.genImNFTAddress}`);
+    }
+
+    // Validate baseMintPrice format
+    if (!/^[0-9]+(\.[0-9]+)?$/.test(config.baseMintPrice)) {
+      throw new Error(`Invalid baseMintPrice format: ${config.baseMintPrice}`);
+    }
+
+    console.log("✅ Configuration loaded and validated successfully");
+    return config;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Deploy CollectorNFT using configuration from JSON file
  * 
  * Usage examples:
- * - Environment variable: GENIMNFr_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
- * - Script parameter: npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
- * - Validation only: VALIDATE_ONLY=true npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
- * - Dry run: DRY_RUN=true npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
- * - Custom base price: BASE_MINT_PRICE=0.001 npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - Default config: npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - Custom config: DEPLOY_CONFIG=./my-config.json npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - With config argument: npx hardhat run scripts/deploy-collector-nft.ts --network sepolia -- ./custom-config.json
+ * - Validation only: Set "validateOnly": true in JSON config
+ * - Dry run: Set "dryRun": true in JSON config
  */
-async function deployCollectorNFT(options: DeployOptions = {}) {
+async function deployCollectorNFT(configPath?: string) {
   console.log("🚀 CollectorNFT Deployment Script");
   console.log("=" .repeat(50));
   console.log(`Network: ${network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
-  // Get GenImNFT address from environment or parameter
-  const genImNFTAddress = options.genImNFTAddress || process.env.GENIMFNT_ADDRESS;
-  if (!genImNFTAddress) {
-    throw new Error(
-      "GenImNFT address required. Set GENIMFNT_ADDRESS environment variable or pass as parameter."
-    );
+  // Load configuration from JSON file
+  const config = loadDeployConfig(configPath);
+
+  // Display configuration
+  console.log("📋 Deployment Configuration:");
+  console.log(`📍 GenImNFT Address: ${config.genImNFTAddress}`);
+  console.log(`💰 Base Mint Price: ${config.baseMintPrice} ETH`);
+  console.log(`🌐 Target Network: ${network.name}`);
+  if (config.metadata) {
+    console.log(`📝 Description: ${config.metadata.description || "N/A"}`);
+    console.log(`🏷️  Version: ${config.metadata.version || "N/A"}`);
+    console.log(`🔧 Environment: ${config.metadata.environment || "N/A"}`);
   }
+  console.log("");
 
-  console.log(`📍 GenImNFT Address: ${genImNFTAddress}`);
+  const baseMintPrice = ethers.parseEther(config.baseMintPrice);
+  console.log(`💰 Parsed Base Mint Price: ${baseMintPrice.toString()} wei`);
 
-  // Validate GenImNFT address format
-  try {
-    getAddress(genImNFTAddress);
-  } catch (error) {
-    throw new Error(`Invalid GenImNFT address: ${genImNFTAddress}`);
-  }
-
-  // Get base mint price (default: 0.001 ETH)
-  const baseMintPriceStr = options.baseMintPrice || process.env.BASE_MINT_PRICE || "0.001";
-  const baseMintPrice = ethers.parseEther(baseMintPriceStr);
-  console.log(`💰 Base Mint Price: ${baseMintPriceStr} ETH (${baseMintPrice.toString()} wei)`);
+  const options = config.options || {};
 
   // Check if validation only
-  if (options.validateOnly || process.env.VALIDATE_ONLY === "true") {
+  if (options.validateOnly) {
     console.log("🔍 Validation Only Mode - No deployment will occur");
-    return await validateDeployment(genImNFTAddress, baseMintPrice);
+    return await validateDeployment(config.genImNFTAddress, baseMintPrice);
   }
 
   // Check if dry run
-  if (options.dryRun || process.env.DRY_RUN === "true") {
+  if (options.dryRun) {
     console.log("🧪 Dry Run Mode - Simulation only");
-    return await simulateDeployment(genImNFTAddress, baseMintPrice);
+    return await simulateDeployment(config.genImNFTAddress, baseMintPrice);
   }
 
   // Get contract factory
@@ -66,9 +125,9 @@ async function deployCollectorNFT(options: DeployOptions = {}) {
 
   // Verify GenImNFT contract exists
   console.log("🔍 Verifying GenImNFT contract...");
-  const genImNFTCode = await ethers.provider.getCode(genImNFTAddress);
+  const genImNFTCode = await ethers.provider.getCode(config.genImNFTAddress);
   if (genImNFTCode === "0x") {
-    throw new Error(`No contract found at GenImNFT address: ${genImNFTAddress}`);
+    throw new Error(`No contract found at GenImNFT address: ${config.genImNFTAddress}`);
   }
   console.log("✅ GenImNFT contract verified");
 
@@ -78,14 +137,27 @@ async function deployCollectorNFT(options: DeployOptions = {}) {
 
   const collectorNFT = await upgrades.deployProxy(
     CollectorNFTFactory,
-    [genImNFTAddress, baseMintPrice],
+    [config.genImNFTAddress, baseMintPrice],
     {
       kind: "uups",
       initializer: "initialize",
     }
   );
 
+  // Wait for deployment with specified confirmations
+  const waitConfirmations = options.waitConfirmations || 1;
+  console.log(`⏳ Waiting for ${waitConfirmations} confirmation(s)...`);
   await collectorNFT.waitForDeployment();
+  
+  // Wait for additional confirmations if specified
+  if (waitConfirmations > 1) {
+    const deploymentTx = collectorNFT.deploymentTransaction();
+    if (deploymentTx) {
+      await deploymentTx.wait(waitConfirmations);
+      console.log(`✅ ${waitConfirmations} confirmations received`);
+    }
+  }
+
   const collectorNFTAddress = await collectorNFT.getAddress();
 
   console.log("✅ CollectorNFT deployed successfully!");
@@ -110,7 +182,7 @@ async function deployCollectorNFT(options: DeployOptions = {}) {
   console.log(`💰 Base Mint Price: ${ethers.formatEther(contractBaseMintPrice)} ETH`);
 
   // Verify configuration
-  if (contractGenImNFT.toLowerCase() !== genImNFTAddress.toLowerCase()) {
+  if (contractGenImNFT.toLowerCase() !== config.genImNFTAddress.toLowerCase()) {
     throw new Error("GenImNFT address mismatch after deployment");
   }
   if (contractBaseMintPrice !== baseMintPrice) {
@@ -128,10 +200,11 @@ async function deployCollectorNFT(options: DeployOptions = {}) {
     proxyAddress: collectorNFTAddress,
     implementationAddress: await upgrades.erc1967.getImplementationAddress(collectorNFTAddress),
     adminAddress: await upgrades.erc1967.getAdminAddress(collectorNFTAddress),
-    genImNFTAddress: genImNFTAddress,
-    baseMintPrice: baseMintPriceStr,
+    genImNFTAddress: config.genImNFTAddress,
+    baseMintPrice: config.baseMintPrice,
     contractName: contractName,
     contractSymbol: contractSymbol,
+    config: config,
   };
 
   console.log("📋 Deployment Summary:");
@@ -184,7 +257,9 @@ async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint
 // Main execution
 async function main() {
   try {
-    await deployCollectorNFT();
+    // Check for config file argument
+    const configPath = process.argv[2];
+    await deployCollectorNFT(configPath);
   } catch (error) {
     console.error("❌ Deployment failed:");
     console.error(error);
@@ -197,4 +272,4 @@ if (require.main === module) {
   main();
 }
 
-export { deployCollectorNFT, DeployOptions };
+export { deployCollectorNFT, DeployConfig, DeployOptions, loadDeployConfig };

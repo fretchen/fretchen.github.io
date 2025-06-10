@@ -1,4 +1,35 @@
-// Contract validation script for GenImNFTv2 and CollectorNFT
+// Contract Validation Script for Deployed Smart Contracts
+// 
+// Purpose: Validates the current state and functionality of deployed smart contracts
+// to ensure they are working correctly and are ready for upgrades or operations.
+// 
+// This script performs comprehensive validation including:
+// - Contract state verification (name, symbol, total supply, etc.)
+// - Functionality testing (calling key contract methods)
+// - Interface compliance checks (ERC721, ERC721Enumerable, etc.)
+// - Implementation contract validation
+// - Upgrade readiness assessment
+// - Owner/permission verification
+// 
+// Supports:
+// - GenImNFT (all versions)
+// - CollectorNFT
+// - Both proxy and implementation contracts
+// - Cross-validation of related contracts
+// 
+// Usage:
+// npx hardhat run scripts/validate-contract.ts --network sepolia
+// or with deployment file (recommended):
+// DEPLOYMENT_FILE=path/to/deployment.json npx hardhat run scripts/validate-contract.ts --network sepolia
+// or with manual proxy address:
+// PROXY_ADDRESS=0x123... npx hardhat run scripts/validate-contract.ts --network sepolia
+//
+// Features:
+// - Automatic detection of deployment files from deployments/ directory
+// - Comprehensive testing of all contract functions
+// - Gas price and account balance checks
+// - Detailed reporting and summaries
+//t validation script for GenImNFTv2 and CollectorNFT
 // 
 // Usage:
 // npx hardhat run scripts/validate-contract-new.ts --network sepolia

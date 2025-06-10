@@ -1,0 +1,27 @@
+{
+  "network": "optimisticEthereum",
+  "timestamp": "2025-06-10T05:54:31.836Z",
+  "blockNumber": 136968047,
+  "proxyAddress": "0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5",
+  "implementationAddress": "0xc9dF056F3C0804B5deb5273469aaD721175F82E5",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "genImNFTAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+  "baseMintPrice": "0.00005",
+  "contractName": "CollectorNFT",
+  "contractSymbol": "COLLECTOR",
+  "config": {
+    "genImNFTAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+    "baseMintPrice": "0.00005",
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": true,
+      "waitConfirmations": 1
+    },
+    "metadata": {
+      "description": "CollectorNFT deployment for local development",
+      "version": "1.0.0",
+      "environment": "production"
+    }
+  }
+}

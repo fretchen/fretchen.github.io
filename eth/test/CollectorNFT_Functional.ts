@@ -1,4 +1,3 @@
-
 /**
  * CollectorNFT Functional Tests
  * 
@@ -37,14 +36,20 @@ describe("CollectorNFT - Functional Tests", function () {
     // Deploy GenImNFT first using viem
     const genImNFT = await hre.viem.deployContract("GenImNFTv3", []);
     
-    // Mint some GenImNFTs for testing
-    await genImNFT.write.safeMint(["ipfs://test1"], {
+    // Mint some GenImNFTs for testing (publicly listed by default)
+    await genImNFT.write.safeMint(["ipfs://test1", true], {
       account: genImOwner1.account,
       value: GEN_IM_MINT_PRICE
     });
 
-    await genImNFT.write.safeMint(["ipfs://test2"], {
+    await genImNFT.write.safeMint(["ipfs://test2", true], {
       account: genImOwner2.account,
+      value: GEN_IM_MINT_PRICE
+    });
+
+    // Also mint a private (non-listed) token for testing
+    await genImNFT.write.safeMint(["ipfs://private", false], {
+      account: genImOwner1.account,
       value: GEN_IM_MINT_PRICE
     });
 
@@ -648,6 +653,176 @@ describe("CollectorNFT - Functional Tests", function () {
       // Should not revert
       const price = await collectorNFT.read.getCurrentPrice([largeTokenId]);
       expect(price).to.equal(BASE_MINT_PRICE);
+    });
+  });
+
+  describe("Listing Status Requirements", function () {
+    it("Should reject minting for non-listed GenImNFT token", async function () {
+      const { collectorNFT, collector1 } = await loadFixture(deployCollectorNFTViemFixture);
+
+      const privateTokenId = 2n; // This is the private token created in the fixture
+
+      // Should reject minting for private token
+      await expect(
+        collectorNFT.write.mintCollectorNFT([privateTokenId, "ipfs://should-fail"], {
+          account: collector1.account,
+          value: BASE_MINT_PRICE
+        })
+      ).to.be.rejected;
+    });
+
+    it("Should allow minting only for publicly listed tokens", async function () {
+      const { collectorNFT, collector1 } = await loadFixture(deployCollectorNFTViemFixture);
+
+      const publicTokenId = 0n; // This is a publicly listed token
+      const privateTokenId = 2n; // This is the private token
+
+      // Should succeed for public token
+      await collectorNFT.write.mintCollectorNFT([publicTokenId, "ipfs://public-success"], {
+        account: collector1.account,
+        value: BASE_MINT_PRICE
+      });
+
+      expect(await collectorNFT.read.totalSupply()).to.equal(1n);
+      expect(await collectorNFT.read.tokenURI([0n])).to.equal("ipfs://public-success");
+
+      // Should fail for private token
+      await expect(
+        collectorNFT.write.mintCollectorNFT([privateTokenId, "ipfs://private-fail"], {
+          account: collector1.account,
+          value: BASE_MINT_PRICE
+        })
+      ).to.be.rejected;
+
+      // Total supply should remain 1
+      expect(await collectorNFT.read.totalSupply()).to.equal(1n);
+    });
+
+    it("Should handle listing status changes correctly", async function () {
+      const { collectorNFT, genImNFT, collector1, genImOwner1 } = 
+        await loadFixture(deployCollectorNFTViemFixture);
+
+      const tokenId = 0n; // Initially public token
+
+      // Should work initially (token is public)
+      await collectorNFT.write.mintCollectorNFT([tokenId, "ipfs://before-private"], {
+        account: collector1.account,
+        value: BASE_MINT_PRICE
+      });
+
+      expect(await collectorNFT.read.totalSupply()).to.equal(1n);
+
+      // Make token private
+      await genImNFT.write.setTokenListed([tokenId, false], {
+        account: genImOwner1.account
+      });
+
+      // Should now fail
+      await expect(
+        collectorNFT.write.mintCollectorNFT([tokenId, "ipfs://should-fail"], {
+          account: collector1.account,
+          value: BASE_MINT_PRICE
+        })
+      ).to.be.rejected;
+
+      // Make token public again
+      await genImNFT.write.setTokenListed([tokenId, true], {
+        account: genImOwner1.account
+      });
+
+      // Should work again
+      await collectorNFT.write.mintCollectorNFT([tokenId, "ipfs://after-public"], {
+        account: collector1.account,
+        value: BASE_MINT_PRICE
+      });
+
+      expect(await collectorNFT.read.totalSupply()).to.equal(2n);
+      expect(await collectorNFT.read.tokenURI([1n])).to.equal("ipfs://after-public");
+    });
+
+    it("Should handle batch operations with mixed listing status", async function () {
+      const { collectorNFT, genImNFT, collector1, genImOwner1, genImOwner2 } = 
+        await loadFixture(deployCollectorNFTViemFixture);
+
+      const publicTokenId = 0n;
+      const privateTokenId = 2n;
+      const anotherPublicTokenId = 1n;
+
+      // Test minting for multiple tokens
+      const operations = [
+        { tokenId: publicTokenId, uri: "ipfs://public1", shouldSucceed: true },
+        { tokenId: privateTokenId, uri: "ipfs://private1", shouldSucceed: false },
+        { tokenId: anotherPublicTokenId, uri: "ipfs://public2", shouldSucceed: true },
+      ];
+
+      let successCount = 0;
+
+      for (const op of operations) {
+        if (op.shouldSucceed) {
+          await collectorNFT.write.mintCollectorNFT([op.tokenId, op.uri], {
+            account: collector1.account,
+            value: BASE_MINT_PRICE
+          });
+          successCount++;
+        } else {
+          await expect(
+            collectorNFT.write.mintCollectorNFT([op.tokenId, op.uri], {
+              account: collector1.account,
+              value: BASE_MINT_PRICE
+            })
+          ).to.be.rejected;
+        }
+      }
+
+      expect(await collectorNFT.read.totalSupply()).to.equal(BigInt(successCount));
+    });
+
+    it("Should maintain pricing consistency regardless of listing status", async function () {
+      const { collectorNFT, genImNFT, collector1, genImOwner1 } = 
+        await loadFixture(deployCollectorNFTViemFixture);
+
+      const tokenId = 0n;
+
+      // Mint some tokens while public
+      for (let i = 0; i < 3; i++) {
+        await collectorNFT.write.mintCollectorNFT([tokenId, `ipfs://mint${i}`], {
+          account: collector1.account,
+          value: BASE_MINT_PRICE
+        });
+      }
+
+      // Get current price and mint count
+      const priceBeforePrivate = await collectorNFT.read.getCurrentPrice([tokenId]);
+      const mintCountBefore = await collectorNFT.read.mintCountPerGenImToken([tokenId]);
+
+      // Make token private
+      await genImNFT.write.setTokenListed([tokenId, false], {
+        account: genImOwner1.account
+      });
+
+      // Price should remain the same even when private
+      const priceWhilePrivate = await collectorNFT.read.getCurrentPrice([tokenId]);
+      const mintCountWhilePrivate = await collectorNFT.read.mintCountPerGenImToken([tokenId]);
+
+      expect(priceWhilePrivate).to.equal(priceBeforePrivate);
+      expect(mintCountWhilePrivate).to.equal(mintCountBefore);
+
+      // Make token public again
+      await genImNFT.write.setTokenListed([tokenId, true], {
+        account: genImOwner1.account
+      });
+
+      // Continue minting should use correct pricing
+      const priceAfterPublic = await collectorNFT.read.getCurrentPrice([tokenId]);
+      expect(priceAfterPublic).to.equal(priceBeforePrivate);
+
+      await collectorNFT.write.mintCollectorNFT([tokenId, "ipfs://continued"], {
+        account: collector1.account,
+        value: priceAfterPublic
+      });
+
+      const finalMintCount = await collectorNFT.read.mintCountPerGenImToken([tokenId]);
+      expect(finalMintCount).to.equal(mintCountBefore + 1n);
     });
   });
 });

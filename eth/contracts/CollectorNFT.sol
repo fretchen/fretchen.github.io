@@ -9,6 +9,11 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
+// Interface for GenImNFT contracts that support listing functionality
+interface IGenImNFTWithListing is IERC721 {
+    function isTokenListed(uint256 tokenId) external view returns (bool);
+}
+
 // Author: @fretchen
 contract CollectorNFT is 
     ERC721Upgradeable, 
@@ -20,7 +25,7 @@ contract CollectorNFT is
     uint256 private _nextTokenId;
     
     // Reference to the GenImNFT contract
-    IERC721 public genImNFTContract;
+    IGenImNFTWithListing public genImNFTContract;
     
     // Base price for minting (starts at this price)
     uint256 public baseMintPrice;
@@ -42,7 +47,7 @@ contract CollectorNFT is
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         
-        genImNFTContract = IERC721(_genImNFTContract);
+        genImNFTContract = IGenImNFTWithListing(_genImNFTContract);
         baseMintPrice = _baseMintPrice; // e.g., 0.001 ether
     }
 
@@ -76,6 +81,9 @@ contract CollectorNFT is
         // Check that the GenImNFT exists and get its owner
         address genImOwner = genImNFTContract.ownerOf(genImTokenId);
         require(genImOwner != address(0), "GenImNFT token does not exist");
+        
+        // Check that the GenImNFT token is publicly listed
+        require(genImNFTContract.isTokenListed(genImTokenId), "GenImNFT token is not publicly listed");
         
         // Calculate required payment
         uint256 currentPrice = getCurrentPrice(genImTokenId);
@@ -138,7 +146,7 @@ contract CollectorNFT is
      * @param _genImNFTContract The new GenImNFT contract address
      */
     function updateGenImNFTContract(address _genImNFTContract) public onlyOwner {
-        genImNFTContract = IERC721(_genImNFTContract);
+        genImNFTContract = IGenImNFTWithListing(_genImNFTContract);
     }
 
     /**

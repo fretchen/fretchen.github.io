@@ -1,4 +1,8 @@
-[
+// Auto-generated ABI for GenImNFTv3
+// GenImNFT Version 3 with listing functionality
+// Generated on: 2025-06-09T19:02:50.032Z
+
+export const GenImNFTv3ABI = [
   {
     "inputs": [
       {
@@ -1077,4 +1081,6 @@
     "stateMutability": "nonpayable",
     "type": "function"
   }
-]
+] as const;
+
+export type GenImNFTv3ABI = typeof GenImNFTv3ABI;

@@ -85,10 +85,10 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     if (isReadPending || readError || !mintStats || !Array.isArray(mintStats)) {
       return "Price loading...";
     }
-    
+
     const [mintCount, currentPrice] = mintStats as [bigint, bigint, bigint];
     const currentPriceETH = formatEther(currentPrice);
-    
+
     // Format prices to show only significant digits
     const formatPrice = (ethString: string) => {
       const num = parseFloat(ethString);
@@ -96,19 +96,19 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
       if (num >= 0.0001) return num.toFixed(4);
       return num.toFixed(6);
     };
-    
+
     const formattedCurrent = formatPrice(currentPriceETH);
-    
+
     // Calculate the next tier boundary (next multiple of 5)
     const currentMintCount = Number(mintCount);
     const nextTierBoundary = Math.ceil((currentMintCount + 1) / 5) * 5;
-    
+
     // Calculate price at next tier boundary using same logic as smart contract
     // Price doubles every 5 mints: baseMintPrice * (2 ** (mintCount / 5))
     const baseMintPrice = currentPrice / BigInt(2 ** Math.floor(currentMintCount / 5));
     const nextTierPrice = baseMintPrice * BigInt(2 ** Math.floor(nextTierBoundary / 5));
     const formattedNextTier = formatPrice(formatEther(nextTierPrice));
-    
+
     return `Current price: ${formattedCurrent} ETH | Price after ${nextTierBoundary} mints: ${formattedNextTier} ETH`;
   };
 

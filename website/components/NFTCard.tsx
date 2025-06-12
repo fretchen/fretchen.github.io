@@ -3,6 +3,7 @@ import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { getGenAiNFTContractConfig } from "../utils/getChain";
 import { NFTCardProps } from "../types/components";
 import { useToast } from "./Toast";
+import { SimpleCollectButton } from "./SimpleCollectButton";
 import * as styles from "../layouts/styles";
 
 // NFT Card Component
@@ -250,6 +251,7 @@ export function NFTCard({
             >
               📤 Share
             </button>
+            {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
             {!isPublicView && (
               <button
                 onClick={handleBurn}

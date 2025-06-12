@@ -1,5 +1,6 @@
 import { sepolia, optimism, optimismSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
+import { CollectorNFTABI } from "../../eth/abi/contracts/CollectorNFT";
 
 /**
  * Gibt das entsprechende Chain-Objekt basierend auf der CHAIN-Umgebungsvariable zurück
@@ -1323,5 +1324,23 @@ export function getSupportContractConfig() {
       return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: supportABI } as const;
     default:
       return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: optimismSupportABI } as const;
+  }
+}
+
+export function getCollectorNFTContractConfig() {
+  const chainName = import.meta.env.PUBLIC_ENV__CHAIN_NAME || "optimism";
+  // ChainConfig based on Env Variable
+  switch (chainName) {
+    case "sepolia":
+      // Sepolia testnet address (if deployed)
+      return { address: "0x0000000000000000000000000000000000000000", abi: CollectorNFTABI } as const;
+    case "optimism":
+      // Production Optimism address
+      return { address: "0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5", abi: CollectorNFTABI } as const;
+    case "optimismSepolia":
+      // Optimism Sepolia testnet address (if deployed)
+      return { address: "0x0000000000000000000000000000000000000000", abi: CollectorNFTABI } as const;
+    default:
+      return { address: "0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5", abi: CollectorNFTABI } as const;
   }
 }

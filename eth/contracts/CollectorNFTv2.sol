@@ -13,6 +13,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 interface IGenImNFTWithListing is IERC721 {
     function isTokenListed(uint256 tokenId) external view returns (bool);
     function tokenURI(uint256 tokenId) external view returns (string memory);
+    function totalSupply() external view returns (uint256);
 }
 
 // Author: @fretchen
@@ -36,12 +37,6 @@ contract CollectorNFTv2 is
     
     // Mapping from GenImNFT token ID to array of CollectorNFT token IDs
     mapping(uint256 => uint256[]) public collectorTokensByGenImToken;
-    
-    /**
-     * @dev Get the original GenImNFT token ID that a CollectorNFT is based on
-     * This mapping needs to be stored for retrieval
-     */
-    mapping(uint256 => uint256) public collectorToGenImToken;
     
     // Events
     event CollectorNFTMinted(uint256 indexed collectorTokenId, uint256 indexed genImTokenId, address indexed collector, uint256 price, uint256 mintNumber);
@@ -71,10 +66,12 @@ contract CollectorNFTv2 is
         // Update URI for each existing token based on its GenImNFT relationship
         for (uint256 i = 0; i < totalSupply; i++) {
             uint256 collectorTokenId = tokenByIndex(i);
-            uint256 genImTokenId = collectorToGenImToken[collectorTokenId];
             
-            // Only update if we have a valid GenImNFT relationship
-            if (genImTokenId != 0 || collectorTokenId == 0) {
+            // Find the GenImNFT token ID for this CollectorNFT by searching through collectorTokensByGenImToken
+            uint256 genImTokenId = _findGenImTokenIdForCollector(collectorTokenId);
+            
+            // Update URI to match the GenImNFT URI
+            if (genImTokenId != type(uint256).max) { // Only if we found a valid mapping
                 try genImNFTContract.tokenURI(genImTokenId) returns (string memory genImURI) {
                     _setTokenURI(collectorTokenId, genImURI);
                 } catch {
@@ -137,7 +134,6 @@ contract CollectorNFTv2 is
         // Update tracking
         mintCountPerGenImToken[genImTokenId]++;
         collectorTokensByGenImToken[genImTokenId].push(collectorTokenId);
-        collectorToGenImToken[collectorTokenId] = genImTokenId; // Track relationship
         
         // Send payment to GenImNFT owner (the creator/current owner)
         (bool success, ) = payable(genImOwner).call{value: currentPrice}("");
@@ -189,7 +185,6 @@ contract CollectorNFTv2 is
         // Update tracking
         mintCountPerGenImToken[genImTokenId]++;
         collectorTokensByGenImToken[genImTokenId].push(collectorTokenId);
-        collectorToGenImToken[collectorTokenId] = genImTokenId; // Track relationship
         
         // Send payment to GenImNFT owner (the creator/current owner)
         (bool success, ) = payable(genImOwner).call{value: currentPrice}("");
@@ -255,7 +250,7 @@ contract CollectorNFTv2 is
      * @param collectorTokenId The ID of the CollectorNFT token
      */
     function getGenImTokenIdForCollector(uint256 collectorTokenId) public view returns (uint256) {
-        return collectorToGenImToken[collectorTokenId];
+        return _findGenImTokenIdForCollector(collectorTokenId);
     }
     
     /**
@@ -263,9 +258,40 @@ contract CollectorNFTv2 is
      * @param collectorTokenId The ID of the CollectorNFT token
      */
     function getOriginalGenImURI(uint256 collectorTokenId) public view returns (string memory) {
-        uint256 genImTokenId = collectorToGenImToken[collectorTokenId];
-        require(genImTokenId != 0 || collectorTokenId == 0, "Collector token not found");
+        uint256 genImTokenId = _findGenImTokenIdForCollector(collectorTokenId);
+        require(genImTokenId != type(uint256).max, "Collector token not found");
         return genImNFTContract.tokenURI(genImTokenId);
+    }
+
+    /**
+     * @dev Internal helper function to find GenImNFT token ID for a CollectorNFT
+     * @param collectorTokenId The ID of the CollectorNFT token
+     * @return The GenImNFT token ID, or type(uint256).max if not found
+     */
+    function _findGenImTokenIdForCollector(uint256 collectorTokenId) internal view returns (uint256) {
+        // We need to iterate through the collectorTokensByGenImToken mapping
+        // Since we don't have a reverse mapping, we check each GenImNFT
+        
+        // Get total supply of the GenImNFT contract to know the range
+        uint256 genImTotalSupply;
+        try genImNFTContract.totalSupply() returns (uint256 supply) {
+            genImTotalSupply = supply;
+        } catch {
+            // If totalSupply() is not available, use a reasonable upper bound
+            genImTotalSupply = 10000; // Reasonable upper bound for search
+        }
+        
+        // Search through GenImNFT token IDs
+        for (uint256 genImTokenId = 0; genImTokenId < genImTotalSupply; genImTokenId++) {
+            uint256[] memory collectors = collectorTokensByGenImToken[genImTokenId];
+            for (uint256 i = 0; i < collectors.length; i++) {
+                if (collectors[i] == collectorTokenId) {
+                    return genImTokenId;
+                }
+            }
+        }
+        
+        return type(uint256).max; // Not found
     }
 
     // The following functions are overrides required by Solidity.
@@ -303,6 +329,5 @@ contract CollectorNFTv2 is
     }
 
     // Storage gap for future upgrades
-    // Reduced from [50] to [49] due to addition of collectorToGenImToken mapping
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }

@@ -323,9 +323,9 @@ describe("CollectorNFT to CollectorNFTv2 Upgrade Tests", function () {
     it("Should maintain all existing CollectorNFT functionality", async function () {
       const { collectorNFTv2, collector1, collector2 } = await loadFixture(deployAndUpgradeToV2Fixture);
 
-      // Test pricing
+      // Test pricing - with only 2 mints for token 0, price should still be base price
       const currentPrice = await collectorNFTv2.read.getCurrentPrice([0n]);
-      expect(currentPrice).to.be.greaterThan(BASE_MINT_PRICE); // Should be higher due to existing mints
+      expect(currentPrice).to.equal(BASE_MINT_PRICE); // Still base price (< 5 mints)
 
       // Test enumeration
       expect(await collectorNFTv2.read.tokenByIndex([0n])).to.equal(0n);

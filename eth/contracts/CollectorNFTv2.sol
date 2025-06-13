@@ -179,6 +179,13 @@ contract CollectorNFTv2 is
         // Check that the GenImNFT token is publicly listed
         require(genImNFTContract.isTokenListed(genImTokenId), "GenImNFT token is not publicly listed");
         
+        // Get the original GenImNFT URI and validate it matches the custom URI
+        string memory originalURI = genImNFTContract.tokenURI(genImTokenId);
+        require(
+            keccak256(abi.encodePacked(customURI)) == keccak256(abi.encodePacked(originalURI)),
+            "Custom URI must match the original GenImNFT URI"
+        );
+        
         // Calculate required payment
         uint256 currentPrice = getCurrentPrice(genImTokenId);
         require(msg.value >= currentPrice, "Insufficient payment");

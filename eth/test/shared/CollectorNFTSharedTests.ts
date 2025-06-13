@@ -97,32 +97,6 @@ export function createCollectorNFTFixture(
 }
 
 /**
- * Helper function to mint a CollectorNFT with version-specific parameters
- */
-export async function mintCollectorNFT(
-  contract: any,
-  genImTokenId: bigint,
-  uri: string,
-  account: any,
-  value: bigint,
-  contractName: string
-) {
-  if (contractName === "CollectorNFTv2") {
-    // CollectorNFTv2 only needs genImTokenId (automatic URI inheritance)
-    return await contract.write.mintCollectorNFT([genImTokenId], {
-      account,
-      value
-    });
-  } else {
-    // Original CollectorNFT needs both genImTokenId and uri
-    return await contract.write.mintCollectorNFT([genImTokenId, uri], {
-      account,
-      value
-    });
-  }
-}
-
-/**
  * Basic contract information tests
  */
 export function createBasicContractInfoTests(getFixture: () => Promise<CollectorNFTFixture>) {

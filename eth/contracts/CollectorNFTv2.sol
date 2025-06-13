@@ -163,16 +163,7 @@ contract CollectorNFTv2 is
      * @param uri Custom metadata URI for the CollectorNFT
      */
     function mintCollectorNFT(uint256 genImTokenId, string memory uri) public payable returns (uint256) {
-        return mintCollectorNFTWithCustomURI(genImTokenId, uri);
-    }
-
-    /**
-     * @dev Allows minting with custom URI (for backward compatibility)
-     * @param genImTokenId The ID of the GenImNFT token to base the CollectorNFT on
-     * @param customURI Custom metadata URI for the CollectorNFT
-     */
-    function mintCollectorNFTWithCustomURI(uint256 genImTokenId, string memory customURI) public payable returns (uint256) {
-        // Check that the GenImNFT exists and get its owner
+    // Check that the GenImNFT exists and get its owner
         address genImOwner = genImNFTContract.ownerOf(genImTokenId);
         require(genImOwner != address(0), "GenImNFT token does not exist");
         
@@ -182,7 +173,7 @@ contract CollectorNFTv2 is
         // Get the original GenImNFT URI and validate it matches the custom URI
         string memory originalURI = genImNFTContract.tokenURI(genImTokenId);
         require(
-            keccak256(abi.encodePacked(customURI)) == keccak256(abi.encodePacked(originalURI)),
+            keccak256(abi.encodePacked(uri)) == keccak256(abi.encodePacked(originalURI)),
             "Custom URI must match the original GenImNFT URI"
         );
         
@@ -193,7 +184,7 @@ contract CollectorNFTv2 is
         // Mint the CollectorNFT with custom URI
         uint256 collectorTokenId = _nextTokenId++;
         _safeMint(msg.sender, collectorTokenId);
-        _setTokenURI(collectorTokenId, customURI);
+        _setTokenURI(collectorTokenId, uri);
         
         // Update tracking
         mintCountPerGenImToken[genImTokenId]++;

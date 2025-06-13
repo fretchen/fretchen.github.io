@@ -46,6 +46,7 @@ contract CollectorNFTv2 is
     // Events
     event CollectorNFTMinted(uint256 indexed collectorTokenId, uint256 indexed genImTokenId, address indexed collector, uint256 price, uint256 mintNumber);
     event PaymentSentToCreator(uint256 indexed genImTokenId, address indexed creator, uint256 amount);
+    event ContractReinitializedToV2(uint256 tokensUpdated);
     
     function initialize(address _genImNFTContract, uint256 _baseMintPrice) initializer public {
         __ERC721_init("CollectorNFT", "COLLECTOR");
@@ -56,6 +57,35 @@ contract CollectorNFTv2 is
         
         genImNFTContract = IGenImNFTWithListing(_genImNFTContract);
         baseMintPrice = _baseMintPrice; // e.g., 0.001 ether
+    }
+
+    /**
+     * @dev Reinitialize function for v2 upgrade
+     * Updates all existing CollectorNFT token URIs to match their corresponding GenImNFT URIs
+     * This is called during the upgrade to v2 to ensure automatic URI inheritance
+     */
+    function reinitialize() reinitializer(2) public onlyOwner {
+        // Get the total number of existing tokens
+        uint256 totalSupply = totalSupply();
+        
+        // Update URI for each existing token based on its GenImNFT relationship
+        for (uint256 i = 0; i < totalSupply; i++) {
+            uint256 collectorTokenId = tokenByIndex(i);
+            uint256 genImTokenId = collectorToGenImToken[collectorTokenId];
+            
+            // Only update if we have a valid GenImNFT relationship
+            if (genImTokenId != 0 || collectorTokenId == 0) {
+                try genImNFTContract.tokenURI(genImTokenId) returns (string memory genImURI) {
+                    _setTokenURI(collectorTokenId, genImURI);
+                } catch {
+                    // If getting GenImNFT URI fails, keep the existing URI
+                    // This prevents the reinitialize from failing on edge cases
+                }
+            }
+        }
+        
+        // Emit event to track the reinitialize
+        emit ContractReinitializedToV2(totalSupply);
     }
 
     /**

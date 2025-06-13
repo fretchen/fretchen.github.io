@@ -109,6 +109,26 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
+  // Call reinitialize to update existing token URIs
+  console.log("🔄 Calling reinitialize to update existing token URIs...");
+  try {
+    const reinitTx = await upgradedContract.reinitialize();
+    await reinitTx.wait();
+    console.log("✅ Reinitialize completed successfully!");
+    
+    // Listen for the reinitialize event to get the number of tokens updated
+    const filter = upgradedContract.filters.ContractReinitializedToV2();
+    const events = await upgradedContract.queryFilter(filter, reinitTx.blockNumber, reinitTx.blockNumber);
+    if (events.length > 0) {
+      const tokensUpdated = events[0].args.tokensUpdated;
+      console.log(`📊 Updated URIs for ${tokensUpdated} existing tokens`);
+    }
+  } catch (error) {
+    console.warn("⚠️  Reinitialize failed:", error);
+    console.log("💡 You may need to call reinitialize() manually");
+  }
+  console.log("");
+
   // Verify upgrade and test new features
   console.log("🔍 Verifying upgrade and testing new features...");
   
@@ -165,6 +185,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   console.log("   • Enhanced relationship tracking");
   console.log("   • Backward compatibility maintained");
   console.log("   • All existing functionality preserved");
+  console.log("   • Existing token URIs updated during reinitialize");
   console.log("");
 
   // Export upgrade info
@@ -180,7 +201,8 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
     newFeatures: [
       "Automatic URI inheritance from GenImNFT",
       "Enhanced relationship tracking",
-      "Backward compatibility with custom URI"
+      "Backward compatibility with custom URI",
+      "Existing token URI updates via reinitialize"
     ],
     statePreserved: {
       name: newName === oldName,

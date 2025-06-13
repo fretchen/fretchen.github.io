@@ -1,7 +1,7 @@
 /**
- * CollectorNFT Functional Tests
+ * CollectorNFTv2 Functional Tests
  * 
- * This file contains comprehensive functional tests for the CollectorNFT contract
+ * This file contains comprehensive functional tests for the CollectorNFTv2 contract
  * using the modern Viem testing framework. This implementation uses the shared
  * test library for consistent testing across different CollectorNFT versions.
  * 
@@ -16,10 +16,10 @@ import {
   TEST_CONSTANTS
 } from "./shared/CollectorNFTSharedTests";
 
-describe("CollectorNFT - Functional Tests", function () {
-  // Create fixture using the shared library
-  const getFixture = createCollectorNFTFixture("CollectorNFT", TEST_CONSTANTS.BASE_MINT_PRICE);
+describe("CollectorNFTv2 - Functional Tests", function () {
+  // Create fixture using the shared library for CollectorNFTv2
+  const getFixture = createCollectorNFTFixture("CollectorNFTv2", TEST_CONSTANTS.BASE_MINT_PRICE);
 
   // Run the complete test suite
-  createCompleteTestSuite(() => loadFixture(getFixture), "CollectorNFT")();
+  createCompleteTestSuite(() => loadFixture(getFixture), "CollectorNFTv2")();
 });

@@ -157,7 +157,17 @@ contract CollectorNFTv2 is
     }
 
     /**
-     * @dev Legacy function: Allows minting with custom URI (for backward compatibility)
+     * @dev Overloaded function: Allows minting with custom URI (for backward compatibility with v1)
+     * This function signature matches the original CollectorNFT contract
+     * @param genImTokenId The ID of the GenImNFT token to base the CollectorNFT on
+     * @param uri Custom metadata URI for the CollectorNFT
+     */
+    function mintCollectorNFT(uint256 genImTokenId, string memory uri) public payable returns (uint256) {
+        return mintCollectorNFTWithCustomURI(genImTokenId, uri);
+    }
+
+    /**
+     * @dev Allows minting with custom URI (for backward compatibility)
      * @param genImTokenId The ID of the GenImNFT token to base the CollectorNFT on
      * @param customURI Custom metadata URI for the CollectorNFT
      */

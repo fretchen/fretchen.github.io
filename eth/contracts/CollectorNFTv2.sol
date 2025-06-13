@@ -303,5 +303,6 @@ contract CollectorNFTv2 is
     }
 
     // Storage gap for future upgrades
-    uint256[50] private __gap;
+    // Reduced from [50] to [49] due to addition of collectorToGenImToken mapping
+    uint256[49] private __gap;
 }

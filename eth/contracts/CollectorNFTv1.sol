@@ -7,6 +7,7 @@ import {ERC721URIStorageUpgradeable} from "@openzeppelin/contracts-upgradeable/t
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 // Interface for GenImNFT contracts that support listing functionality
@@ -16,13 +17,23 @@ interface IGenImNFTWithListing is IERC721 {
     function totalSupply() external view returns (uint256);
 }
 
+// Custom errors for gas efficiency
+error InvalidGenImNFTContract();
+error GenImTokenNotFound(uint256 tokenId);
+error GenImTokenNotListed(uint256 tokenId);
+error InsufficientPayment(uint256 required, uint256 provided);
+error PaymentToCreatorFailed();
+error RefundFailed();
+error CollectorTokenNotFound(uint256 tokenId);
+
 // Author: @fretchen
 contract CollectorNFTv1 is 
     ERC721Upgradeable, 
     ERC721URIStorageUpgradeable, 
     ERC721EnumerableUpgradeable,
     OwnableUpgradeable,
-    UUPSUpgradeable 
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable 
 {
     uint256 private _nextTokenId;
     
@@ -57,11 +68,14 @@ contract CollectorNFTv1 is
      * @custom:oz-upgrades-validate-as-initializer
      */
     function initialize(address _genImNFTContract, uint256 _baseMintPrice) initializer public {
+        if (_genImNFTContract == address(0)) revert InvalidGenImNFTContract();
+        
         __ERC721_init("CollectorNFTv1", "COLLECTORv1");
         __ERC721URIStorage_init();
         __ERC721Enumerable_init();
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
         
         genImNFTContract = IGenImNFTWithListing(_genImNFTContract);
         baseMintPrice = _baseMintPrice; // e.g., 0.001 ether
@@ -85,8 +99,12 @@ contract CollectorNFTv1 is
      */
     function getCurrentPrice(uint256 genImTokenId) public view returns (uint256) {
         uint256 mintCount = mintCountPerGenImToken[genImTokenId];
-        uint256 priceMultiplier = 2 ** (mintCount / 5); // Doubles every 5 mints
-        return baseMintPrice * priceMultiplier;
+        uint256 basePrice = baseMintPrice; // Cache storage read
+        
+        unchecked {
+            uint256 priceMultiplier = 2 ** (mintCount / 5); // Doubles every 5 mints
+            return basePrice * priceMultiplier;
+        }
     }
 
     /**
@@ -95,34 +113,39 @@ contract CollectorNFTv1 is
      * The URI is automatically copied from the original GenImNFT
      * @param genImTokenId The ID of the GenImNFT token to base the CollectorNFT on
      */
-    function mintCollectorNFT(uint256 genImTokenId) public payable returns (uint256) {
+    function mintCollectorNFT(uint256 genImTokenId) public payable nonReentrant returns (uint256) {
         // Check that the GenImNFT exists and get its owner
         address genImOwner = genImNFTContract.ownerOf(genImTokenId);
-        require(genImOwner != address(0), "GenImNFT token does not exist");
+        if (genImOwner == address(0)) revert GenImTokenNotFound(genImTokenId);
         
         // Check that the GenImNFT token is publicly listed
-        require(genImNFTContract.isTokenListed(genImTokenId), "GenImNFT token is not publicly listed");
+        if (!genImNFTContract.isTokenListed(genImTokenId)) revert GenImTokenNotListed(genImTokenId);
         
         // Calculate required payment
         uint256 currentPrice = getCurrentPrice(genImTokenId);
-        require(msg.value >= currentPrice, "Insufficient payment");
+        if (msg.value < currentPrice) revert InsufficientPayment(currentPrice, msg.value);
         
         // Get the original GenImNFT URI
         string memory originalURI = genImNFTContract.tokenURI(genImTokenId);
         
         // Mint the CollectorNFT
-        uint256 collectorTokenId = _nextTokenId++;
+        uint256 collectorTokenId;
+        unchecked {
+            collectorTokenId = _nextTokenId++;
+        }
         _safeMint(msg.sender, collectorTokenId);
         _setTokenURI(collectorTokenId, originalURI);
         
         // Update tracking
-        mintCountPerGenImToken[genImTokenId]++;
+        unchecked {
+            mintCountPerGenImToken[genImTokenId]++;
+        }
         collectorTokensByGenImToken[genImTokenId].push(collectorTokenId);
         collectorToGenImToken[collectorTokenId] = genImTokenId;
         
         // Send payment to GenImNFT owner (the creator/current owner)
         (bool success, ) = payable(genImOwner).call{value: currentPrice}("");
-        require(success, "Payment to GenImNFT owner failed");
+        if (!success) revert PaymentToCreatorFailed();
         
         // Emit events
         emit CollectorNFTMinted(collectorTokenId, genImTokenId, msg.sender, currentPrice, mintCountPerGenImToken[genImTokenId]);
@@ -130,8 +153,11 @@ contract CollectorNFTv1 is
         
         // Refund excess payment
         if (msg.value > currentPrice) {
-            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - currentPrice}("");
-            require(refundSuccess, "Refund failed");
+            unchecked {
+                uint256 refundAmount = msg.value - currentPrice;
+                (bool refundSuccess, ) = payable(msg.sender).call{value: refundAmount}("");
+                if (!refundSuccess) revert RefundFailed();
+            }
         }
         
         return collectorTokenId;
@@ -158,9 +184,11 @@ contract CollectorNFTv1 is
         currentPrice = getCurrentPrice(genImTokenId);
         
         // Calculate what the price would be after the next mint
-        uint256 nextMintCount = mintCount + 1;
-        uint256 nextPriceMultiplier = 2 ** (nextMintCount / 5);
-        nextPrice = baseMintPrice * nextPriceMultiplier;
+        unchecked {
+            uint256 nextMintCount = mintCount + 1;
+            uint256 nextPriceMultiplier = 2 ** (nextMintCount / 5);
+            nextPrice = baseMintPrice * nextPriceMultiplier;
+        }
     }
 
     /**
@@ -191,7 +219,7 @@ contract CollectorNFTv1 is
      * @dev Get the original GenImNFT URI for a CollectorNFT
      * @param collectorTokenId The ID of the CollectorNFT token
      */
-    function getOriginalGenImURI(uint256 collectorTokenId) public view returns (string memory) {
+    function getOriginalGenImURI(uint256 collectorTokenId) external view returns (string memory) {
         uint256 genImTokenId = getGenImTokenIdForCollector(collectorTokenId);
         return genImNFTContract.tokenURI(genImTokenId);
     }

@@ -230,6 +230,5 @@ contract CollectorNFTv1 is
         return super.supportsInterface(interfaceId);
     }
 
-    // Storage gap for future upgrades (reduced by 2 due to new mappings)
-    uint256[48] private __gap;
+    uint256[50] private __gap;
 }

@@ -38,6 +38,10 @@ contract CollectorNFTv1 is
     // Mapping from GenImNFT token ID to array of CollectorNFT token IDs
     mapping(uint256 => uint256[]) public collectorTokensByGenImToken;
     
+    // Reverse mapping: CollectorNFT token ID to GenImNFT token ID (for O(1) lookups)
+    mapping(uint256 => uint256) public collectorToGenImToken;
+    
+
     // Events
     event CollectorNFTMinted(uint256 indexed collectorTokenId, uint256 indexed genImTokenId, address indexed collector, uint256 price, uint256 mintNumber);
     event PaymentSentToCreator(uint256 indexed genImTokenId, address indexed creator, uint256 amount);
@@ -114,57 +118,7 @@ contract CollectorNFTv1 is
         // Update tracking
         mintCountPerGenImToken[genImTokenId]++;
         collectorTokensByGenImToken[genImTokenId].push(collectorTokenId);
-        
-        // Send payment to GenImNFT owner (the creator/current owner)
-        (bool success, ) = payable(genImOwner).call{value: currentPrice}("");
-        require(success, "Payment to GenImNFT owner failed");
-        
-        // Emit events
-        emit CollectorNFTMinted(collectorTokenId, genImTokenId, msg.sender, currentPrice, mintCountPerGenImToken[genImTokenId]);
-        emit PaymentSentToCreator(genImTokenId, genImOwner, currentPrice);
-        
-        // Refund excess payment
-        if (msg.value > currentPrice) {
-            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - currentPrice}("");
-            require(refundSuccess, "Refund failed");
-        }
-        
-        return collectorTokenId;
-    }
-
-    /**
-     * @dev Overloaded function: Allows minting with custom URI (for backward compatibility)
-     * This function signature matches potential previous CollectorNFT contracts
-     * @param genImTokenId The ID of the GenImNFT token to base the CollectorNFT on
-     * @param uri Custom metadata URI for the CollectorNFT
-     */
-    function mintCollectorNFT(uint256 genImTokenId, string memory uri) public payable returns (uint256) {
-    // Check that the GenImNFT exists and get its owner
-        address genImOwner = genImNFTContract.ownerOf(genImTokenId);
-        require(genImOwner != address(0), "GenImNFT token does not exist");
-        
-        // Check that the GenImNFT token is publicly listed
-        require(genImNFTContract.isTokenListed(genImTokenId), "GenImNFT token is not publicly listed");
-        
-        // Get the original GenImNFT URI and validate it matches the custom URI
-        string memory originalURI = genImNFTContract.tokenURI(genImTokenId);
-        require(
-            keccak256(abi.encodePacked(uri)) == keccak256(abi.encodePacked(originalURI)),
-            "Custom URI must match the original GenImNFT URI"
-        );
-        
-        // Calculate required payment
-        uint256 currentPrice = getCurrentPrice(genImTokenId);
-        require(msg.value >= currentPrice, "Insufficient payment");
-        
-        // Mint the CollectorNFT with custom URI
-        uint256 collectorTokenId = _nextTokenId++;
-        _safeMint(msg.sender, collectorTokenId);
-        _setTokenURI(collectorTokenId, uri);
-        
-        // Update tracking
-        mintCountPerGenImToken[genImTokenId]++;
-        collectorTokensByGenImToken[genImTokenId].push(collectorTokenId);
+        collectorToGenImToken[collectorTokenId] = genImTokenId;
         
         // Send payment to GenImNFT owner (the creator/current owner)
         (bool success, ) = payable(genImOwner).call{value: currentPrice}("");
@@ -230,7 +184,7 @@ contract CollectorNFTv1 is
      * @param collectorTokenId The ID of the CollectorNFT token
      */
     function getGenImTokenIdForCollector(uint256 collectorTokenId) public view returns (uint256) {
-        return _findGenImTokenIdForCollector(collectorTokenId);
+         return collectorToGenImToken[collectorTokenId];
     }
     
     /**
@@ -238,40 +192,8 @@ contract CollectorNFTv1 is
      * @param collectorTokenId The ID of the CollectorNFT token
      */
     function getOriginalGenImURI(uint256 collectorTokenId) public view returns (string memory) {
-        uint256 genImTokenId = _findGenImTokenIdForCollector(collectorTokenId);
-        require(genImTokenId != type(uint256).max, "Collector token not found");
+        uint256 genImTokenId = getGenImTokenIdForCollector(collectorTokenId);
         return genImNFTContract.tokenURI(genImTokenId);
-    }
-
-    /**
-     * @dev Internal helper function to find GenImNFT token ID for a CollectorNFT
-     * @param collectorTokenId The ID of the CollectorNFT token
-     * @return The GenImNFT token ID, or type(uint256).max if not found
-     */
-    function _findGenImTokenIdForCollector(uint256 collectorTokenId) internal view returns (uint256) {
-        // We need to iterate through the collectorTokensByGenImToken mapping
-        // Since we don't have a reverse mapping, we check each GenImNFT
-        
-        // Get total supply of the GenImNFT contract to know the range
-        uint256 genImTotalSupply;
-        try genImNFTContract.totalSupply() returns (uint256 supply) {
-            genImTotalSupply = supply;
-        } catch {
-            // If totalSupply() is not available, use a reasonable upper bound
-            genImTotalSupply = 10000; // Reasonable upper bound for search
-        }
-        
-        // Search through GenImNFT token IDs
-        for (uint256 genImTokenId = 0; genImTokenId < genImTotalSupply; genImTokenId++) {
-            uint256[] memory collectors = collectorTokensByGenImToken[genImTokenId];
-            for (uint256 i = 0; i < collectors.length; i++) {
-                if (collectors[i] == collectorTokenId) {
-                    return genImTokenId;
-                }
-            }
-        }
-        
-        return type(uint256).max; // Not found
     }
 
     // The following functions are overrides required by Solidity.
@@ -308,6 +230,6 @@ contract CollectorNFTv1 is
         return super.supportsInterface(interfaceId);
     }
 
-    // Storage gap for future upgrades
-    uint256[50] private __gap;
+    // Storage gap for future upgrades (reduced by 2 due to new mappings)
+    uint256[48] private __gap;
 }

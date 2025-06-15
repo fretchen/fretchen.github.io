@@ -122,6 +122,18 @@
   }
 
   /* Figure captions - minimal typography differentiation, stays connected to image */
+  figure {
+    margin: 1.5em 0;              /* consistent spacing around figures */
+    text-align: center;           /* center the entire figure container */
+  }
+
+  figure img {
+    display: block;               /* make image a block element */
+    margin: 0 auto;               /* center the image */
+    max-width: 100%;              /* responsive behavior */
+    height: auto;                 /* maintain aspect ratio */
+  }
+
   figcaption {
     font-size: 0.875rem;          /* slightly smaller than body text (14px) */
     color: #666;                  /* muted but readable gray */

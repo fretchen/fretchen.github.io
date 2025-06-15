@@ -1,5 +1,5 @@
 import * as React from "react";
-import blogs from "../../../../amo/blogs.json";
+import blogs from "../../../../quantum/amo/blogs.json";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../../components/Post";
 import { pageContainer } from "../../../../layouts/styles";

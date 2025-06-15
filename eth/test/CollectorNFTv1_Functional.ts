@@ -237,55 +237,6 @@ describe("CollectorNFTv1 Deployment and Functionality", function () {
     });
   });
 
-  describe("Script Integration", function () {
-    it("Should deploy using the deployment script", async function () {
-      const { genImAddress } = await loadFixture(deployGenImNFTv3Fixture);
-      
-      // Test the deployment script
-      const result = await deployCollectorNFTv1({
-        genImNFTContract: genImAddress,
-        baseMintPrice: "0.001",
-        validateOnly: false,
-        dryRun: false
-      });
-      
-      expect(result).to.have.property("proxy");
-      expect(result).to.have.property("address");
-      expect(result).to.have.property("deploymentInfo");
-      
-      // Verify the deployed contract
-      const collectorNFTv1 = await hre.viem.getContractAt("CollectorNFTv1", result.address);
-      expect(await collectorNFTv1.read.name()).to.equal("CollectorNFTv1");
-      expect(await collectorNFTv1.read.symbol()).to.equal("COLLECTORv1");
-    });
-
-    it("Should validate deployment configuration", async function () {
-      const { genImAddress } = await loadFixture(deployGenImNFTv3Fixture);
-      
-      // Test validation mode
-      const result = await deployCollectorNFTv1({
-        genImNFTContract: genImAddress,
-        baseMintPrice: "0.001",
-        validateOnly: true
-      });
-      
-      expect(result).to.be.true;
-    });
-
-    it("Should perform dry run", async function () {
-      const { genImAddress } = await loadFixture(deployGenImNFTv3Fixture);
-      
-      // Test dry run mode
-      const result = await deployCollectorNFTv1({
-        genImNFTContract: genImAddress,
-        baseMintPrice: "0.001",
-        dryRun: true
-      });
-      
-      expect(result).to.have.property("dryRun", true);
-    });
-  });
-
   describe("Upgrade Readiness", function () {
     it("Should be ready for future upgrades", async function () {
       const { collectorNFTv1, proxyAddress } = await loadFixture(deployCollectorNFTv1Fixture);

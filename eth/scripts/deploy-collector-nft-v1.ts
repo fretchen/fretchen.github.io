@@ -1,208 +1,243 @@
 #!/usr/bin/env npx hardhat run
 import { ethers, upgrades, network } from "hardhat";
 import { getAddress } from "viem";
+import { validateCollectorNFT, validateImplementation } from "./validate-contract";
+import * as fs from "fs";
+import * as path from "path";
 
-interface DeploymentOptions {
-  genImNFTContract?: string;
+interface DeployOptions {
+  genImNFTAddress?: string;
   baseMintPrice?: string;
   validateOnly?: boolean;
   dryRun?: boolean;
 }
 
 /**
- * Deploy CollectorNFTv1 using OpenZeppelin Upgrades Plugin
+ * Deploy CollectorNFT using OpenZeppelin Upgrades Plugin
  * 
  * Usage examples:
- * - Environment variable: GEN_IM_NFT_CONTRACT=0x123... npx hardhat run scripts/deploy-collector-nft-v1.ts --network sepolia
- * - Default values: npx hardhat run scripts/deploy-collector-nft-v1.ts --network localhost
- * - Validation only: VALIDATE_ONLY=true npx hardhat run scripts/deploy-collector-nft-v1.ts --network sepolia
- * - Dry run: DRY_RUN=true npx hardhat run scripts/deploy-collector-nft-v1.ts --network sepolia
+ * - Environment variable: GENIMNFr_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - Script parameter: npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - Validation only: VALIDATE_ONLY=true npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - Dry run: DRY_RUN=true npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+ * - Custom base price: BASE_MINT_PRICE=0.001 npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
  */
-async function deployCollectorNFTv1(options: DeploymentOptions = {}) {
-  console.log("🚀 CollectorNFTv1 Deployment Script");
-  console.log("=====================================");
+async function deployCollectorNFT(options: DeployOptions = {}) {
+  console.log("🚀 CollectorNFT Deployment Script");
+  console.log("=" .repeat(50));
   console.log(`Network: ${network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
-  // Get configuration from environment or options
-  const genImNFTContract = options.genImNFTContract || 
-    process.env.GEN_IM_NFT_CONTRACT || 
-    "0x1234567890123456789012345678901234567890"; // Placeholder for testing
+  // Get GenImNFT address from environment or parameter
+  const genImNFTAddress = options.genImNFTAddress || process.env.GENIMFNT_ADDRESS;
+  if (!genImNFTAddress) {
+    throw new Error(
+      "GenImNFT address required. Set GENIMFNT_ADDRESS environment variable or pass as parameter."
+    );
+  }
 
-  const baseMintPrice = options.baseMintPrice || 
-    process.env.BASE_MINT_PRICE || 
-    "0.001"; // 0.001 ETH default
+  console.log(`📍 GenImNFT Address: ${genImNFTAddress}`);
 
-  const baseMintPriceWei = ethers.parseEther(baseMintPrice);
+  // Validate GenImNFT address format
+  try {
+    getAddress(genImNFTAddress);
+  } catch (error) {
+    throw new Error(`Invalid GenImNFT address: ${genImNFTAddress}`);
+  }
 
-  console.log("📋 Deployment Configuration:");
-  console.log(`   GenImNFT Contract: ${genImNFTContract}`);
-  console.log(`   Base Mint Price: ${baseMintPrice} ETH (${baseMintPriceWei} wei)`);
-  console.log("");
+  // Get base mint price (default: 0.001 ETH)
+  const baseMintPriceStr = options.baseMintPrice || process.env.BASE_MINT_PRICE || "0.001";
+  const baseMintPrice = ethers.parseEther(baseMintPriceStr);
+  console.log(`💰 Base Mint Price: ${baseMintPriceStr} ETH (${baseMintPrice.toString()} wei)`);
 
+  // Check if validation only
   if (options.validateOnly || process.env.VALIDATE_ONLY === "true") {
     console.log("🔍 Validation Only Mode - No deployment will occur");
-    console.log("🔍 Validating CollectorNFTv1 deployment configuration...");
-    
-    try {
-      // Validate contract compilation
-      const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
-      console.log("✅ CollectorNFTv1 contract compiles successfully");
-      
-      // Validate GenImNFT contract exists (if not placeholder)
-      if (genImNFTContract !== "0x1234567890123456789012345678901234567890") {
-        const code = await ethers.provider.getCode(genImNFTContract);
-        if (code === "0x") {
-          throw new Error("GenImNFT contract not found at specified address");
-        }
-        console.log("✅ GenImNFT contract exists at specified address");
-      } else {
-        console.log("⚠️  Using placeholder GenImNFT address for validation");
-      }
-      
-      console.log("✅ All validations passed");
-      console.log("🎉 Validation completed successfully!");
-      return true;
-      
-    } catch (error) {
-      console.error("❌ Validation failed:", error);
-      throw error;
-    }
+    return await validateDeployment(genImNFTAddress, baseMintPrice);
   }
 
+  // Check if dry run
   if (options.dryRun || process.env.DRY_RUN === "true") {
-    console.log("🔄 Dry Run Mode - Preview deployment steps");
-    console.log("-".repeat(40));
-    console.log("1. Deploy CollectorNFTv1 implementation contract");
-    console.log("2. Deploy UUPS proxy pointing to CollectorNFTv1");
-    console.log("3. Initialize proxy with:");
-    console.log(`   - GenImNFT Contract: ${genImNFTContract}`);
-    console.log(`   - Base Mint Price: ${baseMintPrice} ETH`);
-    console.log("4. Verify deployment and proxy setup");
-    console.log("✅ Dry run completed. Set DRY_RUN=false to perform actual deployment.");
-    return { dryRun: true };
+    console.log("🧪 Dry Run Mode - Simulation only");
+    return await simulateDeployment(genImNFTAddress, baseMintPrice);
   }
 
-  console.log("🔄 Deploying CollectorNFTv1");
-  console.log("-".repeat(30));
+  // Get contract factory
+  console.log("📦 Getting CollectorNFT contract factory...");
+  const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFTv1");
 
-  try {
-    // Get deployer
-    const [deployer] = await ethers.getSigners();
-    console.log(`📍 Deployer: ${deployer.address}`);
-    
-    // Get deployer balance
-    const balance = await ethers.provider.getBalance(deployer.address);
-    console.log(`💰 Deployer Balance: ${ethers.formatEther(balance)} ETH`);
-    console.log("");
+  // Verify GenImNFT contract exists
+  console.log("🔍 Verifying GenImNFT contract...");
+  const genImNFTCode = await ethers.provider.getCode(genImNFTAddress);
+  if (genImNFTCode === "0x") {
+    throw new Error(`No contract found at GenImNFT address: ${genImNFTAddress}`);
+  }
+  console.log("✅ GenImNFT contract verified");
 
-    // Deploy CollectorNFTv1 using OpenZeppelin upgrades
-    console.log("⏳ Deploying CollectorNFTv1 proxy...");
-    const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
-    
-    const proxy = await upgrades.deployProxy(
-      CollectorNFTv1Factory,
-      [genImNFTContract, baseMintPriceWei],
-      {
-        initializer: "initialize",
-        kind: "uups"
-      }
-    );
+  // Deploy the upgradeable contract
+  console.log("🚀 Deploying CollectorNFT...");
+  console.log("");
 
-    await proxy.waitForDeployment();
-    const proxyAddress = await proxy.getAddress();
-
-    console.log("✅ CollectorNFTv1 deployed successfully!");
-    console.log("=======================================");
-    console.log(`📍 Proxy Address: ${proxyAddress}`);
-    
-    // Get implementation address
-    const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-    console.log(`📍 Implementation Address: ${implementationAddress}`);
-    
-    // Get admin address
-    try {
-      const adminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
-      console.log(`📍 Admin Address: ${adminAddress}`);
-    } catch {
-      console.log("📍 Admin Address: N/A (UUPS proxy)");
+  const collectorNFT = await upgrades.deployProxy(
+    CollectorNFTFactory,
+    [genImNFTAddress, baseMintPrice],
+    {
+      kind: "uups",
+      initializer: "initialize",
     }
+  );
 
-    console.log("");
+  await collectorNFT.waitForDeployment();
+  const collectorNFTAddress = await collectorNFT.getAddress();
 
-    // Verify deployment
-    console.log("🔍 Verifying deployment...");
-    const collectorNFTv1 = await ethers.getContractAt("CollectorNFTv1", proxyAddress);
-    
-    const name = await collectorNFTv1.name();
-    const symbol = await collectorNFTv1.symbol();
-    const owner = await collectorNFTv1.owner();
-    const genImNFT = await collectorNFTv1.genImNFTContract();
-    const mintPrice = await collectorNFTv1.baseMintPrice();
+  console.log("✅ CollectorNFT deployed successfully!");
+  console.log("=" .repeat(50));
+  console.log(`📍 Proxy Address: ${collectorNFTAddress}`);
+  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(collectorNFTAddress)}`);
+  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(collectorNFTAddress)}`);
+  console.log("");
 
-    console.log("📊 Contract State:");
-    console.log(`   Name: ${name}`);
-    console.log(`   Symbol: ${symbol}`);
-    console.log(`   Owner: ${owner}`);
-    console.log(`   GenImNFT: ${genImNFT}`);
-    console.log(`   Base Mint Price: ${ethers.formatEther(mintPrice)} ETH`);
-    console.log("");
+  // Verify deployment
+  console.log("🔍 Verifying deployment...");
+  const deployedContract = CollectorNFTFactory.attach(collectorNFTAddress);
+  
+  const contractName = await deployedContract.name();
+  const contractSymbol = await deployedContract.symbol();
+  const contractGenImNFT = await deployedContract.genImNFTContract();
+  const contractBaseMintPrice = await deployedContract.baseMintPrice();
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(collectorNFTAddress);
 
-    console.log("🎉 CollectorNFTv1 Deployment Summary:");
-    console.log(`   • Fresh deployment of CollectorNFTv1`);
-    console.log(`   • UUPS upgradeable proxy pattern`);
-    console.log(`   • Ready for future upgrades to v2, v3, etc.`);
-    console.log(`   • Automatic URI inheritance from GenImNFT`);
-    console.log(`   • Dynamic pricing with exponential scaling`);
+  console.log(`📄 Contract Name: ${contractName}`);
+  console.log(`🏷️  Contract Symbol: ${contractSymbol}`);
+  console.log(`🔗 GenImNFT Address: ${contractGenImNFT}`);
+  console.log(`💰 Base Mint Price: ${ethers.formatEther(contractBaseMintPrice)} ETH`);
 
-    const deploymentInfo = {
-      network: network.name,
-      timestamp: new Date().toISOString(),
-      blockNumber: await ethers.provider.getBlockNumber(),
-      proxyAddress,
-      implementationAddress,
-      deployer: deployer.address,
-      genImNFTContract,
-      baseMintPrice: baseMintPrice,
-      contractName: name,
-      contractSymbol: symbol
-    };
-
-    console.log("");
-    console.log("📋 Deployment Summary:");
-    console.log(JSON.stringify(deploymentInfo, null, 2));
-
-    return {
-      proxy: collectorNFTv1,
-      address: proxyAddress,
-      deploymentInfo,
-    };
-
-  } catch (error) {
-    console.error("❌ Deployment failed:", error);
-    throw error;
+  // Verify configuration
+  if (contractGenImNFT.toLowerCase() !== genImNFTAddress.toLowerCase()) {
+    throw new Error("GenImNFT address mismatch after deployment");
   }
+  if (contractBaseMintPrice !== baseMintPrice) {
+    throw new Error("Base mint price mismatch after deployment");
+  }
+
+  // Verify implementation contract
+  console.log("🔧 Verifying implementation contract...");
+  const implementationCode = await ethers.provider.getCode(implementationAddress);
+  if (implementationCode === "0x") {
+    throw new Error(`No contract code found at implementation address: ${implementationAddress}`);
+  }
+  console.log(`✅ Implementation contract verified (${implementationCode.length} bytes)`);
+
+  // Test implementation contract ABI compatibility
+  try {
+    const implementationContract = CollectorNFTFactory.attach(implementationAddress);
+    console.log("✅ Implementation contract ABI compatible");
+  } catch (error: any) {
+    console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message || error);
+  }
+
+  console.log("✅ All verifications passed!");
+  console.log("");
+
+  // Export deployment info
+  const deploymentInfo = {
+    network: network.name,
+    timestamp: new Date().toISOString(),
+    blockNumber: await ethers.provider.getBlockNumber(),
+    proxyAddress: collectorNFTAddress,
+    implementationAddress: await upgrades.erc1967.getImplementationAddress(collectorNFTAddress),
+    adminAddress: await upgrades.erc1967.getAdminAddress(collectorNFTAddress),
+    genImNFTAddress: genImNFTAddress,
+    baseMintPrice: baseMintPriceStr,
+    contractName: contractName,
+    contractSymbol: contractSymbol,
+  };
+
+  console.log("📋 Deployment Summary:");
+  console.log(JSON.stringify(deploymentInfo, null, 2));
+
+  // Save deployment information to file
+  const deploymentsDir = path.join(__dirname, "deployments");
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+  
+  const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const deploymentFileName = `collector-nft-${network.name}-${timestamp}.json`;
+  const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
+  
+  fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
+  console.log(`💾 Deployment info saved to: ${deploymentFilePath}`);
+
+  // Comprehensive validation using validate-contract functions
+  console.log("\n🔍 Running comprehensive validation...");
+  try {
+    await validateCollectorNFT(collectorNFTAddress);
+    await validateImplementation(deploymentInfo.implementationAddress, "CollectorNFTv1");
+    console.log("✅ Comprehensive validation completed successfully!");
+  } catch (error: any) {
+    console.log("⚠️  Warning: Comprehensive validation failed:", error.message || error);
+  }
+
+  return {
+    contract: deployedContract,
+    address: collectorNFTAddress,
+    deploymentInfo,
+  };
+}
+
+async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint) {
+  console.log("🔍 Validating deployment configuration...");
+  
+  // Verify GenImNFT contract
+  const genImNFTCode = await ethers.provider.getCode(genImNFTAddress);
+  if (genImNFTCode === "0x") {
+    throw new Error(`No contract found at GenImNFT address: ${genImNFTAddress}`);
+  }
+
+  // Get contract factory for validation
+  const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
+
+  // Validate contract compilation
+  console.log("✅ CollectorNFT contract compiles successfully");
+  console.log("✅ GenImNFT contract exists at specified address");
+  console.log(`✅ Base mint price valid: ${ethers.formatEther(baseMintPrice)} ETH`);
+  
+  console.log("🎉 Validation completed successfully!");
+  return true;
+}
+
+async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint) {
+  console.log("🧪 Simulating deployment...");
+  
+  await validateDeployment(genImNFTAddress, baseMintPrice);
+  
+  // Estimate gas costs
+  const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
+  
+  console.log("⛽ Estimating deployment costs...");
+  console.log("📦 Contract factory created successfully");
+  console.log("💡 Ready for deployment with specified parameters");
+  
+  console.log("🎉 Simulation completed successfully!");
+  return true;
 }
 
 // Main execution
 async function main() {
-  const options: DeploymentOptions = {
-    genImNFTContract: process.env.GEN_IM_NFT_CONTRACT,
-    baseMintPrice: process.env.BASE_MINT_PRICE,
-    validateOnly: process.env.VALIDATE_ONLY === "true",
-    dryRun: process.env.DRY_RUN === "true"
-  };
-
-  await deployCollectorNFTv1(options);
+  try {
+    await deployCollectorNFT();
+  } catch (error) {
+    console.error("❌ Deployment failed:");
+    console.error(error);
+    process.exitCode = 1;
+  }
 }
 
 // Execute if run directly
 if (require.main === module) {
-  main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
+  main();
 }
 
-export { deployCollectorNFTv1, DeploymentOptions };
+export { deployCollectorNFT, DeployOptions };

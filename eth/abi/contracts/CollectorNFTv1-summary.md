@@ -2,7 +2,7 @@
 
 CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
 
-Generated on: 2025-06-15T14:30:10.475Z
+Generated on: 2025-06-15T14:54:48.728Z
 
 ## Contract Information
 - **Name**: CollectorNFTv1
@@ -134,13 +134,15 @@ Generated on: 2025-06-15T14:30:10.475Z
 
 ## Usage
 
-### JavaScript/TypeScript
+### TypeScript/JavaScript ES Modules
 ```typescript
 import { CollectorNFTv1ABI } from './CollectorNFTv1';
 // Use with ethers, web3, viem, etc.
 ```
 
-### JSON
+### JSON (Direct import)
 ```javascript
+import abi from './CollectorNFTv1.json';
+// Or for Node.js/CommonJS environments:
 const abi = require('./CollectorNFTv1.json');
 ```

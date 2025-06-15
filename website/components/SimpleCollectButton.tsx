@@ -54,7 +54,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     writeContract({
       ...collectorContractConfig,
       functionName: "mintCollectorNFT",
-      args: [genImTokenId, "ipfs://collected-nft"],
+      args: [genImTokenId], // CollectorNFTv1 doesn't need URI parameter
       value: currentPrice,
     });
   };

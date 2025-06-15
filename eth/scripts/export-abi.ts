@@ -33,6 +33,12 @@ const contracts: ContractConfig[] = [
     contractFile: "CollectorNFTv1.sol",
     contractName: "CollectorNFTv1", 
     description: "CollectorNFT Version 1 with upgraded features and UUPS proxy pattern"
+  },
+  {
+    name: "Support",
+    contractFile: "Support.sol",
+    contractName: "Support",
+    description: "Support contract for donations and likes functionality"
   }
 ];
 
@@ -74,20 +80,6 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
 `;
   fs.writeFileSync(abiTsPath, tsContent);
   console.log(`✅ TypeScript ABI exported to: ${abiTsPath}`);
-
-  // Export as JavaScript (for frontend use)
-  const abiJsPath = path.join(exportDir, `${config.name}.js`);
-  const jsContent = `// Auto-generated ABI for ${config.name}
-// ${config.description}
-// Generated on: ${new Date().toISOString()}
-
-export const ${config.name}ABI = ${JSON.stringify(abi, null, 2)};
-
-// For CommonJS compatibility
-module.exports = { ${config.name}ABI };
-`;
-  fs.writeFileSync(abiJsPath, jsContent);
-  console.log(`✅ JavaScript ABI exported to: ${abiJsPath}`);
 
   // Create a summary of the contract
   const functions = abi.filter((item: any) => item.type === "function");
@@ -176,14 +168,16 @@ ${events.map((e: any) => `- \`${e.name}(${e.inputs?.map((i: any) => `${i.indexed
 
 ## Usage
 
-### JavaScript/TypeScript
+### TypeScript/JavaScript ES Modules
 \`\`\`typescript
 import { ${config.name}ABI } from './${config.name}';
 // Use with ethers, web3, viem, etc.
 \`\`\`
 
-### JSON
+### JSON (Direct import)
 \`\`\`javascript
+import abi from './${config.name}.json';
+// Or for Node.js/CommonJS environments:
 const abi = require('./${config.name}.json');
 \`\`\`
 `;
@@ -194,7 +188,6 @@ const abi = require('./${config.name}.json');
   return {
     jsonPath: abiJsonPath,
     tsPath: abiTsPath,
-    jsPath: abiJsPath,
     summaryPath: summaryPath
   };
 }
@@ -212,7 +205,6 @@ async function main() {
         allExportedFiles.push(
           path.relative(process.cwd(), result.jsonPath),
           path.relative(process.cwd(), result.tsPath),
-          path.relative(process.cwd(), result.jsPath),
           path.relative(process.cwd(), result.summaryPath)
         );
         successCount++;

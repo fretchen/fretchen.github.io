@@ -2,7 +2,7 @@
 
 NFT collection based on GenImNFT tokens
 
-Generated on: 2025-06-15T14:30:10.472Z
+Generated on: 2025-06-15T14:54:48.726Z
 
 ## Contract Information
 - **Name**: CollectorNFT
@@ -105,13 +105,15 @@ Generated on: 2025-06-15T14:30:10.472Z
 
 ## Usage
 
-### JavaScript/TypeScript
+### TypeScript/JavaScript ES Modules
 ```typescript
 import { CollectorNFTABI } from './CollectorNFT';
 // Use with ethers, web3, viem, etc.
 ```
 
-### JSON
+### JSON (Direct import)
 ```javascript
+import abi from './CollectorNFT.json';
+// Or for Node.js/CommonJS environments:
 const abi = require('./CollectorNFT.json');
 ```

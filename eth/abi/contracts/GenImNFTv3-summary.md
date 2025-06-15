@@ -2,7 +2,7 @@
 
 GenImNFT Version 3 with listing functionality
 
-Generated on: 2025-06-15T14:30:10.469Z
+Generated on: 2025-06-15T14:48:31.663Z
 
 ## Contract Information
 - **Name**: GenImNFTv3
@@ -97,13 +97,15 @@ Generated on: 2025-06-15T14:30:10.469Z
 
 ## Usage
 
-### JavaScript/TypeScript
+### TypeScript/JavaScript ES Modules
 ```typescript
 import { GenImNFTv3ABI } from './GenImNFTv3';
 // Use with ethers, web3, viem, etc.
 ```
 
-### JSON
+### JSON (Direct import)
 ```javascript
+import abi from './GenImNFTv3.json';
+// Or for Node.js/CommonJS environments:
 const abi = require('./GenImNFTv3.json');
 ```

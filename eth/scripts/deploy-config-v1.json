@@ -3,7 +3,7 @@
   "baseMintPrice": "0.00005",
   "options": {
     "validateOnly": false,
-    "dryRun": true,
+    "dryRun": false,
     "verify": true,
     "waitConfirmations": 1
   },

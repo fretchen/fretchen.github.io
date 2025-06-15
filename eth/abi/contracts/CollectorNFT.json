@@ -509,7 +509,7 @@
     "name": "genImNFTContract",
     "outputs": [
       {
-        "internalType": "contract IERC721",
+        "internalType": "contract IGenImNFTWithListing",
         "name": "",
         "type": "address"
       }

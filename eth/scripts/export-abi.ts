@@ -27,6 +27,12 @@ const contracts: ContractConfig[] = [
     contractFile: "CollectorNFT.sol", 
     contractName: "CollectorNFT",
     description: "NFT collection based on GenImNFT tokens"
+  },
+  {
+    name: "CollectorNFTv1",
+    contractFile: "CollectorNFTv1.sol",
+    contractName: "CollectorNFTv1", 
+    description: "CollectorNFT Version 1 with upgraded features and UUPS proxy pattern"
   }
 ];
 
@@ -116,6 +122,21 @@ module.exports = { ${config.name}ABI };
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFT Specific Functions:");
+      specificFunctions.forEach((f: any) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      });
+    }
+  } else if (config.name === "CollectorNFTv1") {
+    specificFunctions = functions.filter((f: any) => 
+      f.name?.includes("mint") || 
+      f.name?.includes("Price") || 
+      f.name?.includes("GenIm") ||
+      f.name?.includes("Collector") ||
+      f.name?.includes("upgrade") ||
+      f.name === "initialize"
+    );
+    if (specificFunctions.length > 0) {
+      console.log("\n🎨 CollectorNFTv1 Specific Functions:");
       specificFunctions.forEach((f: any) => {
         console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });

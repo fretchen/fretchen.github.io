@@ -1,8 +1,13 @@
-// Auto-generated ABI for GenImNFTv3
-// GenImNFT Version 3 with listing functionality
-// Generated on: 2025-06-15T14:30:10.468Z
+// Auto-generated ABI for CollectorNFTv1
+// CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
+// Generated on: 2025-06-15T14:30:10.474Z
 
-export const GenImNFTv3ABI = [
+export const CollectorNFTv1ABI = [
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
   {
     "inputs": [
       {
@@ -160,6 +165,49 @@ export const GenImNFTv3ABI = [
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "GenImTokenNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "GenImTokenNotListed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "required",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "provided",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientPayment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidGenImNFTContract",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "InvalidInitialization",
     "type": "error"
@@ -189,6 +237,21 @@ export const GenImNFTv3ABI = [
       }
     ],
     "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PaymentToCreatorFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "RefundFailed",
     "type": "error"
   },
   {
@@ -282,42 +345,54 @@ export const GenImNFTv3ABI = [
       {
         "indexed": true,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "collectorTokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "genImTokenId",
         "type": "uint256"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "updater",
+        "name": "collector",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "imageUrl",
-        "type": "string"
+        "internalType": "uint256",
+        "name": "price",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "mintNumber",
+        "type": "uint256"
       }
     ],
-    "name": "ImageUpdateRequested",
+    "name": "CollectorNFTMinted",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
+        "indexed": false,
+        "internalType": "address",
+        "name": "genImNFTContract",
+        "type": "address"
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "updater",
-        "type": "address"
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "baseMintPrice",
+        "type": "uint256"
       }
     ],
-    "name": "ImageUpdaterAuthorized",
+    "name": "ContractInitialized",
     "type": "event"
   },
   {
@@ -371,17 +446,23 @@ export const GenImNFTv3ABI = [
       {
         "indexed": true,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "genImTokenId",
         "type": "uint256"
       },
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "creator",
+        "type": "address"
+      },
+      {
         "indexed": false,
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       }
     ],
-    "name": "TokenListingChanged",
+    "name": "PaymentSentToCreator",
     "type": "event"
   },
   {
@@ -407,31 +488,6 @@ export const GenImNFTv3ABI = [
       }
     ],
     "name": "Transfer",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "updater",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "UpdaterPaid",
     "type": "event"
   },
   {
@@ -498,26 +554,69 @@ export const GenImNFTv3ABI = [
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "baseMintPrice",
+    "outputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "burn",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "collectorToGenImToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "collectorTokensByGenImToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getAllPublicTokens",
+    "name": "genImNFTContract",
     "outputs": [
       {
-        "internalType": "uint256[]",
+        "internalType": "contract IGenImNFTWithListing",
         "name": "",
-        "type": "uint256[]"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -546,30 +645,11 @@ export const GenImNFTv3ABI = [
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "genImTokenId",
         "type": "uint256"
       }
     ],
-    "name": "getAuthorizedImageUpdater",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "getPublicTokensOfOwner",
+    "name": "getCollectorTokensForGenIm",
     "outputs": [
       {
         "internalType": "uint256[]",
@@ -581,7 +661,104 @@ export const GenImNFTv3ABI = [
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "genImTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCurrentPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "collectorTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getGenImTokenIdForCollector",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "genImTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getMintStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "mintCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "nextPrice",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "collectorTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getOriginalGenImURI",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_genImNFTContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_baseMintPrice",
+        "type": "uint256"
+      }
+    ],
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -615,43 +792,30 @@ export const GenImNFTv3ABI = [
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "genImTokenId",
         "type": "uint256"
       }
     ],
-    "name": "isImageUpdated",
+    "name": "mintCollectorNFT",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "uint256",
         "name": "",
-        "type": "bool"
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "isTokenListed",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "mintPrice",
+    "name": "mintCountPerGenImToken",
     "outputs": [
       {
         "internalType": "uint256",
@@ -722,77 +886,9 @@ export const GenImNFTv3ABI = [
   },
   {
     "inputs": [],
-    "name": "reinitializeV3",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "imageUrl",
-        "type": "string"
-      }
-    ],
-    "name": "requestImageUpdate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "uri",
-        "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "name": "safeMint",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "uri",
-        "type": "string"
-      }
-    ],
-    "name": "safeMint",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -868,47 +964,11 @@ export const GenImNFTv3ABI = [
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "newPrice",
+        "name": "_baseMintPrice",
         "type": "uint256"
       }
     ],
-    "name": "setMintPrice",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "tokenIds",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "name": "setMultipleTokensListed",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "name": "setTokenListed",
+    "name": "setBaseMintPrice",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1060,6 +1120,19 @@ export const GenImNFTv3ABI = [
     "inputs": [
       {
         "internalType": "address",
+        "name": "_genImNFTContract",
+        "type": "address"
+      }
+    ],
+    "name": "updateGenImNFTContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "newImplementation",
         "type": "address"
       },
@@ -1073,14 +1146,7 @@ export const GenImNFTv3ABI = [
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "withdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
   }
 ] as const;
 
-export type GenImNFTv3ABI = typeof GenImNFTv3ABI;
+export type CollectorNFTv1ABI = typeof CollectorNFTv1ABI;

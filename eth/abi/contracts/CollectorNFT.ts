@@ -1,6 +1,6 @@
 // Auto-generated ABI for CollectorNFT
 // NFT collection based on GenImNFT tokens
-// Generated on: 2025-06-09T19:02:50.035Z
+// Generated on: 2025-06-15T14:30:10.471Z
 
 export const CollectorNFTABI = [
   {
@@ -513,7 +513,7 @@ export const CollectorNFTABI = [
     "name": "genImNFTContract",
     "outputs": [
       {
-        "internalType": "contract IERC721",
+        "internalType": "contract IGenImNFTWithListing",
         "name": "",
         "type": "address"
       }

@@ -21,11 +21,38 @@ export default function WalletOptions() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
   const [isMounted, setIsMounted] = React.useState(false);
+  const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Prevent hydration mismatch by only showing wallet data after client-side mount
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle opening dropdown
+  const handleMouseEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsOpen(true);
+  };
+
+  // Handle closing dropdown with delay
+  const handleMouseLeave = () => {
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+      setHoveredItem(null);
+    }, 200); // 200ms delay before closing
+  };
 
   // Display address or connect message
   const displayText =
@@ -50,7 +77,11 @@ export default function WalletOptions() {
   const styles = walletOptions;
 
   return (
-    <div className={styles.dropdown} onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>
+    <div 
+      className={styles.dropdown} 
+      onMouseEnter={handleMouseEnter} 
+      onMouseLeave={handleMouseLeave}
+    >
       <button className={styles.button}>{displayText}</button>
 
       {isOpen && (
@@ -64,6 +95,11 @@ export default function WalletOptions() {
               onClick={() => {
                 item.action();
                 setIsOpen(false);
+                // Clear timeout when clicking to close immediately
+                if (closeTimeoutRef.current) {
+                  clearTimeout(closeTimeoutRef.current);
+                  closeTimeoutRef.current = null;
+                }
               }}
             >
               {item.label}

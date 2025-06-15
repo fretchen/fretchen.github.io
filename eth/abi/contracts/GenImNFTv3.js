@@ -1081,6 +1081,7 @@ export const GenImNFTv3ABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-] as const;
+];
 
-export type GenImNFTv3ABI = typeof GenImNFTv3ABI;
+// For CommonJS compatibility
+module.exports = { GenImNFTv3ABI };

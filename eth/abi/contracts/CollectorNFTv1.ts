@@ -1,6 +1,8 @@
 // Auto-generated ABI for CollectorNFTv1
 // CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
-// Generated on: 2025-06-15T14:48:31.671Z  export const CollectorNFTv1ABI = [
+// Generated on: 2025-06-15T14:54:48.728Z
+
+export const CollectorNFTv1ABI = [
   {
     "inputs": [],
     "stateMutability": "nonpayable",

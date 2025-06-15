@@ -33,6 +33,12 @@ const contracts: ContractConfig[] = [
     contractFile: "CollectorNFTv1.sol",
     contractName: "CollectorNFTv1", 
     description: "CollectorNFT Version 1 with upgraded features and UUPS proxy pattern"
+  },
+  {
+    name: "Support",
+    contractFile: "Support.sol",
+    contractName: "Support",
+    description: "Support contract for donations and likes functionality"
   }
 ];
 
@@ -66,7 +72,9 @@ async function exportContractABI(config: ContractConfig) {
   const abiTsPath = path.join(exportDir, `${config.name}.ts`);
   const tsContent = `// Auto-generated ABI for ${config.name}
 // ${config.description}
-// Generated on: ${new Date().toISOString()}  export const ${config.name}ABI = ${JSON.stringify(abi, null, 2)} as const;
+// Generated on: ${new Date().toISOString()}
+
+export const ${config.name}ABI = ${JSON.stringify(abi, null, 2)} as const;
 
 export type ${config.name}ABI = typeof ${config.name}ABI;
 `;

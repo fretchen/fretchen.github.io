@@ -1,0 +1,15 @@
+{
+  "genImNFTAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+  "baseMintPrice": "0.00005",
+  "options": {
+    "validateOnly": false,
+    "dryRun": true,
+    "verify": true,
+    "waitConfirmations": 1
+  },
+  "metadata": {
+    "description": "CollectorNFT v1 deployment configuration",
+    "version": "1.0.0",
+    "environment": "production"
+  }
+}

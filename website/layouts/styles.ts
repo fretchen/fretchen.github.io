@@ -459,30 +459,42 @@ export const walletOptions = {
     display: "flex",
     alignItems: "center",
     gap: "xs",
+    transition: "all 0.2s ease",
+    _hover: {
+      backgroundColor: "#0052a3",
+    },
   }),
   menu: css({
     position: "absolute",
     backgroundColor: "background",
     minWidth: "160px",
-    boxShadow: "0px 8px 16px 0px rgba(0,0,0,0.2)",
-    zIndex: "1",
+    boxShadow: "0px 8px 20px 0px rgba(0,0,0,0.15)",
+    zIndex: 1000,
     right: "0",
     borderRadius: "sm",
-    marginTop: "xs",
+    marginTop: "2px", // Reduced gap to make it feel more connected
+    border: "1px solid token(colors.border)",
+    overflow: "hidden", // Ensures rounded corners work properly
   }),
   menuItem: css({
-    padding: "sm",
+    padding: "10px 16px", // Slightly larger padding for easier clicking
     textDecoration: "none",
     display: "block",
     color: "text",
     textAlign: "left",
     cursor: "pointer",
     borderBottom: "1px solid token(colors.border)",
-    transition: "background-color 0.2s ease",
+    transition: "all 0.2s ease",
+    fontSize: "sm",
     _last: { borderBottom: "none" },
+    _hover: {
+      backgroundColor: "rgba(59, 130, 246, 0.08)", // Subtle brand color hover
+      color: "brand",
+    },
   }),
   menuItemHover: css({
-    backgroundColor: "border",
+    backgroundColor: "rgba(59, 130, 246, 0.08)",
+    color: "brand",
   }),
 };
 

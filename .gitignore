@@ -1,6 +1,7 @@
 # the public repo images
 
 website/public/amo
+website/public/blog
 website/public/quantum
 
 *blogs.json

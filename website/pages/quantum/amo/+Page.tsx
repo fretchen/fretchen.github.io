@@ -2,7 +2,7 @@ import * as React from "react";
 
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
-import blogs from "../../../amo/blogs.json";
+import blogs from "../../../quantum/amo/blogs.json";
 import TitleBar from "../../../components/TitleBar";
 import { css } from "../../../styled-system/css";
 

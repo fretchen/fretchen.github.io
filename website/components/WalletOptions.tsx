@@ -77,11 +77,7 @@ export default function WalletOptions() {
   const styles = walletOptions;
 
   return (
-    <div 
-      className={styles.dropdown} 
-      onMouseEnter={handleMouseEnter} 
-      onMouseLeave={handleMouseLeave}
-    >
+    <div className={styles.dropdown} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       <button className={styles.button}>{displayText}</button>
 
       {isOpen && (

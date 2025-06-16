@@ -21,20 +21,18 @@ Let me describe here, which major changes I made and give you some of the techni
 
 I really enjoy the playful approach to image generation. But a lot of them fail and I do not really want to keep or share them. Hence, it is really easy to delete them from the blockchain and they are NOT listed to the public gallery by default. However, for a few of them I would actually be quite happy to share them with others. Hence, I added a simple new attribute to the smart contract, which is called `isListed` and set to `false` by default. The functionality is simple:
 
-- If this is set to `true`, the image is listed in the public gallery. 
+- If this is set to `true`, the image is listed in the public gallery.
 - If it is set to `false`, the image is not listed and can only be seen in the other tab.
 
 This is a super simple approach, which is inspired by the [robots.txt](https://en.wikipedia.org/wiki/Robots.txt) approach. It does not securely make things private, but it unlists them from some public galleries. This approach is inspired by robots.txt - just as robots.txt doesn't technically prevent access but signals to web crawlers whether content should be indexed, the `isListed` flag signals whether an image should appear in public galleries. The data remains on the blockchain and is technically accessible, but won't be displayed in the public interface.
 
 ### The pain of upgrading smart contracts
 
-I had already set up the smart contract to be upgradeable with [OpenZeppelin](https://docs.openzeppelin.com/upgrades-plugins/writing-upgradeable). However, initially I really enjoyed the work with [hardhat ignition](https://hardhat.org/ignition/docs/getting-started#overview) (a deployment tool) and [viem](https://viem.sh/) (a TypeScript library for Ethereum). So I tried to make the upgrades work with these tools for quite some time. The main issue was that Hardhat Ignition and Viem  don't have built-in support for OpenZeppelin's upgrade patterns.
+I had already set up the smart contract to be upgradeable with [OpenZeppelin](https://docs.openzeppelin.com/upgrades-plugins/writing-upgradeable). However, initially I really enjoyed the work with [hardhat ignition](https://hardhat.org/ignition/docs/getting-started#overview) (a deployment tool) and [viem](https://viem.sh/) (a TypeScript library for Ethereum). So I tried to make the upgrades work with these tools for quite some time. The main issue was that Hardhat Ignition and Viem don't have built-in support for OpenZeppelin's upgrade patterns.
 
 In the end it never really worked out and everything became much easier when I left hardhat ignition behind and simply used the [OpenZeppelin Hardhat Upgrades plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/overview). The OpenZeppelin Hardhat Upgrades plugin handles the complex proxy logic automatically, including storage layout validation and initialization functions.
 
 This unfortunately means that I have to change the deployment stack for the smart contracts completely. However, Claude Sonnet has proven to be a great friend for the corresponding code. I am still not proud about it, but it works good enough for now.
-
-
 
 ### Updating the website
 
@@ -59,7 +57,7 @@ The whole thing is about artwork. So you have the strong feeling that it should 
 Therefore, I decided to introduce an exponential increase in the mint price of the collector NFTs. The pricing follows an exponential progression where the price doubles with each batch of collectors:
 
 - Collectors 1-5: 0.001 ETH (base price)
-- Collectors 6-10: 0.002 ETH (2x base price)  
+- Collectors 6-10: 0.002 ETH (2x base price)
 - Collectors 11-15: 0.004 ETH (4x base price)
 - Collectors 16-20: 0.008 ETH (8x base price)
 - Collectors 21-25: 0.016 ETH (16x base price)
@@ -76,13 +74,13 @@ This can solve a number of open questions:
 
 ### More pain with upgrades
 
-As I worked on the `CollectorNFT`, I had to fix a few bugs and wanted to implement them in an upgrade. However, at that point I discovered that OpenZeppelin actually uses annotations to mark certain functions. And these annotations are really important when you work with the upgradeable plugins as they help you to secure the contract. They are not documented super well, but if you try to introduce them later on, they break the upgrades. So better introduce them early on. 
+As I worked on the `CollectorNFT`, I had to fix a few bugs and wanted to implement them in an upgrade. However, at that point I discovered that OpenZeppelin actually uses annotations to mark certain functions. And these annotations are really important when you work with the upgradeable plugins as they help you to secure the contract. They are not documented super well, but if you try to introduce them later on, they break the upgrades. So better introduce them early on.
 
-*The key lesson:* OpenZeppelin uses special annotations like `@custom:oz-upgrades-unsafe-allow` to mark functions that might be dangerous in upgradeable contracts. These annotations must be present from the beginning - adding them later breaks the upgrade mechanism because the plugin validates the entire contract history. 
+_The key lesson:_ OpenZeppelin uses special annotations like `@custom:oz-upgrades-unsafe-allow` to mark functions that might be dangerous in upgradeable contracts. These annotations must be present from the beginning - adding them later breaks the upgrade mechanism because the plugin validates the entire contract history.
 
 ## Conclusion
 
-It is super stimulating to work on this kind of topics as they allow me to play around with new ideas which have plenty of possibilities. 
+It is super stimulating to work on this kind of topics as they allow me to play around with new ideas which have plenty of possibilities.
 
 This project demonstrates how blockchain technology can create sustainable creator economies for AI-generated art. The combination of public galleries, collector NFTs, and exponential pricing creates interesting dynamics that traditional platforms can't replicate.
 

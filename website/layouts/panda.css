@@ -120,4 +120,30 @@
     overflow-x: auto;
     margin-bottom: 1em;
   }
+
+  /* Figure captions - minimal typography differentiation, stays connected to image */
+  figure {
+    margin: 1.5em 0; /* consistent spacing around figures */
+    text-align: center; /* center the entire figure container */
+  }
+
+  figure img {
+    display: block; /* make image a block element */
+    margin: 0 auto; /* center the image */
+    max-width: 100%; /* responsive behavior */
+    height: auto; /* maintain aspect ratio */
+  }
+
+  figcaption {
+    font-size: 0.875rem; /* slightly smaller than body text (14px) */
+    color: #666; /* muted but readable gray */
+    text-align: center; /* centered under image */
+    margin-top: 4px; /* very minimal gap from image */
+    margin-bottom: 1.2em; /* reasonable space before next content */
+    font-style: italic; /* subtle italic emphasis */
+    font-weight: 400; /* normal weight to keep it light */
+    line-height: 1.4; /* slightly more open for readability */
+    max-width: 100%; /* responsive behavior */
+    opacity: 0.9; /* very subtle transparency for softer appearance */
+  }
 }

@@ -166,16 +166,15 @@ export interface NFT {
 export interface NFTCardProps extends BaseComponentProps {
   /** Token ID of the NFT to display */
   tokenId: bigint;
-  /** Optional pre-loaded NFT data - if not provided, card will load data itself */
-  nft?: NFT;
+  /** Callback when image is clicked for modal display */
   onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
+  /** Callback when NFT is burned (only for private NFTs) */
   onNftBurned: () => void;
+  /** Whether this card should be highlighted (e.g., newly created) */
   isHighlighted?: boolean;
   /** Whether this card is shown in the public gallery (disables burn functionality) */
   isPublicView?: boolean;
-  /** Owner address for public NFTs - if not provided and isPublicView is true, will be loaded */
-  owner?: string;
-  /** Callback when the listed status changes */
+  /** Callback when the listed status changes (only for private NFTs) */
   onListedStatusChanged?: (tokenId: bigint, isListed: boolean) => void;
 }
 
@@ -211,13 +210,6 @@ export interface TabProps extends BaseComponentProps {
   isActive: boolean;
   /** Callback when tab is clicked */
   onClick: () => void;
-}
-
-/**
- * Public NFT with owner information
- */
-export interface PublicNFT extends NFT {
-  owner: string;
 }
 
 /**

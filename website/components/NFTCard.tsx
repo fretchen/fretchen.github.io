@@ -13,28 +13,24 @@ import * as styles from "../layouts/styles";
 // NFT Card Component
 export function NFTCard({
   tokenId,
-  nft: preloadedNft,
   onImageClick,
   onNftBurned,
   onListedStatusChanged,
   isHighlighted = false,
   isPublicView = false,
-  owner: preloadedOwner,
 }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
-  // NFT state - use preloaded data if available, otherwise load
-  const [nft, setNft] = useState<NFT>(
-    preloadedNft || {
-      tokenId,
-      tokenURI: "",
-      isLoading: true,
-    },
-  );
-  const [owner, setOwner] = useState<string>(preloadedOwner || "");
+  // NFT state - always load from blockchain
+  const [nft, setNft] = useState<NFT>({
+    tokenId,
+    tokenURI: "",
+    isLoading: true,
+  });
+  const [owner, setOwner] = useState<string>("");
 
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
@@ -71,16 +67,8 @@ export function NFTCard({
     }
   };
 
-  // Load NFT data if not preloaded
+  // Load NFT data from blockchain
   useEffect(() => {
-    if (preloadedNft) {
-      // Use preloaded data
-      setNft(preloadedNft);
-      setOwner(preloadedOwner || "");
-      return;
-    }
-
-    // Load NFT data
     const loadNFTData = async () => {
       try {
         setNft((prev) => ({ ...prev, isLoading: true, error: undefined }));
@@ -95,9 +83,9 @@ export function NFTCard({
 
         const tokenURI = tokenURIResult as string;
 
-        // Get owner if in public view and not preloaded
+        // Get owner if in public view
         let nftOwner = "";
-        if (isPublicView && !preloadedOwner) {
+        if (isPublicView) {
           const ownerResult = await publicClient.readContract({
             address: genAiNFTContractConfig.address,
             abi: genAiNFTContractConfig.abi,
@@ -146,7 +134,7 @@ export function NFTCard({
     };
 
     loadNFTData();
-  }, [tokenId, preloadedNft, preloadedOwner, isPublicView]); // Entfernt: genAiNFTContractConfig, publicClient
+  }, [tokenId, isPublicView]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({

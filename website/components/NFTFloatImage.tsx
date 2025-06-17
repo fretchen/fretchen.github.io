@@ -18,9 +18,36 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [nftTitle, setNftTitle] = useState<string | null>(null);
+  const [nftDescription, setNftDescription] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
+
+  // Extract prompt from description for display
+  const getPromptPreview = (description: string | null): string => {
+    if (!description) return "";
+    
+    // Look for "Prompt:" in the description and extract what follows
+    const promptMatch = description.match(/Prompt:\s*(.+?)(?:\n|$)/i);
+    if (promptMatch && promptMatch[1]) {
+      const prompt = promptMatch[1].trim();
+      // Truncate to ~60 characters for a good preview
+      return prompt.length > 60 ? `${prompt.substring(0, 60)}...` : prompt;
+    }
+    
+    // Fallback: use first part of description
+    const truncated = description.substring(0, 60);
+    return truncated.length < description.length ? `${truncated}...` : truncated;
+  };
+
+  // Create descriptive title for the image
+  const getImageTitle = (): string => {
+    const promptPreview = getPromptPreview(nftDescription);
+    if (promptPreview) {
+      return `Article Illustration: ${promptPreview}`;
+    }
+    return nftTitle ? `Article Illustration: ${nftTitle}` : `Article Illustration: NFT #${tokenId}`;
+  };
 
   // Memoize the public client
   const publicClient = useMemo(
@@ -79,6 +106,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
         if (metadata) {
           setImageUrl(metadata.image || null);
           setNftTitle(metadata.name || null);
+          setNftDescription(metadata.description || null);
         }
 
         setIsLoading(false);
@@ -117,7 +145,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   return (
     <div className={styles.nftFloat.container}>
       <img src={imageUrl} alt={nftTitle || `NFT #${tokenId}`} className={styles.nftFloat.image} />
-      {nftTitle && <p className={styles.nftFloat.caption}>{nftTitle}</p>}
+      <p className={styles.nftFloat.caption}>{getImageTitle()}</p>
     </div>
   );
 }

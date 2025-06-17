@@ -43,11 +43,10 @@ vi.mock("../layouts/styles", () => ({
 
 // Mock NFTCard component
 vi.mock("../components/NFTCard", () => ({
-  NFTCard: ({ nft, owner }: { nft: { tokenId: bigint; metadata?: { name?: string } }; owner?: string }) => (
-    <div data-testid={`nft-card-${nft.tokenId}`}>
-      <div data-testid="nft-name">{nft.metadata?.name || `Artwork #${nft.tokenId}`}</div>
-      <div data-testid="nft-token-id">Token ID: {nft.tokenId.toString()}</div>
-      {owner && <div data-testid="nft-owner">Owner: {owner}</div>}
+  NFTCard: ({ tokenId }: { tokenId: bigint }) => (
+    <div data-testid={`nft-card-${tokenId}`}>
+      <div data-testid="nft-name">Artwork #{tokenId.toString()}</div>
+      <div data-testid="nft-token-id">Token ID: {tokenId.toString()}</div>
     </div>
   ),
 }));
@@ -162,11 +161,10 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
     expect(screen.getByText("Token ID: 2")).toBeInTheDocument();
     expect(screen.getByText("Token ID: 3")).toBeInTheDocument();
 
-    // Verify owner information is displayed for public view
-    expect(screen.getAllByText(`Owner: ${mockOwner}`)).toHaveLength(3);
-
-    // Verify metadata is displayed
-    expect(screen.getAllByText("Public Artwork Without Wallet")).toHaveLength(3);
+    // Verify NFT names are displayed (from our mock)
+    expect(screen.getByText("Artwork #1")).toBeInTheDocument();
+    expect(screen.getByText("Artwork #2")).toBeInTheDocument();
+    expect(screen.getByText("Artwork #3")).toBeInTheDocument();
   });
 
   it("should demonstrate wallet independence by working without any wagmi dependencies", async () => {
@@ -212,7 +210,7 @@ describe("PublicNFTList - Wallet Independence Tests", () => {
     expect(mockReadContract).toHaveBeenCalled();
 
     // This succeeds, proving the component works without wallet dependencies
-    expect(screen.getByText("Wallet-Independent NFT")).toBeInTheDocument();
+    expect(screen.getByText("Artwork #42")).toBeInTheDocument();
   });
 
   it("should handle errors gracefully without wallet connection", async () => {

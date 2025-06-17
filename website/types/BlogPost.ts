@@ -3,4 +3,5 @@ export interface BlogPost {
   content: string;
   publishing_date?: string;
   order?: number;
+  tokenID?: number;
 }

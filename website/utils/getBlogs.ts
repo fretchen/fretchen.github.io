@@ -44,6 +44,12 @@ export const getBlogs = ({ blogDirectory = "./blog", sortBy = "publishing_date" 
         if (order) {
           blogPost.order = parseInt(order[1]);
         }
+
+        // find a line in front matter that starts with tokenID:
+        const tokenID = frontContent.match(/tokenID: (.*)/);
+        if (tokenID) {
+          blogPost.tokenID = parseInt(tokenID[1]);
+        }
         return blogPost;
       } else {
         return {

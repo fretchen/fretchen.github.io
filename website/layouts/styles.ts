@@ -951,6 +951,36 @@ export const nftCard = {
   }),
 };
 
+// Hero Card styles
+export const heroCard = {
+  container: css({
+    backgroundColor: "white",
+    borderRadius: "lg",
+    border: "1px solid token(colors.border)",
+    padding: "xl",
+    marginY: "xl",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+  }),
+  title: css({
+    fontSize: "2xl",
+    fontWeight: "bold",
+    color: "text",
+    marginBottom: "md",
+    textAlign: "center",
+  }),
+  description: css({
+    fontSize: "lg",
+    color: "gray.600",
+    marginBottom: "lg",
+    textAlign: "center",
+    lineHeight: "1.6",
+  }),
+  nftContainer: css({
+    maxWidth: "400px",
+    margin: "0 auto",
+  }),
+};
+
 // Page-specific styles for blog entries
 export const pageContainer = css({
   maxWidth: "900px",

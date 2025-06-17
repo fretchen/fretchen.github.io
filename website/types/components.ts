@@ -164,13 +164,16 @@ export interface NFT {
  * Props for the NFTCard component
  */
 export interface NFTCardProps extends BaseComponentProps {
-  nft: NFT;
+  /** Token ID of the NFT to display */
+  tokenId: bigint;
+  /** Optional pre-loaded NFT data - if not provided, card will load data itself */
+  nft?: NFT;
   onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
   onNftBurned: () => void;
   isHighlighted?: boolean;
   /** Whether this card is shown in the public gallery (disables burn functionality) */
   isPublicView?: boolean;
-  /** Owner address for public NFTs */
+  /** Owner address for public NFTs - if not provided and isPublicView is true, will be loaded */
   owner?: string;
   /** Callback when the listed status changes */
   onListedStatusChanged?: (tokenId: bigint, isListed: boolean) => void;

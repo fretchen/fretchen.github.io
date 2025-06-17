@@ -7,7 +7,6 @@ import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import TitleBar from "./TitleBar";
 import { Link } from "./Link";
-import { NFTBadge } from "./NFTBadge";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post } from "../layouts/styles";
 import "katex/dist/katex.min.css";
@@ -26,17 +25,7 @@ export function Post({ title, content, publishing_date, prevPost, nextPost, base
   return (
     <>
       <TitleBar title={title} />
-      {publishing_date && (
-        <div className={post.publishingDate}>
-          Published on: {publishing_date}
-          {tokenID && (
-            <>
-              {" • "}
-              <NFTBadge tokenId={tokenID} />
-            </>
-          )}
-        </div>
-      )}
+      {publishing_date && <p className={post.publishingDate}>Published on: {publishing_date}</p>}
 
       <div className={post.contentContainer}>
         {tokenID && <NFTFloatImage tokenId={tokenID} />}

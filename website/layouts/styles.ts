@@ -578,9 +578,6 @@ export const post = {
     color: "gray.600",
     fontSize: "sm",
     marginBottom: "md",
-    display: "flex",
-    alignItems: "center",
-    gap: "xs",
   }),
   contentContainer: css({
     // Container to handle floating layout
@@ -959,70 +956,6 @@ export const nftCard = {
   }),
 };
 
-// Hero Card styles
-export const heroCard = {
-  container: css({
-    borderTop: "1px solid token(colors.border)",
-    borderBottom: "1px solid token(colors.border)",
-    paddingY: "lg",
-    marginY: "lg",
-    backgroundColor: "rgba(249, 250, 251, 0.5)",
-  }),
-  title: css({
-    fontSize: "lg",
-    fontWeight: "medium",
-    color: "text",
-    marginBottom: "sm",
-    textAlign: "center",
-  }),
-  description: css({
-    fontSize: "sm",
-    color: "gray.600",
-    marginBottom: "md",
-    textAlign: "center",
-    lineHeight: "1.5",
-  }),
-  nftContainer: css({
-    maxWidth: "350px",
-    margin: "0 auto",
-  }),
-  loading: css({
-    textAlign: "center",
-    padding: "md",
-    color: "gray.600",
-  }),
-  error: css({
-    textAlign: "center",
-    padding: "md",
-    color: "red.600",
-    fontSize: "sm",
-  }),
-  imageContainer: css({
-    textAlign: "center",
-  }),
-  image: css({
-    width: "100%",
-    height: "auto",
-    borderRadius: "md",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-  }),
-  nftTitle: css({
-    fontSize: "sm",
-    color: "gray.700",
-    marginTop: "sm",
-    fontWeight: "medium",
-  }),
-  placeholder: css({
-    textAlign: "center",
-    padding: "lg",
-    color: "gray.500",
-    fontSize: "sm",
-    backgroundColor: "gray.50",
-    borderRadius: "md",
-    border: "1px dashed token(colors.gray.300)",
-  }),
-};
-
 // Page-specific styles for blog entries
 export const pageContainer = css({
   maxWidth: "900px",
@@ -1104,64 +1037,6 @@ export const tabs = {
   }),
   hiddenPanel: css({
     display: "none",
-  }),
-};
-
-// NFT Badge styles for minimal badge-style display
-export const nftBadge = {
-  container: css({
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "xs",
-    padding: "xs sm",
-    backgroundColor: "rgba(249, 250, 251, 1)",
-    border: "1px solid token(colors.border)",
-    borderRadius: "full",
-    fontSize: "xs",
-    color: "gray.600",
-    transition: "all 0.2s ease",
-    _hover: {
-      backgroundColor: "rgba(243, 244, 246, 1)",
-      borderColor: "gray.300",
-    },
-  }),
-  image: css({
-    width: "24px",
-    height: "24px",
-    borderRadius: "full",
-    objectFit: "cover",
-    border: "1px solid rgba(0, 0, 0, 0.1)",
-  }),
-  text: css({
-    fontSize: "xs",
-    fontWeight: "medium",
-    color: "gray.700",
-  }),
-  loading: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "24px",
-    height: "24px",
-  }),
-  spinner: css({
-    width: "12px",
-    height: "12px",
-    border: "1px solid token(colors.gray.300)",
-    borderTop: "1px solid token(colors.brand)",
-    borderRadius: "full",
-    animation: "spin 1s linear infinite",
-  }),
-  placeholder: css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "24px",
-    height: "24px",
-    backgroundColor: "gray.100",
-    borderRadius: "full",
-    fontSize: "10px",
-    color: "gray.500",
   }),
 };
 

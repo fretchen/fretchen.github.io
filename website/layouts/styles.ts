@@ -954,30 +954,64 @@ export const nftCard = {
 // Hero Card styles
 export const heroCard = {
   container: css({
-    backgroundColor: "white",
-    borderRadius: "lg",
-    border: "1px solid token(colors.border)",
-    padding: "xl",
-    marginY: "xl",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+    borderTop: "1px solid token(colors.border)",
+    borderBottom: "1px solid token(colors.border)",
+    paddingY: "lg",
+    marginY: "lg",
+    backgroundColor: "rgba(249, 250, 251, 0.5)",
   }),
   title: css({
-    fontSize: "2xl",
-    fontWeight: "bold",
+    fontSize: "lg",
+    fontWeight: "medium",
     color: "text",
-    marginBottom: "md",
+    marginBottom: "sm",
     textAlign: "center",
   }),
   description: css({
-    fontSize: "lg",
+    fontSize: "sm",
     color: "gray.600",
-    marginBottom: "lg",
+    marginBottom: "md",
     textAlign: "center",
-    lineHeight: "1.6",
+    lineHeight: "1.5",
   }),
   nftContainer: css({
-    maxWidth: "400px",
+    maxWidth: "350px",
     margin: "0 auto",
+  }),
+  loading: css({
+    textAlign: "center",
+    padding: "md",
+    color: "gray.600",
+  }),
+  error: css({
+    textAlign: "center",
+    padding: "md",
+    color: "red.600",
+    fontSize: "sm",
+  }),
+  imageContainer: css({
+    textAlign: "center",
+  }),
+  image: css({
+    width: "100%",
+    height: "auto",
+    borderRadius: "md",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+  }),
+  nftTitle: css({
+    fontSize: "sm",
+    color: "gray.700",
+    marginTop: "sm",
+    fontWeight: "medium",
+  }),
+  placeholder: css({
+    textAlign: "center",
+    padding: "lg",
+    color: "gray.500",
+    fontSize: "sm",
+    backgroundColor: "gray.50",
+    borderRadius: "md",
+    border: "1px dashed token(colors.gray.300)",
   }),
 };
 

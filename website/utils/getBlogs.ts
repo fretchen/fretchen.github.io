@@ -6,8 +6,13 @@ import fs from "fs";
 import path from "path";
 import { BlogPost } from "../types/BlogPost";
 import { BlogOptions } from "../types/BlogOptions";
+import { loadMultipleNFTMetadata } from "./nftLoader";
 
-export const getBlogs = ({ blogDirectory = "./blog", sortBy = "publishing_date" }: BlogOptions): BlogPost[] => {
+export const getBlogs = async ({
+  blogDirectory = "./blog",
+  sortBy = "publishing_date",
+  loadNFTs = false,
+}: BlogOptions & { loadNFTs?: boolean }): Promise<BlogPost[]> => {
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles
     .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))
@@ -59,6 +64,32 @@ export const getBlogs = ({ blogDirectory = "./blog", sortBy = "publishing_date" 
       }
     });
 
+  // Load NFT metadata if requested
+  if (loadNFTs) {
+    console.log("Loading NFT metadata for blogs...");
+    
+    // Extract all tokenIDs from blogs
+    const tokenIDs = blogs.filter((blog) => blog.tokenID).map((blog) => blog.tokenID!);
+    
+    if (tokenIDs.length > 0) {
+      console.log(`Found ${tokenIDs.length} blogs with NFT tokens: ${tokenIDs.join(", ")}`);
+      
+      // Load all NFT metadata
+      const nftMetadataMap = await loadMultipleNFTMetadata(tokenIDs);
+      
+      // Add NFT metadata to blogs
+      blogs.forEach((blog) => {
+        if (blog.tokenID && nftMetadataMap[blog.tokenID]) {
+          blog.nftMetadata = nftMetadataMap[blog.tokenID];
+        }
+      });
+      
+      console.log(`Successfully loaded metadata for ${Object.keys(nftMetadataMap).length} NFTs`);
+    } else {
+      console.log("No blogs with NFT tokens found");
+    }
+  }
+
   if (sortBy === "order") {
     // sort the blogs by order
     blogs.sort((a, b) => {
@@ -84,4 +115,7 @@ export const getBlogs = ({ blogDirectory = "./blog", sortBy = "publishing_date" 
   return blogs;
 };
 
-getBlogs({ blogDirectory: "./blog", sortBy: "publishing_date" });
+// Example usage - can be called with or without NFT loading
+// Uncomment the line below to test NFT loading:
+// getBlogs({ blogDirectory: "./blog", sortBy: "publishing_date", loadNFTs: true });
+getBlogs({ blogDirectory: "./blog", sortBy: "publishing_date", loadNFTs: true });

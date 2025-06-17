@@ -202,12 +202,7 @@ describe("NFTCard Component", () => {
    * Tests component with different tokenId values
    */
   it("should handle different tokenId values", () => {
-    const testCases = [
-      BigInt(0),
-      BigInt(1),
-      BigInt(999999),
-      BigInt("0x1a2b3c4d5e6f"),
-    ];
+    const testCases = [BigInt(0), BigInt(1), BigInt(999999), BigInt("0x1a2b3c4d5e6f")];
 
     testCases.forEach((tokenId) => {
       expect(() => {

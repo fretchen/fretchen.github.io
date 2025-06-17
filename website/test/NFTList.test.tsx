@@ -62,7 +62,7 @@ describe("NFTList Component", () => {
     const validProps: NFTListProps = {
       onNewNFTDisplayed: vi.fn(),
     };
-    
+
     expect(validProps).toBeDefined();
     expect(typeof validProps.onNewNFTDisplayed).toBe("function");
   });
@@ -97,7 +97,7 @@ describe("NFTList Component", () => {
 
     expect(propsWithCallback.onNewNFTDisplayed).toBe(mockCallback);
     expect(typeof propsWithCallback.onNewNFTDisplayed).toBe("function");
-    
+
     // Test that callback can be called
     propsWithCallback.onNewNFTDisplayed?.();
     expect(mockCallback).toHaveBeenCalledTimes(1);
@@ -191,7 +191,7 @@ describe("NFTList Component", () => {
     expect(fullProps.newlyCreatedNFT).toBeDefined();
     expect(fullProps.onNewNFTDisplayed).toBeDefined();
     expect(fullProps.className).toBeDefined();
-    
+
     // Validate types
     expect(typeof fullProps.newlyCreatedNFT!.tokenId).toBe("bigint");
     expect(typeof fullProps.newlyCreatedNFT!.imageUrl).toBe("string");

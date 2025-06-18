@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "./Link";
 import { NFTPreviewImage } from "./NFTPreviewImage";
-import { NFTBadge } from "./NFTBadge";
+import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
 import { entryList } from "../layouts/styles";
 
@@ -56,31 +56,28 @@ const EntryList: React.FC<EntryListProps> = ({
             onMouseMove={handleMouseMove}
           >
             <div className={entryList.entryContent}>
+              {/* Large NFT image on the left side of the entire entry */}
+              {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
+                <EntryNftImage
+                  tokenId={blog.tokenID}
+                  fallbackImageUrl={blog.nftMetadata?.imageUrl}
+                  nftName={blog.nftMetadata?.name}
+                />
+              )}
+
+              {/* Text content */}
               <div className={entryList.entryText}>
-                {/* Displays the date with NFT badge */}
-                {showDate && blog.publishing_date && (
-                  <p className={entryList.entryDate}>
-                    {blog.publishing_date}
-                    {/* NFT Badge neben dem Datum mit Bild */}
-                    {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
-                      <NFTBadge
-                        tokenId={blog.tokenID}
-                        fallbackImageUrl={blog.nftMetadata?.imageUrl}
-                        nftName={blog.nftMetadata?.name}
-                        textMode="illustration"
-                        showText={true}
-                      />
-                    )}
-                  </p>
-                )}
+                {/* Date */}
+                {showDate && blog.publishing_date && <p className={entryList.entryDate}>{blog.publishing_date}</p>}
 
-                <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>
-                  <span className={entryList.entryTitleText}>{blog.title}</span>
-                </h3>
+                {/* Title */}
+                <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
 
+                {/* Description */}
                 {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
               </div>
 
+              {/* Read more link */}
               <Link href={`${basePath}/${linkIndex}`}>Read more →</Link>
             </div>
 

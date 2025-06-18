@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { createPublicClient, http } from "viem";
 import { optimism } from "viem/chains";
 import { getGenAiNFTContractConfig } from "../utils/getChain";
+import { extractPromptFromDescription } from "../utils/nftLoader";
 import * as styles from "../layouts/styles";
 
 interface NFTFloatImageProps {
@@ -17,23 +18,13 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [nftDescription, setNftDescription] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  // Memoize the contract config to prevent infinite re-renders
+  const genAiNFTContractConfig = useMemo(() => getGenAiNFTContractConfig(), []);
 
-  // Extract prompt from description for display
+  // Extract prompt from description for display (reusing utility function)
   const getPromptPreview = (description: string | null): string => {
     if (!description) return "";
-
-    // Look for "Prompt:" in the description and extract what follows
-    const promptMatch = description.match(/Prompt:\s*(.+?)(?:\n|$)/i);
-    if (promptMatch && promptMatch[1]) {
-      const prompt = promptMatch[1].trim();
-      // Truncate to ~60 characters for a good preview
-      return prompt.length > 60 ? `${prompt.substring(0, 60)}...` : prompt;
-    }
-
-    // Fallback: use first part of description
-    const truncated = description.substring(0, 60);
-    return truncated.length < description.length ? `${truncated}...` : truncated;
+    return extractPromptFromDescription(description, 60);
   };
 
   // Create descriptive title for the image

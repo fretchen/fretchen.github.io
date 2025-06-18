@@ -579,6 +579,11 @@ export const post = {
     fontSize: "sm",
     marginBottom: "md",
   }),
+  contentContainer: css({
+    // Container to handle floating layout
+    overflow: "hidden", // Clears the float
+    lineHeight: "1.6",
+  }),
   navigation: css({
     display: "flex",
     justifyContent: "space-between",
@@ -631,10 +636,27 @@ export const entryList = {
     display: "flex",
     flexDirection: "row",
     gap: "4",
-    alignItems: "center",
+    alignItems: "flex-start",
+  }),
+  entryNftImage: css({
+    width: "20", // 80px thumbnail size
+    height: "20", // 80px thumbnail size
+    borderRadius: "xl",
+    objectFit: "cover",
+    border: "1px solid",
+    borderColor: "gray.300",
+    backgroundColor: "gray.100",
+    flexShrink: 0,
   }),
   entryText: css({
     flex: 1,
+    display: "flex",
+    flexDirection: "column",
+  }),
+  entryTextContent: css({
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
   }),
   entryDate: css({
     margin: "0",
@@ -1032,5 +1054,83 @@ export const tabs = {
   }),
   hiddenPanel: css({
     display: "none",
+  }),
+};
+
+// NFT Float Image styles for left-floating editorial image
+export const nftFloat = {
+  container: css({
+    float: "left",
+    width: "220px",
+    marginRight: "lg",
+    marginBottom: "md",
+    marginTop: "xs",
+    // Clear float for mobile
+    "@media (max-width: 768px)": {
+      float: "none",
+      width: "100%",
+      maxWidth: "300px",
+      margin: "md auto",
+      display: "block",
+    },
+  }),
+  image: css({
+    width: "100%",
+    height: "auto",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    display: "block",
+  }),
+  caption: css({
+    fontSize: "xs",
+    color: "gray.600",
+    marginTop: "xs",
+    textAlign: "center",
+    lineHeight: "1.3",
+  }),
+  loading: css({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "200px",
+    backgroundColor: "gray.50",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+  }),
+  spinner: css({
+    width: "20px",
+    height: "20px",
+    border: "2px solid token(colors.gray.300)",
+    borderTop: "2px solid token(colors.brand)",
+    borderRadius: "full",
+    animation: "spin 1s linear infinite",
+  }),
+  loadingText: css({
+    fontSize: "xs",
+    color: "gray.600",
+    marginTop: "xs",
+  }),
+  placeholder: css({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "200px",
+    backgroundColor: "gray.50",
+    borderRadius: "sm",
+    border: "1px dashed token(colors.gray.300)",
+    textAlign: "center",
+  }),
+  placeholderText: css({
+    fontSize: "sm",
+    color: "gray.700",
+    fontWeight: "medium",
+  }),
+  errorText: css({
+    fontSize: "xs",
+    color: "gray.500",
+    marginTop: "xs",
   }),
 };

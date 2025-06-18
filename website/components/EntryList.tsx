@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Link } from "./Link";
+import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
 import { entryList } from "../layouts/styles";
 
 /**
- * Component that renders a list of blog entries with links
+ * Component that renders a list of blog entries with NFT images and links
  */
 const EntryList: React.FC<EntryListProps> = ({
   blogs,
@@ -33,15 +34,28 @@ const EntryList: React.FC<EntryListProps> = ({
         return (
           <div key={linkIndex} className={entryList.entry}>
             <div className={entryList.entryContent}>
+              {/* Large NFT image on the left side of the entire entry */}
+              {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
+                <EntryNftImage
+                  tokenId={blog.tokenID}
+                  fallbackImageUrl={blog.nftMetadata?.imageUrl}
+                  nftName={blog.nftMetadata?.name}
+                />
+              )}
+
+              {/* Text content */}
               <div className={entryList.entryText}>
-                {/* Displays the date if showDate is enabled and a date exists */}
+                {/* Date */}
                 {showDate && blog.publishing_date && <p className={entryList.entryDate}>{blog.publishing_date}</p>}
 
+                {/* Title */}
                 <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
 
+                {/* Description */}
                 {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
               </div>
 
+              {/* Read more link */}
               <Link href={`${basePath}/${linkIndex}`}>Read more →</Link>
             </div>
           </div>

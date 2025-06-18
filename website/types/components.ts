@@ -58,6 +58,16 @@ export interface CardProps extends BaseComponentProps {
 }
 
 /**
+ * NFT metadata structure
+ */
+export interface NFTMetadata {
+  imageUrl?: string;
+  prompt?: string;
+  name?: string;
+  description?: string;
+}
+
+/**
  * Represents a blog entry with optional metadata
  */
 export interface BlogEntry {
@@ -66,6 +76,9 @@ export interface BlogEntry {
   description?: string;
   slug?: string;
   order?: number;
+  content?: string;
+  tokenID?: number;
+  nftMetadata?: NFTMetadata;
 }
 
 /**

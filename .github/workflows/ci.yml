@@ -5,11 +5,13 @@ on:
     branches: ["main"]
     paths:
       - 'website/**'
+      - 'eth/**'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: ["main"]
     paths:
       - 'website/**'
+      - 'eth/**'
       - '.github/workflows/ci.yml'
 
 permissions:
@@ -18,9 +20,6 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: website
 
     steps:
       - name: Checkout repository
@@ -29,19 +28,31 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: "20"
 
-      - name: Install dependencies
-        run: npm install --include=dev
+      # Install website dependencies
+      - name: Install website dependencies
+        run: |
+          cd website
+          npm install --include=dev
 
       - name: Lint
-        run: npm run lint
+        run: |
+          cd website
+          npm run lint
 
       - name: Test build
-        run: npm run build
+        run: |
+          cd website
+          npm ci
+          npm run build
 
       - name: Run tests
-        run: npm test
+        run: |
+          cd website
+          npm test
 
       - name: Test coverage
-        run: npm run test:coverage
+        run: |
+          cd website
+          npm run test:coverage

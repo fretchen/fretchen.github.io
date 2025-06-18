@@ -21,12 +21,16 @@ const App: React.FC = function () {
   const prevPost = prevBlog ? { title: prevBlog.title, id: id - 1 } : null;
   const nextPost = nextBlog ? { title: nextBlog.title, id: id + 1 } : null;
 
+  console.log("Blog page rendering blog:", blog);
+  console.log("Blog tokenID:", blog.tokenID);
+
   return (
     <div className={pageContainer}>
       <Post
         title={blog.title}
         content={blog.content}
         publishing_date={blog.publishing_date}
+        tokenID={blog.tokenID}
         prevPost={prevPost}
         nextPost={nextPost}
         basePath="/blog"

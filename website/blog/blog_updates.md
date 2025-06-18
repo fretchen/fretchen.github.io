@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-05-26
 title: Updates to the website
+tokenID: 26
 ---
 
 It has been roughly 6 months since I started this website. All in all, it is a enjoyable experience to have this super flexible stack on which I can simply play around in the way I want. So it is time to summarize the most important changes and updates on the stack over the last few months.

@@ -639,8 +639,8 @@ export const entryList = {
     alignItems: "flex-start",
   }),
   entryNftImage: css({
-    width: "20",
-    height: "20",
+    width: "20px",
+    height: "20px",
     borderRadius: "xl",
     objectFit: "cover",
     border: "1px solid",

@@ -14,14 +14,6 @@ import "katex/dist/katex.min.css";
 import Giscus from "@giscus/react";
 
 export function Post({ title, content, publishing_date, prevPost, nextPost, basePath = "", tokenID }: PostProps) {
-  console.log("Post component rendering with props:", { title, tokenID, publishing_date });
-
-  if (tokenID) {
-    console.log("Rendering NFTHeroCard with tokenID:", tokenID);
-  } else {
-    console.log("No tokenID provided, skipping NFTHeroCard");
-  }
-
   return (
     <>
       <TitleBar title={title} />

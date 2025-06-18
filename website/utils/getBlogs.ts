@@ -51,7 +51,7 @@ export const getBlogs = async ({
         }
 
         // find a line in front matter that starts with tokenID:
-        const tokenID = frontContent.match(/tokenID: (.*)/);
+        const tokenID = frontContent.match(/tokenID:\s*(\d+)/);
         if (tokenID) {
           blogPost.tokenID = parseInt(tokenID[1]);
         }

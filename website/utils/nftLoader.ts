@@ -61,21 +61,38 @@ export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | nu
 }
 
 /**
- * Load multiple NFT metadata entries
+ * Load multiple NFT metadata entries with controlled concurrency
+ * @param tokenIDs Array of token IDs to load
+ * @param concurrency Maximum number of concurrent requests (default: 3)
  */
-export async function loadMultipleNFTMetadata(tokenIDs: number[]): Promise<Record<number, NFTMetadata>> {
+export async function loadMultipleNFTMetadata(
+  tokenIDs: number[],
+  concurrency = 3,
+): Promise<Record<number, NFTMetadata>> {
   const results: Record<number, NFTMetadata> = {};
 
-  // Simple sequential loading to avoid overwhelming the blockchain RPC
-  for (const tokenID of tokenIDs) {
-    console.log(`Loading NFT metadata for token ${tokenID}...`);
-    const metadata = await loadNFTMetadata(tokenID);
-    if (metadata) {
-      results[tokenID] = metadata;
-    }
+  // Helper function to process a batch of tokens
+  const processBatch = async (batch: number[]): Promise<void> => {
+    const promises = batch.map(async (tokenID) => {
+      console.log(`Loading NFT metadata for token ${tokenID}...`);
+      const metadata = await loadNFTMetadata(tokenID);
+      if (metadata) {
+        results[tokenID] = metadata;
+      }
+    });
 
-    // Small delay to be respectful to RPC endpoints
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await Promise.all(promises);
+  };
+
+  // Process tokens in batches with controlled concurrency
+  for (let i = 0; i < tokenIDs.length; i += concurrency) {
+    const batch = tokenIDs.slice(i, i + concurrency);
+    await processBatch(batch);
+    
+    // Small delay between batches to be respectful to RPC endpoints
+    if (i + concurrency < tokenIDs.length) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
   }
 
   return results;

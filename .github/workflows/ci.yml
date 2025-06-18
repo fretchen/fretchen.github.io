@@ -36,11 +36,6 @@ jobs:
           cd eth
           npm ci
 
-      - name: Generate ABIs
-        run: |
-          cd eth
-          npm run compile
-
       # Install website dependencies
       - name: Install website dependencies
         run: |

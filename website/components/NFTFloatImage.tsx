@@ -68,8 +68,6 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   };
 
   useEffect(() => {
-    console.log("NFTFloatImage loading tokenId:", tokenId);
-
     const loadNFTData = async () => {
       try {
         setIsLoading(true);
@@ -84,11 +82,9 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
         });
 
         const tokenURI = tokenURIResult as string;
-        console.log("Fetched tokenURI:", tokenURI);
 
         // Fetch metadata
         const metadata = await fetchNFTMetadata(tokenURI);
-        console.log("Fetched metadata:", metadata);
 
         if (metadata) {
           setImageUrl(metadata.image || null);

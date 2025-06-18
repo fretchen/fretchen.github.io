@@ -36,9 +36,21 @@ jobs:
 
       - name: Lint
         run: npm run lint
+      
+      - name: Debug filesystem
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Directory structure:"
+          find . -name "*.ts" -o -name "*.js" | grep -E "(CollectorNFT|abi)" | head -20
+          echo "Specific ABI file check:"
+          ls -la ../eth/abi/contracts/ || echo "Directory not found"
+          ls -la ../eth/abi/contracts/CollectorNFTv1* || echo "CollectorNFTv1 files not found"
 
       - name: Test build
-        run: npm run build
+        run: |
+          npm ci
+          npm run build
 
       - name: Run tests
         run: npm test

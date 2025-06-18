@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-06-18
 title: A public gallery of AI generated images
+tokenID: 23
 ---
 
 In the [previous blog post](./11), I described how I set up an image generator that quite nicely fulfills my needs: The generator in the background is open-source, I have full cost control, I made the system easily usable to others and it is really privacy-conserving. However, I could not resist the temptation to make it easier for others to see some of the images and to try to set up small incentive systems in the form of collector NFTs. The main changes are:

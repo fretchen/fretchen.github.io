@@ -7,20 +7,24 @@ import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import TitleBar from "./TitleBar";
 import { Link } from "./Link";
+import { NFTFloatImage } from "./NFTFloatImage";
 import { post } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 
 import Giscus from "@giscus/react";
 
-export function Post({ title, content, publishing_date, prevPost, nextPost, basePath = "" }: PostProps) {
+export function Post({ title, content, publishing_date, prevPost, nextPost, basePath = "", tokenID }: PostProps) {
   return (
     <>
       <TitleBar title={title} />
       {publishing_date && <p className={post.publishingDate}>Published on: {publishing_date}</p>}
 
-      <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-        {content}
-      </Markdown>
+      <div className={post.contentContainer}>
+        {tokenID && <NFTFloatImage tokenId={tokenID} />}
+        <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+          {content}
+        </Markdown>
+      </div>
 
       {/* Navigation zwischen Posts, nur angezeigt wenn vorhanden */}
       {(prevPost || nextPost) && (

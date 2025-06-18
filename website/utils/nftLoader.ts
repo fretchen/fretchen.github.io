@@ -88,7 +88,7 @@ export async function loadMultipleNFTMetadata(
   for (let i = 0; i < tokenIDs.length; i += concurrency) {
     const batch = tokenIDs.slice(i, i + concurrency);
     await processBatch(batch);
-    
+
     // Small delay between batches to be respectful to RPC endpoints
     if (i + concurrency < tokenIDs.length) {
       await new Promise((resolve) => setTimeout(resolve, 50));

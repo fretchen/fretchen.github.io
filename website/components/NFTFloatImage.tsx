@@ -8,11 +8,7 @@ interface NFTFloatImageProps {
   tokenId: number;
 }
 
-interface NFTMetadata {
-  name?: string;
-  description?: string;
-  image?: string;
-}
+import { NFTMetadata } from "../types/NFTMetadata";
 
 export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [isLoading, setIsLoading] = useState(true);

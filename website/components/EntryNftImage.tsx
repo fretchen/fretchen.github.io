@@ -18,7 +18,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
     const loadNFTImage = async () => {
       try {
         setIsLoading(true);
-        
+
         if (fallbackImageUrl) {
           setImageUrl(fallbackImageUrl);
           setIsLoading(false);

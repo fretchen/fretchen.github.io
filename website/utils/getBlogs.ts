@@ -67,23 +67,23 @@ export const getBlogs = async ({
   // Load NFT metadata if requested
   if (loadNFTs) {
     console.log("Loading NFT metadata for blogs...");
-    
+
     // Extract all tokenIDs from blogs
     const tokenIDs = blogs.filter((blog) => blog.tokenID).map((blog) => blog.tokenID!);
-    
+
     if (tokenIDs.length > 0) {
       console.log(`Found ${tokenIDs.length} blogs with NFT tokens: ${tokenIDs.join(", ")}`);
-      
+
       // Load all NFT metadata
       const nftMetadataMap = await loadMultipleNFTMetadata(tokenIDs);
-      
+
       // Add NFT metadata to blogs
       blogs.forEach((blog) => {
         if (blog.tokenID && nftMetadataMap[blog.tokenID]) {
           blog.nftMetadata = nftMetadataMap[blog.tokenID];
         }
       });
-      
+
       console.log(`Successfully loaded metadata for ${Object.keys(nftMetadataMap).length} NFTs`);
     } else {
       console.log("No blogs with NFT tokens found");

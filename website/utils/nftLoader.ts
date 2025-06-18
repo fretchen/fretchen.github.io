@@ -30,7 +30,7 @@ export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | nu
     });
 
     const tokenURI = tokenURIResult as string;
-    
+
     // Skip file:// URLs as they can't be fetched in this environment
     if (tokenURI.startsWith("file://")) {
       console.warn(`Cannot fetch file:// URL for token ${tokenID}:`, tokenURI);
@@ -65,7 +65,7 @@ export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | nu
  */
 export async function loadMultipleNFTMetadata(tokenIDs: number[]): Promise<Record<number, NFTMetadata>> {
   const results: Record<number, NFTMetadata> = {};
-  
+
   // Simple sequential loading to avoid overwhelming the blockchain RPC
   for (const tokenID of tokenIDs) {
     console.log(`Loading NFT metadata for token ${tokenID}...`);
@@ -73,11 +73,11 @@ export async function loadMultipleNFTMetadata(tokenIDs: number[]): Promise<Recor
     if (metadata) {
       results[tokenID] = metadata;
     }
-    
+
     // Small delay to be respectful to RPC endpoints
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  
+
   return results;
 }
 
@@ -90,7 +90,7 @@ function extractPromptFromDescription(description: string): string {
   if (promptMatch && promptMatch[1]) {
     return promptMatch[1].trim();
   }
-  
+
   // Fallback: use first part of description
   const truncated = description.substring(0, 100);
   return truncated.length < description.length ? `${truncated}...` : truncated;

@@ -16,7 +16,7 @@ function getEnvironmentVariable(key: string, defaultValue: string): string {
   } catch {
     // Fallback to Node.js environment
   }
-  
+
   try {
     // Try Node.js environment
     if (typeof process !== "undefined" && process.env) {
@@ -25,7 +25,7 @@ function getEnvironmentVariable(key: string, defaultValue: string): string {
   } catch {
     // Fallback to default
   }
-  
+
   return defaultValue;
 }
 

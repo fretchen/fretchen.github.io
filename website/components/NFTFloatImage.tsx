@@ -26,7 +26,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   // Extract prompt from description for display
   const getPromptPreview = (description: string | null): string => {
     if (!description) return "";
-    
+
     // Look for "Prompt:" in the description and extract what follows
     const promptMatch = description.match(/Prompt:\s*(.+?)(?:\n|$)/i);
     if (promptMatch && promptMatch[1]) {
@@ -34,7 +34,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
       // Truncate to ~60 characters for a good preview
       return prompt.length > 60 ? `${prompt.substring(0, 60)}...` : prompt;
     }
-    
+
     // Fallback: use first part of description
     const truncated = description.substring(0, 60);
     return truncated.length < description.length ? `${truncated}...` : truncated;
@@ -82,7 +82,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
 
   useEffect(() => {
     console.log("NFTFloatImage loading tokenId:", tokenId);
-    
+
     const loadNFTData = async () => {
       try {
         setIsLoading(true);

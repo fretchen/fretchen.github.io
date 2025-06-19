@@ -20,111 +20,96 @@ const ReactPostRenderer: React.FC<{ componentPath: string }> = ({ componentPath 
   const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
-    // For demonstration purposes, we'll render the interactive example directly
-    // In a production environment, you might want to use dynamic imports or a component registry
-    
-    // Extract the component name from the path
-    const componentName = componentPath.split("/").pop()?.replace(".tsx", "");
-    
-    if (componentName === "interactive_example") {
-      // For now, we'll render a placeholder that simulates the interactive component
-      setComponent(() => {
-        // Import the actual component here - for now using a placeholder
-        return React.lazy(() =>
-          Promise.resolve({
-            default: () => {
-              // This is a simplified version - in production you'd dynamically import the actual component
-              return (
-                <div className={post.contentContainer}>
-                  <div
-                    style={{
-                      border: "2px solid #007acc",
-                      borderRadius: "8px",
-                      padding: "20px",
-                      margin: "20px 0",
-                      backgroundColor: "#f8f9fa",
-                    }}
-                  >
-                    <h2>🎉 TypeScript Post erfolgreich geladen!</h2>
-                    <p>
-                      Dies ist ein Beweis, dass TypeScript-basierte Blog-Posts funktionieren! Die Post-Komponente hat
-                      erfolgreich erkannt, dass dies ein React-Post ist und lädt entsprechend diese spezielle
-                      Renderer-Komponente.
-                    </p>
-                    <div
-                      style={{
-                        backgroundColor: "#e3f2fd",
-                        padding: "15px",
-                        borderLeft: "4px solid #2196f3",
-                        marginTop: "15px",
-                      }}
-                    >
-                      <strong>Komponenten-Details:</strong>
-                      <ul>
-                        <li>
-                          Pfad: <code>{componentPath}</code>
-                        </li>
-                        <li>Typ: React Component (.tsx)</li>
-                        <li>Status: Erfolgreich geladen</li>
-                      </ul>
-                    </div>
-                    <p style={{ marginTop: "15px", fontStyle: "italic", color: "#666" }}>
-                      In der finalen Implementierung würde hier die tatsächliche interaktive Komponente mit Calculator,
-                      Charts und allen interaktiven Features geladen werden.
-                    </p>
-                  </div>
-                </div>
-              );
-            },
-          }),
-        );
-      });
-      setLoading(false);
-    } else {
-      setError(`Unknown React component: ${componentName}`);
-      setLoading(false);
-    }
+    const loadComponent = async () => {
+      try {
+        console.log("ReactPostRenderer: Starting to load component from", componentPath);
+        
+        // Extract the component name from the path
+        const componentName = componentPath.split("/").pop()?.replace(".tsx", "");
+        
+        if (!componentName) {
+          throw new Error("Could not extract component name from path");
+        }
+
+        console.log("ReactPostRenderer: Component name extracted:", componentName);
+
+        // Use dynamic import to load the actual TSX component
+        // This will work with Vite's dynamic import system
+        console.log("ReactPostRenderer: Attempting dynamic import...");
+        const module = await import(`../blog/${componentName}.tsx`);
+        
+        console.log("ReactPostRenderer: Module loaded:", module);
+        
+        // The component should be the default export
+        const LoadedComponent = module.default;
+        
+        if (!LoadedComponent) {
+          throw new Error(`No default export found in ${componentName}.tsx`);
+        }
+
+        console.log("ReactPostRenderer: Component successfully loaded!");
+        setComponent(() => LoadedComponent);
+        setLoading(false);
+      } catch (err) {
+        console.error("ReactPostRenderer: Error loading React component:", err);
+        setError(err instanceof Error ? err.message : "Unknown error occurred");
+        setLoading(false);
+      }
+    };
+
+    console.log("ReactPostRenderer: useEffect triggered with componentPath:", componentPath);
+    loadComponent();
   }, [componentPath]);
 
   if (loading) {
     return (
       <div className={post.contentContainer}>
-        <p>Lade interaktive Komponente...</p>
+        <div style={{ padding: "20px", textAlign: "center" }}>
+          <p>🔄 Lade interaktive Komponente...</p>
+          <p style={{ fontSize: "0.9em", color: "#666" }}>
+            Pfad: <code>{componentPath}</code>
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !Component) {
     return (
       <div className={post.contentContainer}>
         <div
           style={{
             border: "1px solid #dc3545",
             borderRadius: "4px",
-            padding: "15px",
+            padding: "20px",
             backgroundColor: "#f8d7da",
             color: "#721c24",
+            margin: "20px 0",
           }}
         >
-          <strong>Fehler beim Laden der React-Komponente:</strong>
-          <p>{error}</p>
-          <p>Pfad: {componentPath}</p>
+          <h3>❌ Fehler beim Laden der React-Komponente</h3>
+          <p><strong>Fehler:</strong> {error || "Komponente konnte nicht geladen werden"}</p>
+          <p><strong>Pfad:</strong> <code>{componentPath}</code></p>
+          <details style={{ marginTop: "10px" }}>
+            <summary>Mögliche Lösungen</summary>
+            <ul style={{ marginTop: "10px" }}>
+              <li>Überprüfen Sie, ob die TSX-Datei existiert</li>
+              <li>Stellen Sie sicher, dass die Komponente als default export verfügbar ist</li>
+              <li>Überprüfen Sie die Konsolenausgabe für weitere Details</li>
+            </ul>
+          </details>
         </div>
-      </div>
-    );
-  }
-
-  if (!Component) {
-    return (
-      <div className={post.contentContainer}>
-        <p>Komponente konnte nicht geladen werden.</p>
       </div>
     );
   }
 
   return (
     <div className={post.contentContainer}>
-      <React.Suspense fallback={<div>Lade...</div>}>
+      <React.Suspense fallback={
+        <div style={{ padding: "20px", textAlign: "center" }}>
+          <p>⚡ Lade Komponente...</p>
+        </div>
+      }>
         <Component />
       </React.Suspense>
     </div>

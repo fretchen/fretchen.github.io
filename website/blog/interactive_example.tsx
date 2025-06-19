@@ -151,7 +151,7 @@ const InteractiveExample: React.FC = () => {
         interaktive React-Komponenten einbauen.
       </p>
 
-      <h2>Was macht dies besonders?</h2>
+      <h2>Was macht dies besonders toll ?</h2>
       <ul>
         <li><strong>State Management:</strong> Komponenten können internen Zustand verwalten</li>
         <li><strong>Event Handling:</strong> Benutzerinteraktionen werden in Echtzeit verarbeitet</li>

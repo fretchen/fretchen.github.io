@@ -23,10 +23,10 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
     const loadComponent = async () => {
       try {
         console.log("ReactPostRenderer: Starting to load component from", componentPath);
-        
+
         // Extract the component name from the path
         const componentName = componentPath.split("/").pop()?.replace(".tsx", "");
-        
+
         if (!componentName) {
           throw new Error("Could not extract component name from path");
         }
@@ -37,12 +37,12 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
         // This will work with Vite's dynamic import system
         console.log("ReactPostRenderer: Attempting dynamic import...");
         const module = await import(`../blog/${componentName}.tsx`);
-        
+
         console.log("ReactPostRenderer: Module loaded:", module);
-        
+
         // The component should be the default export
         const LoadedComponent = module.default;
-        
+
         if (!LoadedComponent) {
           throw new Error(`No default export found in ${componentName}.tsx`);
         }
@@ -88,8 +88,12 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
           }}
         >
           <h3>❌ Fehler beim Laden der React-Komponente</h3>
-          <p><strong>Fehler:</strong> {error || "Komponente konnte nicht geladen werden"}</p>
-          <p><strong>Pfad:</strong> <code>{componentPath}</code></p>
+          <p>
+            <strong>Fehler:</strong> {error || "Komponente konnte nicht geladen werden"}
+          </p>
+          <p>
+            <strong>Pfad:</strong> <code>{componentPath}</code>
+          </p>
           <details style={{ marginTop: "10px" }}>
             <summary>Mögliche Lösungen</summary>
             <ul style={{ marginTop: "10px" }}>

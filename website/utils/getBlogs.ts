@@ -58,10 +58,10 @@ const processMarkdownPost = (file: string, blogDirectory: string): BlogPost => {
 const processTypeScriptPost = (file: string, blogDirectory: string): BlogPost => {
   const filePath = `${blogDirectory}/${file}`;
   const fileContent = fs.readFileSync(filePath, "utf-8");
-  
+
   // Extract meta export from TypeScript file
   const metaMatch = fileContent.match(/export\s+const\s+meta\s*=\s*({[\s\S]*?});/);
-  
+
   let blogPost: BlogPost = {
     title: file.replace(".tsx", ""),
     content: "", // Will be the component path
@@ -73,22 +73,22 @@ const processTypeScriptPost = (file: string, blogDirectory: string): BlogPost =>
     try {
       // Simple regex-based parsing of meta object
       const metaString = metaMatch[1];
-      
+
       const titleMatch = metaString.match(/title:\s*["']([^"']+)["']/);
       if (titleMatch) {
         blogPost.title = titleMatch[1];
       }
-      
+
       const dateMatch = metaString.match(/publishing_date:\s*["']([^"']+)["']/);
       if (dateMatch) {
         blogPost.publishing_date = dateMatch[1];
       }
-      
+
       const orderMatch = metaString.match(/order:\s*(\d+)/);
       if (orderMatch) {
         blogPost.order = parseInt(orderMatch[1]);
       }
-      
+
       const tokenMatch = metaString.match(/tokenID:\s*(\d+)/);
       if (tokenMatch) {
         blogPost.tokenID = parseInt(tokenMatch[1]);

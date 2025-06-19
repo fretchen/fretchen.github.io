@@ -334,26 +334,33 @@ const PayoffMatrix: React.FC = () => {
 // Expected Utility Plot Component
 const ExpectedUtilityPlot: React.FC = () => {
   const [probabilityDefect, setProbabilityDefect] = useState(0.5);
+  
+  // Prisoner's Dilemma payoff matrix variables (in years of prison)
+  const [R, setR] = useState(2); // Reward for mutual cooperation
+  const [T, setT] = useState(0); // Temptation to defect
+  const [P, setP] = useState(4); // Punishment for mutual defection
+  const [S, setS] = useState(6); // Sucker's payoff
 
-  const expectedCooperate = 2 - 3 * probabilityDefect;
-  const expectedDefect = 4 * probabilityDefect;
+  // Calculate expected values
+  const expectedCooperate = R * (1 - probabilityDefect) + S * probabilityDefect;
+  const expectedDefect = T * (1 - probabilityDefect) + P * probabilityDefect;
 
   const probabilities = Array.from({ length: 101 }, (_, i) => i / 100);
-  const cooperateValues = probabilities.map((p) => 2 - 3 * p);
-  const defectValues = probabilities.map((p) => 4 * p);
+  const cooperateValues = probabilities.map((p) => R * (1 - p) + S * p);
+  const defectValues = probabilities.map((p) => T * (1 - p) + P * p);
 
   const data = {
-    labels: probabilities.map((p) => p.toFixed(2)),
+    labels: probabilities.map((p) => (p * 100).toFixed(0) + "%"),
     datasets: [
       {
-        label: "Cooperate",
+        label: "Cooperate (Stay loyal)",
         data: cooperateValues,
         borderColor: "rgb(59, 130, 246)",
         backgroundColor: "rgba(59, 130, 246, 0.1)",
         tension: 0.1,
       },
       {
-        label: "Defect",
+        label: "Defect (Betray)",
         data: defectValues,
         borderColor: "rgb(239, 68, 68)",
         backgroundColor: "rgba(239, 68, 68, 0.1)",
@@ -364,41 +371,156 @@ const ExpectedUtilityPlot: React.FC = () => {
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "top" as const,
+        labels: {
+          font: { size: 12 },
+        },
       },
       title: {
-        display: true,
-        text: "Expected Payoff by Probability",
+        display: false,
       },
     },
     scales: {
       x: {
         title: {
           display: true,
-          text: "Probability that Player 2 defects",
+          text: "Probability opponent defects",
+          font: { size: 11 },
+        },
+        ticks: {
+          maxTicksLimit: 6,
+          font: { size: 10 },
         },
       },
       y: {
         title: {
           display: true,
-          text: "Expected payoff for Player 1",
+          text: "Expected prison sentence (years)",
+          font: { size: 11 },
+        },
+        ticks: {
+          font: { size: 10 },
         },
       },
     },
   };
 
+  // Calculate crossover point where strategies are equal
+  const crossoverPoint = (R - T) / (S - P + R - T);
+  const hasValidCrossover = crossoverPoint >= 0 && crossoverPoint <= 1;
+
   return (
-    <div className="my-6 p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-lg font-semibold mb-4">🧠 Walter&apos;s Expected Utility Analysis</h3>
-      <p className="text-sm text-gray-600 mb-4">
-        Walter is a chemistry teacher - he thinks rationally. If he estimates the probability that Jesse will betray
-        him, what should he do?
+    <div
+      className={css({
+        margin: "2rem 0",
+        padding: "1.5rem",
+        backgroundColor: "rgba(59, 130, 246, 0.05)",
+        borderRadius: "4px",
+        border: "1px solid rgba(59, 130, 246, 0.2)",
+      })}
+    >
+      <h4
+        className={css({
+          fontSize: "1rem",
+          fontWeight: "medium",
+          textAlign: "center",
+          marginBottom: "1rem",
+          color: "#374151",
+        })}
+      >
+        Interactive Prisoner's Dilemma Analysis
+      </h4>
+
+      <p
+        className={css({
+          textAlign: "center",
+          color: "#6b7280",
+          fontSize: "0.9rem",
+          marginBottom: "1rem",
+        })}
+      >
+        Adjust the payoff matrix and probability to explore different scenarios.
       </p>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">
-          Probability that Jesse betrays Walter: {probabilityDefect.toFixed(2)}
+
+      {/* Payoff Matrix Controls */}
+      <div
+        className={css({
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+          fontSize: "0.8rem",
+        })}
+      >
+        <div>
+          <label>R (Both cooperate): {R} years</label>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            step="0.5"
+            value={R}
+            onChange={(e) => setR(parseFloat(e.target.value))}
+            className={css({ width: "100%" })}
+          />
+        </div>
+        <div>
+          <label>T (I defect, opponent cooperates): {T} years</label>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            step="0.5"
+            value={T}
+            onChange={(e) => setT(parseFloat(e.target.value))}
+            className={css({ width: "100%" })}
+          />
+        </div>
+        <div>
+          <label>P (Both defect): {P} years</label>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            step="0.5"
+            value={P}
+            onChange={(e) => setP(parseFloat(e.target.value))}
+            className={css({ width: "100%" })}
+          />
+        </div>
+        <div>
+          <label>S (I cooperate, opponent defects): {S} years</label>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            step="0.5"
+            value={S}
+            onChange={(e) => setS(parseFloat(e.target.value))}
+            className={css({ width: "100%" })}
+          />
+        </div>
+      </div>
+
+      {/* Probability Control */}
+      <div
+        className={css({
+          marginBottom: "1rem",
+        })}
+      >
+        <label
+          className={css({
+            display: "block",
+            fontSize: "0.85rem",
+            color: "#374151",
+            marginBottom: "0.5rem",
+            textAlign: "center",
+          })}
+        >
+          Probability opponent defects: <strong>{(probabilityDefect * 100).toFixed(0)}%</strong>
         </label>
         <input
           type="range"
@@ -407,34 +529,99 @@ const ExpectedUtilityPlot: React.FC = () => {
           step="0.01"
           value={probabilityDefect}
           onChange={(e) => setProbabilityDefect(parseFloat(e.target.value))}
-          className="w-full"
+          className={css({
+            width: "100%",
+            height: "4px",
+            backgroundColor: "#e5e7eb",
+            borderRadius: "2px",
+            outline: "none",
+            cursor: "pointer",
+          })}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="p-3 bg-blue-50 rounded">
-          <div className="font-semibold text-blue-800">Protect Jesse</div>
-          <div className="text-lg font-bold text-blue-600">{expectedCooperate.toFixed(2)} points</div>
-          <div className="text-xs text-gray-500">Stay loyal strategy</div>
+
+      {/* Current Expected Values */}
+      <div
+        className={css({
+          display: "flex",
+          justifyContent: "center",
+          gap: "1rem",
+          marginBottom: "1rem",
+          fontSize: "0.8rem",
+          color: "#6b7280",
+        })}
+      >
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "0.5rem",
+            backgroundColor: expectedCooperate < expectedDefect ? "#f0f9ff" : "#f9fafb",
+            borderRadius: "4px",
+            border: expectedCooperate < expectedDefect ? "1px solid #0066cc" : "1px solid #d1d5db",
+          })}
+        >
+          <div><strong>Cooperate:</strong></div>
+          <div>{expectedCooperate.toFixed(1)} years</div>
         </div>
-        <div className="p-3 bg-red-50 rounded">
-          <div className="font-semibold text-red-800">Blame Jesse</div>
-          <div className="text-lg font-bold text-red-600">{expectedDefect.toFixed(2)} points</div>
-          <div className="text-xs text-gray-500">Betray first strategy</div>
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "0.5rem",
+            backgroundColor: expectedDefect < expectedCooperate ? "#fef2f2" : "#f9fafb",
+            borderRadius: "4px",
+            border: expectedDefect < expectedCooperate ? "1px solid #dc2626" : "1px solid #d1d5db",
+          })}
+        >
+          <div><strong>Defect:</strong></div>
+          <div>{expectedDefect.toFixed(1)} years</div>
         </div>
       </div>
-      <div className="text-sm text-gray-600 mb-4">
-        <strong>Walter&apos;s best move:</strong> {expectedDefect > expectedCooperate ? "Blame Jesse" : "Protect Jesse"}
-        <br />
-        <strong>Expected difference:</strong> {Math.abs(expectedDefect - expectedCooperate).toFixed(2)} points better
+
+      <div
+        className={css({
+          textAlign: "center",
+          fontSize: "0.8rem",
+          color: "#374151",
+          marginBottom: "1rem",
+        })}
+      >
+        <strong>Optimal choice:</strong>{" "}
+        {expectedDefect < expectedCooperate ? "Defect" : "Cooperate"}
+        {hasValidCrossover && (
+          <span
+            className={css({
+              color: "#6b7280",
+              marginLeft: "0.5rem",
+            })}
+          >
+            (Crossover at {(crossoverPoint * 100).toFixed(1)}%)
+          </span>
+        )}
       </div>
-      <div style={{ height: "300px" }}>
+
+      <div
+        className={css({
+          height: "250px",
+          marginBottom: "0.5rem",
+        })}
+      >
         <Line data={data} options={options} />
+      </div>
+
+      <div
+        className={css({
+          fontSize: "0.7rem",
+          color: "#9ca3af",
+          textAlign: "center",
+        })}
+      >
+        <p>Chart shows expected prison sentences. Lower is better. Valid Prisoner's Dilemma requires: T &gt; R &gt; P &gt; S</p>
       </div>
     </div>
   );
 };
 
-// Game Simulation Component
+// Game Simulation Component  
 const GameSimulation: React.FC = () => {
   const [strategy1, setStrategy1] = useState<Strategy>("random");
   const [strategy2, setStrategy2] = useState<Strategy>("random");
@@ -449,148 +636,68 @@ const GameSimulation: React.FC = () => {
 
   const runSimulation = () => {
     setIsRunning(true);
-    // Simulate delay for visual effect
-    setTimeout(() => {
-      const result = playRepeatedGame(numGames, strategy1, strategy2);
-      setGameData(result);
-      setIsRunning(false);
-    }, 500);
-  };
-
-  const chartData = useMemo(() => {
-    if (!gameData) return null;
-
-    return {
-      labels: Array.from({ length: numGames }, (_, i) => i + 1),
-      datasets: [
-        {
-          label: "Walter (Cumulative)",
-          data: gameData.totalPayoffs1,
-          borderColor: "rgb(59, 130, 246)",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          tension: 0.1,
-        },
-        {
-          label: "Jesse (Cumulative)",
-          data: gameData.totalPayoffs2,
-          borderColor: "rgb(239, 68, 68)",
-          backgroundColor: "rgba(239, 68, 68, 0.1)",
-          tension: 0.1,
-        },
-      ],
-    };
-  }, [gameData, numGames]);
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top" as const,
-      },
-      title: {
-        display: true,
-        text: "Breaking Bad: Walter vs Jesse Over Multiple Encounters",
-      },
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: "Episode Number",
-        },
-      },
-      y: {
-        title: {
-          display: true,
-          text: "Cumulative Points",
-        },
-      },
-    },
+    const result = playRepeatedGame(numGames, strategy1, strategy2);
+    setGameData(result);
+    setIsRunning(false);
   };
 
   return (
-    <div className="my-6 p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-lg font-semibold mb-4">🎬 Breaking Bad Series Simulation</h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div className={css({ margin: "2rem 0", padding: "1.5rem", backgroundColor: "#f9fafb", borderRadius: "4px" })}>
+      <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem" })}>
+        Repeated Game Simulation
+      </h4>
+      
+      <div className={css({ display: "flex", gap: "1rem", marginBottom: "1rem", fontSize: "0.8rem" })}>
         <div>
-          <label className="block text-sm font-medium mb-2">Walter's Strategy</label>
-          <select
-            value={strategy1}
-            onChange={(e) => setStrategy1(e.target.value as Strategy)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="random">Emotional/Unpredictable</option>
-            <option value="cooperate">Always loyal</option>
-            <option value="defect">Always selfish</option>
+          <label>Strategy 1:</label>
+          <select value={strategy1} onChange={(e) => setStrategy1(e.target.value as Strategy)}>
+            <option value="random">Random</option>
+            <option value="defect">Always Defect</option>
+            <option value="cooperate">Always Cooperate</option>
             <option value="tit-for-tat">Tit-for-Tat</option>
           </select>
         </div>
-
         <div>
-          <label className="block text-sm font-medium mb-2">Jesse's Strategy</label>
-          <select
-            value={strategy2}
-            onChange={(e) => setStrategy2(e.target.value as Strategy)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="random">Emotional/Unpredictable</option>
-            <option value="cooperate">Always loyal</option>
-            <option value="defect">Always selfish</option>
+          <label>Strategy 2:</label>
+          <select value={strategy2} onChange={(e) => setStrategy2(e.target.value as Strategy)}>
+            <option value="random">Random</option>
+            <option value="defect">Always Defect</option>
+            <option value="cooperate">Always Cooperate</option>
             <option value="tit-for-tat">Tit-for-Tat</option>
           </select>
         </div>
-
         <div>
-          <label className="block text-sm font-medium mb-2">Number of Episodes</label>
+          <label>Games: {numGames}</label>
           <input
-            type="number"
+            type="range"
             min="10"
-            max="500"
+            max="200"
             value={numGames}
             onChange={(e) => setNumGames(parseInt(e.target.value))}
-            className="w-full p-2 border rounded"
           />
         </div>
       </div>
-
-      <button
-        onClick={runSimulation}
+      
+      <button 
+        onClick={runSimulation} 
         disabled={isRunning}
-        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        className={css({ 
+          padding: "0.5rem 1rem", 
+          backgroundColor: "#0066cc", 
+          color: "white", 
+          borderRadius: "4px",
+          border: "none",
+          cursor: "pointer"
+        })}
       >
-        {isRunning ? "Creating episodes..." : "🎬 Start Breaking Bad Series"}
+        {isRunning ? "Running..." : "Run Simulation"}
       </button>
-
+      
       {gameData && (
-        <>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-3 bg-blue-50 rounded">
-              <div className="font-semibold text-blue-800">Walter's Series Outcome</div>
-              <div className="text-lg font-bold text-blue-600">
-                {gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1]} points
-              </div>
-              <div className="text-sm text-gray-600">
-                Average: {(gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1] / numGames).toFixed(2)} per episode
-              </div>
-            </div>
-            <div className="p-3 bg-red-50 rounded">
-              <div className="font-semibold text-red-800">Jesse's Series Outcome</div>
-              <div className="text-lg font-bold text-red-600">
-                {gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1]} points
-              </div>
-              <div className="text-sm text-gray-600">
-                Average: {(gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1] / numGames).toFixed(2)} per episode
-              </div>
-            </div>
-          </div>
-
-          {chartData && (
-            <div style={{ height: "300px" }}>
-              <Line data={chartData} options={chartOptions} />
-            </div>
-          )}
-        </>
+        <div className={css({ marginTop: "1rem", fontSize: "0.8rem" })}>
+          <p>Final Scores: Player 1: {gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1]?.toFixed(1)} | 
+             Player 2: {gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1]?.toFixed(1)}</p>
+        </div>
       )}
     </div>
   );
@@ -777,13 +884,27 @@ const PrisonersDilemmaPost: React.FC = () => {
 
       <ReactMarkdown>{`
 
-Walter White is a chemistry teacher - he thinks in probabilities and expected outcomes. If he can estimate how likely Jesse is to betray him, what should he do?
 
-The math for Walter's expected outcome:
-- **When protecting Jesse**: E[Protect] = 2 - 3p (where p is probability Jesse betrays)
-- **When blaming Jesse**: E[Blame] = 4p
+Walter White is a chemistry teacher - and hence a fairly rational guy. So, If he can estimate how likely Jesse is to betray him, what should he do?
 
-This is the cold, rational calculation Walter would make:
+Here's how we calculate it:
+
+**Expected Value = (Outcome if Jesse stays loyal) × (Probability Jesse stays loyal) + (Outcome if Jesse betrays) × (Probability Jesse betrays)**
+
+Let's say there's a probability *p* that Jesse will betray Walter. Then there's a probability *(1-p)* that Jesse stays loyal.
+
+The math for Walter's expected prison sentence:
+- **When staying loyal**: E[Loyal] = 3(1-p) + 15p = 3 + 12p years
+  - If Jesse stays loyal (probability 1-p): 3 years
+  - If Jesse betrays (probability p): 15 years
+- **When blaming Jesse**: E[Blame] = 0(1-p) + 5p = 5p years  
+  - If Jesse stays loyal (probability 1-p): 0 years (Walter goes free)
+  - If Jesse betrays (probability p): 5 years
+
+Since we want to minimize prison time, Walter should stay loyal when 3 + 12p < 5p, which simplifies to when p < 3/7 ≈ 0.43.
+
+**In plain English**: If Walter thinks there's less than a 43% chance Jesse will betray him, he should stay loyal. If he thinks Jesse is more likely than that to betray him, he should betray Jesse first.
+
       `}</ReactMarkdown>
 
       <ExpectedUtilityPlot />

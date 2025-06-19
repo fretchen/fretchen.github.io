@@ -20,10 +20,12 @@ type Choice = "D" | "C";
 type Strategy = "random" | "defect" | "cooperate" | "tit-for-tat";
 
 function prisonersDilemma(choice1: Choice, choice2: Choice): [number, number] {
-  if (choice1 === "C" && choice2 === "C") return [2, 2];
-  if (choice1 === "C" && choice2 === "D") return [-1, 4];
-  if (choice1 === "D" && choice2 === "C") return [4, -1];
-  return [0, 0];
+  // Breaking Bad scenario: prison sentences in years
+  // C = Cooperate (stay loyal), D = Defect (betray)
+  if (choice1 === "C" && choice2 === "C") return [3, 3];   // Both stay loyal: 3 years each
+  if (choice1 === "C" && choice2 === "D") return [15, 0];  // Walter loyal, Jesse betrays: Walter 15 years, Jesse free
+  if (choice1 === "D" && choice2 === "C") return [0, 15];  // Walter betrays, Jesse loyal: Walter free, Jesse 15 years
+  return [5, 5]; // Both betray: 5 years each
 }
 
 function playRepeatedGame(
@@ -98,7 +100,7 @@ function playRepeatedGame(
 const PayoffMatrix: React.FC = () => {
   const [playerChoice, setPlayerChoice] = useState<Choice | null>(null);
   const [opponentChoice, setOpponentChoice] = useState<Choice | null>(null);
-  const [gameResult, setGameResult] = useState<{ walterPayoff: number; jessePayoff: number } | null>(null);
+  const [gameResult, setGameResult] = useState<{ walterSentence: number; jesseSentence: number } | null>(null);
 
   const makeDecision = (choice: Choice) => {
     setPlayerChoice(choice);
@@ -106,8 +108,8 @@ const PayoffMatrix: React.FC = () => {
     const jesseChoice = Math.random() < 0.5 ? "C" : "D";
     setOpponentChoice(jesseChoice);
 
-    const [walterPayoff, jessePayoff] = prisonersDilemma(choice, jesseChoice);
-    setGameResult({ walterPayoff, jessePayoff });
+    const [walterSentence, jesseSentence] = prisonersDilemma(choice, jesseChoice);
+    setGameResult({ walterSentence, jesseSentence });
   };
 
   const resetGame = () => {
@@ -117,10 +119,10 @@ const PayoffMatrix: React.FC = () => {
   };
 
   const getOutcomeText = (walter: Choice, jesse: Choice) => {
-    if (walter === "D" && jesse === "D") return "Beide verraten sich - mittlere Strafe für beide!";
-    if (walter === "D" && jesse === "C") return "Walter verrät Jesse - Walter kommt frei!";
-    if (walter === "C" && jesse === "D") return "Jesse verrät Walter - Walter bekommt die Höchststrafe!";
-    return "Beide bleiben stumm - beste gemeinsame Lösung!";
+    if (walter === "D" && jesse === "D") return "Both blame each other - 5 years each!";
+    if (walter === "D" && jesse === "C") return "Walter betrays Jesse - Walter walks free!";
+    if (walter === "C" && jesse === "D") return "Jesse betrays Walter - Walter gets 15 years!";
+    return "Both stay loyal - 3 years each, best mutual outcome!";
   };
 
   const getOutcomeColor = (walter: Choice, jesse: Choice) => {
@@ -142,31 +144,32 @@ const PayoffMatrix: React.FC = () => {
       className={css({
         margin: "2rem 0",
         padding: "1.5rem",
-        backgroundColor: "#e3f2fd", // Much more visible light blue
-        borderRadius: "8px",
-        border: "2px solid #1976d2", // Strong blue border
-        boxShadow: "0 4px 8px rgba(0,0,0,0.15)", // Stronger shadow
+        backgroundColor: "rgba(59, 130, 246, 0.05)", // Very subtle blue background
+        borderRadius: "4px",
+        border: "1px solid rgba(59, 130, 246, 0.2)", // Subtle border
       })}
     >
-      <h3
+      <h4
         className={css({
-          fontSize: "1.25rem",
-          fontWeight: "bold",
+          fontSize: "1rem",
+          fontWeight: "medium",
           textAlign: "center",
           marginBottom: "1rem",
+          color: "#374151",
         })}
       >
-        🧪 Das Gefangenendilemma: Sie sind Walter White
-      </h3>
+        Interactive Scenario: Make Walter's Choice
+      </h4>
 
       <p
         className={css({
           textAlign: "center",
-          color: "#6c757d",
+          color: "#6b7280",
+          fontSize: "0.9rem",
           marginBottom: "1.5rem",
         })}
       >
-        Sie und Jesse werden separat verhört. Was ist Ihre Entscheidung?
+        Jesse's decision will be simulated randomly after you choose.
       </p>
 
       {!playerChoice ? (
@@ -180,38 +183,38 @@ const PayoffMatrix: React.FC = () => {
           <button
             onClick={() => makeDecision("D")}
             className={css({
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#dc3545",
+              padding: "0.5rem 1rem",
+              backgroundColor: "#374151",
               color: "white",
-              borderRadius: "8px",
+              borderRadius: "4px",
               border: "none",
-              fontWeight: "medium",
+              fontSize: "0.9rem",
               cursor: "pointer",
               transition: "background-color 0.2s",
               _hover: {
-                backgroundColor: "#c82333",
+                backgroundColor: "#1f2937",
               },
             })}
           >
-            ⚠️ Jesse verraten
+            Blame Jesse
           </button>
           <button
             onClick={() => makeDecision("C")}
             className={css({
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#007bff",
+              padding: "0.5rem 1rem",
+              backgroundColor: "#0066cc",
               color: "white",
-              borderRadius: "8px",
+              borderRadius: "4px",
               border: "none",
-              fontWeight: "medium",
+              fontSize: "0.9rem",
               cursor: "pointer",
               transition: "background-color 0.2s",
               _hover: {
-                backgroundColor: "#0056b3",
+                backgroundColor: "#0052a3",
               },
             })}
           >
-            🤐 Stumm bleiben
+            Stay loyal
           </button>
         </div>
       ) : (
@@ -224,25 +227,21 @@ const PayoffMatrix: React.FC = () => {
           >
             <p
               className={css({
-                fontSize: "1.125rem",
-                fontWeight: "medium",
+                fontSize: "0.9rem",
+                color: "#374151",
+                marginBottom: "0.5rem",
               })}
             >
-              Ihre Wahl:{" "}
-              <span className={css({ fontWeight: "bold" })}>
-                {playerChoice === "D" ? "Jesse verraten" : "Stumm bleiben"}
-              </span>
+              <strong>Your choice:</strong> {playerChoice === "D" ? "Blame Jesse" : "Stay loyal"}
             </p>
             <p
               className={css({
-                fontSize: "1.125rem",
-                fontWeight: "medium",
+                fontSize: "0.9rem",
+                color: "#6b7280",
+                marginBottom: "0.5rem",
               })}
             >
-              Jesses Wahl:{" "}
-              <span className={css({ fontWeight: "bold" })}>
-                {opponentChoice === "D" ? "Walter verraten" : "Stumm bleiben"}
-              </span>
+              <strong>Jesse&apos;s choice (simulated):</strong> {opponentChoice === "D" ? "Blame Walter" : "Stay loyal"}
             </p>
           </div>
 
@@ -281,10 +280,10 @@ const PayoffMatrix: React.FC = () => {
                     className={css({
                       fontSize: "2rem",
                       fontWeight: "bold",
-                      color: "#007bff",
+                      color: gameResult.walterSentence === 0 ? "#28a745" : gameResult.walterSentence >= 10 ? "#dc3545" : "#ffc107",
                     })}
                   >
-                    {gameResult.walterPayoff}
+                    {gameResult.walterSentence === 0 ? "FREE" : `${gameResult.walterSentence} years`}
                   </div>
                   <div
                     className={css({
@@ -292,7 +291,7 @@ const PayoffMatrix: React.FC = () => {
                       color: "#6c757d",
                     })}
                   >
-                    Walters Punkte
+                    Walter's sentence
                   </div>
                 </div>
                 <div
@@ -304,10 +303,10 @@ const PayoffMatrix: React.FC = () => {
                     className={css({
                       fontSize: "2rem",
                       fontWeight: "bold",
-                      color: "#dc3545",
+                      color: gameResult.jesseSentence === 0 ? "#28a745" : gameResult.jesseSentence >= 10 ? "#dc3545" : "#ffc107",
                     })}
                   >
-                    {gameResult.jessePayoff}
+                    {gameResult.jesseSentence === 0 ? "FREE" : `${gameResult.jesseSentence} years`}
                   </div>
                   <div
                     className={css({
@@ -315,7 +314,7 @@ const PayoffMatrix: React.FC = () => {
                       color: "#6c757d",
                     })}
                   >
-                    Jesses Punkte
+                    Jesse's sentence
                   </div>
                 </div>
               </div>
@@ -343,7 +342,7 @@ const PayoffMatrix: React.FC = () => {
                 },
               })}
             >
-              🔄 Nochmal spielen
+              🔄 Play again
             </button>
           </div>
         </div>
@@ -357,7 +356,7 @@ const PayoffMatrix: React.FC = () => {
           textAlign: "center",
         })}
       >
-        <p>Höhere Punkte = besseres Ergebnis • 4 = Freiheit • 2 = kurze Haft • 0 = mittlere Haft • -1 = lange Haft</p>
+        <p>Prison sentences based on the Breaking Bad scenario • 0 years = immunity deal • 3 years = mutual cooperation • 5 years = mutual betrayal • 15 years = betrayed while loyal</p>
       </div>
     </div>
   );
@@ -797,18 +796,8 @@ const PrisonersDilemmaPost: React.FC = () => {
         across the table, and you know Jesse is in the next room facing the same choice. What do you do?
       </p>
 
-      <div className={css({
-        backgroundColor: '#FFF5CD',
-        border: '3px solid #D69E2E',
-        borderRadius: '8px',
-        padding: '20px',
-        margin: '24px 0',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        display: 'block',
-        width: '100%'
-      })}>
         <PayoffMatrix />
-      </div>
+      
 
       <h3>Walter&apos;s Rational Analysis</h3>
 

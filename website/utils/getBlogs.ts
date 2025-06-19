@@ -62,7 +62,7 @@ const processTypeScriptPost = (file: string, blogDirectory: string): BlogPost =>
   // Extract meta export from TypeScript file
   const metaMatch = fileContent.match(/export\s+const\s+meta\s*=\s*({[\s\S]*?});/);
 
-  let blogPost: BlogPost = {
+  const blogPost: BlogPost = {
     title: file.replace(".tsx", ""),
     content: "", // Will be the component path
     type: "react",

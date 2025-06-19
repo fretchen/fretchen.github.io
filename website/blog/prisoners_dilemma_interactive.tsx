@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Line } from "react-chartjs-2";
 import {
@@ -107,18 +107,7 @@ const PayoffMatrix: React.FC = () => {
     }>
   >([]);
 
-  const matrix = [
-    [
-      { p1: 0, p2: 0, label: "Mutual Defection" },
-      { p1: -1, p2: 4, label: "Betrayed" },
-    ],
-    [
-      { p1: 4, p2: -1, label: "Betrayer" },
-      { p1: 2, p2: 2, label: "Mutual Cooperation" },
-    ],
-  ];
-
-  const choiceLabels = ["Defect (D)", "Cooperate (C)"];
+  // Matrix and choice labels removed as they're not used in the current implementation
   const choiceDescriptions = {
     D: "Blame Jesse for everything",
     C: "Keep quiet, protect Jesse",
@@ -308,13 +297,13 @@ const PayoffMatrix: React.FC = () => {
                   <div className="text-3xl font-bold text-blue-600 mb-1">
                     {prisonersDilemma(playerChoice, opponentChoice)[0]}
                   </div>
-                  <div className="text-sm text-gray-600 font-medium">Walter's Jahre</div>
+                  <div className="text-sm text-gray-600 font-medium">Walter&apos;s Jahre</div>
                 </div>
                 <div className="text-center bg-white/80 rounded-lg p-4 shadow-md">
                   <div className="text-3xl font-bold text-red-600 mb-1">
                     {prisonersDilemma(playerChoice, opponentChoice)[1]}
                   </div>
-                  <div className="text-sm text-gray-600 font-medium">Jesse's Jahre</div>
+                  <div className="text-sm text-gray-600 font-medium">Jesse&apos;s Jahre</div>
                 </div>
               </div>
             </div>
@@ -393,13 +382,13 @@ const PayoffMatrix: React.FC = () => {
                         <div className="font-bold text-blue-600 text-xl">
                           {prisonersDilemma(outcome.p1 as Choice, outcome.p2 as Choice)[0]}
                         </div>
-                        <div className="text-xs text-gray-600">Walter's Points</div>
+                        <div className="text-xs text-gray-600">Walter&apos;s Points</div>
                       </div>
                       <div className="bg-white rounded-lg p-3">
                         <div className="font-bold text-red-600 text-xl">
                           {prisonersDilemma(outcome.p1 as Choice, outcome.p2 as Choice)[1]}
                         </div>
-                        <div className="text-xs text-gray-600">Jesse's Points</div>
+                        <div className="text-xs text-gray-600">Jesse&apos;s Points</div>
                       </div>
                     </div>
                   </div>
@@ -436,7 +425,7 @@ const PayoffMatrix: React.FC = () => {
               <strong>-1 point</strong> = 15 years harsh sentence (betrayed by partner, full blame)
             </p>
             <p className="text-sm text-yellow-700 mt-2">
-              <strong>Just like in the show:</strong> Walter and Jesse's relationship constantly faced these dilemmas.
+              <strong>Just like in the show:</strong> Walter and Jesse&apos;s relationship constantly faced these dilemmas.
               Trust vs. self-preservation. Loyalty vs. survival. The math is brutal but the emotions make it human.
             </p>
           </div>
@@ -506,7 +495,7 @@ const ExpectedUtilityPlot: React.FC = () => {
 
   return (
     <div className="my-6 p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-lg font-semibold mb-4">🧠 Walter's Expected Utility Analysis</h3>
+      <h3 className="text-lg font-semibold mb-4">🧠 Walter&apos;s Expected Utility Analysis</h3>
       <p className="text-sm text-gray-600 mb-4">
         Walter is a chemistry teacher - he thinks rationally. If he estimates the probability that Jesse will betray
         him, what should he do?
@@ -538,7 +527,7 @@ const ExpectedUtilityPlot: React.FC = () => {
         </div>
       </div>
       <div className="text-sm text-gray-600 mb-4">
-        <strong>Walter's best move:</strong> {expectedDefect > expectedCooperate ? "Blame Jesse" : "Protect Jesse"}
+        <strong>Walter&apos;s best move:</strong> {expectedDefect > expectedCooperate ? "Blame Jesse" : "Protect Jesse"}
         <br />
         <strong>Expected difference:</strong> {Math.abs(expectedDefect - expectedCooperate).toFixed(2)} points better
       </div>

@@ -797,7 +797,18 @@ const PrisonersDilemmaPost: React.FC = () => {
         across the table, and you know Jesse is in the next room facing the same choice. What do you do?
       </p>
 
-      <PayoffMatrix />
+      <div className={css({
+        backgroundColor: '#FFF5CD',
+        border: '3px solid #D69E2E',
+        borderRadius: '8px',
+        padding: '20px',
+        margin: '24px 0',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        display: 'block',
+        width: '100%'
+      })}>
+        <PayoffMatrix />
+      </div>
 
       <h3>Walter&apos;s Rational Analysis</h3>
 

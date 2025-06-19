@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { css } from "../styled-system/css";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -93,344 +94,271 @@ function playRepeatedGame(
   return { payoffs1, payoffs2, totalPayoffs1, totalPayoffs2 };
 }
 
-// Interactive Payoff Matrix Component
+// Simplified Interactive Payoff Matrix Component
 const PayoffMatrix: React.FC = () => {
   const [playerChoice, setPlayerChoice] = useState<Choice | null>(null);
   const [opponentChoice, setOpponentChoice] = useState<Choice | null>(null);
-  const [showAllOutcomes, setShowAllOutcomes] = useState(false);
-  const [gameHistory, setGameHistory] = useState<
-    Array<{
-      player: Choice;
-      opponent: Choice;
-      playerPayoff: number;
-      opponentPayoff: number;
-    }>
-  >([]);
+  const [gameResult, setGameResult] = useState<{ walterPayoff: number; jessePayoff: number } | null>(null);
 
-  // Matrix and choice labels removed as they're not used in the current implementation
-  const choiceDescriptions = {
-    D: "Blame Jesse for everything",
-    C: "Keep quiet, protect Jesse",
-  };
+  const makeDecision = (choice: Choice) => {
+    setPlayerChoice(choice);
+    // Jesse's decision is random
+    const jesseChoice = Math.random() < 0.5 ? "C" : "D";
+    setOpponentChoice(jesseChoice);
 
-  const outcomes = [
-    {
-      p1: "D",
-      p2: "D",
-      result: "Both Walter and Jesse blame each other",
-      color: "bg-orange-100 border-orange-300",
-      tvExplanation:
-        "🧪 Walter: 'Jesse forced me to cook!' Jesse: 'Mr. White was the mastermind!' Both end up with medium sentences as their stories contradict each other.",
-      pointExplanation:
-        "0 points = 5 years each. The DEA doesn't buy either story completely since they're contradictory. Both get convicted for manufacturing.",
-    },
-    {
-      p1: "D",
-      p2: "C",
-      result: "Walter blames Jesse, Jesse stays loyal",
-      color: "bg-red-100 border-red-300",
-      tvExplanation:
-        "🧪 Walter: 'Jesse Pinkman was my dealer, he forced me to cook for him.' Jesse stays silent. Walter gets immunity deal, Jesse takes the fall.",
-      pointExplanation:
-        "4 points = Walter walks free with immunity. Jesse gets -1 point = 15 years for manufacturing and distribution charges.",
-    },
-    {
-      p1: "C",
-      p2: "D",
-      result: "Walter stays loyal, Jesse blames Walter",
-      color: "bg-red-100 border-red-300",
-      tvExplanation:
-        "🧪 Jesse: 'Mr. White forced me to cook! He threatened my family!' Walter keeps quiet. Jesse gets a plea deal, Walter gets the book thrown at him.",
-      pointExplanation:
-        "-1 point = Walter gets 15 years for being the 'mastermind.' Jesse gets 4 points = 2 years with cooperation deal.",
-    },
-    {
-      p1: "C",
-      p2: "C",
-      result: "Both Walter and Jesse stay silent",
-      color: "bg-green-100 border-green-300",
-      tvExplanation:
-        "🧪 Both follow the criminal code: 'We don't know each other.' Without testimony, the DEA can only prove possession charges.",
-      pointExplanation:
-        "2 points each = 3 years for possession and equipment charges. Best joint outcome - neither betrays the other.",
-    },
-  ];
-
-  const playRound = () => {
-    if (playerChoice && opponentChoice) {
-      const [playerPayoff, opponentPayoff] = prisonersDilemma(playerChoice, opponentChoice);
-      setGameHistory((prev) => [
-        ...prev,
-        {
-          player: playerChoice,
-          opponent: opponentChoice,
-          playerPayoff,
-          opponentPayoff,
-        },
-      ]);
-    }
+    const [walterPayoff, jessePayoff] = prisonersDilemma(choice, jesseChoice);
+    setGameResult({ walterPayoff, jessePayoff });
   };
 
   const resetGame = () => {
     setPlayerChoice(null);
     setOpponentChoice(null);
-    setGameHistory([]);
+    setGameResult(null);
   };
 
-  const getScenarioDescription = (p1: Choice, p2: Choice) => {
-    if (p1 === "D" && p2 === "D")
-      return {
-        text: "Both Walter and Jesse betray each other - Mutual destruction!",
-        color: "bg-orange-100 text-orange-800",
-      };
-    if (p1 === "D" && p2 === "C")
-      return {
-        text: "Walter betrays Jesse - The teacher becomes the ultimate villain!",
-        color: "bg-red-100 text-red-800",
-      };
-    if (p1 === "C" && p2 === "D")
-      return {
-        text: "Walter stays loyal, Jesse betrays - The student burns the teacher!",
-        color: "bg-red-100 text-red-800",
-      };
-    return { text: "Both stay loyal - Partners till the end!", color: "bg-green-100 text-green-800" };
+  const getOutcomeText = (walter: Choice, jesse: Choice) => {
+    if (walter === "D" && jesse === "D") return "Beide verraten sich - mittlere Strafe für beide!";
+    if (walter === "D" && jesse === "C") return "Walter verrät Jesse - Walter kommt frei!";
+    if (walter === "C" && jesse === "D") return "Jesse verrät Walter - Walter bekommt die Höchststrafe!";
+    return "Beide bleiben stumm - beste gemeinsame Lösung!";
+  };
+
+  const getOutcomeColor = (walter: Choice, jesse: Choice) => {
+    if (walter === "D" && jesse === "D") return "#fff3cd"; // orange-ish
+    if (walter === "D" && jesse === "C") return "#d4edda"; // green-ish
+    if (walter === "C" && jesse === "D") return "#f8d7da"; // red-ish
+    return "#cce5ff"; // blue-ish
+  };
+
+  const getOutcomeBorderColor = (walter: Choice, jesse: Choice) => {
+    if (walter === "D" && jesse === "D") return "#856404"; // orange border
+    if (walter === "D" && jesse === "C") return "#155724"; // green border
+    if (walter === "C" && jesse === "D") return "#721c24"; // red border
+    return "#004085"; // blue border
   };
 
   return (
-    <div className="my-8 p-8 border-4 border-blue-300 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-2xl transition-all duration-500 hover:shadow-3xl hover:scale-[1.01] relative overflow-hidden">
-      {/* Interactive indicator badge */}
-      <div className="absolute top-4 right-4 flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg border border-blue-600 z-10">
-        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-        <span className="text-xs font-bold tracking-wider">INTERAKTIV</span>
-      </div>
+    <div
+      className={css({
+        margin: "2rem 0",
+        padding: "1.5rem",
+        backgroundColor: "#e3f2fd", // Much more visible light blue
+        borderRadius: "8px",
+        border: "2px solid #1976d2", // Strong blue border
+        boxShadow: "0 4px 8px rgba(0,0,0,0.15)", // Stronger shadow
+      })}
+    >
+      <h3
+        className={css({
+          fontSize: "1.25rem",
+          fontWeight: "bold",
+          textAlign: "center",
+          marginBottom: "1rem",
+        })}
+      >
+        🧪 Das Gefangenendilemma: Sie sind Walter White
+      </h3>
 
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_2px_2px,rgba(59,130,246,0.4)_2px,transparent_0)] bg-[length:24px_24px]"></div>
+      <p
+        className={css({
+          textAlign: "center",
+          color: "#6c757d",
+          marginBottom: "1.5rem",
+        })}
+      >
+        Sie und Jesse werden separat verhört. Was ist Ihre Entscheidung?
+      </p>
 
-      {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 via-transparent to-purple-400/10 rounded-2xl"></div>
-
-      <div className="relative z-10">
-        <div className="flex items-center justify-center mb-6 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-blue-200">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse shadow-lg"></div>
-            <h3 className="text-2xl font-bold text-gray-800 text-center">
-              🧪 Interactive Payoff Matrix: Walter vs Jesse - DEA Interrogation
-            </h3>
-            <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full animate-pulse shadow-lg"></div>
-          </div>
-        </div>
-
-        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-blue-200 mb-6">
-          <p className="text-gray-700 text-center text-lg font-medium">
-            🎭 <strong>Sie sind Walter White</strong> (Blau). Jesse Pinkman ist im nächsten Raum. Ihre Wahl?
-          </p>
-        </div>
-        <div className="relative z-10">
-          <div className="flex justify-center gap-6 mb-6">
-            <button
-              onClick={() => setPlayerChoice("D")}
-              className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-110 shadow-lg border-2 ${
-                playerChoice === "D"
-                  ? "bg-red-500 text-white shadow-red-300 border-red-600 animate-pulse"
-                  : "bg-white border-red-300 text-red-600 hover:bg-red-50 hover:shadow-red-200"
-              }`}
-            >
-              �️ Betray (Defect)
-              <div className="text-xs font-normal mt-1">({choiceDescriptions["D"]})</div>
-            </button>
-            <button
-              onClick={() => setPlayerChoice("C")}
-              className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-110 shadow-lg border-2 ${
-                playerChoice === "C"
-                  ? "bg-green-500 text-white shadow-green-300 border-green-600 animate-pulse"
-                  : "bg-white border-green-300 text-green-600 hover:bg-green-50 hover:shadow-green-200"
-              }`}
-            >
-              🤐 Stay Silent (Cooperate)
-              <div className="text-xs font-normal mt-1">({choiceDescriptions["C"]})</div>
-            </button>
-          </div>
-        </div>
-
-        {playerChoice && (
-          <div className="mb-6 bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-blue-200">
-            <p className="text-center text-gray-800 mb-4 text-lg font-medium">
-              🤔 Was wird <strong>Jesse Pinkman</strong> im anderen Verhörraum wählen?
-            </p>
-            <div className="flex justify-center gap-6">
-              <button
-                onClick={() => setOpponentChoice("D")}
-                className={`px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-md border-2 ${
-                  opponentChoice === "D"
-                    ? "bg-red-400 text-white border-red-500 shadow-red-200"
-                    : "bg-white border-red-300 text-red-600 hover:bg-red-50 hover:shadow-red-200"
-                }`}
-              >
-                Jesse verrät Walter
-              </button>
-              <button
-                onClick={() => setOpponentChoice("C")}
-                className={`px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-md border-2 ${
-                  opponentChoice === "C"
-                    ? "bg-green-400 text-white border-green-500 shadow-green-200"
-                    : "bg-white border-green-300 text-green-600 hover:bg-green-50 hover:shadow-green-200"
-                }`}
-              >
-                Jesse bleibt stumm
-              </button>
-            </div>
-          </div>
-        )}
-
-        {playerChoice && opponentChoice && (
-          <div className="mb-6 bg-white/70 backdrop-blur-sm rounded-xl p-6 border-2 border-blue-300 shadow-xl">
-            <div
-              className={`p-6 rounded-xl border-2 ${getScenarioDescription(playerChoice, opponentChoice).color} mb-4 shadow-lg`}
-            >
-              <h4 className="font-bold text-xl mb-3 text-center">🎬 Breaking Bad Ausgang:</h4>
-              <p className="text-base mb-4 text-center font-medium">
-                {getScenarioDescription(playerChoice, opponentChoice).text}
-              </p>
-              <div className="flex justify-center gap-12">
-                <div className="text-center bg-white/80 rounded-lg p-4 shadow-md">
-                  <div className="text-3xl font-bold text-blue-600 mb-1">
-                    {prisonersDilemma(playerChoice, opponentChoice)[0]}
-                  </div>
-                  <div className="text-sm text-gray-600 font-medium">Walter&apos;s Jahre</div>
-                </div>
-                <div className="text-center bg-white/80 rounded-lg p-4 shadow-md">
-                  <div className="text-3xl font-bold text-red-600 mb-1">
-                    {prisonersDilemma(playerChoice, opponentChoice)[1]}
-                  </div>
-                  <div className="text-sm text-gray-600 font-medium">Jesse&apos;s Jahre</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={playRound}
-            className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-          >
-            ✅ Play Round
-          </button>
-          <button
-            onClick={resetGame}
-            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            🔄 Reset
-          </button>
-        </div>
-      </div>
-
-      {gameHistory.length > 0 && (
-        <div className="mb-6">
-          <h4 className="font-bold mb-2">🎬 Breaking Bad Episodes:</h4>
-          <div className="bg-white p-4 rounded-lg border">
-            {gameHistory.map((round, index) => (
-              <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                <span className="text-sm">
-                  Episode {index + 1}: Walter {round.player === "D" ? "Blamed Jesse" : "Protected Jesse"}, Jesse{" "}
-                  {round.opponent === "D" ? "Blamed Walter" : "Protected Walter"}
-                </span>
-                <span className="text-sm font-bold">
-                  <span className="text-blue-600">{round.playerPayoff}</span> vs{" "}
-                  <span className="text-red-600">{round.opponentPayoff}</span>
-                </span>
-              </div>
-            ))}
-            <div className="pt-2 font-bold text-center">
-              Total Prison Years:
-              <span className="text-blue-600 ml-2">
-                Walter: {gameHistory.reduce((sum, round) => sum + round.playerPayoff, 0)} points
-              </span>
-              <span className="mx-2">vs</span>
-              <span className="text-red-600">
-                Jesse: {gameHistory.reduce((sum, round) => sum + round.opponentPayoff, 0)} points
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="text-center">
-        <button
-          onClick={() => setShowAllOutcomes(!showAllOutcomes)}
-          className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
+      {!playerChoice ? (
+        <div
+          className={css({
+            display: "flex",
+            justifyContent: "center",
+            gap: "1rem",
+          })}
         >
-          {showAllOutcomes ? "Hide" : "Show"} All Possible Outcomes
-        </button>
-      </div>
+          <button
+            onClick={() => makeDecision("D")}
+            className={css({
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#dc3545",
+              color: "white",
+              borderRadius: "8px",
+              border: "none",
+              fontWeight: "medium",
+              cursor: "pointer",
+              transition: "background-color 0.2s",
+              _hover: {
+                backgroundColor: "#c82333",
+              },
+            })}
+          >
+            ⚠️ Jesse verraten
+          </button>
+          <button
+            onClick={() => makeDecision("C")}
+            className={css({
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#007bff",
+              color: "white",
+              borderRadius: "8px",
+              border: "none",
+              fontWeight: "medium",
+              cursor: "pointer",
+              transition: "background-color 0.2s",
+              _hover: {
+                backgroundColor: "#0056b3",
+              },
+            })}
+          >
+            🤐 Stumm bleiben
+          </button>
+        </div>
+      ) : (
+        <div>
+          <div
+            className={css({
+              textAlign: "center",
+              marginBottom: "1rem",
+            })}
+          >
+            <p
+              className={css({
+                fontSize: "1.125rem",
+                fontWeight: "medium",
+              })}
+            >
+              Ihre Wahl:{" "}
+              <span className={css({ fontWeight: "bold" })}>
+                {playerChoice === "D" ? "Jesse verraten" : "Stumm bleiben"}
+              </span>
+            </p>
+            <p
+              className={css({
+                fontSize: "1.125rem",
+                fontWeight: "medium",
+              })}
+            >
+              Jesses Wahl:{" "}
+              <span className={css({ fontWeight: "bold" })}>
+                {opponentChoice === "D" ? "Walter verraten" : "Stumm bleiben"}
+              </span>
+            </p>
+          </div>
 
-      {showAllOutcomes && (
-        <div className="mt-4">
-          <h4 className="font-bold text-lg mb-4 text-center">🧪 All Breaking Bad Scenarios - DEA Interrogation Room</h4>
-          <div className="grid grid-cols-1 gap-6">
-            {outcomes.map((outcome, index) => (
-              <div key={index} className={`p-6 rounded-lg border-2 ${outcome.color}`}>
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="lg:w-1/3">
-                    <div className="font-bold text-center mb-2 text-lg">
-                      Walter: {outcome.p1 === "D" ? "🔴 Blames Jesse" : "🔵 Protects Jesse"} | Jesse:{" "}
-                      {outcome.p2 === "D" ? "🔴 Blames Walter" : "🔵 Protects Walter"}
-                    </div>
-                    <div className="flex justify-center gap-4 text-center mb-4">
-                      <div className="bg-white rounded-lg p-3">
-                        <div className="font-bold text-blue-600 text-xl">
-                          {prisonersDilemma(outcome.p1 as Choice, outcome.p2 as Choice)[0]}
-                        </div>
-                        <div className="text-xs text-gray-600">Walter&apos;s Points</div>
-                      </div>
-                      <div className="bg-white rounded-lg p-3">
-                        <div className="font-bold text-red-600 text-xl">
-                          {prisonersDilemma(outcome.p1 as Choice, outcome.p2 as Choice)[1]}
-                        </div>
-                        <div className="text-xs text-gray-600">Jesse&apos;s Points</div>
-                      </div>
-                    </div>
+          {gameResult && (
+            <div
+              className={css({
+                padding: "1rem",
+                borderRadius: "8px",
+                border: "2px solid",
+                borderColor: getOutcomeBorderColor(playerChoice, opponentChoice!),
+                backgroundColor: getOutcomeColor(playerChoice, opponentChoice!),
+              })}
+            >
+              <p
+                className={css({
+                  textAlign: "center",
+                  fontWeight: "medium",
+                  marginBottom: "0.75rem",
+                })}
+              >
+                {getOutcomeText(playerChoice, opponentChoice!)}
+              </p>
+              <div
+                className={css({
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "2rem",
+                })}
+              >
+                <div
+                  className={css({
+                    textAlign: "center",
+                  })}
+                >
+                  <div
+                    className={css({
+                      fontSize: "2rem",
+                      fontWeight: "bold",
+                      color: "#007bff",
+                    })}
+                  >
+                    {gameResult.walterPayoff}
                   </div>
-
-                  <div className="lg:w-2/3 space-y-3">
-                    <div className="bg-white bg-opacity-50 p-3 rounded-lg">
-                      <div className="font-semibold text-gray-800 mb-1">📋 What Happens:</div>
-                      <div className="text-sm">{outcome.result}</div>
-                    </div>
-
-                    <div className="bg-white bg-opacity-50 p-3 rounded-lg">
-                      <div className="font-semibold text-gray-800 mb-1">🎬 Breaking Bad Scene:</div>
-                      <div className="text-sm italic">{outcome.tvExplanation}</div>
-                    </div>
-
-                    <div className="bg-white bg-opacity-50 p-3 rounded-lg">
-                      <div className="font-semibold text-gray-800 mb-1">⚖️ Prison Sentences:</div>
-                      <div className="text-sm font-medium">{outcome.pointExplanation}</div>
-                    </div>
+                  <div
+                    className={css({
+                      fontSize: "0.875rem",
+                      color: "#6c757d",
+                    })}
+                  >
+                    Walters Punkte
+                  </div>
+                </div>
+                <div
+                  className={css({
+                    textAlign: "center",
+                  })}
+                >
+                  <div
+                    className={css({
+                      fontSize: "2rem",
+                      fontWeight: "bold",
+                      color: "#dc3545",
+                    })}
+                  >
+                    {gameResult.jessePayoff}
+                  </div>
+                  <div
+                    className={css({
+                      fontSize: "0.875rem",
+                      color: "#6c757d",
+                    })}
+                  >
+                    Jesses Punkte
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
 
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h5 className="font-bold text-yellow-800 mb-2">🧪 Breaking Bad Insight:</h5>
-            <p className="text-sm text-yellow-700">
-              The points represent prison sentences in <strong>Breaking Bad</strong> terms:{" "}
-              <strong>Higher points = Better outcome for the character</strong>
-              <br />• <strong>4 points</strong> = Walk free with immunity (like when someone cooperates with DEA) •{" "}
-              <strong>2 points</strong> = 3 years light sentence (both keep quiet, minimal evidence) •{" "}
-              <strong>0 points</strong> = 5 years medium sentence (both blame each other, contradictory stories) •{" "}
-              <strong>-1 point</strong> = 15 years harsh sentence (betrayed by partner, full blame)
-            </p>
-            <p className="text-sm text-yellow-700 mt-2">
-              <strong>Just like in the show:</strong> Walter and Jesse&apos;s relationship constantly faced these dilemmas.
-              Trust vs. self-preservation. Loyalty vs. survival. The math is brutal but the emotions make it human.
-            </p>
+          <div
+            className={css({
+              textAlign: "center",
+              marginTop: "1rem",
+            })}
+          >
+            <button
+              onClick={resetGame}
+              className={css({
+                padding: "0.5rem 1rem",
+                backgroundColor: "#6c757d",
+                color: "white",
+                borderRadius: "8px",
+                border: "none",
+                cursor: "pointer",
+                transition: "background-color 0.2s",
+                _hover: {
+                  backgroundColor: "#545b62",
+                },
+              })}
+            >
+              🔄 Nochmal spielen
+            </button>
           </div>
         </div>
       )}
+
+      <div
+        className={css({
+          marginTop: "1.5rem",
+          fontSize: "0.75rem",
+          color: "#6c757d",
+          textAlign: "center",
+        })}
+      >
+        <p>Höhere Punkte = besseres Ergebnis • 4 = Freiheit • 2 = kurze Haft • 0 = mittlere Haft • -1 = lange Haft</p>
+      </div>
     </div>
   );
 };

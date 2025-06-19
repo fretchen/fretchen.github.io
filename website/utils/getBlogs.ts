@@ -153,10 +153,11 @@ export const getBlogs = async ({
       }
     });
   } else if (sortBy === "publishing_date") {
-    // sort the blogs by publishing date with the most recent first
+    // sort the blogs by publishing date with the OLDEST first to keep stable URLs
+    // The display order will be handled by the frontend components
     blogs.sort((a, b) => {
       if (a.publishing_date && b.publishing_date) {
-        return new Date(b.publishing_date).getTime() - new Date(a.publishing_date).getTime();
+        return new Date(a.publishing_date).getTime() - new Date(b.publishing_date).getTime();
       } else {
         return 0;
       }

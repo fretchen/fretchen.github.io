@@ -4,7 +4,7 @@ import React, { useState } from "react";
 export const meta = {
   title: "Interactive Calculator Example",
   publishing_date: "2025-06-19",
-  tokenID: 100,
+  tokenID: 2,
 };
 
 // Simple calculator component
@@ -143,7 +143,6 @@ const DataChart: React.FC = () => {
 const InteractiveExample: React.FC = () => {
   return (
     <article>
-      <h1>Interactive Blog Post Example</h1>
       
       <p>
         Willkommen zu diesem interaktiven Blog-Post! Dies ist ein Beispiel dafür, wie TypeScript-basierte 

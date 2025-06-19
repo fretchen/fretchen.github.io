@@ -14,7 +14,7 @@ import "katex/dist/katex.min.css";
 import Giscus from "@giscus/react";
 
 // Dynamic React component renderer
-const ReactPostRenderer: React.FC<{ componentPath: string }> = ({ componentPath }) => {
+const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> = ({ componentPath, tokenID }) => {
   const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
@@ -105,11 +105,14 @@ const ReactPostRenderer: React.FC<{ componentPath: string }> = ({ componentPath 
 
   return (
     <div className={post.contentContainer}>
-      <React.Suspense fallback={
-        <div style={{ padding: "20px", textAlign: "center" }}>
-          <p>⚡ Lade Komponente...</p>
-        </div>
-      }>
+      {tokenID && <NFTFloatImage tokenId={tokenID} />}
+      <React.Suspense
+        fallback={
+          <div style={{ padding: "20px", textAlign: "center" }}>
+            <p>⚡ Lade Komponente...</p>
+          </div>
+        }
+      >
         <Component />
       </React.Suspense>
     </div>
@@ -142,7 +145,7 @@ export function Post({
 
       {/* Render based on post type */}
       {type === "react" && componentPath ? (
-        <ReactPostRenderer componentPath={componentPath} />
+        <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
       ) : (
         <div className={post.contentContainer}>
           {tokenID && <NFTFloatImage tokenId={tokenID} />}

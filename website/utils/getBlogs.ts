@@ -8,6 +8,99 @@ import { BlogPost } from "../types/BlogPost";
 import { BlogOptions } from "../types/BlogOptions";
 import { loadMultipleNFTMetadata } from "./nftLoader";
 
+// Helper function to process markdown/mdx files
+const processMarkdownPost = (file: string, blogDirectory: string): BlogPost => {
+  const blogFileContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");
+  // separate any front matter from the content
+  let blogContent = blogFileContent;
+
+  const frontMatter = blogFileContent.match(/---([\s\S]*?)---/);
+  if (frontMatter) {
+    blogContent = blogContent.replace(frontMatter[0], "");
+    // remove leading and trailing newlines
+    blogContent = blogContent.replace(/^\n/, "").replace(/\n$/, "");
+    const blogPost: BlogPost = {
+      title: "",
+      content: blogContent,
+      type: "markdown",
+    };
+
+    // strip the leading and trailing '---' from the front matter
+    const frontContent = frontMatter[0].replace(/---/g, "");
+    // find publishing_date, title, order, tokenID
+    const publishingDate = frontContent.match(/publishing_date: (.*)/);
+    if (publishingDate) {
+      blogPost.publishing_date = publishingDate[1];
+    }
+    const title = frontContent.match(/title: (.*)/);
+    if (title) {
+      blogPost.title = title[1];
+    }
+    const order = frontContent.match(/order: (.*)/);
+    if (order) {
+      blogPost.order = parseInt(order[1]);
+    }
+    const tokenID = frontContent.match(/tokenID:\s*(\d+)/);
+    if (tokenID) {
+      blogPost.tokenID = parseInt(tokenID[1]);
+    }
+    return blogPost;
+  } else {
+    return {
+      title: file.endsWith(".mdx") ? file.replace(".mdx", "") : file.replace(".md", ""),
+      content: blogContent,
+      type: "markdown",
+    };
+  }
+};
+
+// Helper function to process TypeScript files
+const processTypeScriptPost = (file: string, blogDirectory: string): BlogPost => {
+  const filePath = `${blogDirectory}/${file}`;
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  
+  // Extract meta export from TypeScript file
+  const metaMatch = fileContent.match(/export\s+const\s+meta\s*=\s*({[\s\S]*?});/);
+  
+  let blogPost: BlogPost = {
+    title: file.replace(".tsx", ""),
+    content: "", // Will be the component path
+    type: "react",
+    componentPath: filePath,
+  };
+
+  if (metaMatch) {
+    try {
+      // Simple regex-based parsing of meta object
+      const metaString = metaMatch[1];
+      
+      const titleMatch = metaString.match(/title:\s*["']([^"']+)["']/);
+      if (titleMatch) {
+        blogPost.title = titleMatch[1];
+      }
+      
+      const dateMatch = metaString.match(/publishing_date:\s*["']([^"']+)["']/);
+      if (dateMatch) {
+        blogPost.publishing_date = dateMatch[1];
+      }
+      
+      const orderMatch = metaString.match(/order:\s*(\d+)/);
+      if (orderMatch) {
+        blogPost.order = parseInt(orderMatch[1]);
+      }
+      
+      const tokenMatch = metaString.match(/tokenID:\s*(\d+)/);
+      if (tokenMatch) {
+        blogPost.tokenID = parseInt(tokenMatch[1]);
+      }
+    } catch (error) {
+      console.warn(`Error parsing meta for ${file}:`, error);
+    }
+  }
+
+  return blogPost;
+};
+
 export const getBlogs = async ({
   blogDirectory = "./blog",
   sortBy = "publishing_date",
@@ -15,52 +108,12 @@ export const getBlogs = async ({
 }: BlogOptions & { loadNFTs?: boolean }): Promise<BlogPost[]> => {
   const blogFiles = fs.readdirSync(blogDirectory);
   const blogs = blogFiles
-    .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))
+    .filter((file) => file.endsWith(".mdx") || file.endsWith(".md") || file.endsWith(".tsx"))
     .map((file) => {
-      const blogFileContent = fs.readFileSync(`${blogDirectory}/${file}`, "utf-8");
-      // separate any front matter from the content
-      let blogContent = blogFileContent;
-
-      const frontMatter = blogFileContent.match(/---([\s\S]*?)---/);
-      if (frontMatter) {
-        blogContent = blogContent.replace(frontMatter[0], "");
-        // remove leading and trailing newlines
-        blogContent = blogContent.replace(/^\n/, "").replace(/\n$/, "");
-        const blogPost: BlogPost = {
-          title: "",
-          content: blogContent,
-        };
-
-        // strip the leading and trailing '---' from the front matter
-        const frontContent = frontMatter[0].replace(/---/g, "");
-        // find a line in front matter that starts with publishing_date:
-        const publishingDate = frontContent.match(/publishing_date: (.*)/);
-        if (publishingDate) {
-          blogPost.publishing_date = publishingDate[1];
-        }
-        // find a line in front matter that starts with title:
-        const title = frontContent.match(/title: (.*)/);
-        if (title) {
-          blogPost.title = title[1];
-        }
-
-        // find a line in front matter that starts with order:
-        const order = frontContent.match(/order: (.*)/);
-        if (order) {
-          blogPost.order = parseInt(order[1]);
-        }
-
-        // find a line in front matter that starts with tokenID:
-        const tokenID = frontContent.match(/tokenID:\s*(\d+)/);
-        if (tokenID) {
-          blogPost.tokenID = parseInt(tokenID[1]);
-        }
-        return blogPost;
+      if (file.endsWith(".tsx")) {
+        return processTypeScriptPost(file, blogDirectory);
       } else {
-        return {
-          title: file.endsWith(".mdx") ? file.replace(".mdx", "") : file.replace(".md", ""),
-          content: blogContent,
-        };
+        return processMarkdownPost(file, blogDirectory);
       }
     });
 
@@ -103,7 +156,7 @@ export const getBlogs = async ({
     // sort the blogs by publishing date with the most recent first
     blogs.sort((a, b) => {
       if (a.publishing_date && b.publishing_date) {
-        return new Date(a.publishing_date).getTime() - new Date(b.publishing_date).getTime();
+        return new Date(b.publishing_date).getTime() - new Date(a.publishing_date).getTime();
       } else {
         return 0;
       }

@@ -22,9 +22,9 @@ type Strategy = "random" | "defect" | "cooperate" | "tit-for-tat";
 function prisonersDilemma(choice1: Choice, choice2: Choice): [number, number] {
   // Breaking Bad scenario: prison sentences in years
   // C = Cooperate (stay loyal), D = Defect (betray)
-  if (choice1 === "C" && choice2 === "C") return [3, 3];   // Both stay loyal: 3 years each
-  if (choice1 === "C" && choice2 === "D") return [15, 0];  // Walter loyal, Jesse betrays: Walter 15 years, Jesse free
-  if (choice1 === "D" && choice2 === "C") return [0, 15];  // Walter betrays, Jesse loyal: Walter free, Jesse 15 years
+  if (choice1 === "C" && choice2 === "C") return [3, 3]; // Both stay loyal: 3 years each
+  if (choice1 === "C" && choice2 === "D") return [15, 0]; // Walter loyal, Jesse betrays: Walter 15 years, Jesse free
+  if (choice1 === "D" && choice2 === "C") return [0, 15]; // Walter betrays, Jesse loyal: Walter free, Jesse 15 years
   return [5, 5]; // Both betray: 5 years each
 }
 
@@ -119,10 +119,10 @@ const PayoffMatrix: React.FC = () => {
   };
 
   const getOutcomeText = (walter: Choice, jesse: Choice) => {
-    if (walter === "D" && jesse === "D") return "Both blame each other - 5 years each!";
-    if (walter === "D" && jesse === "C") return "Walter betrays Jesse - Walter walks free!";
-    if (walter === "C" && jesse === "D") return "Jesse betrays Walter - Walter gets 15 years!";
-    return "Both stay loyal - 3 years each, best mutual outcome!";
+    if (walter === "D" && jesse === "D") return "We both blame each other - 5 years each!";
+    if (walter === "D" && jesse === "C") return "I betray Jesse - I walk free!";
+    if (walter === "C" && jesse === "D") return "Jesse betrays me - I get 15 years!";
+    return "We both stay loyal - 3 years each, best mutual outcome!";
   };
 
   const getOutcomeColor = (walter: Choice, jesse: Choice) => {
@@ -158,7 +158,7 @@ const PayoffMatrix: React.FC = () => {
           color: "#374151",
         })}
       >
-        Interactive Scenario: Make Walter's Choice
+        Interactive Scenario: What do you do?
       </h4>
 
       <p
@@ -232,7 +232,7 @@ const PayoffMatrix: React.FC = () => {
                 marginBottom: "0.5rem",
               })}
             >
-              <strong>Your choice:</strong> {playerChoice === "D" ? "Blame Jesse" : "Stay loyal"}
+              <strong>My choice:</strong> {playerChoice === "D" ? "Blame Jesse" : "Stay loyal"}
             </p>
             <p
               className={css({
@@ -241,25 +241,26 @@ const PayoffMatrix: React.FC = () => {
                 marginBottom: "0.5rem",
               })}
             >
-              <strong>Jesse&apos;s choice (simulated):</strong> {opponentChoice === "D" ? "Blame Walter" : "Stay loyal"}
+              <strong>Jesse&apos;s choice (simulated):</strong> {opponentChoice === "D" ? "Blame me" : "Stay loyal"}
             </p>
           </div>
 
           {gameResult && (
             <div
               className={css({
-                padding: "1rem",
-                borderRadius: "8px",
-                border: "2px solid",
-                borderColor: getOutcomeBorderColor(playerChoice, opponentChoice!),
-                backgroundColor: getOutcomeColor(playerChoice, opponentChoice!),
+                padding: "0.75rem",
+                borderRadius: "4px",
+                border: "1px solid #d1d5db",
+                backgroundColor: "#f9fafb",
+                marginTop: "1rem",
               })}
             >
               <p
                 className={css({
                   textAlign: "center",
-                  fontWeight: "medium",
-                  marginBottom: "0.75rem",
+                  fontSize: "0.85rem",
+                  color: "#374151",
+                  marginBottom: "0.5rem",
                 })}
               >
                 {getOutcomeText(playerChoice, opponentChoice!)}
@@ -269,53 +270,17 @@ const PayoffMatrix: React.FC = () => {
                   display: "flex",
                   justifyContent: "center",
                   gap: "2rem",
+                  fontSize: "0.8rem",
+                  color: "#6b7280",
                 })}
               >
-                <div
-                  className={css({
-                    textAlign: "center",
-                  })}
-                >
-                  <div
-                    className={css({
-                      fontSize: "2rem",
-                      fontWeight: "bold",
-                      color: gameResult.walterSentence === 0 ? "#28a745" : gameResult.walterSentence >= 10 ? "#dc3545" : "#ffc107",
-                    })}
-                  >
-                    {gameResult.walterSentence === 0 ? "FREE" : `${gameResult.walterSentence} years`}
-                  </div>
-                  <div
-                    className={css({
-                      fontSize: "0.875rem",
-                      color: "#6c757d",
-                    })}
-                  >
-                    Walter's sentence
-                  </div>
+                <div>
+                  <strong>My sentence:</strong>{" "}
+                  {gameResult.walterSentence === 0 ? "Free" : `${gameResult.walterSentence} years`}
                 </div>
-                <div
-                  className={css({
-                    textAlign: "center",
-                  })}
-                >
-                  <div
-                    className={css({
-                      fontSize: "2rem",
-                      fontWeight: "bold",
-                      color: gameResult.jesseSentence === 0 ? "#28a745" : gameResult.jesseSentence >= 10 ? "#dc3545" : "#ffc107",
-                    })}
-                  >
-                    {gameResult.jesseSentence === 0 ? "FREE" : `${gameResult.jesseSentence} years`}
-                  </div>
-                  <div
-                    className={css({
-                      fontSize: "0.875rem",
-                      color: "#6c757d",
-                    })}
-                  >
-                    Jesse's sentence
-                  </div>
+                <div>
+                  <strong>Jesse&apos;s sentence:</strong>{" "}
+                  {gameResult.jesseSentence === 0 ? "Free" : `${gameResult.jesseSentence} years`}
                 </div>
               </div>
             </div>
@@ -330,19 +295,20 @@ const PayoffMatrix: React.FC = () => {
             <button
               onClick={resetGame}
               className={css({
-                padding: "0.5rem 1rem",
-                backgroundColor: "#6c757d",
-                color: "white",
-                borderRadius: "8px",
-                border: "none",
+                padding: "0.375rem 0.75rem",
+                backgroundColor: "#f3f4f6",
+                color: "#374151",
+                borderRadius: "4px",
+                border: "1px solid #d1d5db",
+                fontSize: "0.8rem",
                 cursor: "pointer",
                 transition: "background-color 0.2s",
                 _hover: {
-                  backgroundColor: "#545b62",
+                  backgroundColor: "#e5e7eb",
                 },
               })}
             >
-              🔄 Play again
+              Try again
             </button>
           </div>
         </div>
@@ -350,13 +316,16 @@ const PayoffMatrix: React.FC = () => {
 
       <div
         className={css({
-          marginTop: "1.5rem",
-          fontSize: "0.75rem",
-          color: "#6c757d",
+          marginTop: "1rem",
+          fontSize: "0.7rem",
+          color: "#9ca3af",
           textAlign: "center",
         })}
       >
-        <p>Prison sentences based on the Breaking Bad scenario • 0 years = immunity deal • 3 years = mutual cooperation • 5 years = mutual betrayal • 15 years = betrayed while loyal</p>
+        <p>
+          Sentences: 0 years = immunity • 3 years = mutual cooperation • 5 years = mutual betrayal • 15 years = betrayed
+          while loyal
+        </p>
       </div>
     </div>
   );
@@ -796,10 +765,15 @@ const PrisonersDilemmaPost: React.FC = () => {
         across the table, and you know Jesse is in the next room facing the same choice. What do you do?
       </p>
 
-        <PayoffMatrix />
-      
+      <PayoffMatrix />
 
-      <h3>Walter&apos;s Rational Analysis</h3>
+      <p>
+        {" "}
+        It is really interesting to play around with the game. I personally felt very motivated to blame Jesse at some
+        as I could simply walk free and did not feel like I had much too loose. However, you can put feelings aside and
+        simply look at the expected utility of the game.
+      </p>
+      <h3>A Rational Analysis</h3>
 
       <ReactMarkdown>{`
 

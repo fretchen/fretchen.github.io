@@ -133,6 +133,13 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     }, 5000);
   };
 
+  // Handle listing status changes
+  const handleListedStatusChanged = useCallback((tokenId: bigint, isListed: boolean) => {
+    // This function can be used to update local state if needed
+    // For now, the NFTCard handles the blockchain state itself
+    console.log(`NFT ${tokenId} listing status changed to: ${isListed}`);
+  }, []);
+
   // Load data when component mounts or dependencies change
   useEffect(() => {
     if (isConnected && address) {
@@ -191,6 +198,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
             tokenId={tokenId}
             onImageClick={setSelectedImage}
             onNftBurned={() => loadUserTokenIds()}
+            onListedStatusChanged={handleListedStatusChanged}
             isHighlighted={highlightedNFT === tokenId}
             isPublicView={false}
           />

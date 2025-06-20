@@ -44,14 +44,14 @@ const ExpectedUtilityPlot: React.FC = () => {
     labels: probabilities.map((p) => (p * 100).toFixed(0) + "%"),
     datasets: [
       {
-        label: "Cooperate (Stay loyal)",
+        label: "Stay loyal to Jesse",
         data: cooperateValues,
         borderColor: "rgb(59, 130, 246)",
         backgroundColor: "rgba(59, 130, 246, 0.1)",
         tension: 0.1,
       },
       {
-        label: "Defect (Betray)",
+        label: "Betray Jesse",
         data: defectValues,
         borderColor: "rgb(239, 68, 68)",
         backgroundColor: "rgba(239, 68, 68, 0.1)",
@@ -78,7 +78,7 @@ const ExpectedUtilityPlot: React.FC = () => {
       x: {
         title: {
           display: true,
-          text: "Probability opponent defects",
+          text: "How likely Jesse is to betray (%)",
           font: { size: 11 },
         },
         ticks: {
@@ -89,7 +89,7 @@ const ExpectedUtilityPlot: React.FC = () => {
       y: {
         title: {
           display: true,
-          text: "Expected prison sentence (years)",
+          text: "Walter's expected prison sentence (years)",
           font: { size: 11 },
         },
         ticks: {
@@ -122,7 +122,7 @@ const ExpectedUtilityPlot: React.FC = () => {
           color: "#374151",
         })}
       >
-        Interactive Prisoner's Dilemma Analysis
+        When should Walter stay loyal vs. betray Jesse?
       </h4>
 
       <p
@@ -133,72 +133,66 @@ const ExpectedUtilityPlot: React.FC = () => {
           marginBottom: "1rem",
         })}
       >
-        Adjust the payoff matrix and probability to explore different scenarios.
+        We know that if <strong>both stay loyal, each gets 3 years</strong>, and if <strong>Walter betrays while Jesse stays loyal, Walter goes free (0 years)</strong>. But what about the other scenarios? Adjust the sliders below to see when loyalty becomes Walter's best choice.
       </p>
 
-      {/* Payoff Matrix Controls */}
+      {/* Adjustable Prison Sentences */}
       <div
         className={css({
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "0.5rem",
+          gap: "1rem",
           marginBottom: "1rem",
           fontSize: "0.8rem",
         })}
       >
         <div>
-          <label>R (Both cooperate): {R} years (fixed)</label>
-          <div
-            className={css({
-              padding: "0.5rem",
-              backgroundColor: "#f3f4f6",
-              borderRadius: "4px",
-              border: "1px solid #d1d5db",
-              textAlign: "center",
-              color: "#6b7280",
-            })}
-          >
-            Breaking Bad example value
-          </div>
-        </div>
-        <div>
-          <label>T (I defect, opponent cooperates): {T} years (fixed)</label>
-          <div
-            className={css({
-              padding: "0.5rem",
-              backgroundColor: "#f3f4f6",
-              borderRadius: "4px",
-              border: "1px solid #d1d5db",
-              textAlign: "center",
-              color: "#6b7280",
-            })}
-          >
-            Walk free = 0 years
-          </div>
-        </div>
-        <div>
-          <label>P (Both defect): {P} years</label>
+          <label>
+            <strong>If both betray:</strong> {P} years each
+          </label>
           <input
             type="range"
             min="1"
-            max="15"
+            max="20"
             step="0.5"
             value={P}
             onChange={(e) => setP(parseFloat(e.target.value))}
             className={css({ width: "100%" })}
           />
+          <div
+            className={css({
+              fontSize: "0.7rem",
+              color: "#6b7280",
+              textAlign: "center",
+              marginTop: "0.25rem",
+            })}
+          >
+            (Breaking Bad: {P} years)
+          </div>
         </div>
         <div>
-          <label>S (I cooperate, opponent defects): {S} years</label>
+          <label>
+            <strong>If Jesse betrays Walter:</strong> {S} years for Walter
+          </label>
           <input
             type="range"
-            min="5"
+            min="1"
             max="20"
             step="0.5"
             value={S}
             onChange={(e) => setS(parseFloat(e.target.value))}
             className={css({ width: "100%" })}
           />
+          <div
+            className={css({
+              fontSize: "0.7rem",
+              color: "#6b7280",
+              textAlign: "center",
+              marginTop: "0.25rem",
+            })}
+          >
+            (Breaking Bad: {S} years)
+          </div>
         </div>
       </div>
 
@@ -217,7 +211,7 @@ const ExpectedUtilityPlot: React.FC = () => {
             textAlign: "center",
           })}
         >
-          Probability opponent defects: <strong>{(probabilityDefect * 100).toFixed(0)}%</strong>
+          How likely is Jesse to betray me: <strong>{(probabilityDefect * 100).toFixed(0)}%</strong>
         </label>
         <input
           type="range"
@@ -258,7 +252,7 @@ const ExpectedUtilityPlot: React.FC = () => {
           })}
         >
           <div>
-            <strong>Cooperate:</strong>
+            <strong>Stay loyal:</strong>
           </div>
           <div>{expectedCooperate.toFixed(1)} years</div>
         </div>
@@ -272,7 +266,7 @@ const ExpectedUtilityPlot: React.FC = () => {
           })}
         >
           <div>
-            <strong>Defect:</strong>
+            <strong>Betray Jesse:</strong>
           </div>
           <div>{expectedDefect.toFixed(1)} years</div>
         </div>
@@ -286,7 +280,8 @@ const ExpectedUtilityPlot: React.FC = () => {
           marginBottom: "1rem",
         })}
       >
-        <strong>Optimal choice:</strong> {expectedDefect < expectedCooperate ? "Defect" : "Cooperate"}
+        <strong>Walter&apos;s rational choice:</strong>{" "}
+        {expectedDefect < expectedCooperate ? "Betray Jesse" : "Stay loyal"}
         {hasValidCrossover && (
           <span
             className={css({
@@ -294,7 +289,7 @@ const ExpectedUtilityPlot: React.FC = () => {
               marginLeft: "0.5rem",
             })}
           >
-            (Crossover at {(crossoverPoint * 100).toFixed(1)}%)
+            (Break-even at {(crossoverPoint * 100).toFixed(1)}% betrayal probability)
           </span>
         )}
       </div>
@@ -316,10 +311,18 @@ const ExpectedUtilityPlot: React.FC = () => {
         })}
       >
         <p>
-          Chart shows expected prison sentences. Lower is better. Valid Prisoner&apos;s Dilemma requires: T &lt; R
-          &lt; P &lt; S<br />
-          Current: T={T}, R={R}, P={P}, S={S} →{" "}
-          {T < R && R < P && P < S ? "✓ Valid" : "✗ Invalid structure"}
+          Lower prison sentences are better for Walter.
+          <br />
+          Current scenario: T={T}, R={R}, P={P}, S={S} →{" "}
+          {T < R ? (
+            S < P ? (
+              <span style={{ color: "#16a34a" }}>✓ Walter might stay loyal (S &lt; P)</span>
+            ) : (
+              <span style={{ color: "#dc2626" }}>✗ Walter should always betray (S &gt; P)</span>
+            )
+          ) : (
+            <span style={{ color: "#dc2626" }}>✗ Invalid: T must be less than R</span>
+          )}
         </p>
       </div>
     </div>

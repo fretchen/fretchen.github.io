@@ -590,82 +590,206 @@ const PayoffMatrix: React.FC = () => {
 
 // Game Simulation Component
 const GameSimulation: React.FC = () => {
-  const [strategy1, setStrategy1] = useState<Strategy>("random");
-  const [strategy2, setStrategy2] = useState<Strategy>("random");
-  const [numGames, setNumGames] = useState(100);
+  const [walterStrategy, setWalterStrategy] = useState<Strategy>("tit-for-tat");
+  const [numGames, setNumGames] = useState(50);
   const [isRunning, setIsRunning] = useState(false);
   const [gameData, setGameData] = useState<{
     payoffs1: number[];
     payoffs2: number[];
     totalPayoffs1: number[];
     totalPayoffs2: number[];
+    jesseStrategy: Strategy;
   } | null>(null);
+
+  const strategyDescriptions = {
+    random: "Unpredictable - you make random decisions based on emotions and circumstances",
+    cooperate: "Always loyal - you stick with Jesse no matter what (Season 1 approach)",
+    defect: "Always selfish - you prioritize yourself and betray when convenient (Season 5 approach)",
+    "tit-for-tat": "Reciprocal - you start loyal, then match whatever Jesse did last time",
+  };
+
+  const jesseStrategyDescriptions = {
+    random: "Unpredictable Jesse - makes chaotic, emotion-driven decisions",
+    cooperate: "Loyal Jesse - always tries to stick with you (Season 1 Jesse)",
+    defect: "Betraying Jesse - prioritizes himself, always looks for an advantage",
+    "tit-for-tat": "Reactive Jesse - mirrors your behavior from previous interactions",
+  };
 
   const runSimulation = () => {
     setIsRunning(true);
-    const result = playRepeatedGame(numGames, strategy1, strategy2);
-    setGameData(result);
+    
+    // Randomly select Jesse's strategy for this simulation
+    const strategies: Strategy[] = ["random", "cooperate", "defect", "tit-for-tat"];
+    const jesseStrategy = strategies[Math.floor(Math.random() * strategies.length)];
+    
+    const result = playRepeatedGame(numGames, walterStrategy, jesseStrategy);
+    setGameData({
+      ...result,
+      jesseStrategy
+    });
     setIsRunning(false);
   };
 
-  return (
-    <div className={css({ margin: "2rem 0", padding: "1.5rem", backgroundColor: "#f9fafb", borderRadius: "4px" })}>
-      <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem" })}>
-        Repeated Game Simulation
-      </h4>
+  const getOutcomeAnalysis = () => {
+    if (!gameData) return null;
+    
+    const walterTotal = gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1];
+    const jesseTotal = gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1];
+    const walterAvg = walterTotal / numGames;
+    const jesseAvg = jesseTotal / numGames;
+    
+    let verdict = "";
+    let color = "";
+    
+    if (walterAvg < 4) {
+      verdict = "Excellent partnership! You're both doing well.";
+      color = "#10b981"; // green
+    } else if (walterAvg < 6) {
+      verdict = "Decent cooperation with some conflicts.";
+      color = "#f59e0b"; // yellow
+    } else if (walterAvg < 10) {
+      verdict = "Troubled relationship with frequent betrayals.";
+      color = "#f97316"; // orange
+    } else {
+      verdict = "Toxic partnership - this relationship is falling apart.";
+      color = "#ef4444"; // red
+    }
+    
+    return { verdict, color, walterAvg, jesseAvg };
+  };
 
-      <div className={css({ display: "flex", gap: "1rem", marginBottom: "1rem", fontSize: "0.8rem" })}>
+  const analysis = getOutcomeAnalysis();
+
+  return (
+    <div 
+      className={css({ 
+        margin: "2rem 0", 
+        padding: "1.5rem", 
+        backgroundColor: "rgba(59, 130, 246, 0.05)",
+        borderRadius: "4px",
+        border: "1px solid rgba(59, 130, 246, 0.2)"
+      })}
+    >
+      <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem", textAlign: "center", color: "#374151" })}>
+        🎭 Walter's Strategy Simulator: How Will Your Partnership Play Out?
+      </h4>
+      
+      <p className={css({ textAlign: "center", color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.5rem" })}>
+        Choose your approach as Walter. Jesse's strategy will be randomly selected to simulate the uncertainty of working with a partner. Each simulation runs for 50 episodes (two seasons).
+      </p>
+
+      <div className={css({ marginBottom: "1rem" })}>
         <div>
-          <label>Strategy 1:</label>
-          <select value={strategy1} onChange={(e) => setStrategy1(e.target.value as Strategy)}>
-            <option value="random">Random</option>
-            <option value="defect">Always Defect</option>
-            <option value="cooperate">Always Cooperate</option>
-            <option value="tit-for-tat">Tit-for-Tat</option>
-          </select>
-        </div>
-        <div>
-          <label>Strategy 2:</label>
-          <select value={strategy2} onChange={(e) => setStrategy2(e.target.value as Strategy)}>
-            <option value="random">Random</option>
-            <option value="defect">Always Defect</option>
-            <option value="cooperate">Always Cooperate</option>
-            <option value="tit-for-tat">Tit-for-Tat</option>
-          </select>
-        </div>
-        <div>
-          <label>Games: {numGames}</label>
-          <input
-            type="range"
-            min="10"
-            max="200"
-            value={numGames}
-            onChange={(e) => setNumGames(parseInt(e.target.value))}
-          />
+          <label className={css({ display: "block", fontSize: "0.85rem", fontWeight: "medium", marginBottom: "0.5rem", color: "#374151", textAlign: "center" })}>
+            Walter's Strategy (You):
+          </label>
+          <div className={css({ display: "flex", justifyContent: "center" })}>
+            <select 
+              value={walterStrategy} 
+              onChange={(e) => setWalterStrategy(e.target.value as Strategy)}
+              className={css({ 
+                width: "60%", 
+                padding: "0.5rem", 
+                border: "1px solid #d1d5db", 
+                borderRadius: "4px",
+                fontSize: "0.85rem"
+              })}
+            >
+              <option value="tit-for-tat">Reciprocal (Recommended)</option>
+              <option value="cooperate">Always Loyal</option>
+              <option value="defect">Always Selfish</option>
+              <option value="random">Unpredictable</option>
+            </select>
+          </div>
+          <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.5rem", lineHeight: "1.3", textAlign: "center" })}>
+            {strategyDescriptions[walterStrategy]}
+          </p>
         </div>
       </div>
 
-      <button
-        onClick={runSimulation}
-        disabled={isRunning}
-        className={css({
-          padding: "0.5rem 1rem",
-          backgroundColor: "#0066cc",
-          color: "white",
-          borderRadius: "4px",
-          border: "none",
-          cursor: "pointer",
-        })}
-      >
-        {isRunning ? "Running..." : "Run Simulation"}
-      </button>
+      <div className={css({ textAlign: "center", marginBottom: "1rem" })}>
+        <button
+          onClick={runSimulation}
+          disabled={isRunning}
+          className={css({
+            padding: "0.75rem 1.5rem",
+            backgroundColor: isRunning ? "#9ca3af" : "#0066cc",
+            color: "white",
+            borderRadius: "4px",
+            border: "none",
+            fontSize: "0.9rem",
+            fontWeight: "medium",
+            cursor: isRunning ? "not-allowed" : "pointer",
+            transition: "background-color 0.2s",
+            _hover: {
+              backgroundColor: isRunning ? "#9ca3af" : "#0052a3",
+            }
+          })}
+        >
+          {isRunning ? "🎬 Filming the season..." : "🎬 Start the Season"}
+        </button>
+      </div>
 
-      {gameData && (
-        <div className={css({ marginTop: "1rem", fontSize: "0.8rem" })}>
-          <p>
-            Final Scores: Player 1: {gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1]?.toFixed(1)} | Player 2:{" "}
-            {gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1]?.toFixed(1)}
-          </p>
+      {gameData && analysis && (
+        <div className={css({ marginTop: "1rem" })}>
+          <div 
+            className={css({
+              backgroundColor: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "6px",
+              padding: "1rem",
+              marginBottom: "1rem"
+            })}
+          >
+            <div className={css({ textAlign: "center", marginBottom: "0.75rem" })}>
+              <h5 className={css({ fontSize: "0.9rem", fontWeight: "medium", color: "#374151", marginBottom: "0.5rem" })}>
+                🎪 The Season Results
+              </h5>
+              <p className={css({ fontSize: "0.8rem", color: "#6b7280" })}>
+                You played as <strong>{strategyDescriptions[walterStrategy].split(' - ')[0]}</strong> Walter against{" "}
+                <strong>{jesseStrategyDescriptions[gameData.jesseStrategy].split(' - ')[0]}</strong>
+              </p>
+            </div>
+            
+            <div className={css({ 
+              display: "grid", 
+              gridTemplateColumns: "1fr 1fr", 
+              gap: "1rem", 
+              marginBottom: "0.75rem",
+              fontSize: "0.85rem"
+            })}>
+              <div className={css({ textAlign: "center" })}>
+                <div className={css({ color: "#2563eb", fontWeight: "bold", fontSize: "1.1rem" })}>
+                  {analysis.walterAvg.toFixed(1)} years avg
+                </div>
+                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Walter's Average</div>
+              </div>
+              <div className={css({ textAlign: "center" })}>
+                <div className={css({ color: "#7c3aed", fontWeight: "bold", fontSize: "1.1rem" })}>
+                  {analysis.jesseAvg.toFixed(1)} years avg
+                </div>
+                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Jesse's Average</div>
+              </div>
+            </div>
+            
+            <div 
+              className={css({
+                textAlign: "center",
+                padding: "0.5rem",
+                borderRadius: "4px",
+                backgroundColor: "white",
+                border: `1px solid ${analysis.color}20`,
+              })}
+            >
+              <div className={css({ color: analysis.color, fontWeight: "medium", fontSize: "0.85rem" })}>
+                {analysis.verdict}
+              </div>
+            </div>
+          </div>
+          
+          <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
+            💡 Try different strategies to see how they affect your partnership with Jesse
+          </div>
         </div>
       )}
     </div>
@@ -931,30 +1055,30 @@ you can explort how Walter's rational decision should change within different sc
 `}</ReactMarkdown>
       <ExpectedUtilityPlot />
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-### A discussion of the main learnings
+### An intermediate stop: What we have learned so far
 
-Walter and Jesse's predicament in that DEA interrogation room captures something profound about human nature. Both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet the math shows Walter should betray Jesse regardless of what he thinks Jesse will do. This is the heart of the Prisoner's Dilemma: **individual rationality destroys collective benefit**.
+Walter and Jesse's problems in that DEA interrogation room captures some typical conflicts that we encounter frequently. Both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet the math shows Walter should betray Jesse regardless of what he thinks Jesse will do. This is the heart of the Prisoner's Dilemma: **individual rationality destroys collective benefit**.
 
-Think about Walter's internal monologue: "If Jesse stays loyal, I walk free by betraying him. If Jesse betrays me, I still get a lighter sentence by betraying him first. Either way, betrayal is my best move." But Jesse is thinking the exact same thing. The "rational" choice for both leads them to a worse outcome than if they had somehow coordinated to both stay loyal.
+You can easily think about Walter's internal monologue: "If Jesse stays loyal, I walk free by betraying him. If Jesse betrays me, I still get a lighter sentence by betraying him first. Either way, betrayal is my best move." But Jesse is thinking the exact same thing. 
+The "rational" choice for both individually leads them to a worse outcome than if they had somehow coordinated to both stay loyal.
 
-**This Walter-Jesse dynamic isn't unique to criminals** - it's a fundamental tension that appears throughout society whenever individual incentives conflict with group welfare:
+**However, there is also fascinating twist:** The mathematical analysis revealed that Walter should only stay loyal if the punishment for mutual betrayal is higher than the punishment for being the "sucker" who stays loyal while getting betrayed (S = 15 years). 
+You could imagine this scenario to unfold if Walter and Jesse were part of a larger criminal organization - like the cartel. If both betray each other, they don't just get 5 years in prison; they also face execution by the cartel for breaking the code of silence. 
+Suddenly, mutual betrayal might carry a "sentence" of 20+ years (or death), while being betrayed by your partner only gets you the original 15 years in prison - at least you're alive and might get witness protection.
 
-- **Climate Change**: Like Walter and Jesse, every country thinks "If others cut emissions, I benefit from a stable climate while keeping my economy strong. If others don't cut emissions, I need to stay competitive." Result: everyone keeps polluting.
+This is one nice explanation why organized crime groups, military units, and tight-knit communities often develop such strong codes of loyalty - they artificially raise the cost of mutual defection to make cooperation the individually rational choice.
 
-- **Arms Races**: Each nation reasons "If others disarm, I'll be the strongest. If others arm up, I can't be left defenseless." Result: costly military buildups that make everyone less secure.
-
-- **Corporate Tax Avoidance**: Companies think "If others pay taxes, public infrastructure improves while I save money. If others avoid taxes, I can't afford to be the only one paying." Result: crumbling public services.
-
-- **Team Projects**: Each member thinks "If others work hard, the project succeeds while I coast. If others slack off, my extra effort won't save it anyway." Result: mediocre outcomes for everyone.
-
-Walter and Jesse's story reveals why cooperation is both essential and fragile. Their mathematical dilemma explains why we need contracts, laws, reputation systems, and social norms - these mechanisms help bridge the gap between what's rational for individuals and what's beneficial for the group. Without these structures, we all end up like Walter and Jesse: pursuing our individual best interests straight into collectively worse outcomes.
+But what if Walter and Jesse don't have a cartel breathing down their necks? What if they're just two guys who have to work together repeatedly over many "episodes"? This opens up another interesting possibility: maybe they can learn to cooperate through experience. 
+If they know they'll face similar dilemmas again and again, betraying your partner today might mean getting betrayed tomorrow. Suddenly, building a reputation for loyalty becomes valuable - not because of external threats, but because it encourages your partner to cooperate in future rounds. 
+We will have a deeper look into this scenario in the next section.
 
 
       `}</ReactMarkdown>
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## When Breaking Bad Becomes a Series: Repeated Interactions
 
-But Breaking Bad isn't a single episode - it's a series with repeated interactions between Walter and Jesse. This changes everything:
+Neither life, nor Breaking Bad is a single episode. So let us follow up on our initial though experiment
+and look into a series with repeated interactions between Walter and Jesse. This changes everything:
 
 ### Breaking Bad Character Strategies:
 - **Always loyal** (Season 1 Jesse): Stick with your partner no matter what
@@ -1017,6 +1141,26 @@ Understanding these dynamics helps in:
 The Prisoner's Dilemma isn't just an abstract math problem - it's the story of every partnership, every relationship, every society. Breaking Bad just happens to tell it with exceptional chemistry.
 
 *Literally.*
+
+### A discussion of the main learnings
+
+Walter and Jesse's predicament in that DEA interrogation room captures something profound about human nature. Both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet the math shows Walter should betray Jesse regardless of what he thinks Jesse will do. This is the heart of the Prisoner's Dilemma: **individual rationality destroys collective benefit**.
+
+Think about Walter's internal monologue: "If Jesse stays loyal, I walk free by betraying him. If Jesse betrays me, I still get a lighter sentence by betraying him first. Either way, betrayal is my best move." But Jesse is thinking the exact same thing. The "rational" choice for both leads them to a worse outcome than if they had somehow coordinated to both stay loyal.
+
+**This Walter-Jesse dynamic isn't unique to criminals** - it's a fundamental tension that appears throughout society whenever individual incentives conflict with group welfare:
+
+- **Climate Change**: Like Walter and Jesse, every country thinks "If others cut emissions, I benefit from a stable climate while keeping my economy strong. If others don't cut emissions, I need to stay competitive." Result: everyone keeps polluting.
+
+- **Arms Races**: Each nation reasons "If others disarm, I'll be the strongest. If others arm up, I can't be left defenseless." Result: costly military buildups that make everyone less secure.
+
+- **Corporate Tax Avoidance**: Companies think "If others pay taxes, public infrastructure improves while I save money. If others avoid taxes, I can't afford to be the only one paying." Result: crumbling public services.
+
+- **Team Projects**: Each member thinks "If others work hard, the project succeeds while I coast. If others slack off, my extra effort won't save it anyway." Result: mediocre outcomes for everyone.
+
+Walter and Jesse's story reveals why cooperation is both essential and fragile. Their mathematical dilemma explains why we need contracts, laws, reputation systems, and social norms - these mechanisms help bridge the gap between what's rational for individuals and what's beneficial for the group. Without these structures, we all end up like Walter and Jesse: pursuing our individual best interests straight into collectively worse outcomes.
+
+
       `}</ReactMarkdown>
     </article>
   );

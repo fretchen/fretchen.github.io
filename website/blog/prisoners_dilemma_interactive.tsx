@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -11,7 +14,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import annotationPlugin from 'chartjs-plugin-annotation';
+import annotationPlugin from "chartjs-plugin-annotation";
 import { css } from "../styled-system/css";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, annotationPlugin);
@@ -28,7 +31,7 @@ const ExpectedUtilityPlot: React.FC = () => {
   // Fixed values from Breaking Bad example
   const R = 3; // Reward for mutual cooperation (both stay loyal)
   const T = 0; // Temptation to defect (betray while opponent stays loyal)
-  
+
   // Adjustable parameters
   const [P, setP] = useState(5); // Punishment for mutual defection (both betray)
   const [S, setS] = useState(15); // Sucker's payoff (stay loyal while opponent betrays)
@@ -77,10 +80,10 @@ const ExpectedUtilityPlot: React.FC = () => {
       annotation: {
         annotations: {
           line1: {
-            type: 'line' as const,
+            type: "line" as const,
             xMin: probabilityDefect * 100,
             xMax: probabilityDefect * 100,
-            borderColor: 'rgba(0, 0, 0, 0.5)',
+            borderColor: "rgba(0, 0, 0, 0.5)",
             borderWidth: 2,
             borderDash: [5, 5],
             label: {
@@ -149,7 +152,9 @@ const ExpectedUtilityPlot: React.FC = () => {
           marginBottom: "1rem",
         })}
       >
-        We know that if <strong>both stay loyal, each gets 3 years</strong>, and if <strong>Walter betrays while Jesse stays loyal, Walter goes free (0 years)</strong>. But what about the other scenarios? Adjust the sliders below to see when loyalty becomes Walter's best choice.
+        We know that if <strong>both stay loyal, each gets 3 years</strong>, and if{" "}
+        <strong>Walter betrays while Jesse stays loyal, Walter goes free (0 years)</strong>. But what about the other
+        scenarios? Adjust the sliders below to see when loyalty becomes Walter's best choice.
       </p>
 
       {/* Adjustable Prison Sentences */}
@@ -256,7 +261,7 @@ const ExpectedUtilityPlot: React.FC = () => {
         >
           🎯 Walter's Rational Choice: {expectedDefect < expectedCooperate ? "Betray Jesse" : "Stay Loyal"}
         </div>
-        
+
         <div
           className={css({
             fontSize: "0.85rem",
@@ -267,7 +272,6 @@ const ExpectedUtilityPlot: React.FC = () => {
           Expected outcome: <strong>{Math.min(expectedCooperate, expectedDefect).toFixed(1)} years in prison</strong>
         </div>
       </div>
-
     </div>
   );
 };
@@ -830,6 +834,19 @@ const PrisonersDilemmaPost: React.FC = () => {
           case.
         </li>
       </ul>
+
+      <h3> Taking a team approach</h3>
+      <p>
+        If both Walter and Jesse could somehow step back and ask "What's the best outcome for <em>us as a team</em>?"
+        they'd immediately see that mutual loyalty (3 years each) beats mutual betrayal (5 years each). The total "team
+        sentence" is only 6 years versus 10 years. It's like they're in this together against the DEA, not against each
+        other. If they could make a pact and trust each other to stick to it, they'd both be better off. This is what
+        economists call the &quot;Pareto optimal&quot; solution - you can't make one person better off without making
+        the other worse off. The dilemma is that the team approach is not the only way to look at this and that a much
+        more natural perspective for a criminal like Walter White might be &quot;What's the best outcome for{" "}
+        <em>me as an individual</em>?&quot;.
+      </p>
+
       <h3>Playing the role of Walter White</h3>
       <p>
         {" "}
@@ -842,16 +859,15 @@ const PrisonersDilemmaPost: React.FC = () => {
       <p>
         {" "}
         It is really interesting to play around with the game. I personally felt very motivated to blame Jesse at some
-        as I could simply walk free and did not feel like I had much too loose. However, you can put feelings aside and
-        simply look at the expected utility of the game.
+        point, as I could simply walk free and did not feel like I had much too loose. However, you can put feelings
+        aside and simply look at the expected utility of the game for you personally.
       </p>
       <h3>A Rational Analysis</h3>
 
-      <ReactMarkdown>{`
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
 
 Walter White is a chemistry teacher - and hence a fairly rational guy. So, If he can estimate how likely Jesse is to betray him, what should he do?
-
 Here's how we calculate it:
 
 **Expected Value = (Outcome if Jesse stays loyal) × (Probability Jesse stays loyal) + (Outcome if Jesse betrays) × (Probability Jesse betrays)**
@@ -866,22 +882,21 @@ The math for Walter's expected prison sentence:
   - If Jesse stays loyal (probability 1-p): 0 years (Walter goes free)
   - If Jesse betrays (probability p): 5 years
 
-Since we want to minimize prison time, Walter should stay loyal when 3 + 12p < 5p, which is ... never. For a single game
+Since we want to minimize prison time, Walter should stay loyal when 3 + 12p < 5p, which is ... *never*. For a single game
 Walter is always better off to blame Jesse, no matter what he thinks Jesse will do. So, if both players are rational and think the same way, they will both blame each other, leading to 5 years each.
-Clearly, this is not yet best outcome for both of them, but the incentive to betray is too strong.
+Clearly, this is not yet best outcome for them as a team, but the incentive to betray is too strong.
 
-### The flexible calculation
+### The general calculation
 
-We can extend the previous discussion to the more gernal case. We will introduce the following
+We can extend the previous discussion to the more general case. We will introduce the following
 notations:
-
 
 - *T = 0* years is the temptation that Walter and Jesse have to blame the other one.
 - *R = 3* years is the reward that they get for being loyal to each other.
 - *P = 5* years is the punishment that they get for blaming each other.
 - *S = 15* years is the suckers payout that they get for being loyal but getting blamed.
 
-In the general case, you can always assume that *T < R < P < S*. Otherwise the whole situation would fall apart. So
+In the general case, you can always assume that *T < R < P, S*. Otherwise the whole situation would fall apart. So
 we can now simply rewrite the conditions above as follows:
 
 - **When staying loyal**: E[Loyal] = R(1-p) + Sp = R + (S-R)p 
@@ -891,28 +906,52 @@ we can now simply rewrite the conditions above as follows:
   - If Jesse stays loyal (probability 1-p): T years (Walter goes free)
   - If Jesse betrays (probability p): P years
 
+We can now analyze the situation for T=0, as T is anyways always the smallest value. 
 We then see that Walter should stay loyal when:
 
-R + (S-R)p < T + (P-T)p
-R-T < (R+P-S-T)p
-R-T / (R+P-S-T) < p
+$$
+\\begin{align*}
+E[\\text{Loyal}] &< E[\\text{Blame}] \\\\
+R + (S-R)p &<  Pp \\\\
+p&>\\frac{R}{R+P-S} 
+\\end{align*}
+$$
 
+First we see that $S < R+P$, as we would otherwise have $p<0$, which is not viable for a probability.
+We further have the condition that p has to be smaller than one, which directly means that:
 
-Let us simplify for T=0 (which is a nice simplification):
-R + (S-R)p <  Pp
-R < (R+P-S)p
-R / (R+P-S) < p
-
-We have the condition that p has to be smaller than one, which directl means that:
-
+$$
 S < P
+$$
 
 So Walter should only stay loyal if the the punishment of both blaming each other is 
-higher than the punishment of being loyal and getting blamed by the other one. 
+higher than the punishment of being loyal and getting blamed by the other one. in the interactive simulation below
+you can explort how Walter's rational decision should change within different scenarios .
 
 `}</ReactMarkdown>
       <ExpectedUtilityPlot />
-      <ReactMarkdown>{`
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+### A discussion of the main learnings
+
+Walter and Jesse's predicament in that DEA interrogation room captures something profound about human nature. Both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet the math shows Walter should betray Jesse regardless of what he thinks Jesse will do. This is the heart of the Prisoner's Dilemma: **individual rationality destroys collective benefit**.
+
+Think about Walter's internal monologue: "If Jesse stays loyal, I walk free by betraying him. If Jesse betrays me, I still get a lighter sentence by betraying him first. Either way, betrayal is my best move." But Jesse is thinking the exact same thing. The "rational" choice for both leads them to a worse outcome than if they had somehow coordinated to both stay loyal.
+
+**This Walter-Jesse dynamic isn't unique to criminals** - it's a fundamental tension that appears throughout society whenever individual incentives conflict with group welfare:
+
+- **Climate Change**: Like Walter and Jesse, every country thinks "If others cut emissions, I benefit from a stable climate while keeping my economy strong. If others don't cut emissions, I need to stay competitive." Result: everyone keeps polluting.
+
+- **Arms Races**: Each nation reasons "If others disarm, I'll be the strongest. If others arm up, I can't be left defenseless." Result: costly military buildups that make everyone less secure.
+
+- **Corporate Tax Avoidance**: Companies think "If others pay taxes, public infrastructure improves while I save money. If others avoid taxes, I can't afford to be the only one paying." Result: crumbling public services.
+
+- **Team Projects**: Each member thinks "If others work hard, the project succeeds while I coast. If others slack off, my extra effort won't save it anyway." Result: mediocre outcomes for everyone.
+
+Walter and Jesse's story reveals why cooperation is both essential and fragile. Their mathematical dilemma explains why we need contracts, laws, reputation systems, and social norms - these mechanisms help bridge the gap between what's rational for individuals and what's beneficial for the group. Without these structures, we all end up like Walter and Jesse: pursuing our individual best interests straight into collectively worse outcomes.
+
+
+      `}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## When Breaking Bad Becomes a Series: Repeated Interactions
 
 But Breaking Bad isn't a single episode - it's a series with repeated interactions between Walter and Jesse. This changes everything:
@@ -928,7 +967,7 @@ See how different character arcs would play out over multiple "episodes":
 
       <GameSimulation />
 
-      <ReactMarkdown>{`
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## Which Breaking Bad Character Strategy Wins?
 
 Over the course of a full series, which character approach leads to the best outcomes? Let's analyze all strategies against each other:
@@ -936,7 +975,7 @@ Over the course of a full series, which character approach leads to the best out
 
       <StrategyAnalysis />
 
-      <ReactMarkdown>{`
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## Breaking Bad Lessons: What Walter and Jesse Teach Us About Game Theory
 
 The Prisoner's Dilemma through Breaking Bad's lens reveals profound insights about human nature and strategic thinking:

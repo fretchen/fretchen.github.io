@@ -11,9 +11,10 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { css } from "../styled-system/css";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, annotationPlugin);
 
 // Game types and functions
 type Choice = "D" | "C";
@@ -73,6 +74,21 @@ const ExpectedUtilityPlot: React.FC = () => {
       title: {
         display: false,
       },
+      annotation: {
+        annotations: {
+          line1: {
+            type: 'line' as const,
+            xMin: probabilityDefect * 100,
+            xMax: probabilityDefect * 100,
+            borderColor: 'rgba(0, 0, 0, 0.5)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+              display: false,
+            },
+          },
+        },
+      },
     },
     scales: {
       x: {
@@ -100,7 +116,7 @@ const ExpectedUtilityPlot: React.FC = () => {
   };
 
   // Calculate crossover point where strategies are equal
-  const crossoverPoint = (R - T) / (S - P + R - T);
+  const crossoverPoint = (R - T) / (P + R - T - S);
   const hasValidCrossover = crossoverPoint >= 0 && crossoverPoint <= 1;
 
   return (
@@ -159,16 +175,6 @@ const ExpectedUtilityPlot: React.FC = () => {
             onChange={(e) => setP(parseFloat(e.target.value))}
             className={css({ width: "100%" })}
           />
-          <div
-            className={css({
-              fontSize: "0.7rem",
-              color: "#6b7280",
-              textAlign: "center",
-              marginTop: "0.25rem",
-            })}
-          >
-            (Breaking Bad: {P} years)
-          </div>
         </div>
         <div>
           <label>
@@ -183,16 +189,6 @@ const ExpectedUtilityPlot: React.FC = () => {
             onChange={(e) => setS(parseFloat(e.target.value))}
             className={css({ width: "100%" })}
           />
-          <div
-            className={css({
-              fontSize: "0.7rem",
-              color: "#6b7280",
-              textAlign: "center",
-              marginTop: "0.25rem",
-            })}
-          >
-            (Breaking Bad: {S} years)
-          </div>
         </div>
       </div>
 
@@ -230,101 +226,48 @@ const ExpectedUtilityPlot: React.FC = () => {
           })}
         />
       </div>
-
-      {/* Current Expected Values */}
-      <div
-        className={css({
-          display: "flex",
-          justifyContent: "center",
-          gap: "1rem",
-          marginBottom: "1rem",
-          fontSize: "0.8rem",
-          color: "#6b7280",
-        })}
-      >
-        <div
-          className={css({
-            textAlign: "center",
-            padding: "0.5rem",
-            backgroundColor: expectedCooperate < expectedDefect ? "#f0f9ff" : "#f9fafb",
-            borderRadius: "4px",
-            border: expectedCooperate < expectedDefect ? "1px solid #0066cc" : "1px solid #d1d5db",
-          })}
-        >
-          <div>
-            <strong>Stay loyal:</strong>
-          </div>
-          <div>{expectedCooperate.toFixed(1)} years</div>
-        </div>
-        <div
-          className={css({
-            textAlign: "center",
-            padding: "0.5rem",
-            backgroundColor: expectedDefect < expectedCooperate ? "#fef2f2" : "#f9fafb",
-            borderRadius: "4px",
-            border: expectedDefect < expectedCooperate ? "1px solid #dc2626" : "1px solid #d1d5db",
-          })}
-        >
-          <div>
-            <strong>Betray Jesse:</strong>
-          </div>
-          <div>{expectedDefect.toFixed(1)} years</div>
-        </div>
-      </div>
-
-      <div
-        className={css({
-          textAlign: "center",
-          fontSize: "0.8rem",
-          color: "#374151",
-          marginBottom: "1rem",
-        })}
-      >
-        <strong>Walter&apos;s rational choice:</strong>{" "}
-        {expectedDefect < expectedCooperate ? "Betray Jesse" : "Stay loyal"}
-        {hasValidCrossover && (
-          <span
-            className={css({
-              color: "#6b7280",
-              marginLeft: "0.5rem",
-            })}
-          >
-            (Break-even at {(crossoverPoint * 100).toFixed(1)}% betrayal probability)
-          </span>
-        )}
-      </div>
-
       <div
         className={css({
           height: "250px",
-          marginBottom: "0.5rem",
+          marginBottom: "1rem",
         })}
       >
         <Line data={data} options={options} />
       </div>
 
+      {/* Decision Recommendation Section */}
       <div
         className={css({
-          fontSize: "0.7rem",
-          color: "#9ca3af",
-          textAlign: "center",
+          backgroundColor: expectedDefect < expectedCooperate ? "#fef2f2" : "#f0f9ff",
+          border: expectedDefect < expectedCooperate ? "2px solid #dc2626" : "2px solid #0066cc",
+          borderRadius: "6px",
+          padding: "1rem",
+          marginBottom: "1rem",
         })}
       >
-        <p>
-          Lower prison sentences are better for Walter.
-          <br />
-          Current scenario: T={T}, R={R}, P={P}, S={S} →{" "}
-          {T < R ? (
-            S < P ? (
-              <span style={{ color: "#16a34a" }}>✓ Walter might stay loyal (S &lt; P)</span>
-            ) : (
-              <span style={{ color: "#dc2626" }}>✗ Walter should always betray (S &gt; P)</span>
-            )
-          ) : (
-            <span style={{ color: "#dc2626" }}>✗ Invalid: T must be less than R</span>
-          )}
-        </p>
+        <div
+          className={css({
+            textAlign: "center",
+            fontSize: "1rem",
+            fontWeight: "bold",
+            color: expectedDefect < expectedCooperate ? "#dc2626" : "#0066cc",
+            marginBottom: "0.5rem",
+          })}
+        >
+          🎯 Walter's Rational Choice: {expectedDefect < expectedCooperate ? "Betray Jesse" : "Stay Loyal"}
+        </div>
+        
+        <div
+          className={css({
+            fontSize: "0.85rem",
+            color: "#374151",
+            textAlign: "center",
+          })}
+        >
+          Expected outcome: <strong>{Math.min(expectedCooperate, expectedDefect).toFixed(1)} years in prison</strong>
+        </div>
       </div>
+
     </div>
   );
 };

@@ -617,30 +617,30 @@ const GameSimulation: React.FC = () => {
 
   const runSimulation = () => {
     setIsRunning(true);
-    
+
     // Randomly select Jesse's strategy for this simulation
     const strategies: Strategy[] = ["random", "cooperate", "defect", "tit-for-tat"];
     const jesseStrategy = strategies[Math.floor(Math.random() * strategies.length)];
-    
+
     const result = playRepeatedGame(numGames, walterStrategy, jesseStrategy);
     setGameData({
       ...result,
-      jesseStrategy
+      jesseStrategy,
     });
     setIsRunning(false);
   };
 
   const getOutcomeAnalysis = () => {
     if (!gameData) return null;
-    
+
     const walterTotal = gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1];
     const jesseTotal = gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1];
     const walterAvg = walterTotal / numGames;
     const jesseAvg = jesseTotal / numGames;
-    
+
     let verdict = "";
     let color = "";
-    
+
     if (walterAvg < 4) {
       verdict = "Excellent partnership! You're both doing well.";
       color = "#10b981"; // green
@@ -654,45 +654,63 @@ const GameSimulation: React.FC = () => {
       verdict = "Toxic partnership - this relationship is falling apart.";
       color = "#ef4444"; // red
     }
-    
+
     return { verdict, color, walterAvg, jesseAvg };
   };
 
   const analysis = getOutcomeAnalysis();
 
   return (
-    <div 
-      className={css({ 
-        margin: "2rem 0", 
-        padding: "1.5rem", 
+    <div
+      className={css({
+        margin: "2rem 0",
+        padding: "1.5rem",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
         borderRadius: "4px",
-        border: "1px solid rgba(59, 130, 246, 0.2)"
+        border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
-      <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem", textAlign: "center", color: "#374151" })}>
+      <h4
+        className={css({
+          fontSize: "1rem",
+          fontWeight: "medium",
+          marginBottom: "1rem",
+          textAlign: "center",
+          color: "#374151",
+        })}
+      >
         🎭 Walter's Strategy Simulator: How Will Your Partnership Play Out?
       </h4>
-      
+
       <p className={css({ textAlign: "center", color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.5rem" })}>
-        Choose your approach as Walter. Jesse's strategy will be randomly selected to simulate the uncertainty of working with a partner. Each simulation runs for 50 episodes (two seasons).
+        Choose your approach as Walter. Jesse's strategy will be randomly selected to simulate the uncertainty of
+        working with a partner. Each simulation runs for 50 episodes (two seasons).
       </p>
 
       <div className={css({ marginBottom: "1rem" })}>
         <div>
-          <label className={css({ display: "block", fontSize: "0.85rem", fontWeight: "medium", marginBottom: "0.5rem", color: "#374151", textAlign: "center" })}>
+          <label
+            className={css({
+              display: "block",
+              fontSize: "0.85rem",
+              fontWeight: "medium",
+              marginBottom: "0.5rem",
+              color: "#374151",
+              textAlign: "center",
+            })}
+          >
             Walter's Strategy (You):
           </label>
           <div className={css({ display: "flex", justifyContent: "center" })}>
-            <select 
-              value={walterStrategy} 
+            <select
+              value={walterStrategy}
               onChange={(e) => setWalterStrategy(e.target.value as Strategy)}
-              className={css({ 
-                width: "60%", 
-                padding: "0.5rem", 
-                border: "1px solid #d1d5db", 
+              className={css({
+                width: "60%",
+                padding: "0.5rem",
+                border: "1px solid #d1d5db",
                 borderRadius: "4px",
-                fontSize: "0.85rem"
+                fontSize: "0.85rem",
               })}
             >
               <option value="tit-for-tat">Reciprocal (Recommended)</option>
@@ -701,7 +719,15 @@ const GameSimulation: React.FC = () => {
               <option value="random">Unpredictable</option>
             </select>
           </div>
-          <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.5rem", lineHeight: "1.3", textAlign: "center" })}>
+          <p
+            className={css({
+              fontSize: "0.75rem",
+              color: "#6b7280",
+              marginTop: "0.5rem",
+              lineHeight: "1.3",
+              textAlign: "center",
+            })}
+          >
             {strategyDescriptions[walterStrategy]}
           </p>
         </div>
@@ -723,7 +749,7 @@ const GameSimulation: React.FC = () => {
             transition: "background-color 0.2s",
             _hover: {
               backgroundColor: isRunning ? "#9ca3af" : "#0052a3",
-            }
+            },
           })}
         >
           {isRunning ? "🎬 Filming the season..." : "🎬 Start the Season"}
@@ -732,32 +758,36 @@ const GameSimulation: React.FC = () => {
 
       {gameData && analysis && (
         <div className={css({ marginTop: "1rem" })}>
-          <div 
+          <div
             className={css({
               backgroundColor: "#f8fafc",
               border: "1px solid #e2e8f0",
               borderRadius: "6px",
               padding: "1rem",
-              marginBottom: "1rem"
+              marginBottom: "1rem",
             })}
           >
             <div className={css({ textAlign: "center", marginBottom: "0.75rem" })}>
-              <h5 className={css({ fontSize: "0.9rem", fontWeight: "medium", color: "#374151", marginBottom: "0.5rem" })}>
+              <h5
+                className={css({ fontSize: "0.9rem", fontWeight: "medium", color: "#374151", marginBottom: "0.5rem" })}
+              >
                 🎪 The Season Results
               </h5>
               <p className={css({ fontSize: "0.8rem", color: "#6b7280" })}>
-                You played as <strong>{strategyDescriptions[walterStrategy].split(' - ')[0]}</strong> Walter against{" "}
-                <strong>{jesseStrategyDescriptions[gameData.jesseStrategy].split(' - ')[0]}</strong>
+                You played as <strong>{strategyDescriptions[walterStrategy].split(" - ")[0]}</strong> Walter against{" "}
+                <strong>{jesseStrategyDescriptions[gameData.jesseStrategy].split(" - ")[0]}</strong>
               </p>
             </div>
-            
-            <div className={css({ 
-              display: "grid", 
-              gridTemplateColumns: "1fr 1fr", 
-              gap: "1rem", 
-              marginBottom: "0.75rem",
-              fontSize: "0.85rem"
-            })}>
+
+            <div
+              className={css({
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "1rem",
+                marginBottom: "0.75rem",
+                fontSize: "0.85rem",
+              })}
+            >
               <div className={css({ textAlign: "center" })}>
                 <div className={css({ color: "#2563eb", fontWeight: "bold", fontSize: "1.1rem" })}>
                   {analysis.walterAvg.toFixed(1)} years avg
@@ -771,8 +801,8 @@ const GameSimulation: React.FC = () => {
                 <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Jesse's Average</div>
               </div>
             </div>
-            
-            <div 
+
+            <div
               className={css({
                 textAlign: "center",
                 padding: "0.5rem",
@@ -786,7 +816,7 @@ const GameSimulation: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
             💡 Try different strategies to see how they affect your partnership with Jesse
           </div>

@@ -1418,6 +1418,9 @@ Since we want to minimize prison time, Walter should stay loyal when 3 + 12p < 5
 Walter is always better off to blame Jesse, no matter what he thinks Jesse will do. So, if both players are rational and think the same way, they will both blame each other, leading to 5 years each.
 Clearly, this is not yet best outcome for them as a team, but the incentive to betray is too strong.
 
+This outcome where both betray is what game theorists call a &quot;Nash equilibrium&quot; - a stable situation where neither player can improve by switching strategies alone. 
+Even though both would prefer mutual loyalty, neither wants to be the sucker who stays loyal while the other betrays.
+
 ### The general calculation
 
 We can extend the previous discussion to the more general case. We will introduce the following
@@ -1523,8 +1526,6 @@ As you might recognize the selfish strategy is depressingly successful. It reall
 where it is an obviously bad idea. So it is time to take stock of our learnings and see what we might make out of them.
 
 ## Taking stock: What Walter and Jesse Might Have Tought Us
-
-### A discussion of the main learnings
 
 Walter and Jesse's predicament in that DEA interrogation room captures something profound about human nature. Both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet the math shows Walter should betray Jesse regardless of what he thinks Jesse will do. This is the heart of the Prisoner's Dilemma: **individual rationality destroys collective benefit**.
 

@@ -1554,6 +1554,7 @@ The actual models are substantially more complex but it felt that the Prisoner's
 export const meta = {
   title: "The Prisoner's Dilemma",
   publishing_date: "2025-06-22",
+  tokenID: 30
 };
 
 export default PrisonersDilemmaPost;

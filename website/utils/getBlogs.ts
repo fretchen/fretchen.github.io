@@ -74,14 +74,16 @@ const processTypeScriptPost = (file: string, blogDirectory: string): BlogPost =>
       // Simple regex-based parsing of meta object
       const metaString = metaMatch[1];
 
-      const titleMatch = metaString.match(/title:\s*["']([^"']+)["']/);
+      // Match title with either single or double quotes, allowing apostrophes inside
+      const titleMatch = metaString.match(/title:\s*"([^"]*)"|title:\s*'([^']*)'/);
       if (titleMatch) {
-        blogPost.title = titleMatch[1];
+        blogPost.title = titleMatch[1] || titleMatch[2];
       }
 
-      const dateMatch = metaString.match(/publishing_date:\s*["']([^"']+)["']/);
+      // Match date with either single or double quotes
+      const dateMatch = metaString.match(/publishing_date:\s*"([^"]*)"|publishing_date:\s*'([^']*)'/);
       if (dateMatch) {
-        blogPost.publishing_date = dateMatch[1];
+        blogPost.publishing_date = dateMatch[1] || dateMatch[2];
       }
 
       const orderMatch = metaString.match(/order:\s*(\d+)/);

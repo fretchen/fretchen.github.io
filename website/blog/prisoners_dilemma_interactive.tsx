@@ -1402,7 +1402,7 @@ The "rational" choice for both individually leads them to a worse outcome than i
 You could imagine this scenario to unfold if Walter and Jesse were part of a larger criminal organization - like the cartel. If both betray each other, they don't just get 5 years in prison; they also face execution by the cartel for breaking the code of silence. 
 Suddenly, mutual betrayal might carry a "sentence" of 20+ years (or death), while being betrayed by your partner only gets you the original 15 years in prison - at least you're alive and might get witness protection.
 
-This is one nice explanation why organized crime groups, military units, and tight-knit communities often develop such strong codes of loyalty - they artificially raise the cost of mutual defection to make cooperation the individually rational choice.
+This is one nice explanation why organized crime groups, military units, and tight-knit communities develop strong codes of loyalty - they artificially raise the cost of mutual defection to make cooperation the individually rational choice.
 
 But what if Walter and Jesse don't have a cartel breathing down their necks? What if they're just two guys who have to work together repeatedly over many "episodes"? This opens up another interesting possibility: maybe they can learn to cooperate through experience. 
 If they know they'll face similar dilemmas again and again, betraying your partner today might mean getting betrayed tomorrow. Suddenly, building a reputation for loyalty becomes valuable - not because of external threats, but because it encourages your partner to cooperate in future rounds. 
@@ -1414,69 +1414,43 @@ We will have a deeper look into this scenario in the next section.
 ## When Breaking Bad Becomes a Series: Repeated Interactions
 
 Neither life, nor Breaking Bad is a single episode. So let us follow up on our initial though experiment
-and look into a series with repeated interactions between Walter and Jesse. This changes everything:
+and look into a series with repeated interactions between Walter and Jesse.  Now we need to investigate
+different scenarios of behavior and see if there might be strategies the balance self and team interests.
 
-### Breaking Bad Character Strategies:
+We can actually map out four typical strategies and connect them the behavior of caracters in Breaking Bad:
+
 - **Always loyal** (Season 1 Jesse): Stick with your partner no matter what
 - **Always selfish** (Season 5 Walter): Prioritize yourself, always betray when convenient  
 - **Tit-for-Tat** (Realistic relationship): Start loyal, then match whatever your partner did last time
 - **Unpredictable** (Chaotic storylines): Random decisions based on emotions and circumstances
 
-See how different character arcs would play out over multiple "episodes":
+Now, we can once again play around and see the how different character arcs would play out over multiple "episodes". 
       `}</ReactMarkdown>
 
       <GameSimulation />
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-## Which Breaking Bad Character Strategy Wins?
+From this game you might clearly see again som similiarities to the single episode:
 
-Over the course of a full series, which character approach leads to the best outcomes? Let's analyze all strategies against each other:
+- Always being loyal is super naive and easily exploited.
+- Always betraying the other is a surprisingly robust and viable strategy.
+- The tit-for-tat seems like a nice mixture. It somehow allows the partner to behave but is also quite hard to exploit.
+
+### What is a winning strategy?
+
+After the first tries, we can actually take a more systematic approach to benchmark the different strategies.
+Sadly, I am not aware of "proofs" that would tell us which strategy is best. But we can simply let them all run against
+each other and see which one is most benefitial. Feel free to execute the strategy arena below and judge for yourself.
       `}</ReactMarkdown>
 
       <StrategyAnalysis />
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-## Breaking Bad Lessons: What Walter and Jesse Teach Us About Game Theory
 
-The Prisoner's Dilemma through Breaking Bad's lens reveals profound insights about human nature and strategic thinking:
+As you might recognize the selfish strategy is depressingly successful. It really takes a lot of engineering to find situations
+where it is an obviously bad idea. So it is time to take stock of our learnings and see what we might make out of them.
 
-### 1. **Rational Self-Interest vs. Mutual Benefit**
-Walter's chemistry teacher logic tells him to betray Jesse (especially when he thinks Jesse might betray him first). But this "rational" thinking leads to worse outcomes for both. The show perfectly illustrates how individual rationality can destroy collective welfare.
-
-### 2. **Trust is Everything - But Hard to Maintain**
-Walter and Jesse's best outcomes always came when they trusted each other (both staying silent = 3 years each). But trust erodes quickly - one betrayal leads to cycles of retaliation, just like their relationship in the show.
-
-### 3. **Repeated Interactions Change the Game**
-In a single episode (one-shot game), betrayal might seem optimal. But Breaking Bad is a series - Walter and Jesse had to work together repeatedly. This changes everything: reputation, future cooperation, and long-term strategy become crucial.
-
-### 4. **Emotions Make Us "Irrational" - But Maybe That's Good**
-Pure game theory suggests Walter should always be calculating and Jesse should always be selfish. But their emotional bonds (partnership, loyalty, even love) often led to cooperation that benefited both. Sometimes being "irrational" is the most rational thing to do.
-
-### 5. **Real Life is More Complex Than Models**
-Breaking Bad shows that real prisoner's dilemmas involve:
-- **Multiple players** (DEA, family, other criminals)
-- **Asymmetric information** (who knows what?)
-- **Changing payoffs** (stakes get higher over time)
-- **External consequences** (reputation in the criminal world)
-
-## The Breaking Bad Paradox
-
-The show's genius is that it demonstrates both sides:
-- **Walter's transformation**: From cooperator (early seasons) to defector (later seasons)
-- **Jesse's evolution**: From naive loyalty to strategic thinking
-- **Their relationship**: How repeated games can build trust... or destroy it
-
-## Why This Matters Beyond TV
-
-Understanding these dynamics helps in:
-- **Business partnerships**: When to compete vs. cooperate
-- **International relations**: Arms races, trade wars, climate agreements
-- **Personal relationships**: Building trust, handling conflicts
-- **Social systems**: Why cooperation emerges (and breaks down) in society
-
-The Prisoner's Dilemma isn't just an abstract math problem - it's the story of every partnership, every relationship, every society. Breaking Bad just happens to tell it with exceptional chemistry.
-
-*Literally.*
+## Taking stock: What Walter and Jesse Might Have Tought Us
 
 ### A discussion of the main learnings
 
@@ -1484,19 +1458,19 @@ Walter and Jesse's predicament in that DEA interrogation room captures something
 
 Think about Walter's internal monologue: "If Jesse stays loyal, I walk free by betraying him. If Jesse betrays me, I still get a lighter sentence by betraying him first. Either way, betrayal is my best move." But Jesse is thinking the exact same thing. The "rational" choice for both leads them to a worse outcome than if they had somehow coordinated to both stay loyal.
 
-**This Walter-Jesse dynamic isn't unique to criminals** - it's a fundamental tension that appears throughout society whenever individual incentives conflict with group welfare:
+But as we have seen in the second part of the blog post it is surpringly hard to find reasons for cooperative strategies within the prisoners Dilemma. 
+
+
+What I really like is that **this Walter-Jesse dynamic isn't unique to criminals** -  similiar situations appear throughout society whenever individual incentives conflict with group welfare:
+
+- **Team Projects**: Each member thinks "If others work hard, the project succeeds while I coast. If others slack off, my extra effort won't save it anyway." Result: mediocre outcomes for everyone.
 
 - **Climate Change**: Like Walter and Jesse, every country thinks "If others cut emissions, I benefit from a stable climate while keeping my economy strong. If others don't cut emissions, I need to stay competitive." Result: everyone keeps polluting.
 
 - **Arms Races**: Each nation reasons "If others disarm, I'll be the strongest. If others arm up, I can't be left defenseless." Result: costly military buildups that make everyone less secure.
 
-- **Corporate Tax Avoidance**: Companies think "If others pay taxes, public infrastructure improves while I save money. If others avoid taxes, I can't afford to be the only one paying." Result: crumbling public services.
-
-- **Team Projects**: Each member thinks "If others work hard, the project succeeds while I coast. If others slack off, my extra effort won't save it anyway." Result: mediocre outcomes for everyone.
-
-Walter and Jesse's story reveals why cooperation is both essential and fragile. Their mathematical dilemma explains why we need contracts, laws, reputation systems, and social norms - these mechanisms help bridge the gap between what's rational for individuals and what's beneficial for the group. Without these structures, we all end up like Walter and Jesse: pursuing our individual best interests straight into collectively worse outcomes.
-
-
+- **Failing Institutions**: In countries with weak governance, each citizen thinks "If others follow rules and pay taxes, I benefit from order while avoiding costs. If others break rules, I can't afford to be the only honest one." 
+I just felt so compelled by this Dilemma that I had to write it down and understand it better.
       `}</ReactMarkdown>
     </article>
   );
@@ -1504,13 +1478,8 @@ Walter and Jesse's story reveals why cooperation is both essential and fragile. 
 
 // Post metadata
 export const meta = {
-  title: "The Prisoner&apos;s Dilemma",
-  description:
-    "Explore game theory through Breaking Bad: Interactive simulations of Walter White and Jesse Pinkman's strategic decisions and prisoner's dilemmas",
-  publishing_date: "2025-06-22",
-  image: "/images/breaking-bad-prisoners-dilemma.jpg",
-  readTime: "15 min",
-  tags: ["Game Theory", "Breaking Bad", "Interactive", "Mathematics", "TV Analysis"],
+  title: "The Prisoner's Dilemma",
+  publishing_date: "2025-06-22"
 };
 
 export default PrisonersDilemmaPost;

@@ -1238,11 +1238,15 @@ const PrisonersDilemmaPost: React.FC = () => {
         interests can have deep effects on the rational decisions.
       </p>
       <p>
-        I had already heard of it in the context of a single game. However, with the Nobel Prize in economics of 2024 I
-        encountered the topic again, but this time in the contex of repeated games. The way I understood the lecture
-        notes and some articles, repeated games can be helpful to understand the emergence and breakdown of cooperation
-        in society. So, in this post I decided to simply collect it in a visual fashion to understand the basic example
-        a bit better.
+        I had already heard of it in the context of a single game. 
+        
+        However, with the Nobel Prize in economics of 2024 I encountered the topic again, but this time in the contex of repeated games. 
+        The winners had already shown good evidence that strong institutions might be economically benefitial. However, a  lot of countries 
+        do not have them. And repeated games give some insight into this direction. And it all boils down to the questions like "Why should I pay taxes anyways ?".
+        And the "rational answer" is surprisingly not that simple. The way I understood the lecture
+        notes and some articles the repeated games can be helpful to understand when it is rational for citizens to do something for "good for society" and when 
+        it becomes rational to be selfish. So, in this post I decided to simply collect my notes on the Prisoners Dilemma in a visual fashion to understand the basic example
+        a bit better. 
       </p>
       <h2> Setting the scene with Breaking Bad</h2>
       <p>
@@ -1469,8 +1473,9 @@ What I really like is that **this Walter-Jesse dynamic isn't unique to criminals
 
 - **Arms Races**: Each nation reasons "If others disarm, I'll be the strongest. If others arm up, I can't be left defenseless." Result: costly military buildups that make everyone less secure.
 
-- **Failing Institutions**: In countries with weak governance, each citizen thinks "If others follow rules and pay taxes, I benefit from order while avoiding costs. If others break rules, I can't afford to be the only honest one." 
-I just felt so compelled by this Dilemma that I had to write it down and understand it better.
+And all of this brings us back to my initial curiosity about the connection to **failing institutions**: In countries with weak governance, each citizen has a strong incentive to 
+follow the selfish approach "If others follow rules and pay taxes, I benefit from order while avoiding costs. If others break rules, I can't afford to be the only honest one."
+The actual models are substantially more complex but it felt that the Prisoner's Dilemma gives a nice first glimpse into the topic.
       `}</ReactMarkdown>
     </article>
   );

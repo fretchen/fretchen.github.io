@@ -602,17 +602,17 @@ const GameSimulation: React.FC = () => {
   } | null>(null);
 
   const strategyDescriptions = {
-    random: "Unpredictable - you make random decisions based on emotions and circumstances",
-    cooperate: "Always loyal - you stick with Jesse no matter what (Season 1 approach)",
-    defect: "Always selfish - you prioritize yourself and betray when convenient (Season 5 approach)",
-    "tit-for-tat": "Reciprocal - you start loyal, then match whatever Jesse did last time",
+    random: "Unpredictable - chaotic storylines with random decisions based on emotions and circumstances",
+    cooperate: "Always loyal - stick with your partner no matter what (Season 1 Jesse approach)",
+    defect: "Always selfish - prioritize yourself and betray when convenient (Season 5 Walter approach)",
+    "tit-for-tat": "Tit-for-Tat - realistic relationship, start loyal then match whatever Jesse did last time",
   };
 
   const jesseStrategyDescriptions = {
     random: "Unpredictable Jesse - makes chaotic, emotion-driven decisions",
-    cooperate: "Loyal Jesse - always tries to stick with you (Season 1 Jesse)",
-    defect: "Betraying Jesse - prioritizes himself, always looks for an advantage",
-    "tit-for-tat": "Reactive Jesse - mirrors your behavior from previous interactions",
+    cooperate: "Always loyal Jesse - always tries to stick with you (Season 1 Jesse)",
+    defect: "Always selfish Jesse - prioritizes himself, always looks for an advantage",
+    "tit-for-tat": "Tit-for-Tat Jesse - mirrors your behavior from previous interactions",
   };
 
   const runSimulation = () => {
@@ -638,13 +638,38 @@ const GameSimulation: React.FC = () => {
     const walterAvg = walterTotal / numGames;
     const jesseAvg = jesseTotal / numGames;
 
+    // Check for exploitation in both directions
+    let exploited = false;
+    let exploitationMessage = "";
+    
+    const avgDifference = walterAvg - jesseAvg;
+    const walterExploitingJesse = avgDifference < -3; // Walter gets 3+ years less than Jesse (better for Walter)
+    const jesseExploitingWalter = avgDifference > 3; // Walter gets 3+ years more than Jesse (worse for Walter)
+    
+    if (jesseExploitingWalter) {
+      exploited = true;
+      exploitationMessage = `Jesse consistently got better deals while you suffered. Average difference: ${avgDifference.toFixed(1)} years worse for you.`;
+    } else if (walterExploitingJesse) {
+      exploited = true;
+      exploitationMessage = `You consistently got better deals while Jesse suffered. Average difference: ${Math.abs(avgDifference).toFixed(1)} years worse for Jesse.`;
+    } else if (walterStrategy === "cooperate" && jesseAvg < 4 && walterAvg > 8) {
+      exploited = true;
+      exploitationMessage = "You stayed loyal but Jesse took advantage of your cooperation repeatedly.";
+    }
+
     let verdict = "";
     let color = "";
-
-    if (walterAvg < 4) {
+    
+    if (walterExploitingJesse) {
+      verdict = "Exploitative partnership - you're taking advantage of Jesse's loyalty.";
+      color = "#dc2626"; // red
+    } else if (jesseExploitingWalter) {
+      verdict = "You're being exploited - Jesse is getting better deals while you suffer.";
+      color = "#dc2626"; // red
+    } else if (walterAvg < 4 && jesseAvg < 4) {
       verdict = "Excellent partnership! You're both doing well.";
       color = "#10b981"; // green
-    } else if (walterAvg < 6) {
+    } else if (walterAvg < 6 && jesseAvg < 6) {
       verdict = "Decent cooperation with some conflicts.";
       color = "#f59e0b"; // yellow
     } else if (walterAvg < 10) {
@@ -655,7 +680,7 @@ const GameSimulation: React.FC = () => {
       color = "#ef4444"; // red
     }
 
-    return { verdict, color, walterAvg, jesseAvg };
+    return { verdict, color, walterAvg, jesseAvg, exploited, exploitationMessage };
   };
 
   const analysis = getOutcomeAnalysis();
@@ -679,11 +704,11 @@ const GameSimulation: React.FC = () => {
           color: "#374151",
         })}
       >
-        🎭 Walter's Strategy Simulator: How Will Your Partnership Play Out?
+        🎭 Walter&apos;s Strategy Simulator: How Will Your Partnership Play Out?
       </h4>
 
       <p className={css({ textAlign: "center", color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.5rem" })}>
-        Choose your approach as Walter. Jesse's strategy will be randomly selected to simulate the uncertainty of
+        Choose your approach as Walter. Jesse&apos;s strategy will be randomly selected to simulate the uncertainty of
         working with a partner. Each simulation runs for 50 episodes (two seasons).
       </p>
 
@@ -699,7 +724,7 @@ const GameSimulation: React.FC = () => {
               textAlign: "center",
             })}
           >
-            Walter's Strategy (You):
+            Walter&apos;s Strategy (You):
           </label>
           <div className={css({ display: "flex", justifyContent: "center" })}>
             <select
@@ -713,9 +738,9 @@ const GameSimulation: React.FC = () => {
                 fontSize: "0.85rem",
               })}
             >
-              <option value="tit-for-tat">Reciprocal (Recommended)</option>
-              <option value="cooperate">Always Loyal</option>
-              <option value="defect">Always Selfish</option>
+              <option value="tit-for-tat">Tit-for-Tat</option>
+              <option value="cooperate">Always loyal</option>
+              <option value="defect">Always selfish</option>
               <option value="random">Unpredictable</option>
             </select>
           </div>
@@ -758,25 +783,45 @@ const GameSimulation: React.FC = () => {
 
       {gameData && analysis && (
         <div className={css({ marginTop: "1rem" })}>
+          {/* Strategy matchup prominently displayed */}
           <div
             className={css({
               backgroundColor: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "6px",
+              border: "2px solid #e2e8f0",
+              borderRadius: "8px",
               padding: "1rem",
               marginBottom: "1rem",
             })}
           >
-            <div className={css({ textAlign: "center", marginBottom: "0.75rem" })}>
+            <div className={css({ textAlign: "center", marginBottom: "1rem" })}>
               <h5
-                className={css({ fontSize: "0.9rem", fontWeight: "medium", color: "#374151", marginBottom: "0.5rem" })}
+                className={css({ fontSize: "1rem", fontWeight: "bold", color: "#374151", marginBottom: "0.5rem" })}
               >
-                🎪 The Season Results
+                🎪 Season Finale: Walter vs Jesse
               </h5>
-              <p className={css({ fontSize: "0.8rem", color: "#6b7280" })}>
-                You played as <strong>{strategyDescriptions[walterStrategy].split(" - ")[0]}</strong> Walter against{" "}
-                <strong>{jesseStrategyDescriptions[gameData.jesseStrategy].split(" - ")[0]}</strong>
-              </p>
+              <div
+                className={css({
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto 1fr",
+                  gap: "0.5rem",
+                  alignItems: "center",
+                  margin: "1rem 0",
+                })}
+              >
+                <div className={css({ textAlign: "center", padding: "0.75rem", backgroundColor: "#dbeafe", borderRadius: "6px" })}>
+                  <div className={css({ fontSize: "0.85rem", fontWeight: "bold", color: "#1d4ed8" })}>Walter (You)</div>
+                  <div className={css({ fontSize: "0.75rem", color: "#3730a3", marginTop: "0.25rem" })}>
+                    {strategyDescriptions[walterStrategy].split(" - ")[0]}
+                  </div>
+                </div>
+                <div className={css({ fontSize: "1.5rem", textAlign: "center" })}>⚡</div>
+                <div className={css({ textAlign: "center", padding: "0.75rem", backgroundColor: "#faf5ff", borderRadius: "6px", border: "2px solid #a855f7" })}>
+                  <div className={css({ fontSize: "0.85rem", fontWeight: "bold", color: "#7c3aed" })}>Jesse</div>
+                  <div className={css({ fontSize: "0.75rem", color: "#6b21a8", marginTop: "0.25rem" })}>
+                    {jesseStrategyDescriptions[gameData.jesseStrategy].split(" - ")[0]}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div
@@ -784,37 +829,122 @@ const GameSimulation: React.FC = () => {
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: "1rem",
-                marginBottom: "0.75rem",
+                marginBottom: "1rem",
                 fontSize: "0.85rem",
               })}
             >
               <div className={css({ textAlign: "center" })}>
-                <div className={css({ color: "#2563eb", fontWeight: "bold", fontSize: "1.1rem" })}>
-                  {analysis.walterAvg.toFixed(1)} years avg
+                <div className={css({ color: "#2563eb", fontWeight: "bold", fontSize: "1.2rem" })}>
+                  {analysis.walterAvg.toFixed(1)} years
                 </div>
-                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Walter's Average</div>
+                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Walter&apos;s Average Sentence</div>
+                <div className={css({ color: "#2563eb", fontSize: "0.7rem", marginTop: "0.25rem" })}>
+                  Total: {gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1]} years
+                </div>
               </div>
               <div className={css({ textAlign: "center" })}>
-                <div className={css({ color: "#7c3aed", fontWeight: "bold", fontSize: "1.1rem" })}>
-                  {analysis.jesseAvg.toFixed(1)} years avg
+                <div className={css({ color: "#7c3aed", fontWeight: "bold", fontSize: "1.2rem" })}>
+                  {analysis.jesseAvg.toFixed(1)} years
                 </div>
-                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Jesse's Average</div>
+                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Jesse&apos;s Average Sentence</div>
+                <div className={css({ color: "#7c3aed", fontSize: "0.7rem", marginTop: "0.25rem" })}>
+                  Total: {gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1]} years
+                </div>
               </div>
             </div>
 
             <div
               className={css({
                 textAlign: "center",
-                padding: "0.5rem",
-                borderRadius: "4px",
+                padding: "0.75rem",
+                borderRadius: "6px",
                 backgroundColor: "white",
-                border: `1px solid ${analysis.color}20`,
+                border: `2px solid ${analysis.color}`,
+                marginBottom: "1rem",
               })}
             >
-              <div className={css({ color: analysis.color, fontWeight: "medium", fontSize: "0.85rem" })}>
+              <div className={css({ color: analysis.color, fontWeight: "bold", fontSize: "0.9rem" })}>
                 {analysis.verdict}
               </div>
             </div>
+          </div>
+
+          {/* Accumulation Chart */}
+          <div
+            className={css({
+              backgroundColor: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              padding: "1rem",
+              marginBottom: "1rem",
+            })}
+          >
+            <h6 className={css({ fontSize: "0.85rem", fontWeight: "medium", marginBottom: "0.75rem", textAlign: "center", color: "#374151" })}>
+              📈 Cumulative Prison Sentences Over Time
+            </h6>
+            <div style={{ position: "relative", height: "200px", width: "100%" }}>
+              <Line
+                data={{
+                  labels: Array.from({ length: numGames }, (_, i) => `Episode ${i + 1}`),
+                  datasets: [
+                    {
+                      label: "Walter (You)",
+                      data: gameData.totalPayoffs1,
+                      borderColor: "#2563eb",
+                      backgroundColor: "rgba(37, 99, 235, 0.1)",
+                      borderWidth: 2,
+                      fill: false,
+                    },
+                    {
+                      label: "Jesse",
+                      data: gameData.totalPayoffs2,
+                      borderColor: "#7c3aed",
+                      backgroundColor: "rgba(124, 58, 237, 0.1)",
+                      borderWidth: 2,
+                      fill: false,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: "top" as const,
+                      labels: {
+                        boxWidth: 12,
+                        font: { size: 11 },
+                      },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      display: false, // Hide x-axis labels for cleaner look
+                    },
+                    y: {
+                      beginAtZero: true,
+                      title: {
+                        display: true,
+                        text: "Total Prison Years",
+                        font: { size: 10 },
+                      },
+                      ticks: {
+                        font: { size: 10 },
+                      },
+                    },
+                  },
+                  elements: {
+                    point: {
+                      radius: 0, // Hide individual points for cleaner lines
+                    },
+                  },
+                }}
+              />
+            </div>
+            <p className={css({ fontSize: "0.7rem", color: "#6b7280", textAlign: "center", marginTop: "0.5rem" })}>
+              Lower is better - shows how prison sentences accumulate as the partnership progresses
+            </p>
           </div>
 
           <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
@@ -833,10 +963,17 @@ const StrategyAnalysis: React.FC = () => {
 
   const strategies: Strategy[] = ["random", "cooperate", "defect", "tit-for-tat"];
   const strategyNames = {
-    random: "Random",
-    cooperate: "Cooperate",
-    defect: "Defect",
+    random: "Unpredictable",
+    cooperate: "Always loyal",
+    defect: "Always selfish",
     "tit-for-tat": "Tit-for-Tat",
+  };
+
+  const jesseStrategyDescriptions = {
+    random: "Unpredictable Jesse - makes chaotic, emotion-driven decisions",
+    cooperate: "Always loyal Jesse - always tries to stick with you (Season 1 Jesse)",
+    defect: "Always selfish Jesse - prioritizes himself, always looks for an advantage",
+    "tit-for-tat": "Tit-for-Tat Jesse - mirrors your behavior from previous interactions",
   };
 
   const runAnalysis = () => {
@@ -871,51 +1008,220 @@ const StrategyAnalysis: React.FC = () => {
     }, 2000);
   };
 
+  const getBestStrategy = (jesseStrategy: Strategy) => {
+    if (!analysisResults) return null;
+    
+    let bestStrategy = "tit-for-tat";
+    let bestScore = parseFloat(analysisResults["tit-for-tat"][jesseStrategy].avgScore1);
+    
+    strategies.forEach((strategy) => {
+      const score = parseFloat(analysisResults[strategy][jesseStrategy].avgScore1);
+      if (score < bestScore) {
+        bestScore = score;
+        bestStrategy = strategy;
+      }
+    });
+    
+    return { strategy: bestStrategy, score: bestScore };
+  };
+
+  const getRecommendationColor = (score: number) => {
+    if (score < 4) return "#10b981"; // green - excellent
+    if (score < 6) return "#f59e0b"; // yellow - decent
+    if (score < 10) return "#f97316"; // orange - troubled
+    return "#ef4444"; // red - bad
+  };
+
+  const getRecommendationText = (score: number) => {
+    if (score < 4) return "Excellent outcome";
+    if (score < 6) return "Decent cooperation";
+    if (score < 10) return "Troubled relationship";
+    return "Toxic partnership";
+  };
+
   return (
-    <div className="my-6 p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-lg font-semibold mb-4">🧪 Breaking Bad Character Analysis</h3>
-      <p className="text-sm text-gray-600 mb-4">
-        Analyzes how different character approaches fare against each other over a full season (100 episodes, 50
-        simulations per character pairing).
+    <div
+      className={css({
+        margin: "2rem 0",
+        padding: "1.5rem",
+        backgroundColor: "rgba(59, 130, 246, 0.05)",
+        borderRadius: "4px",
+        border: "1px solid rgba(59, 130, 246, 0.2)",
+      })}
+    >
+      <h4
+        className={css({
+          fontSize: "1rem",
+          fontWeight: "medium",
+          marginBottom: "1rem",
+          textAlign: "center",
+          color: "#374151",
+        })}
+      >
+        🧪 Walter's Strategy Guide: How to Handle Different Types of Jesse
+      </h4>
+
+      <p
+        className={css({
+          textAlign: "center",
+          color: "#6b7280",
+          fontSize: "0.9rem",
+          marginBottom: "1.5rem",
+        })}
+      >
+        Analyzes how different Walter strategies perform against each type of Jesse over a full season (100 episodes, 50
+        simulations per matchup). Find the optimal approach for each Jesse personality.
       </p>
 
-      <button
-        onClick={runAnalysis}
-        disabled={isAnalyzing}
-        className="mb-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-      >
-        {isAnalyzing ? "Analyzing character arcs..." : "🎭 Analyze Breaking Bad Characters"}
-      </button>
+      <div className={css({ textAlign: "center", marginBottom: "1.5rem" })}>
+        <button
+          onClick={runAnalysis}
+          disabled={isAnalyzing}
+          className={css({
+            padding: "0.75rem 1.5rem",
+            backgroundColor: isAnalyzing ? "#9ca3af" : "#0066cc",
+            color: "white",
+            borderRadius: "4px",
+            border: "none",
+            fontSize: "0.9rem",
+            fontWeight: "medium",
+            cursor: isAnalyzing ? "not-allowed" : "pointer",
+            transition: "background-color 0.2s",
+            _hover: {
+              backgroundColor: isAnalyzing ? "#9ca3af" : "#0052a3",
+            },
+          })}
+        >
+          {isAnalyzing ? "🔬 Analyzing character dynamics..." : "🎭 Analyze Breaking Bad Strategies"}
+        </button>
+      </div>
 
       {analysisResults && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                <th className="border p-2 bg-gray-100">Player 1 \ Player 2</th>
-                {strategies.map((strat) => (
-                  <th key={strat} className="border p-2 bg-gray-100">
-                    {strategyNames[strat]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {strategies.map((strat1) => (
-                <tr key={strat1}>
-                  <td className="border p-2 bg-gray-100 font-medium">{strategyNames[strat1]}</td>
-                  {strategies.map((strat2) => (
-                    <td key={strat2} className="border p-2 text-center">
-                      <div className="text-blue-600 font-bold">{analysisResults[strat1][strat2].avgScore1}</div>
-                      <div className="text-red-600 text-xs">vs {analysisResults[strat1][strat2].avgScore2}</div>
-                    </td>
+        <div>
+          {/* Strategy Recommendations */}
+          <div
+            className={css({
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "1rem",
+              marginBottom: "2rem",
+            })}
+          >
+            {strategies.map((jesseStrat) => {
+              const best = getBestStrategy(jesseStrat);
+              const color = best ? getRecommendationColor(best.score) : "#6b7280";
+              const recommendationText = best ? getRecommendationText(best.score) : "";
+              
+              return (
+                <div
+                  key={jesseStrat}
+                  className={css({
+                    backgroundColor: "#f8fafc",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: "8px",
+                    padding: "1rem",
+                  })}
+                >
+                  <div className={css({ textAlign: "center", marginBottom: "0.75rem" })}>
+                    <h6 className={css({ fontSize: "0.9rem", fontWeight: "bold", color: "#374151", marginBottom: "0.25rem" })}>
+                      If Jesse is: {strategyNames[jesseStrat]}
+                    </h6>
+                    <p className={css({ fontSize: "0.7rem", color: "#6b7280", lineHeight: "1.3" })}>
+                      {jesseStrategyDescriptions[jesseStrat]}
+                    </p>
+                  </div>
+                  
+                  {best && (
+                    <div
+                      className={css({
+                        textAlign: "center",
+                        padding: "0.75rem",
+                        borderRadius: "6px",
+                        backgroundColor: "white",
+                        border: `2px solid ${color}`,
+                      })}
+                    >
+                      <div className={css({ color: color, fontWeight: "bold", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
+                        🎯 Walter should be: {strategyNames[best.strategy]}
+                      </div>
+                      <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.25rem" })}>
+                        Average: {best.score} years prison
+                      </div>
+                      <div className={css({ fontSize: "0.7rem", color: color, fontWeight: "medium" })}>
+                        {recommendationText}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Detailed Results Table */}
+          <div
+            className={css({
+              backgroundColor: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              padding: "1rem",
+              marginBottom: "1rem",
+            })}
+          >
+            <h6 className={css({ fontSize: "0.85rem", fontWeight: "medium", marginBottom: "0.75rem", textAlign: "center", color: "#374151" })}>
+              📊 Detailed Results: Walter's Average Prison Sentence
+            </h6>
+            <div className={css({ overflowX: "auto" })}>
+              <table className={css({ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" })}>
+                <thead>
+                  <tr>
+                    <th className={css({ border: "1px solid #d1d5db", padding: "0.5rem", backgroundColor: "#f9fafb", textAlign: "left" })}>
+                      Walter's Strategy ↓ / Jesse's Strategy →
+                    </th>
+                    {strategies.map((strat) => (
+                      <th key={strat} className={css({ border: "1px solid #d1d5db", padding: "0.5rem", backgroundColor: "#f9fafb", textAlign: "center" })}>
+                        {strategyNames[strat]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {strategies.map((strat1) => (
+                    <tr key={strat1}>
+                      <td className={css({ border: "1px solid #d1d5db", padding: "0.5rem", backgroundColor: "#f9fafb", fontWeight: "medium" })}>
+                        {strategyNames[strat1]}
+                      </td>
+                      {strategies.map((strat2) => {
+                        const score = parseFloat(analysisResults[strat1][strat2].avgScore1);
+                        const isBest = getBestStrategy(strat2)?.strategy === strat1;
+                        return (
+                          <td 
+                            key={strat2} 
+                            className={css({ 
+                              border: "1px solid #d1d5db", 
+                              padding: "0.5rem", 
+                              textAlign: "center",
+                              backgroundColor: isBest ? "#f0f9ff" : "white",
+                              fontWeight: isBest ? "bold" : "normal",
+                              color: isBest ? "#0066cc" : "#374151"
+                            })}
+                          >
+                            {score.toFixed(1)} years
+                            {isBest && <div className={css({ fontSize: "0.6rem", color: "#0066cc" })}>✓ Best</div>}
+                          </td>
+                        );
+                      })}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mt-2 text-xs text-gray-500">
-            Blue numbers = Player 1 average, Red numbers = Player 2 average
+                </tbody>
+              </table>
+            </div>
+            <p className={css({ fontSize: "0.7rem", color: "#6b7280", textAlign: "center", marginTop: "0.75rem" })}>
+              Lower numbers = better outcomes for Walter. Blue cells show the optimal Walter strategy for each Jesse type.
+            </p>
+          </div>
+
+          <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
+            💡 Understanding your partner's behavior is key to choosing the right strategy in repeated games
           </div>
         </div>
       )}

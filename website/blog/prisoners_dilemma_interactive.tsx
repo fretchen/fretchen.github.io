@@ -641,11 +641,11 @@ const GameSimulation: React.FC = () => {
     // Check for exploitation in both directions
     let exploited = false;
     let exploitationMessage = "";
-    
+
     const avgDifference = walterAvg - jesseAvg;
     const walterExploitingJesse = avgDifference < -3; // Walter gets 3+ years less than Jesse (better for Walter)
     const jesseExploitingWalter = avgDifference > 3; // Walter gets 3+ years more than Jesse (worse for Walter)
-    
+
     if (jesseExploitingWalter) {
       exploited = true;
       exploitationMessage = `Jesse consistently got better deals while you suffered. Average difference: ${avgDifference.toFixed(1)} years worse for you.`;
@@ -659,7 +659,7 @@ const GameSimulation: React.FC = () => {
 
     let verdict = "";
     let color = "";
-    
+
     if (walterExploitingJesse) {
       verdict = "Exploitative partnership - you're taking advantage of Jesse's loyalty.";
       color = "#dc2626"; // red
@@ -794,9 +794,7 @@ const GameSimulation: React.FC = () => {
             })}
           >
             <div className={css({ textAlign: "center", marginBottom: "1rem" })}>
-              <h5
-                className={css({ fontSize: "1rem", fontWeight: "bold", color: "#374151", marginBottom: "0.5rem" })}
-              >
+              <h5 className={css({ fontSize: "1rem", fontWeight: "bold", color: "#374151", marginBottom: "0.5rem" })}>
                 🎪 Season Finale: Walter vs Jesse
               </h5>
               <div
@@ -808,14 +806,29 @@ const GameSimulation: React.FC = () => {
                   margin: "1rem 0",
                 })}
               >
-                <div className={css({ textAlign: "center", padding: "0.75rem", backgroundColor: "#dbeafe", borderRadius: "6px" })}>
+                <div
+                  className={css({
+                    textAlign: "center",
+                    padding: "0.75rem",
+                    backgroundColor: "#dbeafe",
+                    borderRadius: "6px",
+                  })}
+                >
                   <div className={css({ fontSize: "0.85rem", fontWeight: "bold", color: "#1d4ed8" })}>Walter (You)</div>
                   <div className={css({ fontSize: "0.75rem", color: "#3730a3", marginTop: "0.25rem" })}>
                     {strategyDescriptions[walterStrategy].split(" - ")[0]}
                   </div>
                 </div>
                 <div className={css({ fontSize: "1.5rem", textAlign: "center" })}>⚡</div>
-                <div className={css({ textAlign: "center", padding: "0.75rem", backgroundColor: "#faf5ff", borderRadius: "6px", border: "2px solid #a855f7" })}>
+                <div
+                  className={css({
+                    textAlign: "center",
+                    padding: "0.75rem",
+                    backgroundColor: "#faf5ff",
+                    borderRadius: "6px",
+                    border: "2px solid #a855f7",
+                  })}
+                >
                   <div className={css({ fontSize: "0.85rem", fontWeight: "bold", color: "#7c3aed" })}>Jesse</div>
                   <div className={css({ fontSize: "0.75rem", color: "#6b21a8", marginTop: "0.25rem" })}>
                     {jesseStrategyDescriptions[gameData.jesseStrategy].split(" - ")[0]}
@@ -879,7 +892,15 @@ const GameSimulation: React.FC = () => {
               marginBottom: "1rem",
             })}
           >
-            <h6 className={css({ fontSize: "0.85rem", fontWeight: "medium", marginBottom: "0.75rem", textAlign: "center", color: "#374151" })}>
+            <h6
+              className={css({
+                fontSize: "0.85rem",
+                fontWeight: "medium",
+                marginBottom: "0.75rem",
+                textAlign: "center",
+                color: "#374151",
+              })}
+            >
               📈 Cumulative Prison Sentences Over Time
             </h6>
             <div style={{ position: "relative", height: "200px", width: "100%" }}>
@@ -1010,10 +1031,10 @@ const StrategyAnalysis: React.FC = () => {
 
   const getBestStrategy = (jesseStrategy: Strategy) => {
     if (!analysisResults) return null;
-    
+
     let bestStrategy = "tit-for-tat";
     let bestScore = parseFloat(analysisResults["tit-for-tat"][jesseStrategy].avgScore1);
-    
+
     strategies.forEach((strategy) => {
       const score = parseFloat(analysisResults[strategy][jesseStrategy].avgScore1);
       if (score < bestScore) {
@@ -1021,7 +1042,7 @@ const StrategyAnalysis: React.FC = () => {
         bestStrategy = strategy;
       }
     });
-    
+
     return { strategy: bestStrategy, score: bestScore };
   };
 
@@ -1111,7 +1132,7 @@ const StrategyAnalysis: React.FC = () => {
               const best = getBestStrategy(jesseStrat);
               const color = best ? getRecommendationColor(best.score) : "#6b7280";
               const recommendationText = best ? getRecommendationText(best.score) : "";
-              
+
               return (
                 <div
                   key={jesseStrat}
@@ -1123,14 +1144,21 @@ const StrategyAnalysis: React.FC = () => {
                   })}
                 >
                   <div className={css({ textAlign: "center", marginBottom: "0.75rem" })}>
-                    <h6 className={css({ fontSize: "0.9rem", fontWeight: "bold", color: "#374151", marginBottom: "0.25rem" })}>
+                    <h6
+                      className={css({
+                        fontSize: "0.9rem",
+                        fontWeight: "bold",
+                        color: "#374151",
+                        marginBottom: "0.25rem",
+                      })}
+                    >
                       If Jesse is: {strategyNames[jesseStrat]}
                     </h6>
                     <p className={css({ fontSize: "0.7rem", color: "#6b7280", lineHeight: "1.3" })}>
                       {jesseStrategyDescriptions[jesseStrat]}
                     </p>
                   </div>
-                  
+
                   {best && (
                     <div
                       className={css({
@@ -1141,7 +1169,14 @@ const StrategyAnalysis: React.FC = () => {
                         border: `2px solid ${color}`,
                       })}
                     >
-                      <div className={css({ color: color, fontWeight: "bold", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
+                      <div
+                        className={css({
+                          color: color,
+                          fontWeight: "bold",
+                          fontSize: "0.85rem",
+                          marginBottom: "0.25rem",
+                        })}
+                      >
                         🎯 Walter should be: {strategyNames[best.strategy]}
                       </div>
                       <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.25rem" })}>
@@ -1167,18 +1202,41 @@ const StrategyAnalysis: React.FC = () => {
               marginBottom: "1rem",
             })}
           >
-            <h6 className={css({ fontSize: "0.85rem", fontWeight: "medium", marginBottom: "0.75rem", textAlign: "center", color: "#374151" })}>
+            <h6
+              className={css({
+                fontSize: "0.85rem",
+                fontWeight: "medium",
+                marginBottom: "0.75rem",
+                textAlign: "center",
+                color: "#374151",
+              })}
+            >
               📊 Detailed Results: Walter's Average Prison Sentence
             </h6>
             <div className={css({ overflowX: "auto" })}>
               <table className={css({ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" })}>
                 <thead>
                   <tr>
-                    <th className={css({ border: "1px solid #d1d5db", padding: "0.5rem", backgroundColor: "#f9fafb", textAlign: "left" })}>
+                    <th
+                      className={css({
+                        border: "1px solid #d1d5db",
+                        padding: "0.5rem",
+                        backgroundColor: "#f9fafb",
+                        textAlign: "left",
+                      })}
+                    >
                       Walter's Strategy ↓ / Jesse's Strategy →
                     </th>
                     {strategies.map((strat) => (
-                      <th key={strat} className={css({ border: "1px solid #d1d5db", padding: "0.5rem", backgroundColor: "#f9fafb", textAlign: "center" })}>
+                      <th
+                        key={strat}
+                        className={css({
+                          border: "1px solid #d1d5db",
+                          padding: "0.5rem",
+                          backgroundColor: "#f9fafb",
+                          textAlign: "center",
+                        })}
+                      >
                         {strategyNames[strat]}
                       </th>
                     ))}
@@ -1187,22 +1245,29 @@ const StrategyAnalysis: React.FC = () => {
                 <tbody>
                   {strategies.map((strat1) => (
                     <tr key={strat1}>
-                      <td className={css({ border: "1px solid #d1d5db", padding: "0.5rem", backgroundColor: "#f9fafb", fontWeight: "medium" })}>
+                      <td
+                        className={css({
+                          border: "1px solid #d1d5db",
+                          padding: "0.5rem",
+                          backgroundColor: "#f9fafb",
+                          fontWeight: "medium",
+                        })}
+                      >
                         {strategyNames[strat1]}
                       </td>
                       {strategies.map((strat2) => {
                         const score = parseFloat(analysisResults[strat1][strat2].avgScore1);
                         const isBest = getBestStrategy(strat2)?.strategy === strat1;
                         return (
-                          <td 
-                            key={strat2} 
-                            className={css({ 
-                              border: "1px solid #d1d5db", 
-                              padding: "0.5rem", 
+                          <td
+                            key={strat2}
+                            className={css({
+                              border: "1px solid #d1d5db",
+                              padding: "0.5rem",
                               textAlign: "center",
                               backgroundColor: isBest ? "#f0f9ff" : "white",
                               fontWeight: isBest ? "bold" : "normal",
-                              color: isBest ? "#0066cc" : "#374151"
+                              color: isBest ? "#0066cc" : "#374151",
                             })}
                           >
                             {score.toFixed(1)} years
@@ -1216,7 +1281,8 @@ const StrategyAnalysis: React.FC = () => {
               </table>
             </div>
             <p className={css({ fontSize: "0.7rem", color: "#6b7280", textAlign: "center", marginTop: "0.75rem" })}>
-              Lower numbers = better outcomes for Walter. Blue cells show the optimal Walter strategy for each Jesse type.
+              Lower numbers = better outcomes for Walter. Blue cells show the optimal Walter strategy for each Jesse
+              type.
             </p>
           </div>
 
@@ -1235,18 +1301,20 @@ const PrisonersDilemmaPost: React.FC = () => {
     <article className="prose prose-lg max-w-none">
       <p>
         The Prisoner&apos;s Dilemma is one of the most famous examples from game theory and shows how conflict of
-        interests can have deep effects on the rational decisions.
+        interests can have deep effects on the rational decisions. I had already heard of it in the context of a single
+        game. However, with the{" "}
+        <a href="https://www.nobelprize.org/prizes/economic-sciences/2024/press-release/">
+          Nobel Prize in economics of 2024
+        </a>{" "}
+        I encountered the topic again, but this time in the contex of repeated games. 
       </p>
-      <p>
-        I had already heard of it in the context of a single game. 
-        
-        However, with the Nobel Prize in economics of 2024 I encountered the topic again, but this time in the contex of repeated games. 
-        The winners had already shown good evidence that strong institutions might be economically benefitial. However, a  lot of countries 
-        do not have them. And repeated games give some insight into this direction. And it all boils down to the questions like "Why should I pay taxes anyways ?".
-        And the "rational answer" is surprisingly not that simple. The way I understood the lecture
-        notes and some articles the repeated games can be helpful to understand when it is rational for citizens to do something for "good for society" and when 
-        it becomes rational to be selfish. So, in this post I decided to simply collect my notes on the Prisoners Dilemma in a visual fashion to understand the basic example
-        a bit better. 
+      <p>The Nobel Prize winners had already shown good evidence that strong institutions might be economically benefitial.
+        However, a lot of countries do not have them. And repeated games give some insight into the "why". It
+        all boils down to questions like "Why should I pay taxes anyways ?". And the rational answer to those questions is
+        surprisingly complicated. The way I understood the lecture notes and some articles,  the repeated games can be
+        helpful to understand when it is rational for citizens to do something for "good for society" and when it
+        becomes rational to be selfish. So, in this post I decided to simply collect my notes on the Prisoners Dilemma
+        in a visual fashion to understand the basic example a bit better.
       </p>
       <h2> Setting the scene with Breaking Bad</h2>
       <p>
@@ -1389,8 +1457,8 @@ S < P
 $$
 
 So Walter should only stay loyal if the the punishment of both blaming each other is 
-higher than the punishment of being loyal and getting blamed by the other one. in the interactive simulation below
-you can explort how Walter's rational decision should change within different scenarios .
+higher than the punishment of being loyal and getting blamed by the other one. In the interactive simulation below
+you can explore how Walter's rational decision should change within different scenarios.
 
 `}</ReactMarkdown>
       <ExpectedUtilityPlot />
@@ -1409,7 +1477,7 @@ Suddenly, mutual betrayal might carry a "sentence" of 20+ years (or death), whil
 This is one nice explanation why organized crime groups, military units, and tight-knit communities develop strong codes of loyalty - they artificially raise the cost of mutual defection to make cooperation the individually rational choice.
 
 But what if Walter and Jesse don't have a cartel breathing down their necks? What if they're just two guys who have to work together repeatedly over many "episodes"? This opens up another interesting possibility: maybe they can learn to cooperate through experience. 
-If they know they'll face similar dilemmas again and again, betraying your partner today might mean getting betrayed tomorrow. Suddenly, building a reputation for loyalty becomes valuable - not because of external threats, but because it encourages your partner to cooperate in future rounds. 
+If they know they'll face similar dilemmas again and again, betraying your partner today might mean getting betrayed tomorrow. 
 We will have a deeper look into this scenario in the next section.
 
 
@@ -1484,7 +1552,7 @@ The actual models are substantially more complex but it felt that the Prisoner's
 // Post metadata
 export const meta = {
   title: "The Prisoner's Dilemma",
-  publishing_date: "2025-06-22"
+  publishing_date: "2025-06-22",
 };
 
 export default PrisonersDilemmaPost;

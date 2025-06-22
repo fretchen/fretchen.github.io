@@ -1300,21 +1300,21 @@ const PrisonersDilemmaPost: React.FC = () => {
   return (
     <article className="prose prose-lg max-w-none">
       <p>
-        The Prisoner&apos;s Dilemma is one of the most famous examples from game theory and shows how conflict of
-        interests can have deep effects on the rational decisions. I had already heard of it in the context of a single
-        game. However, with the{" "}
-        <a href="https://www.nobelprize.org/prizes/economic-sciences/2024/press-release/">
-          Nobel Prize in economics of 2024
-        </a>{" "}
-        I encountered the topic again, but this time in the contex of repeated games. 
+        Why did the 2024 Nobel Prize in Economics go to researchers that study why some countries prosper with strong
+        institutions while others remain trapped in cycles of corruption and poverty? When I digged into the question,
+        the answer turned out to be connected to a famous social game called Prisoners Dilemma.
       </p>
-      <p>The Nobel Prize winners had already shown good evidence that strong institutions might be economically benefitial.
-        However, a lot of countries do not have them. And repeated games give some insight into the "why". It
-        all boils down to questions like "Why should I pay taxes anyways ?". And the rational answer to those questions is
-        surprisingly complicated. The way I understood the lecture notes and some articles,  the repeated games can be
-        helpful to understand when it is rational for citizens to do something for "good for society" and when it
-        becomes rational to be selfish. So, in this post I decided to simply collect my notes on the Prisoners Dilemma
-        in a visual fashion to understand the basic example a bit better.
+      <p>
+        I had encountered it before rapidly as a single-game thought experiment,
+        but the <a href="https://www.nobelprize.org/prizes/economic-sciences/2024/press-release/">Nobel Prize work</a>{" "}
+        focuses on what happens when the same dilemma plays out repeatedly—which is much closer to how real life
+        actually works. The rational answer to questions like &quot;Why should I pay taxes anyway?&quot; or &quot;Why
+        should my country cut emissions if others won&apos;t?&quot; becomes surprisingly complex to answer in these social games.
+      </p>
+      <p>
+        To explore this step by step, I want to work through the basic mechanics using a scenario
+        that makes the stakes clear. This is why I choose to embed the discussion it into the context of Breaking Bad, which felt just like a perfect example.
+    
       </p>
       <h2> Setting the scene with Breaking Bad</h2>
       <p>
@@ -1554,7 +1554,7 @@ The actual models are substantially more complex but it felt that the Prisoner's
 export const meta = {
   title: "The Prisoner's Dilemma",
   publishing_date: "2025-06-22",
-  tokenID: 30
+  tokenID: 30,
 };
 
 export default PrisonersDilemmaPost;

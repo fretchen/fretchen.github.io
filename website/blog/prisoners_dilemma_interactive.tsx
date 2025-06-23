@@ -29,12 +29,12 @@ const ExpectedUtilityPlot: React.FC = () => {
 
   // Prisoner's Dilemma payoff matrix variables (in years of prison)
   // Fixed values from Breaking Bad example
-  const R = 3; // Reward for mutual cooperation (both stay loyal)
-  const T = 0; // Temptation to defect (betray while opponent stays loyal)
+  const R = 3; // Reward for mutual cooperation (both cooperate)
+  const T = 0; // Temptation to defect (defect while opponent cooperates)
 
   // Adjustable parameters
-  const [P, setP] = useState(5); // Punishment for mutual defection (both betray)
-  const [S, setS] = useState(15); // Sucker's payoff (stay loyal while opponent betrays)
+  const [P, setP] = useState(5); // Punishment for mutual defection (both defect)
+  const [S, setS] = useState(15); // Sucker's payoff (cooperate while opponent defects)
 
   // Calculate expected values
   const expectedCooperate = R * (1 - probabilityDefect) + S * probabilityDefect;
@@ -48,14 +48,14 @@ const ExpectedUtilityPlot: React.FC = () => {
     labels: probabilities.map((p) => (p * 100).toFixed(0) + "%"),
     datasets: [
       {
-        label: "Stay loyal to Jesse",
+        label: "Cooperate with Jesse",
         data: cooperateValues,
         borderColor: "rgb(59, 130, 246)",
         backgroundColor: "rgba(59, 130, 246, 0.1)",
         tension: 0.1,
       },
       {
-        label: "Betray Jesse",
+        label: "Defect against Jesse",
         data: defectValues,
         borderColor: "rgb(239, 68, 68)",
         backgroundColor: "rgba(239, 68, 68, 0.1)",
@@ -97,7 +97,7 @@ const ExpectedUtilityPlot: React.FC = () => {
       x: {
         title: {
           display: true,
-          text: "How likely Jesse is to betray (%)",
+          text: "How likely Jesse is to defect (%)",
           font: { size: 11 },
         },
         ticks: {
@@ -141,7 +141,7 @@ const ExpectedUtilityPlot: React.FC = () => {
           color: "#374151",
         })}
       >
-        When should Walter stay loyal vs. betray Jesse?
+        When should Walter cooperate vs. defect against Jesse?
       </h4>
 
       <p
@@ -152,9 +152,9 @@ const ExpectedUtilityPlot: React.FC = () => {
           marginBottom: "1rem",
         })}
       >
-        We know that if <strong>both stay loyal, each gets 3 years</strong>, and if{" "}
-        <strong>Walter betrays while Jesse stays loyal, Walter goes free (0 years)</strong>. But what about the other
-        scenarios? Adjust the sliders below to see when loyalty becomes Walter's best choice.
+        We know that if <strong>both cooperate, each gets 3 years</strong>, and if{" "}
+        <strong>Walter defects while Jesse cooperates, Walter goes free (0 years)</strong>. But what about the other
+        scenarios? Adjust the sliders below to see when cooperation becomes Walter&rsquo;s best choice.
       </p>
 
       {/* Adjustable Prison Sentences */}
@@ -169,7 +169,7 @@ const ExpectedUtilityPlot: React.FC = () => {
       >
         <div>
           <label>
-            <strong>If both betray:</strong> {P} years each
+            <strong>If both defect:</strong> {P} years each
           </label>
           <input
             type="range"
@@ -183,7 +183,7 @@ const ExpectedUtilityPlot: React.FC = () => {
         </div>
         <div>
           <label>
-            <strong>If Jesse betrays Walter:</strong> {S} years for Walter
+            <strong>If Jesse defects against Walter:</strong> {S} years for Walter
           </label>
           <input
             type="range"
@@ -212,7 +212,7 @@ const ExpectedUtilityPlot: React.FC = () => {
             textAlign: "center",
           })}
         >
-          How likely is Jesse to betray me: <strong>{(probabilityDefect * 100).toFixed(0)}%</strong>
+          How likely is Jesse to defect: <strong>{(probabilityDefect * 100).toFixed(0)}%</strong>
         </label>
         <input
           type="range"
@@ -259,7 +259,7 @@ const ExpectedUtilityPlot: React.FC = () => {
             marginBottom: "0.5rem",
           })}
         >
-          🎯 Walter's Rational Choice: {expectedDefect < expectedCooperate ? "Betray Jesse" : "Stay Loyal"}
+          🎯 Walter's Rational Choice: {expectedDefect < expectedCooperate ? "Defect" : "Cooperate"}
         </div>
 
         <div
@@ -278,11 +278,11 @@ const ExpectedUtilityPlot: React.FC = () => {
 
 function prisonersDilemma(choice1: Choice, choice2: Choice): [number, number] {
   // Breaking Bad scenario: prison sentences in years
-  // C = Cooperate (stay loyal), D = Defect (betray)
-  if (choice1 === "C" && choice2 === "C") return [3, 3]; // Both stay loyal: 3 years each
-  if (choice1 === "C" && choice2 === "D") return [15, 0]; // Walter loyal, Jesse betrays: Walter 15 years, Jesse free
-  if (choice1 === "D" && choice2 === "C") return [0, 15]; // Walter betrays, Jesse loyal: Walter free, Jesse 15 years
-  return [5, 5]; // Both betray: 5 years each
+  // C = Cooperate, D = Defect
+  if (choice1 === "C" && choice2 === "C") return [3, 3]; // Both cooperate: 3 years each
+  if (choice1 === "C" && choice2 === "D") return [15, 0]; // Walter cooperates, Jesse defects: Walter 15 years, Jesse free
+  if (choice1 === "D" && choice2 === "C") return [0, 15]; // Walter defects, Jesse cooperates: Walter free, Jesse 15 years
+  return [5, 5]; // Both defect: 5 years each
 }
 
 function playRepeatedGame(
@@ -1305,50 +1305,48 @@ const PrisonersDilemmaPost: React.FC = () => {
         the answer turned out to be connected to a famous social game called Prisoners Dilemma.
       </p>
       <p>
-        I had encountered it before rapidly as a single-game thought experiment,
-        but the <a href="https://www.nobelprize.org/prizes/economic-sciences/2024/press-release/">Nobel Prize work</a>{" "}
-        focuses on what happens when the same dilemma plays out repeatedly—which is much closer to how real life
-        actually works. The rational answer to questions like &quot;Why should I pay taxes anyway?&quot; or &quot;Why
-        should my country cut emissions if others won&apos;t?&quot; becomes surprisingly complex to answer in these social games.
+        I had encountered the Prisoner&rsquo;s Dilemma before as a single-game thought experiment, but the{" "}
+        <a href="https://www.nobelprize.org/prizes/economic-sciences/2024/press-release/">Nobel Prize work</a> focuses
+        on repeated interactions. When the same dilemma plays out over and over, questions like &quot;Why should I pay
+        taxes anyway?&quot; or &quot;Why should my country cut emissions if others won&apos;t?&quot; become surprisingly
+        complex strategic problems.
       </p>
       <p>
-        To explore this step by step, I want to work through the basic mechanics using a scenario
-        that makes the stakes clear. This is why I choose to embed the discussion it into the context of Breaking Bad, which felt just like a perfect example.
-    
+        To explore dilemma, I wanted to work through its basic mechanics using a scenario that makes the
+        challenges clear. This is why I choose to embed the discussion it into the context of Breaking Bad, which felt
+        just like a perfect example.
       </p>
-      <h2> Setting the scene with Breaking Bad</h2>
+      <h2>Setting the scene with Breaking Bad</h2>
       <p>
-        The formal prisoner's dilemma is quite nicely visualized within the setting of Breaking Bad. The main characters
-        are
-        <ul>
-          <li>
-            <strong>Walter White</strong> - High school chemistry teacher turned meth cook to secure his family's
-            financial future
-          </li>
-          <li>
-            <strong>Jesse Pinkman</strong> - Walter's former student and drug dealing partner in the meth business
-          </li>
-          <li>
-            <strong>Hank Schrader</strong> - DEA agent and Walter's brother-in-law, investigating the local drug trade
-          </li>
-        </ul>
-        So, we will assume the following situation. Walter White and Jesse Pinkman have been arrested after a DEA raid
-        on their meth lab. They're in separate interrogation rooms, unable to communicate. Agent Hank Schrader is
-        offering each of them the same deal: testify against your partner and walk free, or stay silent and take
-        whatever punishment comes.
+        The characters are: <strong>Walter White</strong> (high school chemistry teacher turned meth cook),{" "}
+        <strong>Jesse Pinkman</strong> (Walter&rsquo;s former student and business partner), and{" "}
+        <strong>Hank Schrader</strong> (DEA agent and Walter&rsquo;s brother-in-law).
+      </p>
+      <p>
+        We can now consider these three characters in a standard scenario for the prisoner&rsquo;s: Walter White and
+        Jesse Pinkman have been arrested by the DEA and are being interrogated separately. Agent Hank Schrader offers
+        each the same deal: testify against your partner to get immunity, or stay silent and face whatever charges can
+        be proven.
+      </p>
+      <p>
+        This setup—two people who must choose between cooperation and defection without being able to
+        communicate—provides a clean framework for analyzing why mutually beneficial cooperation often breaks down. The
+        outcome depends entirely on what each person believes the other will do.
       </p>
 
       <h3>The Breaking Bad scenario</h3>
       <p>
-        This is the <strong>perfect</strong> Prisoner's Dilemma scenario. Walter and Jesse each have exactly two
+        This is the <strong>perfect</strong> Prisoner&rsquo;s Dilemma scenario. Walter and Jesse each have exactly two
         choices:
       </p>
       <ul>
         <li>
-          <strong>Cooperate (C)</strong>: Stay loyal to your partner - "I don't know this person, we've never met."
+          <strong>Cooperate (C)</strong>: Stay loyal to your partner - &quot;I don&rsquo;t know this person, we&rsquo;ve
+          never met.&quot;
         </li>
         <li>
-          <strong>Defect (D)</strong>: Blame your partner - "He forced me into this, he's the real criminal."
+          <strong>Defect (D)</strong>: Blame your partner - &quot;He forced me into this, he&rsquo;s the real
+          criminal.&quot;
         </li>
       </ul>
       <p>The sentences depend on what both choose:</p>
@@ -1359,7 +1357,7 @@ const PrisonersDilemmaPost: React.FC = () => {
         </li>
         <li>
           <strong>One blames the other (D, C)</strong>: The betrayer walks free with immunity, the loyal one gets 15
-          years for "being the mastermind."
+          years for &quot;being the mastermind.&quot;
         </li>
         <li>
           <strong>Both blame each other (D, D)</strong>: Each gets 5 years. Their contradictory stories help neither
@@ -1369,14 +1367,15 @@ const PrisonersDilemmaPost: React.FC = () => {
 
       <h3> Taking a team approach</h3>
       <p>
-        If both Walter and Jesse could somehow step back and ask "What's the best outcome for <em>us as a team</em>?"
-        they'd immediately see that mutual loyalty (3 years each) beats mutual betrayal (5 years each). The total "team
-        sentence" is only 6 years versus 10 years. It's like they're in this together against the DEA, not against each
-        other. If they could make a pact and trust each other to stick to it, they'd both be better off. This is what
-        economists call the &quot;Pareto optimal&quot; solution - you can't make one person better off without making
-        the other worse off. The dilemma is that the team approach is not the only way to look at this and that a much
-        more natural perspective for a criminal like Walter White might be &quot;What's the best outcome for{" "}
-        <em>me as an individual</em>?&quot;.
+        If both Walter and Jesse could somehow step back and ask &quot;What&rsquo;s the best outcome for{" "}
+        <em>us as a team</em>?&quot; they&rsquo;d immediately see that mutual loyalty (3 years each) beats mutual
+        betrayal (5 years each). The total &quot;team sentence&quot; is only 6 years versus 10 years. It&rsquo;s like
+        they&rsquo;re in this together against the DEA, not against each other. If they could make a pact and trust each
+        other to stick to it, they&rsquo;d both be better off. This is what economists call the &quot;Pareto
+        optimal&quot; solution - you can&rsquo;t make one person better off without making the other worse off. The
+        dilemma is that the team approach is not the only way to look at this and that a much more natural perspective
+        for a criminal like Walter White might be &quot;What&rsquo;s the best outcome for <em>me as an individual</em>
+        ?&quot;.
       </p>
 
       <h3>Playing the role of Walter White</h3>
@@ -1396,10 +1395,15 @@ const PrisonersDilemmaPost: React.FC = () => {
       </p>
       <h3>A Rational Analysis</h3>
 
+      <p>
+        So far we&rsquo;ve seen the dilemma from an intuitive perspective—the tension between individual incentives and
+        collective benefit. But Walter White is a chemistry teacher, a methodical thinker who approaches problems
+        analytically. Let&rsquo;s follow his lead and examine this mathematically.
+      </p>
+
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-
-Walter White is a chemistry teacher - and hence a fairly rational guy. So, If he can estimate how likely Jesse is to betray him, what should he do?
+If Walter can estimate how likely Jesse is to betray him, what should he do?
 Here's how we calculate it:
 
 **Expected Value = (Outcome if Jesse stays loyal) × (Probability Jesse stays loyal) + (Outcome if Jesse betrays) × (Probability Jesse betrays)**

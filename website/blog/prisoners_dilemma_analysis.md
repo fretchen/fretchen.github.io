@@ -162,15 +162,22 @@ This document analyzes the major inconsistencies and readability issues in the p
 ### High Priority (Core Logic Issues)
 
 1. ✅ **Hook: Implement Nobel Prize opening** - COMPLETED
-2. Improve section transitions
-3. Resolve contradictory conclusions about cooperation
-4. Strengthen connection between single and repeated games
-5. Better integrate interactive elements
+2. ✅ **Setup: Restructure Breaking Bad introduction** - COMPLETED
+   - Toned down dramatic language for technical audience
+   - Clear character introductions with roles
+   - Better logical flow from scenario setup to choices
+   - Fixed awkward paragraph transitions
+3. 🔄 **In Progress: Standardize terminology** - MOSTLY COMPLETED
+   - Converting from mixed "loyal/betray" to consistent "cooperate/defect"
+   - Updated interactive elements and technical sections
+4. Improve section transitions between single/repeated games
+5. Resolve contradictory conclusions about cooperation
+6. Better integrate interactive elements
 
 ### Medium Priority (Structure and Flow)
 
-1. Improve section transitions
-2. Standardize terminology
+1. ✅ **Character setup and scenario flow** - COMPLETED
+2. 🔄 **Terminology standardization** - IN PROGRESS
 3. Better integrate interactive elements
 4. Strengthen institution connection
 

@@ -1422,11 +1422,8 @@ This gives us: p < -3/7
 
 Since probabilities can't be negative, this condition is impossible to satisfy. **Walter should always betray Jesse, regardless of what he thinks Jesse will do.**
 
-This is the mathematical heart of the Prisoner's Dilemma: individual rationality leads both players to a worse outcome than cooperation would provide.
-
-### The Nash Equilibrium
-
-The outcome where both players betray is what game theorists call a "Nash equilibrium" - a stable situation where neither player can improve their payoff by unilaterally changing their strategy. Even though both would prefer mutual cooperation, neither wants to be the "sucker" who cooperates while the other defects.
+This is the mathematical heart of the Prisoner's Dilemma: individual rationality leads both players to a worse outcome than cooperation would provide. The outcome where both players 
+betray is what game theorists call a ["Nash equilibrium"](https://en.wikipedia.org/wiki/Nash_equilibrium) - a stable situation where neither player can improve their payoff by unilaterally changing their strategy. Even though both would prefer mutual cooperation, neither wants to be the "sucker" who cooperates while the other defects.
 
 ### When Cooperation Becomes Rational
 
@@ -1444,26 +1441,34 @@ In Walter's case: T = 0 years (immunity), R = 3 years, P = 5 years, S = 15 years
 For any situation to be a true prisoner's dilemma, we need T < R < P and S is the worst outcome. Using this general framework, let's rewrite Walter's expected value calculation:
 
 **Expected sentence when cooperating:**
-E[Cooperate] = R(1-p) + Sp = R + (S-R)p
 
-**Expected sentence when defecting:**  
-E[Defect] = T(1-p) + Pp = T + (P-T)p
+$$E[\\text{Cooperate}] = R(1-p) + Sp = R + (S-R)p$$
 
-For cooperation to be rational, we'd need: E[Cooperate] < E[Defect]
+**Expected sentence when defecting :**  
+$$E[\\text{Defect}] = T(1-p) + Pp = T + (P-T)p$$
 
-This gives us the condition:
+For cooperation to be rational, we'd need: 
+
+$$
+E[\\text{Cooperate}] < E[\\text{Defect}]
+$$
+
+This gives us the condition (where we assume T=0 for simplicity):
 
 $$
 \\begin{align*}
-R + (S-R)p &< T + (P-T)p \\\\
-R - T &< (P-S)p \\\\
-p &> \\frac{R-T}{P-S}
+R + (S-R)p &< Pp \\\\
+R &< (R+P-S)p \\\\
+p &> \\frac{R}{R+P-S}
 \\end{align*}
 $$
 
-Now here's the crucial insight: In Walter's case, R - T = 3 - 0 = 3, while P - S = 5 - 15 = -10. This gives us p > 3/(-10) = -0.3. Since probabilities can't be negative, cooperation is never rational for Walter—exactly what we found before.
+We can directly see that this equation only makes sense if S < R+P, as we would handle negative probabilities otherwise. This replicates the situation
+which we encountered previously and hence confirms our earlier conclusion that Walter should betray Jesse.
 
-But notice what happens if we change the payoffs. The general formula p > (R-T)/(P-S) tells us exactly when cooperation becomes rational, and the interactive plot below lets you explore how different scenarios affect this critical threshold. Try adjusting the payoff values to see how they change the probability at which cooperation becomes individually rational.
+But notice what happens if we change the payoffs. We know that $p<1$, which directly implies that cooperation become a viable option for $S < P$. The condition above
+tells us exactly when cooperation becomes rational, and the interactive plot below lets you explore how different scenarios affect this critical threshold. 
+Try adjusting the payoff values to see how they change the probability at which cooperation becomes individually rational.
 
 `}</ReactMarkdown>
 
@@ -1475,9 +1480,10 @@ As you can see from experimenting with the plot, the condition for rational coop
 
 **Real-World Applications:**
 
-The mathematical analysis reveals something profound: Walter should only cooperate if the punishment for mutual defection (P) exceeds the punishment for being betrayed while cooperating (S). In our scenario, mutual defection gives 5 years each, while being the "sucker" gives 15 years—so defection dominates.
+The mathematical analysis reveals something surprising: Walter should only cooperate if the punishment for mutual defection (P) exceeds the punishment for being betrayed while cooperating (S). In our scenario, mutual defection gives 5 years each, while being the "sucker" gives 15 years—so defection dominates.
 
-But imagine if Walter and Jesse were part of a larger criminal organization. If both betray each other, they don't just get 5 years in prison—they also face execution by the organization for breaking the code of silence. Suddenly, mutual defection might carry a sentence equivalent to 20+ years (or death), while being betrayed only gets you the original 15 years.
+But imagine if Walter and Jesse were part of a larger criminal organization. If both betray each other, they don't just get 5 years in prison—they 
+also face execution by the organization for breaking the code of silence. Suddenly, mutual defection might carry a sentence equivalent to 20+ years (or death), while being betrayed only gets you the original 15 years.
 
 This explains why organized crime groups, military units, and tight-knit communities develop strong codes of loyalty: they artificially raise the cost of mutual defection to make cooperation individually rational.
 

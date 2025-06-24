@@ -379,7 +379,7 @@ const PayoffMatrix: React.FC = () => {
     if (walter === "D" && jesse === "D") return "We both blame each other - 5 years each!";
     if (walter === "D" && jesse === "C") return "I betray Jesse - I walk free!";
     if (walter === "C" && jesse === "D") return "Jesse betrays me - I get 15 years!";
-    return "We both stay loyal - 3 years each, best mutual outcome!";
+    return "We both cooperate - 3 years each, best mutual outcome!";
   };
 
   const getOutcomeColor = (walter: Choice, jesse: Choice) => {
@@ -471,7 +471,7 @@ const PayoffMatrix: React.FC = () => {
               },
             })}
           >
-            Stay loyal
+            Cooperate
           </button>
         </div>
       ) : (
@@ -489,7 +489,7 @@ const PayoffMatrix: React.FC = () => {
                 marginBottom: "0.5rem",
               })}
             >
-              <strong>My choice:</strong> {playerChoice === "D" ? "Blame Jesse" : "Stay loyal"}
+              <strong>My choice:</strong> {playerChoice === "D" ? "Blame Jesse" : "Cooperate"}
             </p>
             <p
               className={css({
@@ -498,7 +498,7 @@ const PayoffMatrix: React.FC = () => {
                 marginBottom: "0.5rem",
               })}
             >
-              <strong>Jesse&apos;s choice (simulated):</strong> {opponentChoice === "D" ? "Blame me" : "Stay loyal"}
+              <strong>Jesse&apos;s choice (simulated):</strong> {opponentChoice === "D" ? "Blame me" : "Cooperate"}
             </p>
           </div>
 
@@ -581,7 +581,7 @@ const PayoffMatrix: React.FC = () => {
       >
         <p>
           Sentences: 0 years = immunity • 3 years = mutual cooperation • 5 years = mutual betrayal • 15 years = betrayed
-          while loyal
+          while cooperating
         </p>
       </div>
     </div>
@@ -603,14 +603,14 @@ const GameSimulation: React.FC = () => {
 
   const strategyDescriptions = {
     random: "Unpredictable - chaotic storylines with random decisions based on emotions and circumstances",
-    cooperate: "Always loyal - stick with your partner no matter what (Season 1 Jesse approach)",
+    cooperate: "Always Cooperate - stick with your partner no matter what (Season 1 Jesse approach)",
     defect: "Always selfish - prioritize yourself and betray when convenient (Season 5 Walter approach)",
-    "tit-for-tat": "Tit-for-Tat - realistic relationship, start loyal then match whatever Jesse did last time",
+    "tit-for-tat": "Tit-for-Tat - realistic relationship, start cooperating then match whatever Jesse did last time",
   };
 
   const jesseStrategyDescriptions = {
     random: "Unpredictable Jesse - makes chaotic, emotion-driven decisions",
-    cooperate: "Always loyal Jesse - always tries to stick with you (Season 1 Jesse)",
+    cooperate: "Always Cooperate - always tries to stick with you (Season 1 Jesse)",
     defect: "Always selfish Jesse - prioritizes himself, always looks for an advantage",
     "tit-for-tat": "Tit-for-Tat Jesse - mirrors your behavior from previous interactions",
   };
@@ -654,14 +654,14 @@ const GameSimulation: React.FC = () => {
       exploitationMessage = `You consistently got better deals while Jesse suffered. Average difference: ${Math.abs(avgDifference).toFixed(1)} years worse for Jesse.`;
     } else if (walterStrategy === "cooperate" && jesseAvg < 4 && walterAvg > 8) {
       exploited = true;
-      exploitationMessage = "You stayed loyal but Jesse took advantage of your cooperation repeatedly.";
+      exploitationMessage = "You cooperated but Jesse took advantage of your cooperation repeatedly.";
     }
 
     let verdict = "";
     let color = "";
 
     if (walterExploitingJesse) {
-      verdict = "Exploitative partnership - you're taking advantage of Jesse's loyalty.";
+      verdict = "Exploitative partnership - you're taking advantage of Jesse's cooperation.";
       color = "#dc2626"; // red
     } else if (jesseExploitingWalter) {
       verdict = "You're being exploited - Jesse is getting better deals while you suffer.";
@@ -739,7 +739,7 @@ const GameSimulation: React.FC = () => {
               })}
             >
               <option value="tit-for-tat">Tit-for-Tat</option>
-              <option value="cooperate">Always loyal</option>
+              <option value="cooperate">Always Cooperate</option>
               <option value="defect">Always selfish</option>
               <option value="random">Unpredictable</option>
             </select>
@@ -985,14 +985,14 @@ const StrategyAnalysis: React.FC = () => {
   const strategies: Strategy[] = ["random", "cooperate", "defect", "tit-for-tat"];
   const strategyNames = {
     random: "Unpredictable",
-    cooperate: "Always loyal",
+    cooperate: "Always Cooperate",
     defect: "Always selfish",
     "tit-for-tat": "Tit-for-Tat",
   };
 
   const jesseStrategyDescriptions = {
     random: "Unpredictable Jesse - makes chaotic, emotion-driven decisions",
-    cooperate: "Always loyal Jesse - always tries to stick with you (Season 1 Jesse)",
+    cooperate: "Always Cooperate - always tries to stick with you (Season 1 Jesse)",
     defect: "Always selfish Jesse - prioritizes himself, always looks for an advantage",
     "tit-for-tat": "Tit-for-Tat Jesse - mirrors your behavior from previous interactions",
   };
@@ -1352,11 +1352,11 @@ const PrisonersDilemmaPost: React.FC = () => {
       <p>The sentences depend on what both choose:</p>
       <ul>
         <li>
-          <strong>Both stay loyal (C, C)</strong>: Each gets 3 years. The DEA has some evidence but not enough for major
+          <strong>Both cooperate (C, C)</strong>: Each gets 3 years. The DEA has some evidence but not enough for major
           charges without testimony.
         </li>
         <li>
-          <strong>One blames the other (D, C)</strong>: The betrayer walks free with immunity, the loyal one gets 15
+          <strong>One blames the other (D, C)</strong>: The betrayer walks free with immunity, the cooperator gets 15
           years for &quot;being the mastermind.&quot;
         </li>
         <li>
@@ -1365,159 +1365,161 @@ const PrisonersDilemmaPost: React.FC = () => {
         </li>
       </ul>
 
-      <h3> Taking a team approach</h3>
+      <h3>The Dilemma Unfolds</h3>
       <p>
-        If both Walter and Jesse could somehow step back and ask &quot;What&rsquo;s the best outcome for{" "}
-        <em>us as a team</em>?&quot; they&rsquo;d immediately see that mutual loyalty (3 years each) beats mutual
-        betrayal (5 years each). The total &quot;team sentence&quot; is only 6 years versus 10 years. It&rsquo;s like
-        they&rsquo;re in this together against the DEA, not against each other. If they could make a pact and trust each
-        other to stick to it, they&rsquo;d both be better off. This is what economists call the &quot;Pareto
-        optimal&quot; solution - you can&rsquo;t make one person better off without making the other worse off. The
-        dilemma is that the team approach is not the only way to look at this and that a much more natural perspective
-        for a criminal like Walter White might be &quot;What&rsquo;s the best outcome for <em>me as an individual</em>
-        ?&quot;.
-      </p>
-
-      <h3>Playing the role of Walter White</h3>
-      <p>
-        {" "}
-        You can now put yourself into Walter White&apos;s shoes. You&apos;re in the DEA interrogation room. Hank is
-        across the table, and you know Jesse is in the next room facing the same choice. What do you do?
+        Now try putting yourself in Walter&rsquo;s position. You&rsquo;re sitting across from DEA Agent Hank Schrader,
+        knowing Jesse is in the next room facing the exact same choice. What goes through your mind?
       </p>
 
       <PayoffMatrix />
 
       <p>
-        {" "}
-        It is really interesting to play around with the game. I personally felt very motivated to blame Jesse at some
-        point, as I could simply walk free and did not feel like I had much too loose. However, you can put feelings
-        aside and simply look at the expected utility of the game for you personally.
+        The interactive game above reveals something unsettling: there&rsquo;s a strong pull toward betrayal. You might
+        find yourself thinking, &quot;If I blame Jesse, I could walk free. What do I owe him anyway?&quot; This gut
+        reaction points to the heart of the dilemma.
       </p>
-      <h3>A Rational Analysis</h3>
+
+      <h3>Two Ways to Think About It</h3>
 
       <p>
-        So far we&rsquo;ve seen the dilemma from an intuitive perspective—the tension between individual incentives and
-        collective benefit. But Walter White is a chemistry teacher, a methodical thinker who approaches problems
-        analytically. Let&rsquo;s follow his lead and examine this mathematically.
+        <strong>The Team Perspective:</strong> If Walter and Jesse could step back and ask &quot;What&rsquo;s best for
+        us together?&quot;, the answer is clear. Both cooperating (3 years each) beats both betraying (5 years each).
+        Total time served: 6 years versus 10 years. They&rsquo;re partners against the DEA, not enemies.
+      </p>
+
+      <p>
+        <strong>The Individual Perspective:</strong> But here&rsquo;s where Walter&rsquo;s mind would really go:
+        &quot;What&rsquo;s best for <em>me</em>?&quot; And that&rsquo;s where the mathematics becomes crucial—and
+        troubling.
+      </p>
+
+      <h3>Walter&rsquo;s Cold Calculation</h3>
+
+      <p>
+        Walter is, at heart, a high school chemistry teacher who thinks systematically. He&rsquo;d probably work
+        through the logic like this: &quot;Let me figure out what Jesse might do, then decide accordingly.&quot;
       </p>
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-If Walter can estimate how likely Jesse is to betray him, what should he do?
-Here's how we calculate it:
+Suppose Walter estimates there's a probability *p* that Jesse will betray him. That means there's a probability *(1-p)* that Jesse cooperates.
 
-**Expected Value = (Outcome if Jesse stays loyal) × (Probability Jesse stays loyal) + (Outcome if Jesse betrays) × (Probability Jesse betrays)**
+**Walter's expected sentence if he cooperates:**
+- If Jesse cooperates (probability 1-p): 3 years
+- If Jesse betrays (probability p): 15 years  
+- Expected sentence: 3(1-p) + 15p = 3 + 12p years
 
-Let's say there's a probability *p* that Jesse will betray Walter. Then there's a probability *(1-p)* that Jesse stays loyal.
+**Walter's expected sentence if he betrays Jesse:**
+- If Jesse cooperates (probability 1-p): 0 years (Walter goes free)
+- If Jesse betrays (probability p): 5 years
+- Expected sentence: 0(1-p) + 5p = 5p years
 
-The math for Walter's expected prison sentence:
-- **When staying loyal**: E[Loyal] = 3(1-p) + 15p = 3 + 12p years
-  - If Jesse stays loyal (probability 1-p): 3 years
-  - If Jesse betrays (probability p): 15 years
-- **When blaming Jesse**: E[Blame] = 0(1-p) + 5p = 5p years  
-  - If Jesse stays loyal (probability 1-p): 0 years (Walter goes free)
-  - If Jesse betrays (probability p): 5 years
+For Walter to prefer cooperating, we'd need: 3 + 12p < 5p
 
-Since we want to minimize prison time, Walter should stay loyal when 3 + 12p < 5p, which is ... *never*. For a single game
-Walter is always better off to blame Jesse, no matter what he thinks Jesse will do. So, if both players are rational and think the same way, they will both blame each other, leading to 5 years each.
-Clearly, this is not yet best outcome for them as a team, but the incentive to betray is too strong.
+Solving this: 3 < 5p - 12p = -7p
 
-This outcome where both betray is what game theorists call a &quot;Nash equilibrium&quot; - a stable situation where neither player can improve by switching strategies alone. 
-Even though both would prefer mutual loyalty, neither wants to be the sucker who stays loyal while the other betrays.
+This gives us: p < -3/7
 
-### The general calculation
+Since probabilities can't be negative, this condition is impossible to satisfy. **Walter should always betray Jesse, regardless of what he thinks Jesse will do.**
 
-We can extend the previous discussion to the more general case. We will introduce the following
-notations:
+This is the mathematical heart of the Prisoner's Dilemma: individual rationality leads both players to a worse outcome than cooperation would provide.
 
-- *T = 0* years is the temptation that Walter and Jesse have to blame the other one.
-- *R = 3* years is the reward that they get for being loyal to each other.
-- *P = 5* years is the punishment that they get for blaming each other.
-- *S = 15* years is the suckers payout that they get for being loyal but getting blamed.
+### The Nash Equilibrium
 
-In the general case, you can always assume that *T < R < P, S*. Otherwise the whole situation would fall apart. So
-we can now simply rewrite the conditions above as follows:
+The outcome where both players betray is what game theorists call a "Nash equilibrium" - a stable situation where neither player can improve their payoff by unilaterally changing their strategy. Even though both would prefer mutual cooperation, neither wants to be the "sucker" who cooperates while the other defects.
 
-- **When staying loyal**: E[Loyal] = R(1-p) + Sp = R + (S-R)p 
-  - If Jesse stays loyal (probability 1-p): R years
-  - If Jesse betrays (probability p): S years
-- **When blaming Jesse**: E[Blame] = T(1-p) + Pp = T + (P-T)p years  
-  - If Jesse stays loyal (probability 1-p): T years (Walter goes free)
-  - If Jesse betrays (probability p): P years
+### When Cooperation Becomes Rational
 
-We can now analyze the situation for T=0, as T is anyways always the smallest value. 
-We then see that Walter should stay loyal when:
+Walter's calculation revealed a stark conclusion: betrayal dominates in his specific situation. But this raises a deeper question: are there *any* circumstances where cooperation becomes the rational choice in a prisoner's dilemma?
+
+Let's step back from Walter's specific numbers and examine how this logic applies to any prisoner's dilemma. Game theorists use a standard notation to describe these situations:
+
+- **T** = Temptation payoff (what you get for defecting when your partner cooperates)
+- **R** = Reward for mutual cooperation (what both get when both cooperate)  
+- **P** = Punishment for mutual defection (what both get when both defect)
+- **S** = Sucker's payoff (what you get for cooperating when your partner defects)
+
+In Walter's case: T = 0 years (immunity), R = 3 years, P = 5 years, S = 15 years.
+
+For any situation to be a true prisoner's dilemma, we need T < R < P and S is the worst outcome. Using this general framework, let's rewrite Walter's expected value calculation:
+
+**Expected sentence when cooperating:**
+E[Cooperate] = R(1-p) + Sp = R + (S-R)p
+
+**Expected sentence when defecting:**  
+E[Defect] = T(1-p) + Pp = T + (P-T)p
+
+For cooperation to be rational, we'd need: E[Cooperate] < E[Defect]
+
+This gives us the condition:
 
 $$
 \\begin{align*}
-E[\\text{Loyal}] &< E[\\text{Blame}] \\\\
-R + (S-R)p &<  Pp \\\\
-p&>\\frac{R}{R+P-S} 
+R + (S-R)p &< T + (P-T)p \\\\
+R - T &< (P-S)p \\\\
+p &> \\frac{R-T}{P-S}
 \\end{align*}
 $$
 
-First we see that $S < R+P$, as we would otherwise have $p<0$, which is not viable for a probability.
-We further have the condition that p has to be smaller than one, which directly means that:
+Now here's the crucial insight: In Walter's case, R - T = 3 - 0 = 3, while P - S = 5 - 15 = -10. This gives us p > 3/(-10) = -0.3. Since probabilities can't be negative, cooperation is never rational for Walter—exactly what we found before.
 
-$$
-S < P
-$$
-
-So Walter should only stay loyal if the the punishment of both blaming each other is 
-higher than the punishment of being loyal and getting blamed by the other one. In the interactive simulation below
-you can explore how Walter's rational decision should change within different scenarios.
+But notice what happens if we change the payoffs. The general formula p > (R-T)/(P-S) tells us exactly when cooperation becomes rational, and the interactive plot below lets you explore how different scenarios affect this critical threshold. Try adjusting the payoff values to see how they change the probability at which cooperation becomes individually rational.
 
 `}</ReactMarkdown>
+
       <ExpectedUtilityPlot />
+
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-### An intermediate stop: What we have learned so far
 
-Walter and Jesse's problems in that DEA interrogation room captures some typical conflicts that we encounter frequently. Both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet the math shows Walter should betray Jesse regardless of what he thinks Jesse will do. This is the heart of the Prisoner's Dilemma: **individual rationality destroys collective benefit**.
+As you can see from experimenting with the plot, the condition for rational cooperation depends critically on the relationship between the payoffs. When the punishment for mutual defection becomes severe enough relative to being betrayed, cooperation can emerge as the individually rational choice.
 
-You can easily think about Walter's internal monologue: "If Jesse stays loyal, I walk free by betraying him. If Jesse betrays me, I still get a lighter sentence by betraying him first. Either way, betrayal is my best move." But Jesse is thinking the exact same thing. 
-The "rational" choice for both individually leads them to a worse outcome than if they had somehow coordinated to both stay loyal.
+**Real-World Applications:**
 
-**However, there is also fascinating twist:** The mathematical analysis revealed that Walter should only stay loyal if the punishment for mutual betrayal is higher than the punishment for being the "sucker" who stays loyal while getting betrayed (S = 15 years). 
-You could imagine this scenario to unfold if Walter and Jesse were part of a larger criminal organization - like the cartel. If both betray each other, they don't just get 5 years in prison; they also face execution by the cartel for breaking the code of silence. 
-Suddenly, mutual betrayal might carry a "sentence" of 20+ years (or death), while being betrayed by your partner only gets you the original 15 years in prison - at least you're alive and might get witness protection.
+The mathematical analysis reveals something profound: Walter should only cooperate if the punishment for mutual defection (P) exceeds the punishment for being betrayed while cooperating (S). In our scenario, mutual defection gives 5 years each, while being the "sucker" gives 15 years—so defection dominates.
 
-This is one nice explanation why organized crime groups, military units, and tight-knit communities develop strong codes of loyalty - they artificially raise the cost of mutual defection to make cooperation the individually rational choice.
+But imagine if Walter and Jesse were part of a larger criminal organization. If both betray each other, they don't just get 5 years in prison—they also face execution by the organization for breaking the code of silence. Suddenly, mutual defection might carry a sentence equivalent to 20+ years (or death), while being betrayed only gets you the original 15 years.
 
-But what if Walter and Jesse don't have a cartel breathing down their necks? What if they're just two guys who have to work together repeatedly over many "episodes"? This opens up another interesting possibility: maybe they can learn to cooperate through experience. 
-If they know they'll face similar dilemmas again and again, betraying your partner today might mean getting betrayed tomorrow. 
-We will have a deeper look into this scenario in the next section.
+This explains why organized crime groups, military units, and tight-knit communities develop strong codes of loyalty: they artificially raise the cost of mutual defection to make cooperation individually rational.
 
+### The Single Game Conclusion
 
-      `}</ReactMarkdown>
+In our DEA interrogation room, Walter's rational analysis points to one conclusion: betray Jesse. The general mathematical framework confirms this isn't unique to Walter's situation—it's a fundamental feature of prisoner's dilemmas where the sucker's payoff is worse than mutual defection.
+
+But Walter and Jesse don't just interact once—they're partners in a long-running operation. What happens when the same dilemma repeats over multiple "episodes"? This is where the mathematics becomes more hopeful, and where we can explore whether reputation, trust, and reciprocity can overcome the pull of individual rationality.
+
+`}</ReactMarkdown>
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## When Breaking Bad Becomes a Series: Repeated Interactions
 
-Neither life, nor Breaking Bad is a single episode. So let us follow up on our initial though experiment
-and look into a series with repeated interactions between Walter and Jesse.  Now we need to investigate
-different scenarios of behavior and see if there might be strategies the balance self and team interests.
+Walter's rational analysis reveals a troubling conclusion: in a single encounter, defection dominates. But this raises an important question: if everyone follows this logic, how does cooperation ever emerge in the real world?
 
-We can actually map out four typical strategies and connect them the behavior of caracters in Breaking Bad:
+The answer lies in repetition. Most real-world dilemmas aren't one-shot games—they're part of ongoing relationships. Tax compliance, business partnerships, international trade, and even criminal enterprises all involve repeated interactions where today's choices affect tomorrow's options.
 
-- **Always loyal** (Season 1 Jesse): Stick with your partner no matter what
-- **Always selfish** (Season 5 Walter): Prioritize yourself, always betray when convenient  
-- **Tit-for-Tat** (Realistic relationship): Start loyal, then match whatever your partner did last time
-- **Unpredictable** (Chaotic storylines): Random decisions based on emotions and circumstances
+Let's extend our analysis beyond the single interrogation. If Walter and Jesse find themselves in similar situations repeatedly—perhaps facing multiple investigations over time—does the strategic landscape change? Now we need to investigate different behavioral strategies and see if there might be approaches that better balance self-interest with mutual benefit.
 
-Now, we can once again play around and see the how different character arcs would play out over multiple "episodes". 
+We can map out four typical strategies and connect them to character behavior in Breaking Bad:
+
+- **Always Cooperate** (Season 1 Jesse): Stay silent and support your partner no matter what
+- **Always Defect** (Season 5 Walter): Prioritize yourself, always choose the option that minimizes your sentence  
+- **Tit-for-Tat** (Realistic relationship): Start by cooperating, then match whatever your partner did last time
+- **Random** (Chaotic storylines): Unpredictable decisions based on emotions and circumstances
+
+Let's see how different character strategies would play out over multiple encounters. 
       `}</ReactMarkdown>
 
       <GameSimulation />
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-From this game you might clearly see again som similiarities to the single episode:
+From this simulation, you can see some clear patterns emerging:
 
-- Always being loyal is super naive and easily exploited.
-- Always betraying the other is a surprisingly robust and viable strategy.
-- The tit-for-tat seems like a nice mixture. It somehow allows the partner to behave but is also quite hard to exploit.
+- Always cooperating is naive and easily exploited by defectors.
+- Always defecting is surprisingly robust—it can't be exploited, even if it forfeits mutual benefits.
+- Tit-for-tat offers an interesting middle ground: it enables cooperation but retaliates against exploitation.
+- Random strategies perform poorly because they're unpredictable and can't sustain cooperation.
 
-### What is a winning strategy?
+### What constitutes a winning strategy?
 
-After the first tries, we can actually take a more systematic approach to benchmark the different strategies.
+After experimenting with the simulation, we can take a more systematic approach to benchmark different strategies.
 Sadly, I am not aware of "proofs" that would tell us which strategy is best. But we can simply let them all run against
 each other and see which one is most benefitial. Feel free to execute the strategy arena below and judge for yourself.
       `}</ReactMarkdown>

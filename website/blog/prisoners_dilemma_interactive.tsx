@@ -1500,9 +1500,9 @@ But Walter and Jesse don't just interact once—they're partners in a long-runni
 
 Walter's rational analysis reveals a troubling conclusion: in a single encounter, defection dominates. But this raises an important question: if everyone follows this logic, how does cooperation ever emerge in the real world?
 
-### The Shadow of the Future
+### The Power of Repetition
 
-The key insight is that repetition fundamentally changes the game. When Walter and Jesse know they'll face similar situations again, each decision carries weight beyond the immediate outcome. Economists call this the "shadow of the future"—the influence that expected future interactions have on present behavior.
+The key insight is that repetition fundamentally changes the game. When Walter and Jesse know they'll face similar situations again, each decision carries weight beyond the immediate outcome. Future interactions create new incentives that can make cooperation rational even when it wouldn't be in a single encounter.
 
 Consider Walter's strategic calculus now: "If I betray Jesse today, he'll remember that when we face our next crisis together. But if I stay loyal, maybe he'll reciprocate, and we'll both benefit in the long run." This forward-looking reasoning can make cooperation rational even when defection would be better in isolation.
 
@@ -1582,54 +1582,23 @@ The tournament results reveal a crucial insight about repeated interactions: **t
 
 This connects directly to Robert Axelrod's famous finding: tit-for-tat succeeded because it was nice, retaliatory, forgiving, and clear. It could cooperate with other cooperative strategies while defending against exploitative ones.
 
-### From Breaking Bad to Breaking Through: Real-World Applications
-
-The strategic insights from Walter and Jesse's repeated interactions extend far beyond criminal partnerships. The same dynamics appear throughout society wherever individual incentives conflict with collective benefit:
-
-**Institutional Trust and Governance**
-- Citizens face repeated decisions about rule-following: pay taxes, follow regulations, participate in civic life
-- When institutions are predictable and reciprocal (reward compliance, punish violations), cooperation emerges
-- When institutions are arbitrary or corrupt, citizens adopt defensive "always defect" strategies
-
-**Business and Trade Relationships** 
-- Companies must decide whether to honor contracts, maintain quality, or share information honestly
-- Long-term relationships enable tit-for-tat strategies: reward good faith with continued partnership
-- Short-term interactions often collapse into mutual defection (race to the bottom)
-
-**International Cooperation**
-- Nations face repeated decisions about trade agreements, environmental commitments, and security cooperation
-- Successful international institutions often embody tit-for-tat principles: reciprocity, clear rules, and graduated sanctions
-- When countries expect ongoing interactions, cooperation becomes more sustainable
-
-**Climate Change and Collective Action**
-- Each country's emission decisions affect all others, but the costs are borne individually
-- International climate agreements try to create repeated game dynamics with monitoring and enforcement
-- Success depends on countries believing the "game" will continue and that defection will be remembered
-
-### The Institutional Connection
-
-This brings us back to the Nobel Prize research that motivated our exploration. Acemoglu, Johnson, and Robinson showed that societies with "inclusive institutions"—those that create repeated-game dynamics with clear rules and reciprocal enforcement—tend to prosper. Their research demonstrates that when institutions make interactions predictable and reciprocal, cooperation emerges even among self-interested actors.
-
-The prisoner's dilemma provides a mathematical foundation for understanding why some societies develop trust and cooperation while others remain trapped in cycles of mistrust and exploitation. It's not about changing human nature—it's about creating institutional structures that make cooperation rational for self-interested individuals.
-
-## Taking Stock: What Walter and Jesse Taught Us
+## Conclusion: What Walter and Jesse Taught Us
 
 Walter and Jesse's predicament in that DEA interrogation room captures something profound about human cooperation. In a single interaction, both would be better off if they could trust each other to stay loyal (3 years each vs. 5 years each), yet individual rationality pushes them toward mutual betrayal (5 years each).
 
-But as we've seen, repetition changes everything. When the same players expect to face similar situations again, strategies like tit-for-tat can sustain cooperation by making betrayal costly in the long run. The "shadow of the future" makes present cooperation rational.
+But as we've seen, repetition changes everything. When the same players expect to face similar situations again, strategies like tit-for-tat can sustain cooperation by making betrayal costly in the long run. The prospect of future interactions makes present cooperation rational.
 
-However, our analysis also reveals why cooperation remains fragile. Always-defect strategies are surprisingly robust—they can't be exploited, even if they forgo mutual benefits. This explains why selfish behavior persists even in repeated interactions, and why building cooperative institutions requires careful design. 
+However, our analysis also reveals why cooperation remains fragile. Always-defect strategies are surprisingly robust—they can't be exploited, even if they forgo mutual benefits. This explains why selfish behavior persists even in repeated interactions, and why building cooperative institutions requires careful design.
 
-
-What I really like is that **this Walter-Jesse dynamic isn't unique to criminal partnerships**—similar patterns appear throughout society whenever individual incentives conflict with group welfare:
+**This Walter-Jesse dynamic isn't unique to criminal partnerships**—similar patterns appear throughout society whenever individual incentives conflict with group welfare:
 
 - **Team Projects**: Each member faces the repeated choice between contributing effort or free-riding on others' work. Successful teams develop tit-for-tat norms: contribute when others do, withdraw effort when others slack.
-
-- **International Trade**: Countries must repeatedly decide whether to honor agreements or pursue short-term advantages. Trade relationships prosper when nations adopt reciprocal strategies—cooperation for cooperation, retaliation for cheating.
 
 - **Neighborhood Maintenance**: Each homeowner decides whether to maintain their property, knowing it affects everyone's property values. Communities with strong reciprocal norms (contribute to neighborhood appearance and receive social approval) maintain higher standards.
 
 - **Climate Action**: Nations face repeated decisions about emissions, with each country's choices affecting all others. Successful climate agreements attempt to create tit-for-tat dynamics through monitoring and graduated sanctions.
+
+- **International Trade**: Countries must repeatedly decide whether to honor agreements or pursue short-term advantages. Trade relationships prosper when nations adopt reciprocal strategies—cooperation for cooperation, retaliation for cheating.
 
 The mathematical insight is that **cooperation can emerge from purely self-interested behavior when interactions repeat and players value future outcomes**. We don't need to change human nature—we need to create institutional structures that make cooperation rational for self-interested individuals.
 

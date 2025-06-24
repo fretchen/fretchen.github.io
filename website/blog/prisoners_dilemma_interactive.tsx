@@ -1553,7 +1553,7 @@ The simulation reveals key insights about repeated interactions:
 
 ### Systematic Strategy Comparison
 
-To move beyond individual simulations, let's examine how these strategies perform when they face each other systematically. This approach mirrors the famous research by political scientist Robert Axelrod, who ran computer tournaments in the 1970s to identify the most successful strategies in repeated prisoner's dilemmas.
+To move beyond individual simulations, let's examine how these strategies perform when they face each other systematically. This approach mirrors the famous research by political scientist [Robert Axelrod](https://axelrod.readthedocs.io/en/fix-documentation/reference/description.html), who ran computer tournaments in the 1970s to identify the most successful strategies in repeated prisoner's dilemmas.
 
 Axelrod's key finding was that "nice" strategies (those that never defect first) often outperformed "nasty" strategies, but only when the population included enough other cooperative players. The winning strategy in his tournament was tit-for-tat—exactly the reciprocal approach we've been examining.
 

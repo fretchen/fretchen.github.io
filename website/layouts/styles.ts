@@ -460,8 +460,22 @@ export const walletOptions = {
     alignItems: "center",
     gap: "xs",
     transition: "all 0.2s ease",
+    minWidth: "120px", // Ensure minimum width for readability
+    justifyContent: "center",
     _hover: {
       backgroundColor: "#0052a3",
+    },
+    // Mobile responsive styles
+    "@media (max-width: 768px)": {
+      width: "100%",
+      maxWidth: "280px",
+      padding: "12px 20px",
+      fontSize: "16px", // Prevent zoom on iOS
+    },
+    "@media (max-width: 480px)": {
+      padding: "10px 16px",
+      fontSize: "14px",
+      minWidth: "100px",
     },
   }),
   menu: css({
@@ -696,6 +710,16 @@ export const layout = {
     textAlign: "center",
     margin: "token(spacing.md) token(spacing.0)",
     padding: "token(spacing.sm)",
+    // Mobile responsive styles
+    "@media (max-width: 768px)": {
+      fontSize: "1.8rem",
+      margin: "token(spacing.sm) token(spacing.0)",
+      padding: "token(spacing.xs)",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "1.5rem",
+      margin: "token(spacing.xs) token(spacing.0)",
+    },
   }),
   appbar: css({
     padding: "token(spacing.sm) token(spacing.md)",
@@ -705,9 +729,100 @@ export const layout = {
     gap: "token(spacing.md)",
     borderBottom: "token(borders.light)",
     alignItems: "center",
+    // Mobile responsive styles
+    "@media (max-width: 768px)": {
+      flexDirection: "column",
+      gap: "token(spacing.sm)",
+      padding: "token(spacing.sm)",
+      alignItems: "center", // Center wallet button
+    },
+    "@media (max-width: 480px)": {
+      gap: "token(spacing.xs)",
+      padding: "token(spacing.xs) token(spacing.sm)",
+    },
+  }),
+  // Navigation container wrapper for positioning scroll indicator
+  navigationContainer: css({
+    position: "relative",
+    flex: 1,
+    display: "flex",
+    "@media (max-width: 768px)": {
+      width: "100%",
+    },
+  }),
+  navigationLinks: css({
+    display: "flex",
+    flexDirection: "row",
+    gap: "token(spacing.md)",
+    alignItems: "center",
+    flex: 1,
+    // Mobile responsive styles - horizontal scrolling
+    "@media (max-width: 768px)": {
+      overflowX: "auto",
+      overflowY: "hidden",
+      gap: "token(spacing.sm)",
+      width: "100%",
+      paddingBottom: "token(spacing.xs)", // Space for scrollbar
+      scrollSnapType: "x mandatory",
+      position: "relative",
+    },
+    "@media (max-width: 480px)": {
+      gap: "token(spacing.sm)",
+    },
+  }),
+  // Separate scroll indicator that stays fixed
+  scrollIndicator: css({
+    display: "none",
+    "@media (max-width: 768px)": {
+      display: "block",
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: "30px",
+      height: "100%",
+      background: "linear-gradient(to right, transparent 0%, rgba(255,255,255,0.9) 70%, white 100%)",
+      pointerEvents: "none",
+      zIndex: 2,
+      opacity: 1,
+      transition: "opacity 0.3s ease",
+      "&::before": {
+        content: '"→"',
+        position: "absolute",
+        top: "50%",
+        right: "6px",
+        transform: "translateY(-50%)",
+        fontSize: "12px",
+        color: "rgba(59, 130, 246, 0.7)",
+        fontWeight: "bold",
+        animation: "pulse 2s ease-in-out infinite",
+      },
+    },
+  }),
+  // Hidden state for scroll indicator
+  scrollIndicatorHidden: css({
+    opacity: "0 !important",
+  }),
+  navigationLink: css({
+    // Ensure links don't shrink and have proper spacing for touch
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    "@media (max-width: 768px)": {
+      scrollSnapAlign: "start",
+      padding: "token(spacing.sm) token(spacing.md)",
+      minWidth: "auto",
+      textAlign: "center",
+    },
   }),
   walletContainer: css({
     marginLeft: "auto",
+    // Mobile responsive styles
+    "@media (max-width: 768px)": {
+      marginLeft: "0",
+      alignSelf: "center",
+      width: "100%",
+      display: "flex",
+      justifyContent: "center",
+    },
   }),
   content: css({
     padding: "token(spacing.md)",

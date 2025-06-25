@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -117,10 +117,6 @@ const ExpectedUtilityPlot: React.FC = () => {
       },
     },
   };
-
-  // Calculate crossover point where strategies are equal
-  const crossoverPoint = (R - T) / (P + R - T - S);
-  const hasValidCrossover = crossoverPoint >= 0 && crossoverPoint <= 1;
 
   return (
     <div
@@ -259,7 +255,7 @@ const ExpectedUtilityPlot: React.FC = () => {
             marginBottom: "0.5rem",
           })}
         >
-          🎯 Walter's Rational Choice: {expectedDefect < expectedCooperate ? "Defect" : "Cooperate"}
+          🎯 Walter&apos;s Rational Choice: {expectedDefect < expectedCooperate ? "Defect" : "Cooperate"}
         </div>
 
         <div
@@ -382,20 +378,6 @@ const PayoffMatrix: React.FC = () => {
     return "We both cooperate - 3 years each, best mutual outcome!";
   };
 
-  const getOutcomeColor = (walter: Choice, jesse: Choice) => {
-    if (walter === "D" && jesse === "D") return "#fff3cd"; // orange-ish
-    if (walter === "D" && jesse === "C") return "#d4edda"; // green-ish
-    if (walter === "C" && jesse === "D") return "#f8d7da"; // red-ish
-    return "#cce5ff"; // blue-ish
-  };
-
-  const getOutcomeBorderColor = (walter: Choice, jesse: Choice) => {
-    if (walter === "D" && jesse === "D") return "#856404"; // orange border
-    if (walter === "D" && jesse === "C") return "#155724"; // green border
-    if (walter === "C" && jesse === "D") return "#721c24"; // red border
-    return "#004085"; // blue border
-  };
-
   return (
     <div
       className={css({
@@ -426,7 +408,7 @@ const PayoffMatrix: React.FC = () => {
           marginBottom: "1.5rem",
         })}
       >
-        Jesse's decision will be simulated randomly after you choose.
+        Jesse&apos;s decision will be simulated randomly after you choose.
       </p>
 
       {!playerChoice ? (
@@ -591,7 +573,7 @@ const PayoffMatrix: React.FC = () => {
 // Game Simulation Component
 const GameSimulation: React.FC = () => {
   const [walterStrategy, setWalterStrategy] = useState<Strategy>("tit-for-tat");
-  const [numGames, setNumGames] = useState(50);
+  const numGames = 50;
   const [isRunning, setIsRunning] = useState(false);
   const [gameData, setGameData] = useState<{
     payoffs1: number[];
@@ -979,7 +961,10 @@ const GameSimulation: React.FC = () => {
 
 // Strategy Analysis Component
 const StrategyAnalysis: React.FC = () => {
-  const [analysisResults, setAnalysisResults] = useState<any>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<
+    Strategy,
+    Record<Strategy, { avgScore1: string; avgScore2: string }>
+  > | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const strategies: Strategy[] = ["random", "cooperate", "defect", "tit-for-tat"];
@@ -1000,10 +985,13 @@ const StrategyAnalysis: React.FC = () => {
   const runAnalysis = () => {
     setIsAnalyzing(true);
     setTimeout(() => {
-      const results: any = {};
+      const results: Record<Strategy, Record<Strategy, { avgScore1: string; avgScore2: string }>> = {} as Record<
+        Strategy,
+        Record<Strategy, { avgScore1: string; avgScore2: string }>
+      >;
 
       strategies.forEach((strat1) => {
-        results[strat1] = {};
+        results[strat1] = {} as Record<Strategy, { avgScore1: string; avgScore2: string }>;
         strategies.forEach((strat2) => {
           // Run multiple simulations for statistical reliability
           const simulations = Array.from({ length: 50 }, () => {
@@ -1079,7 +1067,7 @@ const StrategyAnalysis: React.FC = () => {
           color: "#374151",
         })}
       >
-        🧪 Walter's Strategy Guide: How to Handle Different Types of Jesse
+        🧪 Walter&apos;s Strategy Guide: How to Handle Different Types of Jesse
       </h4>
 
       <p
@@ -1177,7 +1165,7 @@ const StrategyAnalysis: React.FC = () => {
                           marginBottom: "0.25rem",
                         })}
                       >
-                        🎯 Walter should be: {strategyNames[best.strategy]}
+                        🎯 Walter should be: {strategyNames[best.strategy as keyof typeof strategyNames]}
                       </div>
                       <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.25rem" })}>
                         Average: {best.score} years prison
@@ -1211,7 +1199,7 @@ const StrategyAnalysis: React.FC = () => {
                 color: "#374151",
               })}
             >
-              📊 Detailed Results: Walter's Average Prison Sentence
+              📊 Detailed Results: Walter&apos;s Average Prison Sentence
             </h6>
             <div className={css({ overflowX: "auto" })}>
               <table className={css({ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" })}>
@@ -1225,7 +1213,7 @@ const StrategyAnalysis: React.FC = () => {
                         textAlign: "left",
                       })}
                     >
-                      Walter's Strategy ↓ / Jesse's Strategy →
+                      Walter&apos;s Strategy ↓ / Jesse&apos;s Strategy →
                     </th>
                     {strategies.map((strat) => (
                       <th
@@ -1287,7 +1275,7 @@ const StrategyAnalysis: React.FC = () => {
           </div>
 
           <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
-            💡 Understanding your partner's behavior is key to choosing the right strategy in repeated games
+            💡 Understanding your partner&apos;s behavior is key to choosing the right strategy in repeated games
           </div>
         </div>
       )}
@@ -1301,8 +1289,8 @@ const PrisonersDilemmaPost: React.FC = () => {
     <article className="prose prose-lg max-w-none">
       <p>
         Why did the 2024 Nobel Prize in Economics go to researchers who study why some countries prosper with strong
-        institutions while others don&rsquo;t? When I looked into the question, the answer turned out to be connected to a
-        famous social game called the Prisoner&rsquo;s Dilemma.
+        institutions while others don&rsquo;t? When I looked into the question, the answer turned out to be connected to
+        a famous social game called the Prisoner&rsquo;s Dilemma.
       </p>
       <p>
         I had encountered the Prisoner&rsquo;s Dilemma before as a single-game thought experiment, but the{" "}
@@ -1313,8 +1301,8 @@ const PrisonersDilemmaPost: React.FC = () => {
       </p>
       <p>
         To explore the dilemma, I wanted to work through its basic mechanics using a scenario that makes the challenges
-        clear. This is why I chose to embed the discussion into the context of Breaking Bad, which felt like a
-        perfect example.
+        clear. This is why I chose to embed the discussion into the context of Breaking Bad, which felt like a perfect
+        example.
       </p>
       <h2>Setting the scene with Breaking Bad</h2>
       <p>
@@ -1609,7 +1597,7 @@ This brings us full circle to the Nobel Prize research that started our explorat
 // Post metadata
 export const meta = {
   title: "The Prisoner's Dilemma",
-  publishing_date: "2025-06-22",
+  publishing_date: "2025-06-25",
   tokenID: 30,
 };
 

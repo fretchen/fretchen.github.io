@@ -60,11 +60,11 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
               <div className={layout.navigationLink}>
                 <Link href="/imagegen">ImageGen</Link>
               </div>
+              <div className={layout.navigationLink}>
+                <WalletOptions />
+              </div>
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
-          </div>
-          <div className={layout.walletContainer}>
-            <WalletOptions />
           </div>
         </Appbar>
         <Content>{children}</Content>

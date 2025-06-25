@@ -465,17 +465,28 @@ export const walletOptions = {
     _hover: {
       backgroundColor: "#0052a3",
     },
-    // Mobile responsive styles
+    // Mobile responsive styles - dezenter Outline-Stil, integriert in Navigation
     "@media (max-width: 768px)": {
-      width: "100%",
-      maxWidth: "280px",
-      padding: "12px 20px",
-      fontSize: "16px", // Prevent zoom on iOS
+      backgroundColor: "transparent",
+      color: "brand",
+      border: "1px solid token(colors.brand)",
+      padding: "6px 10px",
+      fontSize: "13px",
+      fontWeight: "medium",
+      minWidth: "auto",
+      maxWidth: "none",
+      width: "auto",
+      marginLeft: "token(spacing.sm)", // Kleiner Abstand zu den anderen Links
+      _hover: {
+        backgroundColor: "rgba(59, 130, 246, 0.05)",
+        borderColor: "#0052a3",
+        color: "#0052a3",
+      },
     },
     "@media (max-width: 480px)": {
-      padding: "10px 16px",
-      fontSize: "14px",
-      minWidth: "100px",
+      padding: "4px 8px",
+      fontSize: "12px",
+      marginLeft: "token(spacing.xs)",
     },
   }),
   menu: css({
@@ -483,12 +494,28 @@ export const walletOptions = {
     backgroundColor: "background",
     minWidth: "160px",
     boxShadow: "0px 8px 20px 0px rgba(0,0,0,0.15)",
-    zIndex: 1000,
+    zIndex: 2000, // Höherer z-index um über scrollbare Navigation zu sein
     right: "0",
     borderRadius: "sm",
     marginTop: "2px", // Reduced gap to make it feel more connected
     border: "1px solid token(colors.border)",
     overflow: "hidden", // Ensures rounded corners work properly
+    // Mobile spezifische Anpassungen für bessere Sichtbarkeit
+    "@media (max-width: 768px)": {
+      position: "absolute",
+      top: "100%", // Direkt unter dem Button
+      right: "0",
+      left: "auto",
+      minWidth: "140px",
+      marginTop: "4px", // Etwas mehr Abstand auf Mobile
+      zIndex: 3000,
+      transform: "translateX(0)", // Sicherstellen dass es nicht über den Bildschirmrand geht
+      maxWidth: "200px",
+      // Falls zu nah am rechten Bildschirmrand, von rechts positionieren
+      "@supports (anchor-name: --wallet-button)": {
+        right: "0",
+      },
+    },
   }),
   menuItem: css({
     padding: "10px 16px", // Slightly larger padding for easier clicking
@@ -729,12 +756,10 @@ export const layout = {
     gap: "token(spacing.md)",
     borderBottom: "token(borders.light)",
     alignItems: "center",
-    // Mobile responsive styles
+    // Mobile responsive styles - simplere Struktur
     "@media (max-width: 768px)": {
-      flexDirection: "column",
       gap: "token(spacing.sm)",
       padding: "token(spacing.sm)",
-      alignItems: "center", // Center wallet button
     },
     "@media (max-width: 480px)": {
       gap: "token(spacing.xs)",
@@ -765,6 +790,7 @@ export const layout = {
       paddingBottom: "token(spacing.xs)", // Space for scrollbar
       scrollSnapType: "x mandatory",
       position: "relative",
+      zIndex: 1, // Niedriger z-index als das Dropdown-Menü
     },
     "@media (max-width: 480px)": {
       gap: "token(spacing.sm)",
@@ -811,17 +837,6 @@ export const layout = {
       padding: "token(spacing.sm) token(spacing.md)",
       minWidth: "auto",
       textAlign: "center",
-    },
-  }),
-  walletContainer: css({
-    marginLeft: "auto",
-    // Mobile responsive styles
-    "@media (max-width: 768px)": {
-      marginLeft: "0",
-      alignSelf: "center",
-      width: "100%",
-      display: "flex",
-      justifyContent: "center",
     },
   }),
   content: css({

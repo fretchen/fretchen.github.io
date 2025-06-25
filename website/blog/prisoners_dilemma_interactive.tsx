@@ -1436,7 +1436,7 @@ Let's step back from Walter's specific numbers and examine how this logic applie
 
 In Walter's case: T = 0 years (immunity), R = 3 years, P = 5 years, S = 15 years.
 
-For any situation to be a true prisoner's dilemma, we need T > R > P > S and S is the worst outcome. Using this general framework, let's rewrite Walter's expected value calculation:
+For any situation to be a true prisoner's dilemma, we need T < R < P and S is the worst outcome. Using this general framework, let's rewrite Walter's expected value calculation:
 
 **Expected sentence when cooperating:**
 

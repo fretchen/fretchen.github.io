@@ -56,9 +56,6 @@ const EntryList: React.FC<EntryListProps> = ({
                   {/* Description */}
                   {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
                 </div>
-
-                {/* Read more link - now integrated as a button-style element */}
-                <span className={entryList.entryLink}>Read more →</span>
               </div>
             </div>
           </Link>

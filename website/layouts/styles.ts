@@ -694,7 +694,10 @@ export const entryList = {
     flexDirection: "column",
     gap: "4",
     "@media (max-width: 768px)": {
-      gap: "3",
+      gap: "2", // Tighter spacing on mobile
+    },
+    "@media (max-width: 480px)": {
+      gap: "1.5", // Even tighter on small mobile
     },
   }),
   entry: css({
@@ -714,14 +717,18 @@ export const entryList = {
     },
     bg: "white",
     marginY: "3",
-    // Mobile: Remove hover transform, add subtle scale
+    // Mobile: Simplified hover and tighter margins
     "@media (max-width: 768px)": {
-      marginY: "2",
+      marginY: "1",
       _hover: {
         boxShadow: "md",
         transform: "scale(1.01)",
         textDecoration: "none",
       },
+    },
+    "@media (max-width: 480px)": {
+      marginY: "0.5",
+      borderRadius: "sm", // Smaller border radius for mobile
     },
   }),
   entryContent: css({
@@ -730,15 +737,16 @@ export const entryList = {
     flexDirection: "row",
     gap: "4",
     alignItems: "flex-start",
-    // Mobile responsive layout
+    // Mobile responsive layout - unified spacing
     "@media (max-width: 768px)": {
-      padding: "4",
-      gap: "3",
+      padding: "3", // Much tighter padding
+      gap: "2.5",
     },
     "@media (max-width: 480px)": {
-      flexDirection: "column",
-      gap: "3",
-      padding: "3",
+      flexDirection: "row", // Keep horizontal on mobile for tighter layout
+      gap: "2",
+      padding: "2.5",
+      alignItems: "center", // Center align for better visual balance
     },
   }),
   entryNftImage: css({
@@ -750,15 +758,16 @@ export const entryList = {
     borderColor: "gray.300",
     backgroundColor: "gray.100",
     flexShrink: 0,
-    // Responsive image sizing
+    // Responsive image sizing - more dramatic reduction
     "@media (max-width: 768px)": {
-      width: "15", // 60px on tablet
-      height: "15",
+      width: "12", // 48px on tablet
+      height: "12",
+      borderRadius: "lg",
     },
     "@media (max-width: 480px)": {
-      width: "12", // 48px on mobile
-      height: "12",
-      alignSelf: "flex-start",
+      width: "10", // 40px on mobile - smaller but still visible
+      height: "10",
+      borderRadius: "md",
     },
   }),
   entryText: css({
@@ -766,6 +775,11 @@ export const entryList = {
     display: "flex",
     flexDirection: "column",
     minWidth: 0, // Prevents flex item from overflowing
+    gap: "1", // Consistent internal spacing
+    // Mobile: Remove internal gaps for tighter layout
+    "@media (max-width: 480px)": {
+      gap: "0.5",
+    },
   }),
   entryTextContent: css({
     flex: 1,
@@ -776,11 +790,15 @@ export const entryList = {
     margin: "0",
     fontSize: "sm",
     color: "gray.600",
-    marginBottom: "1",
-    // Mobile: Better readability
+    marginBottom: "0.5", // Reduced spacing
+    // Mobile: Smaller and more subtle
     "@media (max-width: 768px)": {
       fontSize: "xs",
-      marginBottom: "0.5",
+      marginBottom: "0.25",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "2xs", // Very small on mobile
+      marginBottom: "0",
     },
   }),
   entryTitle: css({
@@ -788,67 +806,47 @@ export const entryList = {
     fontWeight: "semibold",
     margin: 0,
     lineHeight: "1.3",
-    // Better text wrapping and readability on mobile
+    // Mobile: Larger title to compensate for removed description
     "@media (max-width: 768px)": {
       fontSize: "lg",
       lineHeight: "1.4",
+      fontWeight: "bold", // Slightly bolder for emphasis
     },
     "@media (max-width: 480px)": {
-      fontSize: "md",
-      lineHeight: "1.5",
+      fontSize: "base", // Larger than before on mobile
+      lineHeight: "1.4",
+      fontWeight: "bold",
     },
   }),
   entryDescription: css({
-    margin: "1 0 0 0",
+    margin: "0.5 0 0 0",
     fontSize: "sm",
     color: "gray.600",
     lineHeight: "1.5",
-    // Mobile: Better text flow and readability
+    // Mobile: Hide description entirely
     "@media (max-width: 768px)": {
-      fontSize: "sm",
-      lineHeight: "1.6",
-      margin: "0.5 0 0 0",
+      fontSize: "xs",
+      lineHeight: "1.5",
+      margin: "0.25 0 0 0",
+      // Truncate description on tablet
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
     },
     "@media (max-width: 480px)": {
-      fontSize: "xs",
-      lineHeight: "1.6",
+      display: "none", // Completely hide on mobile
     },
   }),
   entryLink: css({
-    whiteSpace: "nowrap",
-    fontWeight: "medium",
-    color: "brand",
-    textDecoration: "none",
-    fontSize: "sm",
-    marginTop: "2",
-    alignSelf: "flex-start",
-    transition: "color 0.2s ease",
-    _hover: {
-      textDecoration: "underline",
-    },
-    // Mobile: Better touch target
-    "@media (max-width: 768px)": {
-      fontSize: "sm",
-      marginTop: "3",
-      padding: "1",
-      marginLeft: "-1", // Offset padding for alignment
-    },
-    "@media (max-width: 480px)": {
-      alignSelf: "stretch",
-      textAlign: "center",
-      padding: "2",
-      marginLeft: "0",
-      backgroundColor: "rgba(59, 130, 246, 0.05)",
-      borderRadius: "sm",
-      border: "1px solid rgba(59, 130, 246, 0.2)",
-    },
+    // Hide the separate "Read more" button entirely
+    display: "none",
   }),
   viewAllContainer: css({
     textAlign: "right",
     marginTop: "2",
     "@media (max-width: 480px)": {
       textAlign: "center",
-      marginTop: "4",
+      marginTop: "3",
     },
   }),
 };

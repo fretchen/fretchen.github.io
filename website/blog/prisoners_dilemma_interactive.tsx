@@ -1301,7 +1301,7 @@ const PrisonersDilemmaPost: React.FC = () => {
     <article className="prose prose-lg max-w-none">
       <p>
         Why did the 2024 Nobel Prize in Economics go to researchers that study why some countries prosper with strong
-        institutions while others dont't? When I looked into the question, the answer turned out to be connected to a
+        institutions while others don&rsquo;t? When I looked into the question, the answer turned out to be connected to a
         famous social game called Prisoners Dilemma.
       </p>
       <p>
@@ -1496,7 +1496,7 @@ But Walter and Jesse don't just interact once—they're partners in a long-runni
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## When Breaking Bad Becomes a Series: Repeated Interactions
 
-Walter's rational analysis reveals a troubling conclusion: in a single encounter, defection dominates. But this raises an important question: if everyone follows this logic, how does cooperation ever emerge in the real world?
+Walter's rational analysis came to a depressing conclusion: in a single encounter, defection dominates. But this raises an important question: if everyone follows this logic, how does cooperation ever emerge in the real world?
 
 ### The Power of Repetition
 

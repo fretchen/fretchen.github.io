@@ -885,6 +885,17 @@ export const layout = {
     paddingBottom: "token(spacing.xl)",
     minHeight: "token(sizes.screen)",
   }),
+  footer: css({
+    padding: "token(spacing.md)",
+    textAlign: "center",
+    borderTop: "1px solid token(colors.border)",
+    marginTop: "token(spacing.xl)",
+    color: "gray.600",
+  }),
+  footerAttribution: css({
+    fontSize: "sm",
+    color: "gray.500",
+  }),
 };
 
 // ===== VEREINFACHTE NFT STILE =====

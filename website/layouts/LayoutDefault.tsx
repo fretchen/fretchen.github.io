@@ -3,6 +3,7 @@ import "./panda.css";
 import React, { useEffect, useRef } from "react";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";
+import Footer from "../components/Footer";
 
 import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
@@ -44,7 +45,6 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   return (
     <div className={layout.main}>
       <WagmiProvider config={config}>
-        <h1 className={layout.title}>Website by fretchen</h1>
         <Appbar>
           <div className={layout.navigationContainer}>
             <div className={layout.navigationLinks} ref={navigationRef}>
@@ -68,6 +68,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
           </div>
         </Appbar>
         <Content>{children}</Content>
+        <Footer />
       </WagmiProvider>
     </div>
   );

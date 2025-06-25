@@ -1301,8 +1301,8 @@ const PrisonersDilemmaPost: React.FC = () => {
     <article className="prose prose-lg max-w-none">
       <p>
         Why did the 2024 Nobel Prize in Economics go to researchers that study why some countries prosper with strong
-        institutions while others remain trapped in cycles of corruption and poverty? When I digged into the question,
-        the answer turned out to be connected to a famous social game called Prisoners Dilemma.
+        institutions while others dont't? When I looked into the question, the answer turned out to be connected to a
+        famous social game called Prisoners Dilemma.
       </p>
       <p>
         I had encountered the Prisoner&rsquo;s Dilemma before as a single-game thought experiment, but the{" "}
@@ -1312,26 +1312,24 @@ const PrisonersDilemmaPost: React.FC = () => {
         complex strategic problems.
       </p>
       <p>
-        To explore dilemma, I wanted to work through its basic mechanics using a scenario that makes the
-        challenges clear. This is why I choose to embed the discussion it into the context of Breaking Bad, which felt
-        just like a perfect example.
+        To explore the dilemma, I wanted to work through its basic mechanics using a scenario that makes the challenges
+        clear. This is why I choose to embed the discussion it into the context of Breaking Bad, which felt just like a
+        perfect example.
       </p>
       <h2>Setting the scene with Breaking Bad</h2>
       <p>
         The characters are: <strong>Walter White</strong> (high school chemistry teacher turned meth cook),{" "}
         <strong>Jesse Pinkman</strong> (Walter&rsquo;s former student and business partner), and{" "}
-        <strong>Hank Schrader</strong> (DEA agent and Walter&rsquo;s brother-in-law).
+        <strong>Hank Schrader</strong> (DEA agent).
       </p>
       <p>
-        We can now consider these three characters in a standard scenario for the prisoner&rsquo;s: Walter White and
-        Jesse Pinkman have been arrested by the DEA and are being interrogated separately. Agent Hank Schrader offers
-        each the same deal: testify against your partner to get immunity, or stay silent and face whatever charges can
-        be proven.
+        We can now consider these three characters in a standard scenario for prisoners: Walter White and Jesse Pinkman
+        have been arrested by the DEA and are being interrogated separately. Agent Hank Schrader offers each the same
+        deal: testify against your partner to get immunity, or stay silent and face whatever charges can be proven.
       </p>
       <p>
         This setup—two people who must choose between cooperation and defection without being able to
-        communicate—provides a clean framework for analyzing why mutually beneficial cooperation often breaks down. The
-        outcome depends entirely on what each person believes the other will do.
+        communicate—provides a clean framework for analyzing why mutually beneficial cooperation often breaks down.
       </p>
 
       <h3>The Breaking Bad scenario</h3>
@@ -1396,8 +1394,8 @@ const PrisonersDilemmaPost: React.FC = () => {
       <h3>Walter&rsquo;s Cold Calculation</h3>
 
       <p>
-        Walter is, at heart, a high school chemistry teacher who thinks systematically. He&rsquo;d probably work
-        through the logic like this: &quot;Let me figure out what Jesse might do, then decide accordingly.&quot;
+        Walter is, at heart, a high school chemistry teacher who thinks systematically. He&rsquo;d probably work through
+        the logic like this: &quot;Let me figure out what Jesse might do, then decide accordingly.&quot;
       </p>
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`

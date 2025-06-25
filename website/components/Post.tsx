@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import TitleBar from "./TitleBar";
+import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post } from "../layouts/styles";
@@ -145,7 +146,7 @@ export function Post({
   return (
     <>
       <TitleBar title={title} />
-      {publishing_date && <p className={post.publishingDate}>Published on: {publishing_date}</p>}
+      <MetadataLine publishingDate={publishing_date} showSupport={true} readTime="5 min read" />
 
       {/* Render based on post type */}
       {type === "react" && componentPath ? (

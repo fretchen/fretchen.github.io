@@ -522,54 +522,97 @@ export const supportArea = {
   container: css({
     display: "flex",
     alignItems: "center",
-    margin: "md 0",
+    margin: "0", // Remove default margin - let parent control spacing
+    justifyContent: "center", // Center on mobile
   }),
   buttonGroup: css({
     display: "flex",
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    borderRadius: "token(radii.sm)",
+    overflow: "hidden",
   }),
   buttonBase: css({
-    padding: "sm",
+    padding: "token(spacing.sm)",
     backgroundColor: "brand",
     color: "light",
     fontWeight: "bold",
-    height: "36px",
+    minHeight: "44px", // Better touch target for mobile
     boxSizing: "border-box",
     display: "flex",
     alignItems: "center",
-  }),
-  writeButton: css({
-    padding: "sm",
-    backgroundColor: "brand",
-    color: "light",
-    fontWeight: "bold",
-    height: "36px",
-    borderRadius: "4px 0 0 4px",
-    borderRight: "1px solid white",
-    borderLeft: "none",
-    borderTop: "none",
-    borderBottom: "none",
-    boxSizing: "border-box",
-    display: "flex",
-    alignItems: "center",
-    cursor: "pointer",
-    _disabled: {
-      backgroundColor: "#5a7aac",
-      cursor: "not-allowed",
+    transition: "all 0.2s ease",
+    // Mobile optimizations
+    "@media (max-width: 768px)": {
+      minHeight: "48px", // Even larger touch target on mobile
+      fontSize: "sm",
     },
   }),
-  readDisplay: css({
-    padding: "sm",
+  writeButton: css({
+    padding: "token(spacing.sm) token(spacing.md)",
     backgroundColor: "brand",
     color: "light",
     fontWeight: "bold",
-    height: "36px",
-    borderRadius: "0 4px 4px 0",
+    minHeight: "44px",
+    borderRadius: "token(radii.sm) 0 0 token(radii.sm)",
+    borderRight: "1px solid rgba(255, 255, 255, 0.3)",
     border: "none",
-    minWidth: "20px",
     boxSizing: "border-box",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    _hover: {
+      backgroundColor: "#0052a3",
+      transform: "translateY(-1px)",
+    },
+    _active: {
+      transform: "translateY(0)",
+    },
+    _disabled: {
+      backgroundColor: "#5a7aac",
+      cursor: "not-allowed",
+      transform: "none",
+      _hover: {
+        backgroundColor: "#5a7aac",
+        transform: "none",
+      },
+    },
+    // Mobile optimizations
+    "@media (max-width: 768px)": {
+      minHeight: "48px",
+      fontSize: "sm",
+      padding: "token(spacing.sm) token(spacing.lg)",
+    },
+    "@media (max-width: 480px)": {
+      padding: "token(spacing.sm) token(spacing.md)",
+      fontSize: "xs",
+    },
+  }),
+  readDisplay: css({
+    padding: "token(spacing.sm) token(spacing.md)",
+    backgroundColor: "brand",
+    color: "light",
+    fontWeight: "bold",
+    minHeight: "44px",
+    borderRadius: "0 token(radii.sm) token(radii.sm) 0",
+    border: "none",
+    minWidth: "48px",
+    boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "sm",
+    // Mobile optimizations
+    "@media (max-width: 768px)": {
+      minHeight: "48px",
+      minWidth: "52px",
+      fontSize: "sm",
+    },
+    "@media (max-width: 480px)": {
+      minWidth: "48px",
+      fontSize: "xs",
+    },
   }),
   tooltipContainer: css({
     position: "relative",
@@ -579,15 +622,29 @@ export const supportArea = {
     bottom: "100%",
     left: "50%",
     transform: "translateX(-50%)",
-    marginBottom: "xs",
-    padding: "sm",
+    marginBottom: "token(spacing.xs)",
+    padding: "token(spacing.sm) token(spacing.md)",
     backgroundColor: "background",
-    border: "1px solid",
-    borderRadius: "sm",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+    border: "1px solid token(colors.border)",
+    borderRadius: "token(radii.sm)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
     width: "max-content",
-    maxWidth: "250px",
-    zIndex: "100",
+    maxWidth: "280px",
+    zIndex: "1000",
+    fontSize: "sm",
+    color: "text",
+    // Mobile responsive tooltip positioning
+    "@media (max-width: 768px)": {
+      position: "fixed",
+      bottom: "auto",
+      top: "10px",
+      left: "10px",
+      right: "10px",
+      transform: "none",
+      maxWidth: "none",
+      width: "auto",
+      textAlign: "center",
+    },
   }),
 };
 
@@ -1246,5 +1303,240 @@ export const nftFloat = {
     fontSize: "xs",
     color: "gray.500",
     marginTop: "xs",
+  }),
+};
+
+// TitleBar component styles - simplified to just the title
+export const titleBar = {
+  title: css({
+    fontSize: "2xl",
+    fontWeight: "bold",
+    margin: 0,
+    marginBottom: "token(spacing.sm)",
+    color: "text",
+    lineHeight: "1.2",
+    // Responsive typography
+    "@media (max-width: 768px)": {
+      fontSize: "xl",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "lg",
+    },
+    // Handle very long titles
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    wordBreak: "break-word",
+    hyphens: "auto",
+  }),
+};
+
+// StarSupport component styles - compact star-based support button
+export const starSupport = {
+  // Reading progress bar with integrated support button
+  progressContainer: css({
+    position: "sticky",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backdropFilter: "blur(10px)",
+    borderBottom: "1px solid token(colors.border)",
+    padding: "token(spacing.xs) token(spacing.md)",
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.md)",
+    zIndex: 100,
+    transition: "all 0.3s ease",
+    // Hide by default, show when scrolling
+    transform: "translateY(-100%)",
+    "&[data-visible='true']": {
+      transform: "translateY(0)",
+    },
+    "@media (max-width: 768px)": {
+      padding: "token(spacing.xs) token(spacing.sm)",
+      gap: "token(spacing.sm)",
+    },
+  }),
+  progressBar: css({
+    flex: 1,
+    height: "4px",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: "2px",
+    overflow: "hidden",
+    position: "relative",
+  }),
+  progressFill: css({
+    height: "100%",
+    backgroundColor: "brand",
+    borderRadius: "2px",
+    transition: "width 0.3s ease",
+  }),
+  supportButton: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.xs)",
+    padding: "token(spacing.xs) token(spacing.sm)",
+    backgroundColor: "transparent",
+    border: "1px solid rgba(59, 130, 246, 0.3)",
+    borderRadius: "token(radii.full)",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    color: "brand",
+    transition: "all 0.2s ease",
+    minHeight: "32px",
+    whiteSpace: "nowrap",
+    _hover: {
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderColor: "brand",
+      transform: "translateY(-1px)",
+    },
+    _active: {
+      transform: "translateY(0)",
+    },
+    _disabled: {
+      opacity: 0.6,
+      cursor: "not-allowed",
+      transform: "none",
+      _hover: {
+        transform: "none",
+        backgroundColor: "transparent",
+      },
+    },
+    "@media (max-width: 768px)": {
+      padding: "token(spacing.xs)",
+      fontSize: "xs",
+      minHeight: "28px",
+      gap: "2px",
+    },
+  }),
+  supportButtonActive: css({
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderColor: "brand",
+    color: "brand",
+  }),
+  starIcon: css({
+    fontSize: "14px",
+    transition: "all 0.2s ease",
+    "@media (max-width: 768px)": {
+      fontSize: "12px",
+    },
+  }),
+  starIconFilled: css({
+    color: "#fbbf24", // Golden yellow for filled star
+  }),
+  supportCount: css({
+    fontSize: "sm",
+    fontWeight: "medium",
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+    },
+  }),
+  // Inline variant for content placement
+  inlineContainer: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.sm)",
+    padding: "token(spacing.sm) 0",
+    borderTop: "1px solid rgba(59, 130, 246, 0.1)",
+    borderBottom: "1px solid rgba(59, 130, 246, 0.1)",
+    margin: "token(spacing.lg) 0",
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  inlineText: css({
+    flex: 1,
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  inlineButton: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.xs)",
+    padding: "token(spacing.xs) token(spacing.sm)",
+    backgroundColor: "transparent",
+    border: "1px solid rgba(59, 130, 246, 0.3)",
+    borderRadius: "token(radii.sm)",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    color: "brand",
+    transition: "all 0.2s ease",
+    _hover: {
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderColor: "brand",
+    },
+    _disabled: {
+      opacity: 0.6,
+      cursor: "not-allowed",
+    },
+  }),
+  // Tooltip for errors/warnings
+  tooltip: css({
+    position: "absolute",
+    top: "100%",
+    right: 0,
+    marginTop: "token(spacing.xs)",
+    padding: "token(spacing.xs) token(spacing.sm)",
+    backgroundColor: "background",
+    border: "1px solid token(colors.border)",
+    borderRadius: "token(radii.sm)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    fontSize: "xs",
+    color: "text",
+    whiteSpace: "nowrap",
+    zIndex: 1000,
+    "@media (max-width: 768px)": {
+      position: "fixed",
+      top: "10px",
+      left: "10px",
+      right: "10px",
+      marginTop: 0,
+      whiteSpace: "normal",
+      textAlign: "center",
+    },
+  }),
+};
+
+// MetadataLine component styles - discrete content metadata integration
+export const metadataLine = {
+  container: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginBottom: "lg",
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    flexWrap: "wrap",
+    lineHeight: "1.4",
+    // Mobile responsive
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      gap: "xs",
+    },
+  }),
+  separator: css({
+    margin: "0 token(spacing.xs)",
+    opacity: 0.5,
+    userSelect: "none",
+  }),
+  supportButton: css({
+    background: "none",
+    border: "none",
+    color: "inherit",
+    cursor: "pointer",
+    textDecoration: "none",
+    fontSize: "inherit",
+    fontFamily: "inherit",
+    padding: 0,
+    margin: 0,
+    transition: "all 0.2s ease",
+    _hover: {
+      color: "brand",
+    },
+    _disabled: {
+      cursor: "default",
+      opacity: 0.6,
+    },
   }),
 };

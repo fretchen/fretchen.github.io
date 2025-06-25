@@ -2,7 +2,7 @@ import * as React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { parseEther } from "viem";
-import { type BaseError, useReadContract } from "wagmi";
+import { useReadContract } from "wagmi";
 import { getChain, getSupportContractConfig } from "../utils/getChain";
 import { supportArea } from "../layouts/styles";
 
@@ -21,6 +21,7 @@ export default function SupportArea() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showTooltip, setShowTooltip] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
 
   // Wagmi hooks
   const { isConnected } = useAccount();
@@ -29,11 +30,21 @@ export default function SupportArea() {
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Set full URL after hydration
+  // Set full URL after hydration and detect mobile
   React.useEffect(() => {
     const rawUrl = window.location.origin + currentUrl;
     const cleanUrl = rawUrl.replace(/\/+$/, "");
     setFullUrl(cleanUrl);
+    
+    // Mobile detection
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+    
+    return () => window.removeEventListener("resize", checkIsMobile);
   }, [currentUrl]);
 
   // Chain and contract configuration
@@ -102,10 +113,11 @@ export default function SupportArea() {
   // Render ReadSupport based on status
   const renderReadSupport = () => {
     if (isReadPending) return <div className={styles.readDisplay}>Loading...</div>;
-    if (readError)
-      return (
-        <div className={styles.readDisplay}>Error: {(readError as BaseError).shortMessage || readError.message}</div>
-      );
+    if (readError) {
+      const errorMessage =
+        (readError as { shortMessage?: string }).shortMessage || readError.message || "Error occurred";
+      return <div className={styles.readDisplay}>Error: {errorMessage}</div>;
+    }
     return <div className={styles.readDisplay}>{data?.toString() || "0"}</div>;
   };
 

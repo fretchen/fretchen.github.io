@@ -1,21 +1,9 @@
 import * as React from "react";
 import { TitleBarProps } from "../types/components";
-import SupportArea from "./SupportArea";
+import { titleBar } from "../layouts/styles";
 
-const TitleBar: React.FC<TitleBarProps> = function ({ title }) {
-  return (
-    <div
-      className="TitleBar"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <h1>{title}</h1>
-      <SupportArea />
-    </div>
-  );
+const TitleBar: React.FC<TitleBarProps> = function ({ title, className }) {
+  return <h1 className={`${titleBar.title} ${className || ""}`}>{title}</h1>;
 };
 
 export default TitleBar;

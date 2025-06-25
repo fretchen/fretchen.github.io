@@ -5,6 +5,8 @@ export interface NFTMetadata {
   description: string;
 }
 
+export type PostType = "markdown" | "react";
+
 export interface BlogPost {
   title: string;
   content: string;
@@ -12,4 +14,6 @@ export interface BlogPost {
   order?: number;
   tokenID?: number;
   nftMetadata?: NFTMetadata;
+  type?: PostType;
+  componentPath?: string; // Pfad zur React-Komponente für interaktive Posts
 }

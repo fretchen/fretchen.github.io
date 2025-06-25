@@ -449,39 +449,33 @@ export const walletOptions = {
     display: "inline-block",
   }),
   button: css({
+    // Consistent outline/border style for all screen sizes
     padding: "8px 16px",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
+    backgroundColor: "transparent",
+    color: "brand",
+    border: "1px solid token(colors.brand)",
     borderRadius: "sm",
     cursor: "pointer",
-    fontWeight: "bold",
+    fontWeight: "medium",
     display: "flex",
     alignItems: "center",
     gap: "xs",
     transition: "all 0.2s ease",
-    minWidth: "120px", // Ensure minimum width for readability
+    minWidth: "120px", // Ensure minimum width for readability on desktop
     justifyContent: "center",
     _hover: {
-      backgroundColor: "#0052a3",
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderColor: "#0052a3",
+      color: "#0052a3",
     },
-    // Mobile responsive styles - dezenter Outline-Stil, integriert in Navigation
+    // Mobile responsive styles - smaller and more compact
     "@media (max-width: 768px)": {
-      backgroundColor: "transparent",
-      color: "brand",
-      border: "1px solid token(colors.brand)",
       padding: "6px 10px",
       fontSize: "13px",
-      fontWeight: "medium",
       minWidth: "auto",
       maxWidth: "none",
       width: "auto",
       marginLeft: "token(spacing.sm)", // Kleiner Abstand zu den anderen Links
-      _hover: {
-        backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderColor: "#0052a3",
-        color: "#0052a3",
-      },
     },
     "@media (max-width: 480px)": {
       padding: "4px 8px",
@@ -500,22 +494,6 @@ export const walletOptions = {
     marginTop: "2px", // Reduced gap to make it feel more connected
     border: "1px solid token(colors.border)",
     overflow: "hidden", // Ensures rounded corners work properly
-    // Mobile spezifische Anpassungen für bessere Sichtbarkeit
-    "@media (max-width: 768px)": {
-      position: "absolute",
-      top: "100%", // Direkt unter dem Button
-      right: "0",
-      left: "auto",
-      minWidth: "140px",
-      marginTop: "4px", // Etwas mehr Abstand auf Mobile
-      zIndex: 3000,
-      transform: "translateX(0)", // Sicherstellen dass es nicht über den Bildschirmrand geht
-      maxWidth: "200px",
-      // Falls zu nah am rechten Bildschirmrand, von rechts positionieren
-      "@supports (anchor-name: --wallet-button)": {
-        right: "0",
-      },
-    },
   }),
   menuItem: css({
     padding: "10px 16px", // Slightly larger padding for easier clicking
@@ -781,6 +759,12 @@ export const layout = {
     gap: "token(spacing.md)",
     alignItems: "center",
     flex: 1,
+    // Desktop: Last item (Connect button) should be pushed to the right
+    "@media (min-width: 769px)": {
+      "& > :last-child": {
+        marginLeft: "auto",
+      },
+    },
     // Mobile responsive styles - horizontal scrolling
     "@media (max-width: 768px)": {
       overflowX: "auto",

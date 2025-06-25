@@ -1,8 +1,0 @@
-import{m as o}from"./chunk-Dz730c6z.js";import"./chunk-B7I0Dq53.js";import"./chunk-C1OwoxBq.js";import"./chunk-C7ty5ilu.js";/* empty css              *//* empty css              *//* empty css              */const p=o`<svg fill="none" viewBox="0 0 16 16">
-  <path
-    fill="currentColor"
-    fill-rule="evenodd"
-    d="M0 3a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H1a1 1 0 0 1-1-1Zm2.63 5.25a1 1 0 0 1 1-1h8.75a1 1 0 1 1 0 2H3.63a1 1 0 0 1-1-1Zm2.62 5.25a1 1 0 0 1 1-1h3.5a1 1 0 0 1 0 2h-3.5a1 1 0 0 1-1-1Z"
-    clip-rule="evenodd"
-  />
-</svg>`;export{p as filtersSvg};

@@ -146,7 +146,7 @@ export function Post({
   return (
     <>
       <TitleBar title={title} />
-      <MetadataLine publishingDate={publishing_date} showSupport={true} readTime="5 min read" />
+      <MetadataLine publishingDate={publishing_date} showSupport={true} />
 
       {/* Render based on post type */}
       {type === "react" && componentPath ? (

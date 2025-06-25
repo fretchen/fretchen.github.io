@@ -6,7 +6,6 @@ import { metadataLine } from "../layouts/styles";
 interface MetadataLineProps {
   publishingDate?: string;
   showSupport?: boolean;
-  readTime?: string;
   className?: string;
 }
 
@@ -14,11 +13,11 @@ interface MetadataLineProps {
  * MetadataLine Component
  *
  * Displays content metadata in a discrete, natural way:
- * "January 15, 2025  •  ⭐ 12 supporters  •  5 min read"
+ * "January 15, 2025  •  ⭐ 12 supporters"
  *
  * Integrates support functionality seamlessly with other metadata.
  */
-export default function MetadataLine({ publishingDate, showSupport = false, readTime, className }: MetadataLineProps) {
+export default function MetadataLine({ publishingDate, showSupport = false, className }: MetadataLineProps) {
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
 
@@ -78,9 +77,7 @@ export default function MetadataLine({ publishingDate, showSupport = false, read
   };
 
   // Build metadata items
-  const metadataItems = [publishingDate && formatDate(publishingDate), renderSupportSection(), readTime].filter(
-    Boolean,
-  );
+  const metadataItems = [publishingDate && formatDate(publishingDate), renderSupportSection()].filter(Boolean);
 
   if (metadataItems.length === 0) {
     return null;

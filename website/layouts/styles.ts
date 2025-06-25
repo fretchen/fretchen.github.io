@@ -693,6 +693,9 @@ export const entryList = {
     display: "flex",
     flexDirection: "column",
     gap: "4",
+    "@media (max-width: 768px)": {
+      gap: "3",
+    },
   }),
   entry: css({
     width: "100%",
@@ -700,12 +703,26 @@ export const entryList = {
     overflow: "hidden",
     boxShadow: "sm",
     transition: "all 0.3s ease",
+    cursor: "pointer",
+    textDecoration: "none",
+    color: "inherit",
+    display: "block",
     _hover: {
       boxShadow: "md",
       transform: "translateX(4px)",
+      textDecoration: "none",
     },
     bg: "white",
     marginY: "3",
+    // Mobile: Remove hover transform, add subtle scale
+    "@media (max-width: 768px)": {
+      marginY: "2",
+      _hover: {
+        boxShadow: "md",
+        transform: "scale(1.01)",
+        textDecoration: "none",
+      },
+    },
   }),
   entryContent: css({
     padding: "6",
@@ -713,6 +730,16 @@ export const entryList = {
     flexDirection: "row",
     gap: "4",
     alignItems: "flex-start",
+    // Mobile responsive layout
+    "@media (max-width: 768px)": {
+      padding: "4",
+      gap: "3",
+    },
+    "@media (max-width: 480px)": {
+      flexDirection: "column",
+      gap: "3",
+      padding: "3",
+    },
   }),
   entryNftImage: css({
     width: "20", // 80px thumbnail size
@@ -723,11 +750,22 @@ export const entryList = {
     borderColor: "gray.300",
     backgroundColor: "gray.100",
     flexShrink: 0,
+    // Responsive image sizing
+    "@media (max-width: 768px)": {
+      width: "15", // 60px on tablet
+      height: "15",
+    },
+    "@media (max-width: 480px)": {
+      width: "12", // 48px on mobile
+      height: "12",
+      alignSelf: "flex-start",
+    },
   }),
   entryText: css({
     flex: 1,
     display: "flex",
     flexDirection: "column",
+    minWidth: 0, // Prevents flex item from overflowing
   }),
   entryTextContent: css({
     flex: 1,
@@ -739,24 +777,79 @@ export const entryList = {
     fontSize: "sm",
     color: "gray.600",
     marginBottom: "1",
+    // Mobile: Better readability
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      marginBottom: "0.5",
+    },
   }),
   entryTitle: css({
     fontSize: "xl",
     fontWeight: "semibold",
     margin: 0,
+    lineHeight: "1.3",
+    // Better text wrapping and readability on mobile
+    "@media (max-width: 768px)": {
+      fontSize: "lg",
+      lineHeight: "1.4",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "md",
+      lineHeight: "1.5",
+    },
   }),
   entryDescription: css({
     margin: "1 0 0 0",
     fontSize: "sm",
     color: "gray.600",
+    lineHeight: "1.5",
+    // Mobile: Better text flow and readability
+    "@media (max-width: 768px)": {
+      fontSize: "sm",
+      lineHeight: "1.6",
+      margin: "0.5 0 0 0",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "xs",
+      lineHeight: "1.6",
+    },
   }),
   entryLink: css({
     whiteSpace: "nowrap",
     fontWeight: "medium",
+    color: "brand",
+    textDecoration: "none",
+    fontSize: "sm",
+    marginTop: "2",
+    alignSelf: "flex-start",
+    transition: "color 0.2s ease",
+    _hover: {
+      textDecoration: "underline",
+    },
+    // Mobile: Better touch target
+    "@media (max-width: 768px)": {
+      fontSize: "sm",
+      marginTop: "3",
+      padding: "1",
+      marginLeft: "-1", // Offset padding for alignment
+    },
+    "@media (max-width: 480px)": {
+      alignSelf: "stretch",
+      textAlign: "center",
+      padding: "2",
+      marginLeft: "0",
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderRadius: "sm",
+      border: "1px solid rgba(59, 130, 246, 0.2)",
+    },
   }),
   viewAllContainer: css({
     textAlign: "right",
     marginTop: "2",
+    "@media (max-width: 480px)": {
+      textAlign: "center",
+      marginTop: "4",
+    },
   }),
 };
 

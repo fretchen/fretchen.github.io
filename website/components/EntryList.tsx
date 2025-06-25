@@ -30,9 +30,10 @@ const EntryList: React.FC<EntryListProps> = ({
       {displayBlogs.map((blog, index) => {
         // Calculates the correct index for links when order is reversed
         const linkIndex = reverseOrder ? blogs.length - 1 - index : index;
+        const entryUrl = `${basePath}/${linkIndex}`;
 
         return (
-          <div key={linkIndex} className={entryList.entry}>
+          <Link key={linkIndex} href={entryUrl} className={entryList.entry}>
             <div className={entryList.entryContent}>
               {/* Large NFT image on the left side of the entire entry */}
               {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
@@ -45,20 +46,22 @@ const EntryList: React.FC<EntryListProps> = ({
 
               {/* Text content */}
               <div className={entryList.entryText}>
-                {/* Date */}
-                {showDate && blog.publishing_date && <p className={entryList.entryDate}>{blog.publishing_date}</p>}
+                <div className={entryList.entryTextContent}>
+                  {/* Date */}
+                  {showDate && blog.publishing_date && <p className={entryList.entryDate}>{blog.publishing_date}</p>}
 
-                {/* Title */}
-                <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
+                  {/* Title */}
+                  <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
 
-                {/* Description */}
-                {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
+                  {/* Description */}
+                  {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
+                </div>
+
+                {/* Read more link - now integrated as a button-style element */}
+                <span className={entryList.entryLink}>Read more →</span>
               </div>
-
-              {/* Read more link */}
-              <Link href={`${basePath}/${linkIndex}`}>Read more →</Link>
             </div>
-          </div>
+          </Link>
         );
       })}
 

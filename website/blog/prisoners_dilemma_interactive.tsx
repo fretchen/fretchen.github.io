@@ -1300,9 +1300,9 @@ const PrisonersDilemmaPost: React.FC = () => {
   return (
     <article className="prose prose-lg max-w-none">
       <p>
-        Why did the 2024 Nobel Prize in Economics go to researchers that study why some countries prosper with strong
+        Why did the 2024 Nobel Prize in Economics go to researchers who study why some countries prosper with strong
         institutions while others don&rsquo;t? When I looked into the question, the answer turned out to be connected to a
-        famous social game called Prisoners Dilemma.
+        famous social game called the Prisoner&rsquo;s Dilemma.
       </p>
       <p>
         I had encountered the Prisoner&rsquo;s Dilemma before as a single-game thought experiment, but the{" "}
@@ -1313,7 +1313,7 @@ const PrisonersDilemmaPost: React.FC = () => {
       </p>
       <p>
         To explore the dilemma, I wanted to work through its basic mechanics using a scenario that makes the challenges
-        clear. This is why I choose to embed the discussion it into the context of Breaking Bad, which felt just like a
+        clear. This is why I chose to embed the discussion into the context of Breaking Bad, which felt like a
         perfect example.
       </p>
       <h2>Setting the scene with Breaking Bad</h2>
@@ -1436,13 +1436,13 @@ Let's step back from Walter's specific numbers and examine how this logic applie
 
 In Walter's case: T = 0 years (immunity), R = 3 years, P = 5 years, S = 15 years.
 
-For any situation to be a true prisoner's dilemma, we need T < R < P and S is the worst outcome. Using this general framework, let's rewrite Walter's expected value calculation:
+For any situation to be a true prisoner's dilemma, we need T > R > P > S and S is the worst outcome. Using this general framework, let's rewrite Walter's expected value calculation:
 
 **Expected sentence when cooperating:**
 
 $$E[\\text{Cooperate}] = R(1-p) + Sp = R + (S-R)p$$
 
-**Expected sentence when defecting :**  
+**Expected sentence when defecting:**  
 $$E[\\text{Defect}] = T(1-p) + Pp = T + (P-T)p$$
 
 For cooperation to be rational, we'd need: 
@@ -1461,10 +1461,10 @@ p &> \\frac{R}{R+P-S}
 \\end{align*}
 $$
 
-We can directly see that this equation only makes sense if S < R+P, as we would handle negative probabilities otherwise. This replicates the situation
-which we encountered previously and hence confirms our earlier conclusion that Walter should betray Jesse.
+We can directly see that this equation only makes sense if S < R+P, as we would be dealing with negative probabilities otherwise. This replicates the situation
+we encountered previously and hence confirms our earlier conclusion that Walter should betray Jesse.
 
-But notice what happens if we change the payoffs. We know that $p<1$, which directly implies that cooperation become a viable option for $S < P$. The condition above
+But notice what happens if we change the payoffs. We know that $p<1$, which directly implies that cooperation becomes a viable option for $S < P$. The condition above
 tells us exactly when cooperation becomes rational, and the interactive plot below lets you explore how different scenarios affect this critical threshold. 
 Try adjusting the payoff values to see how they change the probability at which cooperation becomes individually rational.
 
@@ -1532,7 +1532,7 @@ In repeated prisoner's dilemmas, players typically adopt consistent behavioral r
 
 ### Interactive Strategy Exploration
 
-These strategies aren't just theoretical—they reflect real behavioral patterns we see in ongoing relationships. Let's explore how they perform when Walter and Jesse face repeated crises: 
+These strategies aren't just theoretical—they reflect real behavioral patterns we see in ongoing relationships. Let's explore how they perform when Walter and Jesse face repeated crises:
       `}</ReactMarkdown>
 
       <GameSimulation />
@@ -1544,7 +1544,7 @@ The simulation reveals key insights about repeated interactions:
 
 - **Always cooperating** works well with trustworthy partners but becomes costly against defectors
 - **Always defecting** provides security but forecloses opportunities for mutual benefit  
-- **Tit-for-tat** balances cooperation and protection: starts nice, retaliates against betrayal, forgives when partners return to cooperation
+- **Tit-for-tat** balances cooperation and protection: starts nice, retaliates against betrayal, and forgives when partners return to cooperation
 - **Random strategies** perform poorly because they can't build the consistent patterns needed for trust
 
 💡 **Key Insight**: There's no universally "best" strategy—success depends on what your opponent does.

@@ -58,6 +58,16 @@ export interface CardProps extends BaseComponentProps {
 }
 
 /**
+ * NFT metadata structure
+ */
+export interface NFTMetadata {
+  imageUrl?: string;
+  prompt?: string;
+  name?: string;
+  description?: string;
+}
+
+/**
  * Represents a blog entry with optional metadata
  */
 export interface BlogEntry {
@@ -66,6 +76,9 @@ export interface BlogEntry {
   description?: string;
   slug?: string;
   order?: number;
+  content?: string;
+  tokenID?: number;
+  nftMetadata?: NFTMetadata;
 }
 
 /**
@@ -164,15 +177,17 @@ export interface NFT {
  * Props for the NFTCard component
  */
 export interface NFTCardProps extends BaseComponentProps {
-  nft: NFT;
+  /** Token ID of the NFT to display */
+  tokenId: bigint;
+  /** Callback when image is clicked for modal display */
   onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
+  /** Callback when NFT is burned (only for private NFTs) */
   onNftBurned: () => void;
+  /** Whether this card should be highlighted (e.g., newly created) */
   isHighlighted?: boolean;
   /** Whether this card is shown in the public gallery (disables burn functionality) */
   isPublicView?: boolean;
-  /** Owner address for public NFTs */
-  owner?: string;
-  /** Callback when the listed status changes */
+  /** Callback when the listed status changes (only for private NFTs) */
   onListedStatusChanged?: (tokenId: bigint, isListed: boolean) => void;
 }
 
@@ -208,13 +223,6 @@ export interface TabProps extends BaseComponentProps {
   isActive: boolean;
   /** Callback when tab is clicked */
   onClick: () => void;
-}
-
-/**
- * Public NFT with owner information
- */
-export interface PublicNFT extends NFT {
-  owner: string;
 }
 
 /**

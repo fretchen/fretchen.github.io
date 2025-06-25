@@ -1,28 +1,140 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { readContract } from "wagmi/actions";
+import { createPublicClient, http } from "viem";
+import { optimism } from "viem/chains";
+import { config } from "../wagmi.config";
 import { getGenAiNFTContractConfig } from "../utils/getChain";
-import { NFTCardProps } from "../types/components";
+import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
 import * as styles from "../layouts/styles";
 
 // NFT Card Component
 export function NFTCard({
-  nft,
+  tokenId,
   onImageClick,
   onNftBurned,
   onListedStatusChanged,
   isHighlighted = false,
   isPublicView = false,
-  owner,
 }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
+  // NFT state - always load from blockchain
+  const [nft, setNft] = useState<NFT>({
+    tokenId,
+    tokenURI: "",
+    isLoading: true,
+  });
+  const [owner, setOwner] = useState<string>("");
+
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
+
+  // Memoize the public client to prevent recreation on every render
+  const publicClient = useMemo(
+    () =>
+      createPublicClient({
+        chain: optimism,
+        transport: http(),
+      }),
+    [],
+  );
+
+  // Fetch metadata from tokenURI
+  const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
+    try {
+      // Handle file:// URLs for local development
+      if (tokenURI.startsWith("file://")) {
+        console.warn("Cannot fetch file:// URLs in browser. Metadata:", tokenURI);
+        return null;
+      }
+
+      const response = await fetch(tokenURI);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch metadata: ${response.status}`);
+      }
+
+      const metadata: NFTMetadata = await response.json();
+      return metadata;
+    } catch (error) {
+      console.error("Error fetching NFT metadata:", error);
+      return null;
+    }
+  };
+
+  // Load NFT data from blockchain
+  useEffect(() => {
+    const loadNFTData = async () => {
+      try {
+        setNft((prev) => ({ ...prev, isLoading: true, error: undefined }));
+
+        // Get token URI using public client
+        const tokenURIResult = await publicClient.readContract({
+          address: genAiNFTContractConfig.address,
+          abi: genAiNFTContractConfig.abi,
+          functionName: "tokenURI",
+          args: [tokenId],
+        });
+
+        const tokenURI = tokenURIResult as string;
+
+        // Get owner if in public view
+        let nftOwner = "";
+        if (isPublicView) {
+          const ownerResult = await publicClient.readContract({
+            address: genAiNFTContractConfig.address,
+            abi: genAiNFTContractConfig.abi,
+            functionName: "ownerOf",
+            args: [tokenId],
+          });
+          nftOwner = ownerResult as string;
+          setOwner(nftOwner);
+        }
+
+        // Get listing status if not public view
+        let isListed: boolean | undefined;
+        if (!isPublicView) {
+          try {
+            const isListedResult = await readContract(config, {
+              ...genAiNFTContractConfig,
+              functionName: "isTokenListed",
+              args: [tokenId],
+            });
+            isListed = isListedResult as boolean;
+          } catch (error) {
+            console.warn("Could not load listing status:", error);
+          }
+        }
+
+        // Fetch metadata
+        const metadata = await fetchNFTMetadata(tokenURI);
+
+        setNft({
+          tokenId,
+          tokenURI,
+          metadata: metadata || undefined,
+          imageUrl: metadata?.image,
+          isLoading: false,
+          isListed,
+        });
+      } catch (error) {
+        console.error(`Error loading NFT ${tokenId}:`, error);
+        setNft({
+          tokenId,
+          tokenURI: "",
+          isLoading: false,
+          error: `Failed to load NFT #${tokenId}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
+    };
+
+    loadNFTData();
+  }, [tokenId, isPublicView]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -42,7 +154,7 @@ export function NFTCard({
         onNftBurned();
       }, 1000);
     }
-  }, [isConfirmed, onNftBurned]);
+  }, [isConfirmed]); // Entfernt: onNftBurned aus Dependencies
 
   // Handle successful listing status change
   useEffect(() => {
@@ -50,7 +162,7 @@ export function NFTCard({
       // The UI is already updated optimistically, just show success toast
       showToast("Listing status updated successfully!", "success");
     }
-  }, [isListingConfirmed, onListedStatusChanged, showToast]);
+  }, [isListingConfirmed]); // Entfernt: onListedStatusChanged, showToast aus Dependencies
 
   const handleImageClick = () => {
     if (nft.imageUrl) {

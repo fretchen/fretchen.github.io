@@ -10,6 +10,7 @@ export default defineConfig({
     "./layouts/**/*.{js,jsx,ts,tsx}",
     "./pages/**/*.{js,jsx,ts,tsx}",
     "./src/**/*.{js,jsx,ts,tsx}",
+    "./blog/**/*.{js,jsx,ts,tsx}",
   ],
 
   // Files to exclude

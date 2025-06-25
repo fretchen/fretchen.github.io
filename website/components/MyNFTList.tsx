@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
-import { NFT, NFTMetadata, ModalImageData } from "../types/components";
+import { NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
@@ -22,9 +22,9 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   const chain = getChain();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  // My NFTs state
-  const [nfts, setNfts] = useState<NFT[]>([]);
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  // My NFTs state - now just store token IDs
+  const [tokenIds, setTokenIds] = useState<bigint[]>([]);
+  const [isLoadingTokenIds, setIsLoadingTokenIds] = useState(false);
   const [highlightedNFT, setHighlightedNFT] = useState<bigint | null>(null);
   const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
@@ -39,36 +39,19 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     },
   });
 
-  // Fetch metadata from tokenURI
-  const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
-    try {
-      // Handle file:// URLs for local development
-      if (tokenURI.startsWith("file://")) {
-        console.warn("Cannot fetch file:// URLs in browser. Metadata:", tokenURI);
-        return null;
-      }
+  // Fetch metadata from tokenURI - remove this as NFTCard will handle it
+  // const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
+  //   ...
+  // };
 
-      const response = await fetch(tokenURI);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metadata: ${response.status}`);
-      }
-
-      const metadata: NFTMetadata = await response.json();
-      return metadata;
-    } catch (error) {
-      console.error("Error fetching NFT metadata:", error);
-      return null;
-    }
-  };
-
-  // Load user's NFTs using enumerable functions
-  const loadUserNFTs = async () => {
+  // Load user's NFT token IDs only
+  const loadUserTokenIds = useCallback(async () => {
     if (!isConnected || !address) {
-      setNfts([]);
+      setTokenIds([]);
       return;
     }
 
-    setIsLoadingMetadata(true);
+    setIsLoadingTokenIds(true);
 
     try {
       // Get fresh balance directly from contract to avoid stale state
@@ -79,24 +62,15 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
       });
 
       if (!freshBalance || freshBalance === 0n) {
-        setNfts([]);
+        setTokenIds([]);
         return;
       }
 
-      // Show loading placeholders initially
-      const placeholderNFTs = Array.from({ length: Number(freshBalance) }, () => ({
-        tokenId: 0n,
-        tokenURI: "",
-        isLoading: true,
-      }));
-
-      setNfts(placeholderNFTs);
-
-      // Load all NFT data first, then sort by tokenId
-      const nftPromises: Promise<NFT>[] = [];
+      // Load all token IDs
+      const tokenIdPromises: Promise<bigint>[] = [];
 
       for (let i = 0; i < Number(freshBalance); i++) {
-        const nftPromise = (async () => {
+        const tokenIdPromise = (async () => {
           try {
             // Get token ID at index using wagmi's readContract
             const tokenIdResult = await readContract(config, {
@@ -105,134 +79,82 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
               args: [address, BigInt(i)],
             });
 
-            const tokenId = tokenIdResult as bigint;
-
-            // Get token URI
-            const tokenURIResult = await readContract(config, {
-              ...genAiNFTContractConfig,
-              functionName: "tokenURI",
-              args: [tokenId],
-            });
-
-            const tokenURI = tokenURIResult as string;
-
-            // Get listing status
-            const isListedResult = await readContract(config, {
-              ...genAiNFTContractConfig,
-              functionName: "isTokenListed",
-              args: [tokenId],
-            });
-
-            const isListed = isListedResult as boolean;
-
-            // Fetch metadata
-            const metadata = await fetchNFTMetadata(tokenURI);
-
-            return {
-              tokenId,
-              tokenURI,
-              metadata: metadata || undefined,
-              imageUrl: metadata?.image,
-              isLoading: false,
-              isListed,
-            };
+            return tokenIdResult as bigint;
           } catch (error) {
-            console.error(`Error loading NFT at index ${i}:`, error);
-            return {
-              tokenId: 0n,
-              tokenURI: "",
-              isLoading: false,
-              error: `Failed to load NFT #${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
-            };
+            console.error(`Error loading token ID at index ${i}:`, error);
+            return 0n; // Return 0 as fallback
           }
         })();
 
-        nftPromises.push(nftPromise);
+        tokenIdPromises.push(tokenIdPromise);
       }
 
-      // Wait for all NFTs to load
-      const loadedNFTs = await Promise.all(nftPromises);
+      // Wait for all token IDs to load
+      const loadedTokenIds = await Promise.all(tokenIdPromises);
 
-      // Sort by tokenId in descending order (newest first)
-      const sortedNFTs = loadedNFTs.sort((a, b) => {
-        // Handle error cases - put them at the end
-        if (a.error && !b.error) return 1;
-        if (!a.error && b.error) return -1;
-        if (a.error && b.error) return 0;
+      // Filter out any 0 values (errors) and sort by tokenId in descending order (newest first)
+      const validTokenIds = loadedTokenIds
+        .filter((id) => id > 0n)
+        .sort((a, b) => {
+          // Sort by tokenId (descending - newest first)
+          if (b > a) return 1;
+          if (b < a) return -1;
+          return 0;
+        });
 
-        // Sort by tokenId (descending - newest first)
-        // Use BigInt comparison to avoid precision loss for large token IDs
-        if (b.tokenId > a.tokenId) return 1;
-        if (b.tokenId < a.tokenId) return -1;
-        return 0;
-      });
-
-      // Update state with sorted NFTs
-      setNfts(sortedNFTs);
+      // Update state with sorted token IDs
+      setTokenIds(validTokenIds);
     } catch (error) {
-      console.error("Error loading NFTs:", error);
-      setNfts([]);
+      console.error("Error loading token IDs:", error);
+      setTokenIds([]);
     } finally {
-      setIsLoadingMetadata(false);
+      setIsLoadingTokenIds(false);
     }
+  }, [isConnected, address]); // Entfernt: genAiNFTContractConfig
+
+  // Handle newly created NFT - just add to token list
+  const handleNewlyCreatedNFT = (newTokenId: bigint) => {
+    // Set highlighting for the new NFT
+    setHighlightedNFT(newTokenId);
+
+    // Add to top of token list if not already present
+    setTokenIds((prevTokenIds) => {
+      const exists = prevTokenIds.includes(newTokenId);
+      if (exists) {
+        return prevTokenIds;
+      }
+      return [newTokenId, ...prevTokenIds];
+    });
+
+    // Remove highlighting after 5 seconds
+    setTimeout(() => {
+      setHighlightedNFT(null);
+      onNewNFTDisplayed?.();
+    }, 5000);
   };
 
-  // Handle listed status change for user NFTs
-  const handleListedStatusChanged = async (tokenId: bigint, isListed: boolean) => {
-    // Update the local state immediately for better UX
-    setNfts((prevNfts) => prevNfts.map((nft) => (nft.tokenId === tokenId ? { ...nft, isListed } : nft)));
-  };
+  // Handle listing status changes
+  const handleListedStatusChanged = useCallback((tokenId: bigint, isListed: boolean) => {
+    // This function can be used to update local state if needed
+    // For now, the NFTCard handles the blockchain state itself
+    console.log(`NFT ${tokenId} listing status changed to: ${isListed}`);
+  }, []);
 
   // Load data when component mounts or dependencies change
   useEffect(() => {
     if (isConnected && address) {
-      loadUserNFTs();
+      loadUserTokenIds();
     }
-  }, [address, isConnected, userBalance]); // Keep userBalance for automatic updates
+  }, [address, isConnected]); // Entfernt: userBalance to prevent too frequent reloads
 
   // Handle newly created NFT
   useEffect(() => {
     if (newlyCreatedNFT) {
-      // Set highlighting for the new NFT
-      setHighlightedNFT(newlyCreatedNFT.tokenId);
-
-      // Create temporary NFT for immediate display
-      const tempNFT: NFT = {
-        tokenId: newlyCreatedNFT.tokenId,
-        tokenURI: "",
-        imageUrl: newlyCreatedNFT.imageUrl,
-        metadata: newlyCreatedNFT.metadata,
-        isLoading: false,
-        isListed: false, // New NFTs are private by default
-      };
-
-      // Add to top of list, but ensure we don't duplicate if it already exists
-      setNfts((prevNfts) => {
-        const existingIndex = prevNfts.findIndex((nft) => nft.tokenId === newlyCreatedNFT.tokenId);
-        if (existingIndex !== -1) {
-          // Update existing NFT with image and metadata
-          const updatedNfts = [...prevNfts];
-          updatedNfts[existingIndex] = {
-            ...updatedNfts[existingIndex],
-            imageUrl: newlyCreatedNFT.imageUrl,
-            metadata: newlyCreatedNFT.metadata,
-          };
-          return updatedNfts;
-        } else {
-          // Add new NFT at the top
-          return [tempNFT, ...prevNfts];
-        }
-      });
-
-      // Remove highlighting after 5 seconds - no automatic reload needed
-      setTimeout(() => {
-        setHighlightedNFT(null);
-        onNewNFTDisplayed?.();
-      }, 5000);
+      handleNewlyCreatedNFT(newlyCreatedNFT.tokenId);
     }
-  }, [newlyCreatedNFT, onNewNFTDisplayed]);
+  }, [newlyCreatedNFT]); // Entfernt: onNewNFTDisplayed
 
-  const isLoading = isLoadingBalance || isLoadingMetadata;
+  const isLoading = isLoadingBalance || isLoadingTokenIds;
 
   if (!isConnected) {
     return (
@@ -248,7 +170,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     );
   }
 
-  if (isLoading && nfts.length === 0) {
+  if (isLoading && tokenIds.length === 0) {
     return (
       <div className={styles.nftList.loadingContainer}>
         <div className={styles.spinner}></div>
@@ -270,14 +192,14 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   return (
     <>
       <div className={styles.nftList.grid}>
-        {nfts.map((nft, index) => (
+        {tokenIds.map((tokenId, index) => (
           <NFTCard
-            key={`my-${nft.tokenId}-${index}`}
-            nft={nft}
+            key={`my-${tokenId}-${index}`}
+            tokenId={tokenId}
             onImageClick={setSelectedImage}
-            onNftBurned={() => loadUserNFTs()}
+            onNftBurned={() => loadUserTokenIds()}
             onListedStatusChanged={handleListedStatusChanged}
-            isHighlighted={highlightedNFT === nft.tokenId}
+            isHighlighted={highlightedNFT === tokenId}
             isPublicView={false}
           />
         ))}

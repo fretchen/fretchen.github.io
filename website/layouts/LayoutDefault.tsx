@@ -24,9 +24,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
       const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 5; // 5px tolerance
 
       if (isAtEnd) {
-        scrollIndicatorElement.className = `${layout.scrollIndicator} ${layout.scrollIndicatorHidden}`;
+        scrollIndicatorElement.classList.add(layout.scrollIndicatorHidden);
       } else {
-        scrollIndicatorElement.className = layout.scrollIndicator;
+        scrollIndicatorElement.classList.remove(layout.scrollIndicatorHidden);
       }
     };
 

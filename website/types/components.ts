@@ -123,13 +123,6 @@ export interface PostProps extends BlogPost {
   basePath?: string;
 }
 
-/**
- * Props for the TitleBar component
- */
-export interface TitleBarProps extends BaseComponentProps {
-  title: string;
-}
-
 // ===== IMAGE AND MODAL INTERFACES =====
 
 /**

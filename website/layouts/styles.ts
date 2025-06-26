@@ -400,46 +400,166 @@ export const imageGen = {
 
 // ===== KOMPONENTEN-SPEZIFISCHE STILE =====
 
-// Card component styles
-export const card = {
+// ===== EINHEITLICHE KARTEN-STYLES =====
+
+// Basis-Stil für alle Karten-Komponenten
+export const baseContentCard = {
   container: css({
     width: "100%",
     borderRadius: "md",
     overflow: "hidden",
     boxShadow: "sm",
     transition: "all 0.3s ease",
+    cursor: "pointer",
+    textDecoration: "none",
+    color: "inherit",
+    display: "block",
     _hover: {
       boxShadow: "md",
       transform: "translateX(4px)",
+      textDecoration: "none",
     },
     bg: "white",
     marginY: "3",
-    marginX: "1",
+    // Mobile: Vereinfachte Hover-Effekte und engere Abstände
+    "@media (max-width: 768px)": {
+      marginY: "1",
+      _hover: {
+        boxShadow: "md",
+        transform: "scale(1.01)",
+        textDecoration: "none",
+      },
+    },
+    "@media (max-width: 480px)": {
+      marginY: "0.5",
+      borderRadius: "sm", // Kleinerer Grenzradius für mobile Geräte
+    },
   }),
   content: css({
     padding: "6",
     display: "flex",
     flexDirection: "row",
     gap: "4",
-    alignItems: "center",
+    alignItems: "flex-start",
+    // Mobile responsive Layout - einheitliche Abstände
+    "@media (max-width: 768px)": {
+      padding: "3", // Viel engere Polsterung
+      gap: "2.5",
+    },
+    "@media (max-width: 480px)": {
+      flexDirection: "row", // Horizontal auf mobile für engeres Layout
+      gap: "2",
+      padding: "2.5",
+      alignItems: "center", // Zentrierte Ausrichtung für bessere visuelle Balance
+    },
   }),
   text: css({
     flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0, // Verhindert Überläufe von Flex-Elementen
+    gap: "1", // Konsistente interne Abstände
+    // Mobile: Interne Abstände für engeres Layout entfernen
+    "@media (max-width: 480px)": {
+      gap: "0.5",
+    },
   }),
   title: css({
     fontSize: "xl",
     fontWeight: "semibold",
     margin: 0,
+    lineHeight: "1.3",
+    // Mobile: Größerer Titel
+    "@media (max-width: 768px)": {
+      fontSize: "lg",
+      lineHeight: "1.4",
+      fontWeight: "bold", // Etwas fetter für Betonung
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "base", // Größer als vorher auf mobile
+      lineHeight: "1.4",
+      fontWeight: "bold",
+    },
   }),
   description: css({
-    color: "gray.600",
+    margin: "0.5 0 0 0",
     fontSize: "sm",
-    marginTop: "1",
+    color: "gray.600",
+    lineHeight: "1.5",
+    // Mobile: Beschreibung ausblenden oder verkürzen
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      lineHeight: "1.5",
+      margin: "0.25 0 0 0",
+      // Beschreibung auf Tablet abschneiden
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
+    "@media (max-width: 480px)": {
+      display: "none", // Vollständig auf mobile ausblenden
+    },
   }),
-  link: css({
-    whiteSpace: "nowrap",
-    fontWeight: "medium",
+  // Zusätzliche Styles für Bilder
+  image: css({
+    width: "20", // 80px Thumbnail-Größe
+    height: "20", // 80px Thumbnail-Größe
+    borderRadius: "xl",
+    objectFit: "cover",
+    border: "1px solid",
+    borderColor: "gray.300",
+    backgroundColor: "gray.100",
+    flexShrink: 0,
+    // Responsive Bildgrößen
+    "@media (max-width: 768px)": {
+      width: "12", // 48px auf Tablet
+      height: "12",
+      borderRadius: "lg",
+    },
+    "@media (max-width: 480px)": {
+      width: "10", // 40px auf mobile - kleiner aber noch sichtbar
+      height: "10",
+      borderRadius: "md",
+    },
   }),
+  // Zusätzliche Styles für Datum
+  date: css({
+    margin: "0",
+    fontSize: "sm",
+    color: "gray.600",
+    marginBottom: "0.5", // Reduzierte Abstände
+    // Mobile: Kleiner und subtiler
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      marginBottom: "0.25",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "2xs", // Sehr klein auf mobile
+      marginBottom: "0",
+    },
+  }),
+};
+
+// Container für Listen von Karten
+export const baseContentCardList = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4",
+  "@media (max-width: 768px)": {
+    gap: "2", // Engere Abstände auf mobile
+  },
+  "@media (max-width: 480px)": {
+    gap: "1.5", // Noch enger auf kleinen mobilen Geräten
+  },
+});
+
+// Übergangs-Stil für bestehende Card-Komponente (zur Kompatibilität)
+export const card = {
+  container: baseContentCard.container,
+  content: baseContentCard.content,
+  text: baseContentCard.text,
+  title: baseContentCard.title,
+  description: baseContentCard.description,
 };
 
 // WalletOptions component styles
@@ -689,157 +809,21 @@ export const post = {
 
 // EntryList component styles
 export const entryList = {
-  container: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "4",
-    "@media (max-width: 768px)": {
-      gap: "2", // Tighter spacing on mobile
-    },
-    "@media (max-width: 480px)": {
-      gap: "1.5", // Even tighter on small mobile
-    },
-  }),
-  entry: css({
-    width: "100%",
-    borderRadius: "md",
-    overflow: "hidden",
-    boxShadow: "sm",
-    transition: "all 0.3s ease",
-    cursor: "pointer",
-    textDecoration: "none",
-    color: "inherit",
-    display: "block",
-    _hover: {
-      boxShadow: "md",
-      transform: "translateX(4px)",
-      textDecoration: "none",
-    },
-    bg: "white",
-    marginY: "3",
-    // Mobile: Simplified hover and tighter margins
-    "@media (max-width: 768px)": {
-      marginY: "1",
-      _hover: {
-        boxShadow: "md",
-        transform: "scale(1.01)",
-        textDecoration: "none",
-      },
-    },
-    "@media (max-width: 480px)": {
-      marginY: "0.5",
-      borderRadius: "sm", // Smaller border radius for mobile
-    },
-  }),
-  entryContent: css({
-    padding: "6",
-    display: "flex",
-    flexDirection: "row",
-    gap: "4",
-    alignItems: "flex-start",
-    // Mobile responsive layout - unified spacing
-    "@media (max-width: 768px)": {
-      padding: "3", // Much tighter padding
-      gap: "2.5",
-    },
-    "@media (max-width: 480px)": {
-      flexDirection: "row", // Keep horizontal on mobile for tighter layout
-      gap: "2",
-      padding: "2.5",
-      alignItems: "center", // Center align for better visual balance
-    },
-  }),
-  entryNftImage: css({
-    width: "20", // 80px thumbnail size
-    height: "20", // 80px thumbnail size
-    borderRadius: "xl",
-    objectFit: "cover",
-    border: "1px solid",
-    borderColor: "gray.300",
-    backgroundColor: "gray.100",
-    flexShrink: 0,
-    // Responsive image sizing - more dramatic reduction
-    "@media (max-width: 768px)": {
-      width: "12", // 48px on tablet
-      height: "12",
-      borderRadius: "lg",
-    },
-    "@media (max-width: 480px)": {
-      width: "10", // 40px on mobile - smaller but still visible
-      height: "10",
-      borderRadius: "md",
-    },
-  }),
-  entryText: css({
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    minWidth: 0, // Prevents flex item from overflowing
-    gap: "1", // Consistent internal spacing
-    // Mobile: Remove internal gaps for tighter layout
-    "@media (max-width: 480px)": {
-      gap: "0.5",
-    },
-  }),
+  // Verwendung der einheitlichen Basis-Styles
+  container: baseContentCardList,
+  entry: baseContentCard.container,
+  entryContent: baseContentCard.content,
+  entryText: baseContentCard.text,
+  entryTitle: baseContentCard.title,
+  entryDescription: baseContentCard.description,
+  entryDate: baseContentCard.date,
+  entryNftImage: baseContentCard.image,
+  
+  // Spezifische EntryList-Styles
   entryTextContent: css({
     flex: 1,
     display: "flex",
     flexDirection: "column",
-  }),
-  entryDate: css({
-    margin: "0",
-    fontSize: "sm",
-    color: "gray.600",
-    marginBottom: "0.5", // Reduced spacing
-    // Mobile: Smaller and more subtle
-    "@media (max-width: 768px)": {
-      fontSize: "xs",
-      marginBottom: "0.25",
-    },
-    "@media (max-width: 480px)": {
-      fontSize: "2xs", // Very small on mobile
-      marginBottom: "0",
-    },
-  }),
-  entryTitle: css({
-    fontSize: "xl",
-    fontWeight: "semibold",
-    margin: 0,
-    lineHeight: "1.3",
-    // Mobile: Larger title to compensate for removed description
-    "@media (max-width: 768px)": {
-      fontSize: "lg",
-      lineHeight: "1.4",
-      fontWeight: "bold", // Slightly bolder for emphasis
-    },
-    "@media (max-width: 480px)": {
-      fontSize: "base", // Larger than before on mobile
-      lineHeight: "1.4",
-      fontWeight: "bold",
-    },
-  }),
-  entryDescription: css({
-    margin: "0.5 0 0 0",
-    fontSize: "sm",
-    color: "gray.600",
-    lineHeight: "1.5",
-    // Mobile: Hide description entirely
-    "@media (max-width: 768px)": {
-      fontSize: "xs",
-      lineHeight: "1.5",
-      margin: "0.25 0 0 0",
-      // Truncate description on tablet
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-    },
-    "@media (max-width: 480px)": {
-      display: "none", // Completely hide on mobile
-    },
-  }),
-  entryLink: css({
-    // Hide the separate "Read more" button entirely
-    display: "none",
   }),
   viewAllContainer: css({
     textAlign: "right",

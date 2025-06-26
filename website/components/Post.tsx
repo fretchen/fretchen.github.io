@@ -5,11 +5,10 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
-import TitleBar from "./TitleBar";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
-import { post } from "../layouts/styles";
+import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 
 import Giscus from "@giscus/react";
@@ -145,7 +144,7 @@ export function Post({
 
   return (
     <>
-      <TitleBar title={title} />
+      <h1 className={titleBar.title}>{title}</h1>
       <MetadataLine publishingDate={publishing_date} showSupport={true} />
 
       {/* Render based on post type */}

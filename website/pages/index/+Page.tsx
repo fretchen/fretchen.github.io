@@ -9,7 +9,7 @@ export default function Page() {
     <div className={styles.container}>
       {/* Hero section */}
       <div className={styles.heroContainer}>
-        <h2>Welcome</h2>
+        <h1 className={styles.titleBar.title}>Welcome</h1>
         <p className={styles.heroText}>
           Welcome to my website with all kinds of notes etc. Nothing fancy, just me thinking out loudly.
         </p>

@@ -1,7 +1,8 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import EntryList, { BlogEntry } from "../components/EntryList";
+import EntryList from "../components/EntryList";
+import { BlogEntry } from "../types/components";
 
 // Mock der Link-Komponente
 vi.mock("../components/Link", () => ({
@@ -98,12 +99,13 @@ describe("EntryList Component", () => {
   it("reverses order when reverseOrder is true", () => {
     render(<EntryList {...defaultProps} reverseOrder={true} />);
 
-    const entries = screen.getAllByRole("link", { name: /read more/i });
+    // Jetzt ist die ganze Card klickbar, daher suchen wir nach allen Links
+    const links = screen.getAllByRole("link");
 
     // Bei reverseOrder sollte der erste Link zum letzten Blog führen (Index 2)
-    expect(entries[0]).toHaveAttribute("href", "/blog/2");
+    expect(links[0]).toHaveAttribute("href", "/blog/2");
     // Der dritte Link sollte zum ersten Blog führen (Index 0)
-    expect(entries[2]).toHaveAttribute("href", "/blog/0");
+    expect(links[2]).toHaveAttribute("href", "/blog/0");
   });
 
   /**
@@ -140,11 +142,12 @@ describe("EntryList Component", () => {
   it("generates correct links with basePath and indices", () => {
     render(<EntryList {...defaultProps} />);
 
-    const readMoreLinks = screen.getAllByRole("link", { name: /read more/i });
+    // Jetzt ist die ganze Card klickbar, daher suchen wir nach allen Links
+    const links = screen.getAllByRole("link");
 
-    expect(readMoreLinks[0]).toHaveAttribute("href", "/blog/0");
-    expect(readMoreLinks[1]).toHaveAttribute("href", "/blog/1");
-    expect(readMoreLinks[2]).toHaveAttribute("href", "/blog/2");
+    expect(links[0]).toHaveAttribute("href", "/blog/0");
+    expect(links[1]).toHaveAttribute("href", "/blog/1");
+    expect(links[2]).toHaveAttribute("href", "/blog/2");
   });
 
   /**
@@ -181,8 +184,9 @@ describe("EntryList Component", () => {
     const customBasePath = "/quantum/basics";
     render(<EntryList {...defaultProps} basePath={customBasePath} />);
 
-    const readMoreLinks = screen.getAllByRole("link", { name: /read more/i });
-    expect(readMoreLinks[0]).toHaveAttribute("href", "/quantum/basics/0");
+    // Jetzt ist die ganze Card klickbar, daher suchen wir nach allen Links
+    const links = screen.getAllByRole("link");
+    expect(links[0]).toHaveAttribute("href", "/quantum/basics/0");
 
     const viewAllLink = screen.queryByText("View all entries →");
     if (viewAllLink) {

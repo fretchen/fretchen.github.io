@@ -3,13 +3,13 @@ import * as React from "react";
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
 import blogs from "../../../quantum/qml/blogs.json";
-import TitleBar from "../../../components/TitleBar";
+import { titleBar } from "../../../layouts/styles";
 import { css } from "../../../styled-system/css";
 
 const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
-      <TitleBar title="Beginners guide to Quantum Machine Learning" />
+      <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         Classical machine learning has changed the internet in a dramatic fashion. Because of this, researchers put a
         substantial effort into the develop of quantum machine learning. In this series of tutorials on quantum

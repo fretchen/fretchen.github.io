@@ -18,12 +18,12 @@ interface StarSupportProps {
 export default function StarSupport({ variant = "progress", className }: StarSupportProps) {
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
-  
+
   // Reading progress state
   const [readingProgress, setReadingProgress] = React.useState(0);
   const [isVisible, setIsVisible] = React.useState(false);
   const [showTooltip, setShowTooltip] = React.useState(false);
-  
+
   // Support functionality
   const { supportCount, isLoading, isSuccess, errorMessage, isConnected, handleSupport } = useSupportAction(currentUrl);
 
@@ -35,7 +35,7 @@ export default function StarSupport({ variant = "progress", className }: StarSup
       const scrollTop = window.pageYOffset;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min((scrollTop / docHeight) * 100, 100);
-      
+
       setReadingProgress(progress);
       setIsVisible(progress > 5); // Show after 5% scroll
     };
@@ -91,7 +91,7 @@ export default function StarSupport({ variant = "progress", className }: StarSup
         {renderStarIcon()}
         <span className={starSupport.supportCount}>{isLoading ? "..." : supportCount}</span>
       </button>
-      
+
       {/* Tooltip for errors */}
       {showTooltip && errorMessage && <div className={starSupport.tooltip}>{errorMessage}</div>}
     </div>
@@ -104,7 +104,7 @@ export default function StarSupport({ variant = "progress", className }: StarSup
         <div className={starSupport.progressBar}>
           <div className={starSupport.progressFill} style={{ width: `${readingProgress}%` }} />
         </div>
-        
+
         {renderSupportButton(starSupport.supportButton)}
       </div>
     );
@@ -117,7 +117,7 @@ export default function StarSupport({ variant = "progress", className }: StarSup
         ⭐ Quality content? Support the creator!
         {parseInt(supportCount) > 0 && ` ${supportCount} others already did.`}
       </div>
-      
+
       {renderSupportButton(starSupport.inlineButton)}
     </div>
   );

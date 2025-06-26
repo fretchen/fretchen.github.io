@@ -29,15 +29,15 @@ export default function WalletOptions() {
   // Prevent hydration mismatch by only showing wallet data after client-side mount
   React.useEffect(() => {
     setIsMounted(true);
-    
+
     // Check if mobile on mount and listen for resize
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
-    
+
     return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
@@ -56,12 +56,12 @@ export default function WalletOptions() {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
-    
+
     // Update button position for mobile fixed positioning
     if (isMobile && buttonRef.current) {
       setButtonRect(buttonRef.current.getBoundingClientRect());
     }
-    
+
     setIsOpen(true);
   };
 
@@ -100,7 +100,7 @@ export default function WalletOptions() {
   // Mobile menu positioning
   const getMobileMenuStyle = (): React.CSSProperties => {
     if (!isMobile || !buttonRect) return {};
-    
+
     return {
       position: "fixed",
       top: buttonRect.bottom + 4,

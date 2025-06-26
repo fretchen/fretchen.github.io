@@ -22,7 +22,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
     const handleScroll = () => {
       const { scrollLeft, scrollWidth, clientWidth } = navigationElement;
       const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 5; // 5px tolerance
-      
+
       if (isAtEnd) {
         scrollIndicatorElement.className = `${layout.scrollIndicator} ${layout.scrollIndicatorHidden}`;
       } else {

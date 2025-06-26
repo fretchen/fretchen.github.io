@@ -818,7 +818,7 @@ export const entryList = {
   entryDescription: baseContentCard.description,
   entryDate: baseContentCard.date,
   entryNftImage: baseContentCard.image,
-  
+
   // Spezifische EntryList-Styles
   entryTextContent: css({
     flex: 1,

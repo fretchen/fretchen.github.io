@@ -35,15 +35,15 @@ export default function SupportArea() {
     const rawUrl = window.location.origin + currentUrl;
     const cleanUrl = rawUrl.replace(/\/+$/, "");
     setFullUrl(cleanUrl);
-    
+
     // Mobile detection
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
-    
+
     return () => window.removeEventListener("resize", checkIsMobile);
   }, [currentUrl]);
 

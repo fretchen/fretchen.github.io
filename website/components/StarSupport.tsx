@@ -115,7 +115,7 @@ export default function StarSupport({ variant = "progress", className }: StarSup
     <div className={`${starSupport.inlineContainer} ${className || ""}`}>
       <div className={starSupport.inlineText}>
         ⭐ Quality content? Support the creator!
-        {parseInt(supportCount) > 0 && ` ${supportCount} others already did.`}
+        {parseInt(supportCount, 10) > 0 && ` ${supportCount} others already did.`}
       </div>
 
       {renderSupportButton(starSupport.inlineButton)}

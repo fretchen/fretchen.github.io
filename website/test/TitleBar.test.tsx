@@ -1,19 +1,14 @@
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import TitleBar from "../components/TitleBar";
-
-// Mock SupportArea da es komplexe Blockchain-Abhängigkeiten hat
-vi.mock("../components/SupportArea", () => ({
-  default: () => <div data-testid="support-area">Mocked Support Area</div>,
-}));
 
 /**
  * Component tests for the TitleBar component
  * Tests title rendering, layout structure, and edge cases
  *
- * @fileoverview Unit tests covering title display, SupportArea integration,
- * layout validation, and various title input scenarios for the TitleBar component
+ * @fileoverview Unit tests covering title display, layout validation,
+ * and various title input scenarios for the TitleBar component
  */
 describe("TitleBar Component", () => {
   /**

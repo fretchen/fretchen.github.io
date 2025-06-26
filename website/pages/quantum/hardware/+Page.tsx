@@ -3,13 +3,13 @@ import * as React from "react";
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
 import blogs from "../../../quantum/hardware/blogs.json";
-import TitleBar from "../../../components/TitleBar";
+import { titleBar } from "../../../layouts/styles";
 import { css } from "../../../styled-system/css";
 
 const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
-      <TitleBar title="Quantum Hardware" />
+      <h1 className={titleBar.title}>Quantum Hardware</h1>
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         Quantum technologies are rapidly evolving and different applications require very different hardware platforms.
         Especially for computational tasks there is a fierce competition with unknown outcome. In this series of

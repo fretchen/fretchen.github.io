@@ -400,46 +400,166 @@ export const imageGen = {
 
 // ===== KOMPONENTEN-SPEZIFISCHE STILE =====
 
-// Card component styles
-export const card = {
+// ===== EINHEITLICHE KARTEN-STYLES =====
+
+// Basis-Stil für alle Karten-Komponenten
+export const baseContentCard = {
   container: css({
     width: "100%",
     borderRadius: "md",
     overflow: "hidden",
     boxShadow: "sm",
     transition: "all 0.3s ease",
+    cursor: "pointer",
+    textDecoration: "none",
+    color: "inherit",
+    display: "block",
     _hover: {
       boxShadow: "md",
       transform: "translateX(4px)",
+      textDecoration: "none",
     },
     bg: "white",
     marginY: "3",
-    marginX: "1",
+    // Mobile: Vereinfachte Hover-Effekte und engere Abstände
+    "@media (max-width: 768px)": {
+      marginY: "1",
+      _hover: {
+        boxShadow: "md",
+        transform: "scale(1.01)",
+        textDecoration: "none",
+      },
+    },
+    "@media (max-width: 480px)": {
+      marginY: "0.5",
+      borderRadius: "sm", // Kleinerer Grenzradius für mobile Geräte
+    },
   }),
   content: css({
     padding: "6",
     display: "flex",
     flexDirection: "row",
     gap: "4",
-    alignItems: "center",
+    alignItems: "flex-start",
+    // Mobile responsive Layout - einheitliche Abstände
+    "@media (max-width: 768px)": {
+      padding: "3", // Viel engere Polsterung
+      gap: "2.5",
+    },
+    "@media (max-width: 480px)": {
+      flexDirection: "row", // Horizontal auf mobile für engeres Layout
+      gap: "2",
+      padding: "2.5",
+      alignItems: "center", // Zentrierte Ausrichtung für bessere visuelle Balance
+    },
   }),
   text: css({
     flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0, // Verhindert Überläufe von Flex-Elementen
+    gap: "1", // Konsistente interne Abstände
+    // Mobile: Interne Abstände für engeres Layout entfernen
+    "@media (max-width: 480px)": {
+      gap: "0.5",
+    },
   }),
   title: css({
     fontSize: "xl",
     fontWeight: "semibold",
     margin: 0,
+    lineHeight: "1.3",
+    // Mobile: Größerer Titel
+    "@media (max-width: 768px)": {
+      fontSize: "lg",
+      lineHeight: "1.4",
+      fontWeight: "bold", // Etwas fetter für Betonung
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "base", // Größer als vorher auf mobile
+      lineHeight: "1.4",
+      fontWeight: "bold",
+    },
   }),
   description: css({
-    color: "gray.600",
+    margin: "0.5 0 0 0",
     fontSize: "sm",
-    marginTop: "1",
+    color: "gray.600",
+    lineHeight: "1.5",
+    // Mobile: Beschreibung ausblenden oder verkürzen
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      lineHeight: "1.5",
+      margin: "0.25 0 0 0",
+      // Beschreibung auf Tablet abschneiden
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
+    "@media (max-width: 480px)": {
+      display: "none", // Vollständig auf mobile ausblenden
+    },
   }),
-  link: css({
-    whiteSpace: "nowrap",
-    fontWeight: "medium",
+  // Zusätzliche Styles für Bilder
+  image: css({
+    width: "20", // 80px Thumbnail-Größe
+    height: "20", // 80px Thumbnail-Größe
+    borderRadius: "xl",
+    objectFit: "cover",
+    border: "1px solid",
+    borderColor: "gray.300",
+    backgroundColor: "gray.100",
+    flexShrink: 0,
+    // Responsive Bildgrößen
+    "@media (max-width: 768px)": {
+      width: "12", // 48px auf Tablet
+      height: "12",
+      borderRadius: "lg",
+    },
+    "@media (max-width: 480px)": {
+      width: "10", // 40px auf mobile - kleiner aber noch sichtbar
+      height: "10",
+      borderRadius: "md",
+    },
   }),
+  // Zusätzliche Styles für Datum
+  date: css({
+    margin: "0",
+    fontSize: "sm",
+    color: "gray.600",
+    marginBottom: "0.5", // Reduzierte Abstände
+    // Mobile: Kleiner und subtiler
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      marginBottom: "0.25",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "2xs", // Sehr klein auf mobile
+      marginBottom: "0",
+    },
+  }),
+};
+
+// Container für Listen von Karten
+export const baseContentCardList = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4",
+  "@media (max-width: 768px)": {
+    gap: "2", // Engere Abstände auf mobile
+  },
+  "@media (max-width: 480px)": {
+    gap: "1.5", // Noch enger auf kleinen mobilen Geräten
+  },
+});
+
+// Übergangs-Stil für bestehende Card-Komponente (zur Kompatibilität)
+export const card = {
+  container: baseContentCard.container,
+  content: baseContentCard.content,
+  text: baseContentCard.text,
+  title: baseContentCard.title,
+  description: baseContentCard.description,
 };
 
 // WalletOptions component styles
@@ -449,19 +569,38 @@ export const walletOptions = {
     display: "inline-block",
   }),
   button: css({
+    // Consistent outline/border style for all screen sizes
     padding: "8px 16px",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
+    backgroundColor: "transparent",
+    color: "brand",
+    border: "1px solid token(colors.brand)",
     borderRadius: "sm",
     cursor: "pointer",
-    fontWeight: "bold",
+    fontWeight: "medium",
     display: "flex",
     alignItems: "center",
     gap: "xs",
     transition: "all 0.2s ease",
+    minWidth: "120px", // Ensure minimum width for readability on desktop
+    justifyContent: "center",
     _hover: {
-      backgroundColor: "#0052a3",
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderColor: "#0052a3",
+      color: "#0052a3",
+    },
+    // Mobile responsive styles - smaller and more compact
+    "@media (max-width: 768px)": {
+      padding: "6px 10px",
+      fontSize: "13px",
+      minWidth: "auto",
+      maxWidth: "none",
+      width: "auto",
+      marginLeft: "token(spacing.sm)", // Kleiner Abstand zu den anderen Links
+    },
+    "@media (max-width: 480px)": {
+      padding: "4px 8px",
+      fontSize: "12px",
+      marginLeft: "token(spacing.xs)",
     },
   }),
   menu: css({
@@ -469,7 +608,7 @@ export const walletOptions = {
     backgroundColor: "background",
     minWidth: "160px",
     boxShadow: "0px 8px 20px 0px rgba(0,0,0,0.15)",
-    zIndex: 1000,
+    zIndex: 2000, // Höherer z-index um über scrollbare Navigation zu sein
     right: "0",
     borderRadius: "sm",
     marginTop: "2px", // Reduced gap to make it feel more connected
@@ -495,80 +634,6 @@ export const walletOptions = {
   menuItemHover: css({
     backgroundColor: "rgba(59, 130, 246, 0.08)",
     color: "brand",
-  }),
-};
-
-// SupportArea component styles
-export const supportArea = {
-  container: css({
-    display: "flex",
-    alignItems: "center",
-    margin: "md 0",
-  }),
-  buttonGroup: css({
-    display: "flex",
-  }),
-  buttonBase: css({
-    padding: "sm",
-    backgroundColor: "brand",
-    color: "light",
-    fontWeight: "bold",
-    height: "36px",
-    boxSizing: "border-box",
-    display: "flex",
-    alignItems: "center",
-  }),
-  writeButton: css({
-    padding: "sm",
-    backgroundColor: "brand",
-    color: "light",
-    fontWeight: "bold",
-    height: "36px",
-    borderRadius: "4px 0 0 4px",
-    borderRight: "1px solid white",
-    borderLeft: "none",
-    borderTop: "none",
-    borderBottom: "none",
-    boxSizing: "border-box",
-    display: "flex",
-    alignItems: "center",
-    cursor: "pointer",
-    _disabled: {
-      backgroundColor: "#5a7aac",
-      cursor: "not-allowed",
-    },
-  }),
-  readDisplay: css({
-    padding: "sm",
-    backgroundColor: "brand",
-    color: "light",
-    fontWeight: "bold",
-    height: "36px",
-    borderRadius: "0 4px 4px 0",
-    border: "none",
-    minWidth: "20px",
-    boxSizing: "border-box",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  }),
-  tooltipContainer: css({
-    position: "relative",
-  }),
-  tooltip: css({
-    position: "absolute",
-    bottom: "100%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    marginBottom: "xs",
-    padding: "sm",
-    backgroundColor: "background",
-    border: "1px solid",
-    borderRadius: "sm",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-    width: "max-content",
-    maxWidth: "250px",
-    zIndex: "100",
   }),
 };
 
@@ -613,74 +678,29 @@ export const post = {
 
 // EntryList component styles
 export const entryList = {
-  container: css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "4",
-  }),
-  entry: css({
-    width: "100%",
-    borderRadius: "md",
-    overflow: "hidden",
-    boxShadow: "sm",
-    transition: "all 0.3s ease",
-    _hover: {
-      boxShadow: "md",
-      transform: "translateX(4px)",
-    },
-    bg: "white",
-    marginY: "3",
-  }),
-  entryContent: css({
-    padding: "6",
-    display: "flex",
-    flexDirection: "row",
-    gap: "4",
-    alignItems: "flex-start",
-  }),
-  entryNftImage: css({
-    width: "20", // 80px thumbnail size
-    height: "20", // 80px thumbnail size
-    borderRadius: "xl",
-    objectFit: "cover",
-    border: "1px solid",
-    borderColor: "gray.300",
-    backgroundColor: "gray.100",
-    flexShrink: 0,
-  }),
-  entryText: css({
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  }),
+  // Verwendung der einheitlichen Basis-Styles
+  container: baseContentCardList,
+  entry: baseContentCard.container,
+  entryContent: baseContentCard.content,
+  entryText: baseContentCard.text,
+  entryTitle: baseContentCard.title,
+  entryDescription: baseContentCard.description,
+  entryDate: baseContentCard.date,
+  entryNftImage: baseContentCard.image,
+
+  // Spezifische EntryList-Styles
   entryTextContent: css({
     flex: 1,
     display: "flex",
     flexDirection: "column",
   }),
-  entryDate: css({
-    margin: "0",
-    fontSize: "sm",
-    color: "gray.600",
-    marginBottom: "1",
-  }),
-  entryTitle: css({
-    fontSize: "xl",
-    fontWeight: "semibold",
-    margin: 0,
-  }),
-  entryDescription: css({
-    margin: "1 0 0 0",
-    fontSize: "sm",
-    color: "gray.600",
-  }),
-  entryLink: css({
-    whiteSpace: "nowrap",
-    fontWeight: "medium",
-  }),
   viewAllContainer: css({
     textAlign: "right",
     marginTop: "2",
+    "@media (max-width: 480px)": {
+      textAlign: "center",
+      marginTop: "3",
+    },
   }),
 };
 
@@ -696,6 +716,16 @@ export const layout = {
     textAlign: "center",
     margin: "token(spacing.md) token(spacing.0)",
     padding: "token(spacing.sm)",
+    // Mobile responsive styles
+    "@media (max-width: 768px)": {
+      fontSize: "1.8rem",
+      margin: "token(spacing.sm) token(spacing.0)",
+      padding: "token(spacing.xs)",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "1.5rem",
+      margin: "token(spacing.xs) token(spacing.0)",
+    },
   }),
   appbar: css({
     padding: "token(spacing.sm) token(spacing.md)",
@@ -705,14 +735,110 @@ export const layout = {
     gap: "token(spacing.md)",
     borderBottom: "token(borders.light)",
     alignItems: "center",
+    // Mobile responsive styles - simplere Struktur
+    "@media (max-width: 768px)": {
+      gap: "token(spacing.sm)",
+      padding: "token(spacing.sm)",
+    },
+    "@media (max-width: 480px)": {
+      gap: "token(spacing.xs)",
+      padding: "token(spacing.xs) token(spacing.sm)",
+    },
   }),
-  walletContainer: css({
-    marginLeft: "auto",
+  // Navigation container wrapper for positioning scroll indicator
+  navigationContainer: css({
+    position: "relative",
+    flex: 1,
+    display: "flex",
+    "@media (max-width: 768px)": {
+      width: "100%",
+    },
+  }),
+  navigationLinks: css({
+    display: "flex",
+    flexDirection: "row",
+    gap: "token(spacing.md)",
+    alignItems: "center",
+    flex: 1,
+    // Desktop: Last item (Connect button) should be pushed to the right
+    "@media (min-width: 769px)": {
+      "& > :last-child": {
+        marginLeft: "auto",
+      },
+    },
+    // Mobile responsive styles - horizontal scrolling
+    "@media (max-width: 768px)": {
+      overflowX: "auto",
+      overflowY: "hidden",
+      gap: "token(spacing.sm)",
+      width: "100%",
+      paddingBottom: "token(spacing.xs)", // Space for scrollbar
+      scrollSnapType: "x mandatory",
+      position: "relative",
+      zIndex: 1, // Niedriger z-index als das Dropdown-Menü
+    },
+    "@media (max-width: 480px)": {
+      gap: "token(spacing.sm)",
+    },
+  }),
+  // Separate scroll indicator that stays fixed
+  scrollIndicator: css({
+    display: "none",
+    "@media (max-width: 768px)": {
+      display: "block",
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: "30px",
+      height: "100%",
+      background: "linear-gradient(to right, transparent 0%, rgba(255,255,255,0.9) 70%, white 100%)",
+      pointerEvents: "none",
+      zIndex: 2,
+      opacity: 1,
+      transition: "opacity 0.3s ease",
+      "&::before": {
+        content: '"→"',
+        position: "absolute",
+        top: "50%",
+        right: "6px",
+        transform: "translateY(-50%)",
+        fontSize: "12px",
+        color: "rgba(59, 130, 246, 0.7)",
+        fontWeight: "bold",
+        animation: "pulse 2s ease-in-out infinite",
+      },
+    },
+  }),
+  // Hidden state for scroll indicator
+  scrollIndicatorHidden: css({
+    opacity: "0 !important",
+  }),
+  navigationLink: css({
+    // Ensure links don't shrink and have proper spacing for touch
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    "@media (max-width: 768px)": {
+      scrollSnapAlign: "start",
+      padding: "token(spacing.sm) token(spacing.md)",
+      minWidth: "auto",
+      textAlign: "center",
+    },
   }),
   content: css({
     padding: "token(spacing.md)",
     paddingBottom: "token(spacing.xl)",
     minHeight: "token(sizes.screen)",
+  }),
+  footer: css({
+    padding: "token(spacing.md)",
+    textAlign: "center",
+    borderTop: "1px solid token(colors.border)",
+    marginTop: "token(spacing.xl)",
+    color: "gray.600",
+  }),
+  footerAttribution: css({
+    fontSize: "sm",
+    color: "gray.500",
   }),
 };
 
@@ -1132,5 +1258,240 @@ export const nftFloat = {
     fontSize: "xs",
     color: "gray.500",
     marginTop: "xs",
+  }),
+};
+
+// TitleBar component styles - simplified to just the title
+export const titleBar = {
+  title: css({
+    fontSize: "2xl",
+    fontWeight: "bold",
+    margin: 0,
+    marginBottom: "token(spacing.sm)",
+    color: "text",
+    lineHeight: "1.2",
+    // Responsive typography
+    "@media (max-width: 768px)": {
+      fontSize: "xl",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "lg",
+    },
+    // Handle very long titles
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    wordBreak: "break-word",
+    hyphens: "auto",
+  }),
+};
+
+// StarSupport component styles - compact star-based support button
+export const starSupport = {
+  // Reading progress bar with integrated support button
+  progressContainer: css({
+    position: "sticky",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backdropFilter: "blur(10px)",
+    borderBottom: "1px solid token(colors.border)",
+    padding: "token(spacing.xs) token(spacing.md)",
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.md)",
+    zIndex: 100,
+    transition: "all 0.3s ease",
+    // Hide by default, show when scrolling
+    transform: "translateY(-100%)",
+    "&[data-visible='true']": {
+      transform: "translateY(0)",
+    },
+    "@media (max-width: 768px)": {
+      padding: "token(spacing.xs) token(spacing.sm)",
+      gap: "token(spacing.sm)",
+    },
+  }),
+  progressBar: css({
+    flex: 1,
+    height: "4px",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: "2px",
+    overflow: "hidden",
+    position: "relative",
+  }),
+  progressFill: css({
+    height: "100%",
+    backgroundColor: "brand",
+    borderRadius: "2px",
+    transition: "width 0.3s ease",
+  }),
+  supportButton: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.xs)",
+    padding: "token(spacing.xs) token(spacing.sm)",
+    backgroundColor: "transparent",
+    border: "1px solid rgba(59, 130, 246, 0.3)",
+    borderRadius: "token(radii.full)",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    color: "brand",
+    transition: "all 0.2s ease",
+    minHeight: "32px",
+    whiteSpace: "nowrap",
+    _hover: {
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderColor: "brand",
+      transform: "translateY(-1px)",
+    },
+    _active: {
+      transform: "translateY(0)",
+    },
+    _disabled: {
+      opacity: 0.6,
+      cursor: "not-allowed",
+      transform: "none",
+      _hover: {
+        transform: "none",
+        backgroundColor: "transparent",
+      },
+    },
+    "@media (max-width: 768px)": {
+      padding: "token(spacing.xs)",
+      fontSize: "xs",
+      minHeight: "28px",
+      gap: "2px",
+    },
+  }),
+  supportButtonActive: css({
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderColor: "brand",
+    color: "brand",
+  }),
+  starIcon: css({
+    fontSize: "14px",
+    transition: "all 0.2s ease",
+    "@media (max-width: 768px)": {
+      fontSize: "12px",
+    },
+  }),
+  starIconFilled: css({
+    color: "#fbbf24", // Golden yellow for filled star
+  }),
+  supportCount: css({
+    fontSize: "sm",
+    fontWeight: "medium",
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+    },
+  }),
+  // Inline variant for content placement
+  inlineContainer: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.sm)",
+    padding: "token(spacing.sm) 0",
+    borderTop: "1px solid rgba(59, 130, 246, 0.1)",
+    borderBottom: "1px solid rgba(59, 130, 246, 0.1)",
+    margin: "token(spacing.lg) 0",
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  inlineText: css({
+    flex: 1,
+    fontSize: "sm",
+    color: "gray.600",
+  }),
+  inlineButton: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.xs)",
+    padding: "token(spacing.xs) token(spacing.sm)",
+    backgroundColor: "transparent",
+    border: "1px solid rgba(59, 130, 246, 0.3)",
+    borderRadius: "token(radii.sm)",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    color: "brand",
+    transition: "all 0.2s ease",
+    _hover: {
+      backgroundColor: "rgba(59, 130, 246, 0.05)",
+      borderColor: "brand",
+    },
+    _disabled: {
+      opacity: 0.6,
+      cursor: "not-allowed",
+    },
+  }),
+  // Tooltip for errors/warnings
+  tooltip: css({
+    position: "absolute",
+    top: "100%",
+    right: 0,
+    marginTop: "token(spacing.xs)",
+    padding: "token(spacing.xs) token(spacing.sm)",
+    backgroundColor: "background",
+    border: "1px solid token(colors.border)",
+    borderRadius: "token(radii.sm)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    fontSize: "xs",
+    color: "text",
+    whiteSpace: "nowrap",
+    zIndex: 1000,
+    "@media (max-width: 768px)": {
+      position: "fixed",
+      top: "10px",
+      left: "10px",
+      right: "10px",
+      marginTop: 0,
+      whiteSpace: "normal",
+      textAlign: "center",
+    },
+  }),
+};
+
+// MetadataLine component styles - discrete content metadata integration
+export const metadataLine = {
+  container: css({
+    fontSize: "sm",
+    color: "gray.600",
+    marginBottom: "lg",
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    flexWrap: "wrap",
+    lineHeight: "1.4",
+    // Mobile responsive
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      gap: "xs",
+    },
+  }),
+  separator: css({
+    margin: "0 token(spacing.xs)",
+    opacity: 0.5,
+    userSelect: "none",
+  }),
+  supportButton: css({
+    background: "none",
+    border: "none",
+    color: "inherit",
+    cursor: "pointer",
+    textDecoration: "none",
+    fontSize: "inherit",
+    fontFamily: "inherit",
+    padding: 0,
+    margin: 0,
+    transition: "all 0.2s ease",
+    _hover: {
+      color: "brand",
+    },
+    _disabled: {
+      cursor: "default",
+      opacity: 0.6,
+    },
   }),
 };

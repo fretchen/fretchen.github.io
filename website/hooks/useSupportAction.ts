@@ -1,26 +1,18 @@
 import * as React from "react";
-import { usePageContext } from "vike-react/usePageContext";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { parseEther } from "viem";
-import { type BaseError, useReadContract } from "wagmi";
+import { useReadContract } from "wagmi";
 import { getChain, getSupportContractConfig } from "../utils/getChain";
-import { supportArea } from "../layouts/styles";
 
 /**
- * SupportArea Component
- *
- * Allows users to support content by donating a small amount of ETH.
- * Displays the current support count for the URL.
+ * Custom hook for handling support/like functionality
+ * Separates Web3 logic from UI components
  */
-export default function SupportArea() {
-  const pageContext = usePageContext();
-  const currentUrl = pageContext.urlPathname;
-
+export function useSupportAction(url: string) {
   // States
-  const [fullUrl, setFullUrl] = React.useState(currentUrl);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [fullUrl, setFullUrl] = React.useState(url);
 
   // Wagmi hooks
   const { isConnected } = useAccount();
@@ -31,10 +23,12 @@ export default function SupportArea() {
 
   // Set full URL after hydration
   React.useEffect(() => {
-    const rawUrl = window.location.origin + currentUrl;
-    const cleanUrl = rawUrl.replace(/\/+$/, "");
-    setFullUrl(cleanUrl);
-  }, [currentUrl]);
+    if (typeof window !== "undefined") {
+      const rawUrl = window.location.origin + url;
+      const cleanUrl = rawUrl.replace(/\/+$/, "");
+      setFullUrl(cleanUrl);
+    }
+  }, [url]);
 
   // Chain and contract configuration
   const chain = getChain();
@@ -43,7 +37,7 @@ export default function SupportArea() {
 
   // Read support data
   const {
-    data,
+    data: supportCount,
     error: readError,
     isPending: isReadPending,
     refetch,
@@ -55,7 +49,7 @@ export default function SupportArea() {
   });
 
   // Handle support action
-  const handleSupport = async () => {
+  const handleSupport = React.useCallback(async () => {
     setErrorMessage(null);
     if (!fullUrl) {
       setErrorMessage("URL ist erforderlich");
@@ -75,7 +69,7 @@ export default function SupportArea() {
       args: [fullUrl],
       value: donationAmount,
     });
-  };
+  }, [fullUrl, isCorrectNetwork, chain.name, writeContract, supportContractConfig, donationAmount]);
 
   // Update state after transaction
   React.useEffect(() => {
@@ -96,41 +90,16 @@ export default function SupportArea() {
   const warningMessage =
     errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
 
-  // PandaCSS styles
-  const styles = supportArea;
-
-  // Render ReadSupport based on status
-  const renderReadSupport = () => {
-    if (isReadPending) return <div className={styles.readDisplay}>Loading...</div>;
-    if (readError)
-      return (
-        <div className={styles.readDisplay}>Error: {(readError as BaseError).shortMessage || readError.message}</div>
-      );
-    return <div className={styles.readDisplay}>{data?.toString() || "0"}</div>;
+  return {
+    // State
+    supportCount: supportCount?.toString() || "0",
+    isLoading: isLoading || isPending || isConfirming,
+    isSuccess,
+    errorMessage: warningMessage,
+    isConnected,
+    isReadPending,
+    readError,
+    // Actions
+    handleSupport,
   };
-
-  return (
-    <div className={styles.container}>
-      <div className={styles.buttonGroup}>
-        {/* WriteSupport Button */}
-        <div className={styles.tooltipContainer}>
-          <button
-            onClick={handleSupport}
-            disabled={!isConnected || isLoading || isPending || isConfirming}
-            className={styles.writeButton}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-          >
-            {isLoading || isPending ? "Processing..." : isSuccess ? "Supported!" : "Support"}
-          </button>
-
-          {/* Tooltip */}
-          {showTooltip && warningMessage && <div className={styles.tooltip}>{warningMessage}</div>}
-        </div>
-
-        {/* ReadSupport */}
-        {renderReadSupport()}
-      </div>
-    </div>
-  );
 }

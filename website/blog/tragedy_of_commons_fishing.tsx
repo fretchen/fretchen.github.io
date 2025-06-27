@@ -30,87 +30,191 @@ const historicalData = [
   { year: 1992, catch: 0, stock: 5, employment: 0 },
 ];
 
-// Fishing Game Component
+// Types
+type PlayerChoice = "cooperate" | "defect";
+type GamePhase = "intro" | "deciding" | "reveal" | "finished";
+
+// Simplified Commons Game Component
 const FishingGameSimulator: React.FC = () => {
-  const [userHours, setUserHours] = useState(8);
-  const [fishStock, setFishStock] = useState(100);
-  const [week, setWeek] = useState(1);
-  const [userIncome, setUserIncome] = useState(0);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [gameHistory, setGameHistory] = useState<
-    Array<{ week: number; stock: number; userCatch: number; income: number }>
+  const [currentRound, setCurrentRound] = useState(1);
+  const [gamePhase, setGamePhase] = useState<GamePhase>("intro");
+  const [playerChoice, setPlayerChoice] = useState<PlayerChoice | null>(null);
+  const [commonPool, setCommonPool] = useState(100);
+  const [playerTotal, setPlayerTotal] = useState(0);
+  const [roundHistory, setRoundHistory] = useState<
+    Array<{
+      round: number;
+      playerChoice: PlayerChoice;
+      aiChoices: PlayerChoice[];
+      playerGain: number;
+      poolAfter: number;
+    }>
   >([]);
-  const [gameOver, setGameOver] = useState(false);
-  const [aiStrategies] = useState<FishingStrategy[]>(["sustainable", "moderate", "aggressive", "greedy"]);
 
-  const calculateCatch = (hours: number, stock: number) => {
-    // Catch efficiency decreases as stock depletes
-    const efficiency = Math.max(0.1, stock / 100);
-    return Math.round(hours * efficiency * 5);
-  };
+  // AI players with personalities
+  const aiPlayers = [
+    { name: "🌱 Grüner", strategy: "mostly_cooperate", description: "Kooperiert fast immer" },
+    { name: "⚖️ Tit-for-Tat", strategy: "adaptive", description: "Beginnt kooperativ, passt sich an" },
+    { name: "� Gieriger", strategy: "mostly_defect", description: "Defektiert fast immer" },
+  ];
 
-  const calculateAICatch = (strategy: FishingStrategy, stock: number, _week: number) => {
-    const baseHours = {
-      sustainable: 6,
-      moderate: 8,
-      aggressive: 10,
-      greedy: 12,
-    };
-
-    // Some strategies adapt based on stock level
-    let hours = baseHours[strategy];
-    if (strategy === "moderate" && stock < 50) hours = 6;
-    if (strategy === "aggressive" && stock < 30) hours = 8;
-
-    return calculateCatch(hours, stock);
-  };
-
-  const runWeek = () => {
-    if (gameOver || week > 10) return;
-
-    // Calculate catches
-    const userCatch = calculateCatch(userHours, fishStock);
-    const aiCatches = aiStrategies.map((strategy) => calculateAICatch(strategy, fishStock, week));
-    const totalCatch = userCatch + aiCatches.reduce((sum, catchAmount) => sum + catchAmount, 0);
-
-    // Calculate income (price decreases if too much fish in market)
-    const basePrice = 10;
-    const marketPrice = Math.max(5, basePrice - totalCatch * 0.02);
-    const weekIncome = userCatch * marketPrice;
-
-    // Update fish stock (natural reproduction minus total catch)
-    const reproduction = Math.max(0, fishStock * 0.1); // 10% natural growth
-    const newStock = Math.max(0, fishStock + reproduction - totalCatch);
-
-    // Update state
-    setFishStock(newStock);
-    setUserIncome(weekIncome);
-    setTotalIncome((prev) => prev + weekIncome);
-    setGameHistory((prev) => [
-      ...prev,
-      {
-        week,
-        stock: newStock,
-        userCatch,
-        income: weekIncome,
-      },
-    ]);
-
-    if (newStock < 5) {
-      setGameOver(true);
+  const makeAIChoice = (aiIndex: number, round: number, history: any[]): PlayerChoice => {
+    const ai = aiPlayers[aiIndex];
+    
+    if (ai.strategy === "mostly_cooperate") {
+      return Math.random() < 0.8 ? "cooperate" : "defect";
+    } else if (ai.strategy === "mostly_defect") {
+      return Math.random() < 0.2 ? "cooperate" : "defect";
+    } else { // adaptive/tit-for-tat
+      if (round === 1) return "cooperate";
+      const lastRound = history[history.length - 1];
+      if (!lastRound) return "cooperate";
+      // Copy what the majority did last round
+      const defectors = lastRound.aiChoices.filter((c: PlayerChoice) => c === "defect").length;
+      if (lastRound.playerChoice === "defect") defectors++;
+      return defectors >= 2 ? "defect" : "cooperate";
     }
+  };
 
-    setWeek((prev) => prev + 1);
+  const calculateRoundOutcome = (playerChoice: PlayerChoice) => {
+    const aiChoices = aiPlayers.map((_, index) => makeAIChoice(index, currentRound, roundHistory));
+    
+    // Count cooperators and defectors
+    const allChoices = [playerChoice, ...aiChoices];
+    const cooperators = allChoices.filter(c => c === "cooperate").length;
+    const defectors = allChoices.filter(c => c === "defect").length;
+    
+    // Calculate gains (cooperate = 10, defect = 20)
+    const playerGain = playerChoice === "cooperate" ? 10 : 20;
+    const totalExtracted = cooperators * 10 + defectors * 20;
+    
+    // Update pool with growth (10% per round) minus extraction
+    const poolWithGrowth = Math.round(commonPool * 1.1);
+    const newPool = Math.max(0, poolWithGrowth - totalExtracted);
+    
+    return {
+      aiChoices,
+      playerGain,
+      poolAfter: newPool,
+      totalExtracted,
+      cooperators,
+      defectors,
+    };
+  };
+
+  const handlePlayerChoice = (choice: PlayerChoice) => {
+    setPlayerChoice(choice);
+    const outcome = calculateRoundOutcome(choice);
+    
+    setRoundHistory(prev => [...prev, {
+      round: currentRound,
+      playerChoice: choice,
+      aiChoices: outcome.aiChoices,
+      playerGain: outcome.playerGain,
+      poolAfter: outcome.poolAfter,
+    }]);
+    
+    setPlayerTotal(prev => prev + outcome.playerGain);
+    setCommonPool(outcome.poolAfter);
+    setGamePhase("reveal");
+  };
+
+  const nextRound = () => {
+    if (currentRound >= 3 || commonPool <= 10) {
+      setGamePhase("finished");
+    } else {
+      setCurrentRound((prev) => prev + 1);
+      setGamePhase("deciding");
+    }
   };
 
   const resetGame = () => {
-    setFishStock(100);
-    setWeek(1);
-    setUserIncome(0);
-    setTotalIncome(0);
-    setGameHistory([]);
-    setGameOver(false);
+    setCurrentRound(1);
+    setGamePhase("intro");
+    setCommonPool(100);
+    setPlayerTotal(0);
+    setRoundHistory([]);
   };
+
+  const startGame = () => {
+    setGamePhase("deciding");
+  };
+
+  if (gamePhase === "intro") {
+    return (
+      <div
+        className={css({
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          padding: "20px",
+          margin: "20px 0",
+          backgroundColor: "#f0f9ff",
+        })}
+      >
+        <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
+          🎣 Commons-Dilemma: Das 3-Runden-Experiment
+        </h3>
+        
+        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>📋 Die Spielregeln:</h4>
+          <div className={css({ fontSize: "14px", lineHeight: "1.6", marginBottom: "12px" })}>
+            <div>
+              🏊‍♂️ <strong>Gemeinsamer Pool:</strong> Startet mit 100 Einheiten, wächst um 10% pro Runde
+            </div>
+            <div>
+              👥 <strong>4 Spieler:</strong> Sie + 3 AI-Spieler
+            </div>
+            <div>
+              ⏰ <strong>3 Runden:</strong> Alle entscheiden gleichzeitig
+            </div>
+          </div>
+          
+          <div className={css({ backgroundColor: "#f8fafc", padding: "12px", borderRadius: "6px", marginBottom: "12px" })}>
+            <h5 className={css({ fontWeight: "bold", marginBottom: "8px" })}>💡 Ihre Entscheidungen:</h5>
+            <div className={css({ fontSize: "14px", lineHeight: "1.5" })}>
+              <div>🤝 <strong>Kooperieren:</strong> Nehmen Sie 10 Einheiten (nachhaltig)</div>
+              <div>⚡ <strong>Defektieren:</strong> Nehmen Sie 20 Einheiten (gierig)</div>
+            </div>
+          </div>
+          
+          <div className={css({ backgroundColor: "#fef2f2", padding: "12px", borderRadius: "6px" })}>            <div className={css({ fontSize: "14px", color: "#dc2626" })}>
+              <strong>⚠️ Das Dilemma:</strong> Defektieren bringt mehr Gewinn, aber wenn alle defektieren, kollabiert
+              der Pool und alle verlieren!
+            </div>
+          </div>
+        </div>
+
+        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+          <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>🤖 Ihre AI-Mitspieler:</h4>
+          <div className={css({ display: "grid", gridTemplateColumns: "1fr", gap: "8px", fontSize: "14px" })}>
+            {aiPlayers.map((ai, index) => (
+              <div key={index} className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
+                <span>{ai.name}</span>
+                <span className={css({ color: "#6b7280" })}>- {ai.description}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={startGame}
+          className={css({
+            padding: "12px 24px",
+            backgroundColor: "#3b82f6",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "16px",
+            fontWeight: "bold",
+            "&:hover": { backgroundColor: "#2563eb" },
+          })}
+        >
+          🚀 Experiment starten
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -122,120 +226,207 @@ const FishingGameSimulator: React.FC = () => {
         backgroundColor: "#f0f9ff",
       })}
     >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>🎣 Fischerdorf-Simulator</h3>
+      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
+        🎣 Commons-Dilemma: Runde {currentRound}/3
+      </h3>
 
-      <div
-        className={css({
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          gap: "16px",
-          marginBottom: "20px",
-        })}
-      >
+      <div className={css({ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "16px", marginBottom: "20px" })}>
         <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Woche</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{week}</div>
-        </div>
-        <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Fischbestand</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold", color: fishStock < 30 ? "#ef4444" : "#10b981" })}>
-            {Math.round(fishStock)}%
+          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Gemeinsamer Pool</div>
+          <div className={css({ fontSize: "24px", fontWeight: "bold", color: commonPool < 30 ? "#ef4444" : "#10b981" })}>
+            {commonPool}
           </div>
         </div>
         <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Diese Woche</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>${Math.round(userIncome)}</div>
+          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Ihr Gewinn</div>
+          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{playerTotal}</div>
         </div>
         <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Gesamt</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>${Math.round(totalIncome)}</div>
+          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Runde</div>
+          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{currentRound}/3</div>
         </div>
       </div>
 
-      {!gameOver && week <= 10 && (
+      {gamePhase === "deciding" && (
         <div className={css({ marginBottom: "20px" })}>
-          <label className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
-            Fischstunden pro Tag: {userHours}
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="12"
-            value={userHours}
-            onChange={(e) => setUserHours(parseInt(e.target.value))}
-            className={css({ width: "100%", marginBottom: "12px" })}
-          />
+          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
+            🤔 Runde {currentRound}: Treffen Sie Ihre Entscheidung
+          </h4>
+          <div className={css({ fontSize: "14px", color: "#6b7280", marginBottom: "16px" })}>
+            Aktueller Pool: {Math.round(commonPool * 1.1)} (nach 10% Wachstum)
+          </div>
+          
+          <div className={css({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" })}>
+            <button
+              onClick={() => handlePlayerChoice("cooperate")}
+              className={css({
+                padding: "16px",
+                backgroundColor: "#f0fdf4",
+                border: "2px solid #bbf7d0",
+                borderRadius: "8px",
+                cursor: "pointer",
+                textAlign: "left",
+                "&:hover": { backgroundColor: "#dcfce7" },
+              })}
+            >
+              <div className={css({ fontSize: "16px", fontWeight: "bold", color: "#16a34a", marginBottom: "4px" })}>
+                🤝 Kooperieren
+              </div>
+              <div className={css({ fontSize: "14px", color: "#6b7280" })}>
+                10 Einheiten nehmen
+              </div>
+              <div className={css({ fontSize: "12px", color: "#059669", marginTop: "4px" })}>
+                Nachhaltig für alle
+              </div>
+            </button>
+            
+            <button
+              onClick={() => handlePlayerChoice("defect")}
+              className={css({
+                padding: "16px",
+                backgroundColor: "#fefce8",
+                border: "2px solid #fbbf24",
+                borderRadius: "8px",
+                cursor: "pointer",
+                textAlign: "left",
+                "&:hover": { backgroundColor: "#fef3c7" },
+              })}
+            >
+              <div className={css({ fontSize: "16px", fontWeight: "bold", color: "#d97706", marginBottom: "4px" })}>
+                ⚡ Defektieren
+              </div>
+              <div className={css({ fontSize: "14px", color: "#6b7280" })}>
+                20 Einheiten nehmen
+              </div>
+              <div className={css({ fontSize: "12px", color: "#d97706", marginTop: "4px" })}>
+                Mehr Gewinn, aber riskant
+              </div>
+            </button>
+          </div>
+
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>
+            💡 <strong>Tipp:</strong> Was werden die anderen wohl tun? Denken Sie strategisch!
+          </div>
+        </div>
+      )}
+
+      {gamePhase === "reveal" && roundHistory.length > 0 && (
+        <div className={css({ marginBottom: "20px" })}>
+          {(() => {
+            const lastRound = roundHistory[roundHistory.length - 1];
+            return (
+              <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px" })}>
+                <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
+                  📊 Runde {lastRound.round} - Alle Entscheidungen:
+                </h4>
+                
+                <div className={css({ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "16px" })}>
+                  <div className={css({ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "6px" })}>
+                    <div className={css({ fontWeight: "bold", color: lastRound.playerChoice === "cooperate" ? "#16a34a" : "#d97706" })}>
+                      🎯 Sie: {lastRound.playerChoice === "cooperate" ? "🤝 Kooperiert" : "⚡ Defektiert"}
+                    </div>
+                    <div className={css({ fontSize: "14px", color: "#6b7280" })}>
+                      Gewinn: +{lastRound.playerGain}
+                    </div>
+                  </div>
+                  
+                  {aiPlayers.map((ai, index) => (
+                    <div key={index} className={css({ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "6px" })}>
+                      <div className={css({ fontWeight: "bold", color: lastRound.aiChoices[index] === "cooperate" ? "#16a34a" : "#d97706" })}>
+                        {ai.name}: {lastRound.aiChoices[index] === "cooperate" ? "🤝" : "⚡"}
+                      </div>
+                      <div className={css({ fontSize: "14px", color: "#6b7280" })}>
+                        {lastRound.aiChoices[index] === "cooperate" ? "Kooperiert" : "Defektiert"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={css({ backgroundColor: "#f3f4f6", padding: "12px", borderRadius: "6px", marginBottom: "16px" })}>
+                  <div className={css({ fontSize: "14px" })}>
+                    <div><strong>Gesamt extrahiert:</strong> {
+                      10 * ([lastRound.playerChoice, ...lastRound.aiChoices].filter(c => c === "cooperate").length) +
+                      20 * ([lastRound.playerChoice, ...lastRound.aiChoices].filter(c => c === "defect").length)
+                    } Einheiten</div>
+                    <div><strong>Pool danach:</strong> {lastRound.poolAfter} Einheiten</div>
+                  </div>
+                </div>
+
+                {currentRound < 3 && commonPool > 10 ? (
+                  <button
+                    onClick={nextRound}
+                    className={css({
+                      padding: "10px 20px",
+                      backgroundColor: "#3b82f6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#2563eb" },
+                    })}
+                  >
+                    ➡️ Nächste Runde
+                  </button>
+                ) : (
+                  <button
+                    onClick={nextRound}
+                    className={css({
+                      padding: "10px 20px",
+                      backgroundColor: "#16a34a",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#15803d" },
+                    })}
+                  >
+                    📈 Endergebnis anzeigen
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {gamePhase === "finished" && (
+        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+          <h4 className={css({ fontWeight: "bold", marginBottom: "12px", color: commonPool <= 10 ? "#dc2626" : "#16a34a" })}>
+            {commonPool <= 10 ? "🚨 Commons kollabiert!" : "✅ Experiment beendet!"}
+          </h4>
+          
+          <div className={css({ marginBottom: "16px" })}>
+            <div><strong>Ihr Gesamtgewinn:</strong> {playerTotal} Einheiten</div>
+            <div><strong>Finaler Pool:</strong> {commonPool} Einheiten</div>
+            <div><strong>Kooperationen:</strong> {roundHistory.filter(r => r.playerChoice === "cooperate").length}/3</div>
+          </div>
+
+          <div className={css({ backgroundColor: "#f8fafc", padding: "12px", borderRadius: "6px", marginBottom: "16px" })}>
+            <h5 className={css({ fontWeight: "bold", marginBottom: "8px" })}>🧠 Was haben Sie gelernt?</h5>
+            <div className={css({ fontSize: "14px", lineHeight: "1.5" })}>
+              {commonPool <= 10 ? (
+                <div>Der Pool ist kollabiert! Das passiert, wenn zu viele Spieler defektieren. 
+                Auch wenn Sie kooperiert haben - die Commons sind für alle verloren.</div>
+              ) : (
+                <div>Glückwunsch! Durch strategische Kooperation haben Sie und die anderen 
+                den gemeinsamen Pool erhalten.</div>
+              )}
+            </div>
+          </div>
+
           <button
-            onClick={runWeek}
+            onClick={resetGame}
             className={css({
               padding: "10px 20px",
-              backgroundColor: "#3b82f6",
+              backgroundColor: "#6366f1",
               color: "white",
               border: "none",
               borderRadius: "6px",
               cursor: "pointer",
-              "&:hover": { backgroundColor: "#2563eb" },
+              "&:hover": { backgroundColor: "#5338f5" },
             })}
           >
-            Woche {week} starten
-          </button>
-        </div>
-      )}
-
-      {gameOver && (
-        <div
-          className={css({
-            padding: "16px",
-            backgroundColor: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "6px",
-            marginBottom: "16px",
-          })}
-        >
-          <h4 className={css({ color: "#dc2626", fontWeight: "bold" })}>🚨 Fischbestand kollabiert!</h4>
-          <p>Der See ist leergefischt. Gesamteinkommen: ${Math.round(totalIncome)}</p>
-          <button
-            onClick={resetGame}
-            className={css({
-              padding: "8px 16px",
-              backgroundColor: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              marginTop: "8px",
-            })}
-          >
-            Neues Spiel
-          </button>
-        </div>
-      )}
-
-      {week > 10 && !gameOver && (
-        <div
-          className={css({
-            padding: "16px",
-            backgroundColor: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "6px",
-            marginBottom: "16px",
-          })}
-        >
-          <h4 className={css({ color: "#16a34a", fontWeight: "bold" })}>✅ Nachhaltiger Erfolg!</h4>
-          <p>Du hast 10 Wochen überlebt. Gesamteinkommen: ${Math.round(totalIncome)}</p>
-          <button
-            onClick={resetGame}
-            className={css({
-              padding: "8px 16px",
-              backgroundColor: "#10b981",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              marginTop: "8px",
-            })}
-          >
-            Neues Spiel
+            🔄 Nochmal spielen
           </button>
         </div>
       )}

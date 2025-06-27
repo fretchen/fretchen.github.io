@@ -40,19 +40,19 @@ Anpassung des klassischen Gefangenendilemmas auf Innovation in Unternehmen mit d
 - **Universal**: Relevant für alle Branchen, nicht nur Tech
 - **Skalierbar**: Kann später um andere Commons erweitert werden
 
-## Drei-Spieler Modell
+## Drei typische Governance-Ansätze für Innovation Commons
 
-### 1. Management-Perspektive: "Portfolio-Dilemma"
+### 1. Laissez-faire: Keine Regulierung
+**Prinzip**: "Der Markt regelt das schon"
+- **Mechanismus**: Teams handeln völlig eigenverantwortlich
+- **Annahme**: Selbstkorrektur durch natürliche Konsequenzen
+- **Innovation Context**: 
+  - Wissensbasis verfällt → Teams merken selbst, dass sie eigene Dokumentation brauchen
+  - Budget-Übernutzung → Projekte scheitern, Teams lernen Ressourcenplanung
+- **Typisches Ergebnis**: Tragedy of the Commons tritt ein, dann langsame Selbstorganisation
+- **Beispiele**: Startup-Umgebungen, kleine Teams, experimentelle Phasen
 
-**Akteure**: Management vs. Markt/Konkurrenz
-**Entscheidung**: Diversifizierung vs. Fokussierung der Innovationsressourcen
-
-#### Payoff-Matrix Management:
-```
-                    Markt ist diversifiziert
-                    JA                  NEIN
-Management    JA    Moderate Gewinne   Vorteil durch
-diversi-            für alle           Diversifikation
+### 2. Top-Down: Staatliche/Management-Quoten
 fiziert             
               NEIN  Risiko durch       Hohe Gewinne oder
                     Spezialisierung    totaler Verlust

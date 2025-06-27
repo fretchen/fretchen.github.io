@@ -7,6 +7,39 @@ Anpassung des klassischen Gefangenendilemmas auf Innovation in Unternehmen mit d
 - **Innovations-Teams** (Wissensaustausch)
 - **Nutzer/Kunden** (Feedback-Bereitschaft)
 
+## Fokus-Option: Common Goods / "Tragedy of the Commons" im Innovationskontext
+
+### Gemeinsame Wissensbasis als "Innovation Commons"
+
+**Die Ressource**: Firmenweite Wissensdatenbank, Best Practices, Code Libraries, interne Dokumentation
+
+**Das Dilemma**: 
+- **Nutzen**: Alle Teams können auf geteiltes Wissen zugreifen (Download Code, kopieren Lösungen, lesen Dokumentation)
+- **Beitragen**: Teams müssen Zeit investieren (Dokumentation aktualisieren, Code kommentieren, Wiki pflegen)
+- **"Overfishing"**: Teams nutzen intensiv das Wissen anderer, ohne selbst beizutragen
+
+**Tragödie**: Nach einigen Zyklen ist die Wissensbasis voller veralteter, inkompatibler Information und wird für alle Teams wertlos.
+
+### Alternative Commons-Modelle:
+
+#### Innovation-Budget als Commons
+- **Ressource**: Zentraler Innovationsfonds
+- **Overfishing**: Alle Teams beantragen maximale Mittel für riskante Experimente → Budget erschöpft
+
+#### Shared Infrastructure als Commons  
+- **Ressource**: Computing Resources, Labs, Testumgebungen
+- **Overfishing**: Überlastung ohne Wartung → Systeme brechen zusammen
+
+#### Talent-Pool als Commons
+- **Ressource**: High-Performer, Experten zwischen Teams
+- **Overfishing**: Alle wollen beste Leute, niemand bildet aus → Brain-Drain, Burnout
+
+### Warum Wissensbasis als Startpunkt:
+- **Konkret**: Jeder kennt veraltete interne Wikis
+- **Messbar**: Updates, Quality-Scores, Usage-Statistiken  
+- **Universal**: Relevant für alle Branchen, nicht nur Tech
+- **Skalierbar**: Kann später um andere Commons erweitert werden
+
 ## Drei-Spieler Modell
 
 ### 1. Management-Perspektive: "Portfolio-Dilemma"

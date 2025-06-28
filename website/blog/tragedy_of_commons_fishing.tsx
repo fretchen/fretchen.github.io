@@ -1,4 +1,9 @@
 import React, { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -15,506 +20,233 @@ import { css } from "../styled-system/css";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 // Types
-type FishingStrategy = "sustainable" | "moderate" | "aggressive" | "greedy";
 type GovernanceType = "none" | "quotas" | "ostrom";
 
-// Historical data for Newfoundland cod fishery
-const historicalData = [
-  { year: 1950, catch: 800, stock: 100, employment: 40000 },
-  { year: 1960, catch: 850, stock: 95, employment: 42000 },
-  { year: 1970, catch: 900, stock: 85, employment: 45000 },
-  { year: 1975, catch: 750, stock: 70, employment: 38000 },
-  { year: 1980, catch: 600, stock: 50, employment: 32000 },
-  { year: 1985, catch: 400, stock: 30, employment: 25000 },
-  { year: 1990, catch: 200, stock: 15, employment: 15000 },
-  { year: 1992, catch: 0, stock: 5, employment: 0 },
-];
 
-// Types
-type PlayerChoice = "cooperate" | "defect";
-type GamePhase = "intro" | "deciding" | "reveal" | "finished";
+// Types for Moana's Choice Game
+// Angepasst: Jeder Chief einzeln sichtbar
 
-// Simplified Commons Game Component
+type FishingChoice = "careful" | "intensive";
+type GamePhase = "deciding" | "reveal" | "finished";
+
+const otherChiefs = ["Chief Kai", "Chief Leilani", "Chief Tane"];
+
+type RoundHistory = {
+  round: number;
+  moanaChoice: FishingChoice | null;
+  moanaFish: number | null;
+  otherChiefs: FishingChoice[] | null;
+  chiefsFish: number[] | null; // NEU: Fang pro Chief
+  fishAfter: number | null;
+  regeneration: number | null;
+};
+
 const FishingGameSimulator: React.FC = () => {
-  const [currentRound, setCurrentRound] = useState(1);
-  const [gamePhase, setGamePhase] = useState<GamePhase>("intro");
-  const [playerChoice, setPlayerChoice] = useState<PlayerChoice | null>(null);
-  const [commonPool, setCommonPool] = useState(100);
-  const [playerTotal, setPlayerTotal] = useState(0);
-  const [roundHistory, setRoundHistory] = useState<
-    Array<{
-      round: number;
-      playerChoice: PlayerChoice;
-      aiChoices: PlayerChoice[];
-      playerGain: number;
-      poolAfter: number;
-    }>
-  >([]);
+  const [round, setRound] = useState(1); // 1, 2, 3
+  const [fishStock, setFishStock] = useState(120);
+  const [moanaTotal, setMoanaTotal] = useState(0);
+  const [history, setHistory] = useState<RoundHistory[]>([
+    { round: 1, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+    { round: 2, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+    { round: 3, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+  ]);
+  const [gameOver, setGameOver] = useState(false);
 
-  // AI players with personalities
-  const aiPlayers = [
-    { name: "🌱 Grüner", strategy: "mostly_cooperate", description: "Kooperiert fast immer" },
-    { name: "⚖️ Tit-for-Tat", strategy: "adaptive", description: "Beginnt kooperativ, passt sich an" },
-    { name: "� Gieriger", strategy: "mostly_defect", description: "Defektiert fast immer" },
-  ];
-
-  const makeAIChoice = (aiIndex: number, round: number, history: any[]): PlayerChoice => {
-    const ai = aiPlayers[aiIndex];
-    
-    if (ai.strategy === "mostly_cooperate") {
-      return Math.random() < 0.8 ? "cooperate" : "defect";
-    } else if (ai.strategy === "mostly_defect") {
-      return Math.random() < 0.2 ? "cooperate" : "defect";
-    } else { // adaptive/tit-for-tat
-      if (round === 1) return "cooperate";
-      const lastRound = history[history.length - 1];
-      if (!lastRound) return "cooperate";
-      // Copy what the majority did last round
-      const defectors = lastRound.aiChoices.filter((c: PlayerChoice) => c === "defect").length;
-      if (lastRound.playerChoice === "defect") defectors++;
-      return defectors >= 2 ? "defect" : "cooperate";
-    }
-  };
-
-  const calculateRoundOutcome = (playerChoice: PlayerChoice) => {
-    const aiChoices = aiPlayers.map((_, index) => makeAIChoice(index, currentRound, roundHistory));
-    
-    // Count cooperators and defectors
-    const allChoices = [playerChoice, ...aiChoices];
-    const cooperators = allChoices.filter(c => c === "cooperate").length;
-    const defectors = allChoices.filter(c => c === "defect").length;
-    
-    // Calculate gains (cooperate = 10, defect = 20)
-    const playerGain = playerChoice === "cooperate" ? 10 : 20;
-    const totalExtracted = cooperators * 10 + defectors * 20;
-    
-    // Update pool with growth (10% per round) minus extraction
-    const poolWithGrowth = Math.round(commonPool * 1.1);
-    const newPool = Math.max(0, poolWithGrowth - totalExtracted);
-    
-    return {
-      aiChoices,
-      playerGain,
-      poolAfter: newPool,
-      totalExtracted,
-      cooperators,
-      defectors,
-    };
-  };
-
-  const handlePlayerChoice = (choice: PlayerChoice) => {
-    setPlayerChoice(choice);
-    const outcome = calculateRoundOutcome(choice);
-    
-    setRoundHistory(prev => [...prev, {
-      round: currentRound,
-      playerChoice: choice,
-      aiChoices: outcome.aiChoices,
-      playerGain: outcome.playerGain,
-      poolAfter: outcome.poolAfter,
-    }]);
-    
-    setPlayerTotal(prev => prev + outcome.playerGain);
-    setCommonPool(outcome.poolAfter);
-    setGamePhase("reveal");
-  };
-
-  const nextRound = () => {
-    if (currentRound >= 3 || commonPool <= 10) {
-      setGamePhase("finished");
+  function handleChoice(choice: FishingChoice) {
+    if (gameOver || history[round - 1].moanaChoice) return;
+    // Chiefs wählen zufällig
+    const otherChoices = otherChiefs.map(() => (Math.random() < 0.6 ? "careful" : "intensive"));
+    const moanaFish = choice === "careful" ? 3 : 6;
+    const chiefsFish = otherChoices.map((c) => (c === "careful" ? 3 : 6));
+    let prevStock = round === 1 ? 120 : (history[round - 2].fishAfter ?? 120);
+    let nextStock = Math.max(0, prevStock - moanaFish - chiefsFish.reduce((a, b) => a + b, 0));
+    // Regeneration: 15% falls Bestand > 25, max 150
+    const regeneration = nextStock > 25 ? Math.floor(nextStock * 0.15) : 0;
+    nextStock = Math.min(150, nextStock + regeneration);
+    // Update history
+    const newHistory = history.map((h, idx) =>
+      idx === round - 1
+        ? {
+            round,
+            moanaChoice: choice,
+            moanaFish,
+            otherChiefs: otherChoices,
+            chiefsFish,
+            fishAfter: nextStock,
+            regeneration,
+          }
+        : h
+    );
+    setHistory(newHistory);
+    setMoanaTotal(moanaTotal + moanaFish);
+    setFishStock(nextStock);
+    if (round === 3) {
+      setGameOver(true);
     } else {
-      setCurrentRound((prev) => prev + 1);
-      setGamePhase("deciding");
+      setRound(round + 1);
     }
-  };
+  }
 
-  const resetGame = () => {
-    setCurrentRound(1);
-    setGamePhase("intro");
-    setCommonPool(100);
-    setPlayerTotal(0);
-    setRoundHistory([]);
-  };
+  function reset() {
+    setRound(1);
+    setFishStock(120);
+    setMoanaTotal(0);
+    setHistory([
+      { round: 1, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+      { round: 2, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+      { round: 3, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+    ]);
+    setGameOver(false);
+  }
 
-  const startGame = () => {
-    setGamePhase("deciding");
-  };
-
-  if (gamePhase === "intro") {
+  // Minimalistische Statusleiste
+  function StatusBar() {
     return (
-      <div
-        className={css({
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          padding: "20px",
-          margin: "20px 0",
-          backgroundColor: "#f0f9ff",
-        })}
-      >
-        <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
-          🎣 Commons-Dilemma: Das 3-Runden-Experiment
-        </h3>
-        
-        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
-          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>📋 Die Spielregeln:</h4>
-          <div className={css({ fontSize: "14px", lineHeight: "1.6", marginBottom: "12px" })}>
-            <div>
-              🏊‍♂️ <strong>Gemeinsamer Pool:</strong> Startet mit 100 Einheiten, wächst um 10% pro Runde
-            </div>
-            <div>
-              👥 <strong>4 Spieler:</strong> Sie + 3 AI-Spieler
-            </div>
-            <div>
-              ⏰ <strong>3 Runden:</strong> Alle entscheiden gleichzeitig
-            </div>
-          </div>
-          
-          <div className={css({ backgroundColor: "#f8fafc", padding: "12px", borderRadius: "6px", marginBottom: "12px" })}>
-            <h5 className={css({ fontWeight: "bold", marginBottom: "8px" })}>💡 Ihre Entscheidungen:</h5>
-            <div className={css({ fontSize: "14px", lineHeight: "1.5" })}>
-              <div>🤝 <strong>Kooperieren:</strong> Nehmen Sie 10 Einheiten (nachhaltig)</div>
-              <div>⚡ <strong>Defektieren:</strong> Nehmen Sie 20 Einheiten (gierig)</div>
-            </div>
-          </div>
-          
-          <div className={css({ backgroundColor: "#fef2f2", padding: "12px", borderRadius: "6px" })}>            <div className={css({ fontSize: "14px", color: "#dc2626" })}>
-              <strong>⚠️ Das Dilemma:</strong> Defektieren bringt mehr Gewinn, aber wenn alle defektieren, kollabiert
-              der Pool und alle verlieren!
-            </div>
-          </div>
-        </div>
+      <div style={{ display: "flex", gap: 16, fontSize: 15, marginBottom: 12, justifyContent: "center" }}>
+        <span>🐟 <b>{fishStock}</b> im Riff</span>
+        <span>🌺 <b>{moanaTotal}</b> gefangen</span>
+        <span>Runde <b>{gameOver ? 3 : round}/3</b></span>
+      </div>
+    );
+  }
 
-        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
-          <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>🤖 Ihre AI-Mitspieler:</h4>
-          <div className={css({ display: "grid", gridTemplateColumns: "1fr", gap: "8px", fontSize: "14px" })}>
-            {aiPlayers.map((ai, index) => (
-              <div key={index} className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
-                <span>{ai.name}</span>
-                <span className={css({ color: "#6b7280" })}>- {ai.description}</span>
-              </div>
+  // Vergleichs-Tabelle: Moana + alle Chiefs einzeln
+  function ResultsTable() {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", margin: "18px 0" }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 15, minWidth: 420 }}>
+          <thead>
+            <tr style={{ background: "#bae6fd" }}>
+              <th style={{ padding: "6px 8px" }}>Runde</th>
+              <th style={{ padding: "6px 8px" }}>Moana</th>
+              {otherChiefs.map((chief) => (
+                <th key={chief} style={{ padding: "6px 8px" }}>{chief}</th>
+              ))}
+              <th style={{ padding: "6px 8px" }}>Fischbestand</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((h, idx) => (
+              <tr key={idx} style={{ background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: idx === round - 1 && !gameOver ? 600 : 400 }}>{h.round}</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>{h.moanaFish !== null ? h.moanaFish : "-"}</td>
+                {otherChiefs.map((_, i) => (
+                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>{h.chiefsFish && h.chiefsFish[i] !== undefined ? h.chiefsFish[i] : "-"}</td>
+                ))}
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>{h.fishAfter !== null ? h.fishAfter : "-"}</td>
+              </tr>
             ))}
-          </div>
-        </div>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
+  // Buttons immer sichtbar, aber nach 3 Runden disabled
+  function ChoiceButtons() {
+    return (
+      <div style={{ display: "flex", gap: 12, justifyContent: "center", margin: "16px 0" }}>
         <button
-          onClick={startGame}
-          className={css({
-            padding: "12px 24px",
-            backgroundColor: "#3b82f6",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "16px",
-            fontWeight: "bold",
-            "&:hover": { backgroundColor: "#2563eb" },
-          })}
+          onClick={() => handleChoice("careful")}
+          disabled={gameOver || history[round - 1].moanaChoice !== null}
+          style={{
+            padding: "10px 18px",
+            border: "1px solid #10b981",
+            borderRadius: 6,
+            background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
+            color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
+            cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
+            fontWeight: 500,
+            fontSize: 15,
+          }}
         >
-          🚀 Experiment starten
+          🌊 Sorgsam (3 Fische)
+        </button>
+        <button
+          onClick={() => handleChoice("intensive")}
+          disabled={gameOver || history[round - 1].moanaChoice !== null}
+          style={{
+            padding: "10px 18px",
+            border: "1px solid #f59e0b",
+            borderRadius: 6,
+            background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
+            color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
+            cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
+            fontWeight: 500,
+            fontSize: 15,
+          }}
+        >
+          ⚡ Intensiv (6 Fische)
         </button>
       </div>
     );
   }
 
-  return (
-    <div
-      className={css({
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "20px",
-        margin: "20px 0",
-        backgroundColor: "#f0f9ff",
-      })}
-    >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
-        🎣 Commons-Dilemma: Runde {currentRound}/3
-      </h3>
-
-      <div className={css({ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "16px", marginBottom: "20px" })}>
-        <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Gemeinsamer Pool</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold", color: commonPool < 30 ? "#ef4444" : "#10b981" })}>
-            {commonPool}
-          </div>
+  // Nach 3 Runden: Zusammenfassung
+  function EndSummary() {
+    const collapsed = fishStock <= 10;
+    const struggling = !collapsed && fishStock <= 40;
+    return (
+      <div style={{ textAlign: "center", margin: "18px 0" }}>
+        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>Ergebnis nach 3 Runden</div>
+        <div style={{ fontSize: 15, marginBottom: 6 }}>🐟 <b>{fishStock}</b> Fische im Riff</div>
+        <div style={{ fontSize: 15, marginBottom: 6 }}>🌺 <b>{moanaTotal}</b> Fische für Moana</div>
+        <div style={{ fontSize: 15, marginBottom: 12 }}>
+          {collapsed ? (
+            <span style={{ color: "#ef4444" }}>Das Riff ist kollabiert.</span>
+          ) : struggling ? (
+            <span style={{ color: "#f59e0b" }}>Das Riff ist geschwächt.</span>
+          ) : (
+            <span style={{ color: "#10b981" }}>Das Riff ist gesund.</span>
+          )}
         </div>
-        <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Ihr Gewinn</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{playerTotal}</div>
-        </div>
-        <div className={css({ padding: "12px", backgroundColor: "#fff", borderRadius: "6px" })}>
-          <div className={css({ fontSize: "14px", color: "#6b7280" })}>Runde</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{currentRound}/3</div>
-        </div>
+        <button
+          onClick={reset}
+          style={{
+            padding: "8px 20px",
+            border: "none",
+            borderRadius: 6,
+            background: "#0891b2",
+            color: "#fff",
+            fontWeight: 500,
+            fontSize: 15,
+            cursor: "pointer",
+          }}
+        >
+          Nochmal spielen
+        </button>
       </div>
+    );
+  }
 
-      {gamePhase === "deciding" && (
-        <div className={css({ marginBottom: "20px" })}>
-          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
-            🤔 Runde {currentRound}: Treffen Sie Ihre Entscheidung
-          </h4>
-          <div className={css({ fontSize: "14px", color: "#6b7280", marginBottom: "16px" })}>
-            Aktueller Pool: {Math.round(commonPool * 1.1)} (nach 10% Wachstum)
-          </div>
-          
-          <div className={css({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" })}>
-            <button
-              onClick={() => handlePlayerChoice("cooperate")}
-              className={css({
-                padding: "16px",
-                backgroundColor: "#f0fdf4",
-                border: "2px solid #bbf7d0",
-                borderRadius: "8px",
-                cursor: "pointer",
-                textAlign: "left",
-                "&:hover": { backgroundColor: "#dcfce7" },
-              })}
-            >
-              <div className={css({ fontSize: "16px", fontWeight: "bold", color: "#16a34a", marginBottom: "4px" })}>
-                🤝 Kooperieren
-              </div>
-              <div className={css({ fontSize: "14px", color: "#6b7280" })}>
-                10 Einheiten nehmen
-              </div>
-              <div className={css({ fontSize: "12px", color: "#059669", marginTop: "4px" })}>
-                Nachhaltig für alle
-              </div>
-            </button>
-            
-            <button
-              onClick={() => handlePlayerChoice("defect")}
-              className={css({
-                padding: "16px",
-                backgroundColor: "#fefce8",
-                border: "2px solid #fbbf24",
-                borderRadius: "8px",
-                cursor: "pointer",
-                textAlign: "left",
-                "&:hover": { backgroundColor: "#fef3c7" },
-              })}
-            >
-              <div className={css({ fontSize: "16px", fontWeight: "bold", color: "#d97706", marginBottom: "4px" })}>
-                ⚡ Defektieren
-              </div>
-              <div className={css({ fontSize: "14px", color: "#6b7280" })}>
-                20 Einheiten nehmen
-              </div>
-              <div className={css({ fontSize: "12px", color: "#d97706", marginTop: "4px" })}>
-                Mehr Gewinn, aber riskant
-              </div>
-            </button>
-          </div>
-
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>
-            💡 <strong>Tipp:</strong> Was werden die anderen wohl tun? Denken Sie strategisch!
-          </div>
-        </div>
-      )}
-
-      {gamePhase === "reveal" && roundHistory.length > 0 && (
-        <div className={css({ marginBottom: "20px" })}>
-          {(() => {
-            const lastRound = roundHistory[roundHistory.length - 1];
-            return (
-              <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px" })}>
-                <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
-                  📊 Runde {lastRound.round} - Alle Entscheidungen:
-                </h4>
-                
-                <div className={css({ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "16px" })}>
-                  <div className={css({ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "6px" })}>
-                    <div className={css({ fontWeight: "bold", color: lastRound.playerChoice === "cooperate" ? "#16a34a" : "#d97706" })}>
-                      🎯 Sie: {lastRound.playerChoice === "cooperate" ? "🤝 Kooperiert" : "⚡ Defektiert"}
-                    </div>
-                    <div className={css({ fontSize: "14px", color: "#6b7280" })}>
-                      Gewinn: +{lastRound.playerGain}
-                    </div>
-                  </div>
-                  
-                  {aiPlayers.map((ai, index) => (
-                    <div key={index} className={css({ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "6px" })}>
-                      <div className={css({ fontWeight: "bold", color: lastRound.aiChoices[index] === "cooperate" ? "#16a34a" : "#d97706" })}>
-                        {ai.name}: {lastRound.aiChoices[index] === "cooperate" ? "🤝" : "⚡"}
-                      </div>
-                      <div className={css({ fontSize: "14px", color: "#6b7280" })}>
-                        {lastRound.aiChoices[index] === "cooperate" ? "Kooperiert" : "Defektiert"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className={css({ backgroundColor: "#f3f4f6", padding: "12px", borderRadius: "6px", marginBottom: "16px" })}>
-                  <div className={css({ fontSize: "14px" })}>
-                    <div><strong>Gesamt extrahiert:</strong> {
-                      10 * ([lastRound.playerChoice, ...lastRound.aiChoices].filter(c => c === "cooperate").length) +
-                      20 * ([lastRound.playerChoice, ...lastRound.aiChoices].filter(c => c === "defect").length)
-                    } Einheiten</div>
-                    <div><strong>Pool danach:</strong> {lastRound.poolAfter} Einheiten</div>
-                  </div>
-                </div>
-
-                {currentRound < 3 && commonPool > 10 ? (
-                  <button
-                    onClick={nextRound}
-                    className={css({
-                      padding: "10px 20px",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      "&:hover": { backgroundColor: "#2563eb" },
-                    })}
-                  >
-                    ➡️ Nächste Runde
-                  </button>
-                ) : (
-                  <button
-                    onClick={nextRound}
-                    className={css({
-                      padding: "10px 20px",
-                      backgroundColor: "#16a34a",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      "&:hover": { backgroundColor: "#15803d" },
-                    })}
-                  >
-                    📈 Endergebnis anzeigen
-                  </button>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {gamePhase === "finished" && (
-        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
-          <h4 className={css({ fontWeight: "bold", marginBottom: "12px", color: commonPool <= 10 ? "#dc2626" : "#16a34a" })}>
-            {commonPool <= 10 ? "🚨 Commons kollabiert!" : "✅ Experiment beendet!"}
-          </h4>
-          
-          <div className={css({ marginBottom: "16px" })}>
-            <div><strong>Ihr Gesamtgewinn:</strong> {playerTotal} Einheiten</div>
-            <div><strong>Finaler Pool:</strong> {commonPool} Einheiten</div>
-            <div><strong>Kooperationen:</strong> {roundHistory.filter(r => r.playerChoice === "cooperate").length}/3</div>
-          </div>
-
-          <div className={css({ backgroundColor: "#f8fafc", padding: "12px", borderRadius: "6px", marginBottom: "16px" })}>
-            <h5 className={css({ fontWeight: "bold", marginBottom: "8px" })}>🧠 Was haben Sie gelernt?</h5>
-            <div className={css({ fontSize: "14px", lineHeight: "1.5" })}>
-              {commonPool <= 10 ? (
-                <div>Der Pool ist kollabiert! Das passiert, wenn zu viele Spieler defektieren. 
-                Auch wenn Sie kooperiert haben - die Commons sind für alle verloren.</div>
-              ) : (
-                <div>Glückwunsch! Durch strategische Kooperation haben Sie und die anderen 
-                den gemeinsamen Pool erhalten.</div>
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={resetGame}
-            className={css({
-              padding: "10px 20px",
-              backgroundColor: "#6366f1",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#5338f5" },
-            })}
-          >
-            🔄 Nochmal spielen
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Historical Timeline Component
-const HistoricalTimeline: React.FC = () => {
-  const data = {
-    labels: historicalData.map((d) => d.year.toString()),
-    datasets: [
-      {
-        label: "Fischbestand (%)",
-        data: historicalData.map((d) => d.stock),
-        borderColor: "rgb(34, 197, 94)",
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
-        yAxisID: "y",
-      },
-      {
-        label: "Fang (1000 Tonnen)",
-        data: historicalData.map((d) => d.catch),
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
-        yAxisID: "y1",
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "top" as const,
-      },
-      title: {
-        display: true,
-        text: "Neufundland Kabeljau-Fischerei 1950-1992",
-      },
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: "Jahr",
-        },
-      },
-      y: {
-        type: "linear" as const,
-        display: true,
-        position: "left" as const,
-        title: {
-          display: true,
-          text: "Fischbestand (%)",
-        },
-      },
-      y1: {
-        type: "linear" as const,
-        display: true,
-        position: "right" as const,
-        title: {
-          display: true,
-          text: "Fang (1000 Tonnen)",
-        },
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-    },
-  };
+  // Optionale Rückmeldung zur aktuellen Runde
+  function RoundFeedback() {
+    const h = history[round - 1];
+    if (!h.moanaChoice) return null;
+    return (
+      <div style={{ textAlign: "center", margin: "10px 0 0 0", fontSize: 15, color: "#64748b" }}>
+        Du hast <b>{h.moanaChoice === "careful" ? "sorgsam" : "intensiv"}</b> gefischt und {h.moanaFish} Fische gefangen.<br />
+        Die anderen Chiefs: {h.otherChiefs?.map((c, i) => `${otherChiefs[i]}: ${c === "careful" ? "sorgsam" : "intensiv"}`).join(", ")}<br />
+        Insgesamt wurden {h.moanaFish! + h.othersFish!} Fische gefangen.
+        {h.regeneration && h.regeneration > 0 && (
+          <span> &ndash; Das Riff erholt sich: +{h.regeneration} Fische</span>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={css({
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "20px",
-        margin: "20px 0",
-        backgroundColor: "#f9fafb",
-      })}
-    >
-      <div className={css({ height: "300px" })}>
-        <Line data={data} options={options} />
-      </div>
-      <div className={css({ fontSize: "14px", color: "#6b7280", marginTop: "12px" })}>
-        <strong>1992:</strong> Kompletter Fangstopp. 40.000 Fischer verlieren ihre Jobs über Nacht.
-      </div>
+    <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
+      <StatusBar />
+      <ResultsTable />
+      {!gameOver && <>
+        <div style={{ textAlign: "center", fontSize: 15, marginBottom: 8 }}>
+          Wie möchtest du in Runde {round} fischen?
+        </div>
+        <ChoiceButtons />
+        <RoundFeedback />
+      </>}
+      {gameOver && <EndSummary />}
     </div>
   );
 };
@@ -679,76 +411,167 @@ const GovernanceDesigner: React.FC = () => {
 };
 
 // Main Blog Post Component
-export default function TragedyOfCommonsFishing() {
+
+const TragedyOfCommonsFishing: React.FC = () => {
   return (
-    <article className={css({ maxWidth: "800px", margin: "0 auto", padding: "20px" })}>
-      <header className={css({ marginBottom: "32px" })}>
-        <h1
-          className={css({
-            fontSize: "32px",
-            fontWeight: "bold",
-            lineHeight: "1.2",
-            marginBottom: "16px",
-          })}
-        >
-          Die Kabeljau-Katastrophe: Eine interaktive Lektion über die Tragedy of Commons
-        </h1>
-        <div
-          className={css({
-            fontSize: "16px",
-            color: "#6b7280",
-            marginBottom: "24px",
-          })}
-        >
-          Veröffentlicht am 27. Juni 2025
-        </div>
-      </header>
+    <article>
+      <h1>Games on the common pool ressources</h1>
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+
+I recently wrote about the prisoners dilemma. However, it feels overly gloomy and the not that realistic.
+So I started to look around into more complex games that might apply more directly to my life experiences. In this
+context I kept coming back to the question of how can we govern common pools ?
+
+In the a completely unrestrained version it depletes and collapses. This led to the wide belief that only the state or the market can govern common resources.
+However, Elinor Ostrom showed that communities can self-organize to govern common resources. And she did this again around beautiful social 
+games, which I will explore here.
+`}</ReactMarkdown>
+      <p className={css({ lineHeight: "1.6", fontStyle: "italic", textAlign: "center" })}>
+        &ldquo;Weder Staat noch Markt sind die einzigen Lösungen. Menschen können lernen, gemeinsame Ressourcen selbst
+        zu verwalten.&rdquo; — Elinor Ostrom
+      </p>
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+## Setting up the scene
+            
+Given that we are talking about a social game, I really like the idea to look into the 
+problem from the perspective of a specific person and its community. For the common pool the field 
+of fishing is a great example that is visual and keeps coming back in the literature. So, we will set
+up the scene around the famous Disney character Moana. 
+            
+She has now become the young chief of here island and therefore has to decide how many ships she has to send out every morning. The neighboring islands' chiefs have called an urgent meeting. The fish that have sustained your communities
+          for generations are becoming scarce. The great tuna schools that once darkened the waters now appear only
+          occasionally. **Something must be done, but what?**
+
+### The dilemma of the island chiefs
+
+We can now use this setting to sketch out the rule of the game.
+            
+- Each morning, Moana and the other three chief of the neighboring islands have to decide how many ships they send out to fish.
+- In the evening they count the fish they caught and share it on the beach of each island.
+
+            `}</ReactMarkdown>
+
+      <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+        As Moana sits with the other three chiefs in the sacred meeting place overlooking the shared fishing grounds,
+        the dilemma becomes crystal clear. Each chief faces the same choice:
+      </p>
+
+      <FishingGameSimulator />
 
       <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Die größte Umweltkatastrophe Kanadas
-        </h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Am 2. Juli 1992 verkündete die kanadische Regierung ein komplettes Moratorium für die Kabeljau-Fischerei vor
-          Neufundland. Über Nacht verloren <strong>40.000 Fischer</strong> ihre Jobs. Ein Fischbestand, der 500 Jahre
-          lang nachhaltig befischt worden war, brach vollständig zusammen.
-        </p>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Wie konnte das passieren? Die Antwort liegt in einem einfachen, aber tödlichen Spiel, das jeder von uns
-          täglich spielt - oft ohne es zu merken.
-        </p>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Das Fischerdorf-Spiel</h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Stellen Sie sich vor, Sie sind Kapitän eines Fischerboots in einem kleinen Dorf. Sie teilen sich einen See mit
-          4 anderen Fischern. Jeden Tag müssen Sie entscheiden: Wie viele Stunden sollen Sie fischen?
-        </p>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Die Regeln sind einfach:</strong> Mehr Stunden bedeuten mehr Fang heute - aber weniger Fische für alle
-          morgen.
-        </p>
-
-        <FishingGameSimulator />
 
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           <strong>Was ist passiert?</strong> Wahrscheinlich haben Sie erlebt, was Millionen von Menschen vor Ihnen
           erlebt haben: Selbst mit den besten Absichten ist es schwer, nachhaltig zu handeln, wenn andere es nicht tun.
         </p>
+        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+          <strong>Herzlichen Glückwunsch!</strong> Sie haben gerade eine der grundlegendsten mathematischen Fallen der
+          menschlichen Zivilisation erlebt. Das Nash-Gleichgewicht zeigt:{" "}
+          <em>Defektieren ist immer die rational beste Wahl</em> - egal was die anderen tun.
+        </p>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Die historische Realität: 40 Jahre Überfischung
+          Ostrom's Durchbruch: Es gibt einen dritten Weg
         </h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Was in unserem Spiel in 10 Wochen passiert, spielte sich vor Neufundland über 40 Jahre ab. Die moderne
-          Fischerei-Industrie steigerte ihre Kapazitäten dramatisch, aber der Fischbestand hielt nicht mit.
+          Jahrzehntelang glaubten Ökonomen, es gäbe nur zwei Lösungen für Commons-Probleme:
         </p>
+        <div
+          className={css({
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "16px",
+            marginBottom: "16px",
+          })}
+        >
+          <div
+            className={css({
+              backgroundColor: "#fef2f2",
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid #fecaca",
+            })}
+          >
+            <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>🏛️ Lösung 1: Der Staat</h4>
+            <p className={css({ fontSize: "14px", lineHeight: "1.5" })}>
+              Zentrale Kontrolle, Quoten, Strafen. Funktioniert, aber teuer und oft ineffizient.
+            </p>
+          </div>
+          <div
+            className={css({
+              backgroundColor: "#fef2f2",
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid #fecaca",
+            })}
+          >
+            <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>💰 Lösung 2: Der Markt</h4>
+            <p className={css({ fontSize: "14px", lineHeight: "1.5" })}>
+              Privatisierung der Ressource. Kein Commons-Problem mehr, aber sozialer Ausschluss.
+            </p>
+          </div>
+        </div>
+        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+          Aber Elinor Ostrom verbrachte ihr Leben damit, <strong>erfolgreiche Gemeinschaften</strong> zu studieren, die
+          Commons verwalten - ohne Staat, ohne Privatisierung. Von Fischerdörfern in der Türkei bis zu
+          Bewässerungssystemen in Spanien.
+        </p>
+        <div
+          className={css({
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "8px",
+            padding: "20px",
+            marginBottom: "16px",
+          })}
+        >
+          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
+            🌟 Ostrom's 8 Design-Prinzipien für Commons:
+          </h4>
+          <div className={css({ fontSize: "14px", lineHeight: "1.6" })}>
+            <div className={css({ marginBottom: "8px" })}>
+              1. <strong>Klare Grenzen:</strong> Wer gehört dazu, was ist die Ressource?
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              2. <strong>Lokale Regeln:</strong> An lokale Bedingungen angepasst
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              3. <strong>Partizipation:</strong> Betroffene können Regeln mitbestimmen
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              4. <strong>Monitoring:</strong> Überwachung durch die Gemeinschaft
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              5. <strong>Sanktionen:</strong> Graduierte Strafen bei Regelbruch
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              6. <strong>Konfliktlösung:</strong> Schnelle, günstige Mechanismen
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              7. <strong>Anerkennung:</strong> Externe Behörden akzeptieren das System
+            </div>
+            <div>
+              8. <strong>Verschachtelte Institutionen:</strong> Mehrebenen-Governance
+            </div>
+          </div>
+        </div>
+        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+          <strong>Das Revolutionäre daran:</strong> Diese Prinzipien funktionieren nicht nur in Fischerdörfern. Sie
+          erklären, warum Open-Source-Software funktioniert, warum manche Teams effektiver Wissen teilen, und warum
+          bestimmte Online-Communities gedeihen.
+        </p>
+      </section>
 
-        <HistoricalTimeline />
-
+      <section className={css({ marginBottom: "32px" })}>
+        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
+          Das Neufundland-Beispiel: Wenn Commons kollabieren
+        </h2>
+        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+          Was Sie gerade im Spiel erlebt haben, passierte vor Neufundland über 40 Jahre hinweg. 1992 brach der
+          Kabeljau-Bestand vollständig zusammen - <strong>40.000 Fischer verloren über Nacht ihre Jobs.</strong>
+        </p>
         <div
           className={css({
             backgroundColor: "#fef2f2",
@@ -758,54 +581,14 @@ export default function TragedyOfCommonsFishing() {
             marginBottom: "16px",
           })}
         >
-          <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>Die Warnsignale wurden ignoriert:</h4>
-          <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-            <li>
-              <strong>1970er:</strong> Wissenschaftler warnen vor Überfischung
-            </li>
-            <li>
-              <strong>1980er:</strong> &ldquo;Nur ein schlechtes Jahr&rdquo; - Politik ignoriert Daten
-            </li>
-            <li>
-              <strong>1990er:</strong> Zu spät - der Bestand ist unter kritische Masse gefallen
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Warum rationale Menschen irrationale Entscheidungen treffen
-        </h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Das Kabeljau-Dilemma ist ein perfektes Beispiel für die <strong>&ldquo;Tragedy of the Commons&rdquo;</strong>.
-          Jeder einzelne Fischer handelt rational aus seiner Sicht:
-        </p>
-
-        <div
-          className={css({
-            backgroundColor: "#f3f4f6",
-            padding: "16px",
-            borderRadius: "8px",
-            fontFamily: "monospace",
-            marginBottom: "16px",
-          })}
-        >
-          <div>
-            <strong>Wenn alle anderen nachhaltig fischen:</strong>
+          <p className={css({ fontWeight: "bold", marginBottom: "8px" })}>Die fatale Logik:</p>
+          <div className={css({ fontSize: "14px", lineHeight: "1.6" })}>
+            <em>&ldquo;Wenn ich heute nicht fische, fischt es jemand anders. Lieber ich als die Konkurrenz.&rdquo;</em>
           </div>
-          <div>• Du fischst nachhaltig: Alle profitieren langfristig</div>
-          <div>• Du fischst mehr: Du bekommst kurzfristig mehr Gewinn</div>
-          <br />
-          <div>
-            <strong>Wenn alle anderen überfischen:</strong>
-          </div>
-          <div>• Du fischst nachhaltig: Du bekommst fast nichts</div>
-          <div>• Du fischst auch mehr: Wenigstens gleiche Verluste</div>
         </div>
-
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Das Nash-Gleichgewicht:</strong> Jeder fischt zu viel, der Bestand kollabiert, alle verlieren.
+          Das Nash-Gleichgewicht in Aktion: Jeder handelt rational, das Ergebnis ist irrational.{" "}
+          <strong>Ein Musterbeispiel der Tragedy of Commons.</strong>
         </p>
       </section>
 
@@ -871,10 +654,11 @@ export default function TragedyOfCommonsFishing() {
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Was lernen wir für heute?
+          Ostrom's Vermächtnis: Von Fischerdörfern zu Silicon Valley
         </h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Die Tragedy of Commons ist überall um uns herum:
+          Ostrom's Prinzipien funktionieren nicht nur in traditionellen Commons. Sie erklären, warum manche moderne
+          Organisationen gedeihen:
         </p>
 
         <div
@@ -886,57 +670,84 @@ export default function TragedyOfCommonsFishing() {
           })}
         >
           {[
-            { title: "Klimawandel", desc: "Jedes Land 'fischt' CO2 aus der Atmosphäre" },
-            { title: "Antibiotika", desc: "Übernutzung führt zu Resistenz für alle" },
-            { title: "Internet", desc: "Bandbreiten-Überlastung bei hoher Nutzung" },
-            { title: "Open Source", desc: "Nutzen ohne Beitragen schadet allen" },
+            {
+              title: "🔗 Open Source",
+              desc: "Linux, Wikipedia: Klare Regeln, Community-Governance, graduierte Sanktionen",
+            },
+            {
+              title: "💡 Wissens-Commons",
+              desc: "Erfolgreiche Teams teilen Wissen durch formelle und informelle Institutionen",
+            },
+            {
+              title: "🌐 Online-Communities",
+              desc: "Reddit, Stack Overflow: Reputation, Moderation, Community-Standards",
+            },
+            {
+              title: "🏢 Agile Teams",
+              desc: "Scrum, Cross-functional Teams: Selbstorganisation mit klaren Grenzen",
+            },
           ].map((example) => (
             <div
               key={example.title}
               className={css({
                 padding: "16px",
-                backgroundColor: "#f8fafc",
+                backgroundColor: "#f0fdf4",
                 borderRadius: "6px",
-                border: "1px solid #e2e8f0",
+                border: "1px solid #bbf7d0",
               })}
             >
               <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>{example.title}</h4>
-              <p className={css({ fontSize: "14px", color: "#6b7280" })}>{example.desc}</p>
+              <p className={css({ fontSize: "14px", color: "#374151", lineHeight: "1.5" })}>{example.desc}</p>
             </div>
           ))}
         </div>
 
+        <div
+          className={css({
+            backgroundColor: "#f0f9ff",
+            border: "1px solid #c7d2fe",
+            borderRadius: "8px",
+            padding: "20px",
+            marginBottom: "16px",
+          })}
+        >
+          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
+            💡 Die drei Wege zum Umgang mit Commons-Dilemmas:
+          </h4>
+          <div className={css({ fontSize: "15px", lineHeight: "1.6" })}>
+            <div className={css({ marginBottom: "8px" })}>
+              <strong>🏛️ Staatliche Regulierung:</strong> Quoten, Überwachung, Strafen (funktioniert, aber teuer)
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              <strong>💰 Marktlösungen:</strong> Privatisierung, handelbare Rechte (effizient, aber exklusiv)
+            </div>
+            <div className={css({ marginBottom: "8px" })}>
+              <strong>🤝 Ostrom's Weg:</strong> Community-Governance mit Design-Prinzipien (nachhaltig und inklusiv)
+            </div>
+          </div>
+        </div>
+
         <p className={css({ lineHeight: "1.6" })}>
-          Das nächste Mal, wenn Sie sehen, wie Teams in Ihrem Unternehmen Wissen horten statt teilen, oder wenn Länder
-          bei Klimaverhandlungen blockieren - denken Sie an die Fischer von Neufundland.
-          <strong> Die Mathematik ist dieselbe. Aber jetzt kennen Sie auch die Lösungen.</strong>
+          <strong>Die nächste Commons-Krise?</strong> Künstliche Intelligenz. Wie teilen wir die Vorteile von AI, ohne
+          dass wenige alle Ressourcen monopolisieren? Wie verhindern wir, dass das &ldquo;KI-Commons&rdquo; durch
+          kurzsichtige Konkurrenz zerstört wird?
+        </p>
+        <p className={css({ lineHeight: "1.6", marginTop: "16px" })}>
+          Elinor Ostrom hätte gewusst, wo sie anfangen würde: Bei den Menschen, die das Problem lösen müssen.
+          <strong> Denn am Ende sind Commons-Probleme Menschen-Probleme.</strong>
         </p>
       </section>
-
-      <footer
-        className={css({
-          borderTop: "1px solid #e5e7eb",
-          paddingTop: "16px",
-          fontSize: "14px",
-          color: "#6b7280",
-        })}
-      >
-        <p>
-          <em>
-            Interessiert, wie das in der Innovation aussieht? Der nächste Post untersucht, wie Unternehmen ihre
-            &ldquo;Wissens-Commons&rdquo; verwalten können.
-          </em>
-        </p>
-      </footer>
     </article>
   );
-}
+};
+export default TragedyOfCommonsFishing;
 
 // Post metadata
 export const meta = {
-  title: "Die Kabeljau-Katastrophe: Tragedy of Commons",
-  description: "Eine interaktive Lektion über die Tragedy of Commons am Beispiel der Neufundland-Fischerei",
+  title: "Das Commons-Rätsel: Warum Elinor Ostrom den Nobelpreis gewann",
+  description:
+    "Eine interaktive Reise zu Elinor Ostrom's bahnbrechenden Theorien über Commons-Management - von der Tragedy of Commons zu nachhaltigen Lösungen",
   publishing_date: "2025-06-27",
-  tags: ["Spieltheorie", "Commons", "Nachhaltigkeit", "Geschichte", "Umwelt"],
-  readTime: 10,
+  tags: ["Elinor Ostrom", "Commons", "Spieltheorie", "Nachhaltigkeit", "Nobelpreis", "Governance"],
+  readTime: 12,
 };

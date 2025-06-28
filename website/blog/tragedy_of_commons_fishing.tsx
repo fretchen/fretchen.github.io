@@ -23,11 +23,10 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 type GovernanceType = "none" | "quotas" | "ostrom";
 
 
-// Types for Moana's Choice Game
+// Types für Moana's Choice Game
 // Angepasst: Jeder Chief einzeln sichtbar
 
 type FishingChoice = "careful" | "intensive";
-type GamePhase = "deciding" | "reveal" | "finished";
 
 const otherChiefs = ["Chief Kai", "Chief Leilani", "Chief Tane"];
 
@@ -36,7 +35,7 @@ type RoundHistory = {
   moanaChoice: FishingChoice | null;
   moanaFish: number | null;
   otherChiefs: FishingChoice[] | null;
-  chiefsFish: number[] | null; // NEU: Fang pro Chief
+  chiefsFish: number[] | null; // Fang pro Chief
   fishAfter: number | null;
   regeneration: number | null;
 };
@@ -46,9 +45,33 @@ const FishingGameSimulator: React.FC = () => {
   const [fishStock, setFishStock] = useState(120);
   const [moanaTotal, setMoanaTotal] = useState(0);
   const [history, setHistory] = useState<RoundHistory[]>([
-    { round: 1, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
-    { round: 2, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
-    { round: 3, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+    {
+      round: 1,
+      moanaChoice: null,
+      moanaFish: null,
+      otherChiefs: null,
+      chiefsFish: null,
+      fishAfter: null,
+      regeneration: null,
+    },
+    {
+      round: 2,
+      moanaChoice: null,
+      moanaFish: null,
+      otherChiefs: null,
+      chiefsFish: null,
+      fishAfter: null,
+      regeneration: null,
+    },
+    {
+      round: 3,
+      moanaChoice: null,
+      moanaFish: null,
+      otherChiefs: null,
+      chiefsFish: null,
+      fishAfter: null,
+      regeneration: null,
+    },
   ]);
   const [gameOver, setGameOver] = useState(false);
 
@@ -92,26 +115,143 @@ const FishingGameSimulator: React.FC = () => {
     setFishStock(120);
     setMoanaTotal(0);
     setHistory([
-      { round: 1, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
-      { round: 2, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
-      { round: 3, moanaChoice: null, moanaFish: null, otherChiefs: null, chiefsFish: null, fishAfter: null, regeneration: null },
+      {
+        round: 1,
+        moanaChoice: null,
+        moanaFish: null,
+        otherChiefs: null,
+        chiefsFish: null,
+        fishAfter: null,
+        regeneration: null,
+      },
+      {
+        round: 2,
+        moanaChoice: null,
+        moanaFish: null,
+        otherChiefs: null,
+        chiefsFish: null,
+        fishAfter: null,
+        regeneration: null,
+      },
+      {
+        round: 3,
+        moanaChoice: null,
+        moanaFish: null,
+        otherChiefs: null,
+        chiefsFish: null,
+        fishAfter: null,
+        regeneration: null,
+      },
     ]);
     setGameOver(false);
   }
 
-  // Minimalistische Statusleiste
-  function StatusBar() {
+  // Minimalistisches Konzept: Action-Bereich (Status + Buttons + Feedback) über Scoreboard-Tabelle
+  function ActionBar() {
     return (
-      <div style={{ display: "flex", gap: 16, fontSize: 15, marginBottom: 12, justifyContent: "center" }}>
-        <span>🐟 <b>{fishStock}</b> im Riff</span>
-        <span>🌺 <b>{moanaTotal}</b> gefangen</span>
-        <span>Runde <b>{gameOver ? 3 : round}/3</b></span>
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+      }}>
+        {/* Statusleiste */}
+        <div style={{ display: "flex", gap: 18, fontSize: 16, alignItems: "center" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span role="img" aria-label="Moana">🌺</span>
+            <b>{moanaTotal}</b> Fische
+          </span>
+          <span style={{ color: "#64748b" }}>|</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span role="img" aria-label="Fisch">🐟</span>
+            <b>{fishStock}</b> im Riff
+          </span>
+          <span style={{ color: "#64748b" }}>|</span>
+          <span>Runde <b>{gameOver ? 3 : round}/3</b></span>
+        </div>
+        {/* Buttons */}
+        {!gameOver && (
+          <div style={{ display: "flex", gap: 12, marginTop: 2 }}>
+            <button
+              onClick={() => handleChoice("careful")}
+              disabled={gameOver || history[round - 1].moanaChoice !== null}
+              style={{
+                padding: "10px 18px",
+                border: "1px solid #10b981",
+                borderRadius: 6,
+                background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
+                color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
+                cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
+                fontWeight: 500,
+                fontSize: 15,
+                minWidth: 120,
+              }}
+            >
+              🌊 Sorgsam (3 Fische)
+            </button>
+            <button
+              onClick={() => handleChoice("intensive")}
+              disabled={gameOver || history[round - 1].moanaChoice !== null}
+              style={{
+                padding: "10px 18px",
+                border: "1px solid #f59e0b",
+                borderRadius: 6,
+                background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
+                color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
+                cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
+                fontWeight: 500,
+                fontSize: 15,
+                minWidth: 120,
+              }}
+            >
+              ⚡ Intensiv (6 Fische)
+            </button>
+          </div>
+        )}
+        {/* Rundenfeedback */}
+        {!gameOver && history[round - 1].moanaChoice && (
+          <div style={{ fontSize: 15, color: "#64748b", marginTop: 4, textAlign: "center" }}>
+            Du hast <b>{history[round - 1].moanaChoice === "careful" ? "sorgsam" : "intensiv"}</b> gefischt und {history[round - 1].moanaFish} Fische gefangen.<br />
+            Die anderen Chiefs: {history[round - 1].otherChiefs?.map((c, i) => `${otherChiefs[i]}: ${c === "careful" ? "sorgsam" : "intensiv"}`).join(", ")}
+            <br />Insgesamt wurden {history[round - 1].moanaFish! + history[round - 1].chiefsFish!.reduce((a, b) => a + b, 0)} Fische gefangen.
+            {history[round - 1].regeneration && history[round - 1].regeneration > 0 && (
+              <span> &ndash; Das Riff erholt sich: +{history[round - 1].regeneration} Fische</span>
+            )}
+          </div>
+        )}
       </div>
     );
   }
 
-  // Vergleichs-Tabelle: Moana + alle Chiefs einzeln
+  // Vergleichs-Tabelle: Moana + alle Chiefs einzeln + Summary-Zeile + nachhaltige Entscheidung farblich
   function ResultsTable() {
+    // Summen berechnen
+    const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
+    const chiefsSums = otherChiefs.map((_, i) =>
+      history.reduce((sum, h) => sum + (h.chiefsFish && h.chiefsFish[i] !== undefined ? h.chiefsFish[i] : 0), 0)
+    );
+    // Hilfsfunktion für Zellen-Highlight
+    function choiceCell(choice: FishingChoice | null, fish: number | null) {
+      if (choice === null || fish === null) return <span>-</span>;
+      const isSustainable = choice === "careful";
+      return (
+        <span
+          style={{
+            background: isSustainable ? "#d1fae5" : "#fef9c3",
+            color: isSustainable ? "#047857" : "#b45309",
+            borderRadius: 4,
+            padding: "2px 6px",
+            fontWeight: 500,
+            display: "inline-block",
+            minWidth: 24,
+          }}
+          title={isSustainable ? "Sorgsam (nachhaltig)" : "Intensiv (nicht nachhaltig)"}
+        >
+          {isSustainable ? "🌊" : "⚡"} {fish}
+        </span>
+      );
+    }
     return (
       <div style={{ display: "flex", justifyContent: "center", margin: "18px 0" }}>
         <table style={{ borderCollapse: "collapse", fontSize: 15, minWidth: 420 }}>
@@ -127,57 +267,45 @@ const FishingGameSimulator: React.FC = () => {
           </thead>
           <tbody>
             {history.map((h, idx) => (
-              <tr key={idx} style={{ background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff" }}>
+              <tr
+                key={idx}
+                style={{
+                  background:
+                    idx === round - 1 && !gameOver
+                      ? "#f0fdf4"
+                      : idx % 2 === 0
+                      ? "#f8fafc"
+                      : "#fff",
+                }}
+              >
                 <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: idx === round - 1 && !gameOver ? 600 : 400 }}>{h.round}</td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{h.moanaFish !== null ? h.moanaFish : "-"}</td>
+                {/* Moana */}
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {choiceCell(h.moanaChoice, h.moanaFish)}
+                </td>
+                {/* Chiefs */}
                 {otherChiefs.map((_, i) => (
-                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>{h.chiefsFish && h.chiefsFish[i] !== undefined ? h.chiefsFish[i] : "-"}</td>
+                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {h.otherChiefs && h.chiefsFish && h.otherChiefs[i] !== undefined && h.chiefsFish[i] !== undefined
+                      ? choiceCell(h.otherChiefs[i], h.chiefsFish[i])
+                      : "-"}
+                  </td>
                 ))}
+                {/* Fischbestand */}
                 <td style={{ padding: "4px 8px", textAlign: "center" }}>{h.fishAfter !== null ? h.fishAfter : "-"}</td>
               </tr>
             ))}
+            {/* Summary Row */}
+            <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>Σ</td>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}</td>
+              {chiefsSums.map((sum, i) => (
+                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>{sum}</td>
+              ))}
+              <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
+            </tr>
           </tbody>
         </table>
-      </div>
-    );
-  }
-
-  // Buttons immer sichtbar, aber nach 3 Runden disabled
-  function ChoiceButtons() {
-    return (
-      <div style={{ display: "flex", gap: 12, justifyContent: "center", margin: "16px 0" }}>
-        <button
-          onClick={() => handleChoice("careful")}
-          disabled={gameOver || history[round - 1].moanaChoice !== null}
-          style={{
-            padding: "10px 18px",
-            border: "1px solid #10b981",
-            borderRadius: 6,
-            background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
-            color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
-            cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
-            fontWeight: 500,
-            fontSize: 15,
-          }}
-        >
-          🌊 Sorgsam (3 Fische)
-        </button>
-        <button
-          onClick={() => handleChoice("intensive")}
-          disabled={gameOver || history[round - 1].moanaChoice !== null}
-          style={{
-            padding: "10px 18px",
-            border: "1px solid #f59e0b",
-            borderRadius: 6,
-            background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
-            color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
-            cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
-            fontWeight: 500,
-            fontSize: 15,
-          }}
-        >
-          ⚡ Intensiv (6 Fische)
-        </button>
       </div>
     );
   }
@@ -219,33 +347,10 @@ const FishingGameSimulator: React.FC = () => {
     );
   }
 
-  // Optionale Rückmeldung zur aktuellen Runde
-  function RoundFeedback() {
-    const h = history[round - 1];
-    if (!h.moanaChoice) return null;
-    return (
-      <div style={{ textAlign: "center", margin: "10px 0 0 0", fontSize: 15, color: "#64748b" }}>
-        Du hast <b>{h.moanaChoice === "careful" ? "sorgsam" : "intensiv"}</b> gefischt und {h.moanaFish} Fische gefangen.<br />
-        Die anderen Chiefs: {h.otherChiefs?.map((c, i) => `${otherChiefs[i]}: ${c === "careful" ? "sorgsam" : "intensiv"}`).join(", ")}<br />
-        Insgesamt wurden {h.moanaFish! + h.othersFish!} Fische gefangen.
-        {h.regeneration && h.regeneration > 0 && (
-          <span> &ndash; Das Riff erholt sich: +{h.regeneration} Fische</span>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
-      <StatusBar />
+      <ActionBar />
       <ResultsTable />
-      {!gameOver && <>
-        <div style={{ textAlign: "center", fontSize: 15, marginBottom: 8 }}>
-          Wie möchtest du in Runde {round} fischen?
-        </div>
-        <ChoiceButtons />
-        <RoundFeedback />
-      </>}
       {gameOver && <EndSummary />}
     </div>
   );
@@ -744,10 +849,6 @@ export default TragedyOfCommonsFishing;
 
 // Post metadata
 export const meta = {
-  title: "Das Commons-Rätsel: Warum Elinor Ostrom den Nobelpreis gewann",
-  description:
-    "Eine interaktive Reise zu Elinor Ostrom's bahnbrechenden Theorien über Commons-Management - von der Tragedy of Commons zu nachhaltigen Lösungen",
-  publishing_date: "2025-06-27",
-  tags: ["Elinor Ostrom", "Commons", "Spieltheorie", "Nachhaltigkeit", "Nobelpreis", "Governance"],
-  readTime: 12,
+  title: "Tragedy of the Commons: Moana's Choice",
+  description: "Ein narratives, interaktives Blogspiel zur Tragedy of the Commons und Ostroms Theorien.",
 };

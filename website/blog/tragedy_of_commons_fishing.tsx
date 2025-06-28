@@ -22,7 +22,6 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 // Types
 type GovernanceType = "none" | "quotas" | "ostrom";
 
-
 // Types für Moana's Choice Game
 // Angepasst: Jeder Chief einzeln sichtbar
 
@@ -98,7 +97,7 @@ const FishingGameSimulator: React.FC = () => {
             fishAfter: nextStock,
             regeneration,
           }
-        : h
+        : h,
     );
     setHistory(newHistory);
     setMoanaTotal(moanaTotal + moanaFish);
@@ -149,26 +148,34 @@ const FishingGameSimulator: React.FC = () => {
   // Minimalistisches Konzept: Action-Bereich (Status + Buttons + Feedback) über Scoreboard-Tabelle
   function ActionBar() {
     return (
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 12,
-      }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 12,
+        }}
+      >
         {/* Statusleiste */}
         <div style={{ display: "flex", gap: 18, fontSize: 16, alignItems: "center" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span role="img" aria-label="Moana">🌺</span>
+            <span role="img" aria-label="Moana">
+              🌺
+            </span>
             <b>{moanaTotal}</b> Fische
           </span>
           <span style={{ color: "#64748b" }}>|</span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span role="img" aria-label="Fisch">🐟</span>
+            <span role="img" aria-label="Fisch">
+              🐟
+            </span>
             <b>{fishStock}</b> im Riff
           </span>
           <span style={{ color: "#64748b" }}>|</span>
-          <span>Runde <b>{gameOver ? 3 : round}/3</b></span>
+          <span>
+            Runde <b>{gameOver ? 3 : round}/3</b>
+          </span>
         </div>
         {/* Buttons */}
         {!gameOver && (
@@ -212,9 +219,17 @@ const FishingGameSimulator: React.FC = () => {
         {/* Rundenfeedback */}
         {!gameOver && history[round - 1].moanaChoice && (
           <div style={{ fontSize: 15, color: "#64748b", marginTop: 4, textAlign: "center" }}>
-            Du hast <b>{history[round - 1].moanaChoice === "careful" ? "sorgsam" : "intensiv"}</b> gefischt und {history[round - 1].moanaFish} Fische gefangen.<br />
-            Die anderen Chiefs: {history[round - 1].otherChiefs?.map((c, i) => `${otherChiefs[i]}: ${c === "careful" ? "sorgsam" : "intensiv"}`).join(", ")}
-            <br />Insgesamt wurden {history[round - 1].moanaFish! + history[round - 1].chiefsFish!.reduce((a, b) => a + b, 0)} Fische gefangen.
+            Du hast <b>{history[round - 1].moanaChoice === "careful" ? "sorgsam" : "intensiv"}</b> gefischt und{" "}
+            {history[round - 1].moanaFish} Fische gefangen.
+            <br />
+            Die anderen Chiefs:{" "}
+            {history[round - 1].otherChiefs
+              ?.map((c, i) => `${otherChiefs[i]}: ${c === "careful" ? "sorgsam" : "intensiv"}`)
+              .join(", ")}
+            <br />
+            Insgesamt wurden {history[round - 1].moanaFish! +
+              history[round - 1].chiefsFish!.reduce((a, b) => a + b, 0)}{" "}
+            Fische gefangen.
             {history[round - 1].regeneration && history[round - 1].regeneration > 0 && (
               <span> &ndash; Das Riff erholt sich: +{history[round - 1].regeneration} Fische</span>
             )}
@@ -229,7 +244,7 @@ const FishingGameSimulator: React.FC = () => {
     // Summen berechnen
     const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
     const chiefsSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.chiefsFish && h.chiefsFish[i] !== undefined ? h.chiefsFish[i] : 0), 0)
+      history.reduce((sum, h) => sum + (h.chiefsFish && h.chiefsFish[i] !== undefined ? h.chiefsFish[i] : 0), 0),
     );
     // Hilfsfunktion für Zellen-Highlight
     function choiceCell(choice: FishingChoice | null, fish: number | null) {
@@ -260,7 +275,9 @@ const FishingGameSimulator: React.FC = () => {
               <th style={{ padding: "6px 8px" }}>Runde</th>
               <th style={{ padding: "6px 8px" }}>Moana</th>
               {otherChiefs.map((chief) => (
-                <th key={chief} style={{ padding: "6px 8px" }}>{chief}</th>
+                <th key={chief} style={{ padding: "6px 8px" }}>
+                  {chief}
+                </th>
               ))}
               <th style={{ padding: "6px 8px" }}>Fischbestand</th>
             </tr>
@@ -270,19 +287,20 @@ const FishingGameSimulator: React.FC = () => {
               <tr
                 key={idx}
                 style={{
-                  background:
-                    idx === round - 1 && !gameOver
-                      ? "#f0fdf4"
-                      : idx % 2 === 0
-                      ? "#f8fafc"
-                      : "#fff",
+                  background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff",
                 }}
               >
-                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: idx === round - 1 && !gameOver ? 600 : 400 }}>{h.round}</td>
-                {/* Moana */}
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {choiceCell(h.moanaChoice, h.moanaFish)}
+                <td
+                  style={{
+                    padding: "4px 8px",
+                    textAlign: "center",
+                    fontWeight: idx === round - 1 && !gameOver ? 600 : 400,
+                  }}
+                >
+                  {h.round}
                 </td>
+                {/* Moana */}
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>{choiceCell(h.moanaChoice, h.moanaFish)}</td>
                 {/* Chiefs */}
                 {otherChiefs.map((_, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
@@ -300,7 +318,9 @@ const FishingGameSimulator: React.FC = () => {
               <td style={{ padding: "4px 8px", textAlign: "center" }}>Σ</td>
               <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}</td>
               {chiefsSums.map((sum, i) => (
-                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>{sum}</td>
+                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {sum}
+                </td>
               ))}
               <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
             </tr>
@@ -317,8 +337,12 @@ const FishingGameSimulator: React.FC = () => {
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
         <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>Ergebnis nach 3 Runden</div>
-        <div style={{ fontSize: 15, marginBottom: 6 }}>🐟 <b>{fishStock}</b> Fische im Riff</div>
-        <div style={{ fontSize: 15, marginBottom: 6 }}>🌺 <b>{moanaTotal}</b> Fische für Moana</div>
+        <div style={{ fontSize: 15, marginBottom: 6 }}>
+          🐟 <b>{fishStock}</b> Fische im Riff
+        </div>
+        <div style={{ fontSize: 15, marginBottom: 6 }}>
+          🌺 <b>{moanaTotal}</b> Fische für Moana
+        </div>
         <div style={{ fontSize: 15, marginBottom: 12 }}>
           {collapsed ? (
             <span style={{ color: "#ef4444" }}>Das Riff ist kollabiert.</span>
@@ -564,7 +588,6 @@ We can now use this setting to sketch out the rule of the game.
       <FishingGameSimulator />
 
       <section className={css({ marginBottom: "32px" })}>
-
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           <strong>Was ist passiert?</strong> Wahrscheinlich haben Sie erlebt, was Millionen von Menschen vor Ihnen
           erlebt haben: Selbst mit den besten Absichten ist es schwer, nachhaltig zu handeln, wenn andere es nicht tun.

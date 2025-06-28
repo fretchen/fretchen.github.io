@@ -6,48 +6,48 @@ permissions:
 on:
   pull_request:
     paths:
-      - 'scw_js/**'
-      - '.github/workflows/test-scw-js.yml'
+      - "scw_js/**"
+      - ".github/workflows/test-scw-js.yml"
   push:
     branches:
       - main
     paths:
-      - 'scw_js/**'
+      - "scw_js/**"
 
 jobs:
   test-scw-js:
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ./scw_js
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
           cache-dependency-path: scw_js/package.json
-      
+
       - name: Install dependencies
         run: npm install
-      
+
       - name: Run quality checks (lint + format + test)
         run: npm run check
         env:
           NODE_ENV: test
           CI: true
-      
+
       - name: Run tests with coverage
         run: npm run test:coverage
         env:
           NODE_ENV: test
           CI: true
-      
+
       - name: Upload coverage reports to Codecov (optional)
         uses: codecov/codecov-action@v3
         with:

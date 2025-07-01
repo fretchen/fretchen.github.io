@@ -27,7 +27,7 @@ type GovernanceType = "none" | "quotas" | "ostrom";
 
 type FishingChoice = "careful" | "intensive";
 
-const otherChiefs = ["Chief Kai", "Chief Leilani", "Chief Tane"];
+const otherChiefs = ["Chief Kai"];
 
 type RoundHistory = {
   round: number;
@@ -74,12 +74,12 @@ const FishingGameSimulator: React.FC = () => {
   ]);
   const [gameOver, setGameOver] = useState(false);
 
-  function handleChoice(choice: FishingChoice) {
+  function handleChoice(choice: FishingChoice, intensitveNum = 6, carefulNum = 3) {
     if (gameOver || history[round - 1].moanaChoice) return;
     // Chiefs wählen zufällig
     const otherChoices = otherChiefs.map(() => (Math.random() < 0.6 ? "careful" : "intensive"));
-    const moanaFish = choice === "careful" ? 3 : 6;
-    const chiefsFish = otherChoices.map((c) => (c === "careful" ? 3 : 6));
+    const moanaFish = choice === "careful" ? carefulNum : intensitveNum;
+    const chiefsFish = otherChoices.map((c) => (c === "careful" ? carefulNum : intensitveNum));
     let prevStock = round === 1 ? 120 : (history[round - 2].fishAfter ?? 120);
     let nextStock = Math.max(0, prevStock - moanaFish - chiefsFish.reduce((a, b) => a + b, 0));
     // Regeneration: 15% falls Bestand > 25, max 150
@@ -159,29 +159,14 @@ const FishingGameSimulator: React.FC = () => {
       >
         {/* Statusleiste */}
         <div style={{ display: "flex", gap: 18, fontSize: 16, alignItems: "center" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span role="img" aria-label="Moana">
-              🌺
-            </span>
-            <b>{moanaTotal}</b> Fische
-          </span>
-          <span style={{ color: "#64748b" }}>|</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span role="img" aria-label="Fisch">
-              🐟
-            </span>
-            <b>{fishStock}</b> im Riff
-          </span>
-          <span style={{ color: "#64748b" }}>|</span>
-          <span>
-            Runde <b>{gameOver ? 3 : round}/3</b>
-          </span>
+          Welcome to the game. You are Moana and will now try to balance the needs of your village and 
+          the fish stock in the reef for the next three rounds.
         </div>
         {/* Buttons */}
         {!gameOver && (
           <div style={{ display: "flex", gap: 12, marginTop: 2 }}>
             <button
-              onClick={() => handleChoice("careful")}
+              onClick={() => handleChoice("careful", 15, 5)}
               disabled={gameOver || history[round - 1].moanaChoice !== null}
               style={{
                 padding: "10px 18px",
@@ -195,10 +180,10 @@ const FishingGameSimulator: React.FC = () => {
                 minWidth: 120,
               }}
             >
-              🌊 Sorgsam (3 Fische)
+              🌊 Sustainable (3 Fish)
             </button>
             <button
-              onClick={() => handleChoice("intensive")}
+              onClick={() => handleChoice("intensive", 15, 5)}
               disabled={gameOver || history[round - 1].moanaChoice !== null}
               style={{
                 padding: "10px 18px",
@@ -212,7 +197,7 @@ const FishingGameSimulator: React.FC = () => {
                 minWidth: 120,
               }}
             >
-              ⚡ Intensiv (6 Fische)
+              ⚡ Intensiv (6 Fish)
             </button>
           </div>
         )}
@@ -332,8 +317,6 @@ const FishingGameSimulator: React.FC = () => {
 
   // Nach 3 Runden: Zusammenfassung
   function EndSummary() {
-    const collapsed = fishStock <= 10;
-    const struggling = !collapsed && fishStock <= 40;
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
         <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>Ergebnis nach 3 Runden</div>
@@ -341,16 +324,7 @@ const FishingGameSimulator: React.FC = () => {
           🐟 <b>{fishStock}</b> Fische im Riff
         </div>
         <div style={{ fontSize: 15, marginBottom: 6 }}>
-          🌺 <b>{moanaTotal}</b> Fische für Moana
-        </div>
-        <div style={{ fontSize: 15, marginBottom: 12 }}>
-          {collapsed ? (
-            <span style={{ color: "#ef4444" }}>Das Riff ist kollabiert.</span>
-          ) : struggling ? (
-            <span style={{ color: "#f59e0b" }}>Das Riff ist geschwächt.</span>
-          ) : (
-            <span style={{ color: "#10b981" }}>Das Riff ist gesund.</span>
-          )}
+          🌺 <b>{moanaTotal}</b> fish for you (as Moana).
         </div>
         <button
           onClick={reset}
@@ -365,7 +339,7 @@ const FishingGameSimulator: React.FC = () => {
             cursor: "pointer",
           }}
         >
-          Nochmal spielen
+          Play again
         </button>
       </div>
     );
@@ -539,7 +513,7 @@ const GovernanceDesigner: React.FC = () => {
   );
 };
 
-// Main Blog Post Component
+// My Blog Post Component
 
 const TragedyOfCommonsFishing: React.FC = () => {
   return (
@@ -586,7 +560,13 @@ We can now use this setting to sketch out the rule of the game.
       </p>
 
       <FishingGameSimulator />
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+How did the game go? Most likely, you also had a hard time to keep the fish stock stable.
+It is just hard to resist the temptation to fish intensively, especially when you see the other chiefs doing it.
 
+So is there a rational choice? And what are options to govern the common pool resources such that
+we protect the fish stock and ensure the well-being of the community in the long term ?
+            `}</ReactMarkdown>
       <section className={css({ marginBottom: "32px" })}>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           <strong>Was ist passiert?</strong> Wahrscheinlich haben Sie erlebt, was Millionen von Menschen vor Ihnen

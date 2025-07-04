@@ -22,86 +22,136 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 // Types
 type GovernanceType = "none" | "quotas" | "ostrom";
 
-// Types für Moana's Choice Game
-// Angepasst: Jeder Chief einzeln sichtbar
+// Types für Moana's Choice Game - Updated to boats-based system
 
-type FishingChoice = "careful" | "intensive";
+const otherChiefs = ["Chief Kai", "Chief Tala", "Chief Sina"];
 
-const otherChiefs = ["Chief Kai"];
+
+type ScenarioType = "random" | "sustainable" | "aggressive";
 
 type RoundHistory = {
   round: number;
-  moanaChoice: FishingChoice | null;
+  moanaBoats: number | null;
   moanaFish: number | null;
-  otherChiefs: FishingChoice[] | null;
-  chiefsFish: number[] | null; // Fang pro Chief
+  otherBoats: number[] | null;
+  otherFish: number[] | null;
+  totalBoats: number | null;
+  totalCatch: number | null;
   fishAfter: number | null;
   regeneration: number | null;
 };
 
+// Mathematical functions from the notebook
+const calculateTotalCatch = (stock: number, totalBoats: number): number => {
+  return 0.01 * stock * Math.sqrt(totalBoats);
+};
+
+const calculateRegeneration = (stock: number): number => {
+  return 0.01 * (stock - 0.01 * stock * stock);
+};
+
 const FishingGameSimulator: React.FC = () => {
   const [round, setRound] = useState(1); // 1, 2, 3
-  const [fishStock, setFishStock] = useState(120);
+  const [fishStock, setFishStock] = useState(100); // Start with 100 like in notebook
   const [moanaTotal, setMoanaTotal] = useState(0);
+  const [scenario, setScenario] = useState<ScenarioType>("random");
   const [history, setHistory] = useState<RoundHistory[]>([
     {
       round: 1,
-      moanaChoice: null,
+      moanaBoats: null,
       moanaFish: null,
-      otherChiefs: null,
-      chiefsFish: null,
+      otherBoats: null,
+      otherFish: null,
+      totalBoats: null,
+      totalCatch: null,
       fishAfter: null,
       regeneration: null,
     },
     {
       round: 2,
-      moanaChoice: null,
+      moanaBoats: null,
       moanaFish: null,
-      otherChiefs: null,
-      chiefsFish: null,
+      otherBoats: null,
+      otherFish: null,
+      totalBoats: null,
+      totalCatch: null,
       fishAfter: null,
       regeneration: null,
     },
     {
       round: 3,
-      moanaChoice: null,
+      moanaBoats: null,
       moanaFish: null,
-      otherChiefs: null,
-      chiefsFish: null,
+      otherBoats: null,
+      otherFish: null,
+      totalBoats: null,
+      totalCatch: null,
       fishAfter: null,
       regeneration: null,
     },
   ]);
   const [gameOver, setGameOver] = useState(false);
 
-  function handleChoice(choice: FishingChoice, intensitveNum = 6, carefulNum = 3) {
-    if (gameOver || history[round - 1].moanaChoice) return;
-    // Chiefs wählen zufällig
-    const otherChoices = otherChiefs.map(() => (Math.random() < 0.6 ? "careful" : "intensive"));
-    const moanaFish = choice === "careful" ? carefulNum : intensitveNum;
-    const chiefsFish = otherChoices.map((c) => (c === "careful" ? carefulNum : intensitveNum));
-    let prevStock = round === 1 ? 120 : (history[round - 2].fishAfter ?? 120);
-    let nextStock = Math.max(0, prevStock - moanaFish - chiefsFish.reduce((a, b) => a + b, 0));
-    // Regeneration: 15% falls Bestand > 25, max 150
-    const regeneration = nextStock > 25 ? Math.floor(nextStock * 0.15) : 0;
-    nextStock = Math.min(150, nextStock + regeneration);
+  function handleBoatChoice(moanaBoats: number) {
+    if (gameOver || history[round - 1].moanaBoats !== null) return;
+    
+    // Other chiefs choose boats based on selected scenario
+    let otherBoats: number[];
+    
+    switch (scenario) {
+      case "sustainable":
+        // Harmony Islands: Chiefs value long-term thinking (3-5 boats)
+        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 3) + 3);
+        break;
+      case "aggressive":
+        // Competition Islands: Every chief fights for maximum catch (12-15 boats)
+        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 4) + 12);
+        break;
+      case "random":
+      default:
+        // Mixed Islands: Some sustainable, some aggressive (5-12 boats)
+        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 8) + 5);
+        break;
+    }
+    
+    const totalBoats = moanaBoats + otherBoats.reduce((a, b) => a + b, 0);
+    
+    // Get current stock
+    const currentStock = round === 1 ? 100 : (history[round - 2].fishAfter ?? 100);
+    
+    // Calculate total catch using mathematical model
+    const totalCatch = calculateTotalCatch(currentStock, totalBoats);
+    
+    // Each chief gets proportional share based on boats sent
+    const moanaFish = Math.round((moanaBoats / totalBoats) * totalCatch);
+    const otherFish = otherBoats.map((boats) => Math.round((boats / totalBoats) * totalCatch));
+    
+    // Update stock: subtract catch, add regeneration
+    let nextStock = Math.max(0, currentStock - totalCatch);
+    const regeneration = calculateRegeneration(nextStock);
+    nextStock = Math.min(150, nextStock + regeneration); // Cap at 150
+    
     // Update history
     const newHistory = history.map((h, idx) =>
       idx === round - 1
         ? {
             round,
-            moanaChoice: choice,
+            moanaBoats,
             moanaFish,
-            otherChiefs: otherChoices,
-            chiefsFish,
-            fishAfter: nextStock,
-            regeneration,
+            otherBoats,
+            otherFish,
+            totalBoats,
+            totalCatch: Math.round(totalCatch),
+            fishAfter: Math.round(nextStock),
+            regeneration: Math.round(regeneration),
           }
         : h,
     );
+    
     setHistory(newHistory);
     setMoanaTotal(moanaTotal + moanaFish);
-    setFishStock(nextStock);
+    setFishStock(Math.round(nextStock));
+    
     if (round === 3) {
       setGameOver(true);
     } else {
@@ -111,112 +161,200 @@ const FishingGameSimulator: React.FC = () => {
 
   function reset() {
     setRound(1);
-    setFishStock(120);
+    setFishStock(100);
     setMoanaTotal(0);
     setHistory([
       {
         round: 1,
-        moanaChoice: null,
+        moanaBoats: null,
         moanaFish: null,
-        otherChiefs: null,
-        chiefsFish: null,
+        otherBoats: null,
+        otherFish: null,
+        totalBoats: null,
+        totalCatch: null,
         fishAfter: null,
         regeneration: null,
       },
       {
         round: 2,
-        moanaChoice: null,
+        moanaBoats: null,
         moanaFish: null,
-        otherChiefs: null,
-        chiefsFish: null,
+        otherBoats: null,
+        otherFish: null,
+        totalBoats: null,
+        totalCatch: null,
         fishAfter: null,
         regeneration: null,
       },
       {
         round: 3,
-        moanaChoice: null,
+        moanaBoats: null,
         moanaFish: null,
-        otherChiefs: null,
-        chiefsFish: null,
+        otherBoats: null,
+        otherFish: null,
+        totalBoats: null,
+        totalCatch: null,
         fishAfter: null,
         regeneration: null,
       },
     ]);
     setGameOver(false);
+    setScenario("random");
   }
 
-  // Minimalistisches Konzept: Action-Bereich (Status + Buttons + Feedback) über Scoreboard-Tabelle
+  // Scenario Selector Component
+  function ScenarioSelector() {
+    const scenarios = {
+      random: {
+        name: "🏝️ Mixed Islands",
+        description: "Some chiefs sustainable, others competitive (5-12 boats each)",
+      },
+      sustainable: {
+        name: "🌊 Harmony Islands", 
+        description: "Chiefs here value long-term thinking (3-5 boats each)",
+      },
+      aggressive: {
+        name: "⚔️ Competition Islands",
+        description: "Every chief fights for maximum catch (12-15 boats each)",
+      },
+    };
+
+    return (
+      <div style={{ marginBottom: 20, textAlign: "center" }}>
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+          Choose the culture of the neighboring islands:
+        </div>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          {Object.entries(scenarios).map(([key, info]) => (
+            <button
+              key={key}
+              onClick={() => {
+                setScenario(key as ScenarioType);
+              }}
+              style={{
+                padding: "12px 16px",
+                border: scenario === key ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                borderRadius: 8,
+                background: scenario === key ? "#eff6ff" : "#fff",
+                cursor: "pointer",
+                textAlign: "left",
+                maxWidth: 200,
+                fontSize: 14,
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>{info.name}</div>
+              <div style={{ color: "#64748b", fontSize: 12, lineHeight: "1.3" }}>
+                {info.description}
+              </div>
+            </button>
+          ))}
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8 }}>
+            Selected: {scenarios[scenario].name}
+          </div>
+          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 12 }}>
+            As Moana, you can choose to send 3, 8, or 15 boats. What's your strategy?
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Action-Bereich mit Boats-basierten Entscheidungen
   function ActionBar() {
+    const currentRoundHistory = history[round - 1];
+    const hasChosenBoats = currentRoundHistory.moanaBoats !== null;
+    
     return (
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 8,
-          marginBottom: 12,
+          gap: 12,
+          marginBottom: 16,
         }}
       >
-        {/* Statusleiste */}
-        <div style={{ display: "flex", gap: 18, fontSize: 16, alignItems: "center" }}>
-          Welcome to the game. You are Moana and will now try to balance the needs of your village and 
-          the fish stock in the reef for the next three rounds.
+        {/* Status */}
+        <div style={{ fontSize: 16, textAlign: "center", marginBottom: 8 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            Round {round} of 3 • Fish Stock: {round === 1 ? 100 : history[round - 2].fishAfter} 🐟
+          </div>
+          <div style={{ color: "#64748b", fontSize: 14 }}>How many boats should Moana send out today?</div>
         </div>
-        {/* Buttons */}
-        {!gameOver && (
-          <div style={{ display: "flex", gap: 12, marginTop: 2 }}>
+
+        {/* Boat Choice Buttons */}
+        {!gameOver && !hasChosenBoats && (
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
             <button
-              onClick={() => handleChoice("careful", 15, 5)}
-              disabled={gameOver || history[round - 1].moanaChoice !== null}
+              onClick={() => handleBoatChoice(3)}
               style={{
-                padding: "10px 18px",
+                padding: "10px 16px",
                 border: "1px solid #10b981",
                 borderRadius: 6,
-                background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
-                color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
-                cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
+                background: "#fff",
+                color: "#222",
+                cursor: "pointer",
                 fontWeight: 500,
-                fontSize: 15,
-                minWidth: 120,
+                fontSize: 14,
               }}
             >
-              🌊 Sustainable (3 Fish)
+              🌊 3 Boats (Sustainable)
             </button>
             <button
-              onClick={() => handleChoice("intensive", 15, 5)}
-              disabled={gameOver || history[round - 1].moanaChoice !== null}
+              onClick={() => handleBoatChoice(8)}
               style={{
-                padding: "10px 18px",
+                padding: "10px 16px",
                 border: "1px solid #f59e0b",
                 borderRadius: 6,
-                background: gameOver || history[round - 1].moanaChoice !== null ? "#e5e7eb" : "#fff",
-                color: gameOver || history[round - 1].moanaChoice !== null ? "#94a3b8" : "#222",
-                cursor: gameOver || history[round - 1].moanaChoice !== null ? "not-allowed" : "pointer",
+                background: "#fff",
+                color: "#222",
+                cursor: "pointer",
                 fontWeight: 500,
-                fontSize: 15,
-                minWidth: 120,
+                fontSize: 14,
               }}
             >
-              ⚡ Intensiv (6 Fish)
+              ⚖️ 8 Boats (Moderate)
+            </button>
+            <button
+              onClick={() => handleBoatChoice(15)}
+              style={{
+                padding: "10px 16px",
+                border: "1px solid #ef4444",
+                borderRadius: 6,
+                background: "#fff",
+                color: "#222",
+                cursor: "pointer",
+                fontWeight: 500,
+                fontSize: 14,
+              }}
+            >
+              ⚡ 15 Boats (Intensive)
             </button>
           </div>
         )}
-        {/* Rundenfeedback */}
-        {!gameOver && history[round - 1].moanaChoice && (
-          <div style={{ fontSize: 15, color: "#64748b", marginTop: 4, textAlign: "center" }}>
-            Du hast <b>{history[round - 1].moanaChoice === "careful" ? "sorgsam" : "intensiv"}</b> gefischt und{" "}
-            {history[round - 1].moanaFish} Fische gefangen.
-            <br />
-            Die anderen Chiefs:{" "}
-            {history[round - 1].otherChiefs
-              ?.map((c, i) => `${otherChiefs[i]}: ${c === "careful" ? "sorgsam" : "intensiv"}`)
-              .join(", ")}
-            <br />
-            Insgesamt wurden {history[round - 1].moanaFish! +
-              history[round - 1].chiefsFish!.reduce((a, b) => a + b, 0)}{" "}
-            Fische gefangen.
-            {history[round - 1].regeneration && history[round - 1].regeneration > 0 && (
-              <span> &ndash; Das Riff erholt sich: +{history[round - 1].regeneration} Fische</span>
+
+        {/* Round Feedback */}
+        {!gameOver && hasChosenBoats && (
+          <div style={{ fontSize: 14, color: "#64748b", textAlign: "center", marginTop: 4 }}>
+            <div style={{ marginBottom: 4 }}>
+              <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <strong>Other Chiefs:</strong>{" "}
+              {currentRoundHistory.otherBoats
+                ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
+                .join(", ")}
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch}{" "}
+              fish
+            </div>
+            {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
+              <div style={{ color: "#10b981" }}>
+                🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish
+              </div>
             )}
           </div>
         )}
@@ -224,47 +362,51 @@ const FishingGameSimulator: React.FC = () => {
     );
   }
 
-  // Vergleichs-Tabelle: Moana + alle Chiefs einzeln + Summary-Zeile + nachhaltige Entscheidung farblich
+  // Results table showing boats and fish caught
   function ResultsTable() {
-    // Summen berechnen
+    // Calculate totals
     const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
     const chiefsSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.chiefsFish && h.chiefsFish[i] !== undefined ? h.chiefsFish[i] : 0), 0),
+      history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
     );
-    // Hilfsfunktion für Zellen-Highlight
-    function choiceCell(choice: FishingChoice | null, fish: number | null) {
-      if (choice === null || fish === null) return <span>-</span>;
-      const isSustainable = choice === "careful";
+    
+    // Helper function for boat display
+    function boatCell(boats: number | null, fish: number | null) {
+      if (boats === null || fish === null) return <span>-</span>;
+      const isConservative = boats <= 4;
+      const isAggressive = boats >= 12;
+      
       return (
         <span
           style={{
-            background: isSustainable ? "#d1fae5" : "#fef9c3",
-            color: isSustainable ? "#047857" : "#b45309",
+            background: isConservative ? "#d1fae5" : isAggressive ? "#fef2f2" : "#fef9c3",
+            color: isConservative ? "#047857" : isAggressive ? "#dc2626" : "#b45309",
             borderRadius: 4,
             padding: "2px 6px",
             fontWeight: 500,
             display: "inline-block",
-            minWidth: 24,
+            minWidth: 40,
           }}
-          title={isSustainable ? "Sorgsam (nachhaltig)" : "Intensiv (nicht nachhaltig)"}
+          title={`${boats} boats → ${fish} fish`}
         >
-          {isSustainable ? "🌊" : "⚡"} {fish}
+          {boats}🛥️ → {fish}🐟
         </span>
       );
     }
+    
     return (
       <div style={{ display: "flex", justifyContent: "center", margin: "18px 0" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 15, minWidth: 420 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
           <thead>
             <tr style={{ background: "#bae6fd" }}>
-              <th style={{ padding: "6px 8px" }}>Runde</th>
+              <th style={{ padding: "6px 8px" }}>Round</th>
               <th style={{ padding: "6px 8px" }}>Moana</th>
               {otherChiefs.map((chief) => (
-                <th key={chief} style={{ padding: "6px 8px" }}>
-                  {chief}
+                <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                  {chief.replace("Chief ", "")}
                 </th>
               ))}
-              <th style={{ padding: "6px 8px" }}>Fischbestand</th>
+              <th style={{ padding: "6px 8px" }}>Stock After</th>
             </tr>
           </thead>
           <tbody>
@@ -285,26 +427,30 @@ const FishingGameSimulator: React.FC = () => {
                   {h.round}
                 </td>
                 {/* Moana */}
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{choiceCell(h.moanaChoice, h.moanaFish)}</td>
-                {/* Chiefs */}
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {boatCell(h.moanaBoats, h.moanaFish)}
+                </td>
+                {/* Other Chiefs */}
                 {otherChiefs.map((_, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {h.otherChiefs && h.chiefsFish && h.otherChiefs[i] !== undefined && h.chiefsFish[i] !== undefined
-                      ? choiceCell(h.otherChiefs[i], h.chiefsFish[i])
+                    {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
+                      ? boatCell(h.otherBoats[i], h.otherFish[i])
                       : "-"}
                   </td>
                 ))}
-                {/* Fischbestand */}
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{h.fishAfter !== null ? h.fishAfter : "-"}</td>
+                {/* Fish Stock */}
+                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                  {h.fishAfter !== null ? `${h.fishAfter}🐟` : "-"}
+                </td>
               </tr>
             ))}
             {/* Summary Row */}
             <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-              <td style={{ padding: "4px 8px", textAlign: "center" }}>Σ</td>
-              <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}</td>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
               {chiefsSums.map((sum, i) => (
                 <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {sum}
+                  {sum}🐟
                 </td>
               ))}
               <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
@@ -347,6 +493,7 @@ const FishingGameSimulator: React.FC = () => {
 
   return (
     <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
+      <ScenarioSelector />
       <ActionBar />
       <ResultsTable />
       {gameOver && <EndSummary />}

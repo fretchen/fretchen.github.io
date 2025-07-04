@@ -210,7 +210,7 @@ const FishingGameSimulator: React.FC = () => {
         description: "Some chiefs sustainable, others competitive (5-12 boats each)",
       },
       sustainable: {
-        name: "🌊 Harmony Islands", 
+        name: "🌊 Harmony Islands",
         description: "Chiefs here value long-term thinking (3-5 boats each)",
       },
       aggressive: {
@@ -219,43 +219,91 @@ const FishingGameSimulator: React.FC = () => {
       },
     };
 
+    // Check if any round has started (any boat choice has been made)
+    const gameStarted = history.some((h) => h.moanaBoats !== null);
+
     return (
-      <div style={{ marginBottom: 20, textAlign: "center" }}>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-          Choose the culture of the neighboring islands:
-        </div>
+      <div
+        style={{
+          marginBottom: 20,
+          textAlign: "center",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: 16,
+          background: "#fafafa",
+        }}
+      >
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🌏 Neighboring Islands Culture</div>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          {Object.entries(scenarios).map(([key, info]) => (
-            <button
-              key={key}
-              onClick={() => {
-                setScenario(key as ScenarioType);
-              }}
-              style={{
-                padding: "12px 16px",
-                border: scenario === key ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                borderRadius: 8,
-                background: scenario === key ? "#eff6ff" : "#fff",
-                cursor: "pointer",
-                textAlign: "left",
-                maxWidth: 200,
-                fontSize: 14,
-              }}
-            >
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>{info.name}</div>
-              <div style={{ color: "#64748b", fontSize: 12, lineHeight: "1.3" }}>
-                {info.description}
-              </div>
-            </button>
-          ))}
+          {Object.entries(scenarios).map(([key, info]) => {
+            const isSelected = scenario === key;
+            const isDisabled = gameStarted;
+
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  if (!isDisabled) {
+                    setScenario(key as ScenarioType);
+                  }
+                }}
+                disabled={isDisabled}
+                style={{
+                  padding: "12px 16px",
+                  border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                  borderRadius: 8,
+                  background: isDisabled ? "#f3f4f6" : isSelected ? "#eff6ff" : "#fff",
+                  cursor: isDisabled ? "not-allowed" : "pointer",
+                  textAlign: "left",
+                  maxWidth: 200,
+                  fontSize: 14,
+                  opacity: isDisabled ? 0.6 : 1,
+                  position: "relative",
+                }}
+                title={isDisabled ? "Scenario locked during active game" : ""}
+              >
+                {isDisabled && isSelected && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 6,
+                      fontSize: 12,
+                      color: "#6b7280",
+                    }}
+                  >
+                    🔒
+                  </div>
+                )}
+                <div style={{ fontWeight: 600, marginBottom: 4, color: isDisabled ? "#9ca3af" : "#111827" }}>
+                  {info.name}
+                </div>
+                <div
+                  style={{
+                    color: isDisabled ? "#9ca3af" : "#64748b",
+                    fontSize: 12,
+                    lineHeight: "1.3",
+                  }}
+                >
+                  {info.description}
+                </div>
+              </button>
+            );
+          })}
         </div>
         <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8 }}>
-            Selected: {scenarios[scenario].name}
+          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8, fontWeight: 500 }}>
+            Active Scenario: {scenarios[scenario].name}
           </div>
-          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 12 }}>
-            As Moana, you can choose to send 3, 8, or 15 boats. What's your strategy?
-          </div>
+          {gameStarted ? (
+            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
+              Scenario is locked during the game. Use "Play again" to change scenarios.
+            </div>
+          ) : (
+            <div style={{ fontSize: 14, color: "#64748b" }}>
+              As Moana, you can choose to send 3, 8, or 15 boats. What's your strategy?
+            </div>
+          )}
         </div>
       </div>
     );
@@ -265,7 +313,7 @@ const FishingGameSimulator: React.FC = () => {
   function ActionBar() {
     const currentRoundHistory = history[round - 1];
     const hasChosenBoats = currentRoundHistory.moanaBoats !== null;
-    
+
     return (
       <div
         style={{
@@ -276,6 +324,29 @@ const FishingGameSimulator: React.FC = () => {
           marginBottom: 16,
         }}
       >
+        {/* Progress Indicator */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          {[1, 2, 3].map((roundNum) => (
+            <div
+              key={roundNum}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14,
+                fontWeight: 600,
+                background: roundNum < round ? "#10b981" : roundNum === round ? "#3b82f6" : "#e5e7eb",
+                color: roundNum < round || roundNum === round ? "#fff" : "#9ca3af",
+              }}
+            >
+              {roundNum < round ? "✓" : roundNum}
+            </div>
+          ))}
+        </div>
+
         {/* Status */}
         <div style={{ fontSize: 16, textAlign: "center", marginBottom: 8 }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
@@ -369,13 +440,19 @@ const FishingGameSimulator: React.FC = () => {
     const chiefsSums = otherChiefs.map((_, i) =>
       history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
     );
-    
+
+    const scenarios = {
+      random: { name: "🏝️ Mixed", color: "#f59e0b" },
+      sustainable: { name: "🌊 Harmony", color: "#10b981" },
+      aggressive: { name: "⚔️ Competition", color: "#ef4444" },
+    };
+
     // Helper function for boat display
     function boatCell(boats: number | null, fish: number | null) {
       if (boats === null || fish === null) return <span>-</span>;
       const isConservative = boats <= 4;
       const isAggressive = boats >= 12;
-      
+
       return (
         <span
           style={{
@@ -393,99 +470,162 @@ const FishingGameSimulator: React.FC = () => {
         </span>
       );
     }
-    
+
     return (
-      <div style={{ display: "flex", justifyContent: "center", margin: "18px 0" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
-          <thead>
-            <tr style={{ background: "#bae6fd" }}>
-              <th style={{ padding: "6px 8px" }}>Round</th>
-              <th style={{ padding: "6px 8px" }}>Moana</th>
-              {otherChiefs.map((chief) => (
-                <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
-                  {chief.replace("Chief ", "")}
-                </th>
-              ))}
-              <th style={{ padding: "6px 8px" }}>Stock After</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((h, idx) => (
-              <tr
-                key={idx}
-                style={{
-                  background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff",
-                }}
-              >
-                <td
+      <div style={{ margin: "18px 0" }}>
+        {/* Scenario indicator above table */}
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#64748b",
+          }}
+        >
+          Active Scenario:{" "}
+          <span
+            style={{
+              color: scenarios[scenario].color,
+              fontWeight: 600,
+            }}
+          >
+            {scenarios[scenario].name}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
+            <thead>
+              <tr style={{ background: "#bae6fd" }}>
+                <th style={{ padding: "6px 8px" }}>Round</th>
+                <th style={{ padding: "6px 8px" }}>Moana</th>
+                {otherChiefs.map((chief) => (
+                  <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                    {chief.replace("Chief ", "")}
+                  </th>
+                ))}
+                <th style={{ padding: "6px 8px" }}>Stock After</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h, idx) => (
+                <tr
+                  key={idx}
                   style={{
-                    padding: "4px 8px",
-                    textAlign: "center",
-                    fontWeight: idx === round - 1 && !gameOver ? 600 : 400,
+                    background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff",
                   }}
                 >
-                  {h.round}
-                </td>
-                {/* Moana */}
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {boatCell(h.moanaBoats, h.moanaFish)}
-                </td>
-                {/* Other Chiefs */}
-                {otherChiefs.map((_, i) => (
+                  <td
+                    style={{
+                      padding: "4px 8px",
+                      textAlign: "center",
+                      fontWeight: idx === round - 1 && !gameOver ? 600 : 400,
+                    }}
+                  >
+                    {h.round}
+                  </td>
+                  {/* Moana */}
+                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {boatCell(h.moanaBoats, h.moanaFish)}
+                  </td>
+                  {/* Other Chiefs */}
+                  {otherChiefs.map((_, i) => (
+                    <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                      {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
+                        ? boatCell(h.otherBoats[i], h.otherFish[i])
+                        : "-"}
+                    </td>
+                  ))}
+                  {/* Fish Stock */}
+                  <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                    {h.fishAfter !== null ? `${h.fishAfter}🐟` : "-"}
+                  </td>
+                </tr>
+              ))}
+              {/* Summary Row */}
+              <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
+                {chiefsSums.map((sum, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
-                      ? boatCell(h.otherBoats[i], h.otherFish[i])
-                      : "-"}
+                    {sum}🐟
                   </td>
                 ))}
-                {/* Fish Stock */}
-                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
-                  {h.fishAfter !== null ? `${h.fishAfter}🐟` : "-"}
-                </td>
+                <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
               </tr>
-            ))}
-            {/* Summary Row */}
-            <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-              <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
-              <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
-              {chiefsSums.map((sum, i) => (
-                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {sum}🐟
-                </td>
-              ))}
-              <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
 
   // Nach 3 Runden: Zusammenfassung
   function EndSummary() {
+    const scenarios = {
+      random: { name: "🏝️ Mixed Islands", color: "#f59e0b" },
+      sustainable: { name: "🌊 Harmony Islands", color: "#10b981" },
+      aggressive: { name: "⚔️ Competition Islands", color: "#ef4444" },
+    };
+
+    const getSustainabilityMessage = () => {
+      if (fishStock >= 80) return { text: "Excellent! The ocean thrives.", color: "#10b981" };
+      if (fishStock >= 60) return { text: "Good sustainability achieved.", color: "#f59e0b" };
+      if (fishStock >= 40) return { text: "The ocean is stressed but surviving.", color: "#f59e0b" };
+      return { text: "Critical! The ocean ecosystem is collapsing.", color: "#ef4444" };
+    };
+
+    const sustainabilityMessage = getSustainabilityMessage();
+
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>Ergebnis nach 3 Runden</div>
-        <div style={{ fontSize: 15, marginBottom: 6 }}>
-          🐟 <b>{fishStock}</b> Fische im Riff
+        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 12 }}>Game Complete!</div>
+        
+        <div
+          style={{
+            background: "#f0f9ff",
+            border: "1px solid #c7d2fe",
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ fontSize: 14, marginBottom: 8 }}>
+            <strong>Scenario:</strong>{" "}
+            <span style={{ color: scenarios[scenario].color }}>{scenarios[scenario].name}</span>
+          </div>
+          <div style={{ fontSize: 15, marginBottom: 8 }}>
+            🐟 <strong>{fishStock}</strong> fish remaining in the ocean
+          </div>
+          <div style={{ fontSize: 15, marginBottom: 8 }}>
+            🌺 <strong>{moanaTotal}</strong> fish caught by Moana
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              color: sustainabilityMessage.color,
+              fontWeight: 500,
+              marginTop: 8,
+            }}
+          >
+            {sustainabilityMessage.text}
+          </div>
         </div>
-        <div style={{ fontSize: 15, marginBottom: 6 }}>
-          🌺 <b>{moanaTotal}</b> fish for you (as Moana).
-        </div>
+
         <button
           onClick={reset}
           style={{
-            padding: "8px 20px",
+            padding: "12px 24px",
             border: "none",
-            borderRadius: 6,
+            borderRadius: 8,
             background: "#0891b2",
             color: "#fff",
-            fontWeight: 500,
+            fontWeight: 600,
             fontSize: 15,
             cursor: "pointer",
           }}
         >
-          Play again
+          🔄 Try Different Scenario
         </button>
       </div>
     );

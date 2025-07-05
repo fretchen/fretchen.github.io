@@ -522,24 +522,7 @@ const FishingGameSimulator: React.FC = () => {
     return (
       <div style={{ margin: "18px 0" }}>
         {/* Scenario indicator above table */}
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: 12,
-            fontSize: 13,
-            color: "#64748b",
-          }}
-        >
-          Active Scenario:{" "}
-          <span
-            style={{
-              color: scenarios[scenario].color,
-              fontWeight: 600,
-            }}
-          >
-            {scenarios[scenario].name}
-          </span>
-        </div>
+        
 
         <div style={{ display: "flex", justifyContent: "center" }}>
           <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
@@ -854,7 +837,7 @@ const TragedyOfCommonsFishing: React.FC = () => {
       <h1>Games on the common pool ressources</h1>
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-I recently wrote about the prisoners dilemma. However, it feels overly gloomy and the not that realistic.
+I recently wrote about the prisoners dilemma. However, it feels really gloomy and not that realistic.
 So I started to look around into more complex games that might apply more directly to my life experiences. In this
 context I kept coming back to the question of how can we govern common pools ?
 

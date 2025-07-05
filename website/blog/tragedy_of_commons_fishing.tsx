@@ -26,7 +26,6 @@ type GovernanceType = "none" | "quotas" | "ostrom";
 
 const otherChiefs = ["Chief Kai", "Chief Tala", "Chief Sina"];
 
-
 type ScenarioType = "random" | "sustainable" | "aggressive";
 
 type RoundHistory = {
@@ -41,18 +40,57 @@ type RoundHistory = {
   regeneration: number | null;
 };
 
-// Mathematical functions from the notebook
+// Mathematical parameters from the notebook
+const MODEL_PARAMS = {
+  // Regeneration parameters
+  g0: 0.03, // Linear growth factor
+  g1: 0.001, // Quadratic growth factor
+
+  // Catch efficiency parameter
+  y0: 0.01, // Catch efficiency
+
+  // Cost parameter
+  c0: 0.125, // Cost per boat
+
+  // Initial stock
+  s_init: 100,
+
+  // Number of players (4 total: Moana + 3 chiefs)
+  nplayers: 4,
+};
+
+// Calculate sustainable and competitive boat numbers based on the notebook
+const calculateOptimalBoats = () => {
+  // Sustainable boats: b_sust = (g0/y0 * (1 - g1 * s_init))^2
+  const b_sust = Math.pow((MODEL_PARAMS.g0 / MODEL_PARAMS.y0) * (1 - MODEL_PARAMS.g1 * MODEL_PARAMS.s_init), 2);
+
+  // Competitive boats: b_c = (y0 * s_init / c0)^2
+  const b_c = Math.pow((MODEL_PARAMS.y0 * MODEL_PARAMS.s_init) / MODEL_PARAMS.c0, 2);
+
+  // Boats per player (divide total by number of players)
+  const low_fishing = Math.floor(b_sust / MODEL_PARAMS.nplayers);
+  const intensive_fishing = Math.floor(b_c / MODEL_PARAMS.nplayers);
+
+  return { low_fishing, intensive_fishing, b_sust, b_c };
+};
+
+// Get the calculated optimal values
+const OPTIMAL_BOATS = calculateOptimalBoats();
+
+// Mathematical functions from the notebook - exact implementation
 const calculateTotalCatch = (stock: number, totalBoats: number): number => {
-  return 0.01 * stock * Math.sqrt(totalBoats);
+  // y_t = y0 * s_t * sqrt(b_t)
+  return MODEL_PARAMS.y0 * stock * Math.sqrt(totalBoats);
 };
 
 const calculateRegeneration = (stock: number): number => {
-  return 0.01 * (stock - 0.01 * stock * stock);
+  // g_t = g0 * (s_t - g1 * s_t^2)
+  return MODEL_PARAMS.g0 * (stock - MODEL_PARAMS.g1 * stock * stock);
 };
 
 const FishingGameSimulator: React.FC = () => {
   const [round, setRound] = useState(1); // 1, 2, 3
-  const [fishStock, setFishStock] = useState(100); // Start with 100 like in notebook
+  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init); // Start with notebook value
   const [moanaTotal, setMoanaTotal] = useState(0);
   const [scenario, setScenario] = useState<ScenarioType>("random");
   const [history, setHistory] = useState<RoundHistory[]>([
@@ -94,43 +132,51 @@ const FishingGameSimulator: React.FC = () => {
 
   function handleBoatChoice(moanaBoats: number) {
     if (gameOver || history[round - 1].moanaBoats !== null) return;
-    
+
     // Other chiefs choose boats based on selected scenario
     let otherBoats: number[];
-    
+
     switch (scenario) {
       case "sustainable":
-        // Harmony Islands: Chiefs value long-term thinking (3-5 boats)
-        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 3) + 3);
+        // Harmony Islands: Chiefs value long-term thinking (use calculated sustainable boats)
+        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 2) + Math.max(1, OPTIMAL_BOATS.low_fishing - 1));
         break;
       case "aggressive":
-        // Competition Islands: Every chief fights for maximum catch (12-15 boats)
-        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 4) + 12);
+        // Competition Islands: Every chief fights for maximum catch (use calculated competitive boats)
+        otherBoats = otherChiefs.map(
+          () => Math.floor(Math.random() * 4) + Math.max(8, OPTIMAL_BOATS.intensive_fishing - 2),
+        );
         break;
       case "random":
       default:
-        // Mixed Islands: Some sustainable, some aggressive (5-12 boats)
-        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 8) + 5);
+        // Mixed Islands: Some sustainable, some aggressive (mix of both strategies)
+        otherBoats = otherChiefs.map(() =>
+          Math.random() < 0.5
+            ? Math.max(1, OPTIMAL_BOATS.low_fishing + Math.floor(Math.random() * 3))
+            : Math.max(8, OPTIMAL_BOATS.intensive_fishing - Math.floor(Math.random() * 4)),
+        );
         break;
     }
-    
+
     const totalBoats = moanaBoats + otherBoats.reduce((a, b) => a + b, 0);
-    
+
     // Get current stock
-    const currentStock = round === 1 ? 100 : (history[round - 2].fishAfter ?? 100);
-    
-    // Calculate total catch using mathematical model
+    const currentStock = round === 1 ? MODEL_PARAMS.s_init : (history[round - 2].fishAfter ?? MODEL_PARAMS.s_init);
+    console.log("Current stock:", currentStock);
+    // Calculate regeneration first (like in notebook: gt = g_t(st, g0, g1))
+    const regeneration = calculateRegeneration(currentStock);
+
+    // Calculate total catch using mathematical model (like in notebook: yt = y_t(st, b_t, y0))
     const totalCatch = calculateTotalCatch(currentStock, totalBoats);
-    
+
     // Each chief gets proportional share based on boats sent
     const moanaFish = Math.round((moanaBoats / totalBoats) * totalCatch);
     const otherFish = otherBoats.map((boats) => Math.round((boats / totalBoats) * totalCatch));
-    
-    // Update stock: subtract catch, add regeneration
-    let nextStock = Math.max(0, currentStock - totalCatch);
-    const regeneration = calculateRegeneration(nextStock);
-    nextStock = Math.min(150, nextStock + regeneration); // Cap at 150
-    
+
+    // Update stock exactly like in notebook: st = st - yt + gt
+    let nextStock = currentStock - totalCatch + regeneration;
+    console.log("Next stock after catch and regeneration:", nextStock);
+
     // Update history
     const newHistory = history.map((h, idx) =>
       idx === round - 1
@@ -147,11 +193,11 @@ const FishingGameSimulator: React.FC = () => {
           }
         : h,
     );
-    
+
     setHistory(newHistory);
     setMoanaTotal(moanaTotal + moanaFish);
     setFishStock(Math.round(nextStock));
-    
+
     if (round === 3) {
       setGameOver(true);
     } else {
@@ -161,7 +207,7 @@ const FishingGameSimulator: React.FC = () => {
 
   function reset() {
     setRound(1);
-    setFishStock(100);
+    setFishStock(MODEL_PARAMS.s_init);
     setMoanaTotal(0);
     setHistory([
       {
@@ -207,15 +253,15 @@ const FishingGameSimulator: React.FC = () => {
     const scenarios = {
       random: {
         name: "🏝️ Mixed Islands",
-        description: "Some chiefs sustainable, others competitive (5-12 boats each)",
+        description: `Some chiefs sustainable (~${OPTIMAL_BOATS.low_fishing} boats), others competitive (~${OPTIMAL_BOATS.intensive_fishing} boats)`,
       },
       sustainable: {
         name: "🌊 Harmony Islands",
-        description: "Chiefs here value long-term thinking (3-5 boats each)",
+        description: `Chiefs here value long-term thinking (~${OPTIMAL_BOATS.low_fishing} boats each)`,
       },
       aggressive: {
         name: "⚔️ Competition Islands",
-        description: "Every chief fights for maximum catch (12-15 boats each)",
+        description: `Every chief fights for maximum catch (~${OPTIMAL_BOATS.intensive_fishing} boats each)`,
       },
     };
 
@@ -301,7 +347,9 @@ const FishingGameSimulator: React.FC = () => {
             </div>
           ) : (
             <div style={{ fontSize: 14, color: "#64748b" }}>
-              As Moana, you can choose to send 3, 8, or 15 boats. What's your strategy?
+              As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
+              {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
+              {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
             </div>
           )}
         </div>
@@ -350,7 +398,7 @@ const FishingGameSimulator: React.FC = () => {
         {/* Status */}
         <div style={{ fontSize: 16, textAlign: "center", marginBottom: 8 }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            Round {round} of 3 • Fish Stock: {round === 1 ? 100 : history[round - 2].fishAfter} 🐟
+            Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
           </div>
           <div style={{ color: "#64748b", fontSize: 14 }}>How many boats should Moana send out today?</div>
         </div>
@@ -359,7 +407,7 @@ const FishingGameSimulator: React.FC = () => {
         {!gameOver && !hasChosenBoats && (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
             <button
-              onClick={() => handleBoatChoice(3)}
+              onClick={() => handleBoatChoice(OPTIMAL_BOATS.low_fishing)}
               style={{
                 padding: "10px 16px",
                 border: "1px solid #10b981",
@@ -371,10 +419,12 @@ const FishingGameSimulator: React.FC = () => {
                 fontSize: 14,
               }}
             >
-              🌊 3 Boats (Sustainable)
+              🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
             </button>
             <button
-              onClick={() => handleBoatChoice(8)}
+              onClick={() =>
+                handleBoatChoice(Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2))
+              }
               style={{
                 padding: "10px 16px",
                 border: "1px solid #f59e0b",
@@ -386,10 +436,10 @@ const FishingGameSimulator: React.FC = () => {
                 fontSize: 14,
               }}
             >
-              ⚖️ 8 Boats (Moderate)
+              ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
             </button>
             <button
-              onClick={() => handleBoatChoice(15)}
+              onClick={() => handleBoatChoice(OPTIMAL_BOATS.intensive_fishing)}
               style={{
                 padding: "10px 16px",
                 border: "1px solid #ef4444",
@@ -401,7 +451,7 @@ const FishingGameSimulator: React.FC = () => {
                 fontSize: 14,
               }}
             >
-              ⚡ 15 Boats (Intensive)
+              ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
             </button>
           </div>
         )}
@@ -423,9 +473,7 @@ const FishingGameSimulator: React.FC = () => {
               fish
             </div>
             {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
-              <div style={{ color: "#10b981" }}>
-                🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish
-              </div>
+              <div style={{ color: "#10b981" }}>🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish</div>
             )}
           </div>
         )}
@@ -450,8 +498,8 @@ const FishingGameSimulator: React.FC = () => {
     // Helper function for boat display
     function boatCell(boats: number | null, fish: number | null) {
       if (boats === null || fish === null) return <span>-</span>;
-      const isConservative = boats <= 4;
-      const isAggressive = boats >= 12;
+      const isConservative = boats <= OPTIMAL_BOATS.low_fishing + 1; // Around sustainable level
+      const isAggressive = boats >= OPTIMAL_BOATS.intensive_fishing - 2; // Around competitive level
 
       return (
         <span
@@ -525,9 +573,7 @@ const FishingGameSimulator: React.FC = () => {
                     {h.round}
                   </td>
                   {/* Moana */}
-                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {boatCell(h.moanaBoats, h.moanaFish)}
-                  </td>
+                  <td style={{ padding: "4px 8px", textAlign: "center" }}>{boatCell(h.moanaBoats, h.moanaFish)}</td>
                   {/* Other Chiefs */}
                   {otherChiefs.map((_, i) => (
                     <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
@@ -580,7 +626,7 @@ const FishingGameSimulator: React.FC = () => {
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
         <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 12 }}>Game Complete!</div>
-        
+
         <div
           style={{
             background: "#f0f9ff",

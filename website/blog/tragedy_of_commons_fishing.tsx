@@ -4,7 +4,6 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
-import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,9 +17,6 @@ import {
 import { css } from "../styled-system/css";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-// Types
-type GovernanceType = "none" | "quotas" | "ostrom";
 
 // Types für Moana's Choice Game - Updated to boats-based system
 
@@ -174,7 +170,7 @@ const FishingGameSimulator: React.FC = () => {
     const otherFish = otherBoats.map((boats) => Math.round((boats / totalBoats) * totalCatch));
 
     // Update stock exactly like in notebook: st = st - yt + gt
-    let nextStock = currentStock - totalCatch + regeneration;
+    const nextStock = currentStock - totalCatch + regeneration;
     console.log("Next stock after catch and regeneration:", nextStock);
 
     // Update history
@@ -343,7 +339,7 @@ const FishingGameSimulator: React.FC = () => {
           </div>
           {gameStarted ? (
             <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
-              Scenario is locked during the game. Use "Play again" to change scenarios.
+              Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
             </div>
           ) : (
             <div style={{ fontSize: 14, color: "#64748b" }}>
@@ -489,12 +485,6 @@ const FishingGameSimulator: React.FC = () => {
       history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
     );
 
-    const scenarios = {
-      random: { name: "🏝️ Mixed", color: "#f59e0b" },
-      sustainable: { name: "🌊 Harmony", color: "#10b981" },
-      aggressive: { name: "⚔️ Competition", color: "#ef4444" },
-    };
-
     // Helper function for boat display
     function boatCell(boats: number | null, fish: number | null) {
       if (boats === null || fish === null) return <span>-</span>;
@@ -522,7 +512,6 @@ const FishingGameSimulator: React.FC = () => {
     return (
       <div style={{ margin: "18px 0" }}>
         {/* Scenario indicator above table */}
-        
 
         <div style={{ display: "flex", justifyContent: "center" }}>
           <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
@@ -670,165 +659,6 @@ const FishingGameSimulator: React.FC = () => {
   );
 };
 
-// Governance Designer Component
-const GovernanceDesigner: React.FC = () => {
-  const [selectedGovernance, setSelectedGovernance] = useState<GovernanceType>("none");
-  const [simulationResult, setSimulationResult] = useState<{
-    sustainability: number;
-    efficiency: number;
-    fairness: number;
-    cost: number;
-  } | null>(null);
-
-  const governanceOptions = {
-    none: {
-      name: "Keine Regulierung",
-      description: "Jeder fischt so viel er will",
-      sustainability: 20,
-      efficiency: 70,
-      fairness: 30,
-      cost: 0,
-    },
-    quotas: {
-      name: "Staatliche Quoten",
-      description: "Feste Fangmengen pro Boot",
-      sustainability: 80,
-      efficiency: 60,
-      fairness: 70,
-      cost: 40,
-    },
-    ostrom: {
-      name: "Ostrom'sche Selbstverwaltung",
-      description: "8 Erfolgsprinzipien für Commons",
-      sustainability: 88,
-      efficiency: 78,
-      fairness: 92,
-      cost: 25,
-    },
-  };
-
-  const testGovernance = (type: GovernanceType) => {
-    setSelectedGovernance(type);
-    setSimulationResult(governanceOptions[type]);
-  };
-
-  return (
-    <div
-      className={css({
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "20px",
-        margin: "20px 0",
-        backgroundColor: "#fefce8",
-      })}
-    >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>⚖️ Governance-Designer</h3>
-
-      <div
-        className={css({
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "12px",
-          marginBottom: "20px",
-        })}
-      >
-        {Object.entries(governanceOptions).map(([key, option]) => (
-          <button
-            key={key}
-            onClick={() => testGovernance(key as GovernanceType)}
-            className={css({
-              padding: "12px",
-              backgroundColor: selectedGovernance === key ? "#fbbf24" : "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              cursor: "pointer",
-              textAlign: "left",
-              "&:hover": { backgroundColor: "#fef3c7" },
-            })}
-          >
-            <div className={css({ fontWeight: "bold", marginBottom: "4px" })}>{option.name}</div>
-            <div className={css({ fontSize: "12px", color: "#6b7280" })}>{option.description}</div>
-          </button>
-        ))}
-      </div>
-
-      {simulationResult && (
-        <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "6px" })}>
-          <h4 className={css({ marginBottom: "12px", fontWeight: "bold" })}>
-            Ergebnis: {governanceOptions[selectedGovernance].name}
-          </h4>
-
-          {selectedGovernance === "ostrom" && (
-            <div
-              className={css({
-                backgroundColor: "#f0f9ff",
-                padding: "12px",
-                borderRadius: "6px",
-                marginBottom: "16px",
-                border: "1px solid #c7d2fe",
-              })}
-            >
-              <h5 className={css({ fontWeight: "bold", marginBottom: "8px" })}>Elinor Ostroms 8 Erfolgsprinzipien:</h5>
-              <div className={css({ fontSize: "14px", lineHeight: "1.5" })}>
-                <div>
-                  1. 🎯 <strong>Klare Grenzen:</strong> Wer gehört zur Gemeinschaft?
-                </div>
-                <div>
-                  2. 📋 <strong>Lokale Regeln:</strong> An lokale Bedingungen angepasst
-                </div>
-                <div>
-                  3. 🗳️ <strong>Partizipation:</strong> Betroffene gestalten Regeln mit
-                </div>
-                <div>
-                  4. 👀 <strong>Monitoring:</strong> Gemeinschaft überwacht sich selbst
-                </div>
-                <div>
-                  5. ⚖️ <strong>Graduierte Sanktionen:</strong> Faire, stufenweise Strafen
-                </div>
-                <div>
-                  6. 🤝 <strong>Konfliktlösung:</strong> Schnelle, lokale Streitbeilegung
-                </div>
-                <div>
-                  7. 🛡️ <strong>Anerkennung:</strong> Externe Autorität respektiert Autonomie
-                </div>
-                <div>
-                  8. 🌐 <strong>Verschachtelte Systeme:</strong> Multi-Level Governance
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className={css({ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" })}>
-            {[
-              { label: "Nachhaltigkeit", value: simulationResult.sustainability, color: "#10b981" },
-              { label: "Effizienz", value: simulationResult.efficiency, color: "#3b82f6" },
-              { label: "Fairness", value: simulationResult.fairness, color: "#8b5cf6" },
-              { label: "Kosten", value: simulationResult.cost, color: "#ef4444" },
-            ].map((metric) => (
-              <div key={metric.label} className={css({ marginBottom: "8px" })}>
-                <div className={css({ display: "flex", justifyContent: "space-between", marginBottom: "4px" })}>
-                  <span className={css({ fontSize: "14px" })}>{metric.label}</span>
-                  <span className={css({ fontSize: "14px", fontWeight: "bold" })}>{metric.value}%</span>
-                </div>
-                <div className={css({ width: "100%", backgroundColor: "#e5e7eb", borderRadius: "4px", height: "8px" })}>
-                  <div
-                    className={css({
-                      height: "100%",
-                      borderRadius: "4px",
-                      backgroundColor: metric.color,
-                      width: `${metric.value}%`,
-                    })}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // My Blog Post Component
 
 const TragedyOfCommonsFishing: React.FC = () => {
@@ -879,64 +709,147 @@ We can now use this setting to sketch out the rule of the game.
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 How did the game go? Most likely, you also had a hard time to keep the fish stock stable.
 It is just hard to resist the temptation to fish intensively, especially when you see the other chiefs doing it.
+The dilemma Moana faces is a classic example of the **Tragedy of the Commons**. This concept, popularized by Garrett Hardin in 1968, describes how individuals acting in their 
+own self-interest can deplete shared resources, leading to long-term collective harm. 
 
-So is there a rational choice? And what are options to govern the common pool resources such that
-we protect the fish stock and ensure the well-being of the community in the long term ?
+## A market solution: Individual Transferable Quotas (ITQs)
+
+Back on her island, Moana stares at the empty nets from yesterday's failed cooperation. Chief Tala arrives with news from the outer islands: "I've heard of something called 'fishing rights' - like owning pieces of the ocean itself. What if we could buy and sell the right to fish?"
+
+The idea sounds strange at first, but as Moana learns more, it begins to make sense:
+
+**How Individual Transferable Quotas work:**
+- The island council sets a **total sustainable limit** for the entire fishing ground (say, 60 fish total)
+- Each chief receives **tradeable fishing rights** (quotas) - initially 15 rights each
+- Before fishing, chiefs can **buy and sell** these rights at market prices
+- You can only send as many boats as you have quota rights
+- The total catch is **automatically limited** to sustainable levels
+
+**The key insight:** If you're a skilled fisher, you can buy more rights and profit. If you prefer other activities, you can sell your rights and earn money without fishing.
+      `}</ReactMarkdown>
+      <ITQMarketSimulator />
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+
+
+**Real-world success stories:**
+- **🇮🇸 Iceland:** ITQs saved their fishing industry after near-collapse in the 1980s
+- **🇳🇿 New Zealand:** One of the world's most successful quota systems since 1986
+- **🇺🇸 Alaska:** Combines ITQs with community protections for indigenous fishers
+- **🇨🇱 Chile:** ITQs helped recover several fish species from overfishing
+
+As Moana experiments with the trading system, she realizes both the **power and the problems** of market solutions:
+
+**✅ The good:**
+- **Automatic sustainability:** Total catch can never exceed the quota limit
+- **Economic efficiency:** The best fishers get more access, maximizing total catch value
+- **Flexibility:** Chiefs can adapt their fishing based on their skills and preferences
+- **Innovation incentives:** Efficient fishing techniques become more valuable
+
+**⚠️ The concerns:**
+- **Wealth concentration:** Rich chiefs can buy up all the rights, excluding smaller fishers
+- **Community disruption:** Traditional fishing families might lose access to their livelihood
+- **Price volatility:** Sudden changes in quota prices can destabilize island economies
+- **Social inequality:** The market rewards efficiency over need or tradition
+
+Moana reflects: *"This could work... the fish would be safe, and we'd fish more efficiently. But what happens to Chief Sina's family, who've fished these waters for generations but can't afford the rising quota prices? Is economic efficiency worth losing our island's social fabric?"*
+
+**The fundamental trade-off:** Market solutions excel at efficiency and sustainability, but they can sacrifice equity and community values. ITQs prevent the tragedy of the commons, but they might create a different kind of tragedy - the tragedy of the market.
+
+## State solutions: The Island Authority approach
+
+Disturbed by the social tensions from the quota trading system, Moana considers a different path. "What if we create an Island Fishing Authority?" she proposes. "Someone above all of us who sets the rules and enforces them fairly."
+
+**How government regulation would work:**
+- **Central Authority:** The Island Council sets strict fishing limits for each chief
+- **Fixed Quotas:** Each chief gets exactly the same amount - no trading allowed
+- **Monitoring:** Government boats patrol the waters to prevent cheating
+- **Penalties:** Violators face escalating fines: warning → fishing ban → exile from fishing grounds
+- **Scientific Management:** Marine biologists determine sustainable catch levels based on data
+
+[SIMULATOR PLACEHOLDER: State Regulation Game]
+
+*This simulator would demonstrate:*
+- **Compliance Tracking:** Each chief decides whether to follow or break the rules
+- **Enforcement Costs:** Shows the expensive infrastructure needed for monitoring
+- **Bureaucratic Delays:** Quotas adjust slowly to changing fish populations
+- **Equal Distribution:** All chiefs get the same quotas regardless of skill
+- **Social Stability:** No wealth concentration, but potentially lower total efficiency
+
+**Real-world examples:**
+- **🇳🇴 Norway:** Combines government quotas with strong enforcement
+- **🇨🇦 Canada:** Strict regulations, but enforcement challenges in remote areas
+- **🇪🇺 European Union:** Common Fisheries Policy with complex quota negotiations
+- **🇯🇵 Japan:** Traditional government-managed coastal fishing zones
+
+**Moana's experience with state regulation:**
+
+**✅ The benefits:**
+- **Guaranteed fairness:** Every chief gets equal access regardless of wealth
+- **Social stability:** No market-driven inequality or community disruption
+- **Democratic control:** Fishing rules decided through island council votes
+- **Long-term planning:** Government can consider environmental goals beyond profit
+
+**⚠️ The challenges:**
+- **High costs:** Patrol boats, inspectors, and bureaucracy are expensive
+- **Inflexibility:** Quotas can't adjust quickly to changing conditions
+- **Enforcement problems:** Difficult to monitor every fishing boat every day
+- **Reduced innovation:** No incentive for chiefs to develop better fishing methods
+- **Political capture:** Fishing regulations might favor politically connected chiefs
+
+As Moana watches the government system in action, she observes: *"This is fairer than the market - no one gets left behind. But it's so slow and expensive! And some chiefs are already finding ways around the rules when the patrol boats aren't watching. Plus, talented fishers like Chief Kai have no incentive to innovate since they can't benefit from their skills."*
+
+**The state solution trade-off:** Government regulation prioritizes equity and democratic control, but often at the cost of efficiency and innovation. It can prevent both market failures and the tragedy of the commons, but it creates new challenges around enforcement, bureaucracy, and adaptability.
+
+**Moana's growing realization:** *"Both markets and government have their place, but both also have serious flaws. The market excluded the poor, and the state stifles innovation. There must be another way - something that combines the best of both while avoiding their worst problems..."*
+
+This sets the stage for Ostrom's breakthrough insight: communities can govern themselves.
+
+## Ostrom's Community Solution: The Fishing Council
+
+Frustrated with both market inequality and government bureaucracy, Moana calls for a traditional "Fishing Council" meeting. "Our ancestors managed these waters for centuries without markets or bureaucrats," she reflects. "What if we can find our own way?"
+
+**The Community Approach:**
+- **Self-governance:** The four chiefs create their own rules together
+- **Peer monitoring:** Chiefs keep an eye on each other voluntarily
+- **Graduated sanctions:** Fair consequences that escalate only if needed
+- **Adaptive management:** Rules can change when conditions change
+
+[SIMULATOR: Community Rule Builder]
+
             `}</ReactMarkdown>
-      <section className={css({ marginBottom: "32px" })}>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Was ist passiert?</strong> Wahrscheinlich haben Sie erlebt, was Millionen von Menschen vor Ihnen
-          erlebt haben: Selbst mit den besten Absichten ist es schwer, nachhaltig zu handeln, wenn andere es nicht tun.
-        </p>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Herzlichen Glückwunsch!</strong> Sie haben gerade eine der grundlegendsten mathematischen Fallen der
-          menschlichen Zivilisation erlebt. Das Nash-Gleichgewicht zeigt:{" "}
-          <em>Defektieren ist immer die rational beste Wahl</em> - egal was die anderen tun.
-        </p>
-      </section>
+
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+
+**What makes community governance work?** Moana's experiment demonstrates Ostrom's key insight: **neither markets nor governments are necessary if communities can organize themselves effectively.** But this requires careful attention to institutional design.
+
+**The Community Solution Trade-offs:**
+
+**✅ Advantages:**
+- **High legitimacy:** Rules created by those who must follow them
+- **Cultural fit:** Solutions match local values and knowledge
+- **Low costs:** No expensive enforcement infrastructure needed
+- **Flexibility:** Can adapt quickly to changing conditions
+- **Social cohesion:** Builds trust and cooperation within the community
+
+**⚠️ Challenges:**
+- **Setup complexity:** Requires time and skill to design good institutions
+- **Scale limits:** Works best with small, tight-knit communities
+- **External threats:** Vulnerable to outside interference or competition
+- **Free-rider risk:** Success depends on widespread participation
+- **Conflict management:** Disputes can escalate without proper mechanisms
+
+**Moana's reflection:** *"This feels right - we're solving our problem together, not having solutions imposed on us. But it requires all of us to really commit to making it work. And we need to be smart about how we design our rules, or it could fall apart like the free-for-all did."*
+
+            `}</ReactMarkdown>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Ostrom's Durchbruch: Es gibt einen dritten Weg
+          Ostrom&apos;s Durchbruch: Es gibt einen dritten Weg
         </h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           Jahrzehntelang glaubten Ökonomen, es gäbe nur zwei Lösungen für Commons-Probleme:
         </p>
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-            marginBottom: "16px",
-          })}
-        >
-          <div
-            className={css({
-              backgroundColor: "#fef2f2",
-              padding: "16px",
-              borderRadius: "8px",
-              border: "1px solid #fecaca",
-            })}
-          >
-            <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>🏛️ Lösung 1: Der Staat</h4>
-            <p className={css({ fontSize: "14px", lineHeight: "1.5" })}>
-              Zentrale Kontrolle, Quoten, Strafen. Funktioniert, aber teuer und oft ineffizient.
-            </p>
-          </div>
-          <div
-            className={css({
-              backgroundColor: "#fef2f2",
-              padding: "16px",
-              borderRadius: "8px",
-              border: "1px solid #fecaca",
-            })}
-          >
-            <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>💰 Lösung 2: Der Markt</h4>
-            <p className={css({ fontSize: "14px", lineHeight: "1.5" })}>
-              Privatisierung der Ressource. Kein Commons-Problem mehr, aber sozialer Ausschluss.
-            </p>
-          </div>
-        </div>
+
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           Aber Elinor Ostrom verbrachte ihr Leben damit, <strong>erfolgreiche Gemeinschaften</strong> zu studieren, die
           Commons verwalten - ohne Staat, ohne Privatisierung. Von Fischerdörfern in der Türkei bis zu
@@ -952,7 +865,7 @@ we protect the fish stock and ensure the well-being of the community in the long
           })}
         >
           <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
-            🌟 Ostrom's 8 Design-Prinzipien für Commons:
+            🌟 Ostrom&apos;s 8 Design-Prinzipien für Commons:
           </h4>
           <div className={css({ fontSize: "14px", lineHeight: "1.6" })}>
             <div className={css({ marginBottom: "8px" })}>
@@ -987,105 +900,171 @@ we protect the fish stock and ensure the well-being of the community in the long
           bestimmte Online-Communities gedeihen.
         </p>
       </section>
+    </article>
+  );
+};
 
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Das Neufundland-Beispiel: Wenn Commons kollabieren
-        </h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Was Sie gerade im Spiel erlebt haben, passierte vor Neufundland über 40 Jahre hinweg. 1992 brach der
-          Kabeljau-Bestand vollständig zusammen - <strong>40.000 Fischer verloren über Nacht ihre Jobs.</strong>
-        </p>
-        <div
+// ITQ Market Simulator Component
+function ITQMarketSimulator() {
+  const [round, setRound] = useState(1);
+  const [phase, setPhase] = useState<"trading" | "fishing" | "results">("trading");
+  const [quotaPrice, setQuotaPrice] = useState(5);
+  const [history, setHistory] = useState<
+    Array<{
+      round: number;
+      chiefs: Array<{ name: string; quotas: number; fish: number; money: number }>;
+      totalCatch: number;
+      sustainability: string;
+    }>
+  >([]);
+
+  const [chiefs, setChiefs] = useState([
+    { name: "Tui (Trading Expert)", quotas: 15, money: 50, fish: 0, personality: "trader" },
+    { name: "Sina (Efficient Fisher)", quotas: 15, money: 50, fish: 0, personality: "efficient" },
+    { name: "Tamatoa (Risk Taker)", quotas: 15, money: 50, fish: 0, personality: "aggressive" },
+    { name: "Te Fiti (Conservationist)", quotas: 15, money: 50, fish: 0, personality: "conservative" },
+  ]);
+
+  const sustainableLimit = 60;
+  const totalQuotas = chiefs.reduce((sum, chief) => sum + chief.quotas, 0);
+
+  const handleTrade = (buyerIndex: number, sellerIndex: number, amount: number) => {
+    if (amount <= 0) return;
+
+    const newChiefs = [...chiefs];
+    const cost = amount * quotaPrice;
+
+    if (newChiefs[buyerIndex].money >= cost && newChiefs[sellerIndex].quotas >= amount) {
+      newChiefs[buyerIndex].money -= cost;
+      newChiefs[buyerIndex].quotas += amount;
+      newChiefs[sellerIndex].money += cost;
+      newChiefs[sellerIndex].quotas -= amount;
+      setChiefs(newChiefs);
+
+      // Dynamic pricing: price increases with demand
+      setQuotaPrice((prev) => Math.min(15, prev + 0.5));
+    }
+  };
+
+  const handleFishing = () => {
+    const newChiefs = chiefs.map((chief) => {
+      let efficiency = 1.0;
+      if (chief.personality === "efficient") efficiency = 1.3;
+      else if (chief.personality === "aggressive") efficiency = 1.1;
+      else if (chief.personality === "conservative") efficiency = 0.9;
+
+      const fishCaught = Math.round(chief.quotas * efficiency);
+      return {
+        ...chief,
+        fish: chief.fish + fishCaught,
+      };
+    });
+
+    setChiefs(newChiefs);
+    setPhase("results");
+  };
+
+  const nextRound = () => {
+    const totalCatch = chiefs.reduce((sum, chief) => sum + chief.fish, 0);
+    const sustainability = totalCatch <= sustainableLimit ? "Sustainable ✅" : "Overfishing ⚠️";
+
+    setHistory((prev) => [
+      ...prev,
+      {
+        round,
+        chiefs: chiefs.map((c) => ({ ...c })),
+        totalCatch,
+        sustainability,
+      },
+    ]);
+
+    if (round < 3) {
+      setRound(round + 1);
+      setPhase("trading");
+      setQuotaPrice(Math.max(3, quotaPrice - 1)); // Prices adjust between rounds
+    }
+  };
+
+  const reset = () => {
+    setRound(1);
+    setPhase("trading");
+    setQuotaPrice(5);
+    setHistory([]);
+    setChiefs([
+      { name: "Tui (Trading Expert)", quotas: 15, money: 50, fish: 0, personality: "trader" },
+      { name: "Sina (Efficient Fisher)", quotas: 15, money: 50, fish: 0, personality: "efficient" },
+      { name: "Tamatoa (Risk Taker)", quotas: 15, money: 50, fish: 0, personality: "aggressive" },
+      { name: "Te Fiti (Conservationist)", quotas: 15, money: 50, fish: 0, personality: "conservative" },
+    ]);
+  };
+
+  return (
+    <div 
+      className={css({
+        border: "2px solid #0284c7",
+        borderRadius: "12px",
+        padding: "24px",
+        margin: "24px 0",
+        backgroundColor: "#f0f9ff",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      })}
+    >
+      <h3 
+        className={css({
+          fontSize: "24px",
+          fontWeight: "bold",
+          color: "#0c4a6e",
+          marginBottom: "20px",
+          textAlign: "center",
+        })}
+      >
+        🐟 ITQ Market Simulator
+      </h3>
+
+      <div 
+        className={css({
+          backgroundColor: "#ffffff",
+          padding: "20px",
+          borderRadius: "8px",
+          marginBottom: "16px",
+          border: "1px solid #e0e7ff",
+        })}
+      >
+        <div 
           className={css({
-            backgroundColor: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "8px",
-            padding: "16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: "16px",
+            flexWrap: "wrap",
+            gap: "12px",
           })}
         >
-          <p className={css({ fontWeight: "bold", marginBottom: "8px" })}>Die fatale Logik:</p>
-          <div className={css({ fontSize: "14px", lineHeight: "1.6" })}>
-            <em>&ldquo;Wenn ich heute nicht fische, fischt es jemand anders. Lieber ich als die Konkurrenz.&rdquo;</em>
+          <h4 
+            className={css({
+              fontSize: "18px",
+              fontWeight: "600",
+              color: "#1e293b",
+            })}
+          >
+            Round {round} - {phase === "trading" ? "Trading Phase" : phase === "fishing" ? "Fishing Phase" : "Results"}
+          </h4>
+          <div 
+            className={css({
+              fontSize: "14px",
+              backgroundColor: "#dcfce7",
+              color: "#166534",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #bbf7d0",
+            })}
+          >
+            Sustainable Limit: {sustainableLimit} fish | Total Quotas: {totalQuotas}
           </div>
         </div>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Das Nash-Gleichgewicht in Aktion: Jeder handelt rational, das Ergebnis ist irrational.{" "}
-          <strong>Ein Musterbeispiel der Tragedy of Commons.</strong>
-        </p>
-      </section>
 
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Lösungsansätze: Was hätte funktionieren können?
-        </h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Die gute Nachricht: Es gibt bewährte Lösungen für Commons-Probleme. Testen Sie verschiedene
-          Governance-Systeme:
-        </p>
-
-        <GovernanceDesigner />
-
-        <div
-          className={css({
-            backgroundColor: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "8px",
-            padding: "16px",
-            marginBottom: "16px",
-          })}
-        >
-          <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>Erfolgreiche Beispiele:</h4>
-          <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-            <li>
-              <strong>Island:</strong> Handelbare Quoten (ITQ) retteten die Fischerei
-            </li>
-            <li>
-              <strong>Maine Lobster:</strong> Community-Management durch Fischer-Kooperativen
-            </li>
-            <li>
-              <strong>Neuseeland:</strong> Kombination aus Quoten und Technologie-Monitoring
-            </li>
-            <li>
-              <strong>🏆 Ostrom-Beispiele:</strong> Spanische Huertas, Schweizer Alpweiden, philippinische Bewässerung
-            </li>
-          </ul>
-        </div>
-
-        <div
-          className={css({
-            backgroundColor: "#f0f9ff",
-            border: "1px solid #c7d2fe",
-            borderRadius: "8px",
-            padding: "16px",
-            marginBottom: "16px",
-          })}
-        >
-          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
-            🎓 Elinor Ostrom: Nobelpreis für Commons-Forschung
-          </h4>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            2009 erhielt Elinor Ostrom als erste Frau den Wirtschaftsnobelpreis für ihre Forschung zu Commons. Sie
-            bewies: Weder reine Privatisierung noch staatliche Kontrolle sind die einzigen Lösungen.
-          </p>
-          <p className={css({ lineHeight: "1.6", fontStyle: "italic" })}>
-            &ldquo;Selbst-organisierte Institutionen können Commons nachhaltig verwalten, wenn sie bestimmte
-            Design-Prinzipien befolgen.&rdquo;
-          </p>
-        </div>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Ostrom's Vermächtnis: Von Fischerdörfern zu Silicon Valley
-        </h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Ostrom's Prinzipien funktionieren nicht nur in traditionellen Commons. Sie erklären, warum manche moderne
-          Organisationen gedeihen:
-        </p>
-
-        <div
+        {/* Current Status */}
+        <div 
           className={css({
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
@@ -1093,77 +1072,398 @@ we protect the fish stock and ensure the well-being of the community in the long
             marginBottom: "16px",
           })}
         >
-          {[
-            {
-              title: "🔗 Open Source",
-              desc: "Linux, Wikipedia: Klare Regeln, Community-Governance, graduierte Sanktionen",
-            },
-            {
-              title: "💡 Wissens-Commons",
-              desc: "Erfolgreiche Teams teilen Wissen durch formelle und informelle Institutionen",
-            },
-            {
-              title: "🌐 Online-Communities",
-              desc: "Reddit, Stack Overflow: Reputation, Moderation, Community-Standards",
-            },
-            {
-              title: "🏢 Agile Teams",
-              desc: "Scrum, Cross-functional Teams: Selbstorganisation mit klaren Grenzen",
-            },
-          ].map((example) => (
-            <div
-              key={example.title}
+          {chiefs.map((chief, index) => (
+            <div 
+              key={index} 
               className={css({
-                padding: "16px",
-                backgroundColor: "#f0fdf4",
-                borderRadius: "6px",
-                border: "1px solid #bbf7d0",
+                backgroundColor: "#f8fafc",
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
               })}
             >
-              <h4 className={css({ fontWeight: "bold", marginBottom: "8px" })}>{example.title}</h4>
-              <p className={css({ fontSize: "14px", color: "#374151", lineHeight: "1.5" })}>{example.desc}</p>
+              <div 
+                className={css({
+                  fontWeight: "600",
+                  fontSize: "14px",
+                  marginBottom: "8px",
+                  color: "#1e293b",
+                })}
+              >
+                {chief.name}
+              </div>
+              <div 
+                className={css({
+                  fontSize: "12px",
+                  "& > div": {
+                    marginBottom: "4px",
+                  },
+                })}
+              >
+                <div>
+                  Quotas: <span className={css({ fontWeight: "bold", color: "#2563eb" })}>{chief.quotas}</span>
+                </div>
+                <div>
+                  Money: <span className={css({ fontWeight: "bold", color: "#059669" })}>${chief.money}</span>
+                </div>
+                <div>
+                  Fish: <span className={css({ fontWeight: "bold", color: "#ea580c" })}>{chief.fish}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
 
-        <div
-          className={css({
-            backgroundColor: "#f0f9ff",
-            border: "1px solid #c7d2fe",
-            borderRadius: "8px",
-            padding: "20px",
-            marginBottom: "16px",
-          })}
-        >
-          <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>
-            💡 Die drei Wege zum Umgang mit Commons-Dilemmas:
-          </h4>
-          <div className={css({ fontSize: "15px", lineHeight: "1.6" })}>
-            <div className={css({ marginBottom: "8px" })}>
-              <strong>🏛️ Staatliche Regulierung:</strong> Quoten, Überwachung, Strafen (funktioniert, aber teuer)
+        {/* Trading Phase */}
+        {phase === "trading" && (
+          <div className={css({ "& > div": { marginBottom: "16px" } })}>
+            <div 
+              className={css({
+                backgroundColor: "#fefce8",
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid #facc15",
+                textAlign: "center",
+              })}
+            >
+              <strong>Current Quota Price: ${quotaPrice}</strong> per quota
             </div>
-            <div className={css({ marginBottom: "8px" })}>
-              <strong>💰 Marktlösungen:</strong> Privatisierung, handelbare Rechte (effizient, aber exklusiv)
+
+            <div 
+              className={css({
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gap: "16px",
+              })}
+            >
+              {/* Quick Trade Options */}
+              <div>
+                <h5 
+                  className={css({
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                    fontSize: "16px",
+                  })}
+                >
+                  Quick Trades:
+                </h5>
+                <div className={css({ "& > button": { marginBottom: "8px" } })}>
+                  <button
+                    onClick={() => handleTrade(1, 0, 3)}
+                    disabled={chiefs[1].money < quotaPrice * 3 || chiefs[0].quotas < 3}
+                    className={css({
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px",
+                      backgroundColor: "#dbeafe",
+                      border: "1px solid #93c5fd",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      _hover: { backgroundColor: "#bfdbfe" },
+                      _disabled: { backgroundColor: "#f1f5f9", cursor: "not-allowed", opacity: 0.6 },
+                    })}
+                  >
+                    Sina buys 3 quotas from Tui (${quotaPrice * 3})
+                  </button>
+                  <button
+                    onClick={() => handleTrade(2, 3, 5)}
+                    disabled={chiefs[2].money < quotaPrice * 5 || chiefs[3].quotas < 5}
+                    className={css({
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px",
+                      backgroundColor: "#dbeafe",
+                      border: "1px solid #93c5fd",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      _hover: { backgroundColor: "#bfdbfe" },
+                      _disabled: { backgroundColor: "#f1f5f9", cursor: "not-allowed", opacity: 0.6 },
+                    })}
+                  >
+                    Tamatoa buys 5 quotas from Te Fiti (${quotaPrice * 5})
+                  </button>
+                  <button
+                    onClick={() => handleTrade(0, 2, 2)}
+                    disabled={chiefs[0].money < quotaPrice * 2 || chiefs[2].quotas < 2}
+                    className={css({
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px",
+                      backgroundColor: "#dbeafe",
+                      border: "1px solid #93c5fd",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      _hover: { backgroundColor: "#bfdbfe" },
+                      _disabled: { backgroundColor: "#f1f5f9", cursor: "not-allowed", opacity: 0.6 },
+                    })}
+                  >
+                    Tui buys 2 quotas from Tamatoa (${quotaPrice * 2})
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <h5 
+                  className={css({
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                    fontSize: "16px",
+                  })}
+                >
+                  Market Info:
+                </h5>
+                <div 
+                  className={css({
+                    fontSize: "14px",
+                    backgroundColor: "#f8fafc",
+                    padding: "12px",
+                    borderRadius: "6px",
+                    border: "1px solid #e2e8f0",
+                    "& > div": {
+                      marginBottom: "4px",
+                    },
+                  })}
+                >
+                  <div>• Higher demand → Higher prices</div>
+                  <div>• Sina is most efficient (30% bonus)</div>
+                  <div>• Te Fiti prefers conservation</div>
+                  <div>• Total quotas = sustainable limit</div>
+                </div>
+              </div>
             </div>
-            <div className={css({ marginBottom: "8px" })}>
-              <strong>🤝 Ostrom's Weg:</strong> Community-Governance mit Design-Prinzipien (nachhaltig und inklusiv)
+
+            <button
+              onClick={() => setPhase("fishing")}
+              className={css({
+                width: "100%",
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "16px",
+                fontWeight: "600",
+                cursor: "pointer",
+                _hover: { backgroundColor: "#1d4ed8" },
+              })}
+            >
+              End Trading → Start Fishing
+            </button>
+          </div>
+        )}
+
+        {/* Fishing Phase */}
+        {phase === "fishing" && (
+          <div className={css({ textAlign: "center" })}>
+            <div 
+              className={css({
+                backgroundColor: "#f0f9ff",
+                padding: "16px",
+                borderRadius: "8px",
+                border: "1px solid #bae6fd",
+              })}
+            >
+              <p className={css({ marginBottom: "16px", lineHeight: "1.5" })}>
+                Each chief sends boats equal to their quotas and catches fish based on their efficiency...
+              </p>
+              <button 
+                onClick={handleFishing} 
+                className={css({
+                  backgroundColor: "#059669",
+                  color: "#ffffff",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  _hover: { backgroundColor: "#047857" },
+                })}
+              >
+                🎣 Go Fishing!
+              </button>
             </div>
           </div>
-        </div>
+        )}
 
-        <p className={css({ lineHeight: "1.6" })}>
-          <strong>Die nächste Commons-Krise?</strong> Künstliche Intelligenz. Wie teilen wir die Vorteile von AI, ohne
-          dass wenige alle Ressourcen monopolisieren? Wie verhindern wir, dass das &ldquo;KI-Commons&rdquo; durch
-          kurzsichtige Konkurrenz zerstört wird?
-        </p>
-        <p className={css({ lineHeight: "1.6", marginTop: "16px" })}>
-          Elinor Ostrom hätte gewusst, wo sie anfangen würde: Bei den Menschen, die das Problem lösen müssen.
-          <strong> Denn am Ende sind Commons-Probleme Menschen-Probleme.</strong>
-        </p>
-      </section>
-    </article>
+        {/* Results Phase */}
+        {phase === "results" && (
+          <div className={css({ "& > div": { marginBottom: "16px" } })}>
+            <div 
+              className={css({
+                backgroundColor: "#f0fdf4",
+                padding: "16px",
+                borderRadius: "8px",
+                border: "1px solid #bbf7d0",
+              })}
+            >
+              <h5 
+                className={css({
+                  fontWeight: "600",
+                  marginBottom: "8px",
+                  fontSize: "16px",
+                })}
+              >
+                Round {round} Results:
+              </h5>
+              <div 
+                className={css({
+                  fontSize: "14px",
+                  "& > div": {
+                    marginBottom: "4px",
+                  },
+                })}
+              >
+                <div>
+                  Total Catch: <strong>{chiefs.reduce((sum, chief) => sum + chief.fish, 0)} fish</strong>
+                </div>
+                <div>Limit: {sustainableLimit} fish</div>
+                <div
+                  className={css({
+                    fontWeight: "bold",
+                    color: chiefs.reduce((sum, chief) => sum + chief.fish, 0) <= sustainableLimit
+                      ? "#059669"
+                      : "#dc2626"
+                  })}
+                >
+                  {chiefs.reduce((sum, chief) => sum + chief.fish, 0) <= sustainableLimit
+                    ? "Sustainable ✅"
+                    : "Overfishing ⚠️"}
+                </div>
+              </div>
+            </div>
+
+            {round < 3 ? (
+              <button 
+                onClick={nextRound} 
+                className={css({
+                  width: "100%",
+                  backgroundColor: "#2563eb",
+                  color: "#ffffff",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  _hover: { backgroundColor: "#1d4ed8" },
+                })}
+              >
+                Next Round →
+              </button>
+            ) : (
+              <button
+                onClick={reset}
+                className={css({
+                  width: "100%",
+                  backgroundColor: "#4b5563",
+                  color: "#ffffff",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  _hover: { backgroundColor: "#374151" },
+                })}
+              >
+                🔄 Start New Simulation
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* History Table */}
+      {history.length > 0 && (
+        <div className={css({ marginTop: "24px" })}>
+          <h4 
+            className={css({
+              fontSize: "18px",
+              fontWeight: "600",
+              marginBottom: "12px",
+              color: "#1e293b",
+            })}
+          >
+            Results History:
+          </h4>
+          <div className={css({ overflowX: "auto" })}>
+            <table 
+              className={css({
+                width: "100%",
+                fontSize: "14px",
+                border: "1px solid #d1d5db",
+                borderCollapse: "collapse",
+                backgroundColor: "#ffffff",
+              })}
+            >
+              <thead 
+                className={css({
+                  backgroundColor: "#f3f4f6",
+                })}
+              >
+                <tr>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Round</th>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Tui</th>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Sina</th>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Tamatoa</th>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Te Fiti</th>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Total Catch</th>
+                  <th className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h, i) => (
+                  <tr 
+                    key={i} 
+                    className={css({
+                      _hover: { backgroundColor: "#f9fafb" },
+                    })}
+                  >
+                    <td className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "center" })}>{h.round}</td>
+                    {h.chiefs.map((chief, j) => (
+                      <td key={j} className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "center" })}>
+                        {chief.fish} fish
+                        <br />
+                        <span className={css({ fontSize: "12px", color: "#6b7280" })}>({chief.quotas} quotas)</span>
+                      </td>
+                    ))}
+                    <td className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "center", fontWeight: "bold" })}>{h.totalCatch}</td>
+                    <td className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "center" })}>{h.sustainability}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div 
+        className={css({
+          marginTop: "16px",
+          fontSize: "14px",
+          color: "#4b5563",
+          backgroundColor: "#f8fafc",
+          padding: "12px",
+          borderRadius: "8px",
+          border: "1px solid #e2e8f0",
+          lineHeight: "1.5",
+        })}
+      >
+        <strong>How to use:</strong> In the trading phase, try different quota trades to see how market dynamics work.
+        Notice how efficient fishers (Sina) benefit from buying more quotas, while others might prefer to sell and earn
+        money instead of fishing. The total catch is always limited by total quotas = sustainable limit!
+      </div>
+    </div>
   );
-};
+}
+
 export default TragedyOfCommonsFishing;
 
 // Post metadata

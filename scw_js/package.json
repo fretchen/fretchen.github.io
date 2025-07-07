@@ -18,22 +18,22 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "@eslint/js": "^9.29.0",
+    "@eslint/js": "^9.30.1",
     "@scaleway/serverless-functions": "^1.1.2",
-    "@types/node": "^24.0.4",
+    "@types/node": "^24.0.10",
     "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.29.0",
+    "eslint": "^9.30.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-vitest": "^0.5.4",
-    "prettier": "^3.6.0",
+    "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.4.15",
     "typescript": "^5.0.2",
     "vitest": "^3.2.2"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.835.0",
-    "dotenv": "^16.5.0",
+    "@aws-sdk/client-s3": "^3.842.0",
+    "dotenv": "^17.0.1",
     "tsx": "^4.20.3",
-    "viem": "^2.31.4"
+    "viem": "^2.31.7"
   }
 }

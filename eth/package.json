@@ -6,7 +6,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^4.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.14",
-    "@openzeppelin/hardhat-upgrades": "^3.9.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "hardhat": "^2.25.0"
   },
   "dependencies": {

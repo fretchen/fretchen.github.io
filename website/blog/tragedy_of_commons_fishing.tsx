@@ -659,6 +659,521 @@ const FishingGameSimulator: React.FC = () => {
   );
 };
 
+// Island Efficiency Demonstrator Component - Three-Button Scenario Switcher
+const IslandEfficiencyDemonstrator: React.FC = () => {
+  const [selectedScenario, setSelectedScenario] = useState<"none" | "tragedy" | "regulation" | "efficient">("none");
+
+  // Island parameters: different fishing costs per boat (from notebook)
+  const islands = [
+    { name: "Motunui (Moana)", cost: 0.125, maxBoats: 20, emoji: "🌺" },
+    { name: "Te Fiti Island", cost: 0.25, maxBoats: 15, emoji: "🌿" },
+    { name: "Lalotai Island", cost: 0.375, maxBoats: 12, emoji: "🦀" },
+    { name: "Tamatoa Island", cost: 0.5, maxBoats: 10, emoji: "💎" },
+  ];
+
+  // Fishing parameters
+  const FISH_STOCK = 100;
+  const CATCH_EFFICIENCY = 0.01;
+  const SUSTAINABLE_LIMIT = 9; // Total boats that can fish sustainably
+
+  const calculateCatch = (totalBoats: number) => {
+    // From notebook: y = y0 * s * sqrt(b)
+    return CATCH_EFFICIENCY * FISH_STOCK * Math.sqrt(totalBoats);
+  };
+
+  const calculateResults = (scenarioType: "tragedy" | "regulation" | "efficient") => {
+    const islandResults: {
+      name: string;
+      boats: number;
+      cost: number;
+      revenue: number;
+      profit: number;
+      status: string;
+      emoji: string;
+    }[] = [];
+
+    if (scenarioType === "tragedy") {
+      // Everyone fishes as much as they can
+      islands.forEach((island) => {
+        const boats = island.maxBoats;
+        islandResults.push({
+          name: island.name,
+          boats,
+          cost: boats * island.cost,
+          revenue: 0, // Will calculate after total catch
+          profit: 0,
+          status: "Overfishing",
+          emoji: island.emoji,
+        });
+      });
+
+      const totalBoats = islandResults.reduce((sum, island) => sum + island.boats, 0);
+      const totalCatch = calculateCatch(totalBoats);
+
+      // Distribute catch proportionally
+      islandResults.forEach((island) => {
+        const catchShare = (island.boats / totalBoats) * totalCatch;
+        island.revenue = catchShare;
+        island.profit = catchShare - island.cost;
+      });
+
+      return {
+        islandResults,
+        totalBoats,
+        totalCatch,
+        totalCost: islandResults.reduce((sum, island) => sum + island.cost, 0),
+        totalProfit: islandResults.reduce((sum, island) => sum + island.profit, 0),
+        sustainability: "Unsustainable ⚠️",
+        description:
+          "🚨 **Tragedy of the Commons**: All islands fish intensively. Fish stock collapses, everyone loses money.",
+        insight: "Without rules, self-interest leads to collective disaster.",
+      };
+    }
+
+    if (scenarioType === "regulation") {
+      // Government sets equal quotas
+      const quotaPerIsland = Math.floor(SUSTAINABLE_LIMIT / islands.length);
+
+      islands.forEach((island) => {
+        const boats = quotaPerIsland;
+        const canAfford = boats * island.cost <= 1.5; // Affordability threshold
+
+        islandResults.push({
+          name: island.name,
+          boats: canAfford ? boats : 0,
+          cost: canAfford ? boats * island.cost : 0,
+          revenue: 0,
+          profit: 0,
+          status: canAfford ? "Regulated fishing" : "Excluded (too expensive)",
+          emoji: island.emoji,
+        });
+      });
+
+      const totalBoats = islandResults.reduce((sum, island) => sum + island.boats, 0);
+      const totalCatch = calculateCatch(totalBoats);
+
+      // Distribute catch proportionally
+      const activeFishers = islandResults.filter((island) => island.boats > 0);
+      activeFishers.forEach((island) => {
+        const catchShare = (island.boats / totalBoats) * totalCatch;
+        island.revenue = catchShare;
+        island.profit = catchShare - island.cost;
+      });
+
+      return {
+        islandResults,
+        totalBoats,
+        totalCatch,
+        totalCost: islandResults.reduce((sum, island) => sum + island.cost, 0),
+        totalProfit: islandResults.reduce((sum, island) => sum + island.profit, 0),
+        sustainability: "Sustainable ✅",
+        description: `🏛️ **Fixed Quotas**: Equal quotas (${quotaPerIsland} boats each). Fish are protected, but high-cost islands are excluded.`,
+        insight:
+          "Government regulation solves sustainability but creates inefficiency by excluding capable but costly producers.",
+      };
+    }
+
+    if (scenarioType === "efficient") {
+      // Market-based: most efficient islands fish first
+      const sortedIslands = [...islands].sort((a, b) => a.cost - b.cost);
+      let remainingBoats = SUSTAINABLE_LIMIT;
+
+      sortedIslands.forEach((island) => {
+        const boats = Math.min(island.maxBoats, remainingBoats);
+        islandResults.push({
+          name: island.name,
+          boats,
+          cost: boats * island.cost,
+          revenue: 0,
+          profit: 0,
+          status: boats > 0 ? "Efficient fishing" : "Not needed",
+          emoji: island.emoji,
+        });
+        remainingBoats -= boats;
+      });
+
+      const totalBoats = islandResults.reduce((sum, island) => sum + island.boats, 0);
+      const totalCatch = calculateCatch(totalBoats);
+
+      // Distribute catch proportionally
+      const activeFishers = islandResults.filter((island) => island.boats > 0);
+      activeFishers.forEach((island) => {
+        const catchShare = (island.boats / totalBoats) * totalCatch;
+        island.revenue = catchShare;
+        island.profit = catchShare - island.cost;
+      });
+
+      return {
+        islandResults,
+        totalBoats,
+        totalCatch,
+        totalCost: islandResults.reduce((sum, island) => sum + island.cost, 0),
+        totalProfit: islandResults.reduce((sum, island) => sum + island.profit, 0),
+        sustainability: "Sustainable ✅",
+        description:
+          "💰 **Market Efficiency**: Most efficient islands fish first. Fish are protected AND costs are minimized.",
+        insight:
+          "Market-based allocation achieves both sustainability and efficiency, but may exclude traditional fishers.",
+      };
+    }
+
+    return null;
+  };
+
+  const results =
+    selectedScenario !== "none" ? calculateResults(selectedScenario as "tragedy" | "regulation" | "efficient") : null;
+
+  return (
+    <div
+      className={css({
+        border: "2px solid #059669",
+        borderRadius: "12px",
+        padding: "24px",
+        margin: "24px 0",
+        backgroundColor: "#f0fdf4",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      })}
+    >
+      <h3
+        className={css({
+          fontSize: "24px",
+          fontWeight: "bold",
+          color: "#065f46",
+          marginBottom: "16px",
+          textAlign: "center",
+        })}
+      >
+        🏝️ Island Efficiency Demonstrator
+      </h3>
+
+      <p
+        className={css({
+          fontSize: "16px",
+          marginBottom: "20px",
+          color: "#374151",
+          lineHeight: "1.6",
+          textAlign: "center",
+        })}
+      >
+        The islands have different fishing costs. Compare how different governance approaches handle this reality:
+      </p>
+
+      {/* Three Scenario Buttons */}
+      <div
+        className={css({
+          display: "flex",
+          gap: "16px",
+          marginBottom: "24px",
+          flexWrap: "wrap",
+          justifyContent: "center",
+        })}
+      >
+        <button
+          onClick={() => setSelectedScenario("tragedy")}
+          className={css({
+            backgroundColor: selectedScenario === "tragedy" ? "#dc2626" : "#fee2e2",
+            color: selectedScenario === "tragedy" ? "#ffffff" : "#dc2626",
+            padding: "16px 20px",
+            borderRadius: "8px",
+            border: "2px solid #dc2626",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            minWidth: "160px",
+            "&:hover": {
+              backgroundColor: "#dc2626",
+              color: "#ffffff",
+            },
+          })}
+        >
+          🚨 No Rules
+        </button>
+
+        <button
+          onClick={() => setSelectedScenario("regulation")}
+          className={css({
+            backgroundColor: selectedScenario === "regulation" ? "#2563eb" : "#dbeafe",
+            color: selectedScenario === "regulation" ? "#ffffff" : "#2563eb",
+            padding: "16px 20px",
+            borderRadius: "8px",
+            border: "2px solid #2563eb",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            minWidth: "160px",
+            "&:hover": {
+              backgroundColor: "#2563eb",
+              color: "#ffffff",
+            },
+          })}
+        >
+          🏛️ Fixed Quotas
+        </button>
+
+        <button
+          onClick={() => setSelectedScenario("efficient")}
+          className={css({
+            backgroundColor: selectedScenario === "efficient" ? "#059669" : "#d1fae5",
+            color: selectedScenario === "efficient" ? "#ffffff" : "#059669",
+            padding: "16px 20px",
+            borderRadius: "8px",
+            border: "2px solid #059669",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            minWidth: "160px",
+            "&:hover": {
+              backgroundColor: "#059669",
+              color: "#ffffff",
+            },
+          })}
+        >
+          💰 Market-Based
+        </button>
+      </div>
+
+      {/* Results Display */}
+      {results && (
+        <div
+          className={css({
+            backgroundColor: "#ffffff",
+            padding: "20px",
+            borderRadius: "8px",
+            border: "1px solid #e5e7eb",
+          })}
+        >
+          <div
+            className={css({
+              marginBottom: "20px",
+              padding: "16px",
+              backgroundColor: "#f9fafb",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+            })}
+          >
+            <p
+              className={css({
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: "8px",
+              })}
+            >
+              {results.description}
+            </p>
+            <p
+              className={css({
+                fontSize: "14px",
+                color: "#6b7280",
+                fontStyle: "italic",
+              })}
+            >
+              {results.insight}
+            </p>
+          </div>
+
+          {/* Summary Stats */}
+          <div
+            className={css({
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+              gap: "12px",
+              marginBottom: "20px",
+            })}
+          >
+            <div
+              className={css({
+                textAlign: "center",
+                padding: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "6px",
+                border: "1px solid #e2e8f0",
+              })}
+            >
+              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Total Boats</div>
+              <div className={css({ fontSize: "18px", fontWeight: "bold", color: "#1f2937" })}>
+                {results.totalBoats}
+              </div>
+            </div>
+
+            <div
+              className={css({
+                textAlign: "center",
+                padding: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "6px",
+                border: "1px solid #e2e8f0",
+              })}
+            >
+              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Total Catch</div>
+              <div className={css({ fontSize: "18px", fontWeight: "bold", color: "#1f2937" })}>
+                {results.totalCatch.toFixed(1)}
+              </div>
+            </div>
+
+            <div
+              className={css({
+                textAlign: "center",
+                padding: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "6px",
+                border: "1px solid #e2e8f0",
+              })}
+            >
+              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Total Cost</div>
+              <div className={css({ fontSize: "18px", fontWeight: "bold", color: "#1f2937" })}>
+                {results.totalCost.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              className={css({
+                textAlign: "center",
+                padding: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "6px",
+                border: "1px solid #e2e8f0",
+              })}
+            >
+              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Net Profit</div>
+              <div
+                className={css({
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  color: results.totalProfit >= 0 ? "#059669" : "#dc2626",
+                })}
+              >
+                {results.totalProfit.toFixed(2)}
+              </div>
+            </div>
+
+            <div
+              className={css({
+                textAlign: "center",
+                padding: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "6px",
+                border: "1px solid #e2e8f0",
+              })}
+            >
+              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Sustainability</div>
+              <div className={css({ fontSize: "16px", fontWeight: "bold", color: "#1f2937" })}>
+                {results.sustainability}
+              </div>
+            </div>
+          </div>
+
+          {/* Island Details */}
+          <div
+            className={css({
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "16px",
+            })}
+          >
+            {results.islandResults.map((island) => (
+              <div
+                key={island.name}
+                className={css({
+                  padding: "16px",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  border: "2px solid #e5e7eb",
+                  position: "relative",
+                })}
+              >
+                <div
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  })}
+                >
+                  <span className={css({ fontSize: "20px", marginRight: "8px" })}>{island.emoji}</span>
+                  <div className={css({ fontWeight: "600", fontSize: "16px", color: "#1f2937" })}>{island.name}</div>
+                </div>
+
+                <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "8px" })}>
+                  Cost per boat: ${island.cost.toFixed(3)}
+                </div>
+
+                <div className={css({ fontSize: "14px", color: "#374151", marginBottom: "8px" })}>
+                  <strong>Boats:</strong> {island.boats} | <strong>Revenue:</strong> ${island.revenue.toFixed(2)}
+                </div>
+
+                <div className={css({ fontSize: "14px", color: "#374151", marginBottom: "12px" })}>
+                  <strong>Cost:</strong> ${island.cost.toFixed(2)} | <strong>Profit:</strong>{" "}
+                  <span
+                    className={css({
+                      color: island.profit >= 0 ? "#059669" : "#dc2626",
+                      fontWeight: "600",
+                    })}
+                  >
+                    ${island.profit.toFixed(2)}
+                  </span>
+                </div>
+
+                <div
+                  className={css({
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: island.status.includes("Excluded") ? "#dc2626" : "#059669",
+                    backgroundColor: island.status.includes("Excluded") ? "#fee2e2" : "#d1fae5",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    textAlign: "center",
+                  })}
+                >
+                  {island.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Initial instruction */}
+      {selectedScenario === "none" && (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "32px",
+            color: "#6b7280",
+            fontSize: "16px",
+            fontStyle: "italic",
+          })}
+        >
+          Click a button above to explore different governance approaches
+        </div>
+      )}
+
+      {/* Key Insights */}
+      <div
+        className={css({
+          marginTop: "20px",
+          fontSize: "14px",
+          color: "#6b7280",
+          backgroundColor: "#f9fafb",
+          padding: "16px",
+          borderRadius: "8px",
+          border: "1px solid #e5e7eb",
+          lineHeight: "1.6",
+        })}
+      >
+        <strong>Key Insights:</strong>
+        <ul className={css({ marginLeft: "16px", marginTop: "8px" })}>
+          <li>**No Rules** leads to tragedy - everyone loses</li>
+          <li>**Fixed Quotas** solve sustainability but exclude high-cost islands</li>
+          <li>**Market-Based** achieves both sustainability and efficiency</li>
+          <li>Each approach involves trade-offs between equity, efficiency, and sustainability</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
 // My Blog Post Component
 
 const TragedyOfCommonsFishing: React.FC = () => {
@@ -725,15 +1240,8 @@ The idea feels natural and straightforward: create an Island Fishing Authority.
 - **Penalties:** Violators face escalating fines: warning → fishing ban → exile from fishing grounds
 - **Scientific Management:** Marine biologists determine sustainable catch levels based on data
 
-[SIMULATOR PLACEHOLDER: State Regulation Game]
-
-*This simulator would demonstrate:*
-- **Compliance Tracking:** Each chief decides whether to follow or break the rules
-- **Enforcement Costs:** Shows the expensive infrastructure needed for monitoring
-- **Bureaucratic Delays:** Quotas adjust slowly to changing fish populations
-- **Equal Distribution:** All chiefs get the same quotas regardless of skill
-- **Social Stability:** No wealth concentration, but potentially lower total efficiency
       `}</ReactMarkdown>
+      <IslandEfficiencyDemonstrator />
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
 **Real-world examples:**
@@ -844,12 +1352,9 @@ Frustrated with both market inequality and government bureaucracy, Moana calls f
 **Moana's reflection:** *"This feels right - we're solving our problem together, not having solutions imposed on us. But it requires all of us to really commit to making it work. And we need to be smart about how we design our rules, or it could fall apart like the free-for-all did."*
 
             `}</ReactMarkdown>
-
     </article>
   );
 };
-
-
 
 export default TragedyOfCommonsFishing;
 

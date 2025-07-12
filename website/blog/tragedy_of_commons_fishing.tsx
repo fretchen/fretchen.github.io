@@ -661,7 +661,7 @@ const FishingGameSimulator: React.FC = () => {
 
 // Island Efficiency Demonstrator Component - Three-Button Scenario Switcher
 const IslandEfficiencyDemonstrator: React.FC = () => {
-  const [selectedScenario, setSelectedScenario] = useState<"none" | "tragedy" | "regulation" | "efficient">("none");
+  const [selectedScenario, setSelectedScenario] = useState<"none" | "regulation" | "efficient">("none");
 
   // Island parameters: different fishing costs per boat (from notebook)
   const islands = [
@@ -681,7 +681,7 @@ const IslandEfficiencyDemonstrator: React.FC = () => {
     return CATCH_EFFICIENCY * FISH_STOCK * Math.sqrt(totalBoats);
   };
 
-  const calculateResults = (scenarioType: "tragedy" | "regulation" | "efficient") => {
+  const calculateResults = (scenarioType: "regulation" | "efficient") => {
     const islandResults: {
       name: string;
       boats: number;
@@ -691,44 +691,6 @@ const IslandEfficiencyDemonstrator: React.FC = () => {
       status: string;
       emoji: string;
     }[] = [];
-
-    if (scenarioType === "tragedy") {
-      // Everyone fishes as much as they can
-      islands.forEach((island) => {
-        const boats = island.maxBoats;
-        islandResults.push({
-          name: island.name,
-          boats,
-          cost: boats * island.cost,
-          revenue: 0, // Will calculate after total catch
-          profit: 0,
-          status: "Overfishing",
-          emoji: island.emoji,
-        });
-      });
-
-      const totalBoats = islandResults.reduce((sum, island) => sum + island.boats, 0);
-      const totalCatch = calculateCatch(totalBoats);
-
-      // Distribute catch proportionally
-      islandResults.forEach((island) => {
-        const catchShare = (island.boats / totalBoats) * totalCatch;
-        island.revenue = catchShare;
-        island.profit = catchShare - island.cost;
-      });
-
-      return {
-        islandResults,
-        totalBoats,
-        totalCatch,
-        totalCost: islandResults.reduce((sum, island) => sum + island.cost, 0),
-        totalProfit: islandResults.reduce((sum, island) => sum + island.profit, 0),
-        sustainability: "Unsustainable ⚠️",
-        description:
-          "🚨 **Tragedy of the Commons**: All islands fish intensively. Fish stock collapses, everyone loses money.",
-        insight: "Without rules, self-interest leads to collective disaster.",
-      };
-    }
 
     if (scenarioType === "regulation") {
       // Government sets equal quotas
@@ -820,8 +782,7 @@ const IslandEfficiencyDemonstrator: React.FC = () => {
     return null;
   };
 
-  const results =
-    selectedScenario !== "none" ? calculateResults(selectedScenario as "tragedy" | "regulation" | "efficient") : null;
+  const results = selectedScenario !== "none" ? calculateResults(selectedScenario as "regulation" | "efficient") : null;
 
   return (
     <div
@@ -868,28 +829,6 @@ const IslandEfficiencyDemonstrator: React.FC = () => {
           justifyContent: "center",
         })}
       >
-        <button
-          onClick={() => setSelectedScenario("tragedy")}
-          className={css({
-            backgroundColor: selectedScenario === "tragedy" ? "#dc2626" : "#fee2e2",
-            color: selectedScenario === "tragedy" ? "#ffffff" : "#dc2626",
-            padding: "16px 20px",
-            borderRadius: "8px",
-            border: "2px solid #dc2626",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            minWidth: "160px",
-            "&:hover": {
-              backgroundColor: "#dc2626",
-              color: "#ffffff",
-            },
-          })}
-        >
-          🚨 No Rules
-        </button>
-
         <button
           onClick={() => setSelectedScenario("regulation")}
           className={css({
@@ -1165,7 +1104,6 @@ const IslandEfficiencyDemonstrator: React.FC = () => {
       >
         <strong>Key Insights:</strong>
         <ul className={css({ marginLeft: "16px", marginTop: "8px" })}>
-          <li>**No Rules** leads to tragedy - everyone loses</li>
           <li>**Fixed Quotas** solve sustainability but exclude high-cost islands</li>
           <li>**Market-Based** achieves both sustainability and efficiency</li>
           <li>Each approach involves trade-offs between equity, efficiency, and sustainability</li>

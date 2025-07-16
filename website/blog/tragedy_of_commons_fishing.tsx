@@ -971,20 +971,12 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
   // Nach 3 Runden: Zusammenfassung
   function EndSummary() {
-    const scenarios = {
-      random: { name: "🏝️ Mixed Islands", color: "#f59e0b" },
-      sustainable: { name: "🌊 Harmony Islands", color: "#10b981" },
-      aggressive: { name: "⚔️ Competition Islands", color: "#ef4444" },
-    };
 
-    const getSustainabilityMessage = () => {
-      if (fishStock >= 80) return { text: "Excellent! The ocean thrives.", color: "#10b981" };
-      if (fishStock >= 60) return { text: "Good sustainability achieved.", color: "#f59e0b" };
-      if (fishStock >= 40) return { text: "The ocean is stressed but surviving.", color: "#f59e0b" };
-      return { text: "Critical! The ocean ecosystem is collapsing.", color: "#ef4444" };
-    };
+    // Calculate totals for cost efficiency display
+    const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
+    const totalCost = history.reduce((sum, h) => sum + (h.totalCost ?? 0), 0);
+    const averagePrice = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
 
-    const sustainabilityMessage = getSustainabilityMessage();
 
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
@@ -1000,21 +992,15 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
           }}
         >
           <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🐟 <strong>{fishStock}</strong> fish remaining in the ocean
+            🐟 <strong>{totalFishCaught}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong> total cost
           </div>
           <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🌺 <strong>{moanaTotal}</strong> fish caught by Moana
+            📊 Average cost: <strong>${averagePrice.toFixed(3)}</strong> per fish
           </div>
-          <div
-            style={{
-              fontSize: 14,
-              color: sustainabilityMessage.color,
-              fontWeight: 500,
-              marginTop: 8,
-            }}
-          >
-            {sustainabilityMessage.text}
+          <div style={{ fontSize: 15, marginBottom: 8 }}>
+            � <strong>{fishStock}</strong> fish remaining in the ocean
           </div>
+          
         </div>
       </div>
     );

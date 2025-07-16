@@ -708,7 +708,10 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         case "aggressive":
         default:
           // Competition Islands: All chiefs fight for maximum catch (use calculated competitive boats)
-          allChiefBoats = [0, 1, 2, 3].map(() => Math.floor(calculateEfficientBoats(currentStock, MODEL_PARAMS.c0)));
+          // Each chief has different cost structure based on their island's conditions
+          allChiefBoats = [0, 1, 2, 3].map((chiefIndex) =>
+            Math.floor(calculateEfficientBoats(currentStock, MODEL_PARAMS.c_islands[chiefIndex])),
+          );
           break;
       }
 

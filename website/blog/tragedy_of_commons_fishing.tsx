@@ -68,7 +68,7 @@ const calculateEfficientBoats = (s_t: number, c_t: number): number => {
    *     s_t: stock at time t
    *     c_t: cost of fishing per boat
    */
-  return Math.sqrt((MODEL_PARAMS.y0 * s_t) / c_t) / MODEL_PARAMS.nplayers;
+  return Math.pow((MODEL_PARAMS.y0 * s_t) / c_t, 2) / MODEL_PARAMS.nplayers;
 };
 
 // Calculate sustainable boat numbers
@@ -84,7 +84,8 @@ const calculateOptimalBoats = () => {
   // Boats per player (divide total by number of players)
   const low_fishing = Math.floor(calculateSustainableBoats(MODEL_PARAMS.s_init));
   const intensive_fishing = Math.floor(calculateEfficientBoats(MODEL_PARAMS.s_init, MODEL_PARAMS.c0));
-
+  console.log("Low fishing boats:", low_fishing);
+  console.log("Intensive fishing boats:", intensive_fishing);
   return { low_fishing, intensive_fishing };
 };
 
@@ -702,12 +703,12 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       switch (scenario) {
         case "sustainable":
           // Harmony Islands: All chiefs value long-term thinking (use calculated sustainable boats)
-          allChiefBoats = [0, 1, 2, 3].map(() => calculateSustainableBoats(currentStock));
+          allChiefBoats = [0, 1, 2, 3].map(() => Math.floor(calculateSustainableBoats(currentStock)));
           break;
         case "aggressive":
         default:
           // Competition Islands: All chiefs fight for maximum catch (use calculated competitive boats)
-          allChiefBoats = [0, 1, 2, 3].map(() => calculateEfficientBoats(currentStock, MODEL_PARAMS.c0));
+          allChiefBoats = [0, 1, 2, 3].map(() => Math.floor(calculateEfficientBoats(currentStock, MODEL_PARAMS.c0)));
           break;
       }
 

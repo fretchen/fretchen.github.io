@@ -713,18 +713,18 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       switch (scenario) {
         case "sustainable":
           // Harmony Islands: All chiefs value long-term thinking (use calculated sustainable boats)
-          allChiefBoats = [0, 1, 2, 3].map(() => Math.floor(calculateSustainableBoats(currentStock)));
+          allChiefBoats = [0, 1, 2, 3].map(() => calculateSustainableBoats(currentStock));
           break;
         case "aggressive":
         default:
           // Competition Islands: All chiefs fight for maximum catch (use calculated competitive boats)
           // Each chief has different cost structure based on their island's conditions
           allChiefBoats = [0, 1, 2, 3].map((chiefIndex) =>
-            Math.floor(calculateEfficientBoats(currentStock, MODEL_PARAMS.c_islands[chiefIndex])),
+            calculateEfficientBoats(currentStock, MODEL_PARAMS.c_islands[chiefIndex]),
           );
           break;
       }
-
+      console.log(`Round ${round} - All chiefs boats:`, allChiefBoats);
       // Moana is first chief (index 0), others are indices 1, 2, 3
       const moanaBoats = allChiefBoats[0];
       const otherBoats = allChiefBoats.slice(1);
@@ -738,7 +738,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       const totalCatch = calculateTotalCatch(currentStock, totalBoats);
 
       // Each chief gets proportional share based on boats sent
-      const allChiefFish = allChiefBoats.map((boats) => Math.round((boats / totalBoats) * totalCatch));
+      const allChiefFish = allChiefBoats.map((boats) => (boats / totalBoats) * totalCatch);
       const moanaFish = allChiefFish[0];
       const otherFish = allChiefFish.slice(1);
 
@@ -748,8 +748,8 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       const otherCosts = allChiefCosts.slice(1);
 
       // Calculate cost per fish for each chief
-      const allChiefCostPerFish = allChiefBoats.map((boats, index) =>
-        allChiefFish[index] > 0 ? (boats * MODEL_PARAMS.c_islands[index]) / allChiefFish[index] : 0,
+      const allChiefCostPerFish = allChiefCosts.map((cost, index) =>
+        allChiefFish[index] > 0 ? cost / allChiefFish[index] : 0,
       );
       const moanaCostPerFish = allChiefCostPerFish[0];
       const otherCostPerFish = allChiefCostPerFish.slice(1);
@@ -773,11 +773,11 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         otherCosts,
         otherCostPerFish,
         totalBoats,
-        totalCatch: Math.round(totalCatch),
+        totalCatch: totalCatch,
         totalCost,
         avgCostPerFish,
-        fishAfter: Math.round(nextStock),
-        regeneration: Math.round(regeneration),
+        fishAfter: nextStock,
+        regeneration: regeneration,
       });
 
       // Update for next round
@@ -786,7 +786,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
     }
 
     setHistory(newHistory);
-    setFishStock(Math.round(currentStock));
+    setFishStock(currentStock);
     setMoanaTotal(totalMoanaFish);
   };
 

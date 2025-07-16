@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -550,14 +550,14 @@ const FishingGameSimulator: React.FC = () => {
                 <tr
                   key={idx}
                   style={{
-                    background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff",
+                    background: idx % 2 === 0 ? "#f8fafc" : "#fff",
                   }}
                 >
                   <td
                     style={{
                       padding: "4px 8px",
                       textAlign: "center",
-                      fontWeight: idx === round - 1 && !gameOver ? 600 : 400,
+                      fontWeight: 400,
                     }}
                   >
                     {h.round}
@@ -678,156 +678,82 @@ const FishingGameSimulator: React.FC = () => {
 };
 
 const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
-  const [round, setRound] = useState(1); // 1, 2, 3
-  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init); // Start with notebook value
-  const [moanaTotal, setMoanaTotal] = useState(0);
-  const [scenario, setScenario] = useState<ScenarioType>("random");
-  const [history, setHistory] = useState<RoundHistory[]>([
-    {
-      round: 1,
-      moanaBoats: null,
-      moanaFish: null,
-      otherBoats: null,
-      otherFish: null,
-      totalBoats: null,
-      totalCatch: null,
-      fishAfter: null,
-      regeneration: null,
-    },
-    {
-      round: 2,
-      moanaBoats: null,
-      moanaFish: null,
-      otherBoats: null,
-      otherFish: null,
-      totalBoats: null,
-      totalCatch: null,
-      fishAfter: null,
-      regeneration: null,
-    },
-    {
-      round: 3,
-      moanaBoats: null,
-      moanaFish: null,
-      otherBoats: null,
-      otherFish: null,
-      totalBoats: null,
-      totalCatch: null,
-      fishAfter: null,
-      regeneration: null,
-    },
-  ]);
+  const [scenario, setScenario] = useState<ScenarioType>("sustainable");
+  const [history, setHistory] = useState<RoundHistory[]>([]);
   const [gameOver, setGameOver] = useState(false);
+  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
+  const [moanaTotal, setMoanaTotal] = useState(0);
 
-  function handleBoatChoice(moanaBoats: number) {
-    if (gameOver || history[round - 1].moanaBoats !== null) return;
+  // Auto-simulate all rounds when scenario changes
+  useEffect(() => {
+    simulateAllRounds();
+  }, [scenario]);
 
-    // Other chiefs choose boats based on selected scenario
-    let otherBoats: number[];
+  const simulateAllRounds = () => {
+    const nRounds = 3;
+    let currentStock = MODEL_PARAMS.s_init;
+    const newHistory: RoundHistory[] = [];
+    let totalMoanaFish = 0;
 
-    switch (scenario) {
-      case "sustainable":
-        // Harmony Islands: Chiefs value long-term thinking (use calculated sustainable boats)
-        otherBoats = otherChiefs.map(() => Math.floor(Math.random() * 2) + Math.max(1, OPTIMAL_BOATS.low_fishing - 1));
-        break;
-      case "aggressive":
-      default:
-        // Competition Islands: Every chief fights for maximum catch (use calculated competitive boats)
-        otherBoats = otherChiefs.map(
-          () => Math.floor(Math.random() * 4) + Math.max(8, OPTIMAL_BOATS.intensive_fishing - 2),
-        );
-        break;
+    for (let round = 1; round <= nRounds; round++) {
+      // All chiefs (including Moana) choose boats based on selected scenario
+      let allChiefBoats: number[];
+
+      switch (scenario) {
+        case "sustainable":
+          // Harmony Islands: All chiefs value long-term thinking (use calculated sustainable boats)
+          allChiefBoats = [0, 1, 2, 3].map(() => calculateSustainableBoats(currentStock));
+          break;
+        case "aggressive":
+        default:
+          // Competition Islands: All chiefs fight for maximum catch (use calculated competitive boats)
+          allChiefBoats = [0, 1, 2, 3].map(() => calculateEfficientBoats(currentStock, MODEL_PARAMS.c0));
+          break;
+      }
+
+      // Moana is first chief (index 0), others are indices 1, 2, 3
+      const moanaBoats = allChiefBoats[0];
+      const otherBoats = allChiefBoats.slice(1);
+
+      const totalBoats = allChiefBoats.reduce((a, b) => a + b, 0);
+
+      // Calculate regeneration first (like in notebook: gt = g_t(st, g0, g1))
+      const regeneration = calculateRegeneration(currentStock);
+
+      // Calculate total catch using mathematical model (like in notebook: yt = y_t(st, b_t, y0))
+      const totalCatch = calculateTotalCatch(currentStock, totalBoats);
+
+      // Each chief gets proportional share based on boats sent
+      const allChiefFish = allChiefBoats.map((boats) => Math.round((boats / totalBoats) * totalCatch));
+      const moanaFish = allChiefFish[0];
+      const otherFish = allChiefFish.slice(1);
+
+      // Update stock exactly like in notebook: st = st - yt + gt
+      const nextStock = currentStock - totalCatch + regeneration;
+
+      // Store round result
+      newHistory.push({
+        round,
+        moanaBoats,
+        moanaFish,
+        otherBoats,
+        otherFish,
+        totalBoats,
+        totalCatch: Math.round(totalCatch),
+        fishAfter: Math.round(nextStock),
+        regeneration: Math.round(regeneration),
+      });
+
+      // Update for next round
+      currentStock = Math.max(0, nextStock);
+      totalMoanaFish += moanaFish;
     }
-
-    const totalBoats = moanaBoats + otherBoats.reduce((a, b) => a + b, 0);
-
-    // Get current stock
-    const currentStock = round === 1 ? MODEL_PARAMS.s_init : (history[round - 2].fishAfter ?? MODEL_PARAMS.s_init);
-    console.log("Current stock:", currentStock);
-    // Calculate regeneration first (like in notebook: gt = g_t(st, g0, g1))
-    const regeneration = calculateRegeneration(currentStock);
-
-    // Calculate total catch using mathematical model (like in notebook: yt = y_t(st, b_t, y0))
-    const totalCatch = calculateTotalCatch(currentStock, totalBoats);
-
-    // Each chief gets proportional share based on boats sent
-    const moanaFish = Math.round((moanaBoats / totalBoats) * totalCatch);
-    const otherFish = otherBoats.map((boats) => Math.round((boats / totalBoats) * totalCatch));
-
-    // Update stock exactly like in notebook: st = st - yt + gt
-    const nextStock = currentStock - totalCatch + regeneration;
-    console.log("Next stock after catch and regeneration:", nextStock);
-
-    // Update history
-    const newHistory = history.map((h, idx) =>
-      idx === round - 1
-        ? {
-            round,
-            moanaBoats,
-            moanaFish,
-            otherBoats,
-            otherFish,
-            totalBoats,
-            totalCatch: Math.round(totalCatch),
-            fishAfter: Math.round(nextStock),
-            regeneration: Math.round(regeneration),
-          }
-        : h,
-    );
 
     setHistory(newHistory);
-    setMoanaTotal(moanaTotal + moanaFish);
-    setFishStock(Math.round(nextStock));
-
-    if (round === 3) {
-      setGameOver(true);
-    } else {
-      setRound(round + 1);
-    }
-  }
-
-  function reset() {
-    setRound(1);
-    setFishStock(MODEL_PARAMS.s_init);
-    setMoanaTotal(0);
-    setHistory([
-      {
-        round: 1,
-        moanaBoats: null,
-        moanaFish: null,
-        otherBoats: null,
-        otherFish: null,
-        totalBoats: null,
-        totalCatch: null,
-        fishAfter: null,
-        regeneration: null,
-      },
-      {
-        round: 2,
-        moanaBoats: null,
-        moanaFish: null,
-        otherBoats: null,
-        otherFish: null,
-        totalBoats: null,
-        totalCatch: null,
-        fishAfter: null,
-        regeneration: null,
-      },
-      {
-        round: 3,
-        moanaBoats: null,
-        moanaFish: null,
-        otherBoats: null,
-        otherFish: null,
-        totalBoats: null,
-        totalCatch: null,
-        fishAfter: null,
-        regeneration: null,
-      },
-    ]);
-    setGameOver(false);
-    setScenario("sustainable");
-  }
+    setFishStock(Math.round(currentStock));
+    setMoanaTotal(totalMoanaFish);
+    setGameOver(true);
+  };
 
   // Scenario Selector Component
   function ScenarioSelector() {
@@ -841,9 +767,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         description: `Every chief fights for maximum catch (~${OPTIMAL_BOATS.intensive_fishing} boats each)`,
       },
     };
-
-    // Check if any round has started (any boat choice has been made)
-    const gameStarted = history.some((h) => h.moanaBoats !== null);
 
     return (
       <div
@@ -860,50 +783,29 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           {Object.entries(scenarios).map(([key, info]) => {
             const isSelected = scenario === key;
-            const isDisabled = gameStarted;
 
             return (
               <button
                 key={key}
                 onClick={() => {
-                  if (!isDisabled) {
-                    setScenario(key as ScenarioType);
-                  }
+                  setScenario(key as ScenarioType);
                 }}
-                disabled={isDisabled}
                 style={{
                   padding: "12px 16px",
                   border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
                   borderRadius: 8,
-                  background: isDisabled ? "#f3f4f6" : isSelected ? "#eff6ff" : "#fff",
-                  cursor: isDisabled ? "not-allowed" : "pointer",
+                  background: isSelected ? "#eff6ff" : "#fff",
+                  cursor: "pointer",
                   textAlign: "left",
                   maxWidth: 200,
                   fontSize: 14,
-                  opacity: isDisabled ? 0.6 : 1,
                   position: "relative",
                 }}
-                title={isDisabled ? "Scenario locked during active game" : ""}
               >
-                {isDisabled && isSelected && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 4,
-                      right: 6,
-                      fontSize: 12,
-                      color: "#6b7280",
-                    }}
-                  >
-                    🔒
-                  </div>
-                )}
-                <div style={{ fontWeight: 600, marginBottom: 4, color: isDisabled ? "#9ca3af" : "#111827" }}>
-                  {info.name}
-                </div>
+                <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
                 <div
                   style={{
-                    color: isDisabled ? "#9ca3af" : "#64748b",
+                    color: "#64748b",
                     fontSize: 12,
                     lineHeight: "1.3",
                   }}
@@ -914,31 +816,12 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
             );
           })}
         </div>
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8, fontWeight: 500 }}>
-            Active Scenario: {scenarios[scenario].name}
-          </div>
-          {gameStarted ? (
-            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
-              Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
-            </div>
-          ) : (
-            <div style={{ fontSize: 14, color: "#64748b" }}>
-              As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
-              {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
-              {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
-            </div>
-          )}
-        </div>
       </div>
     );
   }
 
   // Action-Bereich mit Boats-basierten Entscheidungen
   function ActionBar() {
-    const currentRoundHistory = history[round - 1];
-    const hasChosenBoats = currentRoundHistory.moanaBoats !== null;
-
     return (
       <div
         style={{
@@ -963,11 +846,11 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
                 justifyContent: "center",
                 fontSize: 14,
                 fontWeight: 600,
-                background: roundNum < round ? "#10b981" : roundNum === round ? "#3b82f6" : "#e5e7eb",
-                color: roundNum < round || roundNum === round ? "#fff" : "#9ca3af",
+                background: gameOver ? "#10b981" : "#3b82f6",
+                color: "#fff",
               }}
             >
-              {roundNum < round ? "✓" : roundNum}
+              {gameOver ? "✓" : roundNum}
             </div>
           ))}
         </div>
@@ -975,85 +858,12 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         {/* Status */}
         <div style={{ fontSize: 16, textAlign: "center", marginBottom: 8 }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
+            {gameOver ? "Simulation Complete" : "Running simulation..."} • Final Fish Stock: {fishStock} 🐟
           </div>
-          <div style={{ color: "#64748b", fontSize: 14 }}>How many boats should Moana send out today?</div>
+          <div style={{ color: "#64748b", fontSize: 14 }}>
+            {gameOver ? "All 3 rounds completed automatically" : "Calculating results..."}
+          </div>
         </div>
-
-        {/* Boat Choice Buttons */}
-        {!gameOver && !hasChosenBoats && (
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-            <button
-              onClick={() => handleBoatChoice(OPTIMAL_BOATS.low_fishing)}
-              style={{
-                padding: "10px 16px",
-                border: "1px solid #10b981",
-                borderRadius: 6,
-                background: "#fff",
-                color: "#222",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
-            >
-              🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
-            </button>
-            <button
-              onClick={() =>
-                handleBoatChoice(Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2))
-              }
-              style={{
-                padding: "10px 16px",
-                border: "1px solid #f59e0b",
-                borderRadius: 6,
-                background: "#fff",
-                color: "#222",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
-            >
-              ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
-            </button>
-            <button
-              onClick={() => handleBoatChoice(OPTIMAL_BOATS.intensive_fishing)}
-              style={{
-                padding: "10px 16px",
-                border: "1px solid #ef4444",
-                borderRadius: 6,
-                background: "#fff",
-                color: "#222",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
-            >
-              ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
-            </button>
-          </div>
-        )}
-
-        {/* Round Feedback */}
-        {!gameOver && hasChosenBoats && (
-          <div style={{ fontSize: 14, color: "#64748b", textAlign: "center", marginTop: 4 }}>
-            <div style={{ marginBottom: 4 }}>
-              <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
-            </div>
-            <div style={{ marginBottom: 4 }}>
-              <strong>Other Chiefs:</strong>{" "}
-              {currentRoundHistory.otherBoats
-                ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
-                .join(", ")}
-            </div>
-            <div style={{ marginBottom: 4 }}>
-              <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch}{" "}
-              fish
-            </div>
-            {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
-              <div style={{ color: "#10b981" }}>🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish</div>
-            )}
-          </div>
-        )}
       </div>
     );
   }
@@ -1113,14 +923,14 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
                 <tr
                   key={idx}
                   style={{
-                    background: idx === round - 1 && !gameOver ? "#f0fdf4" : idx % 2 === 0 ? "#f8fafc" : "#fff",
+                    background: idx % 2 === 0 ? "#f8fafc" : "#fff",
                   }}
                 >
                   <td
                     style={{
                       padding: "4px 8px",
                       textAlign: "center",
-                      fontWeight: idx === round - 1 && !gameOver ? 600 : 400,
+                      fontWeight: 400,
                     }}
                   >
                     {h.round}
@@ -1162,6 +972,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   // Nach 3 Runden: Zusammenfassung
   function EndSummary() {
     const scenarios = {
+      random: { name: "🏝️ Mixed Islands", color: "#f59e0b" },
       sustainable: { name: "🌊 Harmony Islands", color: "#10b981" },
       aggressive: { name: "⚔️ Competition Islands", color: "#ef4444" },
     };
@@ -1209,22 +1020,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
             {sustainabilityMessage.text}
           </div>
         </div>
-
-        <button
-          onClick={reset}
-          style={{
-            padding: "12px 24px",
-            border: "none",
-            borderRadius: 8,
-            background: "#0891b2",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: 15,
-            cursor: "pointer",
-          }}
-        >
-          🔄 Try Different Scenario
-        </button>
       </div>
     );
   }
@@ -1239,600 +1034,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   );
 };
 
-// Island Efficiency Demonstrator Component - Three-Button Scenario Switcher
-const IslandEfficiencyDemonstrator: React.FC = () => {
-  const [selectedScenario, setSelectedScenario] = useState<"none" | "regulation" | "efficient">("none");
-
-  // Island parameters: different fishing costs per boat (from notebook)
-  const islands = [
-    { name: "Motunui (Moana)", cost: 0.125, maxBoats: 20, emoji: "🌺" },
-    { name: "Te Fiti Island", cost: 0.25, maxBoats: 15, emoji: "🌿" },
-    { name: "Lalotai Island", cost: 0.375, maxBoats: 12, emoji: "🦀" },
-    { name: "Tamatoa Island", cost: 0.5, maxBoats: 10, emoji: "💎" },
-  ];
-
-  // Fishing parameters (from notebook)
-  const FISH_STOCK = 100;
-  const CATCH_EFFICIENCY = 0.01; // y0
-  const GROWTH_RATE = 0.03; // g0
-  const GROWTH_DECLINE = 0.001; // g1
-
-  // Calculate sustainable boats: b_sust = (g0/y0 * (1 - g1*s))^2
-  const SUSTAINABLE_LIMIT = Math.pow((GROWTH_RATE / CATCH_EFFICIENCY) * (1 - GROWTH_DECLINE * FISH_STOCK), 2);
-
-  const calculateResults = (scenarioType: "regulation" | "efficient") => {
-    const nRounds = 3;
-    const islandResults: {
-      name: string;
-      boats: number;
-      cost: number;
-      revenue: number;
-      profit: number;
-      status: string;
-      emoji: string;
-    }[] = [];
-
-    // Initialize islands with zero totals
-    islands.forEach((island) => {
-      islandResults.push({
-        name: island.name,
-        boats: 0,
-        cost: 0,
-        revenue: 0,
-        profit: 0,
-        status: scenarioType === "regulation" ? "Fixed quota" : "Competitive fishing",
-        emoji: island.emoji,
-      });
-    });
-
-    // Track stock evolution and totals over multiple rounds
-    let currentStock = FISH_STOCK;
-    const stockEvolution = [currentStock];
-    let totalBoatsAllRounds = 0;
-    let totalCatchAllRounds = 0;
-    let totalCostAllRounds = 0;
-
-    // Simulate multiple rounds
-    for (let round = 0; round < nRounds; round++) {
-      const roundBoats: number[] = [];
-      const roundCosts: number[] = [];
-
-      if (scenarioType === "regulation") {
-        // Government sets sustainable limit: each island gets equal quota
-        const quotaPerIsland = Math.floor(SUSTAINABLE_LIMIT / islands.length);
-
-        islands.forEach((island, idx) => {
-          const boats = quotaPerIsland;
-          const cost = boats * island.cost;
-
-          roundBoats.push(boats);
-          roundCosts.push(cost);
-
-          // Add to cumulative totals
-          islandResults[idx].boats += boats;
-          islandResults[idx].cost += cost;
-        });
-      } else {
-        // Market competition: each island fishes until marginal profit = 0
-        islands.forEach((island, idx) => {
-          // Calculate competitive boats based on current stock: b_c = (y0 * s_t / c_t)^2
-          const competitiveBoats = Math.pow((CATCH_EFFICIENCY * currentStock) / island.cost, 2);
-          const boats = Math.min(competitiveBoats, island.maxBoats);
-          const cost = boats * island.cost;
-
-          roundBoats.push(boats);
-          roundCosts.push(cost);
-
-          // Add to cumulative totals
-          islandResults[idx].boats += boats;
-          islandResults[idx].cost += cost;
-        });
-      }
-
-      // Calculate round totals
-      const totalBoatsThisRound = roundBoats.reduce((sum, boats) => sum + boats, 0);
-      const totalCatchThisRound = calculateTotalCatch(currentStock, totalBoatsThisRound);
-      const totalCostThisRound = roundCosts.reduce((sum, cost) => sum + cost, 0);
-
-      // Distribute catch proportionally and add to cumulative revenue/profit
-      roundBoats.forEach((boats, idx) => {
-        const catchShare = totalBoatsThisRound > 0 ? (boats / totalBoatsThisRound) * totalCatchThisRound : 0;
-        islandResults[idx].revenue += catchShare;
-        islandResults[idx].profit += catchShare - roundCosts[idx];
-      });
-
-      // Update stock using the same logic as FishingGameSimulator
-      const regeneration = calculateRegeneration(currentStock);
-      currentStock = Math.max(0, currentStock - totalCatchThisRound + regeneration);
-      stockEvolution.push(currentStock);
-
-      // Add to grand totals
-      totalBoatsAllRounds += totalBoatsThisRound;
-      totalCatchAllRounds += totalCatchThisRound;
-      totalCostAllRounds += totalCostThisRound;
-    }
-
-    // Calculate sustainability based on final stock
-    const finalStock = stockEvolution[stockEvolution.length - 1];
-    const stockHealthy = finalStock >= FISH_STOCK * 0.8; // 80% of original stock
-    const sustainability = stockHealthy ? "Sustainable ✅" : "Overfishing ⚠️";
-
-    // Calculate average boats per round for description
-    const avgBoatsPerRound = totalBoatsAllRounds / nRounds;
-    const quotaPerIsland = Math.floor(SUSTAINABLE_LIMIT / islands.length);
-
-    return {
-      islandResults,
-      totalBoats: Math.round(totalBoatsAllRounds),
-      totalCatch: totalCatchAllRounds,
-      totalCost: totalCostAllRounds,
-      totalProfit: islandResults.reduce((sum, island) => sum + island.profit, 0),
-      sustainability,
-      stockEvolution,
-      finalStock: Math.round(finalStock),
-      description:
-        scenarioType === "regulation"
-          ? `🏛️ **State Regulation**: Fixed quotas (${quotaPerIsland} boats each per round). Final stock: ${Math.round(finalStock)} fish.`
-          : `💰 **Market Competition**: Average ${Math.round(avgBoatsPerRound)} boats per round. Final stock: ${Math.round(finalStock)} fish.`,
-      insight:
-        scenarioType === "regulation"
-          ? "State regulation maintains fish stocks but is expensive because it forces inefficient (high-cost) islands to fish alongside efficient ones."
-          : "Market competition minimizes costs by prioritizing efficient (low-cost) islands, but total fishing effort exceeds sustainable limits.",
-    };
-  };
-
-  const results = selectedScenario !== "none" ? calculateResults(selectedScenario as "regulation" | "efficient") : null;
-
-  return (
-    <div
-      className={css({
-        border: "2px solid #059669",
-        borderRadius: "12px",
-        padding: "24px",
-        margin: "24px 0",
-        backgroundColor: "#f0fdf4",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-      })}
-    >
-      <h3
-        className={css({
-          fontSize: "24px",
-          fontWeight: "bold",
-          color: "#065f46",
-          marginBottom: "16px",
-          textAlign: "center",
-        })}
-      >
-        🏝️ Island Efficiency Demonstrator
-      </h3>
-
-      <p
-        className={css({
-          fontSize: "16px",
-          marginBottom: "20px",
-          color: "#374151",
-          lineHeight: "1.6",
-          textAlign: "center",
-        })}
-      >
-        The islands have different fishing costs. This creates a fundamental trade-off between **sustainability** and
-        **economic efficiency**:
-      </p>
-
-      {/* Three Scenario Buttons */}
-      <div
-        className={css({
-          display: "flex",
-          gap: "16px",
-          marginBottom: "24px",
-          flexWrap: "wrap",
-          justifyContent: "center",
-        })}
-      >
-        <button
-          onClick={() => setSelectedScenario("regulation")}
-          className={css({
-            backgroundColor: selectedScenario === "regulation" ? "#2563eb" : "#dbeafe",
-            color: selectedScenario === "regulation" ? "#ffffff" : "#2563eb",
-            padding: "16px 20px",
-            borderRadius: "8px",
-            border: "2px solid #2563eb",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            minWidth: "160px",
-            "&:hover": {
-              backgroundColor: "#2563eb",
-              color: "#ffffff",
-            },
-          })}
-        >
-          🏛️ State Regulation
-        </button>
-
-        <button
-          onClick={() => setSelectedScenario("efficient")}
-          className={css({
-            backgroundColor: selectedScenario === "efficient" ? "#dc2626" : "#fee2e2",
-            color: selectedScenario === "efficient" ? "#ffffff" : "#dc2626",
-            padding: "16px 20px",
-            borderRadius: "8px",
-            border: "2px solid #dc2626",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            minWidth: "160px",
-            "&:hover": {
-              backgroundColor: "#dc2626",
-              color: "#ffffff",
-            },
-          })}
-        >
-          💰 Market Competition
-        </button>
-      </div>
-
-      {/* Results Display */}
-      {results && (
-        <div
-          className={css({
-            backgroundColor: "#ffffff",
-            padding: "20px",
-            borderRadius: "8px",
-            border: "1px solid #e5e7eb",
-          })}
-        >
-          <div
-            className={css({
-              marginBottom: "20px",
-              padding: "16px",
-              backgroundColor: "#f9fafb",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-            })}
-          >
-            <p
-              className={css({
-                fontSize: "16px",
-                fontWeight: "600",
-                color: "#374151",
-                marginBottom: "8px",
-              })}
-            >
-              {results.description}
-            </p>
-            <p
-              className={css({
-                fontSize: "14px",
-                color: "#6b7280",
-                fontStyle: "italic",
-              })}
-            >
-              {results.insight}
-            </p>
-          </div>
-
-          {/* Summary Stats */}
-          <div
-            className={css({
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-              gap: "12px",
-              marginBottom: "20px",
-            })}
-          >
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Total Boats</div>
-              <div className={css({ fontSize: "18px", fontWeight: "bold", color: "#1f2937" })}>
-                {results.totalBoats}
-              </div>
-            </div>
-
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Total Catch</div>
-              <div className={css({ fontSize: "18px", fontWeight: "bold", color: "#1f2937" })}>
-                {results.totalCatch.toFixed(1)}
-              </div>
-            </div>
-
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Total Cost</div>
-              <div className={css({ fontSize: "18px", fontWeight: "bold", color: "#1f2937" })}>
-                {results.totalCost.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Net Profit</div>
-              <div
-                className={css({
-                  fontSize: "18px",
-                  fontWeight: "bold",
-                  color: results.totalProfit >= 0 ? "#059669" : "#dc2626",
-                })}
-              >
-                {results.totalProfit.toFixed(2)}
-              </div>
-            </div>
-
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Sustainability</div>
-              <div className={css({ fontSize: "16px", fontWeight: "bold", color: "#1f2937" })}>
-                {results.sustainability}
-              </div>
-            </div>
-
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Fish Stock After</div>
-              <div
-                className={css({
-                  fontSize: "18px",
-                  fontWeight: "bold",
-                  color:
-                    results.finalStock >= FISH_STOCK * 0.8
-                      ? "#059669"
-                      : results.finalStock >= FISH_STOCK * 0.6
-                        ? "#f59e0b"
-                        : "#dc2626",
-                })}
-              >
-                {results.finalStock} 🐟
-              </div>
-            </div>
-
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "12px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "6px",
-                border: "1px solid #e2e8f0",
-              })}
-            >
-              <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "4px" })}>Cost/Efficiency</div>
-              <div
-                className={css({
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  color: results.totalCost < 5 ? "#059669" : "#dc2626",
-                })}
-              >
-                {results.totalCost < 5 ? "Efficient 💰" : "Expensive 💸"}
-              </div>
-            </div>
-          </div>
-
-          {/* Island Details */}
-          <div
-            className={css({
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "16px",
-            })}
-          >
-            {results.islandResults.map((island) => (
-              <div
-                key={island.name}
-                className={css({
-                  padding: "16px",
-                  backgroundColor: "#ffffff",
-                  borderRadius: "8px",
-                  border: "2px solid #e5e7eb",
-                  position: "relative",
-                })}
-              >
-                <div
-                  className={css({
-                    display: "flex",
-                    alignItems: "center",
-                    marginBottom: "8px",
-                  })}
-                >
-                  <span className={css({ fontSize: "20px", marginRight: "8px" })}>{island.emoji}</span>
-                  <div className={css({ fontWeight: "600", fontSize: "16px", color: "#1f2937" })}>{island.name}</div>
-                </div>
-
-                <div className={css({ fontSize: "12px", color: "#6b7280", marginBottom: "8px" })}>
-                  Cost per boat: ${island.cost.toFixed(3)}
-                </div>
-
-                <div className={css({ fontSize: "14px", color: "#374151", marginBottom: "8px" })}>
-                  <strong>Boats:</strong> {island.boats} | <strong>Revenue:</strong> ${island.revenue.toFixed(2)}
-                </div>
-
-                <div className={css({ fontSize: "14px", color: "#374151", marginBottom: "12px" })}>
-                  <strong>Cost:</strong> ${island.cost.toFixed(2)} | <strong>Profit:</strong>{" "}
-                  <span
-                    className={css({
-                      color: island.profit >= 0 ? "#059669" : "#dc2626",
-                      fontWeight: "600",
-                    })}
-                  >
-                    ${island.profit.toFixed(2)}
-                  </span>
-                </div>
-
-                <div
-                  className={css({
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: island.status.includes("Excluded") ? "#dc2626" : "#059669",
-                    backgroundColor: island.status.includes("Excluded") ? "#fee2e2" : "#d1fae5",
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    textAlign: "center",
-                  })}
-                >
-                  {island.status}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Stock Evolution Chart */}
-          <div
-            className={css({
-              marginTop: "20px",
-              padding: "16px",
-              backgroundColor: "#f9fafb",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-            })}
-          >
-            <h4
-              className={css({
-                fontSize: "16px",
-                fontWeight: "600",
-                marginBottom: "12px",
-                color: "#374151",
-              })}
-            >
-              📊 Fish Stock Evolution ({results.stockEvolution.length - 1} rounds)
-            </h4>
-            <div
-              className={css({
-                display: "flex",
-                gap: "12px",
-                justifyContent: "center",
-                alignItems: "end",
-                marginBottom: "12px",
-              })}
-            >
-              {results.stockEvolution.map((stock, round) => (
-                <div key={round} className={css({ textAlign: "center" })}>
-                  <div
-                    className={css({
-                      width: "40px",
-                      height: `${Math.max(20, (stock / FISH_STOCK) * 80)}px`,
-                      backgroundColor:
-                        stock >= FISH_STOCK * 0.8 ? "#059669" : stock >= FISH_STOCK * 0.6 ? "#f59e0b" : "#dc2626",
-                      borderRadius: "4px",
-                      marginBottom: "8px",
-                      display: "flex",
-                      alignItems: "end",
-                      justifyContent: "center",
-                      paddingBottom: "4px",
-                      color: "#ffffff",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                    })}
-                  >
-                    {Math.round(stock)}
-                  </div>
-                  <div className={css({ fontSize: "12px", color: "#6b7280" })}>
-                    {round === 0 ? "Start" : `Round ${round}`}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div
-              className={css({
-                textAlign: "center",
-                fontSize: "14px",
-                color:
-                  results.finalStock >= FISH_STOCK * 0.8
-                    ? "#059669"
-                    : results.finalStock >= FISH_STOCK * 0.6
-                      ? "#f59e0b"
-                      : "#dc2626",
-                fontWeight: "600",
-              })}
-            >
-              Final Stock: {results.finalStock} fish ({((results.finalStock / FISH_STOCK) * 100).toFixed(0)}% of
-              original)
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Initial instruction */}
-      {selectedScenario === "none" && (
-        <div
-          className={css({
-            textAlign: "center",
-            padding: "32px",
-            color: "#6b7280",
-            fontSize: "16px",
-            fontStyle: "italic",
-          })}
-        >
-          Click a button above to explore the trade-off between sustainability and efficiency
-        </div>
-      )}
-
-      {/* Key Insights */}
-      <div
-        className={css({
-          marginTop: "20px",
-          fontSize: "14px",
-          color: "#6b7280",
-          backgroundColor: "#f9fafb",
-          padding: "16px",
-          borderRadius: "8px",
-          border: "1px solid #e5e7eb",
-          lineHeight: "1.6",
-        })}
-      >
-        <strong>Key Insights:</strong>
-        <ul className={css({ marginLeft: "16px", marginTop: "8px" })}>
-          <li>**State Regulation** maintains sustainability but forces inefficient (high-cost) islands to fish</li>
-          <li>**Market Competition** minimizes costs by prioritizing efficient islands, but leads to overfishing</li>
-          <li>This demonstrates the classic trade-off: environmental sustainability vs. economic efficiency</li>
-        </ul>
-      </div>
-    </div>
-  );
-};
 // My Blog Post Component
 
 const TragedyOfCommonsFishing: React.FC = () => {

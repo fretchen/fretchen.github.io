@@ -967,16 +967,13 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
   // Nach 3 Runden: Zusammenfassung
   function EndSummary() {
-
     // Calculate totals for cost efficiency display
     const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
     const totalCost = history.reduce((sum, h) => sum + (h.totalCost ?? 0), 0);
     const averagePrice = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
 
-
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
-
         <div
           style={{
             background: "#f0f9ff",
@@ -987,7 +984,8 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
           }}
         >
           <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong> total cost
+            🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong>{" "}
+            total cost
           </div>
           <div style={{ fontSize: 15, marginBottom: 8 }}>
             📊 Average cost: <strong>${averagePrice.toFixed(2)}</strong> per fish
@@ -995,7 +993,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
           <div style={{ fontSize: 15, marginBottom: 8 }}>
             🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in the ocean
           </div>
-          
         </div>
       </div>
     );

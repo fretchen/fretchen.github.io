@@ -935,19 +935,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       const isExpensive = costPerFish >= roundAvgCost * 1.2; // 20% above average
 
       return (
-        <span
-          style={{
-            background: isEfficient ? "#d1fae5" : isExpensive ? "#fef2f2" : "#fef9c3",
-            color: isEfficient ? "#047857" : isExpensive ? "#dc2626" : "#b45309",
-            borderRadius: 4,
-            padding: "2px 6px",
-            fontWeight: 500,
-            display: "inline-block",
-            minWidth: 60,
-            fontSize: 12,
-          }}
-          title={`${fish} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(3)} per fish`}
-        >
+        <span title={`${fish} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(3)} per fish`}>
           {fish}🐟
           <br />${cost.toFixed(2)}
         </span>

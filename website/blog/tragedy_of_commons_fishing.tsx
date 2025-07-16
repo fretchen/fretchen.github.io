@@ -691,7 +691,6 @@ const FishingGameSimulator: React.FC = () => {
 const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   const [scenario, setScenario] = useState<ScenarioType>("sustainable");
   const [history, setHistory] = useState<IslandRoundHistory[]>([]);
-  const [gameOver, setGameOver] = useState(false);
 
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
   const [moanaTotal, setMoanaTotal] = useState(0);
@@ -789,7 +788,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
     setHistory(newHistory);
     setFishStock(Math.round(currentStock));
     setMoanaTotal(totalMoanaFish);
-    setGameOver(true);
   };
 
   // Scenario Selector Component
@@ -852,54 +850,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
               </button>
             );
           })}
-        </div>
-      </div>
-    );
-  }
-
-  // Action-Bereich mit Boats-basierten Entscheidungen
-  function ActionBar() {
-    return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        {/* Progress Indicator */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          {[1, 2, 3].map((roundNum) => (
-            <div
-              key={roundNum}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 14,
-                fontWeight: 600,
-                background: gameOver ? "#10b981" : "#3b82f6",
-                color: "#fff",
-              }}
-            >
-              {gameOver ? "✓" : roundNum}
-            </div>
-          ))}
-        </div>
-
-        {/* Status */}
-        <div style={{ fontSize: 16, textAlign: "center", marginBottom: 8 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            {gameOver ? "Simulation Complete" : "Running simulation..."} • Final Fish Stock: {fishStock} 🐟
-          </div>
-          <div style={{ color: "#64748b", fontSize: 14 }}>
-            {gameOver ? "All 3 rounds completed automatically" : "Calculating results..."}
-          </div>
         </div>
       </div>
     );
@@ -1049,10 +999,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
             marginBottom: 16,
           }}
         >
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
-            <strong>Scenario:</strong>{" "}
-            <span style={{ color: scenarios[scenario].color }}>{scenarios[scenario].name}</span>
-          </div>
           <div style={{ fontSize: 15, marginBottom: 8 }}>
             🐟 <strong>{fishStock}</strong> fish remaining in the ocean
           </div>
@@ -1077,9 +1023,8 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   return (
     <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
       <ScenarioSelector />
-      <ActionBar />
       <ResultsTable />
-      {gameOver && <EndSummary />}
+      <EndSummary />
     </div>
   );
 };

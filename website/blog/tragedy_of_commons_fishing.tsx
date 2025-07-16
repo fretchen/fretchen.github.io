@@ -60,7 +60,7 @@ const MODEL_PARAMS = {
 
   // cost for the inidividual islands
   // important for the second game
-  c_islands: [0.125, 0.25, 0.375, 0.5],
+  c_islands: [0.125, 0.25, 0.75, 1],
 
   // Initial stock
   s_init: 100,
@@ -693,7 +693,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   const [history, setHistory] = useState<IslandRoundHistory[]>([]);
 
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
-  const [moanaTotal, setMoanaTotal] = useState(0);
 
   // Auto-simulate all rounds when scenario changes
   useEffect(() => {
@@ -704,7 +703,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
     const nRounds = 3;
     let currentStock = MODEL_PARAMS.s_init;
     const newHistory: IslandRoundHistory[] = [];
-    let totalMoanaFish = 0;
 
     for (let round = 1; round <= nRounds; round++) {
       // All chiefs (including Moana) choose boats based on selected scenario
@@ -782,24 +780,22 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
       // Update for next round
       currentStock = Math.max(0, nextStock);
-      totalMoanaFish += moanaFish;
     }
 
     setHistory(newHistory);
     setFishStock(currentStock);
-    setMoanaTotal(totalMoanaFish);
   };
 
   // Scenario Selector Component
   function ScenarioSelector() {
     const scenarios = {
       sustainable: {
-        name: "🌊 Harmony Islands",
-        description: `Chiefs here value long-term thinking (~${OPTIMAL_BOATS.low_fishing} boats each)`,
+        name: "⚖️ Equal Access Policy",
+        description: "All islands fish at the same sustainable level regardless of their individual costs",
       },
       aggressive: {
-        name: "⚔️ Competition Islands",
-        description: `Every chief fights for maximum catch (~${OPTIMAL_BOATS.intensive_fishing} boats each)`,
+        name: "📈 Efficiency-Based Fishing",
+        description: "Each island fishes at their cost-optimal level (islands with lower costs fish more)",
       },
     };
 
@@ -814,7 +810,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
           background: "#fafafa",
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🌏 Neighboring Islands Culture</div>
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🌏 Fishing Management System</div>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           {Object.entries(scenarios).map(([key, info]) => {
             const isSelected = scenario === key;
@@ -877,8 +873,8 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       if (fish === null || cost === null || costPerFish === null || roundAvgCost === null) return <span>-</span>;
 
       return (
-        <span title={`${fish} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(3)} per fish`}>
-          {fish}🐟
+        <span title={`${Math.round(fish)} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(2)} per fish`}>
+          {Math.round(fish)}🐟
           <br />${cost.toFixed(2)}
         </span>
       );
@@ -943,7 +939,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
                   ))}
                   {/* Fish Stock */}
                   <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
-                    {h.fishAfter !== null ? `${h.fishAfter}🐟` : "-"}
+                    {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
                   </td>
                 </tr>
               ))}
@@ -951,12 +947,12 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
               <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
                 <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
                 <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {moanaSum}🐟
+                  {Math.round(moanaSum)}🐟
                   <br />${moanaCostSum.toFixed(2)}
                 </td>
                 {chiefsSums.map((sum, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {sum}🐟
+                    {Math.round(sum)}🐟
                     <br />${chiefsCostSums[i].toFixed(2)}
                   </td>
                 ))}
@@ -980,7 +976,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 12 }}>Game Complete!</div>
 
         <div
           style={{
@@ -992,13 +987,13 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
           }}
         >
           <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🐟 <strong>{totalFishCaught}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong> total cost
+            🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong> total cost
           </div>
           <div style={{ fontSize: 15, marginBottom: 8 }}>
-            📊 Average cost: <strong>${averagePrice.toFixed(3)}</strong> per fish
+            📊 Average cost: <strong>${averagePrice.toFixed(2)}</strong> per fish
           </div>
           <div style={{ fontSize: 15, marginBottom: 8 }}>
-            � <strong>{fishStock}</strong> fish remaining in the ocean
+            🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in the ocean
           </div>
           
         </div>

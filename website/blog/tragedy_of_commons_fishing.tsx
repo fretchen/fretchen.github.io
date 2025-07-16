@@ -693,10 +693,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   const [history, setHistory] = useState<IslandRoundHistory[]>([]);
   const [gameOver, setGameOver] = useState(false);
 
-  const restart = () => {
-    setHistory([]);
-    setGameOver(false);
-  };
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
   const [moanaTotal, setMoanaTotal] = useState(0);
 
@@ -929,10 +925,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       roundAvgCost: number | null,
     ) {
       if (fish === null || cost === null || costPerFish === null || roundAvgCost === null) return <span>-</span>;
-
-      // Color coding based on cost efficiency
-      const isEfficient = costPerFish <= roundAvgCost * 0.8; // 20% below average
-      const isExpensive = costPerFish >= roundAvgCost * 1.2; // 20% above average
 
       return (
         <span title={`${fish} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(3)} per fish`}>

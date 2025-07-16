@@ -28,10 +28,16 @@ type RoundHistory = {
   round: number;
   moanaBoats: number | null;
   moanaFish: number | null;
+  moanaCost: number | null;
+  moanaCostPerFish: number | null;
   otherBoats: number[] | null;
   otherFish: number[] | null;
+  otherCosts: number[] | null;
+  otherCostPerFish: number[] | null;
   totalBoats: number | null;
   totalCatch: number | null;
+  totalCost: number | null;
+  avgCostPerFish: number | null;
   fishAfter: number | null;
   regeneration: number | null;
 };
@@ -113,10 +119,16 @@ const FishingGameSimulator: React.FC = () => {
       round: 1,
       moanaBoats: null,
       moanaFish: null,
+      moanaCost: null,
+      moanaCostPerFish: null,
       otherBoats: null,
       otherFish: null,
+      otherCosts: null,
+      otherCostPerFish: null,
       totalBoats: null,
       totalCatch: null,
+      totalCost: null,
+      avgCostPerFish: null,
       fishAfter: null,
       regeneration: null,
     },
@@ -124,10 +136,16 @@ const FishingGameSimulator: React.FC = () => {
       round: 2,
       moanaBoats: null,
       moanaFish: null,
+      moanaCost: null,
+      moanaCostPerFish: null,
       otherBoats: null,
       otherFish: null,
+      otherCosts: null,
+      otherCostPerFish: null,
       totalBoats: null,
       totalCatch: null,
+      totalCost: null,
+      avgCostPerFish: null,
       fishAfter: null,
       regeneration: null,
     },
@@ -135,10 +153,16 @@ const FishingGameSimulator: React.FC = () => {
       round: 3,
       moanaBoats: null,
       moanaFish: null,
+      moanaCost: null,
+      moanaCostPerFish: null,
       otherBoats: null,
       otherFish: null,
+      otherCosts: null,
+      otherCostPerFish: null,
       totalBoats: null,
       totalCatch: null,
+      totalCost: null,
+      avgCostPerFish: null,
       fishAfter: null,
       regeneration: null,
     },
@@ -199,10 +223,16 @@ const FishingGameSimulator: React.FC = () => {
             round,
             moanaBoats,
             moanaFish,
+            moanaCost: null,
+            moanaCostPerFish: null,
             otherBoats,
             otherFish,
+            otherCosts: null,
+            otherCostPerFish: null,
             totalBoats,
             totalCatch: Math.round(totalCatch),
+            totalCost: null,
+            avgCostPerFish: null,
             fishAfter: Math.round(nextStock),
             regeneration: Math.round(regeneration),
           }
@@ -229,10 +259,16 @@ const FishingGameSimulator: React.FC = () => {
         round: 1,
         moanaBoats: null,
         moanaFish: null,
+        moanaCost: null,
+        moanaCostPerFish: null,
         otherBoats: null,
         otherFish: null,
+        otherCosts: null,
+        otherCostPerFish: null,
         totalBoats: null,
         totalCatch: null,
+        totalCost: null,
+        avgCostPerFish: null,
         fishAfter: null,
         regeneration: null,
       },
@@ -240,10 +276,16 @@ const FishingGameSimulator: React.FC = () => {
         round: 2,
         moanaBoats: null,
         moanaFish: null,
+        moanaCost: null,
+        moanaCostPerFish: null,
         otherBoats: null,
         otherFish: null,
+        otherCosts: null,
+        otherCostPerFish: null,
         totalBoats: null,
         totalCatch: null,
+        totalCost: null,
+        avgCostPerFish: null,
         fishAfter: null,
         regeneration: null,
       },
@@ -251,10 +293,16 @@ const FishingGameSimulator: React.FC = () => {
         round: 3,
         moanaBoats: null,
         moanaFish: null,
+        moanaCost: null,
+        moanaCostPerFish: null,
         otherBoats: null,
         otherFish: null,
+        otherCosts: null,
+        otherCostPerFish: null,
         totalBoats: null,
         totalCatch: null,
+        totalCost: null,
+        avgCostPerFish: null,
         fishAfter: null,
         regeneration: null,
       },
@@ -496,34 +544,47 @@ const FishingGameSimulator: React.FC = () => {
     );
   }
 
-  // Results table showing boats and fish caught
+  // Results table showing costs and fish caught
   function ResultsTable() {
     // Calculate totals
     const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
     const chiefsSums = otherChiefs.map((_, i) =>
       history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
     );
+    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+    const chiefsCostSums = otherChiefs.map((_, i) =>
+      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+    );
 
-    // Helper function for boat display
-    function boatCell(boats: number | null, fish: number | null) {
-      if (boats === null || fish === null) return <span>-</span>;
-      const isConservative = boats <= OPTIMAL_BOATS.low_fishing + 1; // Around sustainable level
-      const isAggressive = boats >= OPTIMAL_BOATS.intensive_fishing - 2; // Around competitive level
+    // Helper function for cost display
+    function costCell(
+      fish: number | null,
+      cost: number | null,
+      costPerFish: number | null,
+      roundAvgCost: number | null,
+    ) {
+      if (fish === null || cost === null || costPerFish === null || roundAvgCost === null) return <span>-</span>;
+
+      // Color coding based on cost efficiency
+      const isEfficient = costPerFish <= roundAvgCost * 0.8; // 20% below average
+      const isExpensive = costPerFish >= roundAvgCost * 1.2; // 20% above average
 
       return (
         <span
           style={{
-            background: isConservative ? "#d1fae5" : isAggressive ? "#fef2f2" : "#fef9c3",
-            color: isConservative ? "#047857" : isAggressive ? "#dc2626" : "#b45309",
+            background: isEfficient ? "#d1fae5" : isExpensive ? "#fef2f2" : "#fef9c3",
+            color: isEfficient ? "#047857" : isExpensive ? "#dc2626" : "#b45309",
             borderRadius: 4,
             padding: "2px 6px",
             fontWeight: 500,
             display: "inline-block",
-            minWidth: 40,
+            minWidth: 60,
+            fontSize: 12,
           }}
-          title={`${boats} boats → ${fish} fish`}
+          title={`${fish} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(3)} per fish`}
         >
-          {boats}🛥️ → {fish}🐟
+          {fish}🐟
+          <br />${cost.toFixed(2)}
         </span>
       );
     }
@@ -537,10 +598,16 @@ const FishingGameSimulator: React.FC = () => {
             <thead>
               <tr style={{ background: "#bae6fd" }}>
                 <th style={{ padding: "6px 8px" }}>Round</th>
-                <th style={{ padding: "6px 8px" }}>Moana</th>
+                <th style={{ padding: "6px 8px" }}>
+                  Moana
+                  <br />
+                  Fish • Cost
+                </th>
                 {otherChiefs.map((chief) => (
                   <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
                     {chief.replace("Chief ", "")}
+                    <br />
+                    Fish • Cost
                   </th>
                 ))}
                 <th style={{ padding: "6px 8px" }}>Stock After</th>
@@ -564,12 +631,18 @@ const FishingGameSimulator: React.FC = () => {
                     {h.round}
                   </td>
                   {/* Moana */}
-                  <td style={{ padding: "4px 8px", textAlign: "center" }}>{boatCell(h.moanaBoats, h.moanaFish)}</td>
+                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {costCell(h.moanaFish, h.moanaCost, h.moanaCostPerFish, h.avgCostPerFish)}
+                  </td>
                   {/* Other Chiefs */}
                   {otherChiefs.map((_, i) => (
                     <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                      {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
-                        ? boatCell(h.otherBoats[i], h.otherFish[i])
+                      {h.otherFish &&
+                      h.otherCosts &&
+                      h.otherCostPerFish &&
+                      h.otherFish[i] !== undefined &&
+                      h.otherCosts[i] !== undefined
+                        ? costCell(h.otherFish[i], h.otherCosts[i], h.otherCostPerFish[i], h.avgCostPerFish)
                         : "-"}
                     </td>
                   ))}
@@ -582,10 +655,14 @@ const FishingGameSimulator: React.FC = () => {
               {/* Summary Row */}
               <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
                 <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {moanaSum}🐟
+                  <br />${moanaCostSum.toFixed(2)}
+                </td>
                 {chiefsSums.map((sum, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
                     {sum}🐟
+                    <br />${chiefsCostSums[i].toFixed(2)}
                   </td>
                 ))}
                 <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
@@ -682,6 +759,11 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   const [scenario, setScenario] = useState<ScenarioType>("sustainable");
   const [history, setHistory] = useState<RoundHistory[]>([]);
   const [gameOver, setGameOver] = useState(false);
+
+  const restart = () => {
+    setHistory([]);
+    setGameOver(false);
+  };
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
   const [moanaTotal, setMoanaTotal] = useState(0);
 
@@ -732,6 +814,22 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       const moanaFish = allChiefFish[0];
       const otherFish = allChiefFish.slice(1);
 
+      // Calculate costs for each chief
+      const allChiefCosts = allChiefBoats.map((boats, index) => boats * MODEL_PARAMS.c_islands[index]);
+      const moanaCost = allChiefCosts[0];
+      const otherCosts = allChiefCosts.slice(1);
+
+      // Calculate cost per fish for each chief
+      const allChiefCostPerFish = allChiefBoats.map((boats, index) =>
+        allChiefFish[index] > 0 ? (boats * MODEL_PARAMS.c_islands[index]) / allChiefFish[index] : 0,
+      );
+      const moanaCostPerFish = allChiefCostPerFish[0];
+      const otherCostPerFish = allChiefCostPerFish.slice(1);
+
+      // Calculate total cost and average cost per fish
+      const totalCost = allChiefCosts.reduce((sum, cost) => sum + cost, 0);
+      const avgCostPerFish = totalCatch > 0 ? totalCost / totalCatch : 0;
+
       // Update stock exactly like in notebook: st = st - yt + gt
       const nextStock = currentStock - totalCatch + regeneration;
 
@@ -740,10 +838,16 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         round,
         moanaBoats,
         moanaFish,
+        moanaCost,
+        moanaCostPerFish,
         otherBoats,
         otherFish,
+        otherCosts,
+        otherCostPerFish,
         totalBoats,
         totalCatch: Math.round(totalCatch),
+        totalCost,
+        avgCostPerFish,
         fishAfter: Math.round(nextStock),
         regeneration: Math.round(regeneration),
       });
@@ -872,34 +976,47 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
     );
   }
 
-  // Results table showing boats and fish caught
+  // Results table showing costs and fish caught
   function ResultsTable() {
     // Calculate totals
     const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
     const chiefsSums = otherChiefs.map((_, i) =>
       history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
     );
+    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+    const chiefsCostSums = otherChiefs.map((_, i) =>
+      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+    );
 
-    // Helper function for boat display
-    function boatCell(boats: number | null, fish: number | null) {
-      if (boats === null || fish === null) return <span>-</span>;
-      const isConservative = boats <= OPTIMAL_BOATS.low_fishing + 1; // Around sustainable level
-      const isAggressive = boats >= OPTIMAL_BOATS.intensive_fishing - 2; // Around competitive level
+    // Helper function for cost display
+    function costCell(
+      fish: number | null,
+      cost: number | null,
+      costPerFish: number | null,
+      roundAvgCost: number | null,
+    ) {
+      if (fish === null || cost === null || costPerFish === null || roundAvgCost === null) return <span>-</span>;
+
+      // Color coding based on cost efficiency
+      const isEfficient = costPerFish <= roundAvgCost * 0.8; // 20% below average
+      const isExpensive = costPerFish >= roundAvgCost * 1.2; // 20% above average
 
       return (
         <span
           style={{
-            background: isConservative ? "#d1fae5" : isAggressive ? "#fef2f2" : "#fef9c3",
-            color: isConservative ? "#047857" : isAggressive ? "#dc2626" : "#b45309",
+            background: isEfficient ? "#d1fae5" : isExpensive ? "#fef2f2" : "#fef9c3",
+            color: isEfficient ? "#047857" : isExpensive ? "#dc2626" : "#b45309",
             borderRadius: 4,
             padding: "2px 6px",
             fontWeight: 500,
             display: "inline-block",
-            minWidth: 40,
+            minWidth: 60,
+            fontSize: 12,
           }}
-          title={`${boats} boats → ${fish} fish`}
+          title={`${fish} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(3)} per fish`}
         >
-          {boats}🛥️ → {fish}🐟
+          {fish}🐟
+          <br />${cost.toFixed(2)}
         </span>
       );
     }
@@ -913,10 +1030,16 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
             <thead>
               <tr style={{ background: "#bae6fd" }}>
                 <th style={{ padding: "6px 8px" }}>Round</th>
-                <th style={{ padding: "6px 8px" }}>Moana</th>
+                <th style={{ padding: "6px 8px" }}>
+                  Moana
+                  <br />
+                  Fish • Cost
+                </th>
                 {otherChiefs.map((chief) => (
                   <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
                     {chief.replace("Chief ", "")}
+                    <br />
+                    Fish • Cost
                   </th>
                 ))}
                 <th style={{ padding: "6px 8px" }}>Stock After</th>
@@ -940,12 +1063,18 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
                     {h.round}
                   </td>
                   {/* Moana */}
-                  <td style={{ padding: "4px 8px", textAlign: "center" }}>{boatCell(h.moanaBoats, h.moanaFish)}</td>
+                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {costCell(h.moanaFish, h.moanaCost, h.moanaCostPerFish, h.avgCostPerFish)}
+                  </td>
                   {/* Other Chiefs */}
                   {otherChiefs.map((_, i) => (
                     <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                      {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
-                        ? boatCell(h.otherBoats[i], h.otherFish[i])
+                      {h.otherFish &&
+                      h.otherCosts &&
+                      h.otherCostPerFish &&
+                      h.otherFish[i] !== undefined &&
+                      h.otherCosts[i] !== undefined
+                        ? costCell(h.otherFish[i], h.otherCosts[i], h.otherCostPerFish[i], h.avgCostPerFish)
                         : "-"}
                     </td>
                   ))}
@@ -958,10 +1087,14 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
               {/* Summary Row */}
               <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
                 <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {moanaSum}🐟
+                  <br />${moanaCostSum.toFixed(2)}
+                </td>
                 {chiefsSums.map((sum, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
                     {sum}🐟
+                    <br />${chiefsCostSums[i].toFixed(2)}
                   </td>
                 ))}
                 <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>

@@ -23,6 +23,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const otherChiefs = ["Chief Kai", "Chief Tala", "Chief Sina"];
 
 type ScenarioType = "random" | "sustainable" | "aggressive";
+type CommunityScenarioType = "democratic" | "hierarchical";
 
 type RoundHistory = {
   round: number;
@@ -44,6 +45,18 @@ type IslandRoundHistory = RoundHistory & {
   otherCostPerFish: number[] | null;
   totalCost: number | null;
   avgCostPerFish: number | null;
+};
+
+type CommunityRoundHistory = RoundHistory & {
+  // Community governance specific attributes
+  leader: number; // Who was leader this round (0=Moana, 1=Kai, 2=Tala, 3=Sina)
+  leaderStrategy: string; // "conservative" | "moderate" | "aggressive"
+  redistributionAmount: number; // How much fish was redistributed
+  moanaNetTransfer: number; // Moana's gain/loss through redistribution
+  communityTrust: number; // Community cohesion metric (0-1)
+  activeOstromPrinciples: string[]; // Which principles were active this round
+  moanaOriginalCatch: number; // Before redistribution
+  otherOriginalCatch: number[]; // Before redistribution
 };
 
 // Mathematical parameters from the notebook
@@ -1007,6 +1020,536 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   );
 };
 
+const CommunityGovernanceSimulator: React.FC = () => {
+  const [scenario, setScenario] = useState<CommunityScenarioType>("democratic");
+  const [history, setHistory] = useState<CommunityRoundHistory[]>([]);
+  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
+
+  // Auto-simulate all rounds when scenario changes
+  useEffect(() => {
+    simulateAllRounds();
+  }, [scenario]);
+
+  // Community governance parameters
+  const COMMUNITY_PARAMS = {
+    base_quota: 0.2, // Base quota for least efficient
+    efficiency_bonus: 0.1, // Additional quota per efficiency level
+    cooperation_bonus: 0.05, // Bonus for community participation
+    minimum_income_guarantee: 0.3, // Minimum catch guarantee for all players
+  };
+
+  // Helper functions for community governance mechanics
+  const calculateCommunityQuotas = (leader: number, totalSustainableBoats: number) => {
+    const quotaWeights: number[] = [];
+    let totalQuotaWeight = 0;
+
+    // Leader's distribution method choice based on their position
+    let method: string;
+    if (scenario === "democratic") {
+      // In democratic mode, distribution rotates based on leader
+      if (leader <= 1) method = "efficiency"; // Efficient leaders prefer efficiency-based
+      else if (leader >= 2) method = "hybrid"; // Less efficient leaders prefer more equality
+      else method = "equal";
+    } else {
+      // In hierarchical mode, always efficiency-based
+      method = "efficiency";
+    }
+
+    for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
+      let quotaWeight: number;
+
+      if (method === "equal") {
+        quotaWeight = 0.25; // Equal shares
+      } else if (method === "efficiency") {
+        const efficiencyLevel = MODEL_PARAMS.nplayers - jj - 1; // Island 0 is most efficient
+        quotaWeight = COMMUNITY_PARAMS.base_quota + efficiencyLevel * COMMUNITY_PARAMS.efficiency_bonus * 1.5;
+      } else {
+        // hybrid
+        const efficiencyLevel = MODEL_PARAMS.nplayers - jj - 1;
+        quotaWeight = COMMUNITY_PARAMS.base_quota + efficiencyLevel * COMMUNITY_PARAMS.efficiency_bonus * 0.7;
+        if (jj === leader) {
+          quotaWeight += COMMUNITY_PARAMS.cooperation_bonus;
+        }
+      }
+
+      quotaWeights.push(quotaWeight);
+      totalQuotaWeight += quotaWeight;
+    }
+
+    // Normalize
+    return quotaWeights.map((w) => (w / totalQuotaWeight) * totalSustainableBoats);
+  };
+
+  const applyRedistribution = (originalCatches: number[], leader: number) => {
+    const redistributionRate = scenario === "democratic" ? (leader >= 2 ? 0.2 : leader === 0 ? 0.1 : 0.15) : 0.05;
+
+    let totalRedistributionFund = 0;
+    const redistributionPaid = originalCatches.map((catchAmount) => {
+      if (catchAmount > COMMUNITY_PARAMS.minimum_income_guarantee) {
+        const payment = (catchAmount - COMMUNITY_PARAMS.minimum_income_guarantee) * redistributionRate;
+        totalRedistributionFund += payment;
+        return payment;
+      }
+      return 0;
+    });
+
+    // Calculate who needs help
+    const lowEarners: { index: number; deficit: number }[] = [];
+    let totalDeficit = 0;
+    originalCatches.forEach((catchAmount, index) => {
+      if (catchAmount < COMMUNITY_PARAMS.minimum_income_guarantee) {
+        const deficit = COMMUNITY_PARAMS.minimum_income_guarantee - catchAmount;
+        lowEarners.push({ index, deficit });
+        totalDeficit += deficit;
+      }
+    });
+
+    // Distribute compensation
+    const finalCatches = [...originalCatches];
+    const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
+
+    // Subtract payments
+    redistributionPaid.forEach((payment, index) => {
+      finalCatches[index] -= payment;
+    });
+
+    // Add compensation to low earners
+    if (totalDeficit > 0 && totalRedistributionFund > 0) {
+      lowEarners.forEach(({ index, deficit }) => {
+        const compensationShare = deficit / totalDeficit;
+        const compensation = Math.min(totalRedistributionFund * compensationShare, deficit);
+        finalCatches[index] += compensation;
+        redistributionReceived[index] = compensation;
+      });
+    }
+
+    return {
+      finalCatches,
+      redistributionAmount: totalRedistributionFund,
+      netTransfers: redistributionReceived.map((received, i) => received - redistributionPaid[i]),
+    };
+  };
+
+  const calculateCommunityTrust = (redistributionSuccess: number, stockHealth: number): number => {
+    // Trust based on successful redistribution and resource health
+    const redistributionFactor = Math.min(redistributionSuccess / 2, 1); // Normalize
+    const stockFactor = stockHealth / MODEL_PARAMS.s_init;
+    return (redistributionFactor * 0.6 + stockFactor * 0.4);
+  };
+
+  const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
+    const principles = [];
+    
+    if (scenario === "democratic") {
+      principles.push("Clearly defined boundaries");
+      principles.push("Collective choice arrangements");
+      if (leader !== 0) principles.push("Graduated sanctions"); // When others lead
+      principles.push("Monitoring by community members");
+      principles.push("Conflict resolution mechanisms");
+    } else {
+      principles.push("Clearly defined boundaries");
+      if (leader === 0) principles.push("Monitoring by authorities"); // Moana-led monitoring
+    }
+    
+    return principles;
+  };
+
+  const simulateAllRounds = () => {
+    const nRounds = 3;
+    let currentStock = MODEL_PARAMS.s_init;
+    const newHistory: CommunityRoundHistory[] = [];
+
+    for (let round = 1; round <= nRounds; round++) {
+      // Leadership rotation: democratic rotates, hierarchical stays with Moana
+      const leader = scenario === "democratic" ? (round - 1) % MODEL_PARAMS.nplayers : 0;
+
+      // Leader's conservation strategy
+      let conservationFactor: number;
+      if (currentStock < 0.8 * MODEL_PARAMS.s_init) {
+        conservationFactor = leader === 0 ? 1.0 : 0.9; // Efficient leaders might take more risk
+      } else if (currentStock > 0.95 * MODEL_PARAMS.s_init) {
+        conservationFactor = 1.1; // Can be aggressive with high stock
+      } else {
+        conservationFactor = 1.0; // Moderate
+      }
+
+      const leaderStrategy = conservationFactor > 1.05 ? "aggressive" : conservationFactor < 0.95 ? "conservative" : "moderate";
+
+      // Calculate sustainable boats and apply conservation strategy
+      const sustainableBoats = calculateSustainableBoats(currentStock);
+      const adjustedSustainableBoats = sustainableBoats * conservationFactor;
+
+      // Get community quotas
+      const allChiefBoats = calculateCommunityQuotas(leader, adjustedSustainableBoats);
+
+      const moanaBoats = allChiefBoats[0];
+      const otherBoats = allChiefBoats.slice(1);
+      const totalBoats = allChiefBoats.reduce((a, b) => a + b, 0);
+
+      // Calculate regeneration and catch
+      const regeneration = calculateRegeneration(currentStock);
+      const totalCatch = calculateTotalCatch(currentStock, totalBoats);
+
+      // Calculate original catches (proportional to boats)
+      const originalCatches = allChiefBoats.map((boats) => (boats / totalBoats) * totalCatch);
+      const moanaOriginalCatch = originalCatches[0];
+      const otherOriginalCatch = originalCatches.slice(1);
+
+      // Apply community redistribution
+      const redistribution = applyRedistribution(originalCatches, leader);
+      
+      const moanaFish = redistribution.finalCatches[0];
+      const otherFish = redistribution.finalCatches.slice(1);
+      const moanaNetTransfer = redistribution.netTransfers[0];
+
+      // Calculate community trust
+      const communityTrust = calculateCommunityTrust(
+        redistribution.redistributionAmount,
+        currentStock
+      );
+
+      // Get active Ostrom principles
+      const activeOstromPrinciples = getActiveOstromPrinciples(leader, scenario);
+
+      // Update stock
+      const nextStock = currentStock - totalCatch + regeneration;
+
+      // Store round result
+      newHistory.push({
+        round,
+        moanaBoats,
+        moanaFish,
+        otherBoats,
+        otherFish,
+        totalBoats,
+        totalCatch,
+        fishAfter: nextStock,
+        regeneration,
+        leader,
+        leaderStrategy,
+        redistributionAmount: redistribution.redistributionAmount,
+        moanaNetTransfer,
+        communityTrust,
+        activeOstromPrinciples,
+        moanaOriginalCatch,
+        otherOriginalCatch,
+      });
+
+      // Update for next round
+      currentStock = Math.max(0, nextStock);
+    }
+
+    setHistory(newHistory);
+    setFishStock(currentStock);
+  };
+
+  // Scenario Selector Component
+  function ScenarioSelector() {
+    const scenarios = {
+      democratic: {
+        name: "🤝 Democratic Fishing Council",
+        description: "Rotating leadership, graduated quotas, wealth redistribution based on Ostrom's principles",
+      },
+      hierarchical: {
+        name: "👑 Moana-Led Governance",
+        description: "Fixed leadership by Moana, efficiency focus, minimal redistribution",
+      },
+    };
+
+    return (
+      <div
+        style={{
+          marginBottom: 20,
+          textAlign: "center",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: 16,
+          background: "#fafafa",
+        }}
+      >
+        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🏛️ Community Governance System</div>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          {Object.entries(scenarios).map(([key, info]) => {
+            const isSelected = scenario === key;
+
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setScenario(key as CommunityScenarioType);
+                }}
+                style={{
+                  padding: "12px 16px",
+                  border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                  borderRadius: 8,
+                  background: isSelected ? "#eff6ff" : "#fff",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  maxWidth: 220,
+                  fontSize: 14,
+                  position: "relative",
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
+                <div
+                  style={{
+                    color: "#64748b",
+                    fontSize: 12,
+                    lineHeight: "1.3",
+                  }}
+                >
+                  {info.description}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Results table showing community governance in action
+  function ResultsTable() {
+    // Calculate totals
+    const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
+    const chiefsSums = otherChiefs.map((_, i) =>
+      history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
+    );
+    const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
+
+    // Helper function for redistribution display
+    function redistributionCell(originalCatch: number, finalCatch: number, netTransfer: number) {
+      return (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 12 }}>
+            {originalCatch.toFixed(1)}🐟 → {finalCatch.toFixed(1)}🐟
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: netTransfer > 0 ? "#10b981" : netTransfer < 0 ? "#dc2626" : "#64748b",
+              fontWeight: 500,
+            }}
+          >
+            {netTransfer > 0 ? "+" : ""}{netTransfer.toFixed(1)}
+          </div>
+        </div>
+      );
+    }
+
+    // Helper function for leader display
+    function leaderCell(leader: number, strategy: string) {
+      const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
+      const strategyColors = {
+        conservative: "#10b981",
+        moderate: "#f59e0b", 
+        aggressive: "#dc2626"
+      };
+
+      return (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontWeight: 600, fontSize: 12 }}>{leaderNames[leader]}</div>
+          <div style={{ 
+            fontSize: 10, 
+            color: strategyColors[strategy as keyof typeof strategyColors],
+            textTransform: "capitalize"
+          }}>
+            {strategy}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ margin: "18px 0" }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 600 }}>
+            <thead>
+              <tr style={{ background: "#bae6fd" }}>
+                <th style={{ padding: "6px 8px" }}>Round</th>
+                <th style={{ padding: "6px 8px" }}>Leader</th>
+                <th style={{ padding: "6px 8px" }}>
+                  Moana
+                  <br />
+                  Original → Final
+                </th>
+                {otherChiefs.map((chief) => (
+                  <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                    {chief.replace("Chief ", "")}
+                    <br />
+                    Original → Final
+                  </th>
+                ))}
+                <th style={{ padding: "6px 8px" }}>Trust</th>
+                <th style={{ padding: "6px 8px" }}>Stock After</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h, idx) => (
+                <tr
+                  key={idx}
+                  style={{
+                    background: idx % 2 === 0 ? "#f8fafc" : "#fff",
+                  }}
+                >
+                  <td
+                    style={{
+                      padding: "4px 8px",
+                      textAlign: "center",
+                      fontWeight: 400,
+                    }}
+                  >
+                    {h.round}
+                  </td>
+                  {/* Leader */}
+                  <td style={{ padding: "4px 8px" }}>{leaderCell(h.leader, h.leaderStrategy)}</td>
+                  {/* Moana */}
+                  <td style={{ padding: "4px 8px" }}>
+                    {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer)}
+                  </td>
+                  {/* Other Chiefs */}
+                  {otherChiefs.map((_, i) => (
+                    <td key={i} style={{ padding: "4px 8px" }}>
+                      {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined
+                        ? redistributionCell(
+                            h.otherOriginalCatch[i], 
+                            h.otherFish[i], 
+                            h.otherFish[i] - h.otherOriginalCatch[i]
+                          )
+                        : "-"}
+                    </td>
+                  ))}
+                  {/* Community Trust */}
+                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: h.communityTrust > 0.7 ? "#10b981" : h.communityTrust > 0.4 ? "#f59e0b" : "#dc2626",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {(h.communityTrust * 100).toFixed(0)}%
+                    </div>
+                  </td>
+                  {/* Fish Stock */}
+                  <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                    {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
+                  </td>
+                </tr>
+              ))}
+              {/* Summary Row */}
+              <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
+                <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>Total</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>{Math.round(moanaSum)}🐟</td>
+                {chiefsSums.map((sum, i) => (
+                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {Math.round(sum)}🐟
+                  </td>
+                ))}
+                <td style={{ padding: "4px 8px", textAlign: "center", fontSize: 11 }}>
+                  Redistributed: {totalRedistribution.toFixed(1)}🐟
+                </td>
+                <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // Summary showing community governance effectiveness
+  function EndSummary() {
+    const avgTrust = history.reduce((sum, h) => sum + h.communityTrust, 0) / history.length;
+    const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
+    const allPrinciples = [...new Set(history.flatMap(h => h.activeOstromPrinciples))];
+    
+    const getGovernanceMessage = () => {
+      if (avgTrust >= 0.8) return { text: "Excellent community cohesion achieved!", color: "#10b981" };
+      if (avgTrust >= 0.6) return { text: "Good community cooperation maintained.", color: "#f59e0b" };
+      if (avgTrust >= 0.4) return { text: "Community struggling but holding together.", color: "#f59e0b" };
+      return { text: "Community governance breaking down.", color: "#dc2626" };
+    };
+
+    const governanceMessage = getGovernanceMessage();
+
+    return (
+      <div style={{ textAlign: "center", margin: "18px 0" }}>
+        <div
+          style={{
+            background: "#f0f9ff",
+            border: "1px solid #c7d2fe",
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ fontSize: 15, marginBottom: 8 }}>
+            🏛️ <strong>{scenario === "democratic" ? "Democratic Council" : "Moana-Led Governance"}</strong> Results
+          </div>
+          <div style={{ fontSize: 14, marginBottom: 8 }}>
+            🤝 Community Trust: <strong>{(avgTrust * 100).toFixed(0)}%</strong>
+          </div>
+          <div style={{ fontSize: 14, marginBottom: 8 }}>
+            ↔️ Fish Redistributed: <strong>{totalRedistribution.toFixed(1)}🐟</strong>
+          </div>
+          <div style={{ fontSize: 14, marginBottom: 8 }}>
+            🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in ocean
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: governanceMessage.color,
+              fontWeight: 500,
+              marginTop: 8,
+            }}
+          >
+            {governanceMessage.text}
+          </div>
+        </div>
+
+        {/* Ostrom Principles Active */}
+        <div
+          style={{
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: 8,
+            padding: 12,
+            marginBottom: 16,
+            fontSize: 13,
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>🎯 Active Ostrom Principles:</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+            {allPrinciples.map((principle, i) => (
+              <span
+                key={i}
+                style={{
+                  background: "#dcfce7",
+                  color: "#166534",
+                  padding: "2px 8px",
+                  borderRadius: 12,
+                  fontSize: 11,
+                }}
+              >
+                {principle}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
+      <ScenarioSelector />
+      <ResultsTable />
+      <EndSummary />
+    </div>
+  );
+};
+
 // My Blog Post Component
 
 const TragedyOfCommonsFishing: React.FC = () => {
@@ -1158,9 +1701,9 @@ Frustrated with both market inequality and government bureaucracy, Moana calls f
 - **Graduated sanctions:** Fair consequences that escalate only if needed
 - **Adaptive management:** Rules can change when conditions change
 
-[SIMULATOR: Community Rule Builder]
-
             `}</ReactMarkdown>
+
+      <CommunityGovernanceSimulator />
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 

@@ -181,6 +181,73 @@ const leaderConservationLevel = (
   };
 };
 
+/**
+ * Simulates the leader's choice of distribution method for quotas
+ */
+const leaderDistribution = (
+  leader: number,
+  nplayers: number,
+  cooperationBonus: number,
+  efficiencyBonus: number = 0.1,
+  baseQuota: number = 0.25,
+): number[] => {
+  // Simulate leader's choice based on their own efficiency
+  let method: string;
+  if (leader <= 1) {
+    // Efficient leaders prefer efficiency-based
+    method = "efficiency";
+  } else if (leader >= 2) {
+    // Less efficient leaders prefer more equality
+    method = "hybrid";
+  } else {
+    method = "equal";
+  }
+
+  console.log(`  Leader chooses '${method}' distribution method`);
+
+  // Calculate quotas based on leader's chosen method
+  const quotaWeights: number[] = [];
+
+  if (method === "equal") {
+    // Equal quotas for all
+    for (let jj = 0; jj < nplayers; jj++) {
+      const quotaWeight = 0.25; // Equal shares
+      quotaWeights.push(quotaWeight);
+    }
+  } else if (method === "efficiency") {
+    // Pure efficiency-based quotas
+    let totalQuotaWeight = 0;
+    for (let jj = 0; jj < nplayers; jj++) {
+      const efficiencyLevel = nplayers - jj - 1; // Island 0 is most efficient
+      const quotaWeight = baseQuota + efficiencyLevel * efficiencyBonus * 1.5; // More extreme
+      quotaWeights.push(quotaWeight);
+      totalQuotaWeight += quotaWeight;
+    }
+    // Normalize
+    for (let i = 0; i < quotaWeights.length; i++) {
+      quotaWeights[i] = quotaWeights[i] / totalQuotaWeight;
+    }
+  } else {
+    // hybrid - Mix of efficiency and equality
+    let totalQuotaWeight = 0;
+    for (let jj = 0; jj < nplayers; jj++) {
+      const efficiencyLevel = nplayers - jj - 1;
+      let quotaWeight = baseQuota + efficiencyLevel * efficiencyBonus * 0.7; // Less extreme
+      if (jj === leader) {
+        quotaWeight += cooperationBonus;
+      }
+      quotaWeights.push(quotaWeight);
+      totalQuotaWeight += quotaWeight;
+    }
+    // Normalize
+    for (let i = 0; i < quotaWeights.length; i++) {
+      quotaWeights[i] = quotaWeights[i] / totalQuotaWeight;
+    }
+  }
+
+  return quotaWeights;
+};
+
 const FishingGameSimulator: React.FC = () => {
   const [round, setRound] = useState(1); // 1, 2, 3
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init); // Start with notebook value
@@ -1093,50 +1160,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
     minimum_income_guarantee: 0.3, // Minimum catch guarantee for all players
   };
 
-  // Helper functions for community governance mechanics
-  const calculateCommunityQuotas = (leader: number, totalSustainableBoats: number) => {
-    const quotaWeights: number[] = [];
-    let totalQuotaWeight = 0;
-
-    // Leader's distribution method choice based on their position
-    let method: string;
-    if (scenario === "democratic") {
-      // In democratic mode, distribution rotates based on leader
-      if (leader <= 1)
-        method = "efficiency"; // Efficient leaders prefer efficiency-based
-      else if (leader >= 2)
-        method = "hybrid"; // Less efficient leaders prefer more equality
-      else method = "equal";
-    } else {
-      // In hierarchical mode, always efficiency-based
-      method = "efficiency";
-    }
-
-    for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
-      let quotaWeight: number;
-
-      if (method === "equal") {
-        quotaWeight = 0.25; // Equal shares
-      } else if (method === "efficiency") {
-        const efficiencyLevel = MODEL_PARAMS.nplayers - jj - 1; // Island 0 is most efficient
-        quotaWeight = COMMUNITY_PARAMS.base_quota + efficiencyLevel * COMMUNITY_PARAMS.efficiency_bonus * 1.5;
-      } else {
-        // hybrid
-        const efficiencyLevel = MODEL_PARAMS.nplayers - jj - 1;
-        quotaWeight = COMMUNITY_PARAMS.base_quota + efficiencyLevel * COMMUNITY_PARAMS.efficiency_bonus * 0.7;
-        if (jj === leader) {
-          quotaWeight += COMMUNITY_PARAMS.cooperation_bonus;
-        }
-      }
-
-      quotaWeights.push(quotaWeight);
-      totalQuotaWeight += quotaWeight;
-    }
-
-    // Normalize
-    return quotaWeights.map((w) => (w / totalQuotaWeight) * totalSustainableBoats);
-  };
-
   const applyRedistribution = (originalCatches: number[], leader: number) => {
     const redistributionRate = scenario === "democratic" ? (leader >= 2 ? 0.2 : leader === 0 ? 0.1 : 0.15) : 0.05;
 
@@ -1221,8 +1244,24 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const adjustedSustainableBoats = conservationDecision.adjustedSustainableBoats;
       const leaderStrategy = conservationDecision.strategy;
 
-      // Get community quotas
-      const allChiefBoats = calculateCommunityQuotas(leader, adjustedSustainableBoats);
+      // Declare allChiefBoats outside the if-statement so it's accessible later
+      let allChiefBoats: number[];
+
+      // in the case of the hierarchical scenario use the standard sustainable boats
+      if (scenario === "hierarchical") {
+        allChiefBoats = [0, 1, 2, 3].map(() => calculateSustainableBoats(currentStock));
+        console.log(`Round ${round} - All chiefs boats (hierarchical):`, allChiefBoats);
+      } else {
+        // LEADER DECISION 2: Choose quota distribution method
+        const quotaWeights = leaderDistribution(
+          leader,
+          MODEL_PARAMS.nplayers,
+          COMMUNITY_PARAMS.cooperation_bonus,
+          COMMUNITY_PARAMS.efficiency_bonus,
+          COMMUNITY_PARAMS.base_quota,
+        );
+        allChiefBoats = quotaWeights.map((weight) => adjustedSustainableBoats * weight);
+      }
 
       const moanaBoats = allChiefBoats[0];
       const otherBoats = allChiefBoats.slice(1);

@@ -1194,16 +1194,17 @@ const CommunityGovernanceSimulator: React.FC = () => {
   };
 
   const applyRedistribution = (originalCatches: number[], leader: number) => {
-    const redistributionRate = scenario === "democratic" ? leaderRedistribution(leader) : 0.05;
-    
+    const redistributionRate = leaderRedistribution(leader);
+
     // Calculate sustainable catch per player (like in Python)
-    const sustainableCatchPerPlayer = calculateTotalCatch(fishStock, calculateSustainableBoats(fishStock)) / MODEL_PARAMS.nplayers;
-    
+    const sustainableCatchPerPlayer =
+      calculateTotalCatch(fishStock, calculateSustainableBoats(fishStock)) / MODEL_PARAMS.nplayers;
+
     // Initialize arrays
     const redistributionTax = new Array(MODEL_PARAMS.nplayers).fill(0);
     const underfished = new Array(MODEL_PARAMS.nplayers).fill(0);
     const finalCatches = [...originalCatches];
-    
+
     // Step 1: Calculate redistribution tax for players above sustainable catch
     for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
       if (originalCatches[jj] > sustainableCatchPerPlayer) {
@@ -1215,7 +1216,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
         redistributionTax[jj] = 0.0;
       }
     }
-    
+
     // Step 2: Calculate underfished amounts for players below sustainable catch
     for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
       if (finalCatches[jj] < sustainableCatchPerPlayer) {
@@ -1224,13 +1225,13 @@ const CommunityGovernanceSimulator: React.FC = () => {
         underfished[jj] = 0;
       }
     }
-    
+
     // Step 3: Redistribute the collected tax to underfished players
     const totalRedistributionAmount = redistributionTax.reduce((sum, tax) => sum + tax, 0);
     const totalUnderfished = underfished.reduce((sum, amount) => sum + amount, 0);
-    
+
     const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
-    
+
     if (totalUnderfished > 0) {
       for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
         if (underfished[jj] > 0) {
@@ -1242,7 +1243,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
         }
       }
     }
-    
+
     return {
       finalCatches,
       redistributionAmount: totalRedistributionAmount,
@@ -1316,15 +1317,28 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const moanaOriginalCatch = originalCatches[0];
       const otherOriginalCatch = originalCatches.slice(1);
 
+      // Declare variables outside the if-else blocks so they're accessible later
+      let moanaFish: number;
+      let otherFish: number[];
+      let moanaNetTransfer: number;
+      let redistributionAmount: number;
+
       // Calculate the latest choice of the chief if we are in the democratic scenario
-      const currentRedistributionRate = redistributionPolicies[leader];
+      if (scenario === "democratic") {
+        // Apply community redistribution
+        const redistribution = applyRedistribution(originalCatches, leader);
 
-      // Apply community redistribution
-      const redistribution = applyRedistribution(originalCatches, leader);
-
-      const moanaFish = redistribution.finalCatches[0];
-      const otherFish = redistribution.finalCatches.slice(1);
-      const moanaNetTransfer = redistribution.netTransfers[0];
+        moanaFish = redistribution.finalCatches[0];
+        otherFish = redistribution.finalCatches.slice(1);
+        moanaNetTransfer = redistribution.netTransfers[0];
+        redistributionAmount = redistribution.redistributionAmount;
+      } else {
+        // Hierarchical scenario: no redistribution
+        moanaFish = moanaOriginalCatch;
+        otherFish = otherOriginalCatch;
+        moanaNetTransfer = 0;
+        redistributionAmount = 0;
+      }
 
       // Get active Ostrom principles
       const activeOstromPrinciples = getActiveOstromPrinciples(leader, scenario);
@@ -1345,7 +1359,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
         regeneration,
         leader,
         leaderStrategy,
-        redistributionAmount: redistribution.redistributionAmount,
+        redistributionAmount,
         moanaNetTransfer,
         activeOstromPrinciples,
         moanaOriginalCatch,
@@ -1656,6 +1670,14 @@ In the a completely unrestrained version it depletes and collapses. This led to 
 However, Elinor Ostrom showed that communities can self-organize to govern common resources. And she did this again around beautiful social 
 games, which I will explore here.
 `}</ReactMarkdown>
+      <p className={css({ lineHeight: "1.6", fontStyle: "italic", textAlign: "center" })}>
+        &ldquo;Weder Staat noch Markt sind die einzigen Lösungen. Menschen können lernen, gemeinsame Ressourcen selbst
+        zu verwalten.&rdquo; — Elinor Ostrom
+      </p>
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+## Setting up the scene
+            
+Given that we are talking about a social game, I really like the idea to look into the 
 problem from the perspective of a specific person and its community. For the common pool the field 
 of fishing is a great example that is visual and keeps coming back in the literature. So, we will set
 up the scene around the famous Disney character Moana. 

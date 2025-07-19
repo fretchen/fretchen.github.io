@@ -248,6 +248,39 @@ const leaderDistribution = (
   return quotaWeights;
 };
 
+/**
+ * Simulates the leader's choice of redistribution policy based on their position.
+ */
+const leaderRedistribution = (leader: number): number => {
+  // LEADER DECISION 3: Choose redistribution policy
+  const redistributionPolicies = {
+    progressive: 0.2, // Higher redistribution
+    moderate: 0.15, // Standard redistribution
+    conservative: 0.1, // Lower redistribution
+  };
+
+  // Leader's redistribution choice depends on their position
+  let redistributionPolicy: keyof typeof redistributionPolicies;
+
+  if (leader >= 2) {
+    // Less efficient leaders prefer more redistribution
+    redistributionPolicy = "progressive";
+  } else if (leader === 0) {
+    // Most efficient leader prefers less
+    redistributionPolicy = "conservative";
+  } else {
+    redistributionPolicy = "moderate";
+  }
+
+  const currentRedistributionRate = redistributionPolicies[redistributionPolicy];
+
+  console.log(
+    `  Leader chooses '${redistributionPolicy}' redistribution policy (${(currentRedistributionRate * 100).toFixed(0)}%)`,
+  );
+
+  return currentRedistributionRate;
+};
+
 const FishingGameSimulator: React.FC = () => {
   const [round, setRound] = useState(1); // 1, 2, 3
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init); // Start with notebook value
@@ -1161,52 +1194,59 @@ const CommunityGovernanceSimulator: React.FC = () => {
   };
 
   const applyRedistribution = (originalCatches: number[], leader: number) => {
-    const redistributionRate = scenario === "democratic" ? (leader >= 2 ? 0.2 : leader === 0 ? 0.1 : 0.15) : 0.05;
-
-    let totalRedistributionFund = 0;
-    const redistributionPaid = originalCatches.map((catchAmount) => {
-      if (catchAmount > COMMUNITY_PARAMS.minimum_income_guarantee) {
-        const payment = (catchAmount - COMMUNITY_PARAMS.minimum_income_guarantee) * redistributionRate;
-        totalRedistributionFund += payment;
-        return payment;
-      }
-      return 0;
-    });
-
-    // Calculate who needs help
-    const lowEarners: { index: number; deficit: number }[] = [];
-    let totalDeficit = 0;
-    originalCatches.forEach((catchAmount, index) => {
-      if (catchAmount < COMMUNITY_PARAMS.minimum_income_guarantee) {
-        const deficit = COMMUNITY_PARAMS.minimum_income_guarantee - catchAmount;
-        lowEarners.push({ index, deficit });
-        totalDeficit += deficit;
-      }
-    });
-
-    // Distribute compensation
+    const redistributionRate = scenario === "democratic" ? leaderRedistribution(leader) : 0.05;
+    
+    // Calculate sustainable catch per player (like in Python)
+    const sustainableCatchPerPlayer = calculateTotalCatch(fishStock, calculateSustainableBoats(fishStock)) / MODEL_PARAMS.nplayers;
+    
+    // Initialize arrays
+    const redistributionTax = new Array(MODEL_PARAMS.nplayers).fill(0);
+    const underfished = new Array(MODEL_PARAMS.nplayers).fill(0);
     const finalCatches = [...originalCatches];
-    const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
-
-    // Subtract payments
-    redistributionPaid.forEach((payment, index) => {
-      finalCatches[index] -= payment;
-    });
-
-    // Add compensation to low earners
-    if (totalDeficit > 0 && totalRedistributionFund > 0) {
-      lowEarners.forEach(({ index, deficit }) => {
-        const compensationShare = deficit / totalDeficit;
-        const compensation = Math.min(totalRedistributionFund * compensationShare, deficit);
-        finalCatches[index] += compensation;
-        redistributionReceived[index] = compensation;
-      });
+    
+    // Step 1: Calculate redistribution tax for players above sustainable catch
+    for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
+      if (originalCatches[jj] > sustainableCatchPerPlayer) {
+        // Calculate tax for excess catch
+        const excessCatch = originalCatches[jj] - sustainableCatchPerPlayer;
+        redistributionTax[jj] = excessCatch * redistributionRate;
+        finalCatches[jj] -= redistributionTax[jj];
+      } else {
+        redistributionTax[jj] = 0.0;
+      }
     }
-
+    
+    // Step 2: Calculate underfished amounts for players below sustainable catch
+    for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
+      if (finalCatches[jj] < sustainableCatchPerPlayer) {
+        underfished[jj] = sustainableCatchPerPlayer - finalCatches[jj];
+      } else {
+        underfished[jj] = 0;
+      }
+    }
+    
+    // Step 3: Redistribute the collected tax to underfished players
+    const totalRedistributionAmount = redistributionTax.reduce((sum, tax) => sum + tax, 0);
+    const totalUnderfished = underfished.reduce((sum, amount) => sum + amount, 0);
+    
+    const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
+    
+    if (totalUnderfished > 0) {
+      for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
+        if (underfished[jj] > 0) {
+          // Calculate redistribution share based on underfished amount
+          const share = underfished[jj] / totalUnderfished;
+          const redistributionShare = totalRedistributionAmount * share;
+          finalCatches[jj] += redistributionShare;
+          redistributionReceived[jj] = redistributionShare;
+        }
+      }
+    }
+    
     return {
       finalCatches,
-      redistributionAmount: totalRedistributionFund,
-      netTransfers: redistributionReceived.map((received, i) => received - redistributionPaid[i]),
+      redistributionAmount: totalRedistributionAmount,
+      netTransfers: redistributionReceived.map((received, i) => received - redistributionTax[i]),
     };
   };
 
@@ -1275,6 +1315,9 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const originalCatches = allChiefBoats.map((boats) => (boats / totalBoats) * totalCatch);
       const moanaOriginalCatch = originalCatches[0];
       const otherOriginalCatch = originalCatches.slice(1);
+
+      // Calculate the latest choice of the chief if we are in the democratic scenario
+      const currentRedistributionRate = redistributionPolicies[leader];
 
       // Apply community redistribution
       const redistribution = applyRedistribution(originalCatches, leader);
@@ -1613,14 +1656,6 @@ In the a completely unrestrained version it depletes and collapses. This led to 
 However, Elinor Ostrom showed that communities can self-organize to govern common resources. And she did this again around beautiful social 
 games, which I will explore here.
 `}</ReactMarkdown>
-      <p className={css({ lineHeight: "1.6", fontStyle: "italic", textAlign: "center" })}>
-        &ldquo;Weder Staat noch Markt sind die einzigen Lösungen. Menschen können lernen, gemeinsame Ressourcen selbst
-        zu verwalten.&rdquo; — Elinor Ostrom
-      </p>
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-## Setting up the scene
-            
-Given that we are talking about a social game, I really like the idea to look into the 
 problem from the perspective of a specific person and its community. For the common pool the field 
 of fishing is a great example that is visual and keeps coming back in the literature. So, we will set
 up the scene around the famous Disney character Moana. 

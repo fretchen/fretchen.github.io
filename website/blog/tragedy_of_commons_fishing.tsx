@@ -211,8 +211,7 @@ const leaderDistribution = (
   if (method === "equal") {
     // Equal quotas for all
     for (let jj = 0; jj < nplayers; jj++) {
-      const quotaWeight = 0.25; // Equal shares
-      quotaWeights.push(quotaWeight);
+      quotaWeights.push(1 / nplayers);
     }
   } else if (method === "efficiency") {
     // Pure efficiency-based quotas
@@ -1278,10 +1277,15 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const leader = scenario === "democratic" ? (round - 1) % MODEL_PARAMS.nplayers : 0;
 
       // Calculate sustainable boats first
-      const sustainableBoats = calculateSustainableBoats(currentStock);
+      const totalSustainableBoats = calculateSustainableBoats(currentStock) * MODEL_PARAMS.nplayers;
 
       // Use the leader conservation level function to determine strategy
-      const conservationDecision = leaderConservationLevel(leader, sustainableBoats, currentStock, MODEL_PARAMS.s_init);
+      const conservationDecision = leaderConservationLevel(
+        leader,
+        totalSustainableBoats,
+        currentStock,
+        MODEL_PARAMS.s_init,
+      );
       const adjustedSustainableBoats = conservationDecision.adjustedSustainableBoats;
       const leaderStrategy = conservationDecision.strategy;
 

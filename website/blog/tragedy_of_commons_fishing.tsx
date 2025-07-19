@@ -56,6 +56,9 @@ type CommunityRoundHistory = RoundHistory & {
   activeOstromPrinciples: string[]; // Which principles were active this round
   moanaOriginalCatch: number; // Before redistribution
   otherOriginalCatch: number[]; // Before redistribution
+  // Cost-related attributes (Option 1: minimal cost extension)
+  moanaCost: number; // Moana's total cost for this round
+  otherCosts: number[]; // Other chiefs' total costs for this round
 };
 
 // Mathematical parameters from the notebook
@@ -1347,6 +1350,11 @@ const CommunityGovernanceSimulator: React.FC = () => {
       // Get active Ostrom principles
       const activeOstromPrinciples = getActiveOstromPrinciples(leader, scenario);
 
+      // Calculate costs for each chief (Option 1: minimal cost extension)
+      const allChiefCosts = allChiefBoats.map((boats, index) => boats * MODEL_PARAMS.c_islands[index]);
+      const moanaCost = allChiefCosts[0];
+      const otherCosts = allChiefCosts.slice(1);
+
       // Update stock
       const nextStock = currentStock - totalCatch + regeneration;
 
@@ -1368,6 +1376,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
         activeOstromPrinciples,
         moanaOriginalCatch,
         otherOriginalCatch,
+        moanaCost,
+        otherCosts,
       });
 
       // Update for next round
@@ -1451,10 +1461,20 @@ const CommunityGovernanceSimulator: React.FC = () => {
       history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
     );
     const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
+    // Calculate cost totals (Option 1: minimal cost extension)
+    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+    const chiefsCostSums = otherChiefs.map((_, i) =>
+      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+    );
 
-    // Helper function for redistribution display
-    function redistributionCell(originalCatch: number | null, finalCatch: number | null, netTransfer: number | null) {
-      if (originalCatch === null || finalCatch === null || netTransfer === null) {
+    // Helper function for redistribution display with costs
+    function redistributionCell(
+      originalCatch: number | null,
+      finalCatch: number | null,
+      netTransfer: number | null,
+      cost: number | null,
+    ) {
+      if (originalCatch === null || finalCatch === null || netTransfer === null || cost === null) {
         return <span>-</span>;
       }
 
@@ -1463,6 +1483,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
           <div style={{ fontSize: 12 }}>
             {originalCatch.toFixed(1)}🐟 → {finalCatch.toFixed(1)}🐟
           </div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>${cost.toFixed(2)}</div>
           <div
             style={{
               fontSize: 11,
@@ -1513,13 +1534,13 @@ const CommunityGovernanceSimulator: React.FC = () => {
                 <th style={{ padding: "6px 8px" }}>
                   Moana
                   <br />
-                  Original → Final
+                  Original → Final • Cost
                 </th>
                 {otherChiefs.map((chief) => (
                   <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
                     {chief.replace("Chief ", "")}
                     <br />
-                    Original → Final
+                    Original → Final • Cost
                   </th>
                 ))}
                 <th style={{ padding: "6px 8px" }}>Stock After</th>
@@ -1546,16 +1567,17 @@ const CommunityGovernanceSimulator: React.FC = () => {
                   <td style={{ padding: "4px 8px" }}>{leaderCell(h.leader, h.leaderStrategy)}</td>
                   {/* Moana */}
                   <td style={{ padding: "4px 8px" }}>
-                    {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer)}
+                    {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer, h.moanaCost)}
                   </td>
                   {/* Other Chiefs */}
                   {otherChiefs.map((_, i) => (
                     <td key={i} style={{ padding: "4px 8px" }}>
-                      {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined
+                      {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined && h.otherCosts
                         ? redistributionCell(
                             h.otherOriginalCatch[i],
                             h.otherFish[i],
                             h.otherFish[i] - h.otherOriginalCatch[i],
+                            h.otherCosts[i],
                           )
                         : "-"}
                     </td>
@@ -1571,16 +1593,21 @@ const CommunityGovernanceSimulator: React.FC = () => {
                 <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>
                   Total
                 </td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{Math.round(moanaSum)}🐟</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {Math.round(moanaSum)}🐟
+                  <br />
+                  <span style={{ fontSize: 10, color: "#64748b" }}>${moanaCostSum.toFixed(2)}</span>
+                </td>
                 {chiefsSums.map((sum, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
                     {Math.round(sum)}🐟
+                    <br />
+                    <span style={{ fontSize: 10, color: "#64748b" }}>${chiefsCostSums[i].toFixed(2)}</span>
                   </td>
                 ))}
                 <td style={{ padding: "4px 8px", textAlign: "center", fontSize: 11 }}>
                   Redistributed: {totalRedistribution.toFixed(1)}🐟
                 </td>
-                <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
               </tr>
             </tbody>
           </table>

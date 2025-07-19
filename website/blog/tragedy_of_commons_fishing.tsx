@@ -51,6 +51,8 @@ type CommunityRoundHistory = RoundHistory & {
   // Community governance specific attributes
   leader: number; // Who was leader this round (0=Moana, 1=Kai, 2=Tala, 3=Sina)
   leaderStrategy: string; // "conservative" | "moderate" | "aggressive"
+  leaderDistributionMethod: string; // "equal" | "hybrid" | "efficiency"
+  leaderRedistributionPolicy: string; // "conservative" | "moderate" | "progressive"
   redistributionAmount: number; // How much fish was redistributed
   moanaNetTransfer: number; // Moana's gain/loss through redistribution
   activeOstromPrinciples: string[]; // Which principles were active this round
@@ -194,7 +196,7 @@ const leaderDistribution = (
   cooperationBonus: number,
   efficiencyBonus: number = 0.1,
   baseQuota: number = 0.25,
-): number[] => {
+): { quotaWeights: number[]; method: string } => {
   // Simulate leader's choice based on their own efficiency
   let method: string;
   if (leader <= 1) {
@@ -248,13 +250,13 @@ const leaderDistribution = (
     }
   }
 
-  return quotaWeights;
+  return { quotaWeights, method };
 };
 
 /**
  * Simulates the leader's choice of redistribution policy based on their position.
  */
-const leaderRedistribution = (leader: number): number => {
+const leaderRedistribution = (leader: number): { redistributionRate: number; policy: string } => {
   // LEADER DECISION 3: Choose redistribution policy
   const redistributionPolicies = {
     progressive: 0.2, // Higher redistribution
@@ -281,7 +283,7 @@ const leaderRedistribution = (leader: number): number => {
     `  Leader chooses '${redistributionPolicy}' redistribution policy (${(currentRedistributionRate * 100).toFixed(0)}%)`,
   );
 
-  return currentRedistributionRate;
+  return { redistributionRate: currentRedistributionRate, policy: redistributionPolicy };
 };
 
 const FishingGameSimulator: React.FC = () => {
@@ -1197,7 +1199,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
   };
 
   const applyRedistribution = (originalCatches: number[], leader: number) => {
-    const redistributionRate = leaderRedistribution(leader);
+    const redistributionResult = leaderRedistribution(leader);
+    const redistributionRate = redistributionResult.redistributionRate;
 
     // Calculate sustainable catch per player (like in Python)
     const sustainableCatchPerPlayer =
@@ -1302,14 +1305,14 @@ const CommunityGovernanceSimulator: React.FC = () => {
         console.log(`Round ${round} - All chiefs boats (hierarchical):`, allChiefBoats);
       } else {
         // LEADER DECISION 2: Choose quota distribution method
-        const quotaWeights = leaderDistribution(
+        const distributionResult = leaderDistribution(
           leader,
           MODEL_PARAMS.nplayers,
           COMMUNITY_PARAMS.cooperation_bonus,
           COMMUNITY_PARAMS.efficiency_bonus,
           COMMUNITY_PARAMS.base_quota,
         );
-        allChiefBoats = quotaWeights.map((weight) => adjustedSustainableBoats * weight);
+        allChiefBoats = distributionResult.quotaWeights.map((weight) => adjustedSustainableBoats * weight);
       }
 
       const moanaBoats = allChiefBoats[0];
@@ -1330,11 +1333,25 @@ const CommunityGovernanceSimulator: React.FC = () => {
       let otherFish: number[];
       let moanaNetTransfer: number;
       let redistributionAmount: number;
+      let leaderDistributionMethod: string = "equal"; // Default for hierarchical
+      let leaderRedistributionPolicy: string = "conservative"; // Default for hierarchical
 
       // Calculate the latest choice of the chief if we are in the democratic scenario
       if (scenario === "democratic") {
+        // Get the distribution method from the distributionResult we calculated earlier
+        const distributionResult = leaderDistribution(
+          leader,
+          MODEL_PARAMS.nplayers,
+          COMMUNITY_PARAMS.cooperation_bonus,
+          COMMUNITY_PARAMS.efficiency_bonus,
+          COMMUNITY_PARAMS.base_quota,
+        );
+        leaderDistributionMethod = distributionResult.method;
+
         // Apply community redistribution
         const redistribution = applyRedistribution(originalCatches, leader);
+        const redistributionResult = leaderRedistribution(leader);
+        leaderRedistributionPolicy = redistributionResult.policy;
 
         moanaFish = redistribution.finalCatches[0];
         otherFish = redistribution.finalCatches.slice(1);
@@ -1372,6 +1389,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
         regeneration,
         leader,
         leaderStrategy,
+        leaderDistributionMethod,
+        leaderRedistributionPolicy,
         redistributionAmount,
         moanaNetTransfer,
         activeOstromPrinciples,
@@ -1490,7 +1509,12 @@ const CommunityGovernanceSimulator: React.FC = () => {
     }
 
     // Helper function for leader display
-    function leaderCell(leader: number, strategy: string) {
+    function leaderCell(
+      leader: number,
+      strategy: string,
+      distributionMethod?: string,
+      redistributionPolicy?: string
+    ) {
       const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
       const strategyColors = {
         conservative: "#10b981",
@@ -1498,12 +1522,48 @@ const CommunityGovernanceSimulator: React.FC = () => {
         aggressive: "#dc2626",
       };
 
+      // Icon mappings for each decision type
+      const conservationIcons = {
+        conservative: "🛡️",
+        moderate: "⚖️",
+        aggressive: "⚔️",
+      };
+
+      const distributionIcons = {
+        equal: "🟰",
+        hybrid: "🔄",
+        efficiency: "📈",
+      };
+
+      const redistributionIcons = {
+        conservative: "🔐",
+        moderate: "🔄",
+        progressive: "🔓",
+      };
+
       return (
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontWeight: 600, fontSize: 12 }}>{leaderNames[leader]}</div>
+          <div style={{ fontWeight: 600, fontSize: 12, marginBottom: "2px" }}>
+            {leaderNames[leader]}
+          </div>
+          
+          {/* Decision Icons Row */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "2px", fontSize: "10px", marginBottom: "2px" }}>
+            <span title={`Konservierung: ${strategy}`}>
+              {conservationIcons[strategy as keyof typeof conservationIcons] || "❓"}
+            </span>
+            <span title={`Verteilung: ${distributionMethod || "unbekannt"}`}>
+              {distributionMethod ? (distributionIcons[distributionMethod as keyof typeof distributionIcons] || "❓") : "❓"}
+            </span>
+            <span title={`Umverteilung: ${redistributionPolicy || "unbekannt"}`}>
+              {redistributionPolicy ? (redistributionIcons[redistributionPolicy as keyof typeof redistributionIcons] || "❓") : "❓"}
+            </span>
+          </div>
+
+          {/* Strategy text for reference */}
           <div
             style={{
-              fontSize: 10,
+              fontSize: 9,
               color: strategyColors[strategy as keyof typeof strategyColors],
               textTransform: "capitalize",
             }}
@@ -1516,6 +1576,23 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
     return (
       <div style={{ margin: "18px 0" }}>
+        {/* Legend for Leadership Decision Icons */}
+        <div style={{ 
+          marginBottom: "12px", 
+          padding: "8px 12px", 
+          backgroundColor: "#f8fafc", 
+          borderRadius: "6px", 
+          fontSize: "12px",
+          border: "1px solid #e2e8f0"
+        }}>
+          <div style={{ fontWeight: "600", marginBottom: "4px" }}>Leader-Entscheidungen:</div>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <div><span style={{ marginRight: "4px" }}>🛡️</span>Konservierung (konservativ/moderat/aggressiv)</div>
+            <div><span style={{ marginRight: "4px" }}>⚖️</span>Verteilung (gleich/hybrid/effizienz)</div>
+            <div><span style={{ marginRight: "4px" }}>🔄</span>Umverteilung (konservativ/moderat/progressiv)</div>
+          </div>
+        </div>
+        
         <div style={{ display: "flex", justifyContent: "center" }}>
           <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 600 }}>
             <thead>
@@ -1555,7 +1632,9 @@ const CommunityGovernanceSimulator: React.FC = () => {
                     {h.round}
                   </td>
                   {/* Leader */}
-                  <td style={{ padding: "4px 8px" }}>{leaderCell(h.leader, h.leaderStrategy)}</td>
+                  <td style={{ padding: "4px 8px" }}>
+                    {leaderCell(h.leader, h.leaderStrategy, h.leaderDistributionMethod, h.leaderRedistributionPolicy)}
+                  </td>
                   {/* Moana */}
                   <td style={{ padding: "4px 8px" }}>
                     {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer, h.moanaCost)}

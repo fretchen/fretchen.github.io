@@ -147,10 +147,11 @@ const leaderConservationLevel = (
   initialStock: number,
 ): ConservationResult => {
   // Define conservation strategies
+  const conFactor = 2;
   const conservationStrategies: Record<ConservationStrategy, number> = {
-    aggressive: 1.1, // 10% above sustainable (risky)
+    aggressive: conFactor, // 20% above sustainable (risky)
     moderate: 1.0, // Exactly sustainable (safe)
-    conservative: 0.9, // 10% below sustainable (very safe)
+    conservative: 1 / conFactor, // 20% below sustainable (very safe)
   };
 
   // Simulate leader's decision based on stock level and their island efficiency
@@ -1484,16 +1485,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
             {originalCatch.toFixed(1)}🐟 → {finalCatch.toFixed(1)}🐟
           </div>
           <div style={{ fontSize: 10, color: "#64748b" }}>${cost.toFixed(2)}</div>
-          <div
-            style={{
-              fontSize: 11,
-              color: netTransfer > 0 ? "#10b981" : netTransfer < 0 ? "#dc2626" : "#64748b",
-              fontWeight: 500,
-            }}
-          >
-            {netTransfer > 0 ? "+" : ""}
-            {netTransfer.toFixed(1)}
-          </div>
         </div>
       );
     }

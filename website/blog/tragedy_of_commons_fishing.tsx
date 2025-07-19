@@ -1047,8 +1047,10 @@ const CommunityGovernanceSimulator: React.FC = () => {
     let method: string;
     if (scenario === "democratic") {
       // In democratic mode, distribution rotates based on leader
-      if (leader <= 1) method = "efficiency"; // Efficient leaders prefer efficiency-based
-      else if (leader >= 2) method = "hybrid"; // Less efficient leaders prefer more equality
+      if (leader <= 1)
+        method = "efficiency"; // Efficient leaders prefer efficiency-based
+      else if (leader >= 2)
+        method = "hybrid"; // Less efficient leaders prefer more equality
       else method = "equal";
     } else {
       // In hierarchical mode, always efficiency-based
@@ -1134,12 +1136,12 @@ const CommunityGovernanceSimulator: React.FC = () => {
     // Trust based on successful redistribution and resource health
     const redistributionFactor = Math.min(redistributionSuccess / 2, 1); // Normalize
     const stockFactor = stockHealth / MODEL_PARAMS.s_init;
-    return (redistributionFactor * 0.6 + stockFactor * 0.4);
+    return redistributionFactor * 0.6 + stockFactor * 0.4;
   };
 
   const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
     const principles = [];
-    
+
     if (scenario === "democratic") {
       principles.push("Clearly defined boundaries");
       principles.push("Collective choice arrangements");
@@ -1150,7 +1152,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
       principles.push("Clearly defined boundaries");
       if (leader === 0) principles.push("Monitoring by authorities"); // Moana-led monitoring
     }
-    
+
     return principles;
   };
 
@@ -1173,7 +1175,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
         conservationFactor = 1.0; // Moderate
       }
 
-      const leaderStrategy = conservationFactor > 1.05 ? "aggressive" : conservationFactor < 0.95 ? "conservative" : "moderate";
+      const leaderStrategy =
+        conservationFactor > 1.05 ? "aggressive" : conservationFactor < 0.95 ? "conservative" : "moderate";
 
       // Calculate sustainable boats and apply conservation strategy
       const sustainableBoats = calculateSustainableBoats(currentStock);
@@ -1197,16 +1200,13 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
       // Apply community redistribution
       const redistribution = applyRedistribution(originalCatches, leader);
-      
+
       const moanaFish = redistribution.finalCatches[0];
       const otherFish = redistribution.finalCatches.slice(1);
       const moanaNetTransfer = redistribution.netTransfers[0];
 
       // Calculate community trust
-      const communityTrust = calculateCommunityTrust(
-        redistribution.redistributionAmount,
-        currentStock
-      );
+      const communityTrust = calculateCommunityTrust(redistribution.redistributionAmount, currentStock);
 
       // Get active Ostrom principles
       const activeOstromPrinciples = getActiveOstromPrinciples(leader, scenario);
@@ -1331,7 +1331,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
               fontWeight: 500,
             }}
           >
-            {netTransfer > 0 ? "+" : ""}{netTransfer.toFixed(1)}
+            {netTransfer > 0 ? "+" : ""}
+            {netTransfer.toFixed(1)}
           </div>
         </div>
       );
@@ -1342,18 +1343,20 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
       const strategyColors = {
         conservative: "#10b981",
-        moderate: "#f59e0b", 
-        aggressive: "#dc2626"
+        moderate: "#f59e0b",
+        aggressive: "#dc2626",
       };
 
       return (
         <div style={{ textAlign: "center" }}>
           <div style={{ fontWeight: 600, fontSize: 12 }}>{leaderNames[leader]}</div>
-          <div style={{ 
-            fontSize: 10, 
-            color: strategyColors[strategy as keyof typeof strategyColors],
-            textTransform: "capitalize"
-          }}>
+          <div
+            style={{
+              fontSize: 10,
+              color: strategyColors[strategy as keyof typeof strategyColors],
+              textTransform: "capitalize",
+            }}
+          >
             {strategy}
           </div>
         </div>
@@ -1412,9 +1415,9 @@ const CommunityGovernanceSimulator: React.FC = () => {
                     <td key={i} style={{ padding: "4px 8px" }}>
                       {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined
                         ? redistributionCell(
-                            h.otherOriginalCatch[i], 
-                            h.otherFish[i], 
-                            h.otherFish[i] - h.otherOriginalCatch[i]
+                            h.otherOriginalCatch[i],
+                            h.otherFish[i],
+                            h.otherFish[i] - h.otherOriginalCatch[i],
                           )
                         : "-"}
                     </td>
@@ -1439,7 +1442,9 @@ const CommunityGovernanceSimulator: React.FC = () => {
               ))}
               {/* Summary Row */}
               <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-                <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>Total</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>
+                  Total
+                </td>
                 <td style={{ padding: "4px 8px", textAlign: "center" }}>{Math.round(moanaSum)}🐟</td>
                 {chiefsSums.map((sum, i) => (
                   <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
@@ -1462,8 +1467,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
   function EndSummary() {
     const avgTrust = history.reduce((sum, h) => sum + h.communityTrust, 0) / history.length;
     const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
-    const allPrinciples = [...new Set(history.flatMap(h => h.activeOstromPrinciples))];
-    
+    const allPrinciples = [...new Set(history.flatMap((h) => h.activeOstromPrinciples))];
+
     const getGovernanceMessage = () => {
       if (avgTrust >= 0.8) return { text: "Excellent community cohesion achieved!", color: "#10b981" };
       if (avgTrust >= 0.6) return { text: "Good community cooperation maintained.", color: "#f59e0b" };

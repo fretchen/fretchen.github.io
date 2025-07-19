@@ -53,7 +53,6 @@ type CommunityRoundHistory = RoundHistory & {
   leaderStrategy: string; // "conservative" | "moderate" | "aggressive"
   redistributionAmount: number; // How much fish was redistributed
   moanaNetTransfer: number; // Moana's gain/loss through redistribution
-  communityTrust: number; // Community cohesion metric (0-1)
   activeOstromPrinciples: string[]; // Which principles were active this round
   moanaOriginalCatch: number; // Before redistribution
   otherOriginalCatch: number[]; // Before redistribution
@@ -124,6 +123,62 @@ const calculateTotalCatch = (stock: number, totalBoats: number): number => {
 const calculateRegeneration = (stock: number): number => {
   // g_t = g0 * (s_t - g1 * s_t^2)
   return MODEL_PARAMS.g0 * (stock - MODEL_PARAMS.g1 * stock * stock);
+};
+
+type ConservationStrategy = "aggressive" | "moderate" | "conservative";
+
+interface ConservationResult {
+  adjustedSustainableBoats: number;
+  strategy: ConservationStrategy;
+  conservationFactor: number;
+}
+
+/**
+ * Simulates the decision of a leader on the appropriate conservation level
+ * based on current stock level and their island efficiency
+ */
+const leaderConservationLevel = (
+  leader: number,
+  sustainableBoats: number,
+  currentStock: number,
+  initialStock: number,
+): ConservationResult => {
+  // Define conservation strategies
+  const conservationStrategies: Record<ConservationStrategy, number> = {
+    aggressive: 1.1, // 10% above sustainable (risky)
+    moderate: 1.0, // Exactly sustainable (safe)
+    conservative: 0.9, // 10% below sustainable (very safe)
+  };
+
+  // Simulate leader's decision based on stock level and their island efficiency
+  let strategy: ConservationStrategy;
+
+  if (currentStock < 0.8 * initialStock) {
+    // Low stock - be conservative
+    if (leader === 0) {
+      // Efficient player (Moana) might take more risk
+      strategy = "moderate";
+    } else {
+      strategy = "conservative";
+    }
+  } else if (currentStock > 0.95 * initialStock) {
+    // High stock - can be more aggressive
+    strategy = "aggressive";
+  } else {
+    strategy = "moderate";
+  }
+
+  const conservationFactor = conservationStrategies[strategy];
+  const adjustedSustainableBoats = sustainableBoats * conservationFactor;
+
+  console.log(`  Leader ${leader} chooses '${strategy}' strategy (factor: ${conservationFactor})`);
+  console.log(`  Adjusted sustainable boats: ${adjustedSustainableBoats.toFixed(2)}`);
+
+  return {
+    adjustedSustainableBoats,
+    strategy,
+    conservationFactor,
+  };
 };
 
 const FishingGameSimulator: React.FC = () => {
@@ -1132,13 +1187,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
     };
   };
 
-  const calculateCommunityTrust = (redistributionSuccess: number, stockHealth: number): number => {
-    // Trust based on successful redistribution and resource health
-    const redistributionFactor = Math.min(redistributionSuccess / 2, 1); // Normalize
-    const stockFactor = stockHealth / MODEL_PARAMS.s_init;
-    return redistributionFactor * 0.6 + stockFactor * 0.4;
-  };
-
   const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
     const principles = [];
 
@@ -1165,22 +1213,13 @@ const CommunityGovernanceSimulator: React.FC = () => {
       // Leadership rotation: democratic rotates, hierarchical stays with Moana
       const leader = scenario === "democratic" ? (round - 1) % MODEL_PARAMS.nplayers : 0;
 
-      // Leader's conservation strategy
-      let conservationFactor: number;
-      if (currentStock < 0.8 * MODEL_PARAMS.s_init) {
-        conservationFactor = leader === 0 ? 1.0 : 0.9; // Efficient leaders might take more risk
-      } else if (currentStock > 0.95 * MODEL_PARAMS.s_init) {
-        conservationFactor = 1.1; // Can be aggressive with high stock
-      } else {
-        conservationFactor = 1.0; // Moderate
-      }
-
-      const leaderStrategy =
-        conservationFactor > 1.05 ? "aggressive" : conservationFactor < 0.95 ? "conservative" : "moderate";
-
-      // Calculate sustainable boats and apply conservation strategy
+      // Calculate sustainable boats first
       const sustainableBoats = calculateSustainableBoats(currentStock);
-      const adjustedSustainableBoats = sustainableBoats * conservationFactor;
+
+      // Use the leader conservation level function to determine strategy
+      const conservationDecision = leaderConservationLevel(leader, sustainableBoats, currentStock, MODEL_PARAMS.s_init);
+      const adjustedSustainableBoats = conservationDecision.adjustedSustainableBoats;
+      const leaderStrategy = conservationDecision.strategy;
 
       // Get community quotas
       const allChiefBoats = calculateCommunityQuotas(leader, adjustedSustainableBoats);
@@ -1205,9 +1244,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const otherFish = redistribution.finalCatches.slice(1);
       const moanaNetTransfer = redistribution.netTransfers[0];
 
-      // Calculate community trust
-      const communityTrust = calculateCommunityTrust(redistribution.redistributionAmount, currentStock);
-
       // Get active Ostrom principles
       const activeOstromPrinciples = getActiveOstromPrinciples(leader, scenario);
 
@@ -1229,7 +1265,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
         leaderStrategy,
         redistributionAmount: redistribution.redistributionAmount,
         moanaNetTransfer,
-        communityTrust,
         activeOstromPrinciples,
         moanaOriginalCatch,
         otherOriginalCatch,
@@ -1318,7 +1353,11 @@ const CommunityGovernanceSimulator: React.FC = () => {
     const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
 
     // Helper function for redistribution display
-    function redistributionCell(originalCatch: number, finalCatch: number, netTransfer: number) {
+    function redistributionCell(originalCatch: number | null, finalCatch: number | null, netTransfer: number | null) {
+      if (originalCatch === null || finalCatch === null || netTransfer === null) {
+        return <span>-</span>;
+      }
+
       return (
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 12 }}>
@@ -1383,7 +1422,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
                     Original → Final
                   </th>
                 ))}
-                <th style={{ padding: "6px 8px" }}>Trust</th>
                 <th style={{ padding: "6px 8px" }}>Stock After</th>
               </tr>
             </thead>
@@ -1422,18 +1460,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
                         : "-"}
                     </td>
                   ))}
-                  {/* Community Trust */}
-                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: h.communityTrust > 0.7 ? "#10b981" : h.communityTrust > 0.4 ? "#f59e0b" : "#dc2626",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {(h.communityTrust * 100).toFixed(0)}%
-                    </div>
-                  </td>
                   {/* Fish Stock */}
                   <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
                     {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
@@ -1465,18 +1491,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
   // Summary showing community governance effectiveness
   function EndSummary() {
-    const avgTrust = history.reduce((sum, h) => sum + h.communityTrust, 0) / history.length;
     const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
     const allPrinciples = [...new Set(history.flatMap((h) => h.activeOstromPrinciples))];
-
-    const getGovernanceMessage = () => {
-      if (avgTrust >= 0.8) return { text: "Excellent community cohesion achieved!", color: "#10b981" };
-      if (avgTrust >= 0.6) return { text: "Good community cooperation maintained.", color: "#f59e0b" };
-      if (avgTrust >= 0.4) return { text: "Community struggling but holding together.", color: "#f59e0b" };
-      return { text: "Community governance breaking down.", color: "#dc2626" };
-    };
-
-    const governanceMessage = getGovernanceMessage();
 
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
@@ -1493,23 +1509,10 @@ const CommunityGovernanceSimulator: React.FC = () => {
             🏛️ <strong>{scenario === "democratic" ? "Democratic Council" : "Moana-Led Governance"}</strong> Results
           </div>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
-            🤝 Community Trust: <strong>{(avgTrust * 100).toFixed(0)}%</strong>
-          </div>
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
             ↔️ Fish Redistributed: <strong>{totalRedistribution.toFixed(1)}🐟</strong>
           </div>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
             🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in ocean
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: governanceMessage.color,
-              fontWeight: 500,
-              marginTop: 8,
-            }}
-          >
-            {governanceMessage.text}
           </div>
         </div>
 

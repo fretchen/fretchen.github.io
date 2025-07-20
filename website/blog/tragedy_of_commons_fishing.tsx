@@ -1864,24 +1864,27 @@ But this raises the central question: **If individual rationality leads to colle
 
 Back on her island, Moana stares at the empty nets from yesterday&rsquo;s failed cooperation. The other chiefs are equally frustrated. &ldquo;This can&rsquo;t continue,&rdquo; Chief Kai declares. &ldquo;We need rules - someone above all of us who sets limits and enforces them fairly.&rdquo;
 
-The solution feels natural: create an Island Fishing Authority with centralized control.
+Within days, they contact the Regional Maritime Authority. The solution feels natural: surrender their fishing decisions to an Island Fishing Authority with centralized control. For Moana, this means no more daily choices about boat deployments - that responsibility now belongs to others.
 
-**How government regulation works:**
-- **Central Authority:** An Island Council sets strict fishing limits for each community
-- **Fixed Quotas:** Each chief receives identical allocations - no trading permitted  
-- **Monitoring:** Government boats patrol waters to prevent violations
-- **Penalties:** Escalating consequences: warning → fishing ban → exile from fishing grounds
-- **Scientific Management:** Marine biologists determine sustainable catch levels based on data
+**The centralized approach:** An Island Council sets fishing limits, monitors compliance, and enforces penalties. The key question becomes: should all islands get equal quotas, or should efficient islands be allowed to fish more?
+
+Try both policies below to see how each approach affects sustainability and fairness:
 
       `}</ReactMarkdown>
       <IslandEfficiencyDemonstratorWithRounds />
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-Government regulation successfully prevents the tragedy of the commons and ensures fair access for all chiefs. However, this approach comes at a high price: expensive bureaucracy, slow adaptation to changes, and reduced innovation incentives. As Moana observes: *"This saves the fish and keeps things fair, but the costs are enormous and chiefs have no reason to improve their methods."*
+As you can see from the simulation, centralized regulation successfully prevents the tragedy of the commons. The fish stocks remain stable, and systematic management replaces chaotic individual decisions.
+
+After months under this system, Moana observes both the benefits and costs: *"No more sleepless nights wondering about boat deployments - the Authority decides everything. The fish are recovering, but the bureaucracy is expensive and my crews have lost their drive to innovate when quotas are fixed."*
+
+The simulation reveals the core tension: equal access ensures fairness but sacrifices efficiency, while efficiency-based allocation maximizes output but creates inequality.
 
 ### A market refinement: Individual Transferable Quotas (ITQs)
 
-Another approach combines market mechanisms with government limits: **Individual Transferable Quotas (ITQs)**. The government sets total sustainable fishing limits, but chiefs can buy and sell their fishing rights to each other. This allows efficient fishers to expand while maintaining overall sustainability. However, wealthy chiefs can monopolize access, excluding traditional fishing families. As Moana reflects: *"This rewards skill and saves fish, but creates new inequalities when some can't afford rising quota prices."*
+Recognizing the efficiency problems, the Authority proposes a refinement: **Individual Transferable Quotas (ITQs)**. The government still sets total sustainable fishing limits, but now chiefs can buy and sell their fishing rights to each other. 
+
+This allows efficient fishers like Moana to expand while maintaining overall sustainability. However, as quota prices rise, wealthy chiefs can monopolize access, excluding traditional fishing families. As Moana reflects: *"This system rewards skill and saves fish, but I&rsquo;ve watched smaller islands get priced out entirely."*
 
 This sets the stage for Ostrom's breakthrough insight: communities can govern themselves.
 

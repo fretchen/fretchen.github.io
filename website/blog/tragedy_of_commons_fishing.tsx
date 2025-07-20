@@ -1509,12 +1509,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
     }
 
     // Helper function for leader display
-    function leaderCell(
-      leader: number,
-      strategy: string,
-      distributionMethod?: string,
-      redistributionPolicy?: string
-    ) {
+    function leaderCell(leader: number, strategy: string, distributionMethod?: string, redistributionPolicy?: string) {
       const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
       const strategyColors = {
         conservative: "#10b981",
@@ -1543,20 +1538,22 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
       return (
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontWeight: 600, fontSize: 12, marginBottom: "2px" }}>
-            {leaderNames[leader]}
-          </div>
-          
+          <div style={{ fontWeight: 600, fontSize: 12, marginBottom: "2px" }}>{leaderNames[leader]}</div>
+
           {/* Decision Icons Row */}
           <div style={{ display: "flex", justifyContent: "center", gap: "2px", fontSize: "10px", marginBottom: "2px" }}>
             <span title={`Konservierung: ${strategy}`}>
               {conservationIcons[strategy as keyof typeof conservationIcons] || "❓"}
             </span>
             <span title={`Verteilung: ${distributionMethod || "unbekannt"}`}>
-              {distributionMethod ? (distributionIcons[distributionMethod as keyof typeof distributionIcons] || "❓") : "❓"}
+              {distributionMethod
+                ? distributionIcons[distributionMethod as keyof typeof distributionIcons] || "❓"
+                : "❓"}
             </span>
             <span title={`Umverteilung: ${redistributionPolicy || "unbekannt"}`}>
-              {redistributionPolicy ? (redistributionIcons[redistributionPolicy as keyof typeof redistributionIcons] || "❓") : "❓"}
+              {redistributionPolicy
+                ? redistributionIcons[redistributionPolicy as keyof typeof redistributionIcons] || "❓"
+                : "❓"}
             </span>
           </div>
 
@@ -1577,41 +1574,43 @@ const CommunityGovernanceSimulator: React.FC = () => {
     return (
       <div style={{ margin: "18px 0" }}>
         {/* Legend for Leadership Decision Icons */}
-        <div style={{ 
-          marginBottom: "12px", 
-          padding: "8px 12px", 
-          backgroundColor: "#f8fafc", 
-          borderRadius: "6px", 
-          fontSize: "12px",
-          border: "1px solid #e2e8f0"
-        }}>
-          <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leader-Entscheidungen (3 Icons pro Leader):</div>
-          
+        <div
+          style={{
+            marginBottom: "12px",
+            padding: "8px 12px",
+            backgroundColor: "#f8fafc",
+            borderRadius: "6px",
+            fontSize: "12px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leadership Decisions (3 Icons per Decision):</div>
+
           {/* Conservation Strategy Icons */}
           <div style={{ marginBottom: "4px" }}>
-            <strong>Konservierung:</strong>
-            <span style={{ marginLeft: "8px" }}>🛡️ konservativ</span>
-            <span style={{ marginLeft: "8px" }}>⚖️ moderat</span>
-            <span style={{ marginLeft: "8px" }}>⚔️ aggressiv</span>
+            <strong>Conservation:</strong>
+            <span style={{ marginLeft: "8px" }}>🛡️ conservative</span>
+            <span style={{ marginLeft: "8px" }}>⚖️ moderate</span>
+            <span style={{ marginLeft: "8px" }}>⚔️ aggressive</span>
           </div>
-          
+
           {/* Distribution Method Icons */}
           <div style={{ marginBottom: "4px" }}>
-            <strong>Verteilung:</strong>
-            <span style={{ marginLeft: "8px" }}>🟰 gleich</span>
+            <strong>Distribution:</strong>
+            <span style={{ marginLeft: "8px" }}>🟰 equal</span>
             <span style={{ marginLeft: "8px" }}>🔄 hybrid</span>
-            <span style={{ marginLeft: "8px" }}>� effizienz</span>
+            <span style={{ marginLeft: "8px" }}>⚡ efficiency</span>
           </div>
-          
+
           {/* Redistribution Policy Icons */}
           <div>
-            <strong>Umverteilung:</strong>
-            <span style={{ marginLeft: "8px" }}>🔐 konservativ</span>
-            <span style={{ marginLeft: "8px" }}>🔄 moderat</span>
-            <span style={{ marginLeft: "8px" }}>🔓 progressiv</span>
+            <strong>Redistribution:</strong>
+            <span style={{ marginLeft: "8px" }}>🔐 conservative</span>
+            <span style={{ marginLeft: "8px" }}>🔄 moderate</span>
+            <span style={{ marginLeft: "8px" }}>🔓 progressive</span>
           </div>
         </div>
-        
+
         <div style={{ display: "flex", justifyContent: "center" }}>
           <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 600 }}>
             <thead>

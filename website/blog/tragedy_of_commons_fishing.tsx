@@ -1812,68 +1812,65 @@ const CommunityGovernanceSimulator: React.FC = () => {
 const TragedyOfCommonsFishing: React.FC = () => {
   return (
     <article>
-      <h1>Games on the common pool ressources</h1>
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-I recently wrote about the prisoners dilemma. However, while it is instructive, it is quite clear that it misses out
-on major parts of our daily experiences, where it is quite obvious that cooperation is vital. In this I really like
-the deeper look into the **Tragedy of the Commons**. This is a social dilemma that occurs when individuals, acting independently 
-according to their own self-interest, deplete or spoil shared resources, leading to long-term collective harm.
-In this context I kept coming back to the question of how can we govern common pools?
+Every day, millions of people make seemingly rational decisions that, collectively, destroy the very resources they depend on. From overfishing our oceans to depleting groundwater aquifers, we face a paradox that has puzzled economists and social scientists for decades.
 
-In the a completely unrestrained version it depletes and collapses. This led to the wide belief that only the state or the market can govern common resources.
-However, Elinor Ostrom showed that communities can self-organize to govern common resources. And she did this again around beautiful social 
-games, which I will explore here.
-`}</ReactMarkdown>
-      <p className={css({ lineHeight: "1.6", fontStyle: "italic", textAlign: "center" })}>
-        &ldquo;Weder Staat noch Markt sind die einzigen Lösungen. Menschen können lernen, gemeinsame Ressourcen selbst
-        zu verwalten.&rdquo; — Elinor Ostrom
-      </p>
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-## Setting up the scene
+This raises a fundamental question: **How can we govern common pool resources?**
+
+In unrestrained scenarios, these resources deplete and collapse. This led to the widespread belief that only the state or the market can effectively govern common resources. However, Elinor Ostrom demonstrated that communities can self-organize to govern common resources successfully. She explored this through carefully designed social experiments and real-world case studies, which I will examine here through interactive simulations.
+
+Throughout the blog post, which follows Moana's journey, we'll explore three approaches to solving this dilemma:
+
+💰 **The Market Solution:** Tradeable fishing quotas that reward efficiency - but what about equity?
+🏛️ **The State Solution:** An Island Fishing Authority with centralized control - effective but costly?
+🤝 **The Community Solution:** The chiefs create their own rules together - can self-governance work?
+
+## From Theory to Reality: A Chief's Dilemma
+
+But how do these abstract governance theories play out in practice? To understand this, let's step into the sandals of someone facing exactly these choices every single day.
+
+Meet Moana - no longer the adventurous teenager from Disney's story, but now a seasoned chief responsible for her island's survival. Each morning, she faces a decision that will determine whether her people feast or go hungry: how many fishing boats should she send out to the shared waters that sustain not just her community, but three neighboring islands as well?
+
+The neighboring islands' chiefs have called a meeting. The fish that have sustained these communities for generations are becoming scarcer. The great tuna schools that once appeared predictably now show up only occasionally. A decision must be made about how to manage their shared waters.
+
+This isn't just a thought experiment. Fishing provides the perfect lens to examine common pool resource governance because it's visual, well-documented in research, and demonstrates the key tensions between individual incentives and collective welfare. This scenario captures the essential elements of any common pool resource dilemma - whether it's fisheries, groundwater, grazing lands, or even digital commons like open-source software.
+
+### The fundamental dynamics of common pool resources
+
+The situation Moana faces demonstrates the core elements present in all common pool resource scenarios:
             
+- Multiple decision-makers (Moana and the three other chiefs) choose resource extraction levels
+- Individual decisions aggregate to affect the shared resource (fish stock)
+- Each participant's catch depends on both their effort and the total pressure on the resource
+- Resource regeneration occurs, but extraction can exceed sustainable levels
 
-Given that we are talking about a social game, I really like the idea to look into the 
-problem from the perspective of a specific person and its community. For the common pool the field 
-of fishing is a great example that is visual and keeps coming back in the literature. So, we will set
-up the scene around the famous Disney character Moana. 
-            
-She has now become the young chief of here island and therefore has to decide how many ships she has to send out every morning. The neighboring islands' chiefs have called an urgent meeting. The fish that have sustained your communities
-          for generations are becoming scarce. The great tuna schools that once darkened the waters now appear only
-          occasionally. **Something must be done, but what?**
 
-### The dilemma of the island chiefs
-
-We can now use this setting to sketch out the rule of the game.
-            
-- Each morning, Moana and the other three chief of the neighboring islands have to decide how many ships they send out to fish.
-- In the evening they count the fish they caught and share it on the beach of each island.
-
+To understand how these dynamics play out, let&rsquo;s experience Moana&rsquo;s dilemma firsthand. As she sits 
+with the other three chiefs overlooking the shared fishing grounds, each faces identical incentives, but their
+collective choices will determine everyone&rsquo;s fate:
             `}</ReactMarkdown>
-
-      <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-        As Moana sits with the other three chiefs in the sacred meeting place overlooking the shared fishing grounds,
-        the dilemma becomes crystal clear. Each chief faces the same choice:
-      </p>
 
       <FishingGameSimulator />
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-How did the game go? Most likely, you also had a hard time to keep the fish stock stable.
-It is just hard to resist the temptation to fish intensively, especially when you see the other chiefs doing it.
-The dilemma Moana faces is a classic example of the **Tragedy of the Commons**. This concept, popularized by Garrett Hardin in 1968, describes how individuals acting in their 
-own self-interest can deplete shared resources, leading to long-term collective harm. 
+How did the simulation go? Most likely, you found it challenging to maintain fish stock stability.
+It's difficult to resist the temptation to fish intensively, especially when other chiefs do the same.
 
-## State solutions: The Island Authority approach
+The dilemma Moana faces illustrates the classic **Tragedy of the Commons**. This concept, popularized by Garrett Hardin in 1968, describes how rational individual choices can lead to irrational collective outcomes - depleting shared resources that everyone depends on.
 
-Back on her island, Moana stares at the empty nets from yesterday's failed cooperation. The other chiefs are equally frustrated. "This can't continue," Chief Kai declares. "We need rules - someone above all of us who sets limits and enforces them fairly."
+But this raises the central question: **If individual rationality leads to collective irrationality, what governance mechanisms can solve this dilemma?**
 
-The idea feels natural and straightforward: create an Island Fishing Authority.
+## State solutions: The centralized authority approach
+
+Back on her island, Moana stares at the empty nets from yesterday&rsquo;s failed cooperation. The other chiefs are equally frustrated. &ldquo;This can&rsquo;t continue,&rdquo; Chief Kai declares. &ldquo;We need rules - someone above all of us who sets limits and enforces them fairly.&rdquo;
+
+The solution feels natural: create an Island Fishing Authority with centralized control.
 
 **How government regulation works:**
-- **Central Authority:** The Island Council sets strict fishing limits for each chief
-- **Fixed Quotas:** Each chief gets exactly the same amount - no trading allowed  
-- **Monitoring:** Government boats patrol the waters to prevent cheating
-- **Penalties:** Violators face escalating fines: warning → fishing ban → exile from fishing grounds
+- **Central Authority:** An Island Council sets strict fishing limits for each community
+- **Fixed Quotas:** Each chief receives identical allocations - no trading permitted  
+- **Monitoring:** Government boats patrol waters to prevent violations
+- **Penalties:** Escalating consequences: warning → fishing ban → exile from fishing grounds
 - **Scientific Management:** Marine biologists determine sustainable catch levels based on data
 
       `}</ReactMarkdown>
@@ -1882,7 +1879,7 @@ The idea feels natural and straightforward: create an Island Fishing Authority.
 
 Government regulation successfully prevents the tragedy of the commons and ensures fair access for all chiefs. However, this approach comes at a high price: expensive bureaucracy, slow adaptation to changes, and reduced innovation incentives. As Moana observes: *"This saves the fish and keeps things fair, but the costs are enormous and chiefs have no reason to improve their methods."*
 
-## A market refinement: Individual Transferable Quotas (ITQs)
+### A market refinement: Individual Transferable Quotas (ITQs)
 
 Another approach combines market mechanisms with government limits: **Individual Transferable Quotas (ITQs)**. The government sets total sustainable fishing limits, but chiefs can buy and sell their fishing rights to each other. This allows efficient fishers to expand while maintaining overall sustainability. However, wealthy chiefs can monopolize access, excluding traditional fishing families. As Moana reflects: *"This rewards skill and saves fish, but creates new inequalities when some can't afford rising quota prices."*
 

@@ -1583,7 +1583,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
           </div>
 
           {/* Strategy text for reference */}
-          
         </div>
       );
     }
@@ -1878,74 +1877,11 @@ The idea feels natural and straightforward: create an Island Fishing Authority.
       <IslandEfficiencyDemonstratorWithRounds />
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-**Real-world examples:**
-- **🇳🇴 Norway:** Combines government quotas with strong enforcement
-- **🇨🇦 Canada:** Strict regulations, but enforcement challenges in remote areas
-- **🇪🇺 European Union:** Common Fisheries Policy with complex quota negotiations
-- **🇯🇵 Japan:** Traditional government-managed coastal fishing zones
-
-**Moana's experience with state regulation:**
-
-**✅ The benefits:**
-- **Guaranteed fairness:** Every chief gets equal access regardless of wealth
-- **Social stability:** No market-driven inequality or community disruption
-- **Democratic control:** Fishing rules decided through island council votes
-- **Long-term planning:** Government can consider environmental goals beyond profit
-
-**⚠️ The challenges:**
-- **High costs:** Patrol boats, inspectors, and bureaucracy are expensive
-- **Inflexibility:** Quotas can't adjust quickly to changing conditions
-- **Enforcement problems:** Difficult to monitor every fishing boat every day
-- **Reduced innovation:** No incentive for chiefs to develop better fishing methods
-- **Political capture:** Fishing regulations might favor politically connected chiefs
-
-As Moana watches the government system in action, she observes: *"This is fairer than the free-for-all - no one gets left behind. But it's so slow and expensive! And some chiefs are already finding ways around the rules when the patrol boats aren't watching. Plus, talented fishers like Chief Kai have no incentive to innovate since they can't benefit from their skills."*
-
-**The state solution trade-off:** Government regulation prioritizes equity and democratic control, but often at the cost of efficiency and innovation. It prevents the tragedy of the commons, but creates new challenges around enforcement, bureaucracy, and adaptability.
+Government regulation successfully prevents the tragedy of the commons and ensures fair access for all chiefs. However, this approach comes at a high price: expensive bureaucracy, slow adaptation to changes, and reduced innovation incentives. As Moana observes: *"This saves the fish and keeps things fair, but the costs are enormous and chiefs have no reason to improve their methods."*
 
 ## A market refinement: Individual Transferable Quotas (ITQs)
 
-Frustrated with the bureaucracy and inefficiencies of government control, Chief Tala arrives with news from the outer islands: "I've heard of something called 'fishing rights' - like owning pieces of the ocean itself. What if we could buy and sell the right to fish?"
-
-The idea sounds strange at first, but as Moana learns more, it begins to make sense as a **hybrid solution** - combining government sustainability goals with market efficiency:
-
-**How Individual Transferable Quotas work:**
-- The island council still sets a **total sustainable limit** (say, 60 fish total)
-- Each chief receives **tradeable fishing rights** (quotas) - initially 15 rights each
-- Before fishing, chiefs can **buy and sell** these rights at market prices
-- You can only send as many boats as you have quota rights
-- The total catch is **automatically limited** to sustainable levels
-
-**The key insight:** Government sets the environmental limit, but the market decides who gets to fish. If you're a skilled fisher, you can buy more rights and profit. If you prefer other activities, you can sell your rights and earn money without fishing.
-      `}</ReactMarkdown>
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
-
-**Real-world success stories:**
-- **🇮🇸 Iceland:** ITQs saved their fishing industry after near-collapse in the 1980s
-- **🇳🇿 New Zealand:** One of the world's most successful quota systems since 1986
-- **🇺🇸 Alaska:** Combines ITQs with community protections for indigenous fishers
-- **🇨🇱 Chile:** ITQs helped recover several fish species from overfishing
-
-As Moana experiments with the trading system, she realizes both the **power and the problems** of this market-state hybrid:
-
-**✅ The good:**
-- **Automatic sustainability:** Total catch can never exceed the quota limit
-- **Economic efficiency:** The best fishers get more access, maximizing total catch value
-- **Flexibility:** Chiefs can adapt their fishing based on their skills and preferences
-- **Lower enforcement costs:** Market mechanisms reduce need for government monitoring
-- **Innovation incentives:** Efficient fishing techniques become more valuable
-
-**⚠️ The concerns:**
-- **Wealth concentration:** Rich chiefs can buy up all the rights, excluding smaller fishers
-- **Community disruption:** Traditional fishing families might lose access to their livelihood
-- **Price volatility:** Sudden changes in quota prices can destabilize island economies
-- **Social inequality:** The market rewards efficiency over need or tradition
-
-Moana reflects: *"This is more efficient than pure government control, and still keeps the fish safe. But what happens to Chief Sina's family, who've fished these waters for generations but can't afford the rising quota prices? We've solved the efficiency problem, but created new inequality. There must be another way..."*
-
-**The fundamental trade-off:** ITQs excel at combining sustainability with efficiency, but they can sacrifice equity and community values. They prevent both the tragedy of the commons and bureaucratic inefficiency, but might create a different kind of tragedy - the tragedy of the market.
-
-**Moana's growing realization:** *"Both markets and government have their place, but both also have serious flaws. The market excluded the poor, and the state stifles innovation. There must be another way - something that combines the best of both while avoiding their worst problems..."*
+Another approach combines market mechanisms with government limits: **Individual Transferable Quotas (ITQs)**. The government sets total sustainable fishing limits, but chiefs can buy and sell their fishing rights to each other. This allows efficient fishers to expand while maintaining overall sustainability. However, wealthy chiefs can monopolize access, excluding traditional fishing families. As Moana reflects: *"This rewards skill and saves fish, but creates new inequalities when some can't afford rising quota prices."*
 
 This sets the stage for Ostrom's breakthrough insight: communities can govern themselves.
 

@@ -1815,9 +1815,11 @@ const TragedyOfCommonsFishing: React.FC = () => {
       <h1>Games on the common pool ressources</h1>
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-I recently wrote about the prisoners dilemma. However, it feels really gloomy and not that realistic.
-So I started to look around into more complex games that might apply more directly to my life experiences. In this
-context I kept coming back to the question of how can we govern common pools ?
+I recently wrote about the prisoners dilemma. However, while it is instructive, it is quite clear that it misses out
+on major parts of our daily experiences, where it is quite obvious that cooperation is vital. In this I really like
+the deeper look into the **Tragedy of the Commons**. This is a social dilemma that occurs when individuals, acting independently 
+according to their own self-interest, deplete or spoil shared resources, leading to long-term collective harm.
+In this context I kept coming back to the question of how can we govern common pools?
 
 In the a completely unrestrained version it depletes and collapses. This led to the wide belief that only the state or the market can govern common resources.
 However, Elinor Ostrom showed that communities can self-organize to govern common resources. And she did this again around beautiful social 
@@ -1830,6 +1832,7 @@ games, which I will explore here.
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 ## Setting up the scene
             
+
 Given that we are talking about a social game, I really like the idea to look into the 
 problem from the perspective of a specific person and its community. For the common pool the field 
 of fishing is a great example that is visual and keeps coming back in the literature. So, we will set

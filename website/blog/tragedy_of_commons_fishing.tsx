@@ -1585,11 +1585,30 @@ const CommunityGovernanceSimulator: React.FC = () => {
           fontSize: "12px",
           border: "1px solid #e2e8f0"
         }}>
-          <div style={{ fontWeight: "600", marginBottom: "4px" }}>Leader-Entscheidungen:</div>
-          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-            <div><span style={{ marginRight: "4px" }}>🛡️</span>Konservierung (konservativ/moderat/aggressiv)</div>
-            <div><span style={{ marginRight: "4px" }}>⚖️</span>Verteilung (gleich/hybrid/effizienz)</div>
-            <div><span style={{ marginRight: "4px" }}>🔄</span>Umverteilung (konservativ/moderat/progressiv)</div>
+          <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leader-Entscheidungen (3 Icons pro Leader):</div>
+          
+          {/* Conservation Strategy Icons */}
+          <div style={{ marginBottom: "4px" }}>
+            <strong>Konservierung:</strong>
+            <span style={{ marginLeft: "8px" }}>🛡️ konservativ</span>
+            <span style={{ marginLeft: "8px" }}>⚖️ moderat</span>
+            <span style={{ marginLeft: "8px" }}>⚔️ aggressiv</span>
+          </div>
+          
+          {/* Distribution Method Icons */}
+          <div style={{ marginBottom: "4px" }}>
+            <strong>Verteilung:</strong>
+            <span style={{ marginLeft: "8px" }}>🟰 gleich</span>
+            <span style={{ marginLeft: "8px" }}>🔄 hybrid</span>
+            <span style={{ marginLeft: "8px" }}>� effizienz</span>
+          </div>
+          
+          {/* Redistribution Policy Icons */}
+          <div>
+            <strong>Umverteilung:</strong>
+            <span style={{ marginLeft: "8px" }}>🔐 konservativ</span>
+            <span style={{ marginLeft: "8px" }}>🔄 moderat</span>
+            <span style={{ marginLeft: "8px" }}>🔓 progressiv</span>
           </div>
         </div>
         

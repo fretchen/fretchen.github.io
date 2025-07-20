@@ -1861,16 +1861,14 @@ Back on her island, Moana stares at the empty nets from yesterday&rsquo;s failed
 
 Within days, they contact the Regional Maritime Authority. The solution feels natural: surrender their fishing decisions to an Island Fishing Authority with centralized control. For Moana, this means no more daily choices about boat deployments - that responsibility now belongs to others.
 
-**The centralized approach:** An Island Council sets fishing limits, monitors compliance, and enforces penalties. But here's where it gets complicated: not all islands face the same fishing costs.
+**The centralized approach:** An Island Council sets fishing limits, monitors compliance, and enforces penalties. However, the Authority quickly discovers that equal treatment isn't necessarily fair treatment - the islands have vastly different fishing costs:
 
-**Understanding the Cost Structure:**
-Each island faces different fishing costs per boat due to their unique circumstances:
-- **Moana's Island**: Modern harbor, efficient boats → **Low cost** ($0.125 per boat)
-- **Kai's Island**: Decent infrastructure → **Medium-low cost** ($0.25 per boat)  
-- **Tala's Island**: Remote location, older equipment → **Medium-high cost** ($0.75 per boat)
-- **Sina's Island**: Very remote, harsh conditions → **High cost** ($1.00 per boat)
+- **Moana's Island**: $0.125 per boat (modern harbor, efficient boats)
+- **Kai's Island**: $0.25 per boat (decent infrastructure)  
+- **Tala's Island**: $0.75 per boat (remote location, older equipment)
+- **Sina's Island**: $1.00 per boat (very remote, harsh conditions)
 
-This creates the central policy dilemma: Should all islands get equal fishing quotas (equal responsibility), or should more efficient islands be allowed to fish more (market efficiency)? Try both approaches below:
+This creates the central policy dilemma: equal quotas or economic efficiency? Try both approaches below:
 
       `}</ReactMarkdown>
       <IslandEfficiencyDemonstratorWithRounds />
@@ -1897,13 +1895,26 @@ This allows efficient fishers like Moana to expand while maintaining overall sus
 
 This sets the stage for Ostrom's breakthrough insight: communities can govern themselves.
 
-## Ostrom's Community Solution: The Fishing Council
+## Ostrom's Community Solution: Learning from Failure
 
-Frustrated with both market inequality and government bureaucracy, Moana calls for a traditional "Fishing Council" meeting. "Our ancestors managed these waters for centuries without markets or bureaucrats," she reflects. "What if we can find our own way?"
+After months of failed cooperation and bureaucratic frustration, Moana realizes something crucial: **"We keep trying solutions that worked elsewhere, but we never asked what makes solutions work at all."**
 
-The idea isn't new - **Elinor Ostrom's groundbreaking research** showed that communities worldwide have successfully managed shared resources for centuries. Her work identified key principles that make self-governance work, which Moana now hopes to apply to their fishing crisis.
+**The Missing Piece:** Elinor Ostrom asked the same question. Her research revealed that successful community resource management isn't about finding the "right" rules—it's about building the right **institutions** for making and adapting rules.
 
-Moana's council must navigate three critical decisions: Who leads when? How should fishing quotas be distributed? Should successful fishers share with struggling islands? Experience their community governance experiment below - try both democratic rotation and hierarchical leadership to see how different approaches shape outcomes:
+**From Tragedy to Success:** What transforms a failing commons into a thriving one? Through studying thousands of cases worldwide—from Swiss alpine pastures to Japanese forests to Philippine irrigation systems—Ostrom identified eight institutional design principles that separate successful commons from failures:
+
+**Ostrom's Eight Design Principles:**
+
+1. **Clearly defined boundaries** - Everyone knows who belongs to the fishing community and what waters they govern
+2. **Collective choice arrangements** - The chiefs affected by fishing rules participate in making and changing them  
+3. **Monitoring** - Community members keep watch over each other's compliance, not outside enforcers
+4. **Graduated sanctions** - Violations start with warnings, escalate fairly—building trust, not resentment
+5. **Conflict resolution mechanisms** - Chiefs have ways to resolve disputes locally and quickly
+6. **Recognition of rights to organize** - External authorities (like the Regional Maritime Authority) respect their self-governance
+7. **Nested enterprises** - Rules work at multiple levels—daily fishing decisions, seasonal planning, long-term stock management
+8. **Congruence with local conditions** - Rules match the unique conditions of their specific waters and communities
+
+**Moana's Experiment:** Experience how these institutional elements play out in practice. The simulation below shows how different governance structures implement varying numbers of these principles—and how that affects outcomes:
 
             `}</ReactMarkdown>
 

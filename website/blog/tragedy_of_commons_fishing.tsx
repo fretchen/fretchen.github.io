@@ -1076,13 +1076,13 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
                 <th style={{ padding: "6px 8px" }}>
                   Moana
                   <br />
-                  Fish • Cost
+                  (${MODEL_PARAMS.c_islands[0]}/boat)
                 </th>
-                {otherChiefs.map((chief) => (
+                {otherChiefs.map((chief, i) => (
                   <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
                     {chief.replace("Chief ", "")}
                     <br />
-                    Fish • Cost
+                    (${MODEL_PARAMS.c_islands[i + 1]}/boat)
                   </th>
                 ))}
                 <th style={{ padding: "6px 8px" }}>Stock After</th>
@@ -1536,11 +1536,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
     // Helper function for leader display
     function leaderCell(leader: number, strategy: string, distributionMethod?: string, redistributionPolicy?: string) {
       const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
-      const strategyColors = {
-        conservative: "#10b981",
-        moderate: "#f59e0b",
-        aggressive: "#dc2626",
-      };
 
       // Icon mappings for each decision type
       const conservationIcons = {
@@ -1866,13 +1861,27 @@ Back on her island, Moana stares at the empty nets from yesterday&rsquo;s failed
 
 Within days, they contact the Regional Maritime Authority. The solution feels natural: surrender their fishing decisions to an Island Fishing Authority with centralized control. For Moana, this means no more daily choices about boat deployments - that responsibility now belongs to others.
 
-**The centralized approach:** An Island Council sets fishing limits, monitors compliance, and enforces penalties. The key question becomes: should all islands get equal quotas, or should efficient islands be allowed to fish more?
+**The centralized approach:** An Island Council sets fishing limits, monitors compliance, and enforces penalties. But here's where it gets complicated: not all islands face the same fishing costs.
 
-Try both policies below to see how each approach affects sustainability and fairness:
+**Understanding the Cost Structure:**
+Each island faces different fishing costs per boat due to their unique circumstances:
+- **Moana's Island**: Modern harbor, efficient boats → **Low cost** ($0.125 per boat)
+- **Kai's Island**: Decent infrastructure → **Medium-low cost** ($0.25 per boat)  
+- **Tala's Island**: Remote location, older equipment → **Medium-high cost** ($0.75 per boat)
+- **Sina's Island**: Very remote, harsh conditions → **High cost** ($1.00 per boat)
+
+This creates the central policy dilemma: Should all islands get equal fishing quotas (equal responsibility), or should more efficient islands be allowed to fish more (market efficiency)? Try both approaches below:
 
       `}</ReactMarkdown>
       <IslandEfficiencyDemonstratorWithRounds />
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+
+**What the Results Show:**
+
+The cost differences create significant fairness challenges. In the "🌍 Equal Responsibility Policy", everyone fishes sustainably at the same level - but Sina's island pays 8 times more per fish than Moana's island! In the "💰 Market-Driven Approach", each island fishes at their economically optimal level - but this means efficient islands like Moana's catch much more fish.
+
+Neither approach is perfect: equal fishing quotas seem fair in principle but create economic hardship for less efficient islands. Market-driven approaches seem economically efficient but can lead to inequality in outcomes. This is why real-world commons governance often needs more sophisticated solutions that balance both equity and efficiency concerns.
+
 
 As you can see from the simulation, centralized regulation successfully prevents the tragedy of the commons. The fish stocks remain stable, and systematic management replaces chaotic individual decisions.
 

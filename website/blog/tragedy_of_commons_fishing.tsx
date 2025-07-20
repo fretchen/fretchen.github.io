@@ -147,28 +147,36 @@ const leaderConservationLevel = (
   sustainableBoats: number,
   currentStock: number,
   initialStock: number,
+  previousStock?: number,
 ): ConservationResult => {
-  // Define conservation strategies
-  const conFactor = 2;
+  // Define conservation strategies with slightly more aggressive factor
+  const conFactor = 2.5; // Increased from 2 to 2.5 for stronger effects
   const conservationStrategies: Record<ConservationStrategy, number> = {
-    aggressive: conFactor, // 20% above sustainable (risky)
+    aggressive: conFactor, // 150% above sustainable (risky)
     moderate: 1.0, // Exactly sustainable (safe)
-    conservative: 1 / conFactor, // 20% below sustainable (very safe)
+    conservative: 1 / conFactor, // 60% of sustainable (very safe)
   };
 
-  // Simulate leader's decision based on stock level and their island efficiency
+  // Simulate leader's decision based on stock level, their island efficiency, and trend
   let strategy: ConservationStrategy;
 
-  if (currentStock < 0.8 * initialStock) {
-    // Low stock - be conservative
+  // Calculate stock trend if previous stock is available
+  let stockTrend = 0;
+  if (previousStock !== undefined) {
+    stockTrend = (currentStock - previousStock) / previousStock;
+  }
+
+  // Enhanced decision logic: consider both absolute stock and trend
+  if (currentStock < 0.85 * initialStock || stockTrend < -0.08) {
+    // Low stock OR strong negative trend - be conservative
     if (leader === 0) {
       // Efficient player (Moana) might take more risk
       strategy = "moderate";
     } else {
       strategy = "conservative";
     }
-  } else if (currentStock > 0.95 * initialStock) {
-    // High stock - can be more aggressive
+  } else if (currentStock > 0.98 * initialStock && stockTrend > -0.02) {
+    // Very high stock AND no negative trend - can be more aggressive
     strategy = "aggressive";
   } else {
     strategy = "moderate";
@@ -178,6 +186,9 @@ const leaderConservationLevel = (
   const adjustedSustainableBoats = sustainableBoats * conservationFactor;
 
   console.log(`  Leader ${leader} chooses '${strategy}' strategy (factor: ${conservationFactor})`);
+  if (previousStock !== undefined) {
+    console.log(`  Stock trend: ${(stockTrend * 100).toFixed(1)}% (${currentStock} from ${previousStock})`);
+  }
   console.log(`  Adjusted sustainable boats: ${adjustedSustainableBoats.toFixed(2)}`);
 
   return {
@@ -1274,9 +1285,10 @@ const CommunityGovernanceSimulator: React.FC = () => {
   };
 
   const simulateAllRounds = () => {
-    const nRounds = 3;
+    const nRounds = 5; // Increased from 3 to 5 for better strategy progression
     let currentStock = MODEL_PARAMS.s_init;
     const newHistory: CommunityRoundHistory[] = [];
+    let previousStock: number | undefined;
 
     for (let round = 1; round <= nRounds; round++) {
       // Leadership rotation: democratic rotates, hierarchical stays with Moana
@@ -1285,12 +1297,13 @@ const CommunityGovernanceSimulator: React.FC = () => {
       // Calculate sustainable boats first
       const totalSustainableBoats = calculateSustainableBoats(currentStock) * MODEL_PARAMS.nplayers;
 
-      // Use the leader conservation level function to determine strategy
+      // Use the leader conservation level function to determine strategy (with trend awareness)
       const conservationDecision = leaderConservationLevel(
         leader,
         totalSustainableBoats,
         currentStock,
         MODEL_PARAMS.s_init,
+        previousStock,
       );
       const adjustedSustainableBoats = conservationDecision.adjustedSustainableBoats;
       const leaderStrategy = conservationDecision.strategy;
@@ -1413,6 +1426,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
       // Update for next round
       currentStock = Math.max(0, nextStock);
+      previousStock = currentStock; // Store for trend calculation in next round
     }
 
     setHistory(newHistory);
@@ -1569,15 +1583,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
           </div>
 
           {/* Strategy text for reference */}
-          <div
-            style={{
-              fontSize: 9,
-              color: strategyColors[strategy as keyof typeof strategyColors],
-              textTransform: "capitalize",
-            }}
-          >
-            {strategy}
-          </div>
+          
         </div>
       );
     }

@@ -1195,7 +1195,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
     base_quota: 0.2, // Base quota for least efficient
     efficiency_bonus: 0.1, // Additional quota per efficiency level
     cooperation_bonus: 0.05, // Bonus for community participation
-    minimum_income_guarantee: 0.3, // Minimum catch guarantee for all players
   };
 
   const applyRedistribution = (originalCatches: number[], leader: number) => {
@@ -1312,7 +1311,19 @@ const CommunityGovernanceSimulator: React.FC = () => {
           COMMUNITY_PARAMS.efficiency_bonus,
           COMMUNITY_PARAMS.base_quota,
         );
-        allChiefBoats = distributionResult.quotaWeights.map((weight) => adjustedSustainableBoats * weight);
+
+        allChiefBoats = distributionResult.quotaWeights.map((weight, jj) => {
+          // Calculate economically viable boats for this chief
+          const econBoats = calculateEfficientBoats(currentStock, MODEL_PARAMS.c_islands[jj]);
+
+          if (econBoats > adjustedSustainableBoats * weight) {
+            // If the economic boats exceed the adjusted sustainable level, use the quota weights
+            return adjustedSustainableBoats * weight;
+          } else {
+            // Otherwise, use the economic boats (more restrictive)
+            return econBoats;
+          }
+        });
       }
 
       const moanaBoats = allChiefBoats[0];
@@ -1708,7 +1719,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
   function EndSummary() {
     const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
     const allPrinciples = [...new Set(history.flatMap((h) => h.activeOstromPrinciples))];
-    
+
     // Calculate economic metrics
     const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
     const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);

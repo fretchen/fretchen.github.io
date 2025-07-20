@@ -1271,14 +1271,20 @@ const CommunityGovernanceSimulator: React.FC = () => {
     const principles = [];
 
     if (scenario === "democratic") {
-      principles.push("Clearly defined boundaries");
-      principles.push("Collective choice arrangements");
-      if (leader !== 0) principles.push("Graduated sanctions"); // When others lead
-      principles.push("Monitoring by community members");
-      principles.push("Conflict resolution mechanisms");
+      // Democratic governance implements most of Ostrom's principles
+      principles.push("1. Clearly defined boundaries");
+      principles.push("2. Collective choice arrangements");
+      principles.push("3. Community monitoring");
+      principles.push("4. Graduated sanctions");
+      principles.push("5. Conflict resolution mechanisms");
+      principles.push("7. Nested enterprises");
+      if (leader !== 0) principles.push("6. Recognition of rights to organize"); // When others lead, shows external respect
+      // Principle 8 (Local congruence) is inherently present as rules adapt to local conditions
     } else {
-      principles.push("Clearly defined boundaries");
-      if (leader === 0) principles.push("Monitoring by authorities"); // Moana-led monitoring
+      // Hierarchical governance implements fewer principles
+      principles.push("1. Clearly defined boundaries");
+      principles.push("8. Congruence with local conditions");
+      if (leader === 0) principles.push("3. Monitoring by authorities"); // Moana-led monitoring
     }
 
     return principles;
@@ -1562,15 +1568,15 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
           {/* Decision Icons Row */}
           <div style={{ display: "flex", justifyContent: "center", gap: "2px", fontSize: "10px", marginBottom: "2px" }}>
-            <span title={`Konservierung: ${strategy}`}>
+            <span title={`Conservation Strategy: ${strategy}`}>
               {conservationIcons[strategy as keyof typeof conservationIcons] || "❓"}
             </span>
-            <span title={`Verteilung: ${distributionMethod || "unbekannt"}`}>
+            <span title={`Distribution Method: ${distributionMethod || "unknown"}`}>
               {distributionMethod
                 ? distributionIcons[distributionMethod as keyof typeof distributionIcons] || "❓"
                 : "❓"}
             </span>
-            <span title={`Umverteilung: ${redistributionPolicy || "unbekannt"}`}>
+            <span title={`Redistribution Policy: ${redistributionPolicy || "unknown"}`}>
               {redistributionPolicy
                 ? redistributionIcons[redistributionPolicy as keyof typeof redistributionIcons] || "❓"
                 : "❓"}
@@ -1595,30 +1601,30 @@ const CommunityGovernanceSimulator: React.FC = () => {
             border: "1px solid #e2e8f0",
           }}
         >
-          <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leadership Decisions (3 Icons per Decision):</div>
+          <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leadership Decision Icons Guide:</div>
 
           {/* Conservation Strategy Icons */}
           <div style={{ marginBottom: "4px" }}>
-            <strong>Conservation:</strong>
-            <span style={{ marginLeft: "8px" }}>🛡️ conservative</span>
-            <span style={{ marginLeft: "8px" }}>⚖️ moderate</span>
-            <span style={{ marginLeft: "8px" }}>⚔️ aggressive</span>
+            <strong>Conservation Strategy:</strong>
+            <span style={{ marginLeft: "8px" }}>🛡️ conservative (protect stocks)</span>
+            <span style={{ marginLeft: "8px" }}>⚖️ moderate (balanced approach)</span>
+            <span style={{ marginLeft: "8px" }}>⚔️ aggressive (maximize current catch)</span>
           </div>
 
           {/* Distribution Method Icons */}
           <div style={{ marginBottom: "4px" }}>
-            <strong>Distribution:</strong>
-            <span style={{ marginLeft: "8px" }}>🟰 equal</span>
-            <span style={{ marginLeft: "8px" }}>🔄 hybrid</span>
-            <span style={{ marginLeft: "8px" }}>⚡ efficiency</span>
+            <strong>Distribution Method:</strong>
+            <span style={{ marginLeft: "8px" }}>🟰 equal (same quotas for all)</span>
+            <span style={{ marginLeft: "8px" }}>🔄 hybrid (balanced allocation)</span>
+            <span style={{ marginLeft: "8px" }}>📈 efficiency (quota based on capability)</span>
           </div>
 
           {/* Redistribution Policy Icons */}
           <div>
-            <strong>Redistribution:</strong>
-            <span style={{ marginLeft: "8px" }}>🔐 conservative</span>
-            <span style={{ marginLeft: "8px" }}>🔄 moderate</span>
-            <span style={{ marginLeft: "8px" }}>🔓 progressive</span>
+            <strong>Redistribution Policy:</strong>
+            <span style={{ marginLeft: "8px" }}>🔐 conservative (minimal sharing)</span>
+            <span style={{ marginLeft: "8px" }}>🔄 moderate (balanced redistribution)</span>
+            <span style={{ marginLeft: "8px" }}>🔓 progressive (significant wealth sharing)</span>
           </div>
         </div>
 
@@ -1914,7 +1920,13 @@ After months of failed cooperation and bureaucratic frustration, Moana realizes 
 7. **Nested enterprises** - Rules work at multiple levels—daily fishing decisions, seasonal planning, long-term stock management
 8. **Congruence with local conditions** - Rules match the unique conditions of their specific waters and communities
 
-**Moana's Experiment:** Experience how these institutional elements play out in practice. The simulation below shows how different governance structures implement varying numbers of these principles—and how that affects outcomes:
+**Moana's Leadership Challenge:** Real community leadership isn't about making one perfect decision—it's about balancing multiple competing concerns simultaneously. Watch how each rotating leader faces three interconnected choices that affect different aspects of community welfare:
+
+1. **Resource Conservation Strategy**: How aggressive should we be in protecting fish stocks for future generations?
+2. **Fair Distribution Method**: Should fishing quotas be allocated equally, based on efficiency, or through a balanced approach?
+3. **Community Redistribution Policy**: How much should successful fishers share with struggling islands to maintain social cohesion?
+
+Each decision activates different Ostrom principles and creates different community outcomes. Experience how these institutional elements play out in practice:
 
             `}</ReactMarkdown>
 
@@ -1922,21 +1934,28 @@ After months of failed cooperation and bureaucratic frustration, Moana realizes 
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-As you experienced in the simulation, community governance involves complex trade-offs between leadership styles, distribution methods, and redistribution policies. Each choice reflects different applications of **Ostrom's design principles** - the institutional arrangements that make self-governance work.
+**Understanding Multi-Dimensional Leadership:** The simulation demonstrates that effective community governance requires leaders to simultaneously balance:
+
+- **Sustainability vs. Immediate Needs**: Conservation strategies determine long-term resource health
+- **Equality vs. Efficiency**: Distribution methods affect fairness and economic optimization  
+- **Individual Success vs. Community Cohesion**: Redistribution policies maintain social stability
+
+**The Deeper Lesson:** Notice how the *process* of governance—who decides, how monitoring works, how conflicts are resolved—matters more than the specific fishing quotas chosen. Democratic rotation implements 6-7 of Ostrom's principles simultaneously, while hierarchical governance implements only 2-3.
 
 **What makes community solutions different?** Unlike markets that rely on prices or states that impose rules, communities create governance systems where the people affected by decisions are the ones making them. Moana's council demonstrates this: the chiefs who depend on the fish are the same people setting fishing limits and monitoring compliance.
 
 After months under their fishing council, Moana observes: *"We're not just following rules - we're continuously adapting them based on what we learn. When Chief Tala's aggressive fishing strategy depleted stocks, we didn't wait for outside authorities to intervene. We adjusted our redistribution policy immediately because we all felt the consequences."*
 
-**Ostrom's Design Principles at Work:**
+**Why Ostrom's Framework Works:**
 
-The simulation shows these principles in action:
-- **Clearly defined boundaries:** Everyone knows who participates and what resources are governed
-- **Collective choice arrangements:** The chiefs affected by fishing rules participate in making them
-- **Monitoring:** Community members observe each other's compliance voluntarily
-- **Graduated sanctions:** Consequences escalate fairly, building trust rather than resentment
+The simulation reveals the power of institutional design. When multiple principles work together, they create resilient governance:
 
-**Why community governance succeeds:** Ostrom discovered that sustainable commons aren't accidents - they're carefully designed institutions. The fishing council works because it combines local knowledge (chiefs understand their waters), adaptive management (rules change when conditions change), and aligned incentives (rule-makers are rule-followers).
+- **Boundaries + Collective Choice** → Everyone knows their role and has a voice
+- **Monitoring + Graduated Sanctions** → Trust builds through fair, transparent accountability  
+- **Conflict Resolution + Nested Enterprises** → Problems get solved at the right level quickly
+- **Local Congruence + Recognition Rights** → Rules fit reality and external support exists
+
+**Ostrom's Nobel Prize Discovery:** Sustainable commons aren't accidents—they're carefully designed institutions. The fishing council works because it combines local knowledge (chiefs understand their waters), adaptive management (rules change when conditions change), and aligned incentives (rule-makers are rule-followers).
 
 ## Personal Reflections: Why This Matters
 

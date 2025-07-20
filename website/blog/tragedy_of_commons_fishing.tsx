@@ -1892,11 +1892,9 @@ This sets the stage for Ostrom's breakthrough insight: communities can govern th
 
 Frustrated with both market inequality and government bureaucracy, Moana calls for a traditional "Fishing Council" meeting. "Our ancestors managed these waters for centuries without markets or bureaucrats," she reflects. "What if we can find our own way?"
 
-**The Community Approach:**
-- **Self-governance:** The four chiefs create their own rules together
-- **Peer monitoring:** Chiefs keep an eye on each other voluntarily
-- **Graduated sanctions:** Fair consequences that escalate only if needed
-- **Adaptive management:** Rules can change when conditions change
+The idea isn't new - **Elinor Ostrom's groundbreaking research** showed that communities worldwide have successfully managed shared resources for centuries. Her work identified key principles that make self-governance work, which Moana now hopes to apply to their fishing crisis.
+
+Moana's council must navigate three critical decisions: Who leads when? How should fishing quotas be distributed? Should successful fishers share with struggling islands? Experience their community governance experiment below - try both democratic rotation and hierarchical leadership to see how different approaches shape outcomes:
 
             `}</ReactMarkdown>
 
@@ -1904,25 +1902,29 @@ Frustrated with both market inequality and government bureaucracy, Moana calls f
 
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-**What makes community governance work?** Moana's experiment demonstrates Ostrom's key insight: **neither markets nor governments are necessary if communities can organize themselves effectively.** But this requires careful attention to institutional design.
+As you experienced in the simulation, community governance involves complex trade-offs between leadership styles, distribution methods, and redistribution policies. Each choice reflects different applications of **Ostrom's design principles** - the institutional arrangements that make self-governance work.
 
-**The Community Solution Trade-offs:**
+**What makes community solutions different?** Unlike markets that rely on prices or states that impose rules, communities create governance systems where the people affected by decisions are the ones making them. Moana's council demonstrates this: the chiefs who depend on the fish are the same people setting fishing limits and monitoring compliance.
 
-**✅ Advantages:**
-- **High legitimacy:** Rules created by those who must follow them
-- **Cultural fit:** Solutions match local values and knowledge
-- **Low costs:** No expensive enforcement infrastructure needed
-- **Flexibility:** Can adapt quickly to changing conditions
-- **Social cohesion:** Builds trust and cooperation within the community
+After months under their fishing council, Moana observes: *"We're not just following rules - we're continuously adapting them based on what we learn. When Chief Tala's aggressive fishing strategy depleted stocks, we didn't wait for outside authorities to intervene. We adjusted our redistribution policy immediately because we all felt the consequences."*
 
-**⚠️ Challenges:**
-- **Setup complexity:** Requires time and skill to design good institutions
-- **Scale limits:** Works best with small, tight-knit communities
-- **External threats:** Vulnerable to outside interference or competition
-- **Free-rider risk:** Success depends on widespread participation
-- **Conflict management:** Disputes can escalate without proper mechanisms
+**Ostrom's Design Principles at Work:**
 
-**Moana's reflection:** *"This feels right - we're solving our problem together, not having solutions imposed on us. But it requires all of us to really commit to making it work. And we need to be smart about how we design our rules, or it could fall apart like the free-for-all did."*
+The simulation shows these principles in action:
+- **Clearly defined boundaries:** Everyone knows who participates and what resources are governed
+- **Collective choice arrangements:** The chiefs affected by fishing rules participate in making them
+- **Monitoring:** Community members observe each other's compliance voluntarily
+- **Graduated sanctions:** Consequences escalate fairly, building trust rather than resentment
+
+**Why community governance succeeds:** Ostrom discovered that sustainable commons aren't accidents - they're carefully designed institutions. The fishing council works because it combines local knowledge (chiefs understand their waters), adaptive management (rules change when conditions change), and aligned incentives (rule-makers are rule-followers).
+
+## Three paths forward
+
+Moana's journey reveals that governing common resources isn't about choosing the "right" solution - markets, states, and communities each work under different conditions. The key is matching the governance approach to the specific context and scale.
+
+**Innovation as a commons:** This matters more than ever because knowledge itself is a commons. Every patent that expires, every academic paper published, every piece of code shared on GitHub adds to humanity's shared knowledge pool. Unlike fish in the ocean, knowledge grows when shared - but it still requires careful governance to thrive.
+
+Whether you're managing a research team, contributing to open source, or building a startup on existing innovations, you're navigating the same governance principles Moana discovered. The question is: how will you help grow the commons you depend on?
 
             `}</ReactMarkdown>
     </article>

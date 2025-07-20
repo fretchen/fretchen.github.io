@@ -1708,6 +1708,15 @@ const CommunityGovernanceSimulator: React.FC = () => {
   function EndSummary() {
     const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
     const allPrinciples = [...new Set(history.flatMap((h) => h.activeOstromPrinciples))];
+    
+    // Calculate economic metrics
+    const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
+    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+    const chiefsCostSums = otherChiefs.map((_, i) =>
+      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+    );
+    const totalCost = moanaCostSum + chiefsCostSums.reduce((sum, cost) => sum + cost, 0);
+    const avgCostPerFish = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
 
     return (
       <div style={{ textAlign: "center", margin: "18px 0" }}>
@@ -1723,6 +1732,15 @@ const CommunityGovernanceSimulator: React.FC = () => {
           <div style={{ fontSize: 15, marginBottom: 8 }}>
             🏛️ <strong>{scenario === "democratic" ? "Democratic Council" : "Moana-Led Governance"}</strong> Results
           </div>
+          <div style={{ fontSize: 14, marginBottom: 8 }}>
+            🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught {"·"} 💰{" "}
+            <strong>${avgCostPerFish.toFixed(2)}</strong> average cost per fish
+          </div>
+          {scenario === "democratic" && (
+            <div style={{ fontSize: 12, marginBottom: 8, color: "#10b981", fontStyle: "italic" }}>
+              ✨ Community Benefit: Lower costs through coordinated fishing
+            </div>
+          )}
           <div style={{ fontSize: 14, marginBottom: 8 }}>
             ↔️ Fish Redistributed: <strong>{totalRedistribution.toFixed(1)}🐟</strong>
           </div>

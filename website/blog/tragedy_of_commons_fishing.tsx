@@ -974,11 +974,11 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   function ScenarioSelector() {
     const scenarios = {
       sustainable: {
-        name: "⚖️ Equal Access Policy",
+        name: "🌍 Equal Responsibility Policy",
         description: "All islands fish at the same sustainable level regardless of their individual costs",
       },
       aggressive: {
-        name: "📈 Efficiency-Based Fishing",
+        name: "� Market-Driven Approach",
         description: "Each island fishes at their cost-optimal level (islands with lower costs fish more)",
       },
     };
@@ -1930,7 +1930,7 @@ The tragedy of the commons isn't just an abstract economic concept. It's the dai
 - **Monitoring:** How do we track contributions without destroying intrinsic motivation?
 - **Graduated sanctions:** How do we handle free-riders without creating surveillance culture?
 
-Writing this has convinced me that there is a lot to learn in the context of of innovation management. It depends less on perfecting market mechanisms and more on learning to govern knowledge commons well. TBC.
+Writing this has convinced me that there is a lot to learn in the context of innovation management. It depends less on perfecting market mechanisms and more on learning to govern knowledge commons well. TBC.
 
             `}</ReactMarkdown>
     </article>

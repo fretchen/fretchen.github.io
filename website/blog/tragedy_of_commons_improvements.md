@@ -110,21 +110,18 @@ Nach diesem Spiel verstehen Sie:
 - **Tooltips für mathematische Parameter**
 - **"Warum ist das passiert?"-Erklärungen** nach Spielrunden
 
-#### **ITQ-Simulator hinzufügen:**
-```typescript
-// Neue Komponente: MarketBasedGovernanceSimulator
-interface ITQSimulatorProps {
-  initialQuotas: number[];
-  tradingEnabled: boolean;
-  marketPrice: number;
-}
-```
+#### **Community-Simulator-Verbesserungen:**
+**Priorität: Schneller Übergang zum Community-Governance-Spiel**
 
-**Features des ITQ-Simulators:**
-- Vierte interaktive Komponente für Marktmechanismen
-- Zeigt Quota-Handel zwischen Chiefs
-- Demonstriert Effizienz vs. Equity Trade-offs
-- Visualisiert Preisbildung und Marktkonzentration
+**Vereinfachte Erklärung der ITQs:**
+- **Kurze Textbox statt interaktiver Simulator**
+- **Fokus auf konzeptionelle Probleme:** Ungleichheit, Marktversagen
+- **Schneller Übergang:** "Aber gibt es einen dritten Weg?"
+
+**Community-Simulator als Hauptfokus:**
+- **Ostrom's 8 Prinzipien visuell hervorheben**
+- **Klare Unterschiede zwischen demokratischer und hierarchischer Governance**
+- **Emotionale Momente:** Moanas Entscheidungen und ihre Auswirkungen
 
 ### **4. Wissenschaftliche Vertiefung**
 
@@ -178,7 +175,8 @@ const achievements = {
 
 ### **7. Strukturelle Reorganisation**
 
-#### **Modularer Aufbau:**
+#### **Modularer Aufbau - Fokus auf Community Governance:**
+
 ```markdown
 1. **Einführung: Das Dilemma verstehen**
    - Aktuelles erstes Spiel
@@ -190,20 +188,21 @@ const achievements = {
    - Kosten-Nutzen-Analyse
    - Reale Beispiele von Fischereiregulierung
 
-3. **Lösung 2: Marktmechanismen**
-   - Neuer ITQ-Simulator
-   - Demonstration von Quota-Handel
-   - Equity vs. Efficiency Trade-offs
+3. **Lösung 2: Marktmechanismen (Kurze Erklärung)**
+   - **KEIN eigener Simulator - nur konzeptionelle Erklärung**
+   - ITQs als Textbox mit Pro/Contra
+   - Schneller Übergang: "Aber es gibt einen dritten Weg..."
 
-4. **Lösung 3: Community Governance**
-   - Verbessertes drittes Spiel
-   - Explizite Darstellung der Ostrom-Prinzipien
-   - Verschiedene Governance-Modelle
+4. **Lösung 3: Community Governance (Hauptfokus)**
+   - **Erweiterten dritten Simulator als Kern des Blogposts**
+   - Detaillierte Darstellung der Ostrom-Prinzipien
+   - Moanas emotionale Reise zur Community-Führung
+   - Verschiedene demokratische vs. hierarchische Modelle
 
-5. **Synthesis: Wann funktioniert was?**
-   - Neue Vergleichssektion
-   - Decision Tree für verschiedene Kontexte
-   - Framework für reale Anwendungen
+5. **Synthesis: Warum Community Governance funktioniert**
+   - Fokus auf die Erfolge des Community-Simulators
+   - Reale Beispiele erfolgreicher Commons-Governance
+   - Framework für eigene Community-Anwendungen
 ```
 
 #### **Reflexions- und Transfersektion:**
@@ -239,15 +238,11 @@ const achievements = {
 2. **Ostrom-Prinzipien explizit machen** (1 Woche)
 3. **Reflexionsfragen hinzufügen** (2-3 Tage)
 
-### **Phase 3: Neue Features (Langfristig)**
-1. **ITQ-Simulator entwickeln** (2-3 Wochen)
-2. **Gamification-Elemente** (1-2 Wochen)
-3. **Reale Fallstudien integrieren** (1 Woche)
+### **Phase 3: Community-Fokus (Priorität)**
 
-### **Phase 4: Advanced Features (Optional)**
-1. **Analytics und A/B Testing** (2-4 Wochen)
-2. **Advanced Math Features** (1-2 Wochen)
-3. **Mobile App Version** (4-6 Wochen)
+1. **Community-Simulator erweitern** (1-2 Wochen)
+2. **Ostrom-Prinzipien visuell implementieren** (3-5 Tage)
+3. **Reale Fallstudien zu Community-Governance** (1 Woche)
 
 ---
 
@@ -263,29 +258,33 @@ const achievements = {
 - **Tieferes Lernen** durch Ostrom-Integration
 - **Praktische Anwendbarkeit** durch Reflexionsfragen
 
-### **Langfristige Verbesserungen:**
-- **Vollständige Abdeckung** aller Governance-Ansätze
-- **Hohe Viralität** durch Gamification
-- **Wissenschaftliche Anerkennung** als Lehrmittel
+### **Langfristige Verbesserungen - Community-Fokus:**
+
+- **Tiefe Community-Governance-Expertise** durch erweiterten Simulator
+- **Praktische Anwendbarkeit** von Ostrom's Prinzipien
+- **Wissenschaftliche Anerkennung** als führendes Commons-Governance-Tool
 
 ---
 
-## 💡 **Zusätzliche Ideen für die Zukunft**
+## 💡 **Zusätzliche Ideen für Community-Governance-Fokus**
 
 ### **Community Features:**
-- **Multiplayer-Modus**: Echte Menschen spielen gegeneinander
-- **Discussion Forums**: Community diskutiert Strategien
-- **User-Generated Content**: Nutzer erstellen eigene Szenarien
+
+- **Community-Governance-Foren**: Nutzer diskutieren reale Commons-Probleme
+- **Success Stories Sammlung**: Benutzer teilen eigene Community-Governance-Erfahrungen
+- **Ostrom-Prinzipien-Checkliste**: Tool zur Selbstbewertung von Communities
 
 ### **Educational Integration:**
-- **Lehrer-Dashboard**: Tools für Klassenraum-Nutzung
-- **Assessment Tools**: Automatische Bewertung des Lernfortschritts
-- **Curriculum Integration**: Anpassung an verschiedene Bildungssysteme
+
+- **Lehrer-Dashboard**: Fokus auf Commons-Governance-Unterricht
+- **Community-Assessment**: Bewertung des Verständnisses von Ostrom's Prinzipien
+- **Praxis-Integration**: Verbindung zu realen Community-Projekten
 
 ### **Research Applications:**
-- **Data Collection**: Anonyme Nutzerdaten für Forschung
-- **Behavior Analysis**: Wie Menschen in Commons-Dilemmata entscheiden
-- **Policy Testing**: Neue Governance-Modelle simulieren
+
+- **Commons-Governance-Forschung**: Wie Menschen Community-Lösungen präferieren
+- **Ostrom-Prinzipien-Analyse**: Welche Prinzipien werden als wichtigster empfunden
+- **Community-Success-Faktoren**: Was macht Community-Governance erfolgreich
 
 ---
 

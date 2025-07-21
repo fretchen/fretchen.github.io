@@ -4,20 +4,6 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { css } from "../styled-system/css";
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
 // Types für Moana's Choice Game - Updated to boats-based system
 
 const otherChiefs = ["Chief Kai", "Chief Tala", "Chief Sina"];
@@ -479,17 +465,19 @@ const FishingGameSimulator: React.FC = () => {
 
     return (
       <div
-        style={{
-          marginBottom: 20,
+        className={css({
+          marginBottom: "20px",
           textAlign: "center",
           border: "1px solid #e5e7eb",
-          borderRadius: 8,
-          padding: 16,
+          borderRadius: "8px",
+          padding: "16px",
           background: "#fafafa",
-        }}
+        })}
       >
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🌏 Neighboring Islands Culture</div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+          🌏 Neighboring Islands Culture
+        </div>
+        <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
           {Object.entries(scenarios).map(([key, info]) => {
             const isSelected = scenario === key;
             const isDisabled = gameStarted;
@@ -573,16 +561,16 @@ const FishingGameSimulator: React.FC = () => {
 
     return (
       <div
-        style={{
+        className={css({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 12,
-          marginBottom: 16,
-        }}
+          gap: "12px",
+          marginBottom: "16px",
+        })}
       >
         {/* Progress Indicator */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <div className={css({ display: "flex", gap: "8px", marginBottom: "8px" })}>
           {[1, 2, 3].map((roundNum) => (
             <div
               key={roundNum}
@@ -863,7 +851,15 @@ const FishingGameSimulator: React.FC = () => {
   }
 
   return (
-    <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
+    <div
+      className={css({
+        border: "1px solid #bae6fd",
+        borderRadius: "8px",
+        padding: "18px",
+        margin: "18px 0",
+        background: "#f8fafc",
+      })}
+    >
       <ScenarioSelector />
       <ActionBar />
       <ResultsTable />
@@ -985,17 +981,19 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
     return (
       <div
-        style={{
-          marginBottom: 20,
+        className={css({
+          marginBottom: "20px",
           textAlign: "center",
           border: "1px solid #e5e7eb",
-          borderRadius: 8,
-          padding: 16,
+          borderRadius: "8px",
+          padding: "16px",
           background: "#fafafa",
-        }}
+        })}
       >
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🌏 Fishing Management System</div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+          🌏 Fishing Management System
+        </div>
+        <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
           {Object.entries(scenarios).map(([key, info]) => {
             const isSelected = scenario === key;
 
@@ -1183,7 +1181,15 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
   }
 
   return (
-    <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
+    <div
+      className={css({
+        border: "1px solid #bae6fd",
+        borderRadius: "8px",
+        padding: "18px",
+        margin: "18px 0",
+        background: "#f8fafc",
+      })}
+    >
       <ScenarioSelector />
       <ResultsTable />
       <EndSummary />
@@ -1454,17 +1460,19 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
     return (
       <div
-        style={{
-          marginBottom: 20,
+        className={css({
+          marginBottom: "20px",
           textAlign: "center",
           border: "1px solid #e5e7eb",
-          borderRadius: 8,
-          padding: 16,
+          borderRadius: "8px",
+          padding: "16px",
           background: "#fafafa",
-        }}
+        })}
       >
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>🏛️ Community Governance System</div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+          🏛️ Community Governance System
+        </div>
+        <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
           {Object.entries(scenarios).map(([key, info]) => {
             const isSelected = scenario === key;
 
@@ -1800,7 +1808,15 @@ const CommunityGovernanceSimulator: React.FC = () => {
   }
 
   return (
-    <div style={{ border: "1px solid #bae6fd", borderRadius: 8, padding: 18, margin: "18px 0", background: "#f8fafc" }}>
+    <div
+      className={css({
+        border: "1px solid #bae6fd",
+        borderRadius: "8px",
+        padding: "18px",
+        margin: "18px 0",
+        background: "#f8fafc",
+      })}
+    >
       <ScenarioSelector />
       <ResultsTable />
       <EndSummary />

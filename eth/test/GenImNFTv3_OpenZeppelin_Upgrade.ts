@@ -8,48 +8,49 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
   // Fixture to deploy initial GenImNFTv2 proxy using OpenZeppelin
   async function deployGenImNFTv2Fixture() {
     const [owner, otherAccount] = await hre.viem.getWalletClients();
-    
+
     // Deploy GenImNFTv2 using OpenZeppelin upgrades plugin
     const GenImNFTv2Factory = await hre.ethers.getContractFactory("GenImNFTv2");
     const proxy = await hre.upgrades.deployProxy(GenImNFTv2Factory, [], {
       initializer: "initialize",
-      kind: "uups"
+      kind: "uups",
     });
     await proxy.waitForDeployment();
-    
+
     const proxyAddress = await proxy.getAddress();
-    
+
     // Get viem contract instance for easier testing
     const genImNFTv2 = await hre.viem.getContractAt("GenImNFTv2", proxyAddress);
     const mintPrice = await genImNFTv2.read.mintPrice();
-    
+
     return {
       genImNFTv2,
       proxy,
       owner,
       otherAccount,
       mintPrice,
-      proxyAddress
+      proxyAddress,
     };
   }
 
   // Fixture to deploy V2 and upgrade to V3 using OpenZeppelin
   async function deployAndUpgradeToV3Fixture() {
-    const { genImNFTv2, proxy, owner, otherAccount, mintPrice, proxyAddress } = await loadFixture(deployGenImNFTv2Fixture);
-    
+    const { genImNFTv2, proxy, owner, otherAccount, mintPrice, proxyAddress } =
+      await loadFixture(deployGenImNFTv2Fixture);
+
     // Mint some tokens before upgrade
     await genImNFTv2.write.safeMint(["ipfs://token1"], { value: mintPrice, account: otherAccount.account });
     await genImNFTv2.write.safeMint(["ipfs://token2"], { value: mintPrice, account: otherAccount.account });
-    
+
     // Upgrade to V3 using OpenZeppelin upgrades plugin
     const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
     const upgradedProxy = await hre.upgrades.upgradeProxy(proxy, GenImNFTv3Factory, {
-      call: { fn: "reinitializeV3", args: [] }
+      call: { fn: "reinitializeV3", args: [] },
     });
-    
+
     // Get viem contract instance with V3 ABI
     const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
-    
+
     return {
       genImNFTv2,
       genImNFTv3,
@@ -57,7 +58,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       owner,
       otherAccount,
       mintPrice,
-      proxyAddress
+      proxyAddress,
     };
   }
 
@@ -75,7 +76,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       const { genImNFTv2, otherAccount, mintPrice } = await loadFixture(deployGenImNFTv2Fixture);
 
       await genImNFTv2.write.safeMint(["ipfs://test"], { value: mintPrice, account: otherAccount.account });
-      
+
       expect(await genImNFTv2.read.totalSupply()).to.equal(1n);
       expect(await genImNFTv2.read.ownerOf([0n])).to.equal(getAddress(otherAccount.account.address));
       expect(await genImNFTv2.read.tokenURI([0n])).to.equal("ipfs://test");
@@ -88,7 +89,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Verify proxy address is the same
       expect(genImNFTv3.address).to.equal(proxyAddress);
-      
+
       // Verify existing tokens are preserved
       expect(await genImNFTv3.read.totalSupply()).to.equal(2n);
       expect(await genImNFTv3.read.ownerOf([0n])).to.equal(getAddress(otherAccount.account.address));
@@ -110,7 +111,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // V2 function should still work and default to listed=true
       await genImNFTv3.write.safeMint(["ipfs://v2-style"], { value: mintPrice, account: otherAccount.account });
-      
+
       const newTokenId = 2n;
       expect(await genImNFTv3.read.ownerOf([newTokenId])).to.equal(getAddress(otherAccount.account.address));
       expect(await genImNFTv3.read.tokenURI([newTokenId])).to.equal("ipfs://v2-style");
@@ -121,8 +122,11 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       const { genImNFTv3, otherAccount, mintPrice } = await loadFixture(deployAndUpgradeToV3Fixture);
 
       // Test new V3 function with explicit listing parameter
-      await genImNFTv3.write.safeMint(["ipfs://private-token", false], { value: mintPrice, account: otherAccount.account });
-      
+      await genImNFTv3.write.safeMint(["ipfs://private-token", false], {
+        value: mintPrice,
+        account: otherAccount.account,
+      });
+
       const privateTokenId = 2n;
       expect(await genImNFTv3.read.ownerOf([privateTokenId])).to.equal(getAddress(otherAccount.account.address));
       expect(await genImNFTv3.read.tokenURI([privateTokenId])).to.equal("ipfs://private-token");
@@ -138,13 +142,13 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Batch update to make them private
       await genImNFTv3.write.setMultipleTokensListed([[0n, 1n], false], { account: otherAccount.account });
-      
+
       expect(await genImNFTv3.read.isTokenListed([0n])).to.be.false;
       expect(await genImNFTv3.read.isTokenListed([1n])).to.be.false;
 
       // Batch update to make them public again
       await genImNFTv3.write.setMultipleTokensListed([[0n, 1n], true], { account: otherAccount.account });
-      
+
       expect(await genImNFTv3.read.isTokenListed([0n])).to.be.true;
       expect(await genImNFTv3.read.isTokenListed([1n])).to.be.true;
     });
@@ -154,13 +158,13 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Add a private token using V3 safeMint
       await genImNFTv3.write.safeMint(["ipfs://private", false], { value: mintPrice, account: otherAccount.account });
-      
+
       // Make token 1 private
       await genImNFTv3.write.setTokenListed([1n, false], { account: otherAccount.account });
 
       // Get public tokens (should only include token 0)
       const publicTokens = await genImNFTv3.read.getPublicTokensOfOwner([getAddress(otherAccount.account.address)]);
-      
+
       expect(publicTokens).to.have.lengthOf(1);
       expect(publicTokens[0]).to.equal(0n);
     });
@@ -174,30 +178,34 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Get implementation before upgrade
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
       const publicClient = await hre.viem.getPublicClient();
-      
+
       const implBefore = await publicClient.getStorageAt({
         address: proxyAddress as `0x${string}`,
-        slot: implementationSlot as `0x${string}`
+        slot: implementationSlot as `0x${string}`,
       });
-      
+
       // Perform upgrade
       const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
-      const upgradedProxy = await hre.upgrades.upgradeProxy(await hre.ethers.getContractAt("GenImNFTv2", proxyAddress), GenImNFTv3Factory, {
-        call: { fn: "reinitializeV3", args: [] }
-      });
-      
+      const upgradedProxy = await hre.upgrades.upgradeProxy(
+        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress),
+        GenImNFTv3Factory,
+        {
+          call: { fn: "reinitializeV3", args: [] },
+        },
+      );
+
       // Get implementation after upgrade
       const implAfter = await publicClient.getStorageAt({
         address: proxyAddress as `0x${string}`,
-        slot: implementationSlot as `0x${string}`
+        slot: implementationSlot as `0x${string}`,
       });
-      
+
       console.log("Implementation before upgrade:", `0x${implBefore!.slice(-40)}`);
       console.log("Implementation after upgrade:", `0x${implAfter!.slice(-40)}`);
-      
+
       // Verify implementation changed
       expect(implBefore).to.not.equal(implAfter);
-      
+
       // Verify V3 functionality works - test with the token we minted before upgrade
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
       const isListed = await genImNFTv3.read.isTokenListed([0n]); // Token 0 exists and should be listed after upgrade
@@ -212,10 +220,11 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Upgrade without any tokens
       const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
       const upgradedProxy = await hre.upgrades.upgradeProxy(
-        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress), 
-        GenImNFTv3Factory, {
-          call: { fn: "reinitializeV3", args: [] }
-        }
+        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress),
+        GenImNFTv3Factory,
+        {
+          call: { fn: "reinitializeV3", args: [] },
+        },
       );
 
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
@@ -234,17 +243,18 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Upgrade to v3
       const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
       const upgradedProxy = await hre.upgrades.upgradeProxy(
-        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress), 
-        GenImNFTv3Factory, {
-          call: { fn: "reinitializeV3", args: [] }
-        }
+        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress),
+        GenImNFTv3Factory,
+        {
+          call: { fn: "reinitializeV3", args: [] },
+        },
       );
 
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
 
       // Verify all tokens are preserved and listed
       expect(await genImNFTv3.read.totalSupply()).to.equal(BigInt(numTokens));
-      
+
       for (let i = 0; i < numTokens; i++) {
         expect(await genImNFTv3.read.ownerOf([BigInt(i)])).to.equal(getAddress(otherAccount.account.address));
         expect(await genImNFTv3.read.isTokenListed([BigInt(i)])).to.be.true;
@@ -265,10 +275,11 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Upgrade to v3
       const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
       const upgradedProxy = await hre.upgrades.upgradeProxy(
-        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress), 
-        GenImNFTv3Factory, {
-          call: { fn: "reinitializeV3", args: [] }
-        }
+        await hre.ethers.getContractAt("GenImNFTv2", proxyAddress),
+        GenImNFTv3Factory,
+        {
+          call: { fn: "reinitializeV3", args: [] },
+        },
       );
 
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
@@ -285,11 +296,13 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Test public token filtering per owner
       const ownerPublicTokens = await genImNFTv3.read.getPublicTokensOfOwner([getAddress(owner.account.address)]);
-      const otherPublicTokens = await genImNFTv3.read.getPublicTokensOfOwner([getAddress(otherAccount.account.address)]);
+      const otherPublicTokens = await genImNFTv3.read.getPublicTokensOfOwner([
+        getAddress(otherAccount.account.address),
+      ]);
 
       expect(ownerPublicTokens).to.have.lengthOf(1);
       expect(ownerPublicTokens[0]).to.equal(0n);
-      
+
       expect(otherPublicTokens).to.have.lengthOf(2);
       expect(otherPublicTokens).to.include(1n);
       expect(otherPublicTokens).to.include(2n);
@@ -307,13 +320,13 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Use the actual upgrade script in validation mode
       const result = await upgradeToV3({
         proxyAddress,
-        validateOnly: true
+        validateOnly: true,
       });
 
       // Verify validation results
       expect(result.validated).to.be.true;
       expect(result.upgraded).to.be.false;
-      
+
       // Contract should still be V2 after validation-only
       expect(await genImNFTv2.read.totalSupply()).to.equal(2n);
     });
@@ -328,14 +341,14 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Test dry run mode
       const result = await upgradeToV3({
         proxyAddress,
-        dryRun: true
+        dryRun: true,
       });
 
       // Verify dry run results
       expect(result.validated).to.be.true;
       expect(result.upgraded).to.be.false;
       expect(result.dryRun).to.be.true;
-      
+
       // Contract should still be V2 after dry run
       expect(await genImNFTv2.read.totalSupply()).to.equal(2n);
       expect(await genImNFTv2.read.name()).to.equal("GenImNFTv2");
@@ -357,7 +370,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       const result = await upgradeToV3({
         proxyAddress,
         validateOnly: false,
-        dryRun: false
+        dryRun: false,
       });
 
       // Verify upgrade completion
@@ -369,7 +382,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Verify the contract is now V3
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
-      
+
       // Basic properties should be preserved
       expect(await genImNFTv3.read.totalSupply()).to.equal(preUpgradeSupply);
       expect(await genImNFTv3.read.owner()).to.equal(preUpgradeOwner);
@@ -387,9 +400,9 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       expect(publicTokens).to.have.lengthOf(Number(preUpgradeSupply));
 
       // Test new V3 minting with private option
-      await genImNFTv3.write.safeMint(["ipfs://post-upgrade-private", false], { 
-        value: mintPrice, 
-        account: otherAccount.account 
+      await genImNFTv3.write.safeMint(["ipfs://post-upgrade-private", false], {
+        value: mintPrice,
+        account: otherAccount.account,
       });
 
       const newTokenId = preUpgradeSupply;
@@ -404,7 +417,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       const result = await upgradeToV3({
         proxyAddress,
         validateOnly: false,
-        dryRun: false
+        dryRun: false,
       });
 
       expect(result.validated).to.be.true;
@@ -424,7 +437,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       try {
         await upgradeToV3({
           proxyAddress: invalidAddress,
-          validateOnly: true
+          validateOnly: true,
         });
         expect.fail("Should have thrown an error for invalid proxy");
       } catch (error) {
@@ -437,7 +450,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Setup with multiple tokens from different accounts
       const [owner] = await hre.viem.getWalletClients();
-      
+
       await genImNFTv2.write.safeMint(["ipfs://owner-token"], { value: mintPrice, account: owner.account });
       await genImNFTv2.write.safeMint(["ipfs://user-token1"], { value: mintPrice, account: otherAccount.account });
       await genImNFTv2.write.safeMint(["ipfs://user-token2"], { value: mintPrice, account: otherAccount.account });
@@ -446,7 +459,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       const result = await upgradeToV3({
         proxyAddress,
         validateOnly: false,
-        dryRun: false
+        dryRun: false,
       });
 
       // Comprehensive verification
@@ -459,13 +472,13 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
       // Verify the upgrade maintained all data integrity
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
-      
+
       // Check all tokens are preserved and properly listed
       expect(await genImNFTv3.read.totalSupply()).to.equal(3n);
       expect(await genImNFTv3.read.ownerOf([0n])).to.equal(getAddress(owner.account.address));
       expect(await genImNFTv3.read.ownerOf([1n])).to.equal(getAddress(otherAccount.account.address));
       expect(await genImNFTv3.read.ownerOf([2n])).to.equal(getAddress(otherAccount.account.address));
-      
+
       // All tokens should be listed after upgrade
       expect(await genImNFTv3.read.isTokenListed([0n])).to.be.true;
       expect(await genImNFTv3.read.isTokenListed([1n])).to.be.true;
@@ -474,7 +487,7 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
       // Verify public token filtering works correctly
       const ownerPublicTokens = await genImNFTv3.read.getPublicTokensOfOwner([getAddress(owner.account.address)]);
       const userPublicTokens = await genImNFTv3.read.getPublicTokensOfOwner([getAddress(otherAccount.account.address)]);
-      
+
       expect(ownerPublicTokens).to.have.lengthOf(1);
       expect(userPublicTokens).to.have.lengthOf(2);
     });
@@ -483,78 +496,78 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
   describe("Direct Upgrade Script Integration", function () {
     it("Should successfully upgrade using the upgrade-to-v3 script", async function () {
       const { genImNFTv2, owner, otherAccount, mintPrice, proxyAddress } = await loadFixture(deployGenImNFTv2Fixture);
-      
+
       // Mint some tokens before upgrade to test preservation
       await genImNFTv2.write.safeMint(["ipfs://token1"], { value: mintPrice, account: otherAccount.account });
       await genImNFTv2.write.safeMint(["ipfs://token2"], { value: mintPrice, account: otherAccount.account });
       await genImNFTv2.write.safeMint(["ipfs://token3"], { value: mintPrice, account: owner.account });
-      
+
       const preUpgradeSupply = await genImNFTv2.read.totalSupply();
       const preUpgradeOwner = await genImNFTv2.read.owner();
-      
+
       // Use the actual upgrade script
       const result = await upgradeToV3({
         proxyAddress: proxyAddress,
         validateOnly: false,
-        dryRun: false
+        dryRun: false,
       });
-      
+
       // Verify script returned success
       expect(result.validated).to.be.true;
       expect(result.upgraded).to.be.true;
       expect(result.proxyAddress).to.equal(proxyAddress);
-      
+
       // Get V3 contract instance after upgrade
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
-      
+
       // Verify basic properties preserved
       const postUpgradeSupply = await genImNFTv3.read.totalSupply();
       const postUpgradeOwner = await genImNFTv3.read.owner();
-      
+
       expect(postUpgradeSupply).to.equal(preUpgradeSupply);
       expect(getAddress(postUpgradeOwner)).to.equal(getAddress(preUpgradeOwner));
-      
+
       // Verify existing tokens are marked as listed (V3 functionality)
       for (let i = 0; i < Number(postUpgradeSupply); i++) {
         const isListed = await genImNFTv3.read.isTokenListed([BigInt(i)]);
         expect(isListed).to.be.true;
       }
-      
+
       // Test new V3 functions work
       const publicTokensOwner = await genImNFTv3.read.getPublicTokensOfOwner([owner.account.address]);
       const publicTokensOther = await genImNFTv3.read.getPublicTokensOfOwner([otherAccount.account.address]);
-      
+
       expect(publicTokensOwner.length).to.equal(1); // owner has 1 token
       expect(publicTokensOther.length).to.equal(2); // otherAccount has 2 tokens
-      
+
       // Test that new tokens can be minted with listing status
-      await genImNFTv3.write.safeMint(["ipfs://token4", true], { 
-        value: mintPrice, 
-        account: owner.account 
+      await genImNFTv3.write.safeMint(["ipfs://token4", true], {
+        value: mintPrice,
+        account: owner.account,
       });
-      
-      const newTokenId = await genImNFTv3.read.totalSupply() - 1n;
+
+      const newTokenId = (await genImNFTv3.read.totalSupply()) - 1n;
       const isNewTokenListed = await genImNFTv3.read.isTokenListed([newTokenId]);
       expect(isNewTokenListed).to.be.true;
     });
 
     it("Should validate upgrade without performing it when validateOnly is true", async function () {
       const { proxyAddress } = await loadFixture(deployGenImNFTv2Fixture);
-      
+
       const result = await upgradeToV3({
         proxyAddress: proxyAddress,
-        validateOnly: true
+        validateOnly: true,
       });
-      
+
       expect(result.validated).to.be.true;
       expect(result.upgraded).to.be.false;
-      
+
       // Contract should still be V2
       const genImNFTv2 = await hre.viem.getContractAt("GenImNFTv2", proxyAddress);
-      
+
       // This should work (V2 function)
       await expect(genImNFTv2.read.totalSupply()).to.not.be.rejected;
-      
+
       // This should fail (V3 function doesn't exist yet)
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
       await expect(genImNFTv3.read.isTokenListed([0n])).to.be.rejected;
@@ -562,20 +575,20 @@ describe("GenImNFTv3 OpenZeppelin Upgrades Plugin", function () {
 
     it("Should perform dry run without actual upgrade when dryRun is true", async function () {
       const { proxyAddress } = await loadFixture(deployGenImNFTv2Fixture);
-      
+
       const result = await upgradeToV3({
         proxyAddress: proxyAddress,
-        dryRun: true
+        dryRun: true,
       });
-      
+
       expect(result.validated).to.be.true;
       expect(result.upgraded).to.be.false;
       expect(result.dryRun).to.be.true;
-      
+
       // Contract should still be V2
       const genImNFTv2 = await hre.viem.getContractAt("GenImNFTv2", proxyAddress);
       await expect(genImNFTv2.read.totalSupply()).to.not.be.rejected;
-      
+
       // V3 functions should not be available
       const genImNFTv3 = await hre.viem.getContractAt("GenImNFTv3", proxyAddress);
       await expect(genImNFTv3.read.isTokenListed([0n])).to.be.rejected;

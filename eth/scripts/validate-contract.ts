@@ -1,8 +1,8 @@
 // Contract Validation Script for Deployed Smart Contracts
-// 
+//
 // Purpose: Validates the current state and functionality of deployed smart contracts
 // to ensure they are working correctly and are ready for upgrades or operations.
-// 
+//
 // This script performs comprehensive validation including:
 // - Contract state verification (name, symbol, total supply, etc.)
 // - Functionality testing (calling key contract methods)
@@ -10,13 +10,13 @@
 // - Implementation contract validation
 // - Upgrade readiness assessment
 // - Owner/permission verification
-// 
+//
 // Supports:
 // - GenImNFT (all versions)
 // - CollectorNFT
 // - Both proxy and implementation contracts
 // - Cross-validation of related contracts
-// 
+//
 // Usage:
 // npx hardhat run scripts/validate-contract.ts --network sepolia
 // or with deployment file (recommended):
@@ -30,7 +30,7 @@
 // - Gas price and account balance checks
 // - Detailed reporting and summaries
 //t validation script for GenImNFTv2 and CollectorNFT
-// 
+//
 // Usage:
 // npx hardhat run scripts/validate-contract-new.ts --network sepolia
 // or with deployment file:
@@ -99,12 +99,12 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
     const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
     const implementationAddress = await ethers.provider.getStorage(proxyAddress, implementationSlot);
     const implementation = ethers.getAddress("0x" + implementationAddress.slice(-40));
-    
+
     console.log(`🔧 Implementation: ${implementation}`);
 
     // Test basic functionality
     console.log("\n🧪 Testing basic functionality...");
-    
+
     try {
       await contract.isImageUpdated(0);
       console.log("✅ isImageUpdated function works");
@@ -150,9 +150,8 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
       owner,
       mintPrice: ethers.formatEther(mintPrice),
       totalSupply: totalSupply.toString(),
-      implementation
+      implementation,
     };
-
   } catch (error: any) {
     console.error("❌ Contract validation failed:", error.message || error);
     throw error;
@@ -184,12 +183,12 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
     const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
     const implementationAddress = await ethers.provider.getStorage(proxyAddress, implementationSlot);
     const implementation = ethers.getAddress("0x" + implementationAddress.slice(-40));
-    
+
     console.log(`🔧 Implementation: ${implementation}`);
 
     // Test basic functionality
     console.log("\n🧪 Testing basic functionality...");
-    
+
     // Test if contract can check minting permissions
     try {
       const [signer] = await ethers.getSigners();
@@ -223,9 +222,8 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
       genImNFTContract,
       baseMintPrice: ethers.formatEther(baseMintPrice),
       totalSupply: totalSupply.toString(),
-      implementation
+      implementation,
     };
-
   } catch (error: any) {
     console.error("❌ CollectorNFT validation failed:", error.message || error);
     throw error;
@@ -242,22 +240,20 @@ async function validateImplementation(implementationAddress: string, contractNam
     if (code === "0x") {
       throw new Error(`No contract code found at implementation address: ${implementationAddress}`);
     }
-    
+
     console.log(`✅ Implementation contract code exists (${code.length} bytes)`);
-    
+
     // Try to get contract instance (this will fail if ABI doesn't match)
     try {
       const contract = await ethers.getContractAt(contractName, implementationAddress);
       console.log(`✅ Contract ABI matches implementation`);
-      
+
       // For implementation contracts, we can't call initialize functions
       // but we can check if the contract has the expected structure
       console.log(`✅ ${contractName} implementation validation passed`);
-      
     } catch (error: any) {
       console.log(`⚠️  Could not attach contract ABI to implementation:`, error.message || error);
     }
-    
   } catch (error: any) {
     console.error(`❌ Implementation validation failed:`, error.message || error);
     throw error;
@@ -269,17 +265,17 @@ async function checkUpgradeReadiness(proxyAddress: string, contractType: string 
   console.log("=".repeat(30));
 
   const [signer] = await ethers.getSigners();
-  
+
   try {
     const contract = await ethers.getContractAt(contractType, proxyAddress);
-    
+
     // Check if signer has upgrade permissions
     const signerAddress = await signer.getAddress();
-    
+
     if (contractType === "GenImNFTv2") {
       // Check if signer is the owner
       const owner = await contract.owner();
-      
+
       if (owner.toLowerCase() === signerAddress.toLowerCase()) {
         console.log("✅ Current signer is the contract owner");
       } else {
@@ -312,7 +308,6 @@ async function checkUpgradeReadiness(proxyAddress: string, contractType: string 
     }
 
     console.log(`✅ ${contractType} is ready for upgrade`);
-
   } catch (error: any) {
     console.error("❌ Upgrade readiness check failed:", error.message || error);
   }
@@ -323,15 +318,15 @@ async function loadDeploymentFile(filePath: string): Promise<DeploymentData | nu
     if (!fs.existsSync(filePath)) {
       return null;
     }
-    
+
     const fileContent = fs.readFileSync(filePath, "utf8");
     const deploymentData = JSON.parse(fileContent) as DeploymentData;
-    
+
     console.log(`📂 Loaded deployment file: ${filePath}`);
     console.log(`📝 Network: ${deploymentData.network}`);
     console.log(`📍 Proxy: ${deploymentData.proxyAddress}`);
     console.log(`🔧 Implementation: ${deploymentData.implementationAddress}`);
-    
+
     return deploymentData;
   } catch (error: any) {
     console.error("❌ Failed to load deployment file:", error.message || error);
@@ -348,7 +343,7 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
     try {
       const collectorInfo = await validateCollectorNFT(deploymentData.proxyAddress);
       await checkUpgradeReadiness(deploymentData.proxyAddress, "CollectorNFT");
-      
+
       console.log("\n📋 CollectorNFT Summary:");
       console.log("=".repeat(30));
       console.log(JSON.stringify(collectorInfo, null, 2));
@@ -371,7 +366,7 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
     try {
       const genImInfo = await validateContract(deploymentData.genImNFTAddress);
       await checkUpgradeReadiness(deploymentData.genImNFTAddress, "GenImNFTv2");
-      
+
       console.log("\n📋 GenImNFT Summary:");
       console.log("=".repeat(30));
       console.log(JSON.stringify(genImInfo, null, 2));
@@ -383,14 +378,14 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
 
 async function main() {
   const args = process.argv.slice(2);
-  
+
   // Check for deployment file first
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
-  
+
   if (deploymentFilePath) {
     console.log(`📂 Using deployment file: ${deploymentFilePath}`);
     const deploymentData = await loadDeploymentFile(deploymentFilePath);
-    
+
     if (deploymentData) {
       await validateFromDeploymentFile(deploymentData);
       return;
@@ -402,19 +397,19 @@ async function main() {
   // Check for deployment files in the deployments directory
   const deploymentsDir = path.join(__dirname, "deployments");
   if (fs.existsSync(deploymentsDir)) {
-    const files = fs.readdirSync(deploymentsDir).filter(f => f.endsWith(".json"));
-    
+    const files = fs.readdirSync(deploymentsDir).filter((f) => f.endsWith(".json"));
+
     if (files.length > 0) {
       console.log(`📂 Found ${files.length} deployment file(s) in deployments directory:`);
-      files.forEach(file => console.log(`   - ${file}`));
-      
+      files.forEach((file) => console.log(`   - ${file}`));
+
       // Use the most recent file if no specific file was provided
       const mostRecentFile = files.sort().reverse()[0];
       const deploymentFilePath = path.join(deploymentsDir, mostRecentFile);
-      
+
       console.log(`📂 Using most recent deployment file: ${mostRecentFile}`);
       const deploymentData = await loadDeploymentFile(deploymentFilePath);
-      
+
       if (deploymentData) {
         await validateFromDeploymentFile(deploymentData);
         return;
@@ -430,11 +425,15 @@ async function main() {
   }
 
   const proxyAddress = process.env.PROXY_ADDRESS || "";
-  
+
   if (!proxyAddress) {
-    console.log("❌ Please set PROXY_ADDRESS environment variable, DEPLOYMENT_FILE, or place deployment files in deployments/ directory");
+    console.log(
+      "❌ Please set PROXY_ADDRESS environment variable, DEPLOYMENT_FILE, or place deployment files in deployments/ directory",
+    );
     console.log("Example: PROXY_ADDRESS=0x... npx hardhat run scripts/validate-contract-new.ts --network sepolia");
-    console.log("Example: DEPLOYMENT_FILE=./deployments/collector-nft-optimism-2025-06-10.json npx hardhat run scripts/validate-contract-new.ts --network optimisticEthereum");
+    console.log(
+      "Example: DEPLOYMENT_FILE=./deployments/collector-nft-optimism-2025-06-10.json npx hardhat run scripts/validate-contract-new.ts --network optimisticEthereum",
+    );
     return;
   }
 
@@ -445,7 +444,6 @@ async function main() {
     console.log("\n📋 Summary:");
     console.log("=".repeat(20));
     console.log(JSON.stringify(info, null, 2));
-
   } catch (error: any) {
     console.error("Script failed:", error.message || error);
     process.exit(1);
@@ -460,4 +458,11 @@ if (require.main === module) {
   });
 }
 
-export { validateContract, validateCollectorNFT, validateImplementation, checkUpgradeReadiness, loadDeploymentFile, validateFromDeploymentFile };
+export {
+  validateContract,
+  validateCollectorNFT,
+  validateImplementation,
+  checkUpgradeReadiness,
+  loadDeploymentFile,
+  validateFromDeploymentFile,
+};

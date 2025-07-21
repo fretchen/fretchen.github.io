@@ -5,12 +5,15 @@ This directory contains configuration files and scripts for deploying the Collec
 ## Configuration Files
 
 ### `deploy-config.json`
+
 Main configuration file for CollectorNFT deployment. This file contains all deployment parameters and options.
 
 ### `deploy-config.example.json`
+
 Example configuration file showing all available options. Copy this file to create your own configuration.
 
 ### `deploy-config.schema.json`
+
 JSON schema file for validation of configuration structure. This ensures proper format and required fields.
 
 ## Configuration Structure
@@ -41,14 +44,18 @@ JSON schema file for validation of configuration structure. This ensures proper 
 ### Optional Fields
 
 #### `options`
+
 Deployment options:
+
 - `validateOnly` (boolean): Only validate configuration without deploying
 - `dryRun` (boolean): Simulate deployment without actual execution
 - `verify` (boolean): Verify contract on block explorer after deployment
 - `waitConfirmations` (number): Number of confirmations to wait (1-20)
 
 #### `metadata`
+
 Additional metadata for documentation:
+
 - `description`: Human-readable description of the deployment
 - `version`: Version identifier
 - `environment`: Environment type (development, staging, production)
@@ -56,18 +63,21 @@ Additional metadata for documentation:
 ## Usage Examples
 
 ### Basic Usage
+
 ```bash
 # Deploy using default config file (deploy-config.json)
 npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
 ```
 
 ### Custom Config File
+
 ```bash
 # Deploy using a specific config file
 npx hardhat run scripts/deploy-collector-nft.ts --network sepolia -- ./my-custom-config.json
 ```
 
 ### Environment Variable
+
 ```bash
 # Deploy using config file from environment variable
 DEPLOY_CONFIG=./production-config.json npx hardhat run scripts/deploy-collector-nft.ts --network mainnet
@@ -76,7 +86,9 @@ DEPLOY_CONFIG=./production-config.json npx hardhat run scripts/deploy-collector-
 **Note:** The network must be specified via the `--network` parameter as it determines which blockchain network to deploy to. The config file only contains contract-specific parameters.
 
 ### Validation Only
+
 Set `"validateOnly": true` in your config file:
+
 ```json
 {
   "genImNFTAddress": "0x...",
@@ -88,7 +100,9 @@ Set `"validateOnly": true` in your config file:
 ```
 
 ### Dry Run
+
 Set `"dryRun": true` in your config file:
+
 ```json
 {
   "genImNFTAddress": "0x...",
@@ -102,6 +116,7 @@ Set `"dryRun": true` in your config file:
 ## Configuration Validation
 
 The script automatically validates:
+
 - ✅ JSON syntax and structure
 - ✅ Required fields presence
 - ✅ Ethereum address format
@@ -120,6 +135,7 @@ The script automatically validates:
 ## Example Workflows
 
 ### Development Deployment
+
 ```json
 {
   "genImNFTAddress": "0x742d35Cc0C8A4B20A3Fa31f8Fd4F7a77C4cFaE77",
@@ -136,6 +152,7 @@ The script automatically validates:
 ```
 
 ### Production Deployment
+
 ```json
 {
   "genImNFTAddress": "0xPRODUCTION_ADDRESS",
@@ -157,18 +174,22 @@ The script automatically validates:
 ### Common Errors
 
 1. **"Configuration file not found"**
+
    - Ensure the config file exists in the specified path
    - Check file permissions
 
 2. **"Invalid JSON"**
+
    - Validate JSON syntax using a JSON validator
    - Check for missing commas or brackets
 
 3. **"Invalid genImNFTAddress format"**
+
    - Ensure address is 42 characters (0x + 40 hex characters)
    - Verify address checksum
 
 4. **"Network mismatch"**
+
    - Ensure config network matches Hardhat network parameter
    - This is a warning, not an error
 

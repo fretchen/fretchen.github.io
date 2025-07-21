@@ -99,8 +99,6 @@ const calculateOptimalBoats = () => {
   // Boats per player (divide total by number of players)
   const low_fishing = Math.floor(calculateSustainableBoats(MODEL_PARAMS.s_init));
   const intensive_fishing = Math.floor(calculateEfficientBoats(MODEL_PARAMS.s_init, MODEL_PARAMS.c0));
-  console.log("Low fishing boats:", low_fishing);
-  console.log("Intensive fishing boats:", intensive_fishing);
   return { low_fishing, intensive_fishing };
 };
 
@@ -173,12 +171,6 @@ const leaderConservationLevel = (
   const conservationFactor = conservationStrategies[strategy];
   const adjustedSustainableBoats = sustainableBoats * conservationFactor;
 
-  console.log(`  Leader ${leader} chooses '${strategy}' strategy (factor: ${conservationFactor})`);
-  if (previousStock !== undefined) {
-    console.log(`  Stock trend: ${(stockTrend * 100).toFixed(1)}% (${currentStock} from ${previousStock})`);
-  }
-  console.log(`  Adjusted sustainable boats: ${adjustedSustainableBoats.toFixed(2)}`);
-
   return {
     adjustedSustainableBoats,
     strategy,
@@ -207,8 +199,6 @@ const leaderDistribution = (
   } else {
     method = "equal";
   }
-
-  console.log(`  Leader chooses '${method}' distribution method`);
 
   // Calculate quotas based on leader's chosen method
   const quotaWeights: number[] = [];
@@ -277,10 +267,6 @@ const leaderRedistribution = (leader: number): { redistributionRate: number; pol
   }
 
   const currentRedistributionRate = redistributionPolicies[redistributionPolicy];
-
-  console.log(
-    `  Leader chooses '${redistributionPolicy}' redistribution policy (${(currentRedistributionRate * 100).toFixed(0)}%)`,
-  );
 
   return { redistributionRate: currentRedistributionRate, policy: redistributionPolicy };
 };
@@ -359,7 +345,6 @@ const FishingGameSimulator: React.FC = () => {
 
     // Get current stock
     const currentStock = round === 1 ? MODEL_PARAMS.s_init : (history[round - 2].fishAfter ?? MODEL_PARAMS.s_init);
-    console.log("Current stock:", currentStock);
     // Calculate regeneration first (like in notebook: gt = g_t(st, g0, g1))
     const regeneration = calculateRegeneration(currentStock);
 
@@ -372,7 +357,6 @@ const FishingGameSimulator: React.FC = () => {
 
     // Update stock exactly like in notebook: st = st - yt + gt
     const nextStock = currentStock - totalCatch + regeneration;
-    console.log("Next stock after catch and regeneration:", nextStock);
 
     // Update history
     const newHistory = history.map((h, idx) =>
@@ -938,7 +922,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
           );
           break;
       }
-      console.log(`Round ${round} - All chiefs boats:`, allChiefBoats);
       // Moana is first chief (index 0), others are indices 1, 2, 3
       const moanaBoats = allChiefBoats[0];
       const otherBoats = allChiefBoats.slice(1);
@@ -1362,7 +1345,6 @@ const CommunityGovernanceSimulator: React.FC = () => {
       // in the case of the hierarchical scenario use the standard sustainable boats
       if (scenario === "hierarchical") {
         allChiefBoats = [0, 1, 2, 3].map(() => calculateSustainableBoats(currentStock));
-        console.log(`Round ${round} - All chiefs boats (hierarchical):`, allChiefBoats);
       } else {
         // LEADER DECISION 2: Choose quota distribution method
         const distributionResult = leaderDistribution(

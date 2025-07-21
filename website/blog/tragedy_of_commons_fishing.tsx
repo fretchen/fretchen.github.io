@@ -493,42 +493,48 @@ const FishingGameSimulator: React.FC = () => {
                   }
                 }}
                 disabled={isDisabled}
-                style={{
+                className={css({
                   padding: "12px 16px",
                   border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                  borderRadius: 8,
+                  borderRadius: "8px",
                   background: isDisabled ? "#f3f4f6" : isSelected ? "#eff6ff" : "#fff",
                   cursor: isDisabled ? "not-allowed" : "pointer",
                   textAlign: "left",
-                  maxWidth: 200,
-                  fontSize: 14,
+                  maxWidth: "200px",
+                  fontSize: "14px",
                   opacity: isDisabled ? 0.6 : 1,
                   position: "relative",
-                }}
+                })}
                 title={isDisabled ? "Scenario locked during active game" : ""}
               >
                 {isDisabled && isSelected && (
                   <div
-                    style={{
+                    className={css({
                       position: "absolute",
-                      top: 4,
-                      right: 6,
-                      fontSize: 12,
+                      top: "4px",
+                      right: "6px",
+                      fontSize: "12px",
                       color: "#6b7280",
-                    }}
+                    })}
                   >
                     🔒
                   </div>
                 )}
-                <div style={{ fontWeight: 600, marginBottom: 4, color: isDisabled ? "#9ca3af" : "#111827" }}>
+                <div
+                  className={css({
+                    fontWeight: "600",
+                    marginBottom: "4px",
+                    color: isDisabled ? "#9ca3af" : "#111827",
+                  })}
+                >
                   {info.name}
                 </div>
                 <div
-                  style={{
+                  className={css({
                     color: isDisabled ? "#9ca3af" : "#64748b",
-                    fontSize: 12,
+                    fontSize: "12px",
                     lineHeight: "1.3",
-                  }}
+                  })}
                 >
                   {info.description}
                 </div>
@@ -536,16 +542,29 @@ const FishingGameSimulator: React.FC = () => {
             );
           })}
         </div>
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8, fontWeight: 500 }}>
+        <div className={css({ marginTop: "16px" })}>
+          <div
+            className={css({
+              fontSize: "14px",
+              color: "#64748b",
+              marginBottom: "8px",
+              fontWeight: "500",
+            })}
+          >
             Active Scenario: {scenarios[scenario].name}
           </div>
           {gameStarted ? (
-            <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
+            <div
+              className={css({
+                fontSize: "13px",
+                color: "#9ca3af",
+                fontStyle: "italic",
+              })}
+            >
               Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
             </div>
           ) : (
-            <div style={{ fontSize: 14, color: "#64748b" }}>
+            <div className={css({ fontSize: "14px", color: "#64748b" })}>
               As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
               {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
               {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
@@ -576,18 +595,18 @@ const FishingGameSimulator: React.FC = () => {
           {[1, 2, 3].map((roundNum) => (
             <div
               key={roundNum}
-              style={{
-                width: 32,
-                height: 32,
+              className={css({
+                width: "32px",
+                height: "32px",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 14,
-                fontWeight: 600,
+                fontSize: "14px",
+                fontWeight: "600",
                 background: roundNum < round ? "#10b981" : roundNum === round ? "#3b82f6" : "#e5e7eb",
                 color: roundNum < round || roundNum === round ? "#fff" : "#9ca3af",
-              }}
+              })}
             >
               {roundNum < round ? "✓" : roundNum}
             </div>
@@ -595,28 +614,28 @@ const FishingGameSimulator: React.FC = () => {
         </div>
 
         {/* Status */}
-        <div style={{ fontSize: 16, textAlign: "center", marginBottom: 8 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        <div className={css({ fontSize: "16px", textAlign: "center", marginBottom: "8px" })}>
+          <div className={css({ fontWeight: "600", marginBottom: "4px" })}>
             Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
           </div>
-          <div style={{ color: "#64748b", fontSize: 14 }}>How many boats should Moana send out today?</div>
+          <div className={css({ color: "#64748b", fontSize: "14px" })}>How many boats should Moana send out today?</div>
         </div>
 
         {/* Boat Choice Buttons */}
         {!gameOver && !hasChosenBoats && (
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+          <div className={css({ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" })}>
             <button
               onClick={() => handleBoatChoice(OPTIMAL_BOATS.low_fishing)}
-              style={{
+              className={css({
                 padding: "10px 16px",
                 border: "1px solid #10b981",
-                borderRadius: 6,
+                borderRadius: "6px",
                 background: "#fff",
                 color: "#222",
                 cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
+                fontWeight: "500",
+                fontSize: "14px",
+              })}
             >
               🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
             </button>
@@ -624,31 +643,31 @@ const FishingGameSimulator: React.FC = () => {
               onClick={() =>
                 handleBoatChoice(Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2))
               }
-              style={{
+              className={css({
                 padding: "10px 16px",
                 border: "1px solid #f59e0b",
-                borderRadius: 6,
+                borderRadius: "6px",
                 background: "#fff",
                 color: "#222",
                 cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
+                fontWeight: "500",
+                fontSize: "14px",
+              })}
             >
               ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
             </button>
             <button
               onClick={() => handleBoatChoice(OPTIMAL_BOATS.intensive_fishing)}
-              style={{
+              className={css({
                 padding: "10px 16px",
                 border: "1px solid #ef4444",
-                borderRadius: 6,
+                borderRadius: "6px",
                 background: "#fff",
                 color: "#222",
                 cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-              }}
+                fontWeight: "500",
+                fontSize: "14px",
+              })}
             >
               ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
             </button>
@@ -657,22 +676,31 @@ const FishingGameSimulator: React.FC = () => {
 
         {/* Round Feedback */}
         {!gameOver && hasChosenBoats && (
-          <div style={{ fontSize: 14, color: "#64748b", textAlign: "center", marginTop: 4 }}>
-            <div style={{ marginBottom: 4 }}>
+          <div
+            className={css({
+              fontSize: "14px",
+              color: "#64748b",
+              textAlign: "center",
+              marginTop: "4px",
+            })}
+          >
+            <div className={css({ marginBottom: "4px" })}>
               <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
             </div>
-            <div style={{ marginBottom: 4 }}>
+            <div className={css({ marginBottom: "4px" })}>
               <strong>Other Chiefs:</strong>{" "}
               {currentRoundHistory.otherBoats
                 ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
                 .join(", ")}
             </div>
-            <div style={{ marginBottom: 4 }}>
+            <div className={css({ marginBottom: "4px" })}>
               <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch}{" "}
               fish
             </div>
             {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
-              <div style={{ color: "#10b981" }}>🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish</div>
+              <div className={css({ color: "#10b981" })}>
+                🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish
+              </div>
             )}
           </div>
         )}
@@ -713,17 +741,23 @@ const FishingGameSimulator: React.FC = () => {
     }
 
     return (
-      <div style={{ margin: "18px 0" }}>
+      <div className={css({ margin: "18px 0" })}>
         {/* Scenario indicator above table */}
 
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
+        <div className={css({ display: "flex", justifyContent: "center" })}>
+          <table
+            className={css({
+              borderCollapse: "collapse",
+              fontSize: "14px",
+              minWidth: "480px",
+            })}
+          >
             <thead>
-              <tr style={{ background: "#bae6fd" }}>
-                <th style={{ padding: "6px 8px" }}>Round</th>
-                <th style={{ padding: "6px 8px" }}>Moana</th>
+              <tr className={css({ background: "#bae6fd" })}>
+                <th className={css({ padding: "6px 8px" })}>Round</th>
+                <th className={css({ padding: "6px 8px" })}>Moana</th>
                 {otherChiefs.map((chief) => (
-                  <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                  <th key={chief} className={css({ padding: "6px 8px", fontSize: "12px" })}>
                     {chief.replace("Chief ", "")}
                   </th>
                 ))}

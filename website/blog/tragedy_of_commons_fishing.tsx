@@ -978,7 +978,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         description: "All islands fish at the same sustainable level regardless of their individual costs",
       },
       aggressive: {
-        name: "� Market-Driven Approach",
+        name: "💰 Market-Driven Approach",
         description: "Each island fishes at their cost-optimal level (islands with lower costs fish more)",
       },
     };
@@ -1815,27 +1815,32 @@ const TragedyOfCommonsFishing: React.FC = () => {
     <article>
       <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
 
-Every day, millions of people make seemingly rational decisions that, collectively, destroy the very resources they depend on. From overfishing our oceans to depleting groundwater aquifers, we face a paradox that has puzzled economists and social scientists for decades.
+Every day, we make seemingly rational decisions that, collectively, destroy the very resources we depend on. From not buying electric cars because they might be inconvenient to depleting groundwater aquifers, we face a paradox that has puzzled scientists for a long time.
 
-This raises a fundamental question: **How can we govern common pool resources?**
+This raises a fundamental question: **How should we govern common pool resources?**
 
-In unrestrained scenarios, these resources deplete and collapse. This led to the widespread belief that only the state or the market can effectively govern common resources. However, Elinor Ostrom demonstrated that communities can self-organize to govern common resources successfully. She explored this through carefully designed social experiments and real-world case studies, which I will examine here through interactive simulations.
+In unrestrained scenarios, these resources deplete and collapse. This led to the widespread belief that only the state or the market can effectively govern common resources. However, Elinor Ostrom demonstrated that communities can self-organize to govern common resources successfully. This earned her the economics [Nobel Prize in 2009](https://www.nobelprize.org/prizes/economic-sciences/2009/ostrom/facts/) as the first woman to receive the award in that category. She explored this through carefully designed social experiments and real-world case studies, which I will examine here through interactive simulations.
 
-Throughout the blog post, which follows Moana's journey, we'll explore three approaches to solving this dilemma:
+Throughout the blog post, we look into the topic through the lens of Moana's journey. we'll explore three approaches to solving this dilemma:
 
 💰 **The Market Solution:** Tradeable fishing quotas that reward efficiency - but what about equity?
+
 🏛️ **The State Solution:** An Island Fishing Authority with centralized control - effective but costly?
+
 🤝 **The Community Solution:** The chiefs create their own rules together - can self-governance work?
 
 ## From Theory to Reality: A Chief's Dilemma
 
 But how do these abstract governance theories play out in practice? To understand this, let's step into the sandals of someone facing exactly these choices every single day.
 
-Meet Moana - no longer the adventurous teenager from Disney's story, but now a seasoned chief responsible for her island's survival. Each morning, she faces a decision that will determine whether her people feast or go hungry: how many fishing boats should she send out to the shared waters that sustain not just her community, but three neighboring islands as well?
+Meet Moana - no longer the adventurous teenager from Disney's story, but now a seasoned chief responsible for her island's survival. Each morning, she faces a decision that will determine whether her people can eat well or go hungry: how many fishing boats should she send out to the shared waters that sustain 
+not just her community, but three neighboring islands as well?
 
-The neighboring islands' chiefs have called a meeting. The fish that have sustained these communities for generations are becoming scarcer. The great tuna schools that once appeared predictably now show up only occasionally. A decision must be made about how to manage their shared waters.
+The neighboring islands' chiefs have called a meeting. The fish that have sustained these communities for generations are becoming scarcer. 
+The great tuna schools that once appeared predictably now show up only occasionally. A decision must be made about how to manage their shared waters.
 
-This isn't just a thought experiment. Fishing provides the perfect lens to examine common pool resource governance because it's visual, well-documented in research, and demonstrates the key tensions between individual incentives and collective welfare. This scenario captures the essential elements of any common pool resource dilemma - whether it's fisheries, groundwater, grazing lands, or even digital commons like open-source software.
+This isn't just a thought experiment. Fishing provides the perfect lens to examine common pool resource governance because it's visual, well-documented in research, 
+and demonstrates the key tensions between individual incentives and collective welfare. This scenario captures the essential elements of any common pool resource dilemma - whether it's fisheries, groundwater, grazing lands, or even digital commons like open-source software.
 
 ### The fundamental dynamics of common pool resources
 
@@ -1857,7 +1862,7 @@ collective choices will determine everyone&rsquo;s fate:
 How did the simulation go? Most likely, you found it challenging to maintain fish stock stability.
 It's difficult to resist the temptation to fish intensively, especially when other chiefs do the same.
 
-The dilemma Moana faces illustrates the classic **Tragedy of the Commons**. This concept, popularized by Garrett Hardin in 1968, describes how rational individual choices can lead to irrational collective outcomes - depleting shared resources that everyone depends on.
+The dilemma Moana faces illustrates the classic **Tragedy of the Commons**. This concept, popularized by [Garrett Hardin in 1968](https://math.uchicago.edu/~shmuel/Modeling/Hardin,%20Tragedy%20of%20the%20Commons.pdf), describes how rational individual choices can lead to irrational collective outcomes - depleting shared resources that everyone depends on.
 
 But this raises the central question: **If individual rationality leads to collective irrationality, what governance mechanisms can solve this dilemma?**
 
@@ -1907,7 +1912,7 @@ After months of failed cooperation and bureaucratic frustration, Moana realizes 
 
 **The Missing Piece:** Elinor Ostrom asked the same question. Her research revealed that successful community resource management isn't about finding the "right" rules—it's about building the right **institutions** for making and adapting rules.
 
-**From Tragedy to Success:** What transforms a failing commons into a thriving one? Through studying thousands of cases worldwide—from Swiss alpine pastures to Japanese forests to Philippine irrigation systems—Ostrom identified eight institutional design principles that separate successful commons from failures:
+**From Tragedy to Success:** What transforms a failing commons into a thriving one? Through studying [thousands of cases worldwide](https://www.actu-environnement.com/media/pdf/ostrom_1990.pdf) Ostrom identified eight institutional design principles that separate successful commons from failures:
 
 **Ostrom's Eight Design Principles:**
 
@@ -1944,33 +1949,19 @@ Each decision activates different Ostrom principles and creates different commun
 
 **What makes community solutions different?** Unlike markets that rely on prices or states that impose rules, communities create governance systems where the people affected by decisions are the ones making them. Moana's council demonstrates this: the chiefs who depend on the fish are the same people setting fishing limits and monitoring compliance.
 
-After months under their fishing council, Moana observes: *"We're not just following rules - we're continuously adapting them based on what we learn. When Chief Tala's aggressive fishing strategy depleted stocks, we didn't wait for outside authorities to intervene. We adjusted our redistribution policy immediately because we all felt the consequences."*
-
-**Why Ostrom's Framework Works:**
-
-The simulation reveals the power of institutional design. When multiple principles work together, they create resilient governance:
-
-- **Boundaries + Collective Choice** → Everyone knows their role and has a voice
-- **Monitoring + Graduated Sanctions** → Trust builds through fair, transparent accountability  
-- **Conflict Resolution + Nested Enterprises** → Problems get solved at the right level quickly
-- **Local Congruence + Recognition Rights** → Rules fit reality and external support exists
-
-**Ostrom's Nobel Prize Discovery:** Sustainable commons aren't accidents—they're carefully designed institutions. The fishing council works because it combines local knowledge (chiefs understand their waters), adaptive management (rules change when conditions change), and aligned incentives (rule-makers are rule-followers).
-
 ## Personal Reflections: Why This Matters
 
 This exploration through Moana's world has been more revealing than I expected. It's forced me to recognize that a lot of meaningful work happens not in markets or under government regulation, but in community spaces - research collaborations, open-source projects, innovation networks where informal governance determines whether we succeed or fail.
 
 The tragedy of the commons isn't just an abstract economic concept. It's the daily reality of every shared Slack channel that becomes chaotic, every open-source project that fragments, every research community that loses focus. But Ostrom's work suggests these failures aren't inevitable.
 
-**Applying commons governance to knowledge work:**
+**It makes you wonder how to apply commons governance to knowledge work:**
 - **Clearly defined boundaries:** Who belongs to this research community? What counts as contribution?
 - **Collective choice:** Do the people doing the work have a voice in setting priorities?  
 - **Monitoring:** How do we track contributions without destroying intrinsic motivation?
 - **Graduated sanctions:** How do we handle free-riders without creating surveillance culture?
 
 Writing this has convinced me that there is a lot to learn in the context of innovation management. It depends less on perfecting market mechanisms and more on learning to govern knowledge commons well. TBC.
-
             `}</ReactMarkdown>
     </article>
   );
@@ -1980,6 +1971,6 @@ export default TragedyOfCommonsFishing;
 
 // Post metadata
 export const meta = {
-  title: "Tragedy of the Commons: Moana's Choice",
-  description: "Ein narratives, interaktives Blogspiel zur Tragedy of the Commons und Ostroms Theorien.",
+  title: "Tale of Four Islands: Solutions to the Tragedy of the Commons",
+  publishing_date: "2025-07-21",
 };

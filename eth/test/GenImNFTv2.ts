@@ -4,14 +4,14 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpe
 import { formatEther, getAddress } from "viem";
 
 // Import shared test utilities
-import { 
-  createBasicNFTTests, 
-  createImageUpdateTests, 
+import {
+  createBasicNFTTests,
+  createImageUpdateTests,
   createAdvancedImageUpdateTests,
   createEnumerationTests,
   createWalletEnumerationTests,
   cleanupTestFiles,
-  ContractFixture
+  ContractFixture,
 } from "./shared/GenImNFTSharedTests";
 
 describe("GenImNFTv2", function () {

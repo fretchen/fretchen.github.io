@@ -5,6 +5,7 @@ GenImNFT Version 3 with listing functionality
 Generated on: 2025-06-15T14:54:48.722Z
 
 ## Contract Information
+
 - **Name**: GenImNFTv3
 - **Functions**: 38
 - **Events**: 12
@@ -13,31 +14,34 @@ Generated on: 2025-06-15T14:54:48.722Z
 ## Key Functions
 
 ### `getAllPublicTokens`
+
 - **Type**: view
 - **Inputs**: none
-- **Outputs**: uint256[] 
+- **Outputs**: uint256[]
 
 ### `getPublicTokensOfOwner`
+
 - **Type**: view
 - **Inputs**: address owner
-- **Outputs**: uint256[] 
+- **Outputs**: uint256[]
 
 ### `isTokenListed`
+
 - **Type**: view
 - **Inputs**: uint256 tokenId
-- **Outputs**: bool 
+- **Outputs**: bool
 
 ### `setMultipleTokensListed`
+
 - **Type**: nonpayable
 - **Inputs**: uint256[] tokenIds, bool isListed
 - **Outputs**: none
 
 ### `setTokenListed`
+
 - **Type**: nonpayable
 - **Inputs**: uint256 tokenId, bool isListed
 - **Outputs**: none
-
-
 
 ## All Functions
 
@@ -98,14 +102,16 @@ Generated on: 2025-06-15T14:54:48.722Z
 ## Usage
 
 ### TypeScript/JavaScript ES Modules
+
 ```typescript
-import { GenImNFTv3ABI } from './GenImNFTv3';
+import { GenImNFTv3ABI } from "./GenImNFTv3";
 // Use with ethers, web3, viem, etc.
 ```
 
 ### JSON (Direct import)
+
 ```javascript
-import abi from './GenImNFTv3.json';
+import abi from "./GenImNFTv3.json";
 // Or for Node.js/CommonJS environments:
-const abi = require('./GenImNFTv3.json');
+const abi = require("./GenImNFTv3.json");
 ```

@@ -36,21 +36,25 @@ npx hardhat ignition verify <THE-ID-FROM-ABOVE>
 GenImNFTv3 can **only** be deployed as an upgrade from GenImNFTv2. There is no direct deployment of V3.
 
 ### Upgrade existing V2 to V3:
+
 ```shell
 PROXY_ADDRESS=0x123... npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
 ```
 
 ### Verify upgraded V3 contracts on Etherscan:
+
 ```shell
 PROXY_ADDRESS=0x123... npx hardhat run scripts/verify-v3.ts --network sepolia
 ```
 
 ### Manual verification (if automatic fails):
+
 ```shell
 IMPLEMENTATION_ADDRESS=0x456... npx hardhat run scripts/verify-manual.ts --network sepolia
 ```
 
 ### Get ABI for frontend integration:
+
 ```shell
 # Export ABIs for both GenImNFTv3 and CollectorNFT in multiple formats
 npx hardhat run scripts/export-abi.ts
@@ -86,16 +90,18 @@ GENIMNFv3_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --net
 # Run deployment tests
 npx hardhat test --grep "CollectorNFT - Deployment Tests"
 
-# Run functional tests  
+# Run functional tests
 npx hardhat test --grep "CollectorNFT - Functional Tests"
 ```
 
 ### Key Scripts
 
 #### `deploy-collector-nft.ts`
+
 Deploys CollectorNFT as an upgradeable proxy contract.
 
 **Usage:**
+
 ```shell
 # Validation only (dry run)
 npx hardhat run scripts/deploy-collector-nft.ts --network sepolia -- --validate-only
@@ -105,9 +111,11 @@ GENIMNIFL_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --net
 ```
 
 #### `upgrade-collector-nft.ts`
+
 Upgrades existing CollectorNFT deployments (when available).
 
 **Usage:**
+
 ```shell
 PROXY_ADDRESS=0x456... npx hardhat run scripts/upgrade-collector-nft.ts --network sepolia
 ```
@@ -131,13 +139,14 @@ const collectorTokens = await collectorNFT.getCollectorTokensForGenIm(0);
 - **Base Price**: 0.001 ETH (configurable)
 - **Price Tiers**: Doubles every 5 mints
   - Mints 1-5: 1x base price (0.001 ETH)
-  - Mints 6-10: 2x base price (0.002 ETH)  
+  - Mints 6-10: 2x base price (0.002 ETH)
   - Mints 11-15: 4x base price (0.004 ETH)
   - And so on...
 
 ### Integration with GenImNFT
 
 CollectorNFT works seamlessly with any GenImNFT version:
+
 - References GenImNFT by contract address
 - Validates token ownership before minting
 - Sends payments to current GenImNFT token owners
@@ -211,11 +220,7 @@ After successful upgrade, update your frontend/dApp:
 
 ```javascript
 // Example: Using the new getAllPublicTokens function
-const contract = new ethers.Contract(
-  "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", 
-  GenImNFTv3ABI, 
-  provider
-);
+const contract = new ethers.Contract("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", GenImNFTv3ABI, provider);
 
 // Get all public tokens (new V3 feature)
 const publicTokens = await contract.getAllPublicTokens();
@@ -227,7 +232,7 @@ console.log(`Found ${publicTokens.length} public tokens`);
 Supported networks:
 
 - **Sepolia** (testnet): `--network sepolia`
-- **Optimism Sepolia** (testnet): `--network optsepolia`  
+- **Optimism Sepolia** (testnet): `--network optsepolia`
 - **Optimism Mainnet** (production): `--network optimisticEthereum`
 
 ### Environment Variables Required

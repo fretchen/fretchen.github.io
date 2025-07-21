@@ -4,14 +4,14 @@ import { ethers, upgrades } from "hardhat";
 import hre from "hardhat";
 
 // Import shared test utilities
-import { 
-  createBasicNFTTests, 
-  createImageUpdateTests, 
+import {
+  createBasicNFTTests,
+  createImageUpdateTests,
   createAdvancedImageUpdateTests,
   createEnumerationTests,
   createWalletEnumerationTests,
   cleanupTestFiles,
-  ContractFixture
+  ContractFixture,
 } from "./shared/GenImNFTSharedTests";
 
 describe("GenImNFTv3", function () {
@@ -23,7 +23,7 @@ describe("GenImNFTv3", function () {
     const GenImNFTv2 = await ethers.getContractFactory("GenImNFTv2");
     const proxyV2 = await upgrades.deployProxy(GenImNFTv2, [], {
       initializer: "initialize",
-      kind: "uups"
+      kind: "uups",
     });
     await proxyV2.waitForDeployment();
 
@@ -35,7 +35,7 @@ describe("GenImNFTv3", function () {
     // Now upgrade to v3
     const GenImNFTv3 = await ethers.getContractFactory("GenImNFTv3");
     const proxyV3 = await upgrades.upgradeProxy(proxyV2, GenImNFTv3, {
-      call: { fn: "reinitializeV3", args: [] }
+      call: { fn: "reinitializeV3", args: [] },
     });
 
     const proxyAddress = await proxyV3.getAddress();
@@ -46,7 +46,7 @@ describe("GenImNFTv3", function () {
       owner,
       otherAccount,
       thirdAccount,
-      proxyAddress
+      proxyAddress,
     };
   }
 
@@ -57,7 +57,7 @@ describe("GenImNFTv3", function () {
     const GenImNFTv3 = await ethers.getContractFactory("GenImNFTv3");
     const proxy = await upgrades.deployProxy(GenImNFTv3, [], {
       initializer: "initialize",
-      kind: "uups"
+      kind: "uups",
     });
     await proxy.waitForDeployment();
 
@@ -77,7 +77,7 @@ describe("GenImNFTv3", function () {
     const GenImNFTv3 = await ethers.getContractFactory("GenImNFTv3");
     const proxy = await upgrades.deployProxy(GenImNFTv3, [], {
       initializer: "initialize",
-      kind: "uups"
+      kind: "uups",
     });
     await proxy.waitForDeployment();
 
@@ -103,7 +103,7 @@ describe("GenImNFTv3", function () {
     const GenImNFTv3 = await ethers.getContractFactory("GenImNFTv3");
     const proxy = await upgrades.deployProxy(GenImNFTv3, [], {
       initializer: "initialize",
-      kind: "uups"
+      kind: "uups",
     });
     await proxy.waitForDeployment();
 
@@ -125,12 +125,12 @@ describe("GenImNFTv3", function () {
   describe("Upgrade from V2 to V3", function () {
     it("Should preserve existing tokens during upgrade and mark them as listed", async function () {
       const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // Check that existing tokens are preserved
       expect(await proxy.totalSupply()).to.equal(2n);
       expect(await proxy.ownerOf(0)).to.equal(owner.address);
       expect(await proxy.ownerOf(1)).to.equal(otherAccount.address);
-      
+
       // Check that existing tokens are marked as listed (opt-out system)
       expect(await proxy.isTokenListed(0)).to.be.true;
       expect(await proxy.isTokenListed(1)).to.be.true;
@@ -138,11 +138,11 @@ describe("GenImNFTv3", function () {
 
     it("Should maintain all v2 functionality after upgrade", async function () {
       const { proxy, thirdAccount } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // Test minting still works (use the v2 style safeMint)
       const mintPrice = await proxy.mintPrice();
       await proxy.connect(thirdAccount)["safeMint(string)"]("ipfs://post-upgrade", { value: mintPrice });
-      
+
       expect(await proxy.totalSupply()).to.equal(3n);
       expect(await proxy.ownerOf(2)).to.equal(thirdAccount.address);
       expect(await proxy.tokenURI(2)).to.equal("ipfs://post-upgrade");
@@ -150,24 +150,24 @@ describe("GenImNFTv3", function () {
 
     it("Should have v3 functionality available after upgrade", async function () {
       const { proxy, thirdAccount } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // Test new v3 functionality
       const mintPrice = await proxy.mintPrice();
       await proxy.connect(thirdAccount)["safeMint(string,bool)"]("ipfs://v3-private", false, { value: mintPrice });
-      
+
       expect(await proxy.isTokenListed(2)).to.be.false;
     });
 
     it("Should allow changing listing status after upgrade", async function () {
       const { proxy, owner } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // Initially, existing tokens should be listed
       expect(await proxy.isTokenListed(0)).to.be.true;
-      
+
       // Owner should be able to change listing status
       await proxy.connect(owner).setTokenListed(0, false);
       expect(await proxy.isTokenListed(0)).to.be.false;
-      
+
       // Change it back
       await proxy.connect(owner).setTokenListed(0, true);
       expect(await proxy.isTokenListed(0)).to.be.true;
@@ -175,22 +175,22 @@ describe("GenImNFTv3", function () {
 
     it("Should support getting public tokens of owner after upgrade", async function () {
       const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // Both existing tokens should be listed initially
       const publicTokens = await proxy.getPublicTokensOfOwner(owner.address);
       expect(publicTokens.length).to.equal(1);
       expect(publicTokens[0]).to.equal(0n);
-      
+
       // Change one to private
       await proxy.connect(owner).setTokenListed(0, false);
-      
+
       const publicTokensAfter = await proxy.getPublicTokensOfOwner(owner.address);
       expect(publicTokensAfter.length).to.equal(0);
     });
 
     it("Should preserve contract metadata after upgrade", async function () {
       const { proxy } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // After upgrade, the name should remain GenImNFTv2 (metadata doesn't change in upgrade)
       expect(await proxy.name()).to.equal("GenImNFTv2");
       expect(await proxy.symbol()).to.equal("GENIMGv2");
@@ -199,18 +199,18 @@ describe("GenImNFTv3", function () {
 
     it("Should handle image updates for existing tokens after upgrade", async function () {
       const { proxy, owner } = await loadFixture(deployGenImNFTv2AndUpgradeToV3Fixture);
-      
+
       // Fund the contract for image update payments
       const mintPrice = await proxy.mintPrice();
       await proxy.connect(owner)["safeMint(string)"]("ipfs://funding", { value: mintPrice });
-      
+
       // Check that existing token hasn't been updated
       expect(await proxy.isImageUpdated(0)).to.be.false;
-      
+
       // Request image update for existing token
       const newImageUrl = "ipfs://updated-image-v3";
       await proxy.connect(owner).requestImageUpdate(0, newImageUrl);
-      
+
       expect(await proxy.isImageUpdated(0)).to.be.true;
       expect(await proxy.tokenURI(0)).to.equal(newImageUrl);
     });
@@ -221,7 +221,7 @@ describe("GenImNFTv3", function () {
     createBasicNFTTests(deployGenImNFTv3DirectFixtureViem);
   });
 
-  // Use shared image update tests for v3 with viem (like V2)  
+  // Use shared image update tests for v3 with viem (like V2)
   describe("Image Updates (Direct V3 Deployment)", function () {
     createImageUpdateTests(deployGenImNFTv3DirectFixtureViem);
   });
@@ -294,14 +294,14 @@ describe("GenImNFTv3", function () {
 
       // Change one public token to private
       await proxy.connect(owner).setTokenListed(0, false);
-      
+
       allPublicTokens = await proxy.getAllPublicTokens();
       expect(allPublicTokens.length).to.equal(2);
       expect(allPublicTokens).to.deep.equal([2n, 4n]);
 
       // Change a private token to public
       await proxy.connect(otherAccount).setTokenListed(3, true);
-      
+
       allPublicTokens = await proxy.getAllPublicTokens();
       expect(allPublicTokens.length).to.equal(3);
       expect(allPublicTokens).to.deep.equal([2n, 3n, 4n]);
@@ -318,14 +318,14 @@ describe("GenImNFTv3", function () {
       // Test all private tokens
       await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://private1", false, { value: mintPrice });
       await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://private2", false, { value: mintPrice });
-      
+
       allPublicTokens = await proxy.getAllPublicTokens();
       expect(allPublicTokens.length).to.equal(0);
 
       // Test all public tokens
       await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public1", true, { value: mintPrice });
       await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://public2", true, { value: mintPrice });
-      
+
       allPublicTokens = await proxy.getAllPublicTokens();
       expect(allPublicTokens.length).to.equal(2);
       expect(allPublicTokens).to.deep.equal([2n, 3n]);
@@ -356,20 +356,23 @@ describe("GenImNFTv3", function () {
   });
 
   // Use shared basic NFT tests for v3 with viem (like V2)
-// Removed duplicate describe blocks for "Basic NFT Functionality" and "Image Updates" as they are already defined earlier in the file.
-  // Use shared advanced image update tests for v3 with viem (like V2)  
-  describe("Advanced Image Updates (Direct V3 Deployment)", 
-    createAdvancedImageUpdateTests(deployGenImNFTv3DirectFixtureViem)
+  // Removed duplicate describe blocks for "Basic NFT Functionality" and "Image Updates" as they are already defined earlier in the file.
+  // Use shared advanced image update tests for v3 with viem (like V2)
+  describe(
+    "Advanced Image Updates (Direct V3 Deployment)",
+    createAdvancedImageUpdateTests(deployGenImNFTv3DirectFixtureViem),
   );
 
-  // Use shared enumeration tests for v3 with viem (like V2)  
-  describe("Token Transfers and Burns (Direct V3 Deployment)", 
-    createEnumerationTests(deployGenImNFTv3DirectFixtureViem)
+  // Use shared enumeration tests for v3 with viem (like V2)
+  describe(
+    "Token Transfers and Burns (Direct V3 Deployment)",
+    createEnumerationTests(deployGenImNFTv3DirectFixtureViem),
   );
 
-  // Use shared wallet enumeration tests for v3 with viem (like V2)  
-  describe("Wallet NFT Enumeration Helper (Direct V3 Deployment)", 
-    createWalletEnumerationTests(deployGenImNFTv3DirectFixtureViem, "GenImNFTv3")
+  // Use shared wallet enumeration tests for v3 with viem (like V2)
+  describe(
+    "Wallet NFT Enumeration Helper (Direct V3 Deployment)",
+    createWalletEnumerationTests(deployGenImNFTv3DirectFixtureViem, "GenImNFTv3"),
   );
 
   // Aufräumen nach jedem Test

@@ -4,15 +4,15 @@ on:
   push:
     branches: ["main"]
     paths:
-      - 'website/**'
-      - 'eth/**'
-      - '.github/workflows/ci.yml'
+      - "website/**"
+      - "eth/**"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches: ["main"]
     paths:
-      - 'website/**'
-      - 'eth/**'
-      - '.github/workflows/ci.yml'
+      - "website/**"
+      - "eth/**"
+      - ".github/workflows/ci.yml"
 
 permissions:
   contents: read

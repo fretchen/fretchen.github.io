@@ -3,7 +3,7 @@ name: "Custom CodeQL Configuration"
 queries:
   - name: security-extended
     uses: security-extended
-  - name: security-and-quality  
+  - name: security-and-quality
     uses: security-and-quality
 
 paths-ignore:

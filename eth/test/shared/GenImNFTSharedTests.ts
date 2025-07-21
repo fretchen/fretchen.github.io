@@ -49,16 +49,16 @@ export function createMetadataFile(tokenId: number | bigint, prompt: string): st
 export async function getAllNFTsForWallet(contract: any, walletAddress: string) {
   const balance = await contract.read.balanceOf([walletAddress]);
   const tokens = [];
-  
+
   for (let i = 0; i < Number(balance); i++) {
     const tokenId = await contract.read.tokenOfOwnerByIndex([walletAddress, BigInt(i)]);
     const tokenURI = await contract.read.tokenURI([tokenId]);
     tokens.push({
       tokenId: Number(tokenId),
-      tokenURI: tokenURI
+      tokenURI: tokenURI,
     });
   }
-  
+
   return tokens;
 }
 
@@ -99,7 +99,7 @@ export interface ContractFixture {
  * Gemeinsame Tests für grundlegende NFT-Funktionalität
  */
 export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, contractName: string = "GenImNFT") {
-  return function() {
+  return function () {
     describe("Basic NFT Functionality", function () {
       it("Should set the right owner", async function () {
         const { contract, owner } = await getFixture();
@@ -114,10 +114,10 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const { contract } = await getFixture();
         const name = await contract.read.name();
         const symbol = await contract.read.symbol();
-        
+
         // Diese können je nach Version unterschiedlich sein
-        expect(name).to.be.a('string');
-        expect(symbol).to.be.a('string');
+        expect(name).to.be.a("string");
+        expect(symbol).to.be.a("string");
       });
 
       it("Should allow minting a new NFT", async function () {
@@ -167,24 +167,19 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const mintPrice = await contract.read.mintPrice();
 
         // Simuliere mit korrekter Gebühr
-        const tokenIdResponse = await contract.simulate.safeMint(
-          ["https://example.com/metadata/1.json"],
-          { value: mintPrice },
-        );
+        const tokenIdResponse = await contract.simulate.safeMint(["https://example.com/metadata/1.json"], {
+          value: mintPrice,
+        });
 
         expect(tokenIdResponse.result).to.equal(0n);
 
         // Führe tatsächlich aus
-        await contract.write.safeMint(
-          ["https://example.com/metadata/1.json"],
-          { value: mintPrice },
-        );
+        await contract.write.safeMint(["https://example.com/metadata/1.json"], { value: mintPrice });
 
         // Simuliere den nächsten Mint
-        const nextTokenIdResponse = await contract.simulate.safeMint(
-          ["https://example.com/metadata/2.json"],
-          { value: mintPrice },
-        );
+        const nextTokenIdResponse = await contract.simulate.safeMint(["https://example.com/metadata/2.json"], {
+          value: mintPrice,
+        });
 
         expect(nextTokenIdResponse.result).to.equal(1n);
       });
@@ -194,12 +189,12 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
       it("Should be possible to create an NFT without the token URI at minting", async function () {
         const { contract } = await getFixture();
         const mintPrice = await contract.read.mintPrice();
-        
+
         // Mint NFT ohne URI
         await contract.write.safeMint([""], {
           value: mintPrice,
         });
-        
+
         // Überprüfe, dass der Token URI leer ist
         const tokenURI = await contract.read.tokenURI([0n]);
         expect(tokenURI).to.equal("");
@@ -235,7 +230,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
 
         console.log("Created metadata at:", tokenURI);
         const mintPrice = await contract.read.mintPrice();
-        
+
         // Mint NFT mit dem lokalen URI
         await contract.write.safeMint([tokenURI], {
           value: mintPrice,
@@ -258,9 +253,12 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const { contract, recipient } = await getFixture();
 
         // Erstelle mehrere Metadaten-Dateien
-        const prompts = ["A serene mountain landscape at sunset", "An abstract digital artwork with geometric patterns"];
+        const prompts = [
+          "A serene mountain landscape at sunset",
+          "An abstract digital artwork with geometric patterns",
+        ];
         const mintPrice = await contract.read.mintPrice();
-        
+
         // Mint mehrere NFTs mit verschiedenen Metadaten
         for (let i = 0; i < prompts.length; i++) {
           const tokenURI = createMetadataFile(i, prompts[i]);
@@ -320,13 +318,13 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
 
         // Mint tokens to different owners
         await contract.write.safeMint(["uri1"], { value: mintPrice }); // Token 0 to owner
-        
+
         const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
         await otherClient.write.safeMint(["uri2"], { value: mintPrice }); // Token 1 to otherAccount
         await otherClient.write.safeMint(["uri3"], { value: mintPrice }); // Token 2 to otherAccount
-        
+
         await contract.write.safeMint(["uri4"], { value: mintPrice }); // Token 3 to owner
 
         // Check balances
@@ -356,14 +354,12 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const { contract, recipient } = await getFixture();
 
         const recipientAddress = recipient?.account?.address || contract.account.address;
-        
+
         // Check balance is 0
         expect(await contract.read.balanceOf([recipientAddress])).to.equal(0n);
 
         // Should revert when trying to get token by index for empty wallet
-        await expect(
-          contract.read.tokenOfOwnerByIndex([recipientAddress, 0n])
-        ).to.be.rejected;
+        await expect(contract.read.tokenOfOwnerByIndex([recipientAddress, 0n])).to.be.rejected;
       });
     });
   };
@@ -373,7 +369,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
  * Gemeinsame Tests für Image Update Funktionalität
  */
 export function createImageUpdateTests(getFixture: () => Promise<ContractFixture>, contractName: string = "GenImNFT") {
-  return function() {
+  return function () {
     describe("Image Updates", function () {
       it("Should update the tokenURI when requestImageUpdate is called", async function () {
         const { contract, otherAccount } = await getFixture();
@@ -429,7 +425,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
-        
+
         await otherClient.write.requestImageUpdate([0n, "https://example.com/updated.png"]);
 
         // 4. Image sollte als updated markiert sein
@@ -456,16 +452,15 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
-        
+
         await otherClient.write.requestImageUpdate([0n, "https://example.com/first-update.png"]);
 
         // 3. Image sollte als updated markiert sein
         expect(await contract.read.isImageUpdated([0n])).to.be.true;
 
         // 4. Zweites Update sollte fehlschlagen
-        await expect(
-          otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"])
-        ).to.be.rejected;
+        await expect(otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"])).to.be
+          .rejected;
       });
     });
   };
@@ -478,7 +473,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
  * @returns Test function
  */
 export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expectedName?: string) {
-  return function() {
+  return function () {
     describe("Basic NFT Functionality (Ethers)", function () {
       it("Should set the right owner", async function () {
         const { proxy, owner } = await getFixture();
@@ -492,11 +487,11 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
         const { proxy } = await getFixture();
         const name = await proxy.name();
         const symbol = await proxy.symbol();
-        
+
         // Diese können je nach Version unterschiedlich sein
-        expect(name).to.be.a('string');
-        expect(symbol).to.be.a('string');
-        
+        expect(name).to.be.a("string");
+        expect(symbol).to.be.a("string");
+
         if (expectedName) {
           expect(name).to.equal(expectedName);
         }
@@ -541,7 +536,7 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
 
         const mintPrice = await proxy.mintPrice();
         const tx = await proxy.connect(owner)["safeMint(string)"]("test-uri", { value: mintPrice });
-        
+
         // In ethers.js, we check the total supply to infer the token ID
         const totalSupply = await proxy.totalSupply();
         expect(totalSupply).to.equal(1n);
@@ -593,7 +588,7 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
 
         console.log("Created metadata at:", tokenURI);
         const mintPrice = await proxy.mintPrice();
-        
+
         // Mint NFT mit dem lokalen URI
         await proxy.connect(owner)["safeMint(string)"](tokenURI, { value: mintPrice });
 
@@ -691,7 +686,7 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
  * @returns Test function
  */
 export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, expectedName?: string) {
-  return function() {
+  return function () {
     describe("Image Updates (Ethers)", function () {
       it("Should update the tokenURI when requestImageUpdate is called", async function () {
         const { proxy, owner, otherAccount } = await getFixture();
@@ -731,7 +726,7 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
         // Check that the image was updated successfully
         expect(await proxy.isImageUpdated(tokenId)).to.be.true;
         expect(await proxy.tokenURI(tokenId)).to.equal(newImageUrl);
-        
+
         // Try to get the authorized image updater (may not be implemented in all versions)
         try {
           const imageUpdater = await proxy.getAuthorizedImageUpdater(tokenId);
@@ -793,8 +788,11 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
 /**
  * Erweiterte Tests für Image Update Funktionalität mit komplexeren Szenarien
  */
-export function createAdvancedImageUpdateTests(getFixture: () => Promise<ContractFixture>, contractName: string = "GenImNFT") {
-  return function() {
+export function createAdvancedImageUpdateTests(
+  getFixture: () => Promise<ContractFixture>,
+  contractName: string = "GenImNFT",
+) {
+  return function () {
     describe("Advanced Image Updates", function () {
       it("Should allow another wallet to update the image for a token with balance checks", async function () {
         const { contract, owner, recipient, otherAccount } = await getFixture();
@@ -805,7 +803,7 @@ export function createAdvancedImageUpdateTests(getFixture: () => Promise<Contrac
         const tokenURI = createMetadataFile(7, prompt);
         const mintPrice = await contract.read.mintPrice();
         console.log("Mint price:", formatEther(mintPrice), "ETH");
-        
+
         await contract.write.safeMint([tokenURI], {
           value: mintPrice,
         });
@@ -862,7 +860,7 @@ export function createAdvancedImageUpdateTests(getFixture: () => Promise<Contrac
 
       it("Should handle token transfers and image update authorization correctly", async function () {
         const { contract, owner, recipient, otherAccount } = await getFixture();
-        
+
         // Mint token to owner
         const tokenURI = createMetadataFile(1, "A beautiful sunset");
         const mintPrice = await contract.read.mintPrice();
@@ -890,7 +888,7 @@ export function createAdvancedImageUpdateTests(getFixture: () => Promise<Contrac
 
       it("Should handle metadata file operations correctly", async function () {
         const { contract, otherAccount } = await getFixture();
-        
+
         // Create and mint token with metadata file
         const prompt = "A magical forest with glowing mushrooms";
         const tokenURI = createMetadataFile(2, prompt);
@@ -936,9 +934,9 @@ export function createAdvancedImageUpdateTests(getFixture: () => Promise<Contrac
  */
 export function createEnumerationTests(
   fixtureFunction: () => Promise<ContractFixture>,
-  contractName: string = "Contract"
+  contractName: string = "Contract",
 ): () => void {
-  return function() {
+  return function () {
     it("Should update enumeration after token transfer", async function () {
       const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
@@ -990,7 +988,7 @@ export function createEnumerationTests(
       // Check remaining tokens are still accessible
       const token0 = await contract.read.tokenOfOwnerByIndex([owner.account.address, 0n]);
       const token1 = await contract.read.tokenOfOwnerByIndex([owner.account.address, 1n]);
-      
+
       // Should be tokens 0 and 2 (since token 1 was burned)
       expect([Number(token0), Number(token1)].sort()).to.deep.equal([0, 2]);
     });
@@ -1006,9 +1004,9 @@ export function createEnumerationTests(
  */
 export function createWalletEnumerationTests(
   fixtureFunction: () => Promise<ContractFixture>,
-  contractName: string = "Contract"
+  contractName: string = "Contract",
 ): () => void {
-  return function() {
+  return function () {
     it("Should get all NFTs with metadata for a wallet", async function () {
       const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
@@ -1017,7 +1015,7 @@ export function createWalletEnumerationTests(
       const prompts = [
         "A beautiful sunset over mountains",
         "A futuristic city at night",
-        "An abstract digital artwork"
+        "An abstract digital artwork",
       ];
 
       for (let i = 0; i < prompts.length; i++) {

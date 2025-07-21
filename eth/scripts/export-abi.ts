@@ -3,7 +3,7 @@ import path from "path";
 
 /**
  * Script to extract and export contract ABIs in various formats
- * 
+ *
  * Usage:
  * npx hardhat run scripts/export-abi.ts
  */
@@ -20,34 +20,37 @@ const contracts: ContractConfig[] = [
     name: "GenImNFTv3",
     contractFile: "GenImNFTv3.sol",
     contractName: "GenImNFTv3",
-    description: "GenImNFT Version 3 with listing functionality"
+    description: "GenImNFT Version 3 with listing functionality",
   },
   {
     name: "CollectorNFT",
-    contractFile: "CollectorNFT.sol", 
+    contractFile: "CollectorNFT.sol",
     contractName: "CollectorNFT",
-    description: "NFT collection based on GenImNFT tokens"
+    description: "NFT collection based on GenImNFT tokens",
   },
   {
     name: "CollectorNFTv1",
     contractFile: "CollectorNFTv1.sol",
-    contractName: "CollectorNFTv1", 
-    description: "CollectorNFT Version 1 with upgraded features and UUPS proxy pattern"
+    contractName: "CollectorNFTv1",
+    description: "CollectorNFT Version 1 with upgraded features and UUPS proxy pattern",
   },
   {
     name: "Support",
     contractFile: "Support.sol",
     contractName: "Support",
-    description: "Support contract for donations and likes functionality"
-  }
+    description: "Support contract for donations and likes functionality",
+  },
 ];
 
 async function exportContractABI(config: ContractConfig) {
   console.log(`🔧 Extracting ${config.name} ABI...`);
 
   // Read the artifact file
-  const artifactPath = path.join(__dirname, `../artifacts/contracts/${config.contractFile}/${config.contractName}.json`);
-  
+  const artifactPath = path.join(
+    __dirname,
+    `../artifacts/contracts/${config.contractFile}/${config.contractName}.json`,
+  );
+
   if (!fs.existsSync(artifactPath)) {
     console.error(`❌ ${config.name} artifact not found. Please compile first:`);
     console.log("npx hardhat compile");
@@ -94,10 +97,8 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
   // Show specific functions based on contract type
   let specificFunctions: any[] = [];
   if (config.name === "GenImNFTv3") {
-    specificFunctions = functions.filter((f: any) => 
-      f.name?.includes("Public") || 
-      f.name?.includes("Listed") || 
-      f.name === "getAllPublicTokens"
+    specificFunctions = functions.filter(
+      (f: any) => f.name?.includes("Public") || f.name?.includes("Listed") || f.name === "getAllPublicTokens",
     );
     if (specificFunctions.length > 0) {
       console.log("\n🆕 V3 Specific Functions:");
@@ -106,11 +107,12 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
       });
     }
   } else if (config.name === "CollectorNFT") {
-    specificFunctions = functions.filter((f: any) => 
-      f.name?.includes("mint") || 
-      f.name?.includes("Price") || 
-      f.name?.includes("GenIm") ||
-      f.name?.includes("Collector")
+    specificFunctions = functions.filter(
+      (f: any) =>
+        f.name?.includes("mint") ||
+        f.name?.includes("Price") ||
+        f.name?.includes("GenIm") ||
+        f.name?.includes("Collector"),
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFT Specific Functions:");
@@ -119,13 +121,14 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
       });
     }
   } else if (config.name === "CollectorNFTv1") {
-    specificFunctions = functions.filter((f: any) => 
-      f.name?.includes("mint") || 
-      f.name?.includes("Price") || 
-      f.name?.includes("GenIm") ||
-      f.name?.includes("Collector") ||
-      f.name?.includes("upgrade") ||
-      f.name === "initialize"
+    specificFunctions = functions.filter(
+      (f: any) =>
+        f.name?.includes("mint") ||
+        f.name?.includes("Price") ||
+        f.name?.includes("GenIm") ||
+        f.name?.includes("Collector") ||
+        f.name?.includes("upgrade") ||
+        f.name === "initialize",
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFTv1 Specific Functions:");
@@ -149,14 +152,22 @@ Generated on: ${new Date().toISOString()}
 - **Events**: ${events.length}
 - **Errors**: ${errors.length}
 
-${specificFunctions.length > 0 ? `## Key Functions
+${
+  specificFunctions.length > 0
+    ? `## Key Functions
 
-${specificFunctions.map((f: any) => `### \`${f.name}\`
-- **Type**: ${f.stateMutability || 'function'}
+${specificFunctions
+  .map(
+    (f: any) => `### \`${f.name}\`
+- **Type**: ${f.stateMutability || "function"}
 - **Inputs**: ${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || "none"}
 - **Outputs**: ${f.outputs?.map((o: any) => `${o.type} ${o.name || ""}`).join(", ") || "none"}
-`).join("\n")}
-` : ""}
+`,
+  )
+  .join("\n")}
+`
+    : ""
+}
 
 ## All Functions
 
@@ -188,7 +199,7 @@ const abi = require('./${config.name}.json');
   return {
     jsonPath: abiJsonPath,
     tsPath: abiTsPath,
-    summaryPath: summaryPath
+    summaryPath: summaryPath,
   };
 }
 
@@ -205,7 +216,7 @@ async function main() {
         allExportedFiles.push(
           path.relative(process.cwd(), result.jsonPath),
           path.relative(process.cwd(), result.tsPath),
-          path.relative(process.cwd(), result.summaryPath)
+          path.relative(process.cwd(), result.summaryPath),
         );
         successCount++;
       }
@@ -217,10 +228,10 @@ async function main() {
 
   console.log("🎉 ABI export completed!");
   console.log(`📊 Successfully exported ${successCount}/${contracts.length} contracts\n`);
-  
+
   if (allExportedFiles.length > 0) {
     console.log("📁 All files created:");
-    allExportedFiles.forEach(file => {
+    allExportedFiles.forEach((file) => {
       console.log(`   📄 ${file}`);
     });
   }

@@ -6,6 +6,9 @@ website/public/quantum
 
 *blogs.json
 
+# ignore the books folder
+books
+
 # solidity
 cache
 artifacts

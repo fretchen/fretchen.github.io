@@ -12,7 +12,7 @@ interface UpgradeOptions {
 
 /**
  * Upgrade GenImNFTv2 to GenImNFTv3 using OpenZeppelin Upgrades Plugin
- * 
+ *
  * Usage examples:
  * - Environment variable: PROXY_ADDRESS=0x123... npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
  * - Script parameter: npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
@@ -23,7 +23,7 @@ interface UpgradeOptions {
  */
 async function upgradeToV3(options: UpgradeOptions = {}) {
   console.log("🚀 GenImNFTv2 to GenImNFTv3 Upgrade Script");
-  console.log("=" .repeat(50));
+  console.log("=".repeat(50));
   console.log(`Network: ${network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
@@ -31,9 +31,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
   // Get proxy address from environment or parameter
   const proxyAddress = options.proxyAddress || process.env.PROXY_ADDRESS;
   if (!proxyAddress) {
-    throw new Error(
-      "Proxy address required. Set PROXY_ADDRESS environment variable or pass as parameter."
-    );
+    throw new Error("Proxy address required. Set PROXY_ADDRESS environment variable or pass as parameter.");
   }
 
   console.log(`📍 Proxy Address: ${proxyAddress}`);
@@ -53,7 +51,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
   const currentProxy = GenImNFTv2Factory.attach(proxyAddress);
 
   console.log("🔍 Pre-Upgrade Validation");
-  console.log("-" .repeat(30));
+  console.log("-".repeat(30));
 
   try {
     // Verify current contract is GenImNFTv2
@@ -71,7 +69,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
 
     // Validate upgrade compatibility
     console.log("🔍 Validating upgrade compatibility...");
-    
+
     // Skip OpenZeppelin validation for Ignition-deployed contracts
     if (process.env.SKIP_OZ_VALIDATION !== "true") {
       try {
@@ -80,7 +78,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
       } catch (error: any) {
         console.log("⚠️  OpenZeppelin validation failed (likely Ignition deployment):", error.message);
         console.log("🔄 Continuing with manual validation...");
-        
+
         // Manual validation: Check if it's a proxy
         try {
           const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -108,7 +106,6 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
         }
       }
     }
-
   } catch (error) {
     throw new Error(`Pre-upgrade validation failed: ${error}`);
   }
@@ -132,7 +129,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
 
   console.log("");
   console.log("🔄 Performing Upgrade");
-  console.log("-" .repeat(30));
+  console.log("-".repeat(30));
 
   try {
     // Store pre-upgrade state for verification
@@ -140,78 +137,72 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
     const preUpgradeOwner = await currentProxy.owner();
 
     console.log("⏳ Upgrading proxy to GenImNFTv3...");
-    
+
     let upgradedProxy;
-    
+
     // Check if manual upgrade is forced or try OpenZeppelin first
     if (options.forceManualUpgrade || process.env.FORCE_MANUAL_UPGRADE === "true") {
       console.log("🔧 Manual upgrade forced, skipping OpenZeppelin upgrade...");
-      
+
       // Manual upgrade for Ignition-deployed contracts
       console.log("1️⃣ Deploying new GenImNFTv3 implementation...");
       const newImplementation = await GenImNFTv3Factory.deploy();
       await newImplementation.waitForDeployment();
       const newImplAddress = await newImplementation.getAddress();
       console.log(`✅ New implementation deployed at: ${newImplAddress}`);
-      
+
       console.log("2️⃣ Upgrading proxy to new implementation...");
-      
+
       // Prepare the call to reinitializeV3
       const reinitializeCall = GenImNFTv3Factory.interface.encodeFunctionData("reinitializeV3", []);
-      
+
       // Get the proxy admin (owner should be able to upgrade)
       const [signer] = await ethers.getSigners();
       console.log(`Using signer: ${signer.address}`);
-      
+
       // Perform upgradeToAndCall
       const v3Contract = await ethers.getContractAt("GenImNFTv3", proxyAddress);
       const upgradeTx = await v3Contract.upgradeToAndCall(newImplAddress, reinitializeCall);
       await upgradeTx.wait();
-      
+
       console.log("✅ Manual upgrade completed");
       upgradedProxy = v3Contract;
-      
     } else {
       // Try OpenZeppelin upgrade first, fallback to manual upgrade for Ignition deployments
       try {
         console.log("🔄 Attempting OpenZeppelin managed upgrade...");
-        upgradedProxy = await upgrades.upgradeProxy(
-          proxyAddress,
-          GenImNFTv3Factory,
-          {
-            call: {
-              fn: "reinitializeV3",
-              args: []
-            }
-          }
-        );
+        upgradedProxy = await upgrades.upgradeProxy(proxyAddress, GenImNFTv3Factory, {
+          call: {
+            fn: "reinitializeV3",
+            args: [],
+          },
+        });
         console.log("✅ OpenZeppelin upgrade successful");
-        
       } catch (error: any) {
         console.log("⚠️  OpenZeppelin upgrade failed (likely Ignition deployment)");
         console.log("🔄 Falling back to manual upgrade...");
-        
+
         // Manual upgrade for Ignition-deployed contracts
         console.log("1️⃣ Deploying new GenImNFTv3 implementation...");
         const newImplementation = await GenImNFTv3Factory.deploy();
         await newImplementation.waitForDeployment();
         const newImplAddress = await newImplementation.getAddress();
         console.log(`✅ New implementation deployed at: ${newImplAddress}`);
-        
+
         console.log("2️⃣ Upgrading proxy to new implementation...");
-        
+
         // Prepare the call to reinitializeV3
         const reinitializeCall = GenImNFTv3Factory.interface.encodeFunctionData("reinitializeV3", []);
-        
+
         // Get the proxy admin (owner should be able to upgrade)
         const [signer] = await ethers.getSigners();
         console.log(`Using signer: ${signer.address}`);
-        
+
         // Perform upgradeToAndCall
         const v3Contract = await ethers.getContractAt("GenImNFTv3", proxyAddress);
         const upgradeTx = await v3Contract.upgradeToAndCall(newImplAddress, reinitializeCall);
         await upgradeTx.wait();
-        
+
         console.log("✅ Manual upgrade completed");
         upgradedProxy = v3Contract;
       }
@@ -222,7 +213,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
 
     // Verify upgrade
     console.log("🔍 Post-Upgrade Verification");
-    console.log("-" .repeat(30));
+    console.log("-".repeat(30));
 
     const upgradedAddress = await upgradedProxy.getAddress();
     console.log(`✅ Proxy address unchanged: ${upgradedAddress === proxyAddress}`);
@@ -242,7 +233,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
     // Test V3 functionality if tokens exist
     if (postUpgradeSupply > 0n) {
       console.log("🧪 Testing V3 functionality:");
-      
+
       // Check that existing tokens are marked as listed
       const sampleSize = Math.min(3, Number(postUpgradeSupply));
       for (let i = 0; i < sampleSize; i++) {
@@ -281,9 +272,8 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
       upgraded: true,
       preUpgradeSupply: preUpgradeSupply.toString(),
       postUpgradeSupply: postUpgradeSupply.toString(),
-      upgradedProxy
+      upgradedProxy,
     };
-
   } catch (error) {
     console.error("❌ Upgrade failed:", error);
     throw error;
@@ -297,14 +287,14 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
 async function rollbackUpgrade(proxyAddress: string, previousImplementationAddress: string) {
   console.log("⚠️  EMERGENCY ROLLBACK PROCEDURE");
   console.log("🚨 This should only be used in case of critical bugs!");
-  
+
   const GenImNFTv2Factory = await ethers.getContractFactory("GenImNFTv2");
   const proxy = GenImNFTv2Factory.attach(proxyAddress);
-  
+
   console.log(`Rolling back to implementation: ${previousImplementationAddress}`);
   const tx = await proxy.upgradeToAndCall(previousImplementationAddress, "0x");
   await tx.wait();
-  
+
   console.log("✅ Rollback completed");
 }
 
@@ -312,7 +302,7 @@ async function rollbackUpgrade(proxyAddress: string, previousImplementationAddre
 async function main() {
   try {
     const result = await upgradeToV3();
-    
+
     if (result.upgraded) {
       console.log("\n✅ Script completed successfully");
       process.exit(0);
@@ -320,7 +310,6 @@ async function main() {
       console.log("\n✅ Validation completed");
       process.exit(0);
     }
-    
   } catch (error) {
     console.error("\n❌ Script failed:", error);
     process.exit(1);

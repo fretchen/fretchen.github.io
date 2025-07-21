@@ -1,10 +1,10 @@
 /**
  * CollectorNFT Shared Test Library
- * 
+ *
  * This file contains reusable test functions and utilities for CollectorNFT contracts.
  * It provides a comprehensive test suite that can be used across different test files
  * to ensure consistent testing of CollectorNFT functionality.
- * 
+ *
  * Based on the structure of GenImNFTSharedTests.ts
  */
 
@@ -44,41 +44,40 @@ export const TEST_CONSTANTS = {
  */
 export function createCollectorNFTFixture(
   contractName: string = "CollectorNFT",
-  baseMintPrice: bigint = TEST_CONSTANTS.BASE_MINT_PRICE
+  baseMintPrice: bigint = TEST_CONSTANTS.BASE_MINT_PRICE,
 ) {
   return async function deployCollectorNFTFixture(): Promise<CollectorNFTFixture> {
     // Get viem wallet clients
-    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] = 
-      await hre.viem.getWalletClients();
+    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] = await hre.viem.getWalletClients();
 
     const publicClient = await hre.viem.getPublicClient();
 
     // Deploy GenImNFT first using viem
     const genImNFT = await hre.viem.deployContract("GenImNFTv3", []);
-    
+
     // Mint some GenImNFTs for testing (publicly listed by default)
     await genImNFT.write.safeMint(["ipfs://test1", true], {
       account: genImOwner1.account,
-      value: TEST_CONSTANTS.GEN_IM_MINT_PRICE
+      value: TEST_CONSTANTS.GEN_IM_MINT_PRICE,
     });
 
     await genImNFT.write.safeMint(["ipfs://test2", true], {
       account: genImOwner2.account,
-      value: TEST_CONSTANTS.GEN_IM_MINT_PRICE
+      value: TEST_CONSTANTS.GEN_IM_MINT_PRICE,
     });
 
     // Also mint a private (non-listed) token for testing
     await genImNFT.write.safeMint(["ipfs://private", false], {
       account: genImOwner1.account,
-      value: TEST_CONSTANTS.GEN_IM_MINT_PRICE
+      value: TEST_CONSTANTS.GEN_IM_MINT_PRICE,
     });
 
     // Deploy CollectorNFT using viem
     const collectorNFT = await hre.viem.deployContract(contractName);
-    
+
     // Initialize the CollectorNFT
     await collectorNFT.write.initialize([genImNFT.address, baseMintPrice], {
-      account: owner.account
+      account: owner.account,
     });
 
     return {
@@ -100,7 +99,7 @@ export function createCollectorNFTFixture(
  * Basic contract information tests
  */
 export function createBasicContractInfoTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("Basic Contract Information", function () {
       it("Should return correct contract metadata", async function () {
         const { collectorNFT, genImNFT } = await getFixture();
@@ -111,7 +110,7 @@ export function createBasicContractInfoTests(getFixture: () => Promise<Collector
           collectorNFT.read.symbol(),
           collectorNFT.read.totalSupply(),
           collectorNFT.read.baseMintPrice(),
-          collectorNFT.read.genImNFTContract()
+          collectorNFT.read.genImNFTContract(),
         ]);
 
         expect(name).to.equal("CollectorNFT");
@@ -135,21 +134,19 @@ export function createBasicContractInfoTests(getFixture: () => Promise<Collector
  * Pricing function tests
  */
 export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("Pricing Functions", function () {
       it("Should return correct initial pricing", async function () {
         const { collectorNFT } = await getFixture();
 
         // Test pricing for different token IDs
         const tokenIds = [0n, 1n, 2n, 999n];
-        const pricingPromises = tokenIds.map(tokenId => 
-          collectorNFT.read.getCurrentPrice([tokenId])
-        );
+        const pricingPromises = tokenIds.map((tokenId) => collectorNFT.read.getCurrentPrice([tokenId]));
 
         const prices = await Promise.all(pricingPromises);
-        
+
         // All should return base price initially
-        prices.forEach(price => {
+        prices.forEach((price) => {
           expect(price).to.equal(TEST_CONSTANTS.BASE_MINT_PRICE);
         });
       });
@@ -167,7 +164,7 @@ export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture
 
           await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
-            value: currentPrice
+            value: currentPrice,
           });
         }
 
@@ -178,7 +175,7 @@ export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture
         for (let i = 3; i < 5; i++) {
           await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
           });
         }
 
@@ -194,15 +191,15 @@ export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture
 
         // Test multiple price tiers
         for (let tier = 0; tier < 3; tier++) {
-          const expectedPrice = TEST_CONSTANTS.BASE_MINT_PRICE * (2n ** BigInt(tier));
-          
+          const expectedPrice = TEST_CONSTANTS.BASE_MINT_PRICE * 2n ** BigInt(tier);
+
           for (let mint = 0; mint < 5; mint++) {
             const currentPrice = await collectorNFT.read.getCurrentPrice([genImTokenId]);
             expect(currentPrice).to.equal(expectedPrice);
 
             await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
               account: collector1.account,
-              value: currentPrice
+              value: currentPrice,
             });
           }
         }
@@ -220,7 +217,7 @@ export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture
           const currentPrice = await collectorNFT.read.getCurrentPrice([0n]);
           await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
             account: collector1.account,
-            value: currentPrice
+            value: currentPrice,
           });
         }
 
@@ -228,7 +225,7 @@ export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture
         for (let i = 0; i < 2; i++) {
           await collectorNFT.write.mintCollectorNFT([1n, "ipfs://test2"], {
             account: collector2.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
           });
         }
 
@@ -248,7 +245,7 @@ export function createPricingTests(getFixture: () => Promise<CollectorNFTFixture
  * Minting functionality tests
  */
 export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("Minting Functionality", function () {
       it("Should mint CollectorNFT with correct payment flow", async function () {
         const { collectorNFT, collector1, genImOwner1, publicClient } = await getFixture();
@@ -257,14 +254,14 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const uri = "ipfs://test1"; // Use matching GenImNFT URI
 
         // Get initial balance of GenImNFT owner
-        const initialBalance = await publicClient.getBalance({ 
-          address: genImOwner1.account.address 
+        const initialBalance = await publicClient.getBalance({
+          address: genImOwner1.account.address,
         });
 
         // Mint CollectorNFT
         await collectorNFT.write.mintCollectorNFT([genImTokenId, uri], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Verify mint results
@@ -273,8 +270,8 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         expect(await collectorNFT.read.tokenURI([0n])).to.equal(uri);
 
         // Verify payment was sent to GenImNFT owner
-        const finalBalance = await publicClient.getBalance({ 
-          address: genImOwner1.account.address 
+        const finalBalance = await publicClient.getBalance({
+          address: genImOwner1.account.address,
         });
         expect(finalBalance - initialBalance).to.equal(TEST_CONSTANTS.BASE_MINT_PRICE);
       });
@@ -288,12 +285,12 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         // Mint from two different collectors
         await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
           account: collector2.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Verify results
@@ -314,22 +311,22 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const overpayment = TEST_CONSTANTS.BASE_MINT_PRICE * 2n;
 
         // Get initial balance
-        const initialBalance = await publicClient.getBalance({ 
-          address: collector1.account.address 
+        const initialBalance = await publicClient.getBalance({
+          address: collector1.account.address,
         });
 
         // Mint with overpayment
         const hash = await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
           account: collector1.account,
-          value: overpayment
+          value: overpayment,
         });
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         const gasUsed = receipt.gasUsed * receipt.effectiveGasPrice;
 
         // Check final balance (should be refunded excess)
-        const finalBalance = await publicClient.getBalance({ 
-          address: collector1.account.address 
+        const finalBalance = await publicClient.getBalance({
+          address: collector1.account.address,
         });
 
         const expectedBalance = initialBalance - TEST_CONSTANTS.BASE_MINT_PRICE - gasUsed;
@@ -347,8 +344,8 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         await expect(
           collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
-            value: insufficientPayment
-          })
+            value: insufficientPayment,
+          }),
         ).to.be.rejected;
       });
 
@@ -361,8 +358,8 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         await expect(
           collectorNFT.write.mintCollectorNFT([nonExistentTokenId, arbitraryURI], {
             account: collector1.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
-          })
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
+          }),
         ).to.be.rejected;
       });
     });
@@ -373,7 +370,7 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
  * ERC721 enumerable functionality tests
  */
 export function createEnumerableTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("ERC721 Enumerable Functions", function () {
       it("Should enumerate tokens correctly", async function () {
         const { collectorNFT, collector1, collector2 } = await getFixture();
@@ -381,12 +378,12 @@ export function createEnumerableTests(getFixture: () => Promise<CollectorNFTFixt
         // Mint some tokens
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([1n, "ipfs://test2"], {
           account: collector2.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Test enumeration functions
@@ -405,12 +402,12 @@ export function createEnumerableTests(getFixture: () => Promise<CollectorNFTFixt
         // Mint multiple tokens for one owner
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([1n, "ipfs://test2"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         const balance = await collectorNFT.read.balanceOf([collector1.account.address]);
@@ -419,7 +416,7 @@ export function createEnumerableTests(getFixture: () => Promise<CollectorNFTFixt
         // Query all owned tokens
         const ownedTokens = await Promise.all([
           collectorNFT.read.tokenOfOwnerByIndex([collector1.account.address, 0n]),
-          collectorNFT.read.tokenOfOwnerByIndex([collector1.account.address, 1n])
+          collectorNFT.read.tokenOfOwnerByIndex([collector1.account.address, 1n]),
         ]);
 
         expect(ownedTokens).to.deep.equal([0n, 1n]);
@@ -432,7 +429,7 @@ export function createEnumerableTests(getFixture: () => Promise<CollectorNFTFixt
  * Collector token tracking tests
  */
 export function createTrackingTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("Collector Token Tracking", function () {
       it("Should track collector tokens per GenImNFT correctly", async function () {
         const { collectorNFT, collector1, collector2 } = await getFixture();
@@ -443,18 +440,18 @@ export function createTrackingTests(getFixture: () => Promise<CollectorNFTFixtur
         // Mint tokens for GenImNFT 0
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector2.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Mint token for GenImNFT 1
         await collectorNFT.write.mintCollectorNFT([1n, "ipfs://test2"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Check tracking
@@ -475,18 +472,18 @@ export function createTrackingTests(getFixture: () => Promise<CollectorNFTFixtur
         // Mint for GenImNFT 0
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Mint for GenImNFT 1
         await collectorNFT.write.mintCollectorNFT([1n, "ipfs://test2"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Check updated counts
@@ -501,7 +498,7 @@ export function createTrackingTests(getFixture: () => Promise<CollectorNFTFixtur
  * Batch operations and performance tests
  */
 export function createBatchOperationTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("Batch Operations and Performance", function () {
       it("Should handle batch read operations efficiently", async function () {
         const { collectorNFT, collector1 } = await getFixture();
@@ -510,7 +507,7 @@ export function createBatchOperationTests(getFixture: () => Promise<CollectorNFT
         for (let i = 0; i < 3; i++) {
           await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
             account: collector1.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
           });
         }
 
@@ -523,20 +520,12 @@ export function createBatchOperationTests(getFixture: () => Promise<CollectorNFT
           collectorNFT.read.balanceOf([collector1.account.address]),
           collectorNFT.read.name(),
           collectorNFT.read.symbol(),
-          collectorNFT.read.baseMintPrice()
+          collectorNFT.read.baseMintPrice(),
         ];
 
         // Execute all reads in parallel
-        const [
-          totalSupply,
-          currentPrice,
-          mintStats,
-          collectorTokens,
-          balance,
-          name,
-          symbol,
-          baseMintPrice
-        ] = await Promise.all(readOperations);
+        const [totalSupply, currentPrice, mintStats, collectorTokens, balance, name, symbol, baseMintPrice] =
+          await Promise.all(readOperations);
 
         // Verify results
         expect(totalSupply).to.equal(3n);
@@ -561,14 +550,14 @@ export function createBatchOperationTests(getFixture: () => Promise<CollectorNFT
         for (let i = 0; i < batchSize; i++) {
           await collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
           });
         }
 
         // Verify final state
         expect(await collectorNFT.read.totalSupply()).to.equal(BigInt(batchSize));
         expect(await collectorNFT.read.balanceOf([collector1.account.address])).to.equal(BigInt(batchSize));
-        
+
         const collectorTokens = await collectorNFT.read.getCollectorTokensForGenIm([genImTokenId]);
         expect(collectorTokens).to.have.length(batchSize);
       });
@@ -580,7 +569,7 @@ export function createBatchOperationTests(getFixture: () => Promise<CollectorNFT
  * State consistency verification tests
  */
 export function createStateConsistencyTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("State Consistency Verification", function () {
       it("Should maintain consistent state across operations", async function () {
         const { collectorNFT, genImNFT, collector1, collector2 } = await getFixture();
@@ -588,17 +577,17 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
         // Perform various operations
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([0n, "ipfs://test1"], {
           account: collector2.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         await collectorNFT.write.mintCollectorNFT([1n, "ipfs://test2"], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         // Read multiple related state variables
@@ -613,7 +602,7 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
           currentPrice0,
           currentPrice1,
           genImContract,
-          contractOwner
+          contractOwner,
         ] = await Promise.all([
           collectorNFT.read.totalSupply(),
           collectorNFT.read.mintCountPerGenImToken([0n]),
@@ -625,7 +614,7 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
           collectorNFT.read.getCurrentPrice([0n]),
           collectorNFT.read.getCurrentPrice([1n]),
           collectorNFT.read.genImNFTContract(),
-          collectorNFT.read.owner()
+          collectorNFT.read.owner(),
         ]);
 
         // Verify consistency between related values
@@ -650,7 +639,7 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
  * Listing status and access control tests
  */
 export function createListingStatusTests(getFixture: () => Promise<CollectorNFTFixture>) {
-  return function() {
+  return function () {
     describe("Listing Status and Access Control", function () {
       it("Should handle listing status changes correctly", async function () {
         const { collectorNFT, genImNFT, collector1, genImOwner1 } = await getFixture();
@@ -661,33 +650,33 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
         // Should work initially (token is public)
         await collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         expect(await collectorNFT.read.totalSupply()).to.equal(1n);
 
         // Make token private
         await genImNFT.write.setTokenListed([tokenId, false], {
-          account: genImOwner1.account
+          account: genImOwner1.account,
         });
 
         // Should now fail
         await expect(
           collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
             account: collector1.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
-          })
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
+          }),
         ).to.be.rejected;
 
         // Make token public again
         await genImNFT.write.setTokenListed([tokenId, true], {
-          account: genImOwner1.account
+          account: genImOwner1.account,
         });
 
         // Should work again
         await collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
           account: collector1.account,
-          value: TEST_CONSTANTS.BASE_MINT_PRICE
+          value: TEST_CONSTANTS.BASE_MINT_PRICE,
         });
 
         expect(await collectorNFT.read.totalSupply()).to.equal(2n);
@@ -704,7 +693,7 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
         for (let i = 0; i < 3; i++) {
           await collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
             account: collector1.account,
-            value: TEST_CONSTANTS.BASE_MINT_PRICE
+            value: TEST_CONSTANTS.BASE_MINT_PRICE,
           });
         }
 
@@ -714,7 +703,7 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
 
         // Make token private
         await genImNFT.write.setTokenListed([tokenId, false], {
-          account: genImOwner1.account
+          account: genImOwner1.account,
         });
 
         // Price should remain the same even when private
@@ -726,7 +715,7 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
 
         // Make token public again
         await genImNFT.write.setTokenListed([tokenId, true], {
-          account: genImOwner1.account
+          account: genImOwner1.account,
         });
 
         // Continue minting should use correct pricing
@@ -735,7 +724,7 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
 
         await collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
           account: collector1.account,
-          value: priceAfterPublic
+          value: priceAfterPublic,
         });
 
         const finalMintCount = await collectorNFT.read.mintCountPerGenImToken([tokenId]);
@@ -750,9 +739,9 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
  */
 export function createCompleteTestSuite(
   getFixture: () => Promise<CollectorNFTFixture>,
-  contractName: string = "CollectorNFT"
+  contractName: string = "CollectorNFT",
 ) {
-  return function() {
+  return function () {
     describe(`${contractName} - Complete Functional Tests`, function () {
       createBasicContractInfoTests(getFixture)();
       createPricingTests(getFixture)();
@@ -772,19 +761,19 @@ export function createCompleteTestSuite(
 export async function getAllCollectorNFTsForWallet(contract: any, walletAddress: string) {
   const balance = await contract.read.balanceOf([walletAddress]);
   const tokens = [];
-  
+
   for (let i = 0; i < Number(balance); i++) {
     const tokenId = await contract.read.tokenOfOwnerByIndex([walletAddress, BigInt(i)]);
     const tokenURI = await contract.read.tokenURI([tokenId]);
     const genImTokenId = await contract.read.getGenImTokenIdForCollector([tokenId]);
-    
+
     tokens.push({
       tokenId: Number(tokenId),
       tokenURI: tokenURI,
-      genImTokenId: Number(genImTokenId)
+      genImTokenId: Number(genImTokenId),
     });
   }
-  
+
   return tokens;
 }
 
@@ -792,16 +781,14 @@ export async function getAllCollectorNFTsForWallet(contract: any, walletAddress:
  * Helper function to get mint statistics for multiple GenImNFTs
  */
 export async function getMintStatsForTokens(contract: any, tokenIds: bigint[]) {
-  const statsPromises = tokenIds.map(tokenId => 
-    contract.read.getMintStats([tokenId])
-  );
-  
+  const statsPromises = tokenIds.map((tokenId) => contract.read.getMintStats([tokenId]));
+
   const stats = await Promise.all(statsPromises);
-  
+
   return tokenIds.map((tokenId, index) => ({
     tokenId: Number(tokenId),
     mintCount: Number(stats[index][0]),
     currentPrice: stats[index][1],
-    nextPrice: stats[index][2]
+    nextPrice: stats[index][2],
   }));
 }

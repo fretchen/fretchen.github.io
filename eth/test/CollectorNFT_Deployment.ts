@@ -1,6 +1,6 @@
 /**
  * CollectorNFT Deployment Tests
- * 
+ *
  * Minimal tests for CollectorNFT deployment using OpenZeppelin Upgrades Plugin.
  */
 
@@ -18,9 +18,9 @@ describe("CollectorNFT - Deployment Tests", function () {
     const GenImNFTFactory = await ethers.getContractFactory("GenImNFTv3");
     const genImNFT = await GenImNFTFactory.deploy();
     await genImNFT.waitForDeployment();
-    
+
     const genImNFTAddress = await genImNFT.getAddress();
-    
+
     // Mint a test token
     const mintPrice = await genImNFT.mintPrice();
     await genImNFT.safeMint("ipfs://test-genIm", true, { value: mintPrice });
@@ -37,15 +37,11 @@ describe("CollectorNFT - Deployment Tests", function () {
     const { genImNFT, genImNFTAddress, owner, collector } = await loadFixture(deployGenImNFTFixture);
 
     const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
-    
-    const collectorNFTProxy = await upgrades.deployProxy(
-      CollectorNFTFactory,
-      [genImNFTAddress, BASE_MINT_PRICE],
-      {
-        kind: "uups",
-        initializer: "initialize",
-      }
-    );
+
+    const collectorNFTProxy = await upgrades.deployProxy(CollectorNFTFactory, [genImNFTAddress, BASE_MINT_PRICE], {
+      kind: "uups",
+      initializer: "initialize",
+    });
 
     await collectorNFTProxy.waitForDeployment();
     const proxyAddress = await collectorNFTProxy.getAddress();
@@ -62,18 +58,17 @@ describe("CollectorNFT - Deployment Tests", function () {
 
   describe("Basic Deployment", function () {
     it("Should deploy CollectorNFT proxy correctly", async function () {
-      const { collectorNFT, genImNFTAddress, owner, proxyAddress } = 
-        await loadFixture(deployCollectorNFTFixture);
+      const { collectorNFT, genImNFTAddress, owner, proxyAddress } = await loadFixture(deployCollectorNFTFixture);
 
       // Basic contract properties
       expect(await collectorNFT.name()).to.equal("CollectorNFT");
       expect(await collectorNFT.symbol()).to.equal("COLLECTOR");
       expect(await collectorNFT.owner()).to.equal(owner.address);
-      
+
       // Configuration
       expect(await collectorNFT.genImNFTContract()).to.equal(genImNFTAddress);
       expect(await collectorNFT.baseMintPrice()).to.equal(BASE_MINT_PRICE);
-      
+
       // Proxy setup
       const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
       expect(implementationAddress).to.not.equal(proxyAddress);
@@ -105,7 +100,7 @@ describe("CollectorNFT - Deployment Tests", function () {
       const result = await deployCollectorNFT({
         genImNFTAddress,
         baseMintPrice: "0.001",
-        validateOnly: true
+        validateOnly: true,
       });
 
       expect(result).to.be.true;
@@ -117,7 +112,7 @@ describe("CollectorNFT - Deployment Tests", function () {
       const result = await deployCollectorNFT({
         genImNFTAddress,
         baseMintPrice: "0.001",
-        validateOnly: false
+        validateOnly: false,
       });
 
       if (typeof result === "boolean") {
@@ -144,14 +139,10 @@ describe("CollectorNFT - Deployment Tests", function () {
       const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
 
       // This should succeed as the contract doesn't validate the address in initialize
-      const collectorNFTProxy = await upgrades.deployProxy(
-        CollectorNFTFactory,
-        [ethers.ZeroAddress, BASE_MINT_PRICE],
-        {
-          kind: "uups",
-          initializer: "initialize",
-        }
-      );
+      const collectorNFTProxy = await upgrades.deployProxy(CollectorNFTFactory, [ethers.ZeroAddress, BASE_MINT_PRICE], {
+        kind: "uups",
+        initializer: "initialize",
+      });
 
       await collectorNFTProxy.waitForDeployment();
       expect(await collectorNFTProxy.genImNFTContract()).to.equal(ethers.ZeroAddress);
@@ -162,14 +153,10 @@ describe("CollectorNFT - Deployment Tests", function () {
       const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
 
       // This should succeed as the contract doesn't validate the price in initialize
-      const collectorNFTProxy = await upgrades.deployProxy(
-        CollectorNFTFactory,
-        [genImNFTAddress, 0n],
-        {
-          kind: "uups",
-          initializer: "initialize",
-        }
-      );
+      const collectorNFTProxy = await upgrades.deployProxy(CollectorNFTFactory, [genImNFTAddress, 0n], {
+        kind: "uups",
+        initializer: "initialize",
+      });
 
       await collectorNFTProxy.waitForDeployment();
       expect(await collectorNFTProxy.baseMintPrice()).to.equal(0n);

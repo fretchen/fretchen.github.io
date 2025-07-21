@@ -4,6 +4,8 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
+import { css } from "../styled-system/css";
+
 // Types für Moana's Choice Game - Updated to boats-based system
 
 const otherChiefs = ["Chief Kai", "Chief Tala", "Chief Sina"];
@@ -61,7 +63,7 @@ const MODEL_PARAMS = {
   // Cost parameter
   c0: 0.125, // Cost per boat
 
-  // cost for the inidividual islands
+  // cost for the individual islands
   // important for the second game
   c_islands: [0.125, 0.25, 0.75, 1],
 

@@ -8,4 +8,10 @@ export default defineConfig({
   build: {
     outDir: "build",
   },
+  define: {
+    global: "globalThis",
+  },
+  optimizeDeps: {
+    include: ["buffer"],
+  },
 });

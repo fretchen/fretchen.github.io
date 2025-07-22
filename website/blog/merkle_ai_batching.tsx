@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
+import { MerkleTree } from "merkletreejs";
+import { Buffer } from "buffer";
+
+// Real SHA-256 hash using Web Crypto API with Buffer compatibility
+const createHashSync = async (data: string | Buffer): Promise<Buffer> => {
+  // Convert string data to Uint8Array if needed
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
+  
+  // Use Web Crypto API for real SHA-256
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+  
+  // Convert to Buffer for merkletreejs compatibility
+  return Buffer.from(hashBuffer);
+};
 
 // Export meta for blog post
 export const meta = {
@@ -61,8 +75,8 @@ interface LLMResponse {
   promptProcessed?: string; // LLM response, not stored in leaf
 }
 
-// Mock Merkle Tree functions
-const calculateMerkleRoot = (requests: LLMRequest[]): string => {
+// Mock Merkle Tree functions using merkletreejs with Web Crypto API
+const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
   // Create public leaf data (only id, timestamp, tokenCount, wallet)
   const publicLeaves = requests.map((req) => ({
     id: req.id,
@@ -70,19 +84,151 @@ const calculateMerkleRoot = (requests: LLMRequest[]): string => {
     tokenCount: req.estimatedTokens,
     wallet: req.recipient,
   }));
-  
-  // Simplified mock implementation using only public data
-  const hash = publicLeaves.map((leaf) => `${leaf.id}${leaf.wallet}${leaf.tokenCount}`).join("");
-  return `0x${hash.slice(2, 34)}...`;
+
+  // Convert to buffer format for merkletreejs
+  const leafBuffers = await Promise.all(
+    publicLeaves.map(async (leaf) => {
+      const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
+      return await createHashSync(serialized);
+    })
+  );
+
+  // Create Merkle Tree using merkletreejs with async hash function
+  // We need to provide a synchronous wrapper for the async hash function
+  const hashFn = (data: Buffer) => {
+    // For the tree construction, we'll use a synchronous hash
+    // In a real implementation, you'd want to pre-compute all hashes
+    const encoder = new TextEncoder();
+    const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
+    
+    // Simple synchronous hash for tree construction (not cryptographically secure)
+    let hash = 0;
+    for (let i = 0; i < bytes.length; i++) {
+      const char = bytes[i];
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Create a 32-byte buffer to simulate hash output
+    const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
+    const fullHash = hashHex.repeat(8); // Simulate 256 bits (64 hex chars)
+    
+    return Buffer.from(fullHash, "hex");
+  };
+
+  const tree = new MerkleTree(leafBuffers, hashFn);
+  const root = tree.getRoot();
+
+  return `0x${root.toString("hex")}`;
 };
 
-const generateMerkleProof = (_requestId: number, _merkleRoot: string): string[] => {
-  // Mock proof generation
-  return [
-    `0x${Math.random().toString(16).slice(2, 34)}...`,
-    `0x${Math.random().toString(16).slice(2, 34)}...`,
-    `0x${Math.random().toString(16).slice(2, 34)}...`,
-  ];
+const generateMerkleProof = async (requestId: number, requests: LLMRequest[]): Promise<string[]> => {
+  // Create the same leaf data structure
+  const publicLeaves = requests.map((req) => ({
+    id: req.id,
+    timestamp: new Date().toISOString(),
+    tokenCount: req.estimatedTokens,
+    wallet: req.recipient,
+  }));
+
+  const leafBuffers = await Promise.all(
+    publicLeaves.map(async (leaf) => {
+      const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
+      return await createHashSync(serialized);
+    }),
+  );
+
+  // Use the same synchronous hash function for consistency
+  const hashFn = (data: Buffer) => {
+    const encoder = new TextEncoder();
+    const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
+    
+    let hash = 0;
+    for (let i = 0; i < bytes.length; i++) {
+      const char = bytes[i];
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
+    }
+    
+    const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
+    const fullHash = hashHex.repeat(8);
+    
+    return Buffer.from(fullHash, "hex");
+  };
+
+  const tree = new MerkleTree(leafBuffers, hashFn);
+  const targetLeaf = leafBuffers[requestId - 1]; // Assuming 1-based ID
+  const proof = tree.getProof(targetLeaf);
+
+  return proof.map((p) => `0x${p.data.toString("hex")}`);
+};
+
+// Component to display Merkle proof (handles async loading)
+const MerkleProofDisplay: React.FC<{ requestId: number; requests: LLMRequest[]; merkleRoot: string }> = ({ requestId, requests, merkleRoot }) => {
+  const [proof, setProof] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadProof = async () => {
+    setLoading(true);
+    try {
+      const proofData = await generateMerkleProof(requestId, requests);
+      setProof(proofData);
+    } catch (error) {
+      console.error("Error generating proof:", error);
+      setProof([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (requests.length > 0) {
+      loadProof();
+    }
+  }, [requestId, requests.length]);
+
+  if (loading) {
+    return <div>Loading proof...</div>;
+  }
+
+  return (
+    <div
+      className={css({
+        marginTop: "8px",
+        padding: "8px",
+        backgroundColor: "#f9fafb",
+        borderRadius: "4px",
+        fontFamily: "monospace",
+        fontSize: "10px",
+        maxWidth: "300px",
+        wordBreak: "break-all",
+      })}
+    >
+      <div>
+        <strong>Leaf Data:</strong>
+      </div>
+      <pre>
+        {JSON.stringify(
+          {
+            id: requestId,
+            timestamp: new Date().toISOString(),
+            tokenCount: requests.find((r) => r.id === requestId)?.estimatedTokens || 0,
+            wallet: requests.find((r) => r.id === requestId)?.recipient || "",
+          },
+          null,
+          2,
+        )}
+      </pre>
+      <div>
+        <strong>Merkle Proof:</strong>
+      </div>
+      {proof.map((proofItem, i) => (
+        <div key={i}>{proofItem}</div>
+      ))}
+      <div>
+        <strong>Root:</strong> {merkleRoot}
+      </div>
+    </div>
+  );
 };
 
 // Interactive Batch Creator Component
@@ -132,14 +278,18 @@ const BatchCreator: React.FC = () => {
 
   // Create merkle tree when threshold is reached
   useEffect(() => {
-    if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
-      const root = calculateMerkleRoot(requests);
-      setMerkleRoot(root);
-      setBatchRegistered(true);
+    const createMerkleTree = async () => {
+      if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
+        const root = await calculateMerkleRoot(requests);
+        setMerkleRoot(root);
+        setBatchRegistered(true);
 
-      // Update all request statuses to registered
-      setRequests((prev) => prev.map((req) => ({ ...req, status: "registered" })));
-    }
+        // Update all request statuses to registered
+        setRequests((prev) => prev.map((req) => ({ ...req, status: "registered" })));
+      }
+    };
+
+    createMerkleTree();
   }, [requests.length, batchRegistered]);
 
   const handleSendRequest = () => {
@@ -182,34 +332,36 @@ const BatchCreator: React.FC = () => {
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
         🧪 Interactive LLM Batch Processing Demo
       </h3>
-      
-      <div className={css({ 
-        marginBottom: "20px", 
-        padding: "16px", 
-        backgroundColor: "#eff6ff", 
-        borderRadius: "8px",
-        border: "1px solid #bfdbfe"
-      })}>
+
+      <div
+        className={css({
+          marginBottom: "20px",
+          padding: "16px",
+          backgroundColor: "#eff6ff",
+          borderRadius: "8px",
+          border: "1px solid #bfdbfe",
+        })}
+      >
         <p className={css({ fontSize: "14px", color: "#1e40af", marginBottom: "8px" })}>
-          <strong>How it works:</strong> Send LLM requests and get immediate responses. 
-          After {BATCH_SIZE_THRESHOLD} requests, a Merkle tree is automatically created for cost-efficient blockchain settlement.
+          <strong>How it works:</strong> Send LLM requests and get immediate responses. After {BATCH_SIZE_THRESHOLD}{" "}
+          requests, a Merkle tree is automatically created for cost-efficient blockchain settlement.
         </p>
       </div>
 
       {/* Request Input */}
-      <div className={css({ 
-        marginBottom: "20px", 
-        padding: "16px", 
-        backgroundColor: "#fff", 
-        borderRadius: "8px",
-        border: "1px solid #d1d5db"
-      })}>
+      <div
+        className={css({
+          marginBottom: "20px",
+          padding: "16px",
+          backgroundColor: "#fff",
+          borderRadius: "8px",
+          border: "1px solid #d1d5db",
+        })}
+      >
         <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>Send LLM Request</h4>
-        
+
         <div className={css({ marginBottom: "12px" })}>
-          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>
-            Wallet Address:
-          </label>
+          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>Wallet Address:</label>
           <select
             value={currentWallet}
             onChange={(e) => setCurrentWallet(e.target.value)}
@@ -219,19 +371,19 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
               borderRadius: "4px",
               fontFamily: "monospace",
-              fontSize: "14px"
+              fontSize: "14px",
             })}
           >
-            {mockWallets.map(wallet => (
-              <option key={wallet} value={wallet}>{wallet}</option>
+            {mockWallets.map((wallet) => (
+              <option key={wallet} value={wallet}>
+                {wallet}
+              </option>
             ))}
           </select>
         </div>
-        
+
         <div className={css({ marginBottom: "12px" })}>
-          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>
-            Prompt:
-          </label>
+          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>Prompt:</label>
           <input
             type="text"
             value={currentPrompt}
@@ -242,12 +394,12 @@ const BatchCreator: React.FC = () => {
               padding: "8px",
               border: "1px solid #d1d5db",
               borderRadius: "4px",
-              fontSize: "14px"
+              fontSize: "14px",
             })}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendRequest()}
+            onKeyPress={(e) => e.key === "Enter" && handleSendRequest()}
           />
         </div>
-        
+
         <div className={css({ display: "flex", gap: "8px" })}>
           <button
             onClick={handleSendRequest}
@@ -264,7 +416,7 @@ const BatchCreator: React.FC = () => {
           >
             Send Request
           </button>
-          
+
           <button
             onClick={handleRandomRequest}
             className={css({
@@ -279,7 +431,7 @@ const BatchCreator: React.FC = () => {
           >
             Send Random Request
           </button>
-          
+
           <button
             onClick={resetDemo}
             className={css({
@@ -299,25 +451,27 @@ const BatchCreator: React.FC = () => {
 
       {/* Last Response */}
       {lastResponse && (
-        <div className={css({
-          marginBottom: "20px",
-          padding: "16px",
-          backgroundColor: "#f0fdf4",
-          border: "1px solid #bbf7d0",
-          borderRadius: "8px"
-        })}>
-          <h4 className={css({ fontWeight: "bold", marginBottom: "8px", color: "#166534" })}>
-            ✅ Response Received
-          </h4>
-          <pre className={css({
-            fontSize: "12px",
-            fontFamily: "monospace",
-            backgroundColor: "#fff",
-            padding: "12px",
-            borderRadius: "4px",
-            border: "1px solid #d1d5db",
-            overflow: "auto"
-          })}>
+        <div
+          className={css({
+            marginBottom: "20px",
+            padding: "16px",
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "8px",
+          })}
+        >
+          <h4 className={css({ fontWeight: "bold", marginBottom: "8px", color: "#166534" })}>✅ Response Received</h4>
+          <pre
+            className={css({
+              fontSize: "12px",
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              border: "1px solid #d1d5db",
+              overflow: "auto",
+            })}
+          >
             {JSON.stringify(lastResponse, null, 2)}
           </pre>
         </div>
@@ -356,11 +510,13 @@ const BatchCreator: React.FC = () => {
             })}
           >
             <div className={css({ fontSize: "14px", color: "#6b7280" })}>Batch Status</div>
-            <div className={css({ 
-              fontSize: "16px", 
-              fontWeight: "bold",
-              color: batchRegistered ? "#10b981" : "#f59e0b"
-            })}>
+            <div
+              className={css({
+                fontSize: "16px",
+                fontWeight: "bold",
+                color: batchRegistered ? "#10b981" : "#f59e0b",
+              })}
+            >
               {batchRegistered ? "✅ Registered" : "⏳ Pending"}
             </div>
           </div>
@@ -402,14 +558,16 @@ const BatchCreator: React.FC = () => {
       {/* Request List */}
       <div className={css({ maxHeight: "300px", overflowY: "auto" })}>
         {requests.length === 0 ? (
-          <div className={css({
-            padding: "20px",
-            textAlign: "center",
-            color: "#6b7280",
-            backgroundColor: "#fff",
-            borderRadius: "6px",
-            border: "1px solid #d1d5db"
-          })}>
+          <div
+            className={css({
+              padding: "20px",
+              textAlign: "center",
+              color: "#6b7280",
+              backgroundColor: "#fff",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+            })}
+          >
             No requests yet. Send your first LLM request above! 🚀
           </div>
         ) : (
@@ -429,9 +587,7 @@ const BatchCreator: React.FC = () => {
             >
               <div>
                 <div className={css({ fontWeight: "bold" })}>Request #{request.id}</div>
-                <div className={css({ fontSize: "14px", color: "#6b7280", marginBottom: "4px" })}>
-                  {request.prompt}
-                </div>
+                <div className={css({ fontSize: "14px", color: "#6b7280", marginBottom: "4px" })}>{request.prompt}</div>
                 <div className={css({ fontSize: "12px", fontFamily: "monospace", color: "#9ca3af" })}>
                   {request.recipient} • {request.model} • {request.estimatedTokens} tokens
                 </div>
@@ -443,9 +599,17 @@ const BatchCreator: React.FC = () => {
                     borderRadius: "4px",
                     fontSize: "12px",
                     backgroundColor:
-                      request.status === "claimed" ? "#d1fae5" : request.status === "registered" ? "#fef3c7" : "#f3f4f6",
+                      request.status === "claimed"
+                        ? "#d1fae5"
+                        : request.status === "registered"
+                          ? "#fef3c7"
+                          : "#f3f4f6",
                     color:
-                      request.status === "claimed" ? "#065f46" : request.status === "registered" ? "#92400e" : "#374151",
+                      request.status === "claimed"
+                        ? "#065f46"
+                        : request.status === "registered"
+                          ? "#92400e"
+                          : "#374151",
                   })}
                 >
                   {request.status === "claimed"
@@ -455,21 +619,28 @@ const BatchCreator: React.FC = () => {
                       : "Pending"}
                 </span>
                 {request.status === "registered" && (
-                  <button
-                    onClick={() => claimRequest(request.id)}
-                    className={css({
-                      padding: "4px 8px",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      "&:hover": { backgroundColor: "#2563eb" },
-                    })}
-                  >
-                    Process
-                  </button>
+                  <>
+                    <button
+                      onClick={() => claimRequest(request.id)}
+                      className={css({
+                        padding: "4px 8px",
+                        backgroundColor: "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        marginRight: "8px",
+                        "&:hover": { backgroundColor: "#2563eb" },
+                      })}
+                    >
+                      Process
+                    </button>
+                    <details className={css({ fontSize: "12px" })}>
+                      <summary className={css({ cursor: "pointer", color: "#6b7280" })}>View Merkle Proof</summary>
+                      <MerkleProofDisplay requestId={request.id} requests={requests} merkleRoot={merkleRoot} />
+                    </details>
+                  </>
                 )}
               </div>
             </div>

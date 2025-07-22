@@ -3,19 +3,19 @@ import { css } from "../styled-system/css";
 
 // Export meta for blog post
 export const meta = {
-  title: "Merkle Trees für KI-Batching: Effiziente On-Chain Zahlungen für generative Kunst",
-  description: "Erfahren Sie, wie Merkle Trees die Kosten für KI-generierte NFTs um bis zu 98% reduzieren können",
-  publishing_date: "2025-06-29",
-  tags: ["Blockchain", "KI", "NFT", "Merkle Trees", "Ethereum", "Optimierung", "Generative Kunst"],
-  readTime: 8
+  title: "Merkle Trees for LLM API Batching: Cost-Optimized Blockchain Payments for AI Services",
+  publishing_date: "2025-07-29",
+  tags: ["Blockchain", "LLM", "API", "Merkle Trees", "Ethereum", "Cost Optimization", "AI Services"],
+  readTime: 8,
 };
 
 // Mock types and interfaces
-interface NFTData {
+interface LLMRequest {
   id: number;
   prompt: string;
-  imageHash: string;
+  model: string;
   recipient: string;
+  estimatedTokens: number;
   status: "pending" | "registered" | "claimed";
 }
 
@@ -27,39 +27,42 @@ interface BatchInfo {
   claimed: number;
 }
 
-// Mock NFT data
-const mockNFTs: NFTData[] = [
+// Mock LLM request data
+const mockRequests: LLMRequest[] = [
   {
     id: 1,
-    prompt: "Abstract digital landscape with neon colors",
-    imageHash: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+    prompt: "Analyze the sentiment of this customer review: 'The product is amazing!'",
+    model: "gpt-4-turbo",
     recipient: "0xUser1Address...",
+    estimatedTokens: 150,
     status: "pending",
   },
   {
     id: 2,
-    prompt: "Minimalist geometric patterns in blue",
-    imageHash: "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+    prompt: "Translate this text to German: 'Hello, how are you today?'",
+    model: "gpt-4-turbo", 
     recipient: "0xUser2Address...",
+    estimatedTokens: 120,
     status: "pending",
   },
   {
     id: 3,
-    prompt: "Cyberpunk city skyline at sunset",
-    imageHash: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+    prompt: "Write a short Python function to calculate fibonacci numbers",
+    model: "gpt-4-turbo",
     recipient: "0xUser3Address...",
+    estimatedTokens: 200,
     status: "pending",
   },
 ];
 
 // Mock Merkle Tree functions
-const calculateMerkleRoot = (nfts: NFTData[]): string => {
+const calculateMerkleRoot = (requests: LLMRequest[]): string => {
   // Simplified mock implementation
-  const hash = nfts.map((nft) => nft.imageHash).join("");
+  const hash = requests.map((req) => `${req.prompt}${req.model}`).join("");
   return `0x${hash.slice(2, 34)}...`;
 };
 
-const generateMerkleProof = (nftId: number, merkleRoot: string): string[] => {
+const generateMerkleProof = (_requestId: number, _merkleRoot: string): string[] => {
   // Mock proof generation
   return [
     `0x${Math.random().toString(16).slice(2, 34)}...`,
@@ -70,7 +73,7 @@ const generateMerkleProof = (nftId: number, merkleRoot: string): string[] => {
 
 // Interactive Batch Creator Component
 const BatchCreator: React.FC = () => {
-  const [nfts, setNfts] = useState<NFTData[]>(mockNFTs);
+  const [requests, setRequests] = useState<LLMRequest[]>(mockRequests);
   const [merkleRoot, setMerkleRoot] = useState<string>("");
   const [batchRegistered, setBatchRegistered] = useState(false);
   const [gasEstimate, setGasEstimate] = useState({ individual: 0, batch: 15 });
@@ -78,34 +81,35 @@ const BatchCreator: React.FC = () => {
   useEffect(() => {
     // Calculate gas estimates
     setGasEstimate({
-      individual: nfts.length * 15,
+      individual: requests.length * 15,
       batch: 15,
     });
-  }, [nfts.length]);
+  }, [requests.length]);
 
   const registerBatch = () => {
-    const root = calculateMerkleRoot(nfts);
+    const root = calculateMerkleRoot(requests);
     setMerkleRoot(root);
     setBatchRegistered(true);
 
-    // Update NFT status
-    setNfts((prev) => prev.map((nft) => ({ ...nft, status: "registered" })));
+    // Update request status
+    setRequests((prev) => prev.map((request) => ({ ...request, status: "registered" })));
   };
 
-  const claimNFT = (nftId: number) => {
-    setNfts((prev) => prev.map((nft) => (nft.id === nftId ? { ...nft, status: "claimed" } : nft)));
+  const claimRequest = (requestId: number) => {
+    setRequests((prev) => prev.map((request) => (request.id === requestId ? { ...request, status: "claimed" } : request)));
   };
 
-  const addNFT = () => {
-    const newId = Math.max(...nfts.map((n) => n.id)) + 1;
-    const newNFT: NFTData = {
+  const addRequest = () => {
+    const newId = Math.max(...requests.map((r) => r.id)) + 1;
+    const newRequest: LLMRequest = {
       id: newId,
-      prompt: `Generated prompt #${newId}`,
-      imageHash: `0x${Math.random().toString(16).slice(2, 34)}...`,
+      prompt: `New LLM request #${newId}`,
+      model: "gpt-3.5-turbo",
       recipient: `0xUser${newId}Address...`,
+      estimatedTokens: 100,
       status: "pending",
     };
-    setNfts((prev) => [...prev, newNFT]);
+    setRequests((prev) => [...prev, newRequest]);
   };
 
   return (
@@ -119,7 +123,7 @@ const BatchCreator: React.FC = () => {
       })}
     >
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
-        🧪 Interaktive Batch-Erstellung
+        🧪 Interactive Batch Creation
       </h3>
 
       <div className={css({ marginBottom: "16px" })}>
@@ -139,8 +143,8 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>NFTs im Batch</div>
-            <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{nfts.length}</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>LLM-Anfragen im Batch</div>
+            <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{requests.length}</div>
           </div>
 
           <div
@@ -187,7 +191,7 @@ const BatchCreator: React.FC = () => {
 
       <div className={css({ marginBottom: "16px" })}>
         <button
-          onClick={addNFT}
+          onClick={addRequest}
           className={css({
             padding: "8px 16px",
             backgroundColor: "#3b82f6",
@@ -199,7 +203,7 @@ const BatchCreator: React.FC = () => {
             "&:hover": { backgroundColor: "#2563eb" },
           })}
         >
-          + NFT hinzufügen
+          + LLM-Anfrage hinzufügen
         </button>
 
         <button
@@ -234,9 +238,9 @@ const BatchCreator: React.FC = () => {
       )}
 
       <div className={css({ maxHeight: "300px", overflowY: "auto" })}>
-        {nfts.map((nft) => (
+        {requests.map((request) => (
           <div
-            key={nft.id}
+            key={request.id}
             className={css({
               padding: "12px",
               backgroundColor: "#fff",
@@ -249,9 +253,9 @@ const BatchCreator: React.FC = () => {
             })}
           >
             <div>
-              <div className={css({ fontWeight: "bold" })}>NFT #{nft.id}</div>
-              <div className={css({ fontSize: "14px", color: "#6b7280" })}>{nft.prompt}</div>
-              <div className={css({ fontSize: "12px", fontFamily: "monospace" })}>{nft.imageHash}</div>
+              <div className={css({ fontWeight: "bold" })}>LLM-Anfrage #{request.id}</div>
+              <div className={css({ fontSize: "14px", color: "#6b7280" })}>{request.prompt}</div>
+              <div className={css({ fontSize: "12px", fontFamily: "monospace" })}>{request.model} - {request.estimatedTokens} tokens</div>
             </div>
             <div className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
               <span
@@ -260,15 +264,15 @@ const BatchCreator: React.FC = () => {
                   borderRadius: "4px",
                   fontSize: "12px",
                   backgroundColor:
-                    nft.status === "claimed" ? "#d1fae5" : nft.status === "registered" ? "#fef3c7" : "#f3f4f6",
-                  color: nft.status === "claimed" ? "#065f46" : nft.status === "registered" ? "#92400e" : "#374151",
+                    request.status === "claimed" ? "#d1fae5" : request.status === "registered" ? "#fef3c7" : "#f3f4f6",
+                  color: request.status === "claimed" ? "#065f46" : request.status === "registered" ? "#92400e" : "#374151",
                 })}
               >
-                {nft.status === "claimed" ? "Geclaimed" : nft.status === "registered" ? "Registriert" : "Pending"}
+                {request.status === "claimed" ? "Verarbeitet" : request.status === "registered" ? "Registriert" : "Pending"}
               </span>
-              {nft.status === "registered" && (
+              {request.status === "registered" && (
                 <button
-                  onClick={() => claimNFT(nft.id)}
+                  onClick={() => claimRequest(request.id)}
                   className={css({
                     padding: "4px 8px",
                     backgroundColor: "#3b82f6",
@@ -280,7 +284,7 @@ const BatchCreator: React.FC = () => {
                     "&:hover": { backgroundColor: "#2563eb" },
                   })}
                 >
-                  Claim
+                  Verarbeiten
                 </button>
               )}
             </div>
@@ -293,12 +297,12 @@ const BatchCreator: React.FC = () => {
 
 // Cost Comparison Component
 const CostComparison: React.FC = () => {
-  const [nftCount, setNftCount] = useState(10);
+  const [requestCount, setRequestCount] = useState(10);
 
-  const individualCost = nftCount * 15;
+  const individualCost = requestCount * 15;
   const batchCost = 15;
-  const claimingCost = nftCount * 2; // Estimated claiming cost
-  const totalBatchCost = batchCost + claimingCost;
+  const processingCost = requestCount * 2; // Estimated processing cost
+  const totalBatchCost = batchCost + processingCost;
   const savings = Math.round((1 - totalBatchCost / individualCost) * 100);
 
   return (
@@ -317,14 +321,14 @@ const CostComparison: React.FC = () => {
 
       <div className={css({ marginBottom: "20px" })}>
         <label className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
-          Anzahl NFTs: {nftCount}
+          Anzahl LLM-Anfragen: {requestCount}
         </label>
         <input
           type="range"
           min="1"
           max="100"
-          value={nftCount}
-          onChange={(e) => setNftCount(parseInt(e.target.value))}
+          value={requestCount}
+          onChange={(e) => setRequestCount(parseInt(e.target.value))}
           className={css({ width: "100%" })}
         />
       </div>
@@ -346,7 +350,7 @@ const CostComparison: React.FC = () => {
         >
           <div className={css({ fontSize: "14px", color: "#991b1b", fontWeight: "bold" })}>Einzelne Transaktionen</div>
           <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#dc2626" })}>${individualCost}</div>
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{nftCount} × $15</div>
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{requestCount} × $15</div>div>
         </div>
 
         <div
@@ -370,9 +374,9 @@ const CostComparison: React.FC = () => {
             border: "1px solid #bbf7d0",
           })}
         >
-          <div className={css({ fontSize: "14px", color: "#166534", fontWeight: "bold" })}>Claiming-Kosten</div>
-          <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#16a34a" })}>${claimingCost}</div>
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{nftCount} × $2</div>
+          <div className={css({ fontSize: "14px", color: "#166534", fontWeight: "bold" })}>Verarbeitungskosten</div>
+          <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#16a34a" })}>${processingCost}</div>
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{requestCount} × $2</div>div>
         </div>
 
         <div
@@ -502,44 +506,24 @@ const SmartContractDemo: React.FC = () => {
 export default function MerkleAIBatching() {
   return (
     <article className={css({ maxWidth: "800px", margin: "0 auto", padding: "20px" })}>
-      <header className={css({ marginBottom: "32px" })}>
-        <h1
-          className={css({
-            fontSize: "32px",
-            fontWeight: "bold",
-            lineHeight: "1.2",
-            marginBottom: "16px",
-          })}
-        >
-          Merkle Trees für KI-Batching: Effiziente On-Chain Zahlungen für generative Kunst
-        </h1>
-        <div
-          className={css({
-            fontSize: "16px",
-            color: "#6b7280",
-            marginBottom: "24px",
-          })}
-        >
-          Veröffentlicht am 26. Juni 2025
-        </div>
-      </header>
+      
 
       <section className={css({ marginBottom: "32px" })}>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Die Kombination von generativer KI und Blockchain-Technologie eröffnet faszinierende Möglichkeiten für
-          digitale Kunst. Aber ein Problem bleibt bestehen: Wie können wir die hohen Transaktionskosten reduzieren, wenn
-          Nutzer mehrere KI-generierte NFTs erstellen möchten? Die Antwort liegt in einer eleganten Datenstruktur:{" "}
-          <strong>Merkle Trees</strong>.
+          Die Integration von Large Language Models (LLMs) in dezentrale Anwendungen eröffnet aufregende Möglichkeiten für 
+          KI-gesteuerte Services. Aber ein Problem bleibt bestehen: Wie können wir die hohen Blockchain-Transaktionskosten 
+          reduzieren, wenn Nutzer mehrere LLM-API-Aufrufe in einer Anwendung benötigen? Die Antwort liegt in einer eleganten 
+          Datenstruktur: <strong>Merkle Trees</strong>.
         </p>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Das Problem: Hohe Gaskosten bei einzelnen Transaktionen
+          Das Problem: Hohe Gaskosten bei einzelnen LLM-Zahlungen
         </h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Stellen Sie sich vor, ein Künstler möchte 10 verschiedene KI-generierte Bilder als NFTs minten. Bei der
-          traditionellen Herangehensweise würde jedes NFT eine separate Blockchain-Transaktion erfordern:
+          Stellen Sie sich vor, eine dApp möchte 10 verschiedene LLM-API-Anfragen für ihre Nutzer verarbeiten. 
+          Bei der traditionellen Herangehensweise würde jede LLM-Zahlung eine separate Blockchain-Transaktion erfordern:
         </p>
 
         <div
@@ -552,33 +536,33 @@ export default function MerkleAIBatching() {
           })}
         >
           <div>Einzelne Transaktionen:</div>
-          <div>- NFT #1: ~$15 Gaskosten</div>
-          <div>- NFT #2: ~$15 Gaskosten</div>
-          <div>- NFT #3: ~$15 Gaskosten</div>
+          <div>- LLM Request #1: ~$15 Gaskosten</div>
+          <div>- LLM Request #2: ~$15 Gaskosten</div>
+          <div>- LLM Request #3: ~$15 Gaskosten</div>
           <div>...</div>
           <div>
-            <strong>Gesamt: ~$150 für 10 NFTs</strong>
+            <strong>Gesamt: ~$150 für 10 LLM-Anfragen</strong>
           </div>
         </div>
 
         <p className={css({ lineHeight: "1.6" })}>
-          Das ist nicht nur teuer, sondern auch ineffizient für das Netzwerk.
+          Das ist nicht nur teuer, sondern auch ineffizient für das Netzwerk und macht KI-Services unerschwinglich.
         </p>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Die Lösung: Merkle Tree Batching
+          Die Lösung: Merkle Tree Batching für LLM-Zahlungen
         </h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Mit Merkle Trees können wir mehrere NFT-Erstellungen in einer einzigen Transaktion bündeln. Probieren Sie es
-          in der interaktiven Demo aus:
+          Mit Merkle Trees können wir mehrere LLM-API-Zahlungen in einer einzigen Blockchain-Transaktion bündeln. 
+          Probieren Sie es in der interaktiven Demo aus:
         </p>
 
         <BatchCreator />
 
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Kosten:</strong> Nur ~$15 für den gesamten Batch statt $150!
+          <strong>Kosten:</strong> Nur ~$15 für den gesamten Batch + $2 pro LLM-Anfrage statt $150!
         </p>
       </section>
 
@@ -597,7 +581,7 @@ export default function MerkleAIBatching() {
         </h2>
 
         <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-          Schritt 1: Batch-Erstellung (Off-Chain)
+          Schritt 1: LLM-Batch-Erstellung (Off-Chain)
         </h3>
 
         <div
@@ -611,9 +595,9 @@ export default function MerkleAIBatching() {
             fontSize: "14px",
           })}
         >
-          <div className={css({ color: "#10b981" })}>// Mock: Batch von KI-generierten NFT-Metadaten</div>
+          <div className={css({ color: "#10b981" })}>// Mock: Batch von LLM-API-Anfragen</div>
           <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> nftBatch = [
+            <span className={css({ color: "#f59e0b" })}>const</span> llmBatch = [
           </div>
           <div> {`{`}</div>
           <div>

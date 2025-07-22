@@ -27,33 +27,40 @@ interface BatchInfo {
   claimed: number;
 }
 
-// Mock LLM request data
-const mockRequests: LLMRequest[] = [
-  {
-    id: 1,
-    prompt: "Analyze the sentiment of this customer review: 'The product is amazing!'",
-    model: "gpt-4-turbo",
-    recipient: "0xUser1Address...",
-    estimatedTokens: 150,
-    status: "pending",
-  },
-  {
-    id: 2,
-    prompt: "Translate this text to German: 'Hello, how are you today?'",
-    model: "gpt-4-turbo",
-    recipient: "0xUser2Address...",
-    estimatedTokens: 120,
-    status: "pending",
-  },
-  {
-    id: 3,
-    prompt: "Write a short Python function to calculate fibonacci numbers",
-    model: "gpt-4-turbo",
-    recipient: "0xUser3Address...",
-    estimatedTokens: 200,
-    status: "pending",
-  },
+// Mock wallet addresses for simulation
+const mockWallets = [
+  "0xUser1Address...",
+  "0xUser2Address...",
+  "0xUser3Address...",
+  "0xUser4Address...",
+  "0xUser5Address...",
 ];
+
+// Mock prompts for LLM requests
+const mockPrompts = [
+  "Analyze the sentiment of this customer review: 'The product is amazing!'",
+  "Translate this text to German: 'Hello, how are you today?'",
+  "Write a short Python function to calculate fibonacci numbers",
+  "Explain quantum computing in simple terms",
+  "Generate a creative story about a time-traveling cat",
+  "Summarize the benefits of renewable energy",
+  "Create a marketing strategy for a new mobile app",
+  "Debug this JavaScript code: console.log(hello world)",
+];
+
+// Response type for LLM calls
+interface LLMResponse {
+  leaf: {
+    id: number;
+    timestamp: string;
+    tokenCount: number;
+    wallet: string;
+    prompt: string;
+    model: string;
+  };
+  hash: string;
+  status: string;
+}
 
 // Mock Merkle Tree functions
 const calculateMerkleRoot = (requests: LLMRequest[]): string => {
@@ -73,26 +80,72 @@ const generateMerkleProof = (_requestId: number, _merkleRoot: string): string[] 
 
 // Interactive Batch Creator Component
 const BatchCreator: React.FC = () => {
-  const [requests, setRequests] = useState<LLMRequest[]>(mockRequests);
+  const [requests, setRequests] = useState<LLMRequest[]>([]);
   const [merkleRoot, setMerkleRoot] = useState<string>("");
   const [batchRegistered, setBatchRegistered] = useState(false);
-  const [gasEstimate, setGasEstimate] = useState({ individual: 0, batch: 15 });
+  const [nextRequestId, setNextRequestId] = useState(1);
+  const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
+  const [currentPrompt, setCurrentPrompt] = useState("");
+  const [lastResponse, setLastResponse] = useState<LLMResponse | null>(null);
 
+  const BATCH_SIZE_THRESHOLD = 4; // Create merkle tree after 4 requests
+
+  // Simulate sending an LLM call (like in the notebook)
+  const sendLLMCall = (wallet: string, prompt: string) => {
+    const newRequest: LLMRequest = {
+      id: nextRequestId,
+      prompt: prompt,
+      model: "gpt-4-turbo",
+      recipient: wallet,
+      estimatedTokens: Math.floor(Math.random() * 200) + 100,
+      status: "pending",
+    };
+
+    setRequests((prev) => [...prev, newRequest]);
+    setNextRequestId((prev) => prev + 1);
+
+    // Simulate the response that would be returned immediately
+    const response = {
+      leaf: {
+        id: newRequest.id,
+        timestamp: new Date().toISOString(),
+        tokenCount: newRequest.estimatedTokens,
+        wallet: wallet,
+        prompt: prompt,
+        model: newRequest.model,
+      },
+      hash: `0x${Math.random().toString(16).slice(2, 18)}...`,
+      status: "Request registered. Waiting for batch completion...",
+    };
+
+    setLastResponse(response);
+    setCurrentPrompt("");
+
+    return response;
+  };
+
+  // Create merkle tree when threshold is reached
   useEffect(() => {
-    // Calculate gas estimates
-    setGasEstimate({
-      individual: requests.length * 15,
-      batch: 15,
-    });
-  }, [requests.length]);
+    if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
+      const root = calculateMerkleRoot(requests);
+      setMerkleRoot(root);
+      setBatchRegistered(true);
 
-  const registerBatch = () => {
-    const root = calculateMerkleRoot(requests);
-    setMerkleRoot(root);
-    setBatchRegistered(true);
+      // Update all request statuses to registered
+      setRequests((prev) => prev.map((req) => ({ ...req, status: "registered" })));
+    }
+  }, [requests.length, batchRegistered]);
 
-    // Update request status
-    setRequests((prev) => prev.map((request) => ({ ...request, status: "registered" })));
+  const handleSendRequest = () => {
+    if (!currentPrompt.trim()) return;
+    sendLLMCall(currentWallet, currentPrompt);
+  };
+
+  const handleRandomRequest = () => {
+    const randomPrompt = mockPrompts[Math.floor(Math.random() * mockPrompts.length)];
+    const randomWallet = mockWallets[Math.floor(Math.random() * mockWallets.length)];
+    setCurrentWallet(randomWallet);
+    sendLLMCall(randomWallet, randomPrompt);
   };
 
   const claimRequest = (requestId: number) => {
@@ -101,17 +154,13 @@ const BatchCreator: React.FC = () => {
     );
   };
 
-  const addRequest = () => {
-    const newId = Math.max(...requests.map((r) => r.id)) + 1;
-    const newRequest: LLMRequest = {
-      id: newId,
-      prompt: `New LLM request #${newId}`,
-      model: "gpt-3.5-turbo",
-      recipient: `0xUser${newId}Address...`,
-      estimatedTokens: 100,
-      status: "pending",
-    };
-    setRequests((prev) => [...prev, newRequest]);
+  const resetDemo = () => {
+    setRequests([]);
+    setMerkleRoot("");
+    setBatchRegistered(false);
+    setNextRequestId(1);
+    setLastResponse(null);
+    setCurrentPrompt("");
   };
 
   return (
@@ -125,9 +174,150 @@ const BatchCreator: React.FC = () => {
       })}
     >
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
-        🧪 Interactive Batch Creation
+        🧪 Interactive LLM Batch Processing Demo
       </h3>
+      
+      <div className={css({ 
+        marginBottom: "20px", 
+        padding: "16px", 
+        backgroundColor: "#eff6ff", 
+        borderRadius: "8px",
+        border: "1px solid #bfdbfe"
+      })}>
+        <p className={css({ fontSize: "14px", color: "#1e40af", marginBottom: "8px" })}>
+          <strong>How it works:</strong> Send LLM requests and get immediate responses. 
+          After {BATCH_SIZE_THRESHOLD} requests, a Merkle tree is automatically created for cost-efficient blockchain settlement.
+        </p>
+      </div>
 
+      {/* Request Input */}
+      <div className={css({ 
+        marginBottom: "20px", 
+        padding: "16px", 
+        backgroundColor: "#fff", 
+        borderRadius: "8px",
+        border: "1px solid #d1d5db"
+      })}>
+        <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>Send LLM Request</h4>
+        
+        <div className={css({ marginBottom: "12px" })}>
+          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>
+            Wallet Address:
+          </label>
+          <select
+            value={currentWallet}
+            onChange={(e) => setCurrentWallet(e.target.value)}
+            className={css({
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #d1d5db",
+              borderRadius: "4px",
+              fontFamily: "monospace",
+              fontSize: "14px"
+            })}
+          >
+            {mockWallets.map(wallet => (
+              <option key={wallet} value={wallet}>{wallet}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className={css({ marginBottom: "12px" })}>
+          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>
+            Prompt:
+          </label>
+          <input
+            type="text"
+            value={currentPrompt}
+            onChange={(e) => setCurrentPrompt(e.target.value)}
+            placeholder="Enter your LLM prompt..."
+            className={css({
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #d1d5db",
+              borderRadius: "4px",
+              fontSize: "14px"
+            })}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendRequest()}
+          />
+        </div>
+        
+        <div className={css({ display: "flex", gap: "8px" })}>
+          <button
+            onClick={handleSendRequest}
+            disabled={!currentPrompt.trim()}
+            className={css({
+              padding: "8px 16px",
+              backgroundColor: currentPrompt.trim() ? "#3b82f6" : "#9ca3af",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
+              "&:hover": { backgroundColor: currentPrompt.trim() ? "#2563eb" : "#9ca3af" },
+            })}
+          >
+            Send Request
+          </button>
+          
+          <button
+            onClick={handleRandomRequest}
+            className={css({
+              padding: "8px 16px",
+              backgroundColor: "#10b981",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              "&:hover": { backgroundColor: "#059669" },
+            })}
+          >
+            Send Random Request
+          </button>
+          
+          <button
+            onClick={resetDemo}
+            className={css({
+              padding: "8px 16px",
+              backgroundColor: "#ef4444",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              "&:hover": { backgroundColor: "#dc2626" },
+            })}
+          >
+            Reset Demo
+          </button>
+        </div>
+      </div>
+
+      {/* Last Response */}
+      {lastResponse && (
+        <div className={css({
+          marginBottom: "20px",
+          padding: "16px",
+          backgroundColor: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          borderRadius: "8px"
+        })}>
+          <h4 className={css({ fontWeight: "bold", marginBottom: "8px", color: "#166534" })}>
+            ✅ Response Received
+          </h4>
+          <pre className={css({
+            fontSize: "12px",
+            fontFamily: "monospace",
+            backgroundColor: "#fff",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #d1d5db",
+            overflow: "auto"
+          })}>
+            {JSON.stringify(lastResponse, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {/* Batch Status */}
       <div className={css({ marginBottom: "16px" })}>
         <div
           className={css({
@@ -145,21 +335,9 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>LLM Requests in Batch</div>
-            <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{requests.length}</div>
-          </div>
-
-          <div
-            className={css({
-              padding: "12px",
-              backgroundColor: "#fff",
-              borderRadius: "6px",
-              border: "1px solid #d1d5db",
-            })}
-          >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Individual Cost</div>
-            <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#ef4444" })}>
-              ${gasEstimate.individual}
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Requests in Batch</div>
+            <div className={css({ fontSize: "24px", fontWeight: "bold" })}>
+              {requests.length} / {BATCH_SIZE_THRESHOLD}
             </div>
           </div>
 
@@ -171,8 +349,14 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Batch Cost</div>
-            <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#10b981" })}>${gasEstimate.batch}</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Batch Status</div>
+            <div className={css({ 
+              fontSize: "16px", 
+              fontWeight: "bold",
+              color: batchRegistered ? "#10b981" : "#f59e0b"
+            })}>
+              {batchRegistered ? "✅ Registered" : "⏳ Pending"}
+            </div>
           </div>
 
           <div
@@ -183,48 +367,15 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Savings</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Gas Savings</div>
             <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#10b981" })}>
-              {Math.round((1 - gasEstimate.batch / gasEstimate.individual) * 100)}%
+              {requests.length > 1 ? Math.round((1 - 15 / (requests.length * 15)) * 100) : 0}%
             </div>
           </div>
         </div>
       </div>
 
-      <div className={css({ marginBottom: "16px" })}>
-        <button
-          onClick={addRequest}
-          className={css({
-            padding: "8px 16px",
-            backgroundColor: "#3b82f6",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            marginRight: "8px",
-            "&:hover": { backgroundColor: "#2563eb" },
-          })}
-        >
-          + Add LLM Request
-        </button>
-
-        <button
-          onClick={registerBatch}
-          disabled={batchRegistered}
-          className={css({
-            padding: "8px 16px",
-            backgroundColor: batchRegistered ? "#6b7280" : "#10b981",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: batchRegistered ? "not-allowed" : "pointer",
-            "&:hover": { backgroundColor: batchRegistered ? "#6b7280" : "#059669" },
-          })}
-        >
-          {batchRegistered ? "✅ Batch Registered" : "Register Batch"}
-        </button>
-      </div>
-
+      {/* Merkle Root Display */}
       {batchRegistered && (
         <div
           className={css({
@@ -235,70 +386,89 @@ const BatchCreator: React.FC = () => {
             marginBottom: "16px",
           })}
         >
-          <strong>Merkle Root:</strong> <code>{merkleRoot}</code>
+          <strong>🌳 Merkle Root Created:</strong> <code>{merkleRoot}</code>
+          <div className={css({ fontSize: "14px", color: "#166534", marginTop: "4px" })}>
+            All requests can now be processed with a single blockchain transaction!
+          </div>
         </div>
       )}
 
+      {/* Request List */}
       <div className={css({ maxHeight: "300px", overflowY: "auto" })}>
-        {requests.map((request) => (
-          <div
-            key={request.id}
-            className={css({
-              padding: "12px",
-              backgroundColor: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              marginBottom: "8px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            })}
-          >
-            <div>
-              <div className={css({ fontWeight: "bold" })}>LLM Request #{request.id}</div>
-              <div className={css({ fontSize: "14px", color: "#6b7280" })}>{request.prompt}</div>
-              <div className={css({ fontSize: "12px", fontFamily: "monospace" })}>
-                {request.model} - {request.estimatedTokens} tokens
+        {requests.length === 0 ? (
+          <div className={css({
+            padding: "20px",
+            textAlign: "center",
+            color: "#6b7280",
+            backgroundColor: "#fff",
+            borderRadius: "6px",
+            border: "1px solid #d1d5db"
+          })}>
+            No requests yet. Send your first LLM request above! 🚀
+          </div>
+        ) : (
+          requests.map((request) => (
+            <div
+              key={request.id}
+              className={css({
+                padding: "12px",
+                backgroundColor: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                marginBottom: "8px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              })}
+            >
+              <div>
+                <div className={css({ fontWeight: "bold" })}>Request #{request.id}</div>
+                <div className={css({ fontSize: "14px", color: "#6b7280", marginBottom: "4px" })}>
+                  {request.prompt}
+                </div>
+                <div className={css({ fontSize: "12px", fontFamily: "monospace", color: "#9ca3af" })}>
+                  {request.recipient} • {request.model} • {request.estimatedTokens} tokens
+                </div>
               </div>
-            </div>
-            <div className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
-              <span
-                className={css({
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  backgroundColor:
-                    request.status === "claimed" ? "#d1fae5" : request.status === "registered" ? "#fef3c7" : "#f3f4f6",
-                  color:
-                    request.status === "claimed" ? "#065f46" : request.status === "registered" ? "#92400e" : "#374151",
-                })}
-              >
-                {request.status === "claimed"
-                  ? "Processed"
-                  : request.status === "registered"
-                    ? "Registered"
-                    : "Pending"}
-              </span>
-              {request.status === "registered" && (
-                <button
-                  onClick={() => claimRequest(request.id)}
+              <div className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
+                <span
                   className={css({
                     padding: "4px 8px",
-                    backgroundColor: "#3b82f6",
-                    color: "white",
-                    border: "none",
                     borderRadius: "4px",
                     fontSize: "12px",
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#2563eb" },
+                    backgroundColor:
+                      request.status === "claimed" ? "#d1fae5" : request.status === "registered" ? "#fef3c7" : "#f3f4f6",
+                    color:
+                      request.status === "claimed" ? "#065f46" : request.status === "registered" ? "#92400e" : "#374151",
                   })}
                 >
-                  Process
-                </button>
-              )}
+                  {request.status === "claimed"
+                    ? "Processed"
+                    : request.status === "registered"
+                      ? "Ready to Process"
+                      : "Pending"}
+                </span>
+                {request.status === "registered" && (
+                  <button
+                    onClick={() => claimRequest(request.id)}
+                    className={css({
+                      padding: "4px 8px",
+                      backgroundColor: "#3b82f6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#2563eb" },
+                    })}
+                  >
+                    Process
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

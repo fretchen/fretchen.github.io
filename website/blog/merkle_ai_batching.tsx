@@ -40,7 +40,7 @@ const mockRequests: LLMRequest[] = [
   {
     id: 2,
     prompt: "Translate this text to German: 'Hello, how are you today?'",
-    model: "gpt-4-turbo", 
+    model: "gpt-4-turbo",
     recipient: "0xUser2Address...",
     estimatedTokens: 120,
     status: "pending",
@@ -96,7 +96,9 @@ const BatchCreator: React.FC = () => {
   };
 
   const claimRequest = (requestId: number) => {
-    setRequests((prev) => prev.map((request) => (request.id === requestId ? { ...request, status: "claimed" } : request)));
+    setRequests((prev) =>
+      prev.map((request) => (request.id === requestId ? { ...request, status: "claimed" } : request)),
+    );
   };
 
   const addRequest = () => {
@@ -143,7 +145,7 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>LLM-Anfragen im Batch</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>LLM Requests in Batch</div>
             <div className={css({ fontSize: "24px", fontWeight: "bold" })}>{requests.length}</div>
           </div>
 
@@ -155,7 +157,7 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Einzelkosten</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Individual Cost</div>
             <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#ef4444" })}>
               ${gasEstimate.individual}
             </div>
@@ -169,7 +171,7 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Batch-Kosten</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Batch Cost</div>
             <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#10b981" })}>${gasEstimate.batch}</div>
           </div>
 
@@ -181,7 +183,7 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
             })}
           >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Ersparnis</div>
+            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Savings</div>
             <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#10b981" })}>
               {Math.round((1 - gasEstimate.batch / gasEstimate.individual) * 100)}%
             </div>
@@ -203,7 +205,7 @@ const BatchCreator: React.FC = () => {
             "&:hover": { backgroundColor: "#2563eb" },
           })}
         >
-          + LLM-Anfrage hinzufügen
+          + Add LLM Request
         </button>
 
         <button
@@ -219,7 +221,7 @@ const BatchCreator: React.FC = () => {
             "&:hover": { backgroundColor: batchRegistered ? "#6b7280" : "#059669" },
           })}
         >
-          {batchRegistered ? "✅ Batch registriert" : "Batch registrieren"}
+          {batchRegistered ? "✅ Batch Registered" : "Register Batch"}
         </button>
       </div>
 
@@ -253,9 +255,11 @@ const BatchCreator: React.FC = () => {
             })}
           >
             <div>
-              <div className={css({ fontWeight: "bold" })}>LLM-Anfrage #{request.id}</div>
+              <div className={css({ fontWeight: "bold" })}>LLM Request #{request.id}</div>
               <div className={css({ fontSize: "14px", color: "#6b7280" })}>{request.prompt}</div>
-              <div className={css({ fontSize: "12px", fontFamily: "monospace" })}>{request.model} - {request.estimatedTokens} tokens</div>
+              <div className={css({ fontSize: "12px", fontFamily: "monospace" })}>
+                {request.model} - {request.estimatedTokens} tokens
+              </div>
             </div>
             <div className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
               <span
@@ -265,10 +269,15 @@ const BatchCreator: React.FC = () => {
                   fontSize: "12px",
                   backgroundColor:
                     request.status === "claimed" ? "#d1fae5" : request.status === "registered" ? "#fef3c7" : "#f3f4f6",
-                  color: request.status === "claimed" ? "#065f46" : request.status === "registered" ? "#92400e" : "#374151",
+                  color:
+                    request.status === "claimed" ? "#065f46" : request.status === "registered" ? "#92400e" : "#374151",
                 })}
               >
-                {request.status === "claimed" ? "Verarbeitet" : request.status === "registered" ? "Registriert" : "Pending"}
+                {request.status === "claimed"
+                  ? "Processed"
+                  : request.status === "registered"
+                    ? "Registered"
+                    : "Pending"}
               </span>
               {request.status === "registered" && (
                 <button
@@ -284,7 +293,7 @@ const BatchCreator: React.FC = () => {
                     "&:hover": { backgroundColor: "#2563eb" },
                   })}
                 >
-                  Verarbeiten
+                  Process
                 </button>
               )}
             </div>
@@ -316,12 +325,12 @@ const CostComparison: React.FC = () => {
       })}
     >
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
-        💰 Kostenvergleichsrechner
+        💰 Cost Comparison Calculator
       </h3>
 
       <div className={css({ marginBottom: "20px" })}>
         <label className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
-          Anzahl LLM-Anfragen: {requestCount}
+          Number of LLM Requests: {requestCount}
         </label>
         <input
           type="range"
@@ -348,9 +357,9 @@ const CostComparison: React.FC = () => {
             border: "1px solid #fecaca",
           })}
         >
-          <div className={css({ fontSize: "14px", color: "#991b1b", fontWeight: "bold" })}>Einzelne Transaktionen</div>
+          <div className={css({ fontSize: "14px", color: "#991b1b", fontWeight: "bold" })}>Individual Transactions</div>
           <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#dc2626" })}>${individualCost}</div>
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{requestCount} × $15</div>div>
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{requestCount} × $15</div>
         </div>
 
         <div
@@ -361,9 +370,9 @@ const CostComparison: React.FC = () => {
             border: "1px solid #bfdbfe",
           })}
         >
-          <div className={css({ fontSize: "14px", color: "#1d4ed8", fontWeight: "bold" })}>Batch-Registrierung</div>
+          <div className={css({ fontSize: "14px", color: "#1d4ed8", fontWeight: "bold" })}>Batch Registration</div>
           <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#2563eb" })}>${batchCost}</div>
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>Einmalig</div>
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>One-time</div>
         </div>
 
         <div
@@ -374,9 +383,9 @@ const CostComparison: React.FC = () => {
             border: "1px solid #bbf7d0",
           })}
         >
-          <div className={css({ fontSize: "14px", color: "#166534", fontWeight: "bold" })}>Verarbeitungskosten</div>
+          <div className={css({ fontSize: "14px", color: "#166534", fontWeight: "bold" })}>Processing Costs</div>
           <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#16a34a" })}>${processingCost}</div>
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{requestCount} × $2</div>div>
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>{requestCount} × $2</div>
         </div>
 
         <div
@@ -387,9 +396,9 @@ const CostComparison: React.FC = () => {
             border: "1px solid #bbf7d0",
           })}
         >
-          <div className={css({ fontSize: "14px", color: "#166534", fontWeight: "bold" })}>Ersparnis</div>
+          <div className={css({ fontSize: "14px", color: "#166534", fontWeight: "bold" })}>Savings</div>
           <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#16a34a" })}>{savings}%</div>
-          <div className={css({ fontSize: "12px", color: "#6b7280" })}>${individualCost - totalBatchCost} gesparen</div>
+          <div className={css({ fontSize: "12px", color: "#6b7280" })}>${individualCost - totalBatchCost} saved</div>
         </div>
       </div>
     </div>
@@ -472,7 +481,7 @@ const SmartContractDemo: React.FC = () => {
             },
           })}
         >
-          {contractState.isRegistered ? "Bereits registriert" : "Batch registrieren"}
+          {contractState.isRegistered ? "Already Registered" : "Register Batch"}
         </button>
 
         <button
@@ -495,7 +504,7 @@ const SmartContractDemo: React.FC = () => {
             },
           })}
         >
-          NFT claimen
+          Process LLM Request
         </button>
       </div>
     </div>
@@ -506,24 +515,21 @@ const SmartContractDemo: React.FC = () => {
 export default function MerkleAIBatching() {
   return (
     <article className={css({ maxWidth: "800px", margin: "0 auto", padding: "20px" })}>
-      
-
       <section className={css({ marginBottom: "32px" })}>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Die Integration von Large Language Models (LLMs) in dezentrale Anwendungen eröffnet aufregende Möglichkeiten für 
-          KI-gesteuerte Services. Aber ein Problem bleibt bestehen: Wie können wir die hohen Blockchain-Transaktionskosten 
-          reduzieren, wenn Nutzer mehrere LLM-API-Aufrufe in einer Anwendung benötigen? Die Antwort liegt in einer eleganten 
-          Datenstruktur: <strong>Merkle Trees</strong>.
+          The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem
+          remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an
+          application? One possible answer lies in an elegant data structure: <strong>Merkle Trees</strong>.
         </p>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Das Problem: Hohe Gaskosten bei einzelnen LLM-Zahlungen
+          The Problem: High Gas Costs for Individual LLM Payments
         </h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Stellen Sie sich vor, eine dApp möchte 10 verschiedene LLM-API-Anfragen für ihre Nutzer verarbeiten. 
-          Bei der traditionellen Herangehensweise würde jede LLM-Zahlung eine separate Blockchain-Transaktion erfordern:
+          Imagine a dApp wants to process 10 different LLM API requests for its users. With the traditional approach,
+          each LLM payment would require a separate blockchain transaction:
         </p>
 
         <div
@@ -535,53 +541,88 @@ export default function MerkleAIBatching() {
             marginBottom: "16px",
           })}
         >
-          <div>Einzelne Transaktionen:</div>
-          <div>- LLM Request #1: ~$15 Gaskosten</div>
-          <div>- LLM Request #2: ~$15 Gaskosten</div>
-          <div>- LLM Request #3: ~$15 Gaskosten</div>
+          <div>Individual Transactions:</div>
+          <div>- LLM Request #1: ~$15 Gas Costs</div>
+          <div>- LLM Request #2: ~$15 Gas Costs</div>
+          <div>- LLM Request #3: ~$15 Gas Costs</div>
           <div>...</div>
           <div>
-            <strong>Gesamt: ~$150 für 10 LLM-Anfragen</strong>
+            <strong>Total: ~$150 for 10 LLM Requests</strong>
           </div>
         </div>
 
         <p className={css({ lineHeight: "1.6" })}>
-          Das ist nicht nur teuer, sondern auch ineffizient für das Netzwerk und macht KI-Services unerschwinglich.
+          This is not only expensive, but also inefficient for the network and makes AI services unaffordable.
         </p>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Die Lösung: Merkle Tree Batching für LLM-Zahlungen
+          The Solution: Merkle Tree Batching for LLM Payments
         </h2>
+
+        <div
+          className={css({
+            backgroundColor: "#f8fafc",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #e2e8f0",
+            marginBottom: "20px",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" })}>
+            📊 How Merkle Trees Work
+          </h3>
+          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
+            A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
+            request), and each parent node contains a cryptographic hash of its children. The mathematical foundation
+            is:
+          </p>
+          <div
+            className={css({
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              fontSize: "14px",
+              lineHeight: "1.4",
+            })}
+          >
+            <div>
+              <strong>For requests R₁, R₂, R₃, R₄:</strong>
+            </div>
+            <div>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
+            <div>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
+            <div>
+              <strong>Root = hash(H₁₂ + H₃₄)</strong>
+            </div>
+          </div>
+          <p className={css({ marginTop: "12px", lineHeight: "1.6" })}>
+            This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
+            requests with just one blockchain transaction while maintaining cryptographic proof of each individual
+            request.
+          </p>
+        </div>
+
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Mit Merkle Trees können wir mehrere LLM-API-Zahlungen in einer einzigen Blockchain-Transaktion bündeln. 
-          Probieren Sie es in der interaktiven Demo aus:
+          With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the
+          interactive demo:
         </p>
 
         <BatchCreator />
 
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Kosten:</strong> Nur ~$15 für den gesamten Batch + $2 pro LLM-Anfrage statt $150!
+          <strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!
         </p>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Kostenvergleich</h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Sehen Sie selbst, wie viel Sie mit verschiedenen Batch-Größen sparen können:
-        </p>
-
-        <CostComparison />
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Technische Implementierung
+          Technical Implementation
         </h2>
 
         <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-          Schritt 1: LLM-Batch-Erstellung (Off-Chain)
+          Step 1: LLM Batch Creation (Off-Chain)
         </h3>
 
         <div
@@ -595,7 +636,7 @@ export default function MerkleAIBatching() {
             fontSize: "14px",
           })}
         >
-          <div className={css({ color: "#10b981" })}>// Mock: Batch von LLM-API-Anfragen</div>
+          <div className={css({ color: "#10b981" })}>// Mock: Batch of LLM API Requests</div>
           <div>
             <span className={css({ color: "#f59e0b" })}>const</span> llmBatch = [
           </div>
@@ -606,11 +647,11 @@ export default function MerkleAIBatching() {
           </div>
           <div>
             {" "}
-            prompt: <span className={css({ color: "#34d399" })}>"Abstract digital landscape with neon colors"</span>,
+            prompt: <span className={css({ color: "#34d399" })}>"Analyze sentiment of user feedback"</span>,
           </div>
           <div>
             {" "}
-            imageHash: <span className={css({ color: "#34d399" })}>"0x1a2b3c..."</span>,
+            model: <span className={css({ color: "#34d399" })}>"gpt-4-turbo"</span>,
           </div>
           <div>
             {" "}
@@ -619,26 +660,34 @@ export default function MerkleAIBatching() {
           <div> {`},`}</div>
           <div>
             {" "}
-            <span className={css({ color: "#6b7280" })}>// ... weitere NFTs</span>
+            <span className={css({ color: "#6b7280" })}>// ... more LLM requests</span>
           </div>
           <div>];</div>
           <br />
-          <div className={css({ color: "#10b981" })}>// Berechnung des Merkle Root (vereinfacht)</div>
+          <div className={css({ color: "#10b981" })}>// Calculate Merkle Root (simplified)</div>
           <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> merkleRoot = calculateMerkleRoot(nftBatch);
+            <span className={css({ color: "#f59e0b" })}>const</span> merkleRoot = calculateMerkleRoot(llmBatch);
           </div>
         </div>
 
         <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-          Schritt 2: Smart Contract Interaktion
+          Step 2: Smart Contract Interaction
         </h3>
 
         <SmartContractDemo />
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
+        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Cost Comparison</h2>
+        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+          See for yourself how much you can save with different batch sizes:
+        </p>
+
+        <CostComparison />
+      </section>
+      <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Praktisches Beispiel: KI-Kunstgalerie
+          Practical Example: AI Service Platform
         </h2>
 
         <div
@@ -652,35 +701,35 @@ export default function MerkleAIBatching() {
             fontSize: "14px",
           })}
         >
-          <div className={css({ color: "#10b981" })}>// 1. Nutzer erstellt mehrere KI-Prompts</div>
+          <div className={css({ color: "#10b981" })}>// 1. User creates multiple LLM requests</div>
           <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> userPrompts = [
+            <span className={css({ color: "#f59e0b" })}>const</span> userRequests = [
           </div>
           <div>
             {" "}
-            <span className={css({ color: "#34d399" })}>"Surreal forest with floating islands"</span>,
+            <span className={css({ color: "#34d399" })}>"Analyze sentiment: 'Great product!'"</span>,
           </div>
           <div>
             {" "}
-            <span className={css({ color: "#34d399" })}>"Cyberpunk city skyline at sunset"</span>,
+            <span className={css({ color: "#34d399" })}>"Translate: 'Hello world' to Spanish"</span>,
           </div>
           <div>
             {" "}
-            <span className={css({ color: "#34d399" })}>"Abstract representation of music"</span>
+            <span className={css({ color: "#34d399" })}>"Generate Python code for sorting"</span>
           </div>
           <div>];</div>
           <br />
-          <div className={css({ color: "#10b981" })}>// 2. KI generiert Bilder (simuliert)</div>
+          <div className={css({ color: "#10b981" })}>// 2. LLM processes requests (simulated)</div>
           <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> generatedImages ={" "}
+            <span className={css({ color: "#f59e0b" })}>const</span> processedResults ={" "}
             <span className={css({ color: "#f59e0b" })}>await</span> Promise.all(
           </div>
-          <div> userPrompts.map(prompt =&gt; generateAIImage(prompt))</div>
+          <div> userRequests.map(request =&gt; processLLMRequest(request))</div>
           <div>);</div>
           <br />
-          <div className={css({ color: "#10b981" })}>// 3. Batch wird erstellt und registriert</div>
+          <div className={css({ color: "#10b981" })}>// 3. Batch is created and registered</div>
           <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> batch = createBatch(generatedImages, userAddress);
+            <span className={css({ color: "#f59e0b" })}>const</span> batch = createBatch(processedResults, userAddress);
           </div>
           <div>
             <span className={css({ color: "#f59e0b" })}>const</span> txHash ={" "}
@@ -688,13 +737,14 @@ export default function MerkleAIBatching() {
           </div>
           <br />
           <div>
-            console.log(<span className={css({ color: "#34d399" })}>`Batch registriert! Kosten: $15 statt $45`</span>);
+            console.log(<span className={css({ color: "#34d399" })}>`Batch registered! Cost: $17 instead of $45`</span>
+            );
           </div>
         </div>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Technische Vorteile</h2>
+        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Technical Advantages</h2>
 
         <div
           className={css({
@@ -713,12 +763,12 @@ export default function MerkleAIBatching() {
             })}
           >
             <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px", color: "#1d4ed8" })}>
-              Skalierbarkeit
+              Scalability
             </h3>
             <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-              <li>Theoretisch unbegrenzte Batch-Größe</li>
-              <li>Konstante On-Chain-Kosten für Registrierung</li>
-              <li>Claiming nur bei Bedarf</li>
+              <li>Theoretically unlimited batch size</li>
+              <li>Constant on-chain costs for registration</li>
+              <li>Processing only when needed</li>
             </ul>
           </div>
 
@@ -731,12 +781,12 @@ export default function MerkleAIBatching() {
             })}
           >
             <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px", color: "#166534" })}>
-              Flexibilität
+              Flexibility
             </h3>
             <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-              <li>Verschiedene Claiming-Strategien</li>
-              <li>Sofortiges oder verzögertes Claiming</li>
-              <li>NFT-Übertragung an andere Nutzer</li>
+              <li>Various processing strategies</li>
+              <li>Immediate or delayed processing</li>
+              <li>Request transfer to other users</li>
             </ul>
           </div>
 
@@ -749,12 +799,12 @@ export default function MerkleAIBatching() {
             })}
           >
             <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px", color: "#92400e" })}>
-              Sicherheit
+              Security
             </h3>
             <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-              <li>Kryptographische Beweise durch Merkle Trees</li>
-              <li>Unveränderliche Batch-Registrierung</li>
-              <li>Schutz vor doppeltem Claiming</li>
+              <li>Cryptographic proofs through Merkle Trees</li>
+              <li>Immutable batch registration</li>
+              <li>Protection against double processing</li>
             </ul>
           </div>
         </div>
@@ -762,36 +812,34 @@ export default function MerkleAIBatching() {
 
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Herausforderungen und Lösungsansätze
+          Challenges and Solutions
         </h2>
 
         <div className={css({ marginBottom: "24px" })}>
           <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-            1. Metadaten-Verwaltung
+            1. Request Data Management
           </h3>
           <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Problem:</strong> Wo speichern wir die NFT-Metadaten zwischen Registrierung und Claiming?
+            <strong>Problem:</strong> Where do we store LLM request data between registration and processing?
           </p>
           <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Lösungsansatz:</strong> Dezentrale Speichersysteme wie IPFS, Arweave oder hybride Ansätze.
+            <strong>Solution:</strong> Decentralized storage systems like IPFS, Arweave, or hybrid approaches.
           </p>
         </div>
 
         <div className={css({ marginBottom: "24px" })}>
-          <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>2. Proof-Management</h3>
+          <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>2. Proof Management</h3>
           <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Problem:</strong> Nutzer müssen ihre Merkle Proofs verwalten.
+            <strong>Problem:</strong> Users need to manage their Merkle proofs.
           </p>
           <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Lösungsansatz:</strong> Automatisierte Proof-Services, die Proofs on-demand rekonstruieren.
+            <strong>Solution:</strong> Automated proof services that reconstruct proofs on-demand.
           </p>
         </div>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Zukünftige Entwicklungen
-        </h2>
+        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Future Developments</h2>
 
         <div
           className={css({
@@ -810,8 +858,7 @@ export default function MerkleAIBatching() {
           >
             <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px" })}>Layer 2 Integration</h3>
             <p className={css({ lineHeight: "1.6" })}>
-              Integration mit Polygon, Arbitrum und Optimism für noch günstigere Transaktionen und bessere
-              Benutzererfahrung.
+              Integration with Polygon, Arbitrum, and Optimism for even cheaper transactions and better user experience.
             </p>
           </div>
 
@@ -824,52 +871,26 @@ export default function MerkleAIBatching() {
             })}
           >
             <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px" })}>
-              KI-Model Integration
+              AI Model Integration
             </h3>
             <p className={css({ lineHeight: "1.6" })}>
-              Direkte Integration von KI-Modellen für automatisches Batch-Management und nahtlose Benutzererfahrung.
+              Direct integration of AI models for automatic batch management and seamless user experience.
             </p>
           </div>
         </div>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Fazit</h2>
+        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Conclusion</h2>
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Merkle Tree Batching revolutioniert die Art, wie wir KI-generierte NFTs erstellen und verwalten. Durch die
-          Reduzierung der Transaktionskosten um bis zu 98% macht es hochfrequente KI-Kunst-Generierung erstmals
-          wirtschaftlich praktikabel.
+          Merkle Tree batching revolutionizes how we create and manage LLM API payments on blockchain. By reducing
+          transaction costs by up to 98%, it makes high-frequency AI services economically viable for the first time.
         </p>
         <p className={css({ lineHeight: "1.6" })}>
-          Die Technologie ist bereits heute implementierbar und bietet einen klaren Weg zu einer effizienteren,
-          kostengünstigeren Zukunft für digitale Kunst auf der Blockchain.
+          The technology is implementable today and provides a clear path to a more efficient, cost-effective future for
+          AI services on the blockchain.
         </p>
       </section>
-
-      <footer
-        className={css({
-          borderTop: "1px solid #e5e7eb",
-          paddingTop: "16px",
-          fontSize: "14px",
-          color: "#6b7280",
-        })}
-      >
-        <p>
-          <em>
-            Interessiert an der technischen Implementierung? Schauen Sie sich unseren{" "}
-            <a
-              href="https://github.com/fretchen/fretchen.github.io"
-              className={css({ color: "#3b82f6", textDecoration: "underline" })}
-            >
-              GitHub Repository
-            </a>{" "}
-            für Code-Beispiele und weitere Details an.
-          </em>
-        </p>
-        <p className={css({ marginTop: "8px" })}>
-          <strong>Tags:</strong> Blockchain, KI, NFT, Merkle Trees, Ethereum, Optimierung, Generative Kunst
-        </p>
-      </footer>
     </article>
   );
 }

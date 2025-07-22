@@ -54,7 +54,8 @@ body.page-is-transitioning #page-content {
 
 /* Pulse Animation for scroll indicator */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
   }
   50% {

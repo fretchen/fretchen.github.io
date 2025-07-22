@@ -55,17 +55,24 @@ interface LLMResponse {
     timestamp: string;
     tokenCount: number;
     wallet: string;
-    prompt: string;
-    model: string;
   };
   hash: string;
   status: string;
+  promptProcessed?: string; // LLM response, not stored in leaf
 }
 
 // Mock Merkle Tree functions
 const calculateMerkleRoot = (requests: LLMRequest[]): string => {
-  // Simplified mock implementation
-  const hash = requests.map((req) => `${req.prompt}${req.model}`).join("");
+  // Create public leaf data (only id, timestamp, tokenCount, wallet)
+  const publicLeaves = requests.map((req) => ({
+    id: req.id,
+    timestamp: new Date().toISOString(), // In real implementation, this would be from the request
+    tokenCount: req.estimatedTokens,
+    wallet: req.recipient,
+  }));
+  
+  // Simplified mock implementation using only public data
+  const hash = publicLeaves.map((leaf) => `${leaf.id}${leaf.wallet}${leaf.tokenCount}`).join("");
   return `0x${hash.slice(2, 34)}...`;
 };
 
@@ -104,18 +111,17 @@ const BatchCreator: React.FC = () => {
     setRequests((prev) => [...prev, newRequest]);
     setNextRequestId((prev) => prev + 1);
 
-    // Simulate the response that would be returned immediately
-    const response = {
+    // Simulate the response with only public information in the leaf
+    const response: LLMResponse = {
       leaf: {
         id: newRequest.id,
         timestamp: new Date().toISOString(),
         tokenCount: newRequest.estimatedTokens,
         wallet: wallet,
-        prompt: prompt,
-        model: newRequest.model,
       },
       hash: `0x${Math.random().toString(16).slice(2, 18)}...`,
       status: "Request registered. Waiting for batch completion...",
+      promptProcessed: `Processed: "${prompt}" -> Your AI response would be here`,
     };
 
     setLastResponse(response);

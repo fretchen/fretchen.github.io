@@ -129,119 +129,6 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
   return `0x${root.toString("hex")}`;
 };
 
-const generateMerkleProof = async (requestId: number, requests: LLMRequest[]): Promise<string[]> => {
-  // Create the same leaf data structure
-  const publicLeaves = requests.map((req) => ({
-    id: req.id,
-    timestamp: new Date().toISOString(),
-    tokenCount: req.estimatedTokens,
-    wallet: req.recipient,
-  }));
-
-  const leafBuffers = await Promise.all(
-    publicLeaves.map(async (leaf) => {
-      const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
-      return await createHashSync(serialized);
-    }),
-  );
-
-  // Use the same synchronous hash function for consistency
-  const hashFn = (data: Buffer) => {
-    const encoder = new TextEncoder();
-    const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
-
-    let hash = 0;
-    for (let i = 0; i < bytes.length; i++) {
-      const char = bytes[i];
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash;
-    }
-
-    const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
-    const fullHash = hashHex.repeat(8);
-
-    return Buffer.from(fullHash, "hex");
-  };
-
-  const tree = new MerkleTree(leafBuffers, hashFn);
-  const targetLeaf = leafBuffers[requestId - 1]; // Assuming 1-based ID
-  const proof = tree.getProof(targetLeaf);
-
-  return proof.map((p) => `0x${p.data.toString("hex")}`);
-};
-
-// Component to display Merkle proof (handles async loading)
-const MerkleProofDisplay: React.FC<{ requestId: number; requests: LLMRequest[]; merkleRoot: string }> = ({
-  requestId,
-  requests,
-  merkleRoot,
-}) => {
-  const [proof, setProof] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const loadProof = async () => {
-    setLoading(true);
-    try {
-      const proofData = await generateMerkleProof(requestId, requests);
-      setProof(proofData);
-    } catch (error) {
-      console.error("Error generating proof:", error);
-      setProof([]);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (requests.length > 0) {
-      loadProof();
-    }
-  }, [requestId, requests.length]);
-
-  if (loading) {
-    return <div>Loading proof...</div>;
-  }
-
-  return (
-    <div
-      className={css({
-        marginTop: "8px",
-        padding: "8px",
-        backgroundColor: "#f9fafb",
-        borderRadius: "4px",
-        fontFamily: "monospace",
-        fontSize: "10px",
-        maxWidth: "300px",
-        wordBreak: "break-all",
-      })}
-    >
-      <div>
-        <strong>Leaf Data:</strong>
-      </div>
-      <pre>
-        {JSON.stringify(
-          {
-            id: requestId,
-            timestamp: new Date().toISOString(),
-            tokenCount: requests.find((r) => r.id === requestId)?.estimatedTokens || 0,
-            wallet: requests.find((r) => r.id === requestId)?.recipient || "",
-          },
-          null,
-          2,
-        )}
-      </pre>
-      <div>
-        <strong>Merkle Proof:</strong>
-      </div>
-      {proof.map((proofItem, i) => (
-        <div key={i}>{proofItem}</div>
-      ))}
-      <div>
-        <strong>Root:</strong> {merkleRoot}
-      </div>
-    </div>
-  );
-};
-
 // Interactive Batch Creator Component
 const BatchCreator: React.FC = () => {
   const [requests, setRequests] = useState<LLMRequest[]>([]);
@@ -250,7 +137,6 @@ const BatchCreator: React.FC = () => {
   const [nextRequestId, setNextRequestId] = useState(1);
   const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
   const [currentPrompt, setCurrentPrompt] = useState("");
-  const [lastResponse, setLastResponse] = useState<LLMResponse | null>(null);
 
   const BATCH_SIZE_THRESHOLD = 4; // Create merkle tree after 4 requests
 
@@ -296,19 +182,9 @@ const BatchCreator: React.FC = () => {
 
     setRequests((prev) => [...prev, newRequest]);
     setNextRequestId((prev) => prev + 1);
-
-    // Update last response for the response display
-    const responseObj: LLMResponse = {
-      leaf: leafData,
-      hash: leafHash,
-      status: "Request processed successfully",
-      promptProcessed: response,
-    };
-
-    setLastResponse(responseObj);
     setCurrentPrompt("");
 
-    return responseObj;
+    return newRequest;
   };
 
   // Create merkle tree when threshold is reached
@@ -318,9 +194,6 @@ const BatchCreator: React.FC = () => {
         const root = await calculateMerkleRoot(requests);
         setMerkleRoot(root);
         setBatchRegistered(true);
-
-        // Update all request statuses to registered
-        setRequests((prev) => prev.map((req) => ({ ...req, status: "registered" })));
       }
     };
 
@@ -339,18 +212,11 @@ const BatchCreator: React.FC = () => {
     await sendLLMCall(randomWallet, randomPrompt);
   };
 
-  const claimRequest = (requestId: number) => {
-    setRequests((prev) =>
-      prev.map((request) => (request.id === requestId ? { ...request, status: "claimed" } : request)),
-    );
-  };
-
   const resetDemo = () => {
     setRequests([]);
     setMerkleRoot("");
     setBatchRegistered(false);
     setNextRequestId(1);
-    setLastResponse(null);
     setCurrentPrompt("");
   };
 
@@ -386,27 +252,29 @@ const BatchCreator: React.FC = () => {
       {/* Request Input */}
       <div
         className={css({
-          marginBottom: "20px",
-          padding: "16px",
+          marginBottom: "1.5rem",
+          padding: "1rem",
           backgroundColor: "#fff",
-          borderRadius: "8px",
-          border: "1px solid #d1d5db",
+          borderRadius: "4px",
+          border: "1px solid #e5e7eb",
         })}
       >
-        <h4 className={css({ fontWeight: "bold", marginBottom: "12px" })}>Send LLM Request</h4>
+        <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem" })}>Send LLM Request</h4>
 
-        <div className={css({ marginBottom: "12px" })}>
-          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>Wallet Address:</label>
+        <div className={css({ marginBottom: "0.75rem" })}>
+          <label className={css({ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
+            Wallet Address:
+          </label>
           <select
             value={currentWallet}
             onChange={(e) => setCurrentWallet(e.target.value)}
             className={css({
               width: "100%",
-              padding: "8px",
+              padding: "0.5rem",
               border: "1px solid #d1d5db",
               borderRadius: "4px",
               fontFamily: "monospace",
-              fontSize: "14px",
+              fontSize: "0.85rem",
             })}
           >
             {mockWallets.map((wallet) => (
@@ -417,8 +285,8 @@ const BatchCreator: React.FC = () => {
           </select>
         </div>
 
-        <div className={css({ marginBottom: "12px" })}>
-          <label className={css({ display: "block", fontSize: "14px", marginBottom: "4px" })}>Prompt:</label>
+        <div className={css({ marginBottom: "0.75rem" })}>
+          <label className={css({ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" })}>Prompt:</label>
           <input
             type="text"
             value={currentPrompt}
@@ -426,26 +294,27 @@ const BatchCreator: React.FC = () => {
             placeholder="Enter your LLM prompt..."
             className={css({
               width: "100%",
-              padding: "8px",
+              padding: "0.5rem",
               border: "1px solid #d1d5db",
               borderRadius: "4px",
-              fontSize: "14px",
+              fontSize: "0.85rem",
             })}
             onKeyPress={(e) => e.key === "Enter" && handleSendRequest()}
           />
         </div>
 
-        <div className={css({ display: "flex", gap: "8px" })}>
+        <div className={css({ display: "flex", gap: "0.5rem", fontSize: "0.85rem" })}>
           <button
             onClick={handleSendRequest}
             disabled={!currentPrompt.trim()}
             className={css({
-              padding: "8px 16px",
+              padding: "0.5rem 1rem",
               backgroundColor: currentPrompt.trim() ? "#3b82f6" : "#9ca3af",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
+              transition: "background-color 0.2s",
               "&:hover": { backgroundColor: currentPrompt.trim() ? "#2563eb" : "#9ca3af" },
             })}
           >
@@ -455,12 +324,13 @@ const BatchCreator: React.FC = () => {
           <button
             onClick={handleRandomRequest}
             className={css({
-              padding: "8px 16px",
+              padding: "0.5rem 1rem",
               backgroundColor: "#10b981",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
+              transition: "background-color 0.2s",
               "&:hover": { backgroundColor: "#059669" },
             })}
           >
@@ -470,12 +340,13 @@ const BatchCreator: React.FC = () => {
           <button
             onClick={resetDemo}
             className={css({
-              padding: "8px 16px",
+              padding: "0.5rem 1rem",
               backgroundColor: "#ef4444",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
+              transition: "background-color 0.2s",
               "&:hover": { backgroundColor: "#dc2626" },
             })}
           >
@@ -484,200 +355,96 @@ const BatchCreator: React.FC = () => {
         </div>
       </div>
 
-      {/* Last Response */}
-      {lastResponse && (
-        <div
-          className={css({
-            marginBottom: "20px",
-            padding: "16px",
-            backgroundColor: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "8px",
-          })}
-        >
-          <h4 className={css({ fontWeight: "bold", marginBottom: "8px", color: "#166534" })}>✅ Response Received</h4>
-          <pre
-            className={css({
-              fontSize: "12px",
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              border: "1px solid #d1d5db",
-              overflow: "auto",
-            })}
-          >
-            {JSON.stringify(lastResponse, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {/* Batch Status */}
-      <div className={css({ marginBottom: "16px" })}>
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "16px",
-            marginBottom: "16px",
-          })}
-        >
-          <div
-            className={css({
-              padding: "12px",
-              backgroundColor: "#fff",
-              borderRadius: "6px",
-              border: "1px solid #d1d5db",
-            })}
-          >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Requests in Batch</div>
-            <div className={css({ fontSize: "24px", fontWeight: "bold" })}>
-              {requests.length} / {BATCH_SIZE_THRESHOLD}
-            </div>
-          </div>
-
-          <div
-            className={css({
-              padding: "12px",
-              backgroundColor: "#fff",
-              borderRadius: "6px",
-              border: "1px solid #d1d5db",
-            })}
-          >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Batch Status</div>
-            <div
-              className={css({
-                fontSize: "16px",
-                fontWeight: "bold",
-                color: batchRegistered ? "#10b981" : "#f59e0b",
-              })}
-            >
-              {batchRegistered ? "✅ Registered" : "⏳ Pending"}
-            </div>
-          </div>
-
-          <div
-            className={css({
-              padding: "12px",
-              backgroundColor: "#fff",
-              borderRadius: "6px",
-              border: "1px solid #d1d5db",
-            })}
-          >
-            <div className={css({ fontSize: "14px", color: "#6b7280" })}>Gas Savings</div>
-            <div className={css({ fontSize: "24px", fontWeight: "bold", color: "#10b981" })}>
-              {requests.length > 1 ? Math.round((1 - 15 / (requests.length * 15)) * 100) : 0}%
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Merkle Root Display */}
       {batchRegistered && (
         <div
           className={css({
-            padding: "12px",
-            backgroundColor: "#d1fae5",
-            border: "1px solid #10b981",
-            borderRadius: "6px",
-            marginBottom: "16px",
+            padding: "0.75rem",
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "4px",
+            marginBottom: "1rem",
           })}
         >
-          <strong>🌳 Merkle Root Created:</strong> <code>{merkleRoot}</code>
-          <div className={css({ fontSize: "14px", color: "#166534", marginTop: "4px" })}>
+          <strong>🌳 Merkle Root:</strong> <code className={css({ fontSize: "0.8rem" })}>{merkleRoot}</code>
+          <div className={css({ fontSize: "0.8rem", color: "#166534", marginTop: "0.25rem" })}>
             All requests can now be processed with a single blockchain transaction!
           </div>
         </div>
       )}
 
       {/* Request List */}
-      <div className={css({ maxHeight: "300px", overflowY: "auto" })}>
+      <div className={css({ maxHeight: "400px", overflowY: "auto" })}>
         {requests.length === 0 ? (
           <div
             className={css({
-              padding: "20px",
+              padding: "1.5rem",
               textAlign: "center",
               color: "#6b7280",
               backgroundColor: "#fff",
-              borderRadius: "6px",
-              border: "1px solid #d1d5db",
+              borderRadius: "4px",
+              border: "1px solid #e5e7eb",
             })}
           >
             No requests yet. Send your first LLM request above! 🚀
           </div>
         ) : (
-          requests.map((request) => (
+          requests.map((request, index) => (
             <div
               key={request.id}
               className={css({
-                padding: "12px",
+                padding: "1rem",
                 backgroundColor: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                marginBottom: "8px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                border: "1px solid #e5e7eb",
+                borderRadius: "4px",
+                marginBottom: "0.75rem",
               })}
             >
-              <div>
-                <div className={css({ fontWeight: "bold" })}>Request #{request.id}</div>
-                <div className={css({ fontSize: "14px", color: "#6b7280", marginBottom: "4px" })}>{request.prompt}</div>
-                <div className={css({ fontSize: "12px", fontFamily: "monospace", color: "#9ca3af" })}>
-                  {request.recipient} • {request.model} • {request.estimatedTokens} tokens
+              {/* Leaf Data */}
+              {request.leafData && (
+                <div className={css({ marginBottom: "0.5rem" })}>
+                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
+                    Leaf Data R<sub>{index + 1}</sub>:
+                  </div>
+                  <pre
+                    className={css({
+                      fontSize: "0.7rem",
+                      fontFamily: "monospace",
+                      backgroundColor: "#f9fafb",
+                      padding: "0.5rem",
+                      borderRadius: "4px",
+                      border: "1px solid #e5e7eb",
+                      overflow: "auto",
+                      lineHeight: "1.3",
+                    })}
+                  >
+                    {JSON.stringify(request.leafData, null, 2)}
+                  </pre>
                 </div>
-              </div>
-              <div className={css({ display: "flex", alignItems: "center", gap: "8px" })}>
-                <span
-                  className={css({
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    fontSize: "12px",
-                    backgroundColor:
-                      request.status === "claimed"
-                        ? "#d1fae5"
-                        : request.status === "registered"
-                          ? "#fef3c7"
-                          : "#f3f4f6",
-                    color:
-                      request.status === "claimed"
-                        ? "#065f46"
-                        : request.status === "registered"
-                          ? "#92400e"
-                          : "#374151",
-                  })}
-                >
-                  {request.status === "claimed"
-                    ? "Processed"
-                    : request.status === "registered"
-                      ? "Ready to Process"
-                      : "Pending"}
-                </span>
-                {request.status === "registered" && (
-                  <>
-                    <button
-                      onClick={() => claimRequest(request.id)}
-                      className={css({
-                        padding: "4px 8px",
-                        backgroundColor: "#3b82f6",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        marginRight: "8px",
-                        "&:hover": { backgroundColor: "#2563eb" },
-                      })}
-                    >
-                      Process
-                    </button>
-                    <details className={css({ fontSize: "12px" })}>
-                      <summary className={css({ cursor: "pointer", color: "#6b7280" })}>View Merkle Proof</summary>
-                      <MerkleProofDisplay requestId={request.id} requests={requests} merkleRoot={merkleRoot} />
-                    </details>
-                  </>
-                )}
-              </div>
+              )}
+
+              {/* Leaf Hash */}
+              {request.leafHash && (
+                <div>
+                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
+                    Leaf Hash H<sub>{index + 1}</sub>:
+                  </div>
+                  <code
+                    className={css({
+                      fontSize: "0.7rem",
+                      fontFamily: "monospace",
+                      backgroundColor: "#f3f4f6",
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: "4px",
+                      border: "1px solid #d1d5db",
+                      wordBreak: "break-all",
+                      display: "block",
+                    })}
+                  >
+                    {request.leafHash}
+                  </code>
+                </div>
+              )}
             </div>
           ))
         )}

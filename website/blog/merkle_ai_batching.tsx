@@ -6,11 +6,11 @@ import { Buffer } from "buffer";
 // Real SHA-256 hash using Web Crypto API with Buffer compatibility
 const createHashSync = async (data: string | Buffer): Promise<Buffer> => {
   // Convert string data to Uint8Array if needed
-  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
-  
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
+
   // Use Web Crypto API for real SHA-256
-  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
-  
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+
   // Convert to Buffer for merkletreejs compatibility
   return Buffer.from(hashBuffer);
 };
@@ -30,7 +30,14 @@ interface LLMRequest {
   model: string;
   recipient: string;
   estimatedTokens: number;
-  status: "pending" | "registered" | "claimed";
+  response?: string;
+  leafData?: {
+    id: number;
+    timestamp: string;
+    tokenCount: number;
+    wallet: string;
+  };
+  leafHash?: string;
 }
 
 interface BatchInfo {
@@ -90,7 +97,7 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
     publicLeaves.map(async (leaf) => {
       const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
       return await createHashSync(serialized);
-    })
+    }),
   );
 
   // Create Merkle Tree using merkletreejs with async hash function
@@ -100,7 +107,7 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
     // In a real implementation, you'd want to pre-compute all hashes
     const encoder = new TextEncoder();
     const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
-    
+
     // Simple synchronous hash for tree construction (not cryptographically secure)
     let hash = 0;
     for (let i = 0; i < bytes.length; i++) {
@@ -108,11 +115,11 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
       hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    
+
     // Create a 32-byte buffer to simulate hash output
     const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
     const fullHash = hashHex.repeat(8); // Simulate 256 bits (64 hex chars)
-    
+
     return Buffer.from(fullHash, "hex");
   };
 
@@ -142,17 +149,17 @@ const generateMerkleProof = async (requestId: number, requests: LLMRequest[]): P
   const hashFn = (data: Buffer) => {
     const encoder = new TextEncoder();
     const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
-    
+
     let hash = 0;
     for (let i = 0; i < bytes.length; i++) {
       const char = bytes[i];
       hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
-    
+
     const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
     const fullHash = hashHex.repeat(8);
-    
+
     return Buffer.from(fullHash, "hex");
   };
 
@@ -164,7 +171,11 @@ const generateMerkleProof = async (requestId: number, requests: LLMRequest[]): P
 };
 
 // Component to display Merkle proof (handles async loading)
-const MerkleProofDisplay: React.FC<{ requestId: number; requests: LLMRequest[]; merkleRoot: string }> = ({ requestId, requests, merkleRoot }) => {
+const MerkleProofDisplay: React.FC<{ requestId: number; requests: LLMRequest[]; merkleRoot: string }> = ({
+  requestId,
+  requests,
+  merkleRoot,
+}) => {
   const [proof, setProof] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -244,36 +255,60 @@ const BatchCreator: React.FC = () => {
   const BATCH_SIZE_THRESHOLD = 4; // Create merkle tree after 4 requests
 
   // Simulate sending an LLM call (like in the notebook)
-  const sendLLMCall = (wallet: string, prompt: string) => {
+  const sendLLMCall = async (wallet: string, prompt: string) => {
+    // Create leaf data
+    const leafData = {
+      id: nextRequestId,
+      timestamp: new Date().toISOString(),
+      tokenCount: Math.floor(Math.random() * 200) + 100,
+      wallet: wallet,
+    };
+
+    // Calculate leaf hash
+    const serialized = JSON.stringify(leafData, Object.keys(leafData).sort());
+    const leafHashBuffer = await createHashSync(serialized);
+    const leafHash = `0x${leafHashBuffer.toString("hex")}`;
+
+    // Simulate LLM response
+    const mockResponses = [
+      "The sentiment of this review is positive, indicating customer satisfaction.",
+      "Hallo, wie geht es dir heute?",
+      "Here's a Python function: def fibonacci(n): return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2)",
+      "Quantum computing uses quantum mechanical phenomena like superposition and entanglement to process information.",
+      "Once upon a time, a curious cat named Whiskers discovered a mysterious clock that could bend time...",
+      "Renewable energy reduces carbon emissions, creates jobs, and provides sustainable power solutions.",
+      "Focus on user experience, social media marketing, and influencer partnerships for app growth.",
+      "Fixed code: console.log('hello world'); // Missing quotes around string",
+    ];
+
+    const response = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+
     const newRequest: LLMRequest = {
       id: nextRequestId,
       prompt: prompt,
       model: "gpt-4-turbo",
       recipient: wallet,
-      estimatedTokens: Math.floor(Math.random() * 200) + 100,
-      status: "pending",
+      estimatedTokens: leafData.tokenCount,
+      response: response,
+      leafData: leafData,
+      leafHash: leafHash,
     };
 
     setRequests((prev) => [...prev, newRequest]);
     setNextRequestId((prev) => prev + 1);
 
-    // Simulate the response with only public information in the leaf
-    const response: LLMResponse = {
-      leaf: {
-        id: newRequest.id,
-        timestamp: new Date().toISOString(),
-        tokenCount: newRequest.estimatedTokens,
-        wallet: wallet,
-      },
-      hash: `0x${Math.random().toString(16).slice(2, 18)}...`,
-      status: "Request registered. Waiting for batch completion...",
-      promptProcessed: `Processed: "${prompt}" -> Your AI response would be here`,
+    // Update last response for the response display
+    const responseObj: LLMResponse = {
+      leaf: leafData,
+      hash: leafHash,
+      status: "Request processed successfully",
+      promptProcessed: response,
     };
 
-    setLastResponse(response);
+    setLastResponse(responseObj);
     setCurrentPrompt("");
 
-    return response;
+    return responseObj;
   };
 
   // Create merkle tree when threshold is reached
@@ -292,16 +327,16 @@ const BatchCreator: React.FC = () => {
     createMerkleTree();
   }, [requests.length, batchRegistered]);
 
-  const handleSendRequest = () => {
+  const handleSendRequest = async () => {
     if (!currentPrompt.trim()) return;
-    sendLLMCall(currentWallet, currentPrompt);
+    await sendLLMCall(currentWallet, currentPrompt);
   };
 
-  const handleRandomRequest = () => {
+  const handleRandomRequest = async () => {
     const randomPrompt = mockPrompts[Math.floor(Math.random() * mockPrompts.length)];
     const randomWallet = mockWallets[Math.floor(Math.random() * mockWallets.length)];
     setCurrentWallet(randomWallet);
-    sendLLMCall(randomWallet, randomPrompt);
+    await sendLLMCall(randomWallet, randomPrompt);
   };
 
   const claimRequest = (requestId: number) => {
@@ -960,282 +995,6 @@ export default function MerkleAIBatching() {
 
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           <strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!
-        </p>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Technical Implementation
-        </h2>
-
-        <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-          Step 1: LLM Batch Creation (Off-Chain)
-        </h3>
-
-        <div
-          className={css({
-            backgroundColor: "#1f2937",
-            color: "#f9fafb",
-            padding: "16px",
-            borderRadius: "8px",
-            fontFamily: "monospace",
-            marginBottom: "16px",
-            fontSize: "14px",
-          })}
-        >
-          <div className={css({ color: "#10b981" })}>// Mock: Batch of LLM API Requests</div>
-          <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> llmBatch = [
-          </div>
-          <div> {`{`}</div>
-          <div>
-            {" "}
-            id: <span className={css({ color: "#60a5fa" })}>1</span>,
-          </div>
-          <div>
-            {" "}
-            prompt: <span className={css({ color: "#34d399" })}>"Analyze sentiment of user feedback"</span>,
-          </div>
-          <div>
-            {" "}
-            model: <span className={css({ color: "#34d399" })}>"gpt-4-turbo"</span>,
-          </div>
-          <div>
-            {" "}
-            recipient: <span className={css({ color: "#34d399" })}>"0xUser1Address..."</span>
-          </div>
-          <div> {`},`}</div>
-          <div>
-            {" "}
-            <span className={css({ color: "#6b7280" })}>// ... more LLM requests</span>
-          </div>
-          <div>];</div>
-          <br />
-          <div className={css({ color: "#10b981" })}>// Calculate Merkle Root (simplified)</div>
-          <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> merkleRoot = calculateMerkleRoot(llmBatch);
-          </div>
-        </div>
-
-        <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-          Step 2: Smart Contract Interaction
-        </h3>
-
-        <SmartContractDemo />
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Cost Comparison</h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          See for yourself how much you can save with different batch sizes:
-        </p>
-
-        <CostComparison />
-      </section>
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Practical Example: AI Service Platform
-        </h2>
-
-        <div
-          className={css({
-            backgroundColor: "#1f2937",
-            color: "#f9fafb",
-            padding: "16px",
-            borderRadius: "8px",
-            fontFamily: "monospace",
-            marginBottom: "16px",
-            fontSize: "14px",
-          })}
-        >
-          <div className={css({ color: "#10b981" })}>// 1. User creates multiple LLM requests</div>
-          <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> userRequests = [
-          </div>
-          <div>
-            {" "}
-            <span className={css({ color: "#34d399" })}>"Analyze sentiment: 'Great product!'"</span>,
-          </div>
-          <div>
-            {" "}
-            <span className={css({ color: "#34d399" })}>"Translate: 'Hello world' to Spanish"</span>,
-          </div>
-          <div>
-            {" "}
-            <span className={css({ color: "#34d399" })}>"Generate Python code for sorting"</span>
-          </div>
-          <div>];</div>
-          <br />
-          <div className={css({ color: "#10b981" })}>// 2. LLM processes requests (simulated)</div>
-          <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> processedResults ={" "}
-            <span className={css({ color: "#f59e0b" })}>await</span> Promise.all(
-          </div>
-          <div> userRequests.map(request =&gt; processLLMRequest(request))</div>
-          <div>);</div>
-          <br />
-          <div className={css({ color: "#10b981" })}>// 3. Batch is created and registered</div>
-          <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> batch = createBatch(processedResults, userAddress);
-          </div>
-          <div>
-            <span className={css({ color: "#f59e0b" })}>const</span> txHash ={" "}
-            <span className={css({ color: "#f59e0b" })}>await</span> registerBatch(batch);
-          </div>
-          <br />
-          <div>
-            console.log(<span className={css({ color: "#34d399" })}>`Batch registered! Cost: $17 instead of $45`</span>
-            );
-          </div>
-        </div>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Technical Advantages</h2>
-
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "16px",
-            marginBottom: "16px",
-          })}
-        >
-          <div
-            className={css({
-              padding: "20px",
-              backgroundColor: "#f0f9ff",
-              borderRadius: "8px",
-              border: "1px solid #bfdbfe",
-            })}
-          >
-            <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px", color: "#1d4ed8" })}>
-              Scalability
-            </h3>
-            <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-              <li>Theoretically unlimited batch size</li>
-              <li>Constant on-chain costs for registration</li>
-              <li>Processing only when needed</li>
-            </ul>
-          </div>
-
-          <div
-            className={css({
-              padding: "20px",
-              backgroundColor: "#f0fdf4",
-              borderRadius: "8px",
-              border: "1px solid #bbf7d0",
-            })}
-          >
-            <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px", color: "#166534" })}>
-              Flexibility
-            </h3>
-            <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-              <li>Various processing strategies</li>
-              <li>Immediate or delayed processing</li>
-              <li>Request transfer to other users</li>
-            </ul>
-          </div>
-
-          <div
-            className={css({
-              padding: "20px",
-              backgroundColor: "#fef3c7",
-              borderRadius: "8px",
-              border: "1px solid #fbbf24",
-            })}
-          >
-            <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px", color: "#92400e" })}>
-              Security
-            </h3>
-            <ul className={css({ listStyle: "disc", paddingLeft: "20px", lineHeight: "1.6" })}>
-              <li>Cryptographic proofs through Merkle Trees</li>
-              <li>Immutable batch registration</li>
-              <li>Protection against double processing</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Challenges and Solutions
-        </h2>
-
-        <div className={css({ marginBottom: "24px" })}>
-          <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>
-            1. Request Data Management
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Problem:</strong> Where do we store LLM request data between registration and processing?
-          </p>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Solution:</strong> Decentralized storage systems like IPFS, Arweave, or hybrid approaches.
-          </p>
-        </div>
-
-        <div className={css({ marginBottom: "24px" })}>
-          <h3 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "12px" })}>2. Proof Management</h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Problem:</strong> Users need to manage their Merkle proofs.
-          </p>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            <strong>Solution:</strong> Automated proof services that reconstruct proofs on-demand.
-          </p>
-        </div>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Future Developments</h2>
-
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "16px",
-          })}
-        >
-          <div
-            className={css({
-              padding: "20px",
-              backgroundColor: "#f8fafc",
-              borderRadius: "8px",
-              border: "1px solid #e2e8f0",
-            })}
-          >
-            <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px" })}>Layer 2 Integration</h3>
-            <p className={css({ lineHeight: "1.6" })}>
-              Integration with Polygon, Arbitrum, and Optimism for even cheaper transactions and better user experience.
-            </p>
-          </div>
-
-          <div
-            className={css({
-              padding: "20px",
-              backgroundColor: "#f8fafc",
-              borderRadius: "8px",
-              border: "1px solid #e2e8f0",
-            })}
-          >
-            <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px" })}>
-              AI Model Integration
-            </h3>
-            <p className={css({ lineHeight: "1.6" })}>
-              Direct integration of AI models for automatic batch management and seamless user experience.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>Conclusion</h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Merkle Tree batching revolutionizes how we create and manage LLM API payments on blockchain. By reducing
-          transaction costs by up to 98%, it makes high-frequency AI services economically viable for the first time.
-        </p>
-        <p className={css({ lineHeight: "1.6" })}>
-          The technology is implementable today and provides a clear path to a more efficient, cost-effective future for
-          AI services on the blockchain.
         </p>
       </section>
     </article>

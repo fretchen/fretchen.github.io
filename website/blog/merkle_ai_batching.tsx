@@ -40,13 +40,6 @@ interface LLMRequest {
   leafHash?: string;
 }
 
-interface BatchInfo {
-  merkleRoot: string;
-  creator: string;
-  size: number;
-  timestamp: number;
-  claimed: number;
-}
 
 // Mock wallet addresses for simulation
 const mockWallets = [
@@ -82,15 +75,32 @@ interface LLMResponse {
   promptProcessed?: string; // LLM response, not stored in leaf
 }
 
+// Shared hash function for Merkle Tree construction
+const createMerkleHashFn = () => (data: Buffer) => {
+  // For the tree construction, we'll use a synchronous hash
+  // In a real implementation, you'd want to pre-compute all hashes
+  const encoder = new TextEncoder();
+  const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
+
+  // Simple synchronous hash for tree construction (not cryptographically secure)
+  let hash = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    const char = bytes[i];
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  // Create a 32-byte buffer to simulate hash output
+  const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
+  const fullHash = hashHex.repeat(8); // Simulate 256 bits (64 hex chars)
+
+  return Buffer.from(fullHash, "hex");
+};
+
 // Mock Merkle Tree functions using merkletreejs with Web Crypto API
 const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
-  // Create public leaf data (only id, timestamp, tokenCount, wallet)
-  const publicLeaves = requests.map((req) => ({
-    id: req.id,
-    timestamp: new Date().toISOString(), // In real implementation, this would be from the request
-    tokenCount: req.estimatedTokens,
-    wallet: req.recipient,
-  }));
+  // Use the actual leaf data from requests (don't recreate timestamps)
+  const publicLeaves = requests.map((req) => req.leafData!);
 
   // Convert to buffer format for merkletreejs
   const leafBuffers = await Promise.all(
@@ -100,28 +110,8 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
     }),
   );
 
-  // Create Merkle Tree using merkletreejs with async hash function
-  // We need to provide a synchronous wrapper for the async hash function
-  const hashFn = (data: Buffer) => {
-    // For the tree construction, we'll use a synchronous hash
-    // In a real implementation, you'd want to pre-compute all hashes
-    const encoder = new TextEncoder();
-    const bytes = typeof data === "string" ? encoder.encode(data) : new Uint8Array(data);
-
-    // Simple synchronous hash for tree construction (not cryptographically secure)
-    let hash = 0;
-    for (let i = 0; i < bytes.length; i++) {
-      const char = bytes[i];
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-
-    // Create a 32-byte buffer to simulate hash output
-    const hashHex = Math.abs(hash).toString(16).padStart(8, "0");
-    const fullHash = hashHex.repeat(8); // Simulate 256 bits (64 hex chars)
-
-    return Buffer.from(fullHash, "hex");
-  };
+  // Use the shared hash function
+  const hashFn = createMerkleHashFn();
 
   const tree = new MerkleTree(leafBuffers, hashFn);
   const root = tree.getRoot();
@@ -129,10 +119,53 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
   return `0x${root.toString("hex")}`;
 };
 
+// Function to visualize the Merkle Tree structure
+const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
+  if (requests.length === 0) return "";
+
+  // Use the same leaf data as in calculateMerkleRoot
+  const publicLeaves = requests.map((req) => req.leafData!);
+
+  const leafBuffers = await Promise.all(
+    publicLeaves.map(async (leaf) => {
+      const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
+      return await createHashSync(serialized);
+    }),
+  );
+
+  // Use the same hash function as calculateMerkleRoot
+  const hashFn = createMerkleHashFn();
+
+  const tree = new MerkleTree(leafBuffers, hashFn);
+  
+  // Get the layers of the tree
+  const layers = tree.getLayers();
+  let visualization = "Merkle Tree:\n";
+  
+  // Root (top level)
+  const root = layers[layers.length - 1][0];
+  visualization += `Root: ${root.toString("hex").substring(0, 8)}\n`;
+  
+  // Intermediate levels (if any)
+  for (let i = layers.length - 2; i > 0; i--) {
+    const level = layers[i];
+    const levelHashes = level.map((hash) => hash.toString("hex").substring(0, 8));
+    visualization += `Level ${layers.length - 1 - i}: ${levelHashes.join(" | ")}\n`;
+  }
+  
+  // Leaf level
+  const leaves = layers[0];
+  const leafHashes = leaves.map((hash, index) => `H${index + 1}: ${hash.toString("hex").substring(0, 8)}`);
+  visualization += `Leaves: ${leafHashes.join(" | ")}`;
+  
+  return visualization;
+};
+
 // Interactive Batch Creator Component
 const BatchCreator: React.FC = () => {
   const [requests, setRequests] = useState<LLMRequest[]>([]);
   const [merkleRoot, setMerkleRoot] = useState<string>("");
+  const [merkleTreeVisualization, setMerkleTreeVisualization] = useState<string>("");
   const [batchRegistered, setBatchRegistered] = useState(false);
   const [nextRequestId, setNextRequestId] = useState(1);
   const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
@@ -192,7 +225,9 @@ const BatchCreator: React.FC = () => {
     const createMerkleTree = async () => {
       if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
         const root = await calculateMerkleRoot(requests);
+        const treeVis = await visualizeMerkleTree(requests);
         setMerkleRoot(root);
+        setMerkleTreeVisualization(treeVis);
         setBatchRegistered(true);
       }
     };
@@ -215,6 +250,7 @@ const BatchCreator: React.FC = () => {
   const resetDemo = () => {
     setRequests([]);
     setMerkleRoot("");
+    setMerkleTreeVisualization("");
     setBatchRegistered(false);
     setNextRequestId(1);
     setCurrentPrompt("");
@@ -370,6 +406,27 @@ const BatchCreator: React.FC = () => {
           <div className={css({ fontSize: "0.8rem", color: "#166534", marginTop: "0.25rem" })}>
             All requests can now be processed with a single blockchain transaction!
           </div>
+          {/* Tree Visualization */}
+          {merkleTreeVisualization && (
+            <div className={css({ marginTop: "0.75rem" })}>
+              <strong>Tree Structure:</strong>
+              <pre
+                className={css({
+                  fontSize: "0.7rem",
+                  fontFamily: "monospace",
+                  backgroundColor: "#fff",
+                  padding: "0.5rem",
+                  borderRadius: "4px",
+                  border: "1px solid #bbf7d0",
+                  marginTop: "0.25rem",
+                  lineHeight: "1.4",
+                  overflow: "auto",
+                })}
+              >
+                {merkleTreeVisualization}
+              </pre>
+            </div>
+          )}
         </div>
       )}
 

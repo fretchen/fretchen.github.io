@@ -641,58 +641,77 @@ const GenImNFTWorkflowDiagram: React.FC = () => {
   const mermaidRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mermaidRef.current) {
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: "default",
-        securityLevel: "loose",
-        sequence: {
-          diagramMarginX: 50,
-          diagramMarginY: 10,
-          boxTextMargin: 5,
-          noteMargin: 10,
-          messageMargin: 35,
-          mirrorActors: false,
-        },
-      });
+    const renderDiagram = async () => {
+      if (!mermaidRef.current) return;
 
-      const diagramDefinition = `
-        sequenceDiagram
-          participant User
-          participant Contract as GenImNFT<br/>Contract
-          participant Serverless as Serverless<br/>Function
-          participant AI as FLUX AI<br/>API
-          participant S3 as S3<br/>Storage
-          participant Provider as Image<br/>Provider
-
-          User->>Contract: 1. Pay ~$0.10 ETH
-          Contract->>Contract: 2. safeMint() creates NFT
-          Note over Contract: NFT starts with<br/>placeholder image
-          Contract->>Serverless: 3. Trigger function
-          Serverless->>AI: 4. Call FLUX AI API
-          AI-->>Serverless: Generated image data
-          Serverless->>S3: 5. Upload to S3 storage
-          S3-->>Serverless: Image URL
-          Serverless->>Contract: 6. Update NFT metadata
-          Note over Contract: NFT now has<br/>final image
-          Contract->>Provider: 7. Auto-pay provider wallet
-          Provider-->>Contract: Payment confirmed
-      `;
-
-      mermaid
-        .render("genImNFTWorkflow", diagramDefinition)
-        .then((result) => {
-          if (mermaidRef.current) {
-            mermaidRef.current.innerHTML = result.svg;
-          }
-        })
-        .catch((error) => {
-          console.error("Error rendering Mermaid diagram:", error);
-          if (mermaidRef.current) {
-            mermaidRef.current.innerHTML = "<p>Error loading diagram</p>";
-          }
+      try {
+        // Initialize mermaid with proper config
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: "default",
+          securityLevel: "loose",
+          sequence: {
+            diagramMarginX: 50,
+            diagramMarginY: 10,
+            boxTextMargin: 5,
+            noteMargin: 10,
+            messageMargin: 35,
+            mirrorActors: false,
+          },
         });
-    }
+
+        const diagramDefinition = `sequenceDiagram
+    participant User
+    participant Contract as GenImNFT Contract
+    participant Serverless as Serverless Function
+    participant AI as FLUX AI API
+    participant S3 as S3 Storage
+    participant Provider as Image Provider
+
+    User->>Contract: 1. Pay ~$0.10 ETH
+    Contract->>Contract: 2. safeMint() creates NFT
+    Note over Contract: NFT starts with placeholder image
+    Contract->>Serverless: 3. Trigger function
+    Serverless->>AI: 4. Call FLUX AI API
+    AI-->>Serverless: Generated image data
+    Serverless->>S3: 5. Upload to S3 storage
+    S3-->>Serverless: Image URL
+    Serverless->>Contract: 6. Update NFT metadata
+    Note over Contract: NFT now has final image
+    Contract->>Provider: 7. Auto-pay provider wallet
+    Provider-->>Contract: Payment confirmed`;
+
+        // Generate unique ID for this diagram
+        const id = `genImNFTWorkflow-${Date.now()}`;
+        
+        // Render the diagram
+        const { svg } = await mermaid.render(id, diagramDefinition);
+        
+        // Insert the SVG into the DOM
+        if (mermaidRef.current) {
+          mermaidRef.current.innerHTML = svg;
+        }
+      } catch (error) {
+        console.error("Error rendering Mermaid diagram:", error);
+        if (mermaidRef.current) {
+          mermaidRef.current.innerHTML = `
+            <div style="padding: 20px; color: #ef4444; border: 1px solid #fecaca; border-radius: 4px; background-color: #fef2f2;">
+              <p><strong>Workflow Steps:</strong></p>
+              <ol style="text-align: left; margin: 0; padding-left: 20px;">
+                <li>User pays ~$0.10 ETH → safeMint() creates NFT</li>
+                <li>NFT starts with placeholder image</li>
+                <li>Serverless function calls FLUX AI API</li>
+                <li>Generated image uploaded to S3 storage</li>
+                <li>NFT metadata updated with final image</li>
+                <li>Contract auto-pays image provider wallet</li>
+              </ol>
+            </div>
+          `;
+        }
+      }
+    };
+
+    renderDiagram();
   }, []);
 
   return (

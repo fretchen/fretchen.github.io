@@ -683,10 +683,10 @@ const GenImNFTWorkflowDiagram: React.FC = () => {
 
         // Generate unique ID for this diagram
         const id = `genImNFTWorkflow-${Date.now()}`;
-        
+
         // Render the diagram
         const { svg } = await mermaid.render(id, diagramDefinition);
-        
+
         // Insert the SVG into the DOM
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
@@ -1121,7 +1121,7 @@ export default function MerkleAIBatching() {
           <h3>🎨 Current Architecture: GenImNFT Contract + Serverless AI</h3>
           <p>
             My existing system uses the{" "}
-            <a href="https://optimistic.etherscan.io/address/0x9859431b682e861b19e87Db14a04944BC747AB6d#code">
+            <a href="https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code">
               GenImNFT contract
             </a>{" "}
             on Optimism to coordinate between users, payments, and AI image generation:
@@ -1130,40 +1130,14 @@ export default function MerkleAIBatching() {
           <GenImNFTWorkflowDiagram />
 
           <p>
-            This creates a trustless system where users only pay for successfully generated images, and the service is
-            compensated automatically upon delivery.
+            This allowed me to set up a trustless system where any user with a wallet and optimism balance can access
+            and only pay for successfully generated images, and the service is compensated automatically upon delivery.
           </p>
         </div>
 
-        <div>
-          <h3>⚡ Current Performance & Costs</h3>
-          <p>The current system works well for individual requests but becomes expensive at scale:</p>
-
-          <div>
-            <div>
-              <h4>💰 Cost Breakdown</h4>
-              <div>
-                <div>• AI Image Generation: $0.05-0.06</div>
-                <div>• Optimism Gas Fee: ~$0.04</div>
-                <div>• Total per image: ~$0.10</div>
-                <div>• Buffer for ETH volatility included</div>
-              </div>
-            </div>
-
-            <div>
-              <h4>⚙️ Technical Stack</h4>
-              <div>
-                <div>• Smart Contract: GenImNFTv3.sol</div>
-                <div>• Serverless: readhandler_v2.js</div>
-                <div>• AI API: FLUX via Ionos/DeepInfra</div>
-                <div>• Storage: S3 for images + IPFS metadata</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div>
-          <h3>🚨 The Scalability Challenge</h3>
+          <h3>🚨 The Challenge with this system in the LLM context</h3>
           <p>
             While this system works great for my image generator, it faces limitations when scaling to multiple LLM API
             calls:
@@ -1176,7 +1150,6 @@ export default function MerkleAIBatching() {
             <div>❌ Network congestion: Many small transactions</div>
             <div>❌ Economic barrier: High costs limit adoption</div>
           </div>
-
           <p>
             <strong>Example:</strong> If a user wants to generate 10 AI images for a project, they currently need 10
             separate transactions costing ~$1.00 in total, plus the complexity of multiple wallet interactions.
@@ -1184,7 +1157,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <div>
-          <h3>💡 Why This Setup Needs Merkle Tree Optimization</h3>
+          <h3>💡 Why This Setup Might benefit from a Merkle Tree Optimization</h3>
           <p>
             The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable for
             multiple LLM interactions, we need:
@@ -1261,7 +1234,8 @@ export default function MerkleAIBatching() {
         <h2>Step 3: Proving Individual Transactions with Merkle Proofs</h2>
 
         <p>
-          Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, let&apos;s explore the next crucial step:
+          Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, let&apos;s explore the next crucial
+          step:
           <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.
         </p>
 
@@ -1299,8 +1273,8 @@ export default function MerkleAIBatching() {
         <div>
           <h3>🧮 How Merkle Proofs Work Mathematically</h3>
           <p>
-            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a &quot;proof path&quot; - the minimum set of
-            hash values needed to reconstruct the path from her leaf to the root:
+            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a &quot;proof path&quot; - the
+            minimum set of hash values needed to reconstruct the path from her leaf to the root:
           </p>
           <div>
             <div>

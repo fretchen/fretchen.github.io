@@ -93,7 +93,10 @@ interface MerkleProof {
     wallet: string;
   };
   leafHash: string;
-  proof: string[];
+  proof: Array<{
+    data: string;
+    position: "left" | "right";
+  }>;
   root: string;
 }
 
@@ -157,7 +160,10 @@ const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
     leafIndex,
     leafData: selectedRequest.leafData,
     leafHash: selectedRequest.leafHash,
-    proof: proof.map((p) => `0x${p.data.toString("hex")}`),
+    proof: proof.map((p) => ({
+      data: `0x${p.data.toString("hex")}`,
+      position: p.position as "left" | "right",
+    })),
     root: `0x${root.toString("hex")}`,
   };
 };
@@ -181,20 +187,21 @@ const validateMerkleProof = async (
     const hashFn = createMerkleHashFn();
 
     for (let i = 0; i < proof.proof.length; i++) {
-      const proofElement = Buffer.from(proof.proof[i].slice(2), "hex");
+      const proofElement = Buffer.from(proof.proof[i].data.slice(2), "hex");
+      const position = proof.proof[i].position;
 
-      // Determine order (left or right) - simplified logic
-      const isLeft = proof.leafIndex % 2 ** (i + 1) < 2 ** i;
-
-      if (isLeft) {
+      // Use the position data from merkletreejs
+      if (position === "right") {
+        // Current hash is on the left, proof element on the right
         currentHash = hashFn(Buffer.concat([currentHash, proofElement]));
         steps.push(
-          `Step ${i + 2}: hash(current + ${proof.proof[i].substring(0, 10)}...) → ${currentHash.toString("hex").substring(0, 10)}...`,
+          `Step ${i + 2}: hash(current + ${proof.proof[i].data.substring(0, 10)}...) → ${currentHash.toString("hex").substring(0, 10)}...`,
         );
       } else {
+        // Current hash is on the right, proof element on the left
         currentHash = hashFn(Buffer.concat([proofElement, currentHash]));
         steps.push(
-          `Step ${i + 2}: hash(${proof.proof[i].substring(0, 10)}... + current) → ${currentHash.toString("hex").substring(0, 10)}...`,
+          `Step ${i + 2}: hash(${proof.proof[i].data.substring(0, 10)}... + current) → ${currentHash.toString("hex").substring(0, 10)}...`,
         );
       }
     }
@@ -248,7 +255,8 @@ const ProofDemo: React.FC = () => {
       const proof = JSON.parse(validationInput) as MerkleProof;
       const result = await validateMerkleProof(proof);
       setValidationResult(result);
-    } catch (_error) {
+    } catch (error) {
+      console.error("Proof validation failed:", error);
       setValidationResult({
         isValid: false,
         message: "Invalid JSON format",
@@ -426,9 +434,9 @@ const ProofDemo: React.FC = () => {
               <div className={css({ marginBottom: "12px" })}>
                 <strong>Proof Path:</strong>
                 <div className={css({ fontSize: "12px", fontFamily: "monospace", marginTop: "4px" })}>
-                  {generatedProof.proof.map((hash, index) => (
+                  {generatedProof.proof.map((proofItem, index) => (
                     <div key={index}>
-                      Level {index + 1}: {hash.substring(0, 20)}...
+                      Level {index + 1}: {proofItem.data.substring(0, 20)}... ({proofItem.position})
                     </div>
                   ))}
                 </div>

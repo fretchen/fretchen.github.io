@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { css } from "../styled-system/css";
 import { MerkleTree } from "merkletreejs";
 import { Buffer } from "buffer";
+import mermaid from "mermaid";
 
 // Export meta for blog post
 export const meta = {
@@ -635,6 +636,99 @@ const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
   return visualization;
 };
 
+// Mermaid Sequence Diagram Component
+const GenImNFTWorkflowDiagram: React.FC = () => {
+  const mermaidRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mermaidRef.current) {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "default",
+        securityLevel: "loose",
+        sequence: {
+          diagramMarginX: 50,
+          diagramMarginY: 10,
+          boxTextMargin: 5,
+          noteMargin: 10,
+          messageMargin: 35,
+          mirrorActors: false,
+        },
+      });
+
+      const diagramDefinition = `
+        sequenceDiagram
+          participant User
+          participant Contract as GenImNFT<br/>Contract
+          participant Serverless as Serverless<br/>Function
+          participant AI as FLUX AI<br/>API
+          participant S3 as S3<br/>Storage
+          participant Provider as Image<br/>Provider
+
+          User->>Contract: 1. Pay ~$0.10 ETH
+          Contract->>Contract: 2. safeMint() creates NFT
+          Note over Contract: NFT starts with<br/>placeholder image
+          Contract->>Serverless: 3. Trigger function
+          Serverless->>AI: 4. Call FLUX AI API
+          AI-->>Serverless: Generated image data
+          Serverless->>S3: 5. Upload to S3 storage
+          S3-->>Serverless: Image URL
+          Serverless->>Contract: 6. Update NFT metadata
+          Note over Contract: NFT now has<br/>final image
+          Contract->>Provider: 7. Auto-pay provider wallet
+          Provider-->>Contract: Payment confirmed
+      `;
+
+      mermaid
+        .render("genImNFTWorkflow", diagramDefinition)
+        .then((result) => {
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = result.svg;
+          }
+        })
+        .catch((error) => {
+          console.error("Error rendering Mermaid diagram:", error);
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = "<p>Error loading diagram</p>";
+          }
+        });
+    }
+  }, []);
+
+  return (
+    <div
+      className={css({
+        margin: "20px 0",
+        padding: "20px",
+        backgroundColor: "#f9fafb",
+        borderRadius: "8px",
+        border: "1px solid #e5e7eb",
+        textAlign: "center",
+      })}
+    >
+      <h4
+        className={css({
+          fontSize: "16px",
+          fontWeight: "medium",
+          marginBottom: "16px",
+          color: "#374151",
+        })}
+      >
+        🎨 GenImNFT Workflow Sequence Diagram
+      </h4>
+      <div
+        ref={mermaidRef}
+        className={css({
+          "& svg": {
+            maxWidth: "100%",
+            height: "auto",
+          },
+        })}
+      />
+    </div>
+  );
+};
+
 // Interactive Batch Creator Component
 const BatchCreator: React.FC = () => {
   const [requests, setRequests] = useState<LLMRequest[]>([]);
@@ -1014,14 +1108,7 @@ export default function MerkleAIBatching() {
             on Optimism to coordinate between users, payments, and AI image generation:
           </p>
 
-          <div>
-            <div>1. User pays ~$0.10 ETH → safeMint() creates NFT</div>
-            <div>2. NFT starts with placeholder image</div>
-            <div>3. Serverless function calls FLUX AI API</div>
-            <div>4. Generated image uploaded to S3 storage</div>
-            <div>5. NFT metadata updated with final image</div>
-            <div>6. Contract auto-pays image provider wallet</div>
-          </div>
+          <GenImNFTWorkflowDiagram />
 
           <p>
             This creates a trustless system where users only pay for successfully generated images, and the service is
@@ -1155,7 +1242,7 @@ export default function MerkleAIBatching() {
         <h2>Step 3: Proving Individual Transactions with Merkle Proofs</h2>
 
         <p>
-          Now that we've seen how to batch LLM requests into a Merkle tree, let's explore the next crucial step:
+          Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, let&apos;s explore the next crucial step:
           <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.
         </p>
 
@@ -1182,7 +1269,7 @@ export default function MerkleAIBatching() {
           </p>
           <div>
             <div>✅ Her original transaction data (R₁)</div>
-            <div>✅ ~10 hash values (the "proof path")</div>
+            <div>✅ ~10 hash values (the &quot;proof path&quot;)</div>
             <div>✅ The public Merkle root</div>
             <div>
               <strong>Total: ~320 bytes instead of ~1MB for full batch!</strong>
@@ -1193,7 +1280,7 @@ export default function MerkleAIBatching() {
         <div>
           <h3>🧮 How Merkle Proofs Work Mathematically</h3>
           <p>
-            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a "proof path" - the minimum set of
+            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a &quot;proof path&quot; - the minimum set of
             hash values needed to reconstruct the path from her leaf to the root:
           </p>
           <div>

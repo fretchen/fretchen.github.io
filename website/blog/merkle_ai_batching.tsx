@@ -987,58 +987,39 @@ const BatchCreator: React.FC = () => {
 // Main Blog Post Component
 export default function MerkleAIBatching() {
   return (
-    <article className={css({ maxWidth: "800px", margin: "0 auto", padding: "20px" })}>
-      <section className={css({ marginBottom: "32px" })}>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+    <article>
+      <section>
+        <p>
           The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem
           remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an
           application? In this blog post, I will explore the possible setup and it might be extend through merkle trees.
           </p>
                 </section>
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
+      <section>
+        <h2>
           The Current AI Setup for Image Generation
         </h2>
         
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+        <p>
           Before diving into Merkle tree optimizations, let&apos;s examine how my current NFT-based AI image generation system works. 
           This system successfully bridges blockchain payments with AI API calls, but faces scalability challenges due to transaction costs.
         </p>
 
-        <div
-          className={css({
-            backgroundColor: "#f8fafc",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" })}>
+        <div>
+          <h3>
             🎨 Current Architecture: GenImNFT Contract + Serverless AI
           </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
+          <p>
             My existing system uses the{" "}
             <a 
               href="https://optimistic.etherscan.io/address/0x9859431b682e861b19e87Db14a04944BC747AB6d#code"
-              className={css({ color: "#3b82f6", textDecoration: "underline" })}
             >
               GenImNFT contract
             </a>{" "}
             on Optimism to coordinate between users, payments, and AI image generation:
           </p>
           
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              lineHeight: "1.4",
-              marginBottom: "12px",
-            })}
-          >
+          <div>
             <div>1. User pays ~$0.10 ETH → safeMint() creates NFT</div>
             <div>2. NFT starts with placeholder image</div>
             <div>3. Serverless function calls FLUX AI API</div>
@@ -1047,41 +1028,20 @@ export default function MerkleAIBatching() {
             <div>6. Contract auto-pays image provider wallet</div>
           </div>
 
-          <p className={css({ lineHeight: "1.6", color: "#64748b" })}>
+          <p>
             This creates a trustless system where users only pay for successfully generated images, 
             and the service is compensated automatically upon delivery.
           </p>
         </div>
 
-        <div
-          className={css({
-            backgroundColor: "#fef3c7",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #f59e0b",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#92400e" })}>
-            ⚡ Current Performance & Costs
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#92400e" })}>
-            The current system works well for individual requests but becomes expensive at scale:
-          </p>
+        <div>
+          <h3>⚡ Current Performance & Costs</h3>
+          <p>The current system works well for individual requests but becomes expensive at scale:</p>
           
-          <div className={css({ display: "grid", gap: "12px", gridTemplateColumns: "1fr 1fr" })}>
-            <div
-              className={css({
-                backgroundColor: "#fff",
-                padding: "12px",
-                borderRadius: "4px",
-                border: "1px solid #f59e0b",
-              })}
-            >
-              <h4 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#92400e" })}>
-                💰 Cost Breakdown
-              </h4>
-              <div className={css({ fontSize: "13px", lineHeight: "1.4", color: "#92400e" })}>
+          <div>
+            <div>
+              <h4>💰 Cost Breakdown</h4>
+              <div>
                 <div>• AI Image Generation: $0.05-0.06</div>
                 <div>• Optimism Gas Fee: ~$0.04</div>
                 <div>• Total per image: ~$0.10</div>
@@ -1089,18 +1049,9 @@ export default function MerkleAIBatching() {
               </div>
             </div>
 
-            <div
-              className={css({
-                backgroundColor: "#fff",
-                padding: "12px",
-                borderRadius: "4px",
-                border: "1px solid #f59e0b",
-              })}
-            >
-              <h4 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#92400e" })}>
-                ⚙️ Technical Stack
-              </h4>
-              <div className={css({ fontSize: "13px", lineHeight: "1.4", color: "#92400e" })}>
+            <div>
+              <h4>⚙️ Technical Stack</h4>
+              <div>
                 <div>• Smart Contract: GenImNFTv3.sol</div>
                 <div>• Serverless: readhandler_v2.js</div>
                 <div>• AI API: FLUX via Ionos/DeepInfra</div>
@@ -1110,33 +1061,11 @@ export default function MerkleAIBatching() {
           </div>
         </div>
 
-        <div
-          className={css({
-            backgroundColor: "#fef2f2",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #fecaca",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#dc2626" })}>
-            🚨 The Scalability Challenge
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#dc2626" })}>
-            While this system works great for my image generator, it faces limitations when scaling to multiple LLM API calls:
-          </p>
+        <div>
+          <h3>🚨 The Scalability Challenge</h3>
+          <p>While this system works great for my image generator, it faces limitations when scaling to multiple LLM API calls:</p>
           
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              lineHeight: "1.4",
-              color: "#dc2626",
-            })}
-          >
+          <div>
             <div>❌ Every LLM request = Separate blockchain transaction</div>
             <div>❌ Gas costs multiply: 10 requests = 10× gas fees</div>
             <div>❌ User experience: Multiple wallet confirmations</div>
@@ -1144,28 +1073,17 @@ export default function MerkleAIBatching() {
             <div>❌ Economic barrier: High costs limit adoption</div>
           </div>
 
-          <p className={css({ marginTop: "12px", lineHeight: "1.6", color: "#dc2626" })}>
+          <p>
             <strong>Example:</strong> If a user wants to generate 10 AI images for a project, they currently need 
             10 separate transactions costing ~$1.00 in total, plus the complexity of multiple wallet interactions.
           </p>
         </div>
 
-        <div
-          className={css({
-            backgroundColor: "#eff6ff",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #bfdbfe",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e40af" })}>
-            💡 Why This Setup Needs Merkle Tree Optimization
-          </h3>
-          <p className={css({ marginBottom: "8px", lineHeight: "1.6", color: "#1e40af" })}>
-            The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable 
-            for multiple LLM interactions, we need:
-          </p>
-          <ul className={css({ color: "#1e40af", lineHeight: "1.6", marginLeft: "20px" })}>
+        <div>
+          <h3>💡 Why This Setup Needs Merkle Tree Optimization</h3>
+          <p>The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable 
+            for multiple LLM interactions, we need:</p>
+          <ul>
             <li>Batch multiple requests into single transactions</li>
             <li>Reduce per-request gas costs dramatically</li>
             <li>Maintain payment security and user experience</li>
@@ -1173,242 +1091,106 @@ export default function MerkleAIBatching() {
           </ul>
         </div>
       </section>
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          The Problem: High Gas Costs for Individual LLM Payments
-        </h2>
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Imagine a dApp wants to process 10 different LLM API requests for its users. With the traditional approach,
-          each LLM payment would require a separate blockchain transaction:
-        </p>
+      <section>
+        <h2>The Problem: High Gas Costs for Individual LLM Payments</h2>
+        <p>Imagine a dApp wants to process 10 different LLM API requests for its users. With the traditional approach,
+          each LLM payment would require a separate blockchain transaction:</p>
 
-        <div
-          className={css({
-            backgroundColor: "#f3f4f6",
-            padding: "16px",
-            borderRadius: "8px",
-            fontFamily: "monospace",
-            marginBottom: "16px",
-          })}
-        >
+        <div>
           <div>Individual Transactions:</div>
           <div>- LLM Request #1: ~$15 Gas Costs</div>
           <div>- LLM Request #2: ~$15 Gas Costs</div>
           <div>- LLM Request #3: ~$15 Gas Costs</div>
           <div>...</div>
-          <div>
-            <strong>Total: ~$150 for 10 LLM Requests</strong>
-          </div>
+          <div><strong>Total: ~$150 for 10 LLM Requests</strong></div>
         </div>
 
-        <p className={css({ lineHeight: "1.6" })}>
-          This is not only expensive, but also inefficient for the network and makes AI services unaffordable.
-        </p>
+        <p>This is not only expensive, but also inefficient for the network and makes AI services unaffordable.</p>
       </section>
 
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          The Solution: Merkle Tree Batching for LLM Payments
-        </h2>
+      <section>
+        <h2>The Solution: Merkle Tree Batching for LLM Payments</h2>
 
-        <div
-          className={css({
-            backgroundColor: "#f8fafc",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" })}>
-            📊 How Merkle Trees Work
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
+        <div>
+          <h3>📊 How Merkle Trees Work</h3>
+          <p>A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
             request), and each parent node contains a cryptographic hash of its children. The mathematical foundation
-            is:
-          </p>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              lineHeight: "1.4",
-            })}
-          >
-            <div>
-              <strong>For requests R₁, R₂, R₃, R₄:</strong>
-            </div>
+            is:</p>
+          <div>
+            <div><strong>For requests R₁, R₂, R₃, R₄:</strong></div>
             <div>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
             <div>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
-            <div>
-              <strong>Root = hash(H₁₂ + H₃₄)</strong>
-            </div>
+            <div><strong>Root = hash(H₁₂ + H₃₄)</strong></div>
           </div>
-          <p className={css({ marginTop: "12px", lineHeight: "1.6" })}>
-            This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
+          <p>This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
             requests with just one blockchain transaction while maintaining cryptographic proof of each individual
-            request.
-          </p>
+            request.</p>
         </div>
 
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the
-          interactive demo:
-        </p>
+        <p>With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the
+          interactive demo:</p>
 
         <BatchCreator />
 
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          <strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!
-        </p>
+        <p><strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!</p>
       </section>
 
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Step 3: Proving Individual Transactions with Merkle Proofs
-        </h2>
+      <section>
+        <h2>Step 3: Proving Individual Transactions with Merkle Proofs</h2>
 
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Now that we've seen how to batch LLM requests into a Merkle tree, let's explore the next crucial step:
-          <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.
-        </p>
+        <p>Now that we've seen how to batch LLM requests into a Merkle tree, let's explore the next crucial step:
+          <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.</p>
 
-        <div
-          className={css({
-            backgroundColor: "#fef3c7",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #f59e0b",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#92400e" })}>
-            📖 Alice&apos;s Challenge
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#92400e" })}>
-            Alice made an LLM request that was batched with 1,000 other users&apos; requests into a single Merkle tree.
+        <div>
+          <h3>📖 Alice&apos;s Challenge</h3>
+          <p>Alice made an LLM request that was batched with 1,000 other users&apos; requests into a single Merkle tree.
             The batch was registered on-chain with just one transaction. Now Alice needs to prove to Bob (a third party)
             that she actually made her payment, but she doesn&apos;t want to reveal the details of the other 999
-            transactions.
-          </p>
-          <p className={css({ lineHeight: "1.6", color: "#92400e", fontWeight: "medium" })}>
-            <strong>Question:</strong> How can Alice prove her payment without downloading the entire batch of 1,000
-            transactions?
-          </p>
+            transactions.</p>
+          <p><strong>Question:</strong> How can Alice prove her payment without downloading the entire batch of 1,000
+            transactions?</p>
         </div>
 
-        <div
-          className={css({
-            backgroundColor: "#f0fdf4",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #bbf7d0",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#166534" })}>
-            🔍 The Solution: Merkle Proofs
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#166534" })}>
-            A Merkle proof is a cryptographic proof that allows Alice to demonstrate her transaction is included in the
+        <div>
+          <h3>🔍 The Solution: Merkle Proofs</h3>
+          <p>A Merkle proof is a cryptographic proof that allows Alice to demonstrate her transaction is included in the
             Merkle tree without revealing any other transactions. Instead of downloading 1,000 transactions, Alice only
-            needs:
-          </p>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              lineHeight: "1.4",
-              color: "#166534",
-            })}
-          >
+            needs:</p>
+          <div>
             <div>✅ Her original transaction data (R₁)</div>
             <div>✅ ~10 hash values (the "proof path")</div>
             <div>✅ The public Merkle root</div>
-            <div className={css({ marginTop: "8px", fontWeight: "bold" })}>
-              Total: ~320 bytes instead of ~1MB for full batch!
-            </div>
+            <div><strong>Total: ~320 bytes instead of ~1MB for full batch!</strong></div>
           </div>
         </div>
 
-        <div
-          className={css({
-            backgroundColor: "#f8fafc",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" })}>
-            🧮 How Merkle Proofs Work Mathematically
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
-            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a "proof path" - the minimum set of
-            hash values needed to reconstruct the path from her leaf to the root:
-          </p>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              lineHeight: "1.4",
-            })}
-          >
-            <div>
-              <strong>Alice&apos;s proof for R₁:</strong>
-            </div>
+        <div>
+          <h3>🧮 How Merkle Proofs Work Mathematically</h3>
+          <p>To prove that Alice&apos;s transaction R₁ is in the tree, she provides a "proof path" - the minimum set of
+            hash values needed to reconstruct the path from her leaf to the root:</p>
+          <div>
+            <div><strong>Alice&apos;s proof for R₁:</strong></div>
             <div>1. Start with H₁ = hash(R₁)</div>
             <div>2. Proof provides H₂ (sibling hash)</div>
             <div>3. Compute H₁₂ = hash(H₁ + H₂)</div>
             <div>4. Proof provides H₃₄ (sibling hash)</div>
             <div>5. Compute Root = hash(H₁₂ + H₃₄)</div>
-            <div className={css({ marginTop: "8px", fontWeight: "bold" })}>
-              6. Verify: Computed Root = Published Root ✅
-            </div>
+            <div><strong>6. Verify: Computed Root = Published Root ✅</strong></div>
           </div>
-          <p className={css({ marginTop: "12px", lineHeight: "1.6" })}>
-            This mathematical verification proves Alice&apos;s transaction is authentic without revealing any other
-            transaction details.
-          </p>
+          <p>This mathematical verification proves Alice&apos;s transaction is authentic without revealing any other
+            transaction details.</p>
         </div>
 
         <ProofDemo />
 
-        <div
-          className={css({
-            backgroundColor: "#eff6ff",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #bfdbfe",
-            marginTop: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e40af" })}>
-            🏗️ Real-World Applications
-          </h3>
-          <div className={css({ lineHeight: "1.6", color: "#1e40af" })}>
-            <p className={css({ marginBottom: "8px" })}>
-              <strong>Payment Verification:</strong> Users can prove payments to service providers
-            </p>
-            <p className={css({ marginBottom: "8px" })}>
-              <strong>Audit Compliance:</strong> Companies can prove specific transactions to auditors
-            </p>
-            <p className={css({ marginBottom: "8px" })}>
-              <strong>Privacy Protection:</strong> Individual verification without mass data disclosure
-            </p>
-            <p>
-              <strong>Efficient Validation:</strong> Third parties can verify proofs instantly without blockchain
-              queries
-            </p>
+        <div>
+          <h3>🏗️ Real-World Applications</h3>
+          <div>
+            <p><strong>Payment Verification:</strong> Users can prove payments to service providers</p>
+            <p><strong>Audit Compliance:</strong> Companies can prove specific transactions to auditors</p>
+            <p><strong>Privacy Protection:</strong> Individual verification without mass data disclosure</p>
+            <p><strong>Efficient Validation:</strong> Third parties can verify proofs instantly without blockchain
+              queries</p>
           </div>
         </div>
       </section>

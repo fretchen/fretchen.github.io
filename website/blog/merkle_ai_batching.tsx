@@ -992,10 +992,187 @@ export default function MerkleAIBatching() {
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
           The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem
           remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an
-          application? One possible answer lies in an elegant data structure: <strong>Merkle Trees</strong>.
+          application? In this blog post, I will explore the possible setup and it might be extend through merkle trees.
+          </p>
+                </section>
+      <section className={css({ marginBottom: "32px" })}>
+        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
+          The Current AI Setup for Image Generation
+        </h2>
+        
+        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+          Before diving into Merkle tree optimizations, let&apos;s examine how my current NFT-based AI image generation system works. 
+          This system successfully bridges blockchain payments with AI API calls, but faces scalability challenges due to transaction costs.
         </p>
-      </section>
 
+        <div
+          className={css({
+            backgroundColor: "#f8fafc",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #e2e8f0",
+            marginBottom: "20px",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e293b" })}>
+            🎨 Current Architecture: GenImNFT Contract + Serverless AI
+          </h3>
+          <p className={css({ marginBottom: "12px", lineHeight: "1.6" })}>
+            My existing system uses the{" "}
+            <a 
+              href="https://optimistic.etherscan.io/address/0x9859431b682e861b19e87Db14a04944BC747AB6d#code"
+              className={css({ color: "#3b82f6", textDecoration: "underline" })}
+            >
+              GenImNFT contract
+            </a>{" "}
+            on Optimism to coordinate between users, payments, and AI image generation:
+          </p>
+          
+          <div
+            className={css({
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              fontSize: "14px",
+              lineHeight: "1.4",
+              marginBottom: "12px",
+            })}
+          >
+            <div>1. User pays ~$0.10 ETH → safeMint() creates NFT</div>
+            <div>2. NFT starts with placeholder image</div>
+            <div>3. Serverless function calls FLUX AI API</div>
+            <div>4. Generated image uploaded to S3 storage</div>
+            <div>5. NFT metadata updated with final image</div>
+            <div>6. Contract auto-pays image provider wallet</div>
+          </div>
+
+          <p className={css({ lineHeight: "1.6", color: "#64748b" })}>
+            This creates a trustless system where users only pay for successfully generated images, 
+            and the service is compensated automatically upon delivery.
+          </p>
+        </div>
+
+        <div
+          className={css({
+            backgroundColor: "#fef3c7",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #f59e0b",
+            marginBottom: "20px",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#92400e" })}>
+            ⚡ Current Performance & Costs
+          </h3>
+          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#92400e" })}>
+            The current system works well for individual requests but becomes expensive at scale:
+          </p>
+          
+          <div className={css({ display: "grid", gap: "12px", gridTemplateColumns: "1fr 1fr" })}>
+            <div
+              className={css({
+                backgroundColor: "#fff",
+                padding: "12px",
+                borderRadius: "4px",
+                border: "1px solid #f59e0b",
+              })}
+            >
+              <h4 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#92400e" })}>
+                💰 Cost Breakdown
+              </h4>
+              <div className={css({ fontSize: "13px", lineHeight: "1.4", color: "#92400e" })}>
+                <div>• AI Image Generation: $0.05-0.06</div>
+                <div>• Optimism Gas Fee: ~$0.04</div>
+                <div>• Total per image: ~$0.10</div>
+                <div>• Buffer for ETH volatility included</div>
+              </div>
+            </div>
+
+            <div
+              className={css({
+                backgroundColor: "#fff",
+                padding: "12px",
+                borderRadius: "4px",
+                border: "1px solid #f59e0b",
+              })}
+            >
+              <h4 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#92400e" })}>
+                ⚙️ Technical Stack
+              </h4>
+              <div className={css({ fontSize: "13px", lineHeight: "1.4", color: "#92400e" })}>
+                <div>• Smart Contract: GenImNFTv3.sol</div>
+                <div>• Serverless: readhandler_v2.js</div>
+                <div>• AI API: FLUX via Ionos/DeepInfra</div>
+                <div>• Storage: S3 for images + IPFS metadata</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={css({
+            backgroundColor: "#fef2f2",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #fecaca",
+            marginBottom: "20px",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#dc2626" })}>
+            🚨 The Scalability Challenge
+          </h3>
+          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#dc2626" })}>
+            While this system works great for my image generator, it faces limitations when scaling to multiple LLM API calls:
+          </p>
+          
+          <div
+            className={css({
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              fontSize: "14px",
+              lineHeight: "1.4",
+              color: "#dc2626",
+            })}
+          >
+            <div>❌ Every LLM request = Separate blockchain transaction</div>
+            <div>❌ Gas costs multiply: 10 requests = 10× gas fees</div>
+            <div>❌ User experience: Multiple wallet confirmations</div>
+            <div>❌ Network congestion: Many small transactions</div>
+            <div>❌ Economic barrier: High costs limit adoption</div>
+          </div>
+
+          <p className={css({ marginTop: "12px", lineHeight: "1.6", color: "#dc2626" })}>
+            <strong>Example:</strong> If a user wants to generate 10 AI images for a project, they currently need 
+            10 separate transactions costing ~$1.00 in total, plus the complexity of multiple wallet interactions.
+          </p>
+        </div>
+
+        <div
+          className={css({
+            backgroundColor: "#eff6ff",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #bfdbfe",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e40af" })}>
+            💡 Why This Setup Needs Merkle Tree Optimization
+          </h3>
+          <p className={css({ marginBottom: "8px", lineHeight: "1.6", color: "#1e40af" })}>
+            The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable 
+            for multiple LLM interactions, we need:
+          </p>
+          <ul className={css({ color: "#1e40af", lineHeight: "1.6", marginLeft: "20px" })}>
+            <li>Batch multiple requests into single transactions</li>
+            <li>Reduce per-request gas costs dramatically</li>
+            <li>Maintain payment security and user experience</li>
+            <li>Enable complex AI workflows without cost barriers</li>
+          </ul>
+        </div>
+      </section>
       <section className={css({ marginBottom: "32px" })}>
         <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
           The Problem: High Gas Costs for Individual LLM Payments
@@ -1281,6 +1458,213 @@ export default function MerkleAIBatching() {
           </div>
         </div>
 
+        <div
+          className={css({
+            backgroundColor: "#f0fdf4",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #bbf7d0",
+            marginBottom: "20px",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#166534" })}>
+            🔄 Complete Workflow: From Deposit to Settlement
+          </h3>
+          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#166534" })}>
+            Here&apos;s how the complete prepaid + Merkle tree system works in practice:
+          </p>
+          
+          <div className={css({ marginBottom: "16px" })}>
+            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+              Step 1: Initial Setup & Deposits
+            </h4>
+            <div
+              className={css({
+                fontFamily: "monospace",
+                backgroundColor: "#fff",
+                padding: "12px",
+                borderRadius: "4px",
+                fontSize: "13px",
+                lineHeight: "1.4",
+                marginBottom: "8px",
+              })}
+            >
+              <div>1. User calls: contract.depositForLLM({`{value: ethers.parseEther("0.05")}`})</div>
+              <div>2. Contract updates: llmBalance[user] += 0.05 ETH</div>
+              <div>3. Event emitted: LLMDeposit(user, 0.05 ETH)</div>
+              <div>4. User can now make LLM requests up to $50 value</div>
+            </div>
+          </div>
+
+          <div className={css({ marginBottom: "16px" })}>
+            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+              Step 2: LLM Request Processing
+            </h4>
+            <div
+              className={css({
+                fontFamily: "monospace",
+                backgroundColor: "#fff",
+                padding: "12px",
+                borderRadius: "4px",
+                fontSize: "13px",
+                lineHeight: "1.4",
+                marginBottom: "8px",
+              })}
+            >
+              <div>1. User submits: &quot;Generate image of a sunset&quot;</div>
+              <div>2. System checks: llmBalance[user] &gt;= $2.00 ✅</div>
+              <div>3. LLM API called: Image generated (off-chain)</div>
+              <div>4. Request queued: Added to pending batch (47/50)</div>
+              <div>5. User gets: Immediate response + queue position</div>
+            </div>
+          </div>
+
+          <div className={css({ marginBottom: "16px" })}>
+            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+              Step 3: Batch Trigger & Merkle Tree Construction
+            </h4>
+            <div
+              className={css({
+                fontFamily: "monospace",
+                backgroundColor: "#fff",
+                padding: "12px",
+                borderRadius: "4px",
+                fontSize: "13px",
+                lineHeight: "1.4",
+                marginBottom: "8px",
+              })}
+            >
+              <div>1. Trigger condition met: 50 requests OR 5 minutes</div>
+              <div>2. Create leaf data: {`{id, timestamp, cost, wallet}`} for each</div>
+              <div>3. Build Merkle tree: hash(leaf1), hash(leaf2), ...</div>
+              <div>4. Calculate root: MerkleTree(leafHashes).getRoot()</div>
+              <div>5. Prepare batch: {`{merkleRoot, requests[], proofs[][]}`}</div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+              Step 4: Atomic Settlement on Blockchain
+            </h4>
+            <div
+              className={css({
+                fontFamily: "monospace",
+                backgroundColor: "#fff",
+                padding: "12px",
+                borderRadius: "4px",
+                fontSize: "13px",
+                lineHeight: "1.4",
+              })}
+            >
+              <div>1. Call: contract.processBatch(merkleRoot, requests, proofs)</div>
+              <div>2. Verify: Each proof against merkleRoot</div>
+              <div>3. Deduct: llmBalance[user] -= request.cost (atomic)</div>
+              <div>4. Mark: processedBatches[merkleRoot] = true</div>
+              <div>5. Transfer: Total cost to service provider</div>
+              <div>6. Result: 50 requests settled with 1 transaction!</div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={css({
+            backgroundColor: "#eff6ff",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #bfdbfe",
+            marginBottom: "20px",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#1e40af" })}>
+            💡 Key Implementation Insights
+          </h3>
+          <div className={css({ lineHeight: "1.6", color: "#1e40af" })}>
+            <p className={css({ marginBottom: "8px" })}>
+              <strong>Balance Checking:</strong> Every LLM request pre-verifies sufficient prepaid balance
+            </p>
+            <p className={css({ marginBottom: "8px" })}>
+              <strong>Off-chain Processing:</strong> LLM API calls happen immediately, settlement is batched
+            </p>
+            <p className={css({ marginBottom: "8px" })}>
+              <strong>Atomic Settlement:</strong> All-or-nothing batch processing prevents partial failures
+            </p>
+            <p className={css({ marginBottom: "8px" })}>
+              <strong>Proof Generation:</strong> Each user can extract their individual payment proof
+            </p>
+            <p>
+              <strong>Gas Efficiency:</strong> 50 requests cost $15 gas vs $750 individual ($735 saved!)
+            </p>
+          </div>
+        </div>
+
+        {/* ========================================
+            PREPAID WORKFLOW DEMO PLACEHOLDER
+            ======================================== */}
+        <div
+          className={css({
+            border: "2px dashed #9ca3af",
+            borderRadius: "8px",
+            padding: "24px",
+            margin: "20px 0",
+            backgroundColor: "#f9fafb",
+            textAlign: "center",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#374151" })}>
+            🚧 Prepaid Workflow Demo (Implementation Placeholder)
+          </h3>
+          
+          <div className={css({ textAlign: "left", maxWidth: "600px", margin: "0 auto" })}>
+            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#1f2937" })}>
+              Demo Features to Implement:
+            </h4>
+            
+            <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+              <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#059669" })}>
+                📊 Phase 1: Smart Contract State Dashboard
+              </h5>
+              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#6b7280", marginLeft: "16px" })}>
+                <li>• Live balance tracking for multiple users (Alice: $50, Bob: $30, Charlie: $10)</li>
+                <li>• Deposit simulation with `depositForLLM()` contract calls</li>
+                <li>• Balance verification logic before LLM requests</li>
+                <li>• Real-time contract state updates</li>
+              </ul>
+            </div>
+
+            <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+              <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#3b82f6" })}>
+                ⚙️ Phase 2: Request Processing Pipeline
+              </h5>
+              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#6b7280", marginLeft: "16px" })}>
+                <li>• Individual request intake with balance pre-verification</li>
+                <li>• Queue visualization showing pending requests (23/50 filled)</li>
+                <li>• Auto-trigger conditions: 50 requests OR 5 minutes timeout</li>
+                <li>• Real-time Merkle tree construction process</li>
+                <li>• Visual tree building from leaves to root</li>
+              </ul>
+            </div>
+
+            <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px" })}>
+              <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#dc2626" })}>
+                🔄 Phase 3: Batch Settlement Process
+              </h5>
+              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#6b7280", marginLeft: "16px" })}>
+                <li>• `processBatch()` contract call simulation</li>
+                <li>• Atomic balance deductions across all users</li>
+                <li>• Individual Merkle proof generation for each request</li>
+                <li>• Gas cost comparison: $15 batch vs $1,500 individual</li>
+                <li>• Smart contract event emissions visualization</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className={css({ marginTop: "20px", padding: "12px", backgroundColor: "#fef3c7", borderRadius: "8px" })}>
+            <p className={css({ fontSize: "13px", color: "#92400e", margin: "0" })}>
+              <strong>Implementation Focus:</strong> This demo will show the complete backend flow from deposit to settlement,
+              emphasizing smart contract state changes, Merkle tree mathematics, and gas efficiency gains.
+            </p>
+          </div>
+        </div>
 
         <div
           className={css({
@@ -1298,6 +1682,54 @@ export default function MerkleAIBatching() {
             To integrate this with your existing `GenImNFTv3.sol` contract, you would extend it with prepaid
             functionality:
           </p>
+
+          {/* ========================================
+              NFT INTEGRATION DEMO PLACEHOLDER
+              ======================================== */}
+          <div
+            className={css({
+              border: "2px dashed #3b82f6",
+              borderRadius: "8px",
+              padding: "20px",
+              margin: "16px 0",
+              backgroundColor: "#f0f9ff",
+            })}
+          >
+            <h4 className={css({ fontSize: "16px", fontWeight: "bold", marginBottom: "12px", color: "#1e40af" })}>
+              🔗 NFT Integration Demo (Implementation Placeholder)
+            </h4>
+            
+            <div className={css({ textAlign: "left" })}>
+              <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#1d4ed8" })}>
+                Live Smart Contract Extension Example:
+              </h5>
+              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#1e40af", marginLeft: "16px", marginBottom: "12px" })}>
+                <li>• Show GenImNFTv3 → GenImNFTv4 upgrade path</li>
+                <li>• Live contract interaction with prepaid deposits</li>
+                <li>• NFT image update requests via LLM queue</li>
+                <li>• Batch settlement affecting multiple NFT metadata</li>
+                <li>• Gas cost comparison: current vs optimized</li>
+              </ul>
+
+              <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#1d4ed8" })}>
+                Serverless Function Integration:
+              </h5>
+              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#1e40af", marginLeft: "16px" })}>
+                <li>• readhandler_v2.js → readhandler_v3.js evolution</li>
+                <li>• FLUX API calls with queue management</li>
+                <li>• S3 upload batching for generated images</li>
+                <li>• Real-time status updates for pending requests</li>
+              </ul>
+            </div>
+
+            <div className={css({ marginTop: "16px", padding: "12px", backgroundColor: "#dbeafe", borderRadius: "8px" })}>
+              <p className={css({ fontSize: "13px", color: "#1d4ed8", margin: "0" })}>
+                <strong>Demo Focus:</strong> Show practical integration with existing NFT infrastructure,
+                demonstrating how Merkle batching reduces costs while maintaining user experience.
+              </p>
+            </div>
+          </div>
+
           <div
             className={css({
               fontFamily: "monospace",
@@ -1372,6 +1804,98 @@ contract GenImNFTv4 is GenImNFTv3 {
             <p>
               <strong>🛠️ Compatibility:</strong> Seamless integration with existing GenImNFTv3 contract
             </p>
+          </div>
+        </div>
+
+        {/* ========================================
+            COST COMPARISON DEMO PLACEHOLDER
+            ======================================== */}
+        <div
+          className={css({
+            border: "2px dashed #059669",
+            borderRadius: "8px",
+            padding: "24px",
+            margin: "20px 0",
+            backgroundColor: "#f0fdf4",
+            textAlign: "center",
+          })}
+        >
+          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#065f46" })}>
+            📈 Interactive Cost Comparison Calculator (Implementation Placeholder)
+          </h3>
+          
+          <div className={css({ textAlign: "left", maxWidth: "700px", margin: "0 auto" })}>
+            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#047857" })}>
+              Calculator Features to Implement:
+            </h4>
+            
+            <div className={css({ display: "grid", gap: "12px", gridTemplateColumns: "1fr 1fr" })}>
+              <div
+                className={css({
+                  backgroundColor: "#fef2f2",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  border: "1px solid #fecaca",
+                })}
+              >
+                <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#dc2626" })}>
+                  ❌ Traditional Approach
+                </h5>
+                <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#7f1d1d", marginLeft: "16px" })}>
+                  <li>• Input: Number of LLM requests</li>
+                  <li>• Calculate: requests × $15 gas</li>
+                  <li>• Show: Total cost breakdown</li>
+                  <li>• Display: Transaction confirmations needed</li>
+                </ul>
+              </div>
+
+              <div
+                className={css({
+                  backgroundColor: "#f0fdf4",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  border: "1px solid #bbf7d0",
+                })}
+              >
+                <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#059669" })}>
+                  ✅ Merkle Batching Approach
+                </h5>
+                <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#064e3b", marginLeft: "16px" })}>
+                  <li>• Input: Same number of requests</li>
+                  <li>• Calculate: $15 batch + requests × $2</li>
+                  <li>• Show: Massive savings visualization</li>
+                  <li>• Display: Single transaction needed</li>
+                </ul>
+              </div>
+            </div>
+
+            <div
+              className={css({
+                backgroundColor: "#fff",
+                padding: "16px",
+                borderRadius: "8px",
+                marginTop: "16px",
+                border: "1px solid #d1d5db",
+              })}
+            >
+              <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#374151" })}>
+                📊 Interactive Elements:
+              </h5>
+              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#6b7280", marginLeft: "16px" })}>
+                <li>• Slider: Adjust number of requests (1-1000)</li>
+                <li>• Real-time: Cost calculation updates</li>
+                <li>• Charts: Visual cost comparison graphs</li>
+                <li>• Timeline: Settlement speed comparison</li>
+                <li>• ROI: Break-even point analysis</li>
+              </ul>
+            </div>
+
+            <div className={css({ marginTop: "16px", padding: "12px", backgroundColor: "#ecfdf5", borderRadius: "8px" })}>
+              <p className={css({ fontSize: "13px", color: "#065f46", margin: "0" })}>
+                <strong>Example Output:</strong> &quot;For 100 LLM requests: Traditional = $1,500, Merkle Batching = $215.
+                You save $1,285 (85.7%) and need only 1 transaction instead of 100!&quot;
+              </p>
+            </div>
           </div>
         </div>
       </section>

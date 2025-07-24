@@ -1135,7 +1135,6 @@ export default function MerkleAIBatching() {
           </p>
         </div>
 
-
         <div>
           <h3>🚨 The Challenge with this system in the LLM context</h3>
           <p>
@@ -1170,53 +1169,28 @@ export default function MerkleAIBatching() {
           </ul>
         </div>
       </section>
+
       <section>
-        <h2>The Problem: High Gas Costs for Individual LLM Payments</h2>
+        <h2>📊 How Merkle Trees Work</h2>
         <p>
-          Imagine a dApp wants to process 10 different LLM API requests for its users. With the traditional approach,
-          each LLM payment would require a separate blockchain transaction:
+          A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
+          request), and each parent node contains a cryptographic hash of its children. The mathematical foundation is:
         </p>
-
         <div>
-          <div>Individual Transactions:</div>
-          <div>- LLM Request #1: ~$15 Gas Costs</div>
-          <div>- LLM Request #2: ~$15 Gas Costs</div>
-          <div>- LLM Request #3: ~$15 Gas Costs</div>
-          <div>...</div>
           <div>
-            <strong>Total: ~$150 for 10 LLM Requests</strong>
+            <strong>For requests R₁, R₂, R₃, R₄:</strong>
+          </div>
+          <div>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
+          <div>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
+          <div>
+            <strong>Root = hash(H₁₂ + H₃₄)</strong>
           </div>
         </div>
-
-        <p>This is not only expensive, but also inefficient for the network and makes AI services unaffordable.</p>
-      </section>
-
-      <section>
-        <h2>The Solution: Merkle Tree Batching for LLM Payments</h2>
-
-        <div>
-          <h3>📊 How Merkle Trees Work</h3>
-          <p>
-            A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
-            request), and each parent node contains a cryptographic hash of its children. The mathematical foundation
-            is:
-          </p>
-          <div>
-            <div>
-              <strong>For requests R₁, R₂, R₃, R₄:</strong>
-            </div>
-            <div>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
-            <div>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
-            <div>
-              <strong>Root = hash(H₁₂ + H₃₄)</strong>
-            </div>
-          </div>
-          <p>
-            This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
-            requests with just one blockchain transaction while maintaining cryptographic proof of each individual
-            request.
-          </p>
-        </div>
+        <p>
+          This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
+          requests with just one blockchain transaction while maintaining cryptographic proof of each individual
+          request.
+        </p>
 
         <p>
           With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the

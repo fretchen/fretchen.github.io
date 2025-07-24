@@ -993,32 +993,27 @@ export default function MerkleAIBatching() {
           The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem
           remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an
           application? In this blog post, I will explore the possible setup and it might be extend through merkle trees.
-          </p>
-                </section>
+        </p>
+      </section>
       <section>
-        <h2>
-          The Current AI Setup for Image Generation
-        </h2>
-        
+        <h2>The Current AI Setup for Image Generation</h2>
+
         <p>
-          Before diving into Merkle tree optimizations, let&apos;s examine how my current NFT-based AI image generation system works. 
-          This system successfully bridges blockchain payments with AI API calls, but faces scalability challenges due to transaction costs.
+          Before diving into Merkle tree optimizations, let&apos;s examine how my current NFT-based AI image generation
+          system works. This system successfully bridges blockchain payments with AI API calls, but faces scalability
+          challenges due to transaction costs.
         </p>
 
         <div>
-          <h3>
-            🎨 Current Architecture: GenImNFT Contract + Serverless AI
-          </h3>
+          <h3>🎨 Current Architecture: GenImNFT Contract + Serverless AI</h3>
           <p>
             My existing system uses the{" "}
-            <a 
-              href="https://optimistic.etherscan.io/address/0x9859431b682e861b19e87Db14a04944BC747AB6d#code"
-            >
+            <a href="https://optimistic.etherscan.io/address/0x9859431b682e861b19e87Db14a04944BC747AB6d#code">
               GenImNFT contract
             </a>{" "}
             on Optimism to coordinate between users, payments, and AI image generation:
           </p>
-          
+
           <div>
             <div>1. User pays ~$0.10 ETH → safeMint() creates NFT</div>
             <div>2. NFT starts with placeholder image</div>
@@ -1029,15 +1024,15 @@ export default function MerkleAIBatching() {
           </div>
 
           <p>
-            This creates a trustless system where users only pay for successfully generated images, 
-            and the service is compensated automatically upon delivery.
+            This creates a trustless system where users only pay for successfully generated images, and the service is
+            compensated automatically upon delivery.
           </p>
         </div>
 
         <div>
           <h3>⚡ Current Performance & Costs</h3>
           <p>The current system works well for individual requests but becomes expensive at scale:</p>
-          
+
           <div>
             <div>
               <h4>💰 Cost Breakdown</h4>
@@ -1063,8 +1058,11 @@ export default function MerkleAIBatching() {
 
         <div>
           <h3>🚨 The Scalability Challenge</h3>
-          <p>While this system works great for my image generator, it faces limitations when scaling to multiple LLM API calls:</p>
-          
+          <p>
+            While this system works great for my image generator, it faces limitations when scaling to multiple LLM API
+            calls:
+          </p>
+
           <div>
             <div>❌ Every LLM request = Separate blockchain transaction</div>
             <div>❌ Gas costs multiply: 10 requests = 10× gas fees</div>
@@ -1074,15 +1072,17 @@ export default function MerkleAIBatching() {
           </div>
 
           <p>
-            <strong>Example:</strong> If a user wants to generate 10 AI images for a project, they currently need 
-            10 separate transactions costing ~$1.00 in total, plus the complexity of multiple wallet interactions.
+            <strong>Example:</strong> If a user wants to generate 10 AI images for a project, they currently need 10
+            separate transactions costing ~$1.00 in total, plus the complexity of multiple wallet interactions.
           </p>
         </div>
 
         <div>
           <h3>💡 Why This Setup Needs Merkle Tree Optimization</h3>
-          <p>The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable 
-            for multiple LLM interactions, we need:</p>
+          <p>
+            The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable for
+            multiple LLM interactions, we need:
+          </p>
           <ul>
             <li>Batch multiple requests into single transactions</li>
             <li>Reduce per-request gas costs dramatically</li>
@@ -1093,8 +1093,10 @@ export default function MerkleAIBatching() {
       </section>
       <section>
         <h2>The Problem: High Gas Costs for Individual LLM Payments</h2>
-        <p>Imagine a dApp wants to process 10 different LLM API requests for its users. With the traditional approach,
-          each LLM payment would require a separate blockchain transaction:</p>
+        <p>
+          Imagine a dApp wants to process 10 different LLM API requests for its users. With the traditional approach,
+          each LLM payment would require a separate blockchain transaction:
+        </p>
 
         <div>
           <div>Individual Transactions:</div>
@@ -1102,7 +1104,9 @@ export default function MerkleAIBatching() {
           <div>- LLM Request #2: ~$15 Gas Costs</div>
           <div>- LLM Request #3: ~$15 Gas Costs</div>
           <div>...</div>
-          <div><strong>Total: ~$150 for 10 LLM Requests</strong></div>
+          <div>
+            <strong>Total: ~$150 for 10 LLM Requests</strong>
+          </div>
         </div>
 
         <p>This is not only expensive, but also inefficient for the network and makes AI services unaffordable.</p>
@@ -1113,72 +1117,102 @@ export default function MerkleAIBatching() {
 
         <div>
           <h3>📊 How Merkle Trees Work</h3>
-          <p>A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
+          <p>
+            A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
             request), and each parent node contains a cryptographic hash of its children. The mathematical foundation
-            is:</p>
+            is:
+          </p>
           <div>
-            <div><strong>For requests R₁, R₂, R₃, R₄:</strong></div>
+            <div>
+              <strong>For requests R₁, R₂, R₃, R₄:</strong>
+            </div>
             <div>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
             <div>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
-            <div><strong>Root = hash(H₁₂ + H₃₄)</strong></div>
+            <div>
+              <strong>Root = hash(H₁₂ + H₃₄)</strong>
+            </div>
           </div>
-          <p>This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
+          <p>
+            This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
             requests with just one blockchain transaction while maintaining cryptographic proof of each individual
-            request.</p>
+            request.
+          </p>
         </div>
 
-        <p>With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the
-          interactive demo:</p>
+        <p>
+          With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the
+          interactive demo:
+        </p>
 
         <BatchCreator />
 
-        <p><strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!</p>
+        <p>
+          <strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!
+        </p>
       </section>
 
       <section>
         <h2>Step 3: Proving Individual Transactions with Merkle Proofs</h2>
 
-        <p>Now that we've seen how to batch LLM requests into a Merkle tree, let's explore the next crucial step:
-          <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.</p>
+        <p>
+          Now that we've seen how to batch LLM requests into a Merkle tree, let's explore the next crucial step:
+          <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.
+        </p>
 
         <div>
           <h3>📖 Alice&apos;s Challenge</h3>
-          <p>Alice made an LLM request that was batched with 1,000 other users&apos; requests into a single Merkle tree.
+          <p>
+            Alice made an LLM request that was batched with 1,000 other users&apos; requests into a single Merkle tree.
             The batch was registered on-chain with just one transaction. Now Alice needs to prove to Bob (a third party)
             that she actually made her payment, but she doesn&apos;t want to reveal the details of the other 999
-            transactions.</p>
-          <p><strong>Question:</strong> How can Alice prove her payment without downloading the entire batch of 1,000
-            transactions?</p>
+            transactions.
+          </p>
+          <p>
+            <strong>Question:</strong> How can Alice prove her payment without downloading the entire batch of 1,000
+            transactions?
+          </p>
         </div>
 
         <div>
           <h3>🔍 The Solution: Merkle Proofs</h3>
-          <p>A Merkle proof is a cryptographic proof that allows Alice to demonstrate her transaction is included in the
+          <p>
+            A Merkle proof is a cryptographic proof that allows Alice to demonstrate her transaction is included in the
             Merkle tree without revealing any other transactions. Instead of downloading 1,000 transactions, Alice only
-            needs:</p>
+            needs:
+          </p>
           <div>
             <div>✅ Her original transaction data (R₁)</div>
             <div>✅ ~10 hash values (the "proof path")</div>
             <div>✅ The public Merkle root</div>
-            <div><strong>Total: ~320 bytes instead of ~1MB for full batch!</strong></div>
+            <div>
+              <strong>Total: ~320 bytes instead of ~1MB for full batch!</strong>
+            </div>
           </div>
         </div>
 
         <div>
           <h3>🧮 How Merkle Proofs Work Mathematically</h3>
-          <p>To prove that Alice&apos;s transaction R₁ is in the tree, she provides a "proof path" - the minimum set of
-            hash values needed to reconstruct the path from her leaf to the root:</p>
+          <p>
+            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a "proof path" - the minimum set of
+            hash values needed to reconstruct the path from her leaf to the root:
+          </p>
           <div>
-            <div><strong>Alice&apos;s proof for R₁:</strong></div>
+            <div>
+              <strong>Alice&apos;s proof for R₁:</strong>
+            </div>
             <div>1. Start with H₁ = hash(R₁)</div>
             <div>2. Proof provides H₂ (sibling hash)</div>
             <div>3. Compute H₁₂ = hash(H₁ + H₂)</div>
             <div>4. Proof provides H₃₄ (sibling hash)</div>
             <div>5. Compute Root = hash(H₁₂ + H₃₄)</div>
-            <div><strong>6. Verify: Computed Root = Published Root ✅</strong></div>
+            <div>
+              <strong>6. Verify: Computed Root = Published Root ✅</strong>
+            </div>
           </div>
-          <p>This mathematical verification proves Alice&apos;s transaction is authentic without revealing any other
-            transaction details.</p>
+          <p>
+            This mathematical verification proves Alice&apos;s transaction is authentic without revealing any other
+            transaction details.
+          </p>
         </div>
 
         <ProofDemo />
@@ -1186,11 +1220,19 @@ export default function MerkleAIBatching() {
         <div>
           <h3>🏗️ Real-World Applications</h3>
           <div>
-            <p><strong>Payment Verification:</strong> Users can prove payments to service providers</p>
-            <p><strong>Audit Compliance:</strong> Companies can prove specific transactions to auditors</p>
-            <p><strong>Privacy Protection:</strong> Individual verification without mass data disclosure</p>
-            <p><strong>Efficient Validation:</strong> Third parties can verify proofs instantly without blockchain
-              queries</p>
+            <p>
+              <strong>Payment Verification:</strong> Users can prove payments to service providers
+            </p>
+            <p>
+              <strong>Audit Compliance:</strong> Companies can prove specific transactions to auditors
+            </p>
+            <p>
+              <strong>Privacy Protection:</strong> Individual verification without mass data disclosure
+            </p>
+            <p>
+              <strong>Efficient Validation:</strong> Third parties can verify proofs instantly without blockchain
+              queries
+            </p>
           </div>
         </div>
       </section>
@@ -1255,22 +1297,12 @@ export default function MerkleAIBatching() {
           <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#166534" })}>
             Here&apos;s how the complete prepaid + Merkle tree system works in practice:
           </p>
-          
+
           <div className={css({ marginBottom: "16px" })}>
             <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
               Step 1: Initial Setup & Deposits
             </h4>
-            <div
-              className={css({
-                fontFamily: "monospace",
-                backgroundColor: "#fff",
-                padding: "12px",
-                borderRadius: "4px",
-                fontSize: "13px",
-                lineHeight: "1.4",
-                marginBottom: "8px",
-              })}
-            >
+            <div>
               <div>1. User calls: contract.depositForLLM({`{value: ethers.parseEther("0.05")}`})</div>
               <div>2. Contract updates: llmBalance[user] += 0.05 ETH</div>
               <div>3. Event emitted: LLMDeposit(user, 0.05 ETH)</div>
@@ -1395,13 +1427,15 @@ export default function MerkleAIBatching() {
           <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#374151" })}>
             🚧 Prepaid Workflow Demo (Implementation Placeholder)
           </h3>
-          
+
           <div className={css({ textAlign: "left", maxWidth: "600px", margin: "0 auto" })}>
             <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#1f2937" })}>
               Demo Features to Implement:
             </h4>
-            
-            <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+
+            <div
+              className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}
+            >
               <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#059669" })}>
                 📊 Phase 1: Smart Contract State Dashboard
               </h5>
@@ -1413,7 +1447,9 @@ export default function MerkleAIBatching() {
               </ul>
             </div>
 
-            <div className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}>
+            <div
+              className={css({ backgroundColor: "#fff", padding: "16px", borderRadius: "8px", marginBottom: "16px" })}
+            >
               <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#3b82f6" })}>
                 ⚙️ Phase 2: Request Processing Pipeline
               </h5>
@@ -1442,8 +1478,8 @@ export default function MerkleAIBatching() {
 
           <div className={css({ marginTop: "20px", padding: "12px", backgroundColor: "#fef3c7", borderRadius: "8px" })}>
             <p className={css({ fontSize: "13px", color: "#92400e", margin: "0" })}>
-              <strong>Implementation Focus:</strong> This demo will show the complete backend flow from deposit to settlement,
-              emphasizing smart contract state changes, Merkle tree mathematics, and gas efficiency gains.
+              <strong>Implementation Focus:</strong> This demo will show the complete backend flow from deposit to
+              settlement, emphasizing smart contract state changes, Merkle tree mathematics, and gas efficiency gains.
             </p>
           </div>
         </div>
@@ -1480,12 +1516,20 @@ export default function MerkleAIBatching() {
             <h4 className={css({ fontSize: "16px", fontWeight: "bold", marginBottom: "12px", color: "#1e40af" })}>
               🔗 NFT Integration Demo (Implementation Placeholder)
             </h4>
-            
+
             <div className={css({ textAlign: "left" })}>
               <h5 className={css({ fontSize: "14px", fontWeight: "medium", marginBottom: "8px", color: "#1d4ed8" })}>
                 Live Smart Contract Extension Example:
               </h5>
-              <ul className={css({ fontSize: "13px", lineHeight: "1.5", color: "#1e40af", marginLeft: "16px", marginBottom: "12px" })}>
+              <ul
+                className={css({
+                  fontSize: "13px",
+                  lineHeight: "1.5",
+                  color: "#1e40af",
+                  marginLeft: "16px",
+                  marginBottom: "12px",
+                })}
+              >
                 <li>• Show GenImNFTv3 → GenImNFTv4 upgrade path</li>
                 <li>• Live contract interaction with prepaid deposits</li>
                 <li>• NFT image update requests via LLM queue</li>
@@ -1504,10 +1548,12 @@ export default function MerkleAIBatching() {
               </ul>
             </div>
 
-            <div className={css({ marginTop: "16px", padding: "12px", backgroundColor: "#dbeafe", borderRadius: "8px" })}>
+            <div
+              className={css({ marginTop: "16px", padding: "12px", backgroundColor: "#dbeafe", borderRadius: "8px" })}
+            >
               <p className={css({ fontSize: "13px", color: "#1d4ed8", margin: "0" })}>
-                <strong>Demo Focus:</strong> Show practical integration with existing NFT infrastructure,
-                demonstrating how Merkle batching reduces costs while maintaining user experience.
+                <strong>Demo Focus:</strong> Show practical integration with existing NFT infrastructure, demonstrating
+                how Merkle batching reduces costs while maintaining user experience.
               </p>
             </div>
           </div>
@@ -1605,12 +1651,12 @@ contract GenImNFTv4 is GenImNFTv3 {
           <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#065f46" })}>
             📈 Interactive Cost Comparison Calculator (Implementation Placeholder)
           </h3>
-          
+
           <div className={css({ textAlign: "left", maxWidth: "700px", margin: "0 auto" })}>
             <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#047857" })}>
               Calculator Features to Implement:
             </h4>
-            
+
             <div className={css({ display: "grid", gap: "12px", gridTemplateColumns: "1fr 1fr" })}>
               <div
                 className={css({
@@ -1672,10 +1718,12 @@ contract GenImNFTv4 is GenImNFTv3 {
               </ul>
             </div>
 
-            <div className={css({ marginTop: "16px", padding: "12px", backgroundColor: "#ecfdf5", borderRadius: "8px" })}>
+            <div
+              className={css({ marginTop: "16px", padding: "12px", backgroundColor: "#ecfdf5", borderRadius: "8px" })}
+            >
               <p className={css({ fontSize: "13px", color: "#065f46", margin: "0" })}>
-                <strong>Example Output:</strong> &quot;For 100 LLM requests: Traditional = $1,500, Merkle Batching = $215.
-                You save $1,285 (85.7%) and need only 1 transaction instead of 100!&quot;
+                <strong>Example Output:</strong> &quot;For 100 LLM requests: Traditional = $1,500, Merkle Batching =
+                $215. You save $1,285 (85.7%) and need only 1 transaction instead of 100!&quot;
               </p>
             </div>
           </div>

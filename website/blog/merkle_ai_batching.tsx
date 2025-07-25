@@ -134,66 +134,50 @@ const MERKLE_PROOF_PATH_FALLBACK = (
 
 // Updated LLM Prepaid Workflow with Merkle Batching
 const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
-    participant User1 as User 1 (Alice)
-    participant User2 as User 2 (Bob)
-    participant User3 as User 3 (Charlie)
+    participant Alice as Alice
     participant Contract as LLM Contract
-    participant Queue as Request Queue
+    participant Serverless as Serverless Function
     participant LLM as LLM API
     participant MerkleTree as Merkle Tree
     participant Blockchain as Blockchain
 
-    Note over User1,User3: Phase 1: Prepaid Deposits
-    User1->>Contract: depositForLLM() - $50
-    User2->>Contract: depositForLLM() - $30
-    User3->>Contract: depositForLLM() - $25
-    Contract->>Contract: Update balances
+    Note over Alice,Contract: Phase 1: Prepaid Deposit
+    Alice->>Contract: depositForLLM() - $50
+    Contract->>Contract: Update balance[Alice] = $50
 
-    Note over User1,Blockchain: Phase 2: LLM Request Processing (Off-chain)
-    User1->>Queue: Request 1: "Analyze sentiment"
-    Queue->>Contract: Check balance: Alice $50 ≥ $2 ✅
-    Queue->>LLM: Process request
-    LLM-->>User1: Immediate response
-    
-    User2->>Queue: Request 2: "Generate code"
-    Queue->>Contract: Check balance: Bob $30 ≥ $3 ✅
-    Queue->>LLM: Process request
-    LLM-->>User2: Immediate response
-    
-    User3->>Queue: Request 3: "Translate text"
-    Queue->>Contract: Check balance: Charlie $25 ≥ $2.5 ✅
-    Queue->>LLM: Process request
-    LLM-->>User3: Immediate response
+    Note over Alice,Blockchain: Phase 2: LLM Request Processing (Off-chain)
+    Alice->>Serverless: Request: "Analyze sentiment"
+    Serverless->>Contract: Check balance: Alice $50 ≥ $2 ✅
+    Serverless->>LLM: Process request
+    LLM-->>Alice: Immediate response
 
-    Note over Queue,MerkleTree: Phase 3: Batch Trigger (50 requests OR 5 min)
-    Queue->>MerkleTree: Create leaves from requests
+    Note over Serverless,MerkleTree: Phase 3: Batch Trigger (50 requests OR 5 min)
+    Serverless->>MerkleTree: Create leaves from all queued requests
     MerkleTree->>MerkleTree: Calculate root hash
-    MerkleTree->>MerkleTree: Generate proofs for each request
+    MerkleTree->>MerkleTree: Generate proof for Alice's request
 
     Note over Contract,Blockchain: Phase 4: Atomic Settlement (On-chain)
     MerkleTree->>Contract: processBatch(root, requests, proofs)
-    Contract->>Contract: Verify all proofs
-    Contract->>Contract: Deduct: Alice -= $2, Bob -= $3, Charlie -= $2.5
+    Contract->>Contract: Verify Alice's proof
+    Contract->>Contract: Deduct: Alice -= $2
     Contract->>Contract: Mark batch as processed
-    Contract->>Blockchain: Single transaction ($15 gas)
-    Contract-->>User1: Settlement confirmed + proof
-    Contract-->>User2: Settlement confirmed + proof
-    Contract-->>User3: Settlement confirmed + proof`;
+    Contract->>Blockchain: Single transaction ($15 gas for entire batch)
+    Contract-->>Alice: Settlement confirmed + individual proof`;
 
 const UPDATED_LLM_WORKFLOW_FALLBACK = (
   <div
     style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
   >
     <div>
-      <strong>Updated LLM Workflow Steps:</strong>
+      <strong>Updated LLM Workflow Steps (Alice&apos;s Journey):</strong>
     </div>
-    <div style={{ margin: "8px 0" }}>1. Users deposit funds upfront (prepaid model)</div>
-    <div style={{ margin: "8px 0" }}>2. LLM requests processed immediately with balance checks</div>
-    <div style={{ margin: "8px 0" }}>3. Requests queued until batch trigger (50 requests or 5 minutes)</div>
-    <div style={{ margin: "8px 0" }}>4. Merkle tree constructed with all request data</div>
+    <div style={{ margin: "8px 0" }}>1. Alice deposits $50 upfront (prepaid model)</div>
+    <div style={{ margin: "8px 0" }}>2. Alice makes an LLM request with instant balance check</div>
+    <div style={{ margin: "8px 0" }}>3. Request queued until batch trigger (50 requests or 5 minutes)</div>
+    <div style={{ margin: "8px 0" }}>4. Merkle tree constructed with Alice&apos;s and other requests</div>
     <div style={{ margin: "8px 0" }}>5. Single blockchain transaction settles entire batch</div>
     <div style={{ margin: "8px 0" }}>
-      <strong>6. Users receive individual proofs for verification</strong>
+      <strong>6. Alice receives individual proof for her request</strong>
     </div>
   </div>
 );
@@ -1321,6 +1305,22 @@ export default function MerkleAIBatching() {
           <li>Batch settlement → Efficient blockchain transactions</li>
           <li>Refunds possible → User controls remaining balance</li>
         </ul>
+
+        <MermaidDiagram
+          definition={UPDATED_LLM_WORKFLOW_DEFINITION}
+          title="🔄 Updated LLM Workflow with Merkle Tree Batching"
+          fallbackContent={UPDATED_LLM_WORKFLOW_FALLBACK}
+          config={{
+            sequence: {
+              diagramMarginX: 50,
+              diagramMarginY: 10,
+              boxTextMargin: 5,
+              noteMargin: 10,
+              messageMargin: 35,
+              mirrorActors: false,
+            },
+          }}
+        />
 
         <div
           className={css({

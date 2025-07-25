@@ -43,12 +43,13 @@ const MERKLE_TREE_MATH_FALLBACK = (
 );
 
 const GENIMNET_WORKFLOW_DEFINITION = `sequenceDiagram
-    participant User
+    Actor User
     participant Contract as GenImNFT Contract
+    
     participant Serverless as Serverless Function
     participant AI as FLUX AI API
     participant S3 as S3 Storage
-    participant Provider as Image Provider
+    Actor ServiceProvider as Image Creator Wallet
 
     User->>Contract: 1. Pay ~$0.10 ETH
     Contract->>Contract: 2. safeMint() creates NFT
@@ -60,8 +61,8 @@ const GENIMNET_WORKFLOW_DEFINITION = `sequenceDiagram
     S3-->>Serverless: Image URL
     Serverless->>Contract: 6. Update NFT metadata
     Note over Contract: NFT now has final image
-    Contract->>Provider: 7. Auto-pay provider wallet
-    Provider-->>Contract: Payment confirmed`;
+    Contract->>ServiceProvider: 7. Auto-pay service provider
+    ServiceProvider-->>Contract: Payment confirmed`;
 
 const GENIMNET_WORKFLOW_FALLBACK = (
   <div
@@ -134,12 +135,12 @@ const MERKLE_PROOF_PATH_FALLBACK = (
 
 // Updated LLM Prepaid Workflow with Merkle Batching
 const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
-    participant Alice as Alice
+    Actor Alice as Alice
     participant Contract as LLM Contract
     participant Serverless as Serverless Function
     participant LLM as LLM API
     participant MerkleTree as Merkle Tree on S3 Storage
-    participant Blockchain as Blockchain
+    Actor Blockchain as LLM Wallet
 
     Note over Alice,Contract: Phase 1: Prepaid Deposit
     Alice->>Contract: depositForLLM() - $50
@@ -1309,7 +1310,7 @@ export default function MerkleAIBatching() {
 
         <MermaidDiagram
           definition={UPDATED_LLM_WORKFLOW_DEFINITION}
-          title="🔄 Updated LLM Workflow with Merkle Tree Batching"
+          title="LLM Workflow with Merkle Tree Batching"
           fallbackContent={UPDATED_LLM_WORKFLOW_FALLBACK}
           config={{
             sequence: {

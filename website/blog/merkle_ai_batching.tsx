@@ -1289,12 +1289,10 @@ export default function MerkleAIBatching() {
         <ProofDemo />
       </section>
 
-      <section className={css({ marginBottom: "32px" })}>
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" })}>
-          Step 4: From Theory to Practice - Prepaid Settlement Workflow
-        </h2>
+      <section>
+        <h2>From Theory to Practice - Prepaid Settlement Workflow</h2>
 
-        <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
+        <p>
           Now that we understand how Merkle proofs work, let&apos;s see how we can use it to extend our current workflow
           towards the LLM systems. The first major change is that we will not settle costs after each request, but
           rather require users to deposit funds upfront. This way, we can ensure that the user has enough balance to
@@ -1323,104 +1321,120 @@ export default function MerkleAIBatching() {
             },
           }}
         />
+        <h3>Complete Workflow</h3>
+        <p>
+          The workflow diagram above shows Alice&apos;s complete journey through our Merkle tree batching system.
+          Let&apos;s break down what is required from each participant in the system:
+        </p>
 
+        <h4>Phase 1: Prepaid Deposit (Alice → LLM Contract)</h4>
         <div
           className={css({
-            backgroundColor: "#f0fdf4",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #bbf7d0",
-            marginBottom: "20px",
+            fontFamily: "monospace",
+            backgroundColor: "#fff",
+            padding: "12px",
+            borderRadius: "4px",
+            fontSize: "13px",
+            lineHeight: "1.4",
           })}
         >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#166534" })}>
-            🔄 Complete Workflow: From Deposit to Settlement
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#166534" })}>
-            Here&apos;s how the complete prepaid + Merkle tree system works in practice:
-          </p>
+          <div>1. Alice calls: contract.depositForLLM() with $50</div>
+          <div>2. Contract updates: balance[Alice] = $50</div>
+          <div>3. Alice can now make instant LLM requests</div>
+        </div>
 
-          <div className={css({ marginBottom: "16px" })}>
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-              Step 1: Initial Setup & Deposits
-            </h4>
-            <div>
-              <div>1. User calls: contract.depositForLLM({`{value: ethers.parseEther("0.05")}`})</div>
-              <div>2. Contract updates: llmBalance[user] += 0.05 ETH</div>
-              <div>3. Event emitted: LLMDeposit(user, 0.05 ETH)</div>
-              <div>4. User can now make LLM requests up to $50 value</div>
-            </div>
-          </div>
+        <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+          Phase 2: LLM Request Processing (Off-chain, Instant Response)
+        </h4>
+        <div
+          className={css({
+            fontFamily: "monospace",
+            backgroundColor: "#fff",
+            padding: "12px",
+            borderRadius: "4px",
+            fontSize: "13px",
+            lineHeight: "1.4",
+            marginBottom: "8px",
+          })}
+        >
+          <div>1. Alice calls: contract.depositForLLM() with $50</div>
+          <div>2. Contract updates: balance[Alice] = $50</div>
+          <div>3. Alice can now make instant LLM requests</div>
+        </div>
 
-          <div className={css({ marginBottom: "16px" })}>
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-              Step 2: LLM Request Processing
-            </h4>
-            <div
-              className={css({
-                fontFamily: "monospace",
-                backgroundColor: "#fff",
-                padding: "12px",
-                borderRadius: "4px",
-                fontSize: "13px",
-                lineHeight: "1.4",
-                marginBottom: "8px",
-              })}
-            >
-              <div>1. User submits: &quot;Generate image of a sunset&quot;</div>
-              <div>2. System checks: llmBalance[user] &gt;= $2.00 ✅</div>
-              <div>3. LLM API called: Image generated (off-chain)</div>
-              <div>4. Request queued: Added to pending batch (47/50)</div>
-              <div>5. User gets: Immediate response + queue position</div>
-            </div>
-          </div>
-
-          <div className={css({ marginBottom: "16px" })}>
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-              Step 3: Batch Trigger & Merkle Tree Construction
-            </h4>
-            <div
-              className={css({
-                fontFamily: "monospace",
-                backgroundColor: "#fff",
-                padding: "12px",
-                borderRadius: "4px",
-                fontSize: "13px",
-                lineHeight: "1.4",
-                marginBottom: "8px",
-              })}
-            >
-              <div>1. Trigger condition met: 50 requests OR 5 minutes</div>
-              <div>2. Create leaf data: {`{id, timestamp, cost, wallet}`} for each</div>
-              <div>3. Build Merkle tree: hash(leaf1), hash(leaf2), ...</div>
-              <div>4. Calculate root: MerkleTree(leafHashes).getRoot()</div>
-              <div>5. Prepare batch: {`{merkleRoot, requests[], proofs[][]}`}</div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-              Step 4: Atomic Settlement on Blockchain
-            </h4>
-            <div
-              className={css({
-                fontFamily: "monospace",
-                backgroundColor: "#fff",
-                padding: "12px",
-                borderRadius: "4px",
-                fontSize: "13px",
-                lineHeight: "1.4",
-              })}
-            >
-              <div>1. Call: contract.processBatch(merkleRoot, requests, proofs)</div>
-              <div>2. Verify: Each proof against merkleRoot</div>
-              <div>3. Deduct: llmBalance[user] -= request.cost (atomic)</div>
-              <div>4. Mark: processedBatches[merkleRoot] = true</div>
-              <div>5. Transfer: Total cost to service provider</div>
-              <div>6. Result: 50 requests settled with 1 transaction!</div>
-            </div>
+        <div className={css({ marginBottom: "16px" })}>
+          <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+            Phase 2: LLM Request Processing (Off-chain, Instant Response)
+          </h4>
+          <div
+            className={css({
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              fontSize: "13px",
+              lineHeight: "1.4",
+              marginBottom: "8px",
+            })}
+          >
+            <div>1. Alice→Serverless: &quot;Analyze sentiment&quot;</div>
+            <div>2. Serverless→Contract: Check Alice $50 ≥ $2 ✅</div>
+            <div>3. Serverless→LLM API: Process request</div>
+            <div>4. LLM→Serverless→Alice: Instant response</div>
+            <div>5. Serverless→S3: Create leaf for Alice&apos;s request</div>
           </div>
         </div>
+
+        <div className={css({ marginBottom: "16px" })}>
+          <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+            Phase 3: Batch Trigger (Merkle Tree Construction)
+          </h4>
+          <div
+            className={css({
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              fontSize: "13px",
+              lineHeight: "1.4",
+              marginBottom: "8px",
+            })}
+          >
+            <div>1. S3→S3: Calculate root hash (batch ready)</div>
+            <div>2. S3→S3: Generate proof for Alice&apos;s request</div>
+            <div>3. Batch includes Alice + other users&apos; requests</div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
+            Phase 4: Atomic Settlement (Single Blockchain Transaction)
+          </h4>
+          <div
+            className={css({
+              fontFamily: "monospace",
+              backgroundColor: "#fff",
+              padding: "12px",
+              borderRadius: "4px",
+              fontSize: "13px",
+              lineHeight: "1.4",
+            })}
+          >
+            <div>1. S3→Contract: processBatch(root, requests, proofs)</div>
+            <div>2. Contract→Contract: Verify Alice&apos;s proof ✅</div>
+            <div>3. Contract→Contract: Deduct Alice -= $2</div>
+            <div>4. Contract→Contract: Mark batch as processed</div>
+            <div>5. Contract→LLM Wallet: Pay service provider</div>
+            <div>6. Contract→Alice: Settlement confirmed + proof</div>
+            <div>7. ✨ Result: Alice&apos;s $2 request settled with others in 1 transaction!</div>
+          </div>
+        </div>
+
+        <h3>Required features from each participant</h3>
+        <p>
+          The workflow diagram above shows Alice&apos;s complete journey through our Merkle tree batching system.
+          Let&apos;s break down what is required from each participant in the system:
+        </p>
       </section>
     </article>
   );

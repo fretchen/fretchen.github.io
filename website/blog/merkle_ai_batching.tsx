@@ -1435,6 +1435,242 @@ export default function MerkleAIBatching() {
           The workflow diagram above shows Alice&apos;s complete journey through our Merkle tree batching system.
           Let&apos;s break down what is required from each participant in the system:
         </p>
+
+        <h4>👩‍💻 Alice (User)</h4>
+        <p>
+          <strong>Role:</strong> End user who wants to use LLM services with blockchain payments
+        </p>
+        <p><strong>Required Functions:</strong></p>
+        <ul>
+          <li>Wallet with ETH balance for initial deposit</li>
+          <li>Web3 connection to interact with smart contract</li>
+          <li>UI to send LLM requests and view responses</li>
+          <li>Ability to check balance and request history</li>
+        </ul>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          {/* Example wallet integration */}
+          await contract.depositForLLM({`{value: parseEther("0.05")}`})
+          <br />
+          const balance = await contract.llmBalance(userAddress)
+        </div>
+
+        <h4>📄 LLM Contract (Smart Contract)</h4>
+        <p>
+          <strong>Role:</strong> Central coordinator for deposits, balance tracking, and batch settlement
+        </p>
+        <p><strong>Required Functions:</strong></p>
+        <ul>
+          <li>
+            <code>depositForLLM()</code> - Accept user deposits
+          </li>
+          <li>
+            <code>checkBalance(address user)</code> - Return user&apos;s available balance
+          </li>
+          <li>
+            <code>processBatch(bytes32 root, Request[] requests, bytes32[][] proofs)</code> - Verify and settle
+            batches
+          </li>
+          <li>
+            <code>verifyMerkleProof()</code> - Validate individual transaction proofs
+          </li>
+          <li>
+            <code>withdrawBalance()</code> - Allow users to withdraw remaining funds
+          </li>
+        </ul>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          mapping(address =&gt; uint256) public llmBalance;
+          <br />
+          mapping(bytes32 =&gt; bool) public processedBatches;
+          <br />
+          event LLMDeposit(address user, uint256 amount);
+          <br />
+          event BatchProcessed(bytes32 root, uint256 totalCost);
+        </div>
+
+        <h4>⚡ Serverless Function (Backend Service)</h4>
+        <p>
+          <strong>Role:</strong> Request handler and coordinator between users, blockchain, and AI services
+        </p>
+        <p><strong>Required Functions:</strong></p>
+        <ul>
+          <li>
+            <code>handleLLMRequest(user, prompt)</code> - Process incoming requests
+          </li>
+          <li>
+            <code>checkUserBalance(address)</code> - Verify user has sufficient funds
+          </li>
+          <li>
+            <code>callLLMAPI(prompt, model)</code> - Interface with AI services
+          </li>
+          <li>
+            <code>createLeafData(request)</code> - Generate Merkle tree leaf
+          </li>
+          <li>
+            <code>queueForBatch(leafData)</code> - Add to pending batch
+          </li>
+        </ul>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          {/* AWS Lambda or similar */}
+          exports.handler = async (event) =&gt; {`{`}
+          <br />
+          &nbsp;&nbsp;const balance = await checkBalance(user);
+          <br />
+          &nbsp;&nbsp;if (balance &gt;= cost) await processRequest();
+          <br />
+          {`}`}
+        </div>
+
+        <h4>🤖 LLM API (AI Service)</h4>
+        <p>
+          <strong>Role:</strong> External AI service provider (OpenAI, Anthropic, etc.)
+        </p>
+        <p><strong>Required Features:</strong></p>
+        <ul>
+          <li>RESTful API endpoint for completions</li>
+          <li>Authentication via API keys</li>
+          <li>Token counting for cost calculation</li>
+          <li>Rate limiting and error handling</li>
+          <li>Consistent response format</li>
+        </ul>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          POST /v1/chat/completions
+          <br />
+          {`{`} &quot;model&quot;: &quot;gpt-4&quot;, &quot;messages&quot;: [...] {`}`}
+          <br />
+          {/* Response includes usage.total_tokens */}
+        </div>
+
+        <h4>🌳 Merkle Tree on S3 Storage (Batch Coordinator)</h4>
+        <p>
+          <strong>Role:</strong> Batch aggregation and Merkle tree construction service
+        </p>
+        <p><strong>Required Functions:</strong></p>
+        <ul>
+          <li>
+            <code>addLeafToBatch(leafData)</code> - Queue individual requests
+          </li>
+          <li>
+            <code>triggerBatch()</code> - Activate when threshold reached (50 requests or 5 min)
+          </li>
+          <li>
+            <code>buildMerkleTree(leaves[])</code> - Construct tree from batch
+          </li>
+          <li>
+            <code>generateProofs()</code> - Create individual proofs for each request
+          </li>
+          <li>
+            <code>submitBatch()</code> - Send to smart contract for settlement
+          </li>
+        </ul>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          {/* Using merkletreejs library */}
+          const tree = new MerkleTree(leaves, keccak256);
+          <br />
+          const root = tree.getRoot();
+          <br />
+          const proof = tree.getProof(leaf);
+        </div>
+
+        <h4>💰 LLM Wallet (Service Provider)</h4>
+        <p>
+          <strong>Role:</strong> Receives payments for providing LLM services
+        </p>
+        <p><strong>Required Features:</strong></p>
+        <ul>
+          <li>Ethereum wallet address for receiving payments</li>
+          <li>Automated payment processing</li>
+          <li>Cost calculation and billing logic</li>
+          <li>Integration with AI service costs</li>
+          <li>Revenue tracking and accounting</li>
+        </ul>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          {/* Service provider wallet */}
+          address serviceProvider = 0x742d35Cc6aB4...
+          <br />
+          {/* Receives batch payments automatically */}
+        </div>
+
+        <h4>🔗 Integration Requirements</h4>
+        <p>
+          For the complete system to work, these participants must be properly integrated:
+        </p>
+        <ul>
+          <li>
+            <strong>Smart Contract ↔ Serverless:</strong> Secure API for balance checking and batch submission
+          </li>
+          <li>
+            <strong>Serverless ↔ LLM API:</strong> API key management and rate limiting
+          </li>
+          <li>
+            <strong>Serverless ↔ S3 Storage:</strong> Queue management and batch triggering
+          </li>
+          <li>
+            <strong>S3 ↔ Smart Contract:</strong> Batch submission with Merkle proofs
+          </li>
+          <li>
+            <strong>All components:</strong> Error handling, monitoring, and recovery mechanisms
+          </li>
+        </ul>
       </section>
     </article>
   );

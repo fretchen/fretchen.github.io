@@ -1440,7 +1440,9 @@ export default function MerkleAIBatching() {
         <p>
           <strong>Role:</strong> End user who wants to use LLM services with blockchain payments
         </p>
-        <p><strong>Required Functions:</strong></p>
+        <p>
+          <strong>Required Functions:</strong>
+        </p>
         <ul>
           <li>Wallet with ETH balance for initial deposit</li>
           <li>Web3 connection to interact with smart contract</li>
@@ -1468,7 +1470,14 @@ export default function MerkleAIBatching() {
         <p>
           <strong>Role:</strong> Central coordinator for deposits, balance tracking, and batch settlement
         </p>
-        <p><strong>Required Functions:</strong></p>
+        <p>
+          <strong>Key Difference to GenImNFT:</strong> While the GenImNFT contract handles immediate payments and
+          minting for each request, the LLM contract uses a prepaid model with batch settlement. This makes it simpler
+          in terms of individual transaction processing but more complex in batch verification logic.
+        </p>
+        <p>
+          <strong>Required Functions:</strong>
+        </p>
         <ul>
           <li>
             <code>depositForLLM()</code> - Accept user deposits
@@ -1477,8 +1486,7 @@ export default function MerkleAIBatching() {
             <code>checkBalance(address user)</code> - Return user&apos;s available balance
           </li>
           <li>
-            <code>processBatch(bytes32 root, Request[] requests, bytes32[][] proofs)</code> - Verify and settle
-            batches
+            <code>processBatch(bytes32 root, Request[] requests, bytes32[][] proofs)</code> - Verify and settle batches
           </li>
           <li>
             <code>verifyMerkleProof()</code> - Validate individual transaction proofs
@@ -1495,7 +1503,7 @@ export default function MerkleAIBatching() {
             padding: "12px",
             borderRadius: "4px",
             border: "1px solid #ddd",
-            marginBottom: "32px",
+            marginBottom: "16px",
           })}
         >
           mapping(address =&gt; uint256) public llmBalance;
@@ -1507,11 +1515,172 @@ export default function MerkleAIBatching() {
           event BatchProcessed(bytes32 root, uint256 totalCost);
         </div>
 
+        <h5>🔍 Detailed Function Analysis</h5>
+
+        <p>
+          <strong>1. checkBalance(address user) → uint256</strong>
+        </p>
+        <p>
+          <strong>Return Value:</strong> The user&apos;s <em>currently available</em> balance (funds deposited minus
+          already processed batches).
+          <br />
+          <strong>Important:</strong> This does NOT account for pending requests in unprocessed Merkle trees. This means
+          users could theoretically spend more than their balance if multiple requests are made before batch processing.
+        </p>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "16px",
+          })}
+        >
+          function checkBalance(address user) public view returns (uint256) {`{`}
+          <br />
+          &nbsp;&nbsp;return llmBalance[user]; // Only settled balance
+          <br />
+          &nbsp;&nbsp;// Does NOT subtract pending requests!
+          <br />
+          {`}`}
+          <br />
+          <br />
+          {/* Off-chain check needed for pending requests: */}
+          <br />
+          {/* actualAvailable = onChainBalance - pendingRequestsCost */}
+        </div>
+
+        <p>
+          <strong>2. verifyMerkleProof() - On-chain vs Off-chain Debate</strong>
+        </p>
+        <p>
+          <strong>On-chain Benefits:</strong> Trustless verification, transparency, immutable proof validation
+          <br />
+          <strong>Off-chain Benefits:</strong> Lower gas costs, faster verification, reduced blockchain bloat
+          <br />
+          <strong>Recommendation:</strong> Keep on-chain for security. Gas cost is amortized across the entire batch.
+        </p>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "16px",
+          })}
+        >
+          function verifyMerkleProof(
+          <br />
+          &nbsp;&nbsp;bytes32[] memory proof,
+          <br />
+          &nbsp;&nbsp;bytes32 root,
+          <br />
+          &nbsp;&nbsp;bytes32 leaf) public pure returns (bool) {`{`}
+          <br />
+          &nbsp;&nbsp;bytes32 computedHash = leaf;
+          <br />
+          &nbsp;&nbsp;for (uint256 i = 0; i &lt; proof.length; i++) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;bytes32 proofElement = proof[i];
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;computedHash = computedHash &lt;= proofElement
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;? keccak256(abi.encodePacked(computedHash, proofElement))
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: keccak256(abi.encodePacked(proofElement, computedHash));
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          &nbsp;&nbsp;return computedHash == root;
+          <br />
+          {`}`}
+        </div>
+
+        <p>
+          <strong>3. processBatch() - The Core Settlement Function</strong>
+        </p>
+        <p>
+          This function processes an entire batch of LLM requests in a single transaction. It verifies each proof,
+          deducts costs from user balances, and pays the service provider.
+        </p>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "32px",
+          })}
+        >
+          function processBatch(
+          <br />
+          &nbsp;&nbsp;bytes32 merkleRoot,
+          <br />
+          &nbsp;&nbsp;Request[] memory requests,
+          <br />
+          &nbsp;&nbsp;bytes32[][] memory proofs) external onlyAuthorized {`{`}
+          <br />
+          &nbsp;&nbsp;require(!processedBatches[merkleRoot], &quot;Batch already processed&quot;);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;uint256 totalCost = 0;
+          <br />
+          &nbsp;&nbsp;for (uint256 i = 0; i &lt; requests.length; i++) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;// 1. Create leaf hash from request data
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;bytes32 leaf = keccak256(abi.encode(requests[i]));
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;// 2. Verify proof against merkle root
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;require(verifyMerkleProof(proofs[i], merkleRoot, leaf), &quot;Invalid proof&quot;);
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;// 3. Deduct cost from user balance
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;require(llmBalance[requests[i].user] &gt;= requests[i].cost, &quot;Insufficient
+          balance&quot;);
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;llmBalance[requests[i].user] -= requests[i].cost;
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;totalCost += requests[i].cost;
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 4. Pay service provider
+          <br />
+          &nbsp;&nbsp;payable(serviceProvider).transfer(totalCost);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 5. Mark batch as processed
+          <br />
+          &nbsp;&nbsp;processedBatches[merkleRoot] = true;
+          <br />
+          &nbsp;&nbsp;emit BatchProcessed(merkleRoot, totalCost);
+          <br />
+          {`}`}
+        </div>
+
         <h4>⚡ Serverless Function (Backend Service)</h4>
         <p>
           <strong>Role:</strong> Request handler and coordinator between users, blockchain, and AI services
         </p>
-        <p><strong>Required Functions:</strong></p>
+        <p>
+          <strong>Required Functions:</strong>
+        </p>
         <ul>
           <li>
             <code>handleLLMRequest(user, prompt)</code> - Process incoming requests
@@ -1554,7 +1723,9 @@ export default function MerkleAIBatching() {
         <p>
           <strong>Role:</strong> External AI service provider (OpenAI, Anthropic, etc.)
         </p>
-        <p><strong>Required Features:</strong></p>
+        <p>
+          <strong>Required Features:</strong>
+        </p>
         <ul>
           <li>RESTful API endpoint for completions</li>
           <li>Authentication via API keys</li>
@@ -1584,7 +1755,9 @@ export default function MerkleAIBatching() {
         <p>
           <strong>Role:</strong> Batch aggregation and Merkle tree construction service
         </p>
-        <p><strong>Required Functions:</strong></p>
+        <p>
+          <strong>Required Functions:</strong>
+        </p>
         <ul>
           <li>
             <code>addLeafToBatch(leafData)</code> - Queue individual requests
@@ -1625,7 +1798,9 @@ export default function MerkleAIBatching() {
         <p>
           <strong>Role:</strong> Receives payments for providing LLM services
         </p>
-        <p><strong>Required Features:</strong></p>
+        <p>
+          <strong>Required Features:</strong>
+        </p>
         <ul>
           <li>Ethereum wallet address for receiving payments</li>
           <li>Automated payment processing</li>
@@ -1651,9 +1826,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <h4>🔗 Integration Requirements</h4>
-        <p>
-          For the complete system to work, these participants must be properly integrated:
-        </p>
+        <p>For the complete system to work, these participants must be properly integrated:</p>
         <ul>
           <li>
             <strong>Smart Contract ↔ Serverless:</strong> Secure API for balance checking and batch submission

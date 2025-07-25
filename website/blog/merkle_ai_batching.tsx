@@ -132,6 +132,72 @@ const MERKLE_PROOF_PATH_FALLBACK = (
   </div>
 );
 
+// Updated LLM Prepaid Workflow with Merkle Batching
+const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
+    participant User1 as User 1 (Alice)
+    participant User2 as User 2 (Bob)
+    participant User3 as User 3 (Charlie)
+    participant Contract as LLM Contract
+    participant Queue as Request Queue
+    participant LLM as LLM API
+    participant MerkleTree as Merkle Tree
+    participant Blockchain as Blockchain
+
+    Note over User1,User3: Phase 1: Prepaid Deposits
+    User1->>Contract: depositForLLM() - $50
+    User2->>Contract: depositForLLM() - $30
+    User3->>Contract: depositForLLM() - $25
+    Contract->>Contract: Update balances
+
+    Note over User1,Blockchain: Phase 2: LLM Request Processing (Off-chain)
+    User1->>Queue: Request 1: "Analyze sentiment"
+    Queue->>Contract: Check balance: Alice $50 ≥ $2 ✅
+    Queue->>LLM: Process request
+    LLM-->>User1: Immediate response
+    
+    User2->>Queue: Request 2: "Generate code"
+    Queue->>Contract: Check balance: Bob $30 ≥ $3 ✅
+    Queue->>LLM: Process request
+    LLM-->>User2: Immediate response
+    
+    User3->>Queue: Request 3: "Translate text"
+    Queue->>Contract: Check balance: Charlie $25 ≥ $2.5 ✅
+    Queue->>LLM: Process request
+    LLM-->>User3: Immediate response
+
+    Note over Queue,MerkleTree: Phase 3: Batch Trigger (50 requests OR 5 min)
+    Queue->>MerkleTree: Create leaves from requests
+    MerkleTree->>MerkleTree: Calculate root hash
+    MerkleTree->>MerkleTree: Generate proofs for each request
+
+    Note over Contract,Blockchain: Phase 4: Atomic Settlement (On-chain)
+    MerkleTree->>Contract: processBatch(root, requests, proofs)
+    Contract->>Contract: Verify all proofs
+    Contract->>Contract: Deduct: Alice -= $2, Bob -= $3, Charlie -= $2.5
+    Contract->>Contract: Mark batch as processed
+    Contract->>Blockchain: Single transaction ($15 gas)
+    Contract-->>User1: Settlement confirmed + proof
+    Contract-->>User2: Settlement confirmed + proof
+    Contract-->>User3: Settlement confirmed + proof`;
+
+const UPDATED_LLM_WORKFLOW_FALLBACK = (
+  <div
+    style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
+  >
+    <div>
+      <strong>Updated LLM Workflow Steps:</strong>
+    </div>
+    <div style={{ margin: "8px 0" }}>1. Users deposit funds upfront (prepaid model)</div>
+    <div style={{ margin: "8px 0" }}>2. LLM requests processed immediately with balance checks</div>
+    <div style={{ margin: "8px 0" }}>3. Requests queued until batch trigger (50 requests or 5 minutes)</div>
+    <div style={{ margin: "8px 0" }}>4. Merkle tree constructed with all request data</div>
+    <div style={{ margin: "8px 0" }}>5. Single blockchain transaction settles entire batch</div>
+    <div style={{ margin: "8px 0" }}>
+      <strong>6. Users receive individual proofs for verification</strong>
+    </div>
+  </div>
+);
+
 // Export meta for blog post
 export const meta = {
   title: "Merkle Trees for LLM API Batching: Cost-Optimized Blockchain Payments for AI Services",
@@ -403,23 +469,6 @@ const ProofDemo: React.FC = () => {
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
         🔍 Interactive Proof Demo: Alice&apos;s Story
       </h3>
-
-      {/* Story Introduction */}
-      <div
-        className={css({
-          marginBottom: "20px",
-          padding: "16px",
-          backgroundColor: "#fef3c7",
-          borderRadius: "8px",
-          border: "1px solid #f59e0b",
-        })}
-      >
-        <p className={css({ fontSize: "14px", color: "#92400e", marginBottom: "8px" })}>
-          <strong>📖 The Story:</strong> Alice, Bob, Charlie, and Dave all made LLM requests that were batched together
-          in a single Merkle tree. Now Alice needs to prove to a third party that she made her payment without revealing
-          everyone else&apos;s transaction details.
-        </p>
-      </div>
 
       {/* Sample Batch Display */}
       <div
@@ -1129,41 +1178,33 @@ export default function MerkleAIBatching() {
 
         <p>
           Before diving into Merkle tree optimizations, let&apos;s examine how my current NFT-based AI image generation
-          system works. This system successfully bridges blockchain payments with AI API calls, but faces scalability
-          challenges due to transaction costs.
+          system works. My existing system uses the{" "}
+          <a href="https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code">
+            GenImNFT contract
+          </a>{" "}
+          on Optimism to coordinate between users, payments, and AI image generation:
         </p>
 
-        <div>
-          <h3>Current Architecture: GenImNFT Contract + Serverless AI</h3>
-          <p>
-            My existing system uses the{" "}
-            <a href="https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code">
-              GenImNFT contract
-            </a>{" "}
-            on Optimism to coordinate between users, payments, and AI image generation:
-          </p>
+        <MermaidDiagram
+          definition={GENIMNET_WORKFLOW_DEFINITION}
+          title="Workflow for Image Generation"
+          fallbackContent={GENIMNET_WORKFLOW_FALLBACK}
+          config={{
+            sequence: {
+              diagramMarginX: 50,
+              diagramMarginY: 10,
+              boxTextMargin: 5,
+              noteMargin: 10,
+              messageMargin: 35,
+              mirrorActors: false,
+            },
+          }}
+        />
 
-          <MermaidDiagram
-            definition={GENIMNET_WORKFLOW_DEFINITION}
-            title="🎨 GenImNFT Workflow Sequence Diagram"
-            fallbackContent={GENIMNET_WORKFLOW_FALLBACK}
-            config={{
-              sequence: {
-                diagramMarginX: 50,
-                diagramMarginY: 10,
-                boxTextMargin: 5,
-                noteMargin: 10,
-                messageMargin: 35,
-                mirrorActors: false,
-              },
-            }}
-          />
-
-          <p>
-            This allowed me to set up a trustless system where any user with a wallet and optimism balance can access
-            and only pay for successfully generated images, and the service is compensated automatically upon delivery.
-          </p>
-        </div>
+        <p>
+          This allowed me to set up a trustless system where any user with a wallet and optimism balance can access and
+          only pay for successfully generated images, and the service is compensated automatically upon delivery.
+        </p>
 
         <div>
           <h3>The Challenge with this system in the LLM context</h3>
@@ -1233,69 +1274,33 @@ export default function MerkleAIBatching() {
           possible. The user can verify the validity of the tree with fairly reduced information.
         </p>
         <p>
-          A Merkle proof is a cryptographic proof that allows the user to demonstrate that his transaction is included
-          in the Merkle tree without revealing any other transactions. Instead of downloading all the transactions , the
-          user only needs:
+          A Merkle proof is a cryptographic proof that allows the user, we name her Alice, to demonstrate that her
+          transaction is included in the Merkle tree without revealing any other transactions. To prove that
+          Alice&apos;s transaction R<sub>3</sub> is in the tree, she provides a &quot;proof path&quot; - the minimum set
+          of hash values needed to reconstruct the path from her leaf to the root:
         </p>
-        <ul>
-          <li> His original transaction data (R₁)</li>
-          <li> hash values of neighboring leafs and nodes, i.e. (the &quot;proof path&quot;)</li>
-          <li> The public Merkle root</li>
-        </ul>
 
-        <div>
-          <h3>🧮 How Merkle Proofs Work Mathematically</h3>
-          <p>
-            To prove that Charlie&apos;s transaction R₃ is in the tree, he provides a &quot;proof path&quot; - the
-            minimum set of hash values needed to reconstruct the path from his leaf to the root:
-          </p>
-
+        <figure>
           <MermaidDiagram
             definition={MERKLE_PROOF_PATH_DEFINITION}
             title="🔍 Merkle Proof Path for Request 3 (R₃)"
             fallbackContent={MERKLE_PROOF_PATH_FALLBACK}
           />
+          <figcaption>
+            Visualization of the Merkle proof for R<sub>3</sub>: Alice needs to provide the request and proof siblings
+            that are highlighted in green. The hashes that are highlighted in orange can be calculated from the
+            information. Finally, she can verify if the calculated root is the same as the root she was provided. If
+            they are the same, her request is stored in the merkle tree.
+          </figcaption>
+        </figure>
 
-          <div>
-            <div>
-              <strong>Charlie&apos;s proof for R₃:</strong>
-            </div>
-            <div>1. Start with H₃ = hash(R₃)</div>
-            <div>2. Proof provides H₄ (sibling hash) - highlighted in green</div>
-            <div>3. Compute H₃₄ = hash(H₃ + H₄)</div>
-            <div>4. Proof provides H₁₂ (sibling hash) - highlighted in green</div>
-            <div>5. Compute Root = hash(H₁₂ + H₃₄)</div>
-            <div>
-              <strong>6. Verify: Computed Root = Published Root ✅</strong>
-            </div>
-          </div>
-          <p>
-            This mathematical verification proves Charlie&apos;s transaction is authentic without revealing any other
-            transaction details. The yellow highlighting shows Charlie&apos;s proof path (R₃ → H₃ → H₃₄ → ROOT), while
-            the green highlighting shows the sibling nodes needed for verification (H₄ and H₁₂).
-          </p>
-        </div>
+        <p>
+          This elegant mathematical verification proves Alice&apos;s transaction is authentic without revealing any
+          other transaction details. In the little demonstrator below, you can test in a simple example how the proof
+          can be generated and validated.
+        </p>
 
         <ProofDemo />
-
-        <div>
-          <h3>🏗️ Real-World Applications</h3>
-          <div>
-            <p>
-              <strong>Payment Verification:</strong> Users can prove payments to service providers
-            </p>
-            <p>
-              <strong>Audit Compliance:</strong> Companies can prove specific transactions to auditors
-            </p>
-            <p>
-              <strong>Privacy Protection:</strong> Individual verification without mass data disclosure
-            </p>
-            <p>
-              <strong>Efficient Validation:</strong> Third parties can verify proofs instantly without blockchain
-              queries
-            </p>
-          </div>
-        </div>
       </section>
 
       <section className={css({ marginBottom: "32px" })}>
@@ -1304,44 +1309,18 @@ export default function MerkleAIBatching() {
         </h2>
 
         <p className={css({ marginBottom: "16px", lineHeight: "1.6" })}>
-          Now that we understand how Merkle proofs work, let&apos;s see how this translates to a real-world prepaid
-          system for LLM API payments. This approach solves the &quot;money availability&quot; problem by requiring
-          users to deposit funds upfront.
+          Now that we understand how Merkle proofs work, let&apos;s see how we can use it to extend our current workflow
+          towards the LLM systems. The first major change is that we will not settle costs after each request, but
+          rather require users to deposit funds upfront. This way, we can ensure that the user has enough balance to
+          cover the costs of their requests. This is similar to a prepaid model, where users deposit funds users to
+          deposit funds upfront. This creates a trustless system where:
         </p>
-
-        <div
-          className={css({
-            backgroundColor: "#fef3c7",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #f59e0b",
-            marginBottom: "20px",
-          })}
-        >
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px", color: "#92400e" })}>
-            🏦 The Prepaid Model: How It Ensures Payment
-          </h3>
-          <p className={css({ marginBottom: "12px", lineHeight: "1.6", color: "#92400e" })}>
-            Unlike the &quot;pay later&quot; approach where users might not pay, prepaid settlement guarantees payment
-            by requiring deposits before service usage. This creates a trustless system where:
-          </p>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "14px",
-              lineHeight: "1.4",
-              color: "#92400e",
-            })}
-          >
-            <div>✅ User deposits $50 → Guaranteed $50 available</div>
-            <div>✅ LLM requests consume balance → No payment risk</div>
-            <div>✅ Batch settlement → Efficient blockchain transactions</div>
-            <div>✅ Refunds possible → User controls remaining balance</div>
-          </div>
-        </div>
+        <ul>
+          <li>User deposits $50 → Guaranteed $50 available</li>
+          <li>LLM requests consume balance → No payment risk</li>
+          <li>Batch settlement → Efficient blockchain transactions</li>
+          <li>Refunds possible → User controls remaining balance</li>
+        </ul>
 
         <div
           className={css({

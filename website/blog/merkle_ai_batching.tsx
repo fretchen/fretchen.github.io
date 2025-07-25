@@ -16,12 +16,12 @@ const MERKLE_TREE_MATH_DEFINITION = `graph TD
     H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
     H4 --> H34
     
-    H12 --> ROOT["🌳 ROOT<br/>hash(H₁₂ + H₃₄)"]
+    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
     H34 --> ROOT
     
-    classDef requestNode fill:#e0f2fe,stroke:#0369a1,stroke-width:2px
-    classDef hashNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
-    classDef rootNode fill:#fef3c7,stroke:#d97706,stroke-width:3px
+    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
+    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
+    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
     
     class R1,R2,R3,R4 requestNode
     class H1,H2,H3,H4,H12,H34 hashNode
@@ -84,6 +84,51 @@ const GENIMNET_WORKFLOW_FALLBACK = (
       <li>NFT metadata updated with final image</li>
       <li>Contract auto-pays image provider wallet</li>
     </ol>
+  </div>
+);
+
+// Merkle Proof Path Diagram for Request 3
+const MERKLE_PROOF_PATH_DEFINITION = `graph TD
+    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
+    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
+    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
+    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
+    
+    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
+    H2 --> H12
+    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
+    H4 --> H34
+    
+    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
+    H34 --> ROOT
+    
+    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
+    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
+    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
+    classDef proofPath fill:#fef3c7,stroke:#f59e0b,stroke-width:3px
+    classDef proofNode fill:#ecfdf5,stroke:#10b981,stroke-width:2px
+    
+    class R1,R2,R4 requestNode
+    class H1,H2 hashNode
+    class ROOT rootNode
+    class R3 proofPath
+    class H3,H34 proofPath
+    class H4,H12 proofNode`;
+
+const MERKLE_PROOF_PATH_FALLBACK = (
+  <div
+    style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
+  >
+    <div>
+      <strong>Proof Path for R₃ (highlighted):</strong>
+    </div>
+    <div style={{ margin: "8px 0" }}>1. Start with: H₃ = hash(R₃)</div>
+    <div style={{ margin: "8px 0" }}>2. Need sibling: H₄ (provided in proof)</div>
+    <div style={{ margin: "8px 0" }}>3. Compute: H₃₄ = hash(H₃ + H₄)</div>
+    <div style={{ margin: "8px 0" }}>4. Need sibling: H₁₂ (provided in proof)</div>
+    <div style={{ margin: "8px 0" }}>
+      <strong>5. Verify: Root = hash(H₁₂ + H₃₄)</strong>
+    </div>
   </div>
 );
 
@@ -1089,7 +1134,7 @@ export default function MerkleAIBatching() {
         </p>
 
         <div>
-          <h3>🎨 Current Architecture: GenImNFT Contract + Serverless AI</h3>
+          <h3>Current Architecture: GenImNFT Contract + Serverless AI</h3>
           <p>
             My existing system uses the{" "}
             <a href="https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code">
@@ -1121,7 +1166,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <div>
-          <h3>🚨 The Challenge with this system in the LLM context</h3>
+          <h3>The Challenge with this system in the LLM context</h3>
           <p>
             While this system works great for my image generator, it faces limitations when scaling to multiple LLM API
             calls:
@@ -1140,7 +1185,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <div>
-          <h3>💡 Why This Setup Might benefit from a Merkle Tree Optimization</h3>
+          <h3>Why This Setup Might benefit from a Merkle Tree Optimization</h3>
           <p>
             The current GenImNFT system proves that blockchain-AI integration works, but to make it truly scalable for
             multiple LLM interactions, we need:
@@ -1155,7 +1200,7 @@ export default function MerkleAIBatching() {
       </section>
 
       <section>
-        <h2>📊 How Merkle Trees Work</h2>
+        <h2>How Merkle Trees Work</h2>
         <p>
           A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
           request), and each parent node contains a cryptographic hash of its children. The mathematical foundation is:
@@ -1163,7 +1208,7 @@ export default function MerkleAIBatching() {
 
         <MermaidDiagram
           definition={MERKLE_TREE_MATH_DEFINITION}
-          title="📊 Merkle Tree Mathematical Foundation"
+          title="Merkle Tree Mathematical Foundation"
           fallbackContent={MERKLE_TREE_MATH_FALLBACK}
         />
         <p>
@@ -1178,74 +1223,56 @@ export default function MerkleAIBatching() {
         </p>
 
         <BatchCreator />
-
-        <p>
-          <strong>Cost:</strong> Only ~$15 for the entire batch + $2 per LLM request instead of $150!
-        </p>
       </section>
 
       <section>
-        <h2>Step 3: Proving Individual Transactions with Merkle Proofs</h2>
+        <h3>Proving Individual Transactions with Merkle Proofs</h3>
 
         <p>
-          Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, let&apos;s explore the next crucial
-          step:
-          <strong> proving individual transactions</strong>. This is where the true power of Merkle trees shines.
+          Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, there is actually another cool feature
+          possible. The user can verify the validity of the tree with fairly reduced information.
         </p>
-
-        <div>
-          <h3>📖 Alice&apos;s Challenge</h3>
-          <p>
-            Alice made an LLM request that was batched with 1,000 other users&apos; requests into a single Merkle tree.
-            The batch was registered on-chain with just one transaction. Now Alice needs to prove to Bob (a third party)
-            that she actually made her payment, but she doesn&apos;t want to reveal the details of the other 999
-            transactions.
-          </p>
-          <p>
-            <strong>Question:</strong> How can Alice prove her payment without downloading the entire batch of 1,000
-            transactions?
-          </p>
-        </div>
-
-        <div>
-          <h3>🔍 The Solution: Merkle Proofs</h3>
-          <p>
-            A Merkle proof is a cryptographic proof that allows Alice to demonstrate her transaction is included in the
-            Merkle tree without revealing any other transactions. Instead of downloading 1,000 transactions, Alice only
-            needs:
-          </p>
-          <div>
-            <div>✅ Her original transaction data (R₁)</div>
-            <div>✅ ~10 hash values (the &quot;proof path&quot;)</div>
-            <div>✅ The public Merkle root</div>
-            <div>
-              <strong>Total: ~320 bytes instead of ~1MB for full batch!</strong>
-            </div>
-          </div>
-        </div>
+        <p>
+          A Merkle proof is a cryptographic proof that allows the user to demonstrate that his transaction is included
+          in the Merkle tree without revealing any other transactions. Instead of downloading all the transactions , the
+          user only needs:
+        </p>
+        <ul>
+          <li> His original transaction data (R₁)</li>
+          <li> hash values of neighboring leafs and nodes, i.e. (the &quot;proof path&quot;)</li>
+          <li> The public Merkle root</li>
+        </ul>
 
         <div>
           <h3>🧮 How Merkle Proofs Work Mathematically</h3>
           <p>
-            To prove that Alice&apos;s transaction R₁ is in the tree, she provides a &quot;proof path&quot; - the
-            minimum set of hash values needed to reconstruct the path from her leaf to the root:
+            To prove that Charlie&apos;s transaction R₃ is in the tree, he provides a &quot;proof path&quot; - the
+            minimum set of hash values needed to reconstruct the path from his leaf to the root:
           </p>
+
+          <MermaidDiagram
+            definition={MERKLE_PROOF_PATH_DEFINITION}
+            title="🔍 Merkle Proof Path for Request 3 (R₃)"
+            fallbackContent={MERKLE_PROOF_PATH_FALLBACK}
+          />
+
           <div>
             <div>
-              <strong>Alice&apos;s proof for R₁:</strong>
+              <strong>Charlie&apos;s proof for R₃:</strong>
             </div>
-            <div>1. Start with H₁ = hash(R₁)</div>
-            <div>2. Proof provides H₂ (sibling hash)</div>
-            <div>3. Compute H₁₂ = hash(H₁ + H₂)</div>
-            <div>4. Proof provides H₃₄ (sibling hash)</div>
+            <div>1. Start with H₃ = hash(R₃)</div>
+            <div>2. Proof provides H₄ (sibling hash) - highlighted in green</div>
+            <div>3. Compute H₃₄ = hash(H₃ + H₄)</div>
+            <div>4. Proof provides H₁₂ (sibling hash) - highlighted in green</div>
             <div>5. Compute Root = hash(H₁₂ + H₃₄)</div>
             <div>
               <strong>6. Verify: Computed Root = Published Root ✅</strong>
             </div>
           </div>
           <p>
-            This mathematical verification proves Alice&apos;s transaction is authentic without revealing any other
-            transaction details.
+            This mathematical verification proves Charlie&apos;s transaction is authentic without revealing any other
+            transaction details. The yellow highlighting shows Charlie&apos;s proof path (R₃ → H₃ → H₃₄ → ROOT), while
+            the green highlighting shows the sibling nodes needed for verification (H₄ and H₁₂).
           </p>
         </div>
 

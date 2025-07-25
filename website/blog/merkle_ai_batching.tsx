@@ -1,8 +1,91 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
 import { MerkleTree } from "merkletreejs";
 import { Buffer } from "buffer";
-import mermaid from "mermaid";
+import MermaidDiagram from "../components/MermaidDiagram";
+
+// Mermaid diagram definitions
+const MERKLE_TREE_MATH_DEFINITION = `graph TD
+    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
+    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
+    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
+    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
+    
+    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
+    H2 --> H12
+    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
+    H4 --> H34
+    
+    H12 --> ROOT["🌳 ROOT<br/>hash(H₁₂ + H₃₄)"]
+    H34 --> ROOT
+    
+    classDef requestNode fill:#e0f2fe,stroke:#0369a1,stroke-width:2px
+    classDef hashNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    classDef rootNode fill:#fef3c7,stroke:#d97706,stroke-width:3px
+    
+    class R1,R2,R3,R4 requestNode
+    class H1,H2,H3,H4,H12,H34 hashNode
+    class ROOT rootNode`;
+
+const MERKLE_TREE_MATH_FALLBACK = (
+  <div
+    style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
+  >
+    <div>
+      <strong>For requests R₁, R₂, R₃, R₄:</strong>
+    </div>
+    <div style={{ margin: "8px 0" }}>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
+    <div style={{ margin: "8px 0" }}>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
+    <div style={{ margin: "8px 0" }}>
+      <strong>Root = hash(H₁₂ + H₃₄)</strong>
+    </div>
+  </div>
+);
+
+const GENIMNET_WORKFLOW_DEFINITION = `sequenceDiagram
+    participant User
+    participant Contract as GenImNFT Contract
+    participant Serverless as Serverless Function
+    participant AI as FLUX AI API
+    participant S3 as S3 Storage
+    participant Provider as Image Provider
+
+    User->>Contract: 1. Pay ~$0.10 ETH
+    Contract->>Contract: 2. safeMint() creates NFT
+    Note over Contract: NFT starts with placeholder image
+    Contract->>Serverless: 3. Trigger function
+    Serverless->>AI: 4. Call FLUX AI API
+    AI-->>Serverless: Generated image data
+    Serverless->>S3: 5. Upload to S3 storage
+    S3-->>Serverless: Image URL
+    Serverless->>Contract: 6. Update NFT metadata
+    Note over Contract: NFT now has final image
+    Contract->>Provider: 7. Auto-pay provider wallet
+    Provider-->>Contract: Payment confirmed`;
+
+const GENIMNET_WORKFLOW_FALLBACK = (
+  <div
+    style={{
+      padding: "20px",
+      color: "#ef4444",
+      border: "1px solid #fecaca",
+      borderRadius: "4px",
+      backgroundColor: "#fef2f2",
+    }}
+  >
+    <p>
+      <strong>Workflow Steps:</strong>
+    </p>
+    <ol style={{ textAlign: "left", margin: 0, paddingLeft: "20px" }}>
+      <li>User pays ~$0.10 ETH → safeMint() creates NFT</li>
+      <li>NFT starts with placeholder image</li>
+      <li>Serverless function calls FLUX AI API</li>
+      <li>Generated image uploaded to S3 storage</li>
+      <li>NFT metadata updated with final image</li>
+      <li>Contract auto-pays image provider wallet</li>
+    </ol>
+  </div>
+);
 
 // Export meta for blog post
 export const meta = {
@@ -636,118 +719,6 @@ const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
   return visualization;
 };
 
-// Mermaid Sequence Diagram Component
-const GenImNFTWorkflowDiagram: React.FC = () => {
-  const mermaidRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const renderDiagram = async () => {
-      if (!mermaidRef.current) return;
-
-      try {
-        // Initialize mermaid with proper config
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "default",
-          securityLevel: "loose",
-          sequence: {
-            diagramMarginX: 50,
-            diagramMarginY: 10,
-            boxTextMargin: 5,
-            noteMargin: 10,
-            messageMargin: 35,
-            mirrorActors: false,
-          },
-        });
-
-        const diagramDefinition = `sequenceDiagram
-    participant User
-    participant Contract as GenImNFT Contract
-    participant Serverless as Serverless Function
-    participant AI as FLUX AI API
-    participant S3 as S3 Storage
-    participant Provider as Image Provider
-
-    User->>Contract: 1. Pay ~$0.10 ETH
-    Contract->>Contract: 2. safeMint() creates NFT
-    Note over Contract: NFT starts with placeholder image
-    Contract->>Serverless: 3. Trigger function
-    Serverless->>AI: 4. Call FLUX AI API
-    AI-->>Serverless: Generated image data
-    Serverless->>S3: 5. Upload to S3 storage
-    S3-->>Serverless: Image URL
-    Serverless->>Contract: 6. Update NFT metadata
-    Note over Contract: NFT now has final image
-    Contract->>Provider: 7. Auto-pay provider wallet
-    Provider-->>Contract: Payment confirmed`;
-
-        // Generate unique ID for this diagram
-        const id = `genImNFTWorkflow-${Date.now()}`;
-
-        // Render the diagram
-        const { svg } = await mermaid.render(id, diagramDefinition);
-
-        // Insert the SVG into the DOM
-        if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = svg;
-        }
-      } catch (error) {
-        console.error("Error rendering Mermaid diagram:", error);
-        if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = `
-            <div style="padding: 20px; color: #ef4444; border: 1px solid #fecaca; border-radius: 4px; background-color: #fef2f2;">
-              <p><strong>Workflow Steps:</strong></p>
-              <ol style="text-align: left; margin: 0; padding-left: 20px;">
-                <li>User pays ~$0.10 ETH → safeMint() creates NFT</li>
-                <li>NFT starts with placeholder image</li>
-                <li>Serverless function calls FLUX AI API</li>
-                <li>Generated image uploaded to S3 storage</li>
-                <li>NFT metadata updated with final image</li>
-                <li>Contract auto-pays image provider wallet</li>
-              </ol>
-            </div>
-          `;
-        }
-      }
-    };
-
-    renderDiagram();
-  }, []);
-
-  return (
-    <div
-      className={css({
-        margin: "20px 0",
-        padding: "20px",
-        backgroundColor: "#f9fafb",
-        borderRadius: "8px",
-        border: "1px solid #e5e7eb",
-        textAlign: "center",
-      })}
-    >
-      <h4
-        className={css({
-          fontSize: "16px",
-          fontWeight: "medium",
-          marginBottom: "16px",
-          color: "#374151",
-        })}
-      >
-        🎨 GenImNFT Workflow Sequence Diagram
-      </h4>
-      <div
-        ref={mermaidRef}
-        className={css({
-          "& svg": {
-            maxWidth: "100%",
-            height: "auto",
-          },
-        })}
-      />
-    </div>
-  );
-};
-
 // Interactive Batch Creator Component
 const BatchCreator: React.FC = () => {
   const [requests, setRequests] = useState<LLMRequest[]>([]);
@@ -1127,7 +1098,21 @@ export default function MerkleAIBatching() {
             on Optimism to coordinate between users, payments, and AI image generation:
           </p>
 
-          <GenImNFTWorkflowDiagram />
+          <MermaidDiagram
+            definition={GENIMNET_WORKFLOW_DEFINITION}
+            title="🎨 GenImNFT Workflow Sequence Diagram"
+            fallbackContent={GENIMNET_WORKFLOW_FALLBACK}
+            config={{
+              sequence: {
+                diagramMarginX: 50,
+                diagramMarginY: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35,
+                mirrorActors: false,
+              },
+            }}
+          />
 
           <p>
             This allowed me to set up a trustless system where any user with a wallet and optimism balance can access
@@ -1142,13 +1127,12 @@ export default function MerkleAIBatching() {
             calls:
           </p>
 
-          <div>
-            <div>❌ Every LLM request = Separate blockchain transaction</div>
-            <div>❌ Gas costs multiply: 10 requests = 10× gas fees</div>
-            <div>❌ User experience: Multiple wallet confirmations</div>
-            <div>❌ Network congestion: Many small transactions</div>
-            <div>❌ Economic barrier: High costs limit adoption</div>
-          </div>
+          <ul>
+            <li> Every LLM request = Separate blockchain transaction</li>
+            <li> Gas costs multiply: 10 requests = 10× gas fees</li>
+            <li> User experience: Multiple wallet confirmations</li>
+            <li> Economic barrier: High costs limit adoption</li>
+          </ul>
           <p>
             <strong>Example:</strong> If a user wants to generate 10 AI images for a project, they currently need 10
             separate transactions costing ~$1.00 in total, plus the complexity of multiple wallet interactions.
@@ -1176,16 +1160,12 @@ export default function MerkleAIBatching() {
           A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
           request), and each parent node contains a cryptographic hash of its children. The mathematical foundation is:
         </p>
-        <div>
-          <div>
-            <strong>For requests R₁, R₂, R₃, R₄:</strong>
-          </div>
-          <div>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
-          <div>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
-          <div>
-            <strong>Root = hash(H₁₂ + H₃₄)</strong>
-          </div>
-        </div>
+
+        <MermaidDiagram
+          definition={MERKLE_TREE_MATH_DEFINITION}
+          title="📊 Merkle Tree Mathematical Foundation"
+          fallbackContent={MERKLE_TREE_MATH_FALLBACK}
+        />
         <p>
           This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
           requests with just one blockchain transaction while maintaining cryptographic proof of each individual

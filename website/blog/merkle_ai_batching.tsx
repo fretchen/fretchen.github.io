@@ -1459,9 +1459,9 @@ export default function MerkleAIBatching() {
 
         <h4>LLM API (AI Service)</h4>
         <p>
-          The requirements on the LLM API also does not really change compared to the case of generating images.
-          It it simple really nice if it is OpenAI compatible but thiat is. wallets to not really change compare to the image generation. So this is straight
-          forward.
+          The requirements on the LLM API also does not really change compared to the case of generating images. It it
+          simple really nice if it is OpenAI compatible but thiat is. wallets to not really change compare to the image
+          generation. So this is straight forward.
         </p>
         <p>
           <strong>Role:</strong> External AI service provider (OpenAI, Anthropic, etc.)
@@ -1475,7 +1475,7 @@ export default function MerkleAIBatching() {
           <li>Token counting for cost calculation</li>
           <li>Consistent response format</li>
         </ul>
-    
+
         <h4>LLM Contract (Smart Contract)</h4>
         <p>
           <strong>Role:</strong> Central coordinator for deposits, balance tracking, and batch settlement
@@ -1521,6 +1521,25 @@ export default function MerkleAIBatching() {
           import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
           <br />
           import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
+          <br />
+          <br />
+          {/* Request struct definition - CRITICAL for processBatch compatibility */}
+          <br />
+          struct Request {`{`}
+          <br />
+          &nbsp;&nbsp;address user;
+          <br />
+          &nbsp;&nbsp;string prompt;
+          <br />
+          &nbsp;&nbsp;uint256 tokenCount;
+          <br />
+          &nbsp;&nbsp;uint256 cost;
+          <br />
+          &nbsp;&nbsp;uint256 timestamp;
+          <br />
+          &nbsp;&nbsp;string model;
+          <br />
+          {`}`}
           <br />
           <br />
           mapping(address =&gt; uint256) public llmBalance;
@@ -1692,30 +1711,24 @@ export default function MerkleAIBatching() {
           {`}`}
         </div>
 
-        <h4>⚡ Serverless Function (Backend Service)</h4>
+        <h4>⚡ Serverless Functions (Backend Services)</h4>
         <p>
           <strong>Role:</strong> Request handler and coordinator between users, blockchain, and AI services
         </p>
         <p>
-          <strong>Required Functions:</strong>
+          Based on the existing image generation functions ( <code>scw_js/image_service.js</code> and{" "}
+          <code>scw_js/readhandler_v2.js</code>), the LLM system requires two main serverless functions with enhanced
+          capabilities for batch processing:
         </p>
-        <ul>
-          <li>
-            <code>handleLLMRequest(user, prompt)</code> - Process incoming requests
-          </li>
-          <li>
-            <code>checkUserBalance(address)</code> - Verify user has sufficient funds
-          </li>
-          <li>
-            <code>callLLMAPI(prompt, model)</code> - Interface with AI services
-          </li>
-          <li>
-            <code>createLeafData(request)</code> - Generate Merkle tree leaf
-          </li>
-          <li>
-            <code>queueForBatch(leafData)</code> - Add to pending batch
-          </li>
-        </ul>
+
+        <h5>
+          🔧 Function 1: LLM Request Handler (<code>llm_handler.js</code>)
+        </h5>
+        <p>
+          <strong>Comparison to Image Handler:</strong> Similar to <code>readhandler_v2.js</code> but with instant
+          response capability and batch queuing instead of immediate blockchain settlement.
+        </p>
+
         <div
           className={css({
             fontSize: "13px",
@@ -1724,45 +1737,147 @@ export default function MerkleAIBatching() {
             padding: "12px",
             borderRadius: "4px",
             border: "1px solid #ddd",
-            marginBottom: "32px",
+            marginBottom: "16px",
           })}
         >
-          {/* AWS Lambda or similar */}
-          exports.handler = async (event) =&gt; {`{`}
+          import {`{`} getContract, createPublicClient, http {`}`} from "viem";
           <br />
-          &nbsp;&nbsp;const balance = await checkBalance(user);
+          import {`{`} optimism {`}`} from "viem/chains";
           <br />
-          &nbsp;&nbsp;if (balance &gt;= cost) await processRequest();
+          import {`{`} llmContractAbi {`}`} from "./llm_abi.js";
+          <br />
+          import {`{`} callLLMAPI, createLeafData, queueForBatch {`}`} from "./llm_service.js";
+          <br />
+          <br />
+          export async function handle(event, context, cb) {`{`}
+          <br />
+          &nbsp;&nbsp;// 1. Extract parameters (similar to image handler)
+          <br />
+          &nbsp;&nbsp;const prompt = event.queryStringParameters.prompt;
+          <br />
+          &nbsp;&nbsp;const userAddress = event.queryStringParameters.userAddress;
+          <br />
+          &nbsp;&nbsp;const model = event.queryStringParameters.model || "gpt-4-turbo";
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;if (!prompt || !userAddress) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse("Missing prompt or userAddress", 400);
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 2. Check user balance on-chain (like mint price check)
+          <br />
+          &nbsp;&nbsp;const publicClient = createPublicClient({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;chain: optimism,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;transport: http(),
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;const contract = getContract({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;address: "0x[LLM_CONTRACT_ADDRESS]",
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;abi: llmContractAbi,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;client: {`{`} public: publicClient {`}`},
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;const userBalance = await contract.read.checkBalance([userAddress]);
+          <br />
+          &nbsp;&nbsp;const estimatedCost = estimateTokenCost(prompt, model);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;if (userBalance &lt; estimatedCost) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse("Insufficient balance", 402);
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 3. Call LLM API immediately (unlike delayed image generation)
+          <br />
+          &nbsp;&nbsp;const llmResponse = await callLLMAPI(prompt, model);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 4. Create leaf data for Merkle tree
+          <br />
+          &nbsp;&nbsp;const leafData = createLeafData({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;userAddress,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;prompt,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;response: llmResponse.content,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: llmResponse.usage.total_tokens,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;cost: estimatedCost,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: new Date().toISOString(),
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;model
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 5. Queue for batch processing (new functionality)
+          <br />
+          &nbsp;&nbsp;await queueForBatch(leafData);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 6. Return immediate response (unlike image generation)
+          <br />
+          &nbsp;&nbsp;return {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;statusCode: 200,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`} "Content-Type": "application/json" {`}`},
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;body: JSON.stringify({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response: llmResponse.content,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tokenCount: llmResponse.usage.total_tokens,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cost: estimatedCost,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leafId: leafData.id,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;userBalance: userBalance.toString(),
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: "Request processed, queued for batch settlement"
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;{`}`})
+          <br />
+          &nbsp;&nbsp;{`}`};
           <br />
           {`}`}
         </div>
 
-        
+        <h5>
+          🔧 Function 2: LLM Service Module (<code>llm_service.js</code>)
+        </h5>
+        <p>
+          <strong>Comparison to Image Service:</strong> Enhanced version of <code>image_service.js</code> with LLM API
+          integration and Merkle tree batch management instead of S3 image uploads.
+        </p>
 
-        <h4>🌳 Merkle Tree on S3 Storage (Batch Coordinator)</h4>
-        <p>
-          <strong>Role:</strong> Batch aggregation and Merkle tree construction service
-        </p>
-        <p>
-          <strong>Required Functions:</strong>
-        </p>
-        <ul>
-          <li>
-            <code>addLeafToBatch(leafData)</code> - Queue individual requests
-          </li>
-          <li>
-            <code>triggerBatch()</code> - Activate when threshold reached (50 requests or 5 min)
-          </li>
-          <li>
-            <code>buildMerkleTree(leaves[])</code> - Construct tree from batch
-          </li>
-          <li>
-            <code>generateProofs()</code> - Create individual proofs for each request
-          </li>
-          <li>
-            <code>submitBatch()</code> - Send to smart contract for settlement
-          </li>
-        </ul>
         <div
           className={css({
             fontSize: "13px",
@@ -1771,36 +1886,471 @@ export default function MerkleAIBatching() {
             padding: "12px",
             borderRadius: "4px",
             border: "1px solid #ddd",
-            marginBottom: "32px",
+            marginBottom: "16px",
           })}
         >
-          {/* Using merkletreejs library */}
-          const tree = new MerkleTree(leaves, keccak256);
+          import {`{`} S3Client, PutObjectCommand, GetObjectCommand {`}`} from "@aws-sdk/client-s3";
           <br />
-          const root = tree.getRoot();
+          import {`{`} randomBytes {`}`} from "crypto";
           <br />
-          const proof = tree.getProof(leaf);
+          import {`{`} MerkleTree {`}`} from "merkletreejs";
+          <br />
+          import {`{`} keccak256 {`}`} from "ethers";
+          <br />
+          <br />
+          // Configuration (similar to image_service.js)
+          <br />
+          const LLM_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+          <br />
+          const BATCH_BUCKET = "llm-batches";
+          <br />
+          const BATCH_THRESHOLD = 50; // Trigger batch after 50 requests
+          <br />
+          const BATCH_TIMEOUT = 5 * 60 * 1000; // Or 5 minutes
+          <br />
+          <br />
+          /**
+          <br />
+          &nbsp;* Calls LLM API (replaces generateAndUploadImage function)
+          <br />
+          &nbsp;*/
+          <br />
+          export async function callLLMAPI(prompt, model = "gpt-4-turbo") {`{`}
+          <br />
+          &nbsp;&nbsp;const apiKey = process.env.OPENAI_API_KEY; // Or other LLM provider
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;const response = await fetch(LLM_ENDPOINT, {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;method: "POST",
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Authorization: `Bearer $${`{`}apiKey{`}`}`,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Content-Type": "application/json",
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;{`}`},
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;body: JSON.stringify({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;messages: [{`{`} role: "user", content: prompt {`}`}],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;max_tokens: 2000,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;{`}`}),
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;if (!response.ok) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;throw new Error(`LLM API Error: $${`{`}response.status{`}`}`);
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;const data = await response.json();
+          <br />
+          &nbsp;&nbsp;return {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;content: data.choices[0].message.content,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;usage: data.usage,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;model: data.model
+          <br />
+          &nbsp;&nbsp;{`}`};
+          <br />
+          {`}`}
+          <br />
+          <br />
+          /**
+          <br />
+          &nbsp;* Creates leaf data for Merkle tree (new functionality)
+          <br />
+          &nbsp;*/
+          <br />
+          export function createLeafData(requestData) {`{`}
+          <br />
+          &nbsp;&nbsp;return {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;id: randomBytes(16).toString("hex"),
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;userAddress: requestData.userAddress,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;prompt: requestData.prompt,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;response: requestData.response,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: requestData.tokenCount,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;cost: requestData.cost,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;model: requestData.model,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;leafHash: null // Will be calculated in batch processing
+          <br />
+          &nbsp;&nbsp;{`}`};
+          <br />
+          {`}`}
+          <br />
+          <br />
+          /**
+          <br />
+          &nbsp;* Queues leaf data for batch processing (replaces uploadToS3 for metadata)
+          <br />
+          &nbsp;*/
+          <br />
+          export async function queueForBatch(leafData) {`{`}
+          <br />
+          &nbsp;&nbsp;// Upload to S3 pending batch folder (similar to uploadToS3)
+          <br />
+          &nbsp;&nbsp;const fileName = `pending/$${`{`}leafData.id{`}`}.json`;
+          <br />
+          &nbsp;&nbsp;await uploadToS3(leafData, fileName);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// Check if batch threshold reached
+          <br />
+          &nbsp;&nbsp;const pendingCount = await getPendingRequestCount();
+          <br />
+          &nbsp;&nbsp;if (pendingCount &gt;= BATCH_THRESHOLD) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;await triggerBatchProcessing();
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          {`}`}
         </div>
 
-        <h4>🔗 Integration Requirements</h4>
-        <p>For the complete system to work, these participants must be properly integrated:</p>
-        <ul>
-          <li>
-            <strong>Smart Contract ↔ Serverless:</strong> Secure API for balance checking and batch submission
-          </li>
-          <li>
-            <strong>Serverless ↔ LLM API:</strong> API key management and rate limiting
-          </li>
-          <li>
-            <strong>Serverless ↔ S3 Storage:</strong> Queue management and batch triggering
-          </li>
-          <li>
-            <strong>S3 ↔ Smart Contract:</strong> Batch submission with Merkle proofs
-          </li>
-          <li>
-            <strong>All components:</strong> Error handling, monitoring, and recovery mechanisms
-          </li>
-        </ul>
+        <h5>
+          🔧 Function 3: Batch Processor (<code>batch_processor.js</code>)
+        </h5>
+        <p>
+          <strong>New Functionality:</strong> This function has no equivalent in the image generation system. It handles
+          the batch aggregation and Merkle tree construction that enables cost-efficient blockchain settlement.
+        </p>
+
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "16px",
+          })}
+        >
+          /**
+          <br />
+          &nbsp;* Processes pending requests into a Merkle tree batch
+          <br />
+          &nbsp;* FIXED: Now properly formats data for smart contract compatibility
+          <br />
+          &nbsp;*/
+          <br />
+          export async function triggerBatchProcessing() {`{`}
+          <br />
+          &nbsp;&nbsp;// 1. Collect all pending requests from S3
+          <br />
+          &nbsp;&nbsp;const pendingRequests = await getAllPendingRequests();
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 2. Convert to smart contract Request format
+          <br />
+          &nbsp;&nbsp;const contractRequests = pendingRequests.map(req =&gt; ({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;user: req.userAddress,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;prompt: req.prompt,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: req.tokenCount,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;cost: req.cost,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: Math.floor(new Date(req.timestamp).getTime() / 1000),
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;model: req.model
+          <br />
+          &nbsp;&nbsp;{`}`}));
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 3. Build Merkle tree using the SAME format as smart contract
+          <br />
+          &nbsp;&nbsp;const leaves = contractRequests.map(req =&gt; {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;// Must match: keccak256(abi.encode(requests[i])) in smart contract
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;return ethers.utils.keccak256(
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ethers.utils.defaultAbiCoder.encode(
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["address", "string", "uint256", "uint256", "uint256",
+          "string"],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[req.user, req.prompt, req.tokenCount, req.cost,
+          req.timestamp, req.model]
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;);
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;const tree = new MerkleTree(leaves, keccak256);
+          <br />
+          &nbsp;&nbsp;const merkleRoot = tree.getRoot();
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 4. Generate proofs in smart contract format (bytes32[][])
+          <br />
+          &nbsp;&nbsp;const proofs = leaves.map(leaf =&gt; {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;const proof = tree.getProof(leaf);
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;// Convert from MerkleTree proof objects to bytes32[] format
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;return proof.map(p =&gt; `0x$${`{`}p.data.toString('hex'){`}`}`);
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 5. Submit to smart contract with correct format
+          <br />
+          &nbsp;&nbsp;const txHash = await submitBatchToContract(
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;`0x$${`{`}merkleRoot.toString('hex'){`}`}`,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;contractRequests, // Request[] format
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;proofs // bytes32[][] format
+          <br />
+          &nbsp;&nbsp;);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// 6. Archive processed batch
+          <br />
+          &nbsp;&nbsp;await archiveBatch(contractRequests, txHash);
+          <br />
+          <br />
+          &nbsp;&nbsp;return {`{`} root: merkleRoot, txHash, processedCount: contractRequests.length {`}`};
+          <br />
+          {`}`}
+          <br />
+          <br />
+          /**
+          <br />
+          &nbsp;* Submits batch to smart contract (similar to updateTokenWithImage)
+          <br />
+          &nbsp;*/
+          <br />
+          async function submitBatchToContract(merkleRoot, requests, proofs) {`{`}
+          <br />
+          &nbsp;&nbsp;const walletClient = createWalletClient({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;account: privateKeyToAccount(process.env.LLM_WALLET_PRIVATE_KEY),
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;chain: optimism,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;transport: http(),
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;const contract = getContract({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;address: process.env.LLM_CONTRACT_ADDRESS,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;abi: llmContractAbi,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;client: {`{`} wallet: walletClient {`}`},
+          <br />
+          &nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;// Call processBatch with properly formatted parameters
+          <br />
+          &nbsp;&nbsp;const txHash = await contract.write.processBatch([
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;merkleRoot, // bytes32
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;requests, // Request[] - matches struct format
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;proofs // bytes32[][] - array of proof arrays
+          <br />
+          &nbsp;&nbsp;]);
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;return txHash;
+          <br />
+          {`}`}
+        </div>
+
+        <h5>📋 Key Differences from Image Generation Functions</h5>
+        <table
+          className={css({
+            width: "100%",
+            borderCollapse: "collapse",
+            marginBottom: "16px",
+            fontSize: "14px",
+          })}
+        >
+          <thead>
+            <tr className={css({ backgroundColor: "#f3f4f6" })}>
+              <th className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "left" })}>Aspect</th>
+              <th className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "left" })}>
+                Image Generation
+              </th>
+              <th className={css({ border: "1px solid #d1d5db", padding: "8px", textAlign: "left" })}>
+                LLM Processing
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px", fontWeight: "medium" })}>
+                Response Time
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>
+                Delayed (async via blockchain update)
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Immediate (instant API response)</td>
+            </tr>
+            <tr>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px", fontWeight: "medium" })}>
+                Payment Model
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>
+                Pay-per-transaction (immediate settlement)
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>
+                Prepaid balance (batch settlement)
+              </td>
+            </tr>
+            <tr>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px", fontWeight: "medium" })}>
+                Blockchain Interaction
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>One transaction per image</td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>
+                One transaction per batch (50+ requests)
+              </td>
+            </tr>
+            <tr>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px", fontWeight: "medium" })}>
+                Data Storage
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>S3: Images + ERC-721 metadata</td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>
+                S3: Request queue + Merkle proofs
+              </td>
+            </tr>
+            <tr>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px", fontWeight: "medium" })}>
+                Error Handling
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Blockchain revert on failure</td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Individual request isolation</td>
+            </tr>
+            <tr>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px", fontWeight: "medium" })}>
+                Scalability
+              </td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Limited by gas costs</td>
+              <td className={css({ border: "1px solid #d1d5db", padding: "8px" })}>Scales with batch size</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h5>⚙️ Environment Configuration (serverless.yml)</h5>
+        <div
+          className={css({
+            fontSize: "13px",
+            fontFamily: "monospace",
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
+            marginBottom: "16px",
+          })}
+        >
+          # Extended from existing serverless.yml
+          <br />
+          provider:
+          <br />
+          &nbsp;&nbsp;name: scaleway
+          <br />
+          &nbsp;&nbsp;runtime: node22
+          <br />
+          &nbsp;&nbsp;secret:
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;# Existing secrets
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;SCW_SECRET_KEY: $${`{`}env:SCW_SECRET_KEY{`}`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;SCW_ACCESS_KEY: $${`{`}env:SCW_ACCESS_KEY{`}`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;NFT_WALLET_PRIVATE_KEY: $${`{`}env:NFT_WALLET_PRIVATE_KEY{`}`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;# New LLM secrets
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;OPENAI_API_KEY: $${`{`}env:OPENAI_API_KEY{`}`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;LLM_WALLET_PRIVATE_KEY: $${`{`}env:LLM_WALLET_PRIVATE_KEY{`}`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;LLM_CONTRACT_ADDRESS: $${`{`}env:LLM_CONTRACT_ADDRESS{`}`}
+          <br />
+          <br />
+          functions:
+          <br />
+          &nbsp;&nbsp;# Existing functions
+          <br />
+          &nbsp;&nbsp;readnftv2:
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;handler: readhandler_v2.handle
+          <br />
+          &nbsp;&nbsp;classicai:
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;handler: dec_ai.handle
+          <br />
+          &nbsp;&nbsp;# New LLM functions
+          <br />
+          &nbsp;&nbsp;llmhandler:
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;handler: llm_handler.handle
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;timeout: 30s # Longer timeout for LLM API calls
+          <br />
+          &nbsp;&nbsp;batchprocessor:
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;handler: batch_processor.handle
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;timeout: 60s # Longer timeout for batch processing
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;events:
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- schedule: rate(5 minutes) # Auto-trigger batches
+        </div>
       </section>
     </article>
   );

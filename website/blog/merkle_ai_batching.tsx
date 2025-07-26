@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
-import { MerkleTree } from "merkletreejs";
+// import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
+import { MerkleTree } from "merkletreejs"; // For interactive demos only
 import { Buffer } from "buffer";
 import MermaidDiagram from "../components/MermaidDiagram";
 
@@ -312,34 +313,38 @@ const sampleBatch = {
   merkleRoot: "0x1a2b3c4d5e6f789012345678901234567890abcdef1234567890abcdef123456",
 };
 
-// Generate Merkle Proof for a specific leaf
+// Generate Merkle Proof for a specific leaf (using OpenZeppelin StandardMerkleTree)
 const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
   const requests = sampleBatch.requests;
   const selectedRequest = requests[leafIndex];
 
-  // Convert leaf data to buffers for merkletreejs - use same hash function!
-  const leafBuffers = requests.map((req) => {
-    const serialized = JSON.stringify(req.leafData, Object.keys(req.leafData).sort());
-    return createSyncHash(serialized);
-  });
+  // For demo: simplified format (production uses Request struct format)
+  const treeData = requests.map((req) => [
+    req.leafData.id,
+    req.leafData.timestamp,
+    req.leafData.tokenCount,
+    req.leafData.wallet,
+  ]);
 
-  const hashFn = createMerkleHashFn();
-  const tree = new MerkleTree(leafBuffers, hashFn);
+  // Define types for demo (simplified version of production REQUEST_TYPES)
+  const demoTypes = ["uint256", "string", "uint256", "string"];
+
+  // Create StandardMerkleTree
+  const tree = StandardMerkleTree.of(treeData, demoTypes);
 
   // Get proof for the specific leaf
-  const leaf = leafBuffers[leafIndex];
-  const proof = tree.getProof(leaf);
-  const root = tree.getRoot();
+  const proof = tree.getProof(leafIndex);
+  const root = tree.root;
 
   return {
     leafIndex,
     leafData: selectedRequest.leafData,
     leafHash: selectedRequest.leafHash,
-    proof: proof.map((p) => ({
-      data: `0x${p.data.toString("hex")}`,
-      position: p.position as "left" | "right",
+    proof: proof.map((hash, index) => ({
+      data: hash,
+      position: (index % 2 === 0 ? "left" : "right") as "left" | "right",
     })),
-    root: `0x${root.toString("hex")}`,
+    root: root,
   };
 };
 
@@ -1740,7 +1745,7 @@ export default function MerkleAIBatching() {
             marginBottom: "16px",
           })}
         >
-          import {`{`} getContract, createPublicClient, http {`}`} from "viem";
+          import {`{`} getContract, createPublicClient, http {`}`} from &quot;viem&quot;;
           <br />
           import {`{`} optimism {`}`} from "viem/chains";
           <br />
@@ -1889,47 +1894,55 @@ export default function MerkleAIBatching() {
             marginBottom: "16px",
           })}
         >
-          import {`{`} S3Client, PutObjectCommand, GetObjectCommand {`}`} from "@aws-sdk/client-s3";
+          import {`{`} S3Client, PutObjectCommand, GetObjectCommand {`}`} from &quot;@aws-sdk/client-s3&quot;;
           <br />
-          import {`{`} randomBytes {`}`} from "crypto";
+          import {`{`} randomBytes {`}`} from &quot;crypto&quot;;
           <br />
-          import {`{`} MerkleTree {`}`} from "merkletreejs";
-          <br />
-          import {`{`} keccak256 {`}`} from "ethers";
+          import {`{`} StandardMerkleTree {`}`} from &quot;@openzeppelin/merkle-tree&quot;;
           <br />
           <br />
-          // Configuration (similar to image_service.js)
+          {/* Configuration (similar to image_service.js) */}
           <br />
-          const LLM_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+          const LLM_ENDPOINT = &quot;https://api.openai.com/v1/chat/completions&quot;;
           <br />
-          const BATCH_BUCKET = "llm-batches";
+          const BATCH_BUCKET = &quot;llm-batches&quot;;
           <br />
-          const BATCH_THRESHOLD = 50; // Trigger batch after 50 requests
+          const BATCH_THRESHOLD = 50; {/* Trigger batch after 50 requests */}
           <br />
-          const BATCH_TIMEOUT = 5 * 60 * 1000; // Or 5 minutes
+          const BATCH_TIMEOUT = 5 * 60 * 1000; {/* Or 5 minutes */}
           <br />
           <br />
-          /**
+          {/* Request data types for OpenZeppelin StandardMerkleTree */}
           <br />
-          &nbsp;* Calls LLM API (replaces generateAndUploadImage function)
+          const REQUEST_TYPES = [
           <br />
-          &nbsp;*/
+          &nbsp;&nbsp;&quot;address&quot;, &quot;string&quot;, &quot;uint256&quot;, &quot;uint256&quot;,
+          &quot;uint256&quot;, &quot;string&quot;
           <br />
-          export async function callLLMAPI(prompt, model = "gpt-4-turbo") {`{`}
+          ];
           <br />
-          &nbsp;&nbsp;const apiKey = process.env.OPENAI_API_KEY; // Or other LLM provider
+          <br />
+          {/*
+          <br />
+          &nbsp;* Calls LLM API (enhanced with OpenZeppelin compatibility)
+          <br />
+          &nbsp;*/}
+          <br />
+          export async function callLLMAPI(prompt, model = &quot;gpt-4-turbo&quot;) {`{`}
+          <br />
+          &nbsp;&nbsp;const apiKey = process.env.OPENAI_API_KEY; {/* Or other LLM provider */}
           <br />
           &nbsp;&nbsp;
           <br />
           &nbsp;&nbsp;const response = await fetch(LLM_ENDPOINT, {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;method: "POST",
+          &nbsp;&nbsp;&nbsp;&nbsp;method: &quot;POST&quot;,
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Authorization: `Bearer $${`{`}apiKey{`}`}`,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Content-Type": "application/json",
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;Content-Type&quot;: &quot;application/json&quot;,
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;{`}`},
           <br />
@@ -1937,7 +1950,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;messages: [{`{`} role: "user", content: prompt {`}`}],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;messages: [{`{`} role: &quot;user&quot;, content: prompt {`}`}],
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;max_tokens: 2000,
           <br />
@@ -1970,7 +1983,11 @@ export default function MerkleAIBatching() {
           {`}`}
           <br />
           <br />
-          /**
+          {/*
+          <br />
+          &nbsp;* Creates leaf data for OpenZeppelin StandardMerkleTree (enhanced functionality)
+          <br />
+          &nbsp;*/}
           <br />
           &nbsp;* Creates leaf data for Merkle tree (new functionality)
           <br />
@@ -2051,101 +2068,99 @@ export default function MerkleAIBatching() {
             marginBottom: "16px",
           })}
         >
-          /**
+          {/* Processes pending requests into a Merkle tree batch */}
           <br />
-          &nbsp;* Processes pending requests into a Merkle tree batch
-          <br />
-          &nbsp;* FIXED: Now properly formats data for smart contract compatibility
-          <br />
-          &nbsp;*/
+          {/* UPDATED: Now uses @openzeppelin/merkle-tree for guaranteed contract compatibility */}
           <br />
           export async function triggerBatchProcessing() {`{`}
           <br />
-          &nbsp;&nbsp;// 1. Collect all pending requests from S3
+          &nbsp;&nbsp;{/* 1. Collect all pending requests from S3 */}
           <br />
           &nbsp;&nbsp;const pendingRequests = await getAllPendingRequests();
           <br />
           &nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;// 2. Convert to smart contract Request format
+          &nbsp;&nbsp;{/* 2. Prepare data for StandardMerkleTree */}
           <br />
-          &nbsp;&nbsp;const contractRequests = pendingRequests.map(req =&gt; ({`{`}
+          &nbsp;&nbsp;const treeData = pendingRequests.map(req =&gt; [
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;user: req.userAddress,
+          &nbsp;&nbsp;&nbsp;&nbsp;req.userAddress, {/* user: address */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;prompt: req.prompt,
+          &nbsp;&nbsp;&nbsp;&nbsp;req.prompt, {/* prompt: string */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: req.tokenCount,
+          &nbsp;&nbsp;&nbsp;&nbsp;req.tokenCount, {/* tokenCount: uint256 */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;cost: req.cost,
+          &nbsp;&nbsp;&nbsp;&nbsp;req.cost, {/* cost: uint256 */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: Math.floor(new Date(req.timestamp).getTime() / 1000),
+          &nbsp;&nbsp;&nbsp;&nbsp;Math.floor(new Date(req.timestamp).getTime() / 1000), {/* timestamp: uint256 */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;model: req.model
+          &nbsp;&nbsp;&nbsp;&nbsp;req.model {/* model: string */}
           <br />
-          &nbsp;&nbsp;{`}`}));
-          <br />
-          &nbsp;&nbsp;
-          <br />
-          &nbsp;&nbsp;// 3. Build Merkle tree using the SAME format as smart contract
-          <br />
-          &nbsp;&nbsp;const leaves = contractRequests.map(req =&gt; {`{`}
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;// Must match: keccak256(abi.encode(requests[i])) in smart contract
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;return ethers.utils.keccak256(
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ethers.utils.defaultAbiCoder.encode(
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["address", "string", "uint256", "uint256", "uint256",
-          "string"],
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[req.user, req.prompt, req.tokenCount, req.cost,
-          req.timestamp, req.model]
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;);
-          <br />
-          &nbsp;&nbsp;{`}`});
+          &nbsp;&nbsp;]);
           <br />
           &nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;const tree = new MerkleTree(leaves, keccak256);
+          &nbsp;&nbsp;{/* 3. Build StandardMerkleTree with exact type matching */}
           <br />
-          &nbsp;&nbsp;const merkleRoot = tree.getRoot();
+          &nbsp;&nbsp;const tree = StandardMerkleTree.of(treeData, REQUEST_TYPES);
           <br />
-          &nbsp;&nbsp;
-          <br />
-          &nbsp;&nbsp;// 4. Generate proofs in smart contract format (bytes32[][])
-          <br />
-          &nbsp;&nbsp;const proofs = leaves.map(leaf =&gt; {`{`}
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;const proof = tree.getProof(leaf);
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;// Convert from MerkleTree proof objects to bytes32[] format
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;return proof.map(p =&gt; `0x$${`{`}p.data.toString('hex'){`}`}`);
-          <br />
-          &nbsp;&nbsp;{`}`});
+          &nbsp;&nbsp;const merkleRoot = tree.root;
           <br />
           &nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;// 5. Submit to smart contract with correct format
+          &nbsp;&nbsp;{/* 4. Generate proofs in OpenZeppelin format */}
+          <br />
+          &nbsp;&nbsp;const proofs = [];
+          <br />
+          &nbsp;&nbsp;const contractRequests = [];
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;for (const [index, value] of tree.entries()) {`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;const proof = tree.getProof(index);
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;proofs.push(proof);
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;{/* Convert array back to Request struct format */}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;contractRequests.push({`{`}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;user: value[0],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt: value[1],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tokenCount: value[2],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cost: value[3],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: value[4],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model: value[5]
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;{`}`});
+          <br />
+          &nbsp;&nbsp;{`}`}
+          <br />
+          &nbsp;&nbsp;
+          <br />
+          &nbsp;&nbsp;{/* 5. Submit to smart contract with OpenZeppelin-compatible format */}
           <br />
           &nbsp;&nbsp;const txHash = await submitBatchToContract(
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;`0x$${`{`}merkleRoot.toString('hex'){`}`}`,
+          &nbsp;&nbsp;&nbsp;&nbsp;merkleRoot, {/* Root as hex string */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;contractRequests, // Request[] format
+          &nbsp;&nbsp;&nbsp;&nbsp;contractRequests, {/* Request[] format */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;proofs // bytes32[][] format
+          &nbsp;&nbsp;&nbsp;&nbsp;proofs {/* bytes32[][] format (OpenZeppelin standard) */}
           <br />
           &nbsp;&nbsp;);
           <br />
           &nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;// 6. Archive processed batch
+          &nbsp;&nbsp;{/* 6. Archive processed batch */}
           <br />
           &nbsp;&nbsp;await archiveBatch(contractRequests, txHash);
           <br />
@@ -2155,11 +2170,11 @@ export default function MerkleAIBatching() {
           {`}`}
           <br />
           <br />
-          /**
+          {/*
           <br />
           &nbsp;* Submits batch to smart contract (similar to updateTokenWithImage)
           <br />
-          &nbsp;*/
+          {/* Smart contract submission with OpenZeppelin compatibility */}
           <br />
           async function submitBatchToContract(merkleRoot, requests, proofs) {`{`}
           <br />
@@ -2187,15 +2202,15 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;// Call processBatch with properly formatted parameters
+          &nbsp;&nbsp;{/* Call processBatch with OpenZeppelin-compatible format */}
           <br />
           &nbsp;&nbsp;const txHash = await contract.write.processBatch([
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;merkleRoot, // bytes32
+          &nbsp;&nbsp;&nbsp;&nbsp;merkleRoot, {/* bytes32 root from StandardMerkleTree */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;requests, // Request[] - matches struct format
+          &nbsp;&nbsp;&nbsp;&nbsp;requests, {/* Request[] matching struct format */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;proofs // bytes32[][] - array of proof arrays
+          &nbsp;&nbsp;&nbsp;&nbsp;proofs {/* bytes32[][] OpenZeppelin proof format */}
           <br />
           &nbsp;&nbsp;]);
           <br />

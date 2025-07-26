@@ -1436,37 +1436,47 @@ export default function MerkleAIBatching() {
           Let&apos;s break down what is required from each participant in the system:
         </p>
 
-        <h4>👩‍💻 Alice (User)</h4>
+        <h4>Alice (User) and similiar the LLM Wallet</h4>
         <p>
-          <strong>Role:</strong> End user who wants to use LLM services with blockchain payments
+          The requirements on the two wallets to not really change compare to the image generation. So this is straight
+          forward.
+        </p>
+        <p>
+          <strong>Role of Alice:</strong> End user who wants to use LLM services with blockchain payments
+        </p>
+        <p>
+          <strong>Role of the LLM Wallet:</strong> Receives payments for providing LLM services
         </p>
         <p>
           <strong>Required Functions:</strong>
         </p>
         <ul>
-          <li>Wallet with ETH balance for initial deposit</li>
+          <li>Alice&apos; Wallet with ETH balance for initial deposit</li>
           <li>Web3 connection to interact with smart contract</li>
           <li>UI to send LLM requests and view responses</li>
           <li>Ability to check balance and request history</li>
         </ul>
-        <div
-          className={css({
-            fontSize: "13px",
-            fontFamily: "monospace",
-            backgroundColor: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "4px",
-            border: "1px solid #ddd",
-            marginBottom: "32px",
-          })}
-        >
-          {/* Example wallet integration */}
-          await contract.depositForLLM({`{value: parseEther("0.05")}`})
-          <br />
-          const balance = await contract.llmBalance(userAddress)
-        </div>
 
-        <h4>📄 LLM Contract (Smart Contract)</h4>
+        <h4>LLM API (AI Service)</h4>
+        <p>
+          The requirements on the LLM API also does not really change compared to the case of generating images.
+          It it simple really nice if it is OpenAI compatible but thiat is. wallets to not really change compare to the image generation. So this is straight
+          forward.
+        </p>
+        <p>
+          <strong>Role:</strong> External AI service provider (OpenAI, Anthropic, etc.)
+        </p>
+        <p>
+          <strong>Required Features:</strong>
+        </p>
+        <ul>
+          <li>RESTful API endpoint for completions</li>
+          <li>Authentication via API keys</li>
+          <li>Token counting for cost calculation</li>
+          <li>Consistent response format</li>
+        </ul>
+    
+        <h4>LLM Contract (Smart Contract)</h4>
         <p>
           <strong>Role:</strong> Central coordinator for deposits, balance tracking, and batch settlement
         </p>
@@ -1506,6 +1516,13 @@ export default function MerkleAIBatching() {
             marginBottom: "16px",
           })}
         >
+          {/* Smart Contract Dependencies */}
+          <br />
+          import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
+          <br />
+          import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
+          <br />
+          <br />
           mapping(address =&gt; uint256) public llmBalance;
           <br />
           mapping(bytes32 =&gt; bool) public processedBatches;
@@ -1556,11 +1573,16 @@ export default function MerkleAIBatching() {
           <strong>2. verifyMerkleProof() - On-chain vs Off-chain Debate</strong>
         </p>
         <p>
-          <strong>On-chain Benefits:</strong> Trustless verification, transparency, immutable proof validation
+          <strong>Gas Cost Clarification:</strong> The <code>verifyMerkleProof()</code> function is marked as{" "}
+          <code>pure</code> and only performs computations without state changes, so it costs{" "}
+          <strong>no gas when called directly</strong>. Gas is only consumed when it&apos;s called within{" "}
+          <code>processBatch()</code> as part of a transaction.
           <br />
-          <strong>Off-chain Benefits:</strong> Lower gas costs, faster verification, reduced blockchain bloat
+          <strong>On-chain Benefits:</strong> Trustless verification, transparency, immutable proof validation, no
+          additional gas when called standalone
           <br />
-          <strong>Recommendation:</strong> Keep on-chain for security. Gas cost is amortized across the entire batch.
+          <strong>Off-chain Benefits:</strong> Faster verification, reduced blockchain load
+          <br />
         </p>
         <div
           className={css({
@@ -1573,6 +1595,11 @@ export default function MerkleAIBatching() {
             marginBottom: "16px",
           })}
         >
+          {/* Recommended: Use OpenZeppelin's MerkleProof library */}
+          <br />
+          import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
+          <br />
+          <br />
           function verifyMerkleProof(
           <br />
           &nbsp;&nbsp;bytes32[] memory proof,
@@ -1581,23 +1608,14 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;bytes32 leaf) public pure returns (bool) {`{`}
           <br />
-          &nbsp;&nbsp;bytes32 computedHash = leaf;
-          <br />
-          &nbsp;&nbsp;for (uint256 i = 0; i &lt; proof.length; i++) {`{`}
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;bytes32 proofElement = proof[i];
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;computedHash = computedHash &lt;= proofElement
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;? keccak256(abi.encodePacked(computedHash, proofElement))
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: keccak256(abi.encodePacked(proofElement, computedHash));
-          <br />
-          &nbsp;&nbsp;{`}`}
-          <br />
-          &nbsp;&nbsp;return computedHash == root;
+          &nbsp;&nbsp;return MerkleProof.verify(proof, root, leaf);
           <br />
           {`}`}
+          <br />
+          <br />
+          {/* Alternative: Custom implementation (not recommended) */}
+          <br />
+          {/* function verifyMerkleProofCustom(...) { ... } */}
         </div>
 
         <p>
@@ -1719,37 +1737,7 @@ export default function MerkleAIBatching() {
           {`}`}
         </div>
 
-        <h4>🤖 LLM API (AI Service)</h4>
-        <p>
-          <strong>Role:</strong> External AI service provider (OpenAI, Anthropic, etc.)
-        </p>
-        <p>
-          <strong>Required Features:</strong>
-        </p>
-        <ul>
-          <li>RESTful API endpoint for completions</li>
-          <li>Authentication via API keys</li>
-          <li>Token counting for cost calculation</li>
-          <li>Rate limiting and error handling</li>
-          <li>Consistent response format</li>
-        </ul>
-        <div
-          className={css({
-            fontSize: "13px",
-            fontFamily: "monospace",
-            backgroundColor: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "4px",
-            border: "1px solid #ddd",
-            marginBottom: "32px",
-          })}
-        >
-          POST /v1/chat/completions
-          <br />
-          {`{`} &quot;model&quot;: &quot;gpt-4&quot;, &quot;messages&quot;: [...] {`}`}
-          <br />
-          {/* Response includes usage.total_tokens */}
-        </div>
+        
 
         <h4>🌳 Merkle Tree on S3 Storage (Batch Coordinator)</h4>
         <p>
@@ -1792,37 +1780,6 @@ export default function MerkleAIBatching() {
           const root = tree.getRoot();
           <br />
           const proof = tree.getProof(leaf);
-        </div>
-
-        <h4>💰 LLM Wallet (Service Provider)</h4>
-        <p>
-          <strong>Role:</strong> Receives payments for providing LLM services
-        </p>
-        <p>
-          <strong>Required Features:</strong>
-        </p>
-        <ul>
-          <li>Ethereum wallet address for receiving payments</li>
-          <li>Automated payment processing</li>
-          <li>Cost calculation and billing logic</li>
-          <li>Integration with AI service costs</li>
-          <li>Revenue tracking and accounting</li>
-        </ul>
-        <div
-          className={css({
-            fontSize: "13px",
-            fontFamily: "monospace",
-            backgroundColor: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "4px",
-            border: "1px solid #ddd",
-            marginBottom: "32px",
-          })}
-        >
-          {/* Service provider wallet */}
-          address serviceProvider = 0x742d35Cc6aB4...
-          <br />
-          {/* Receives batch payments automatically */}
         </div>
 
         <h4>🔗 Integration Requirements</h4>

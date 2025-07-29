@@ -7,21 +7,13 @@ interface MermaidDiagramProps {
   definition: string;
   /** Title displayed above the diagram */
   title: string;
-  /** Fallback content to display if diagram rendering fails */
-  fallbackContent: React.ReactNode;
   /** Additional CSS classes for the container */
   className?: string;
   /** Custom mermaid configuration */
   config?: Record<string, unknown>;
 }
 
-const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
-  definition,
-  title,
-  fallbackContent,
-  className,
-  config = {},
-}) => {
+const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, className, config = {} }) => {
   const mermaidRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,24 +43,13 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
       } catch (error) {
         console.error("Error rendering Mermaid diagram:", error);
         if (mermaidRef.current) {
-          // Render fallback content if provided as React node
-          if (React.isValidElement(fallbackContent)) {
-            const fallbackContainer = document.createElement("div");
-            mermaidRef.current.appendChild(fallbackContainer);
-            // For React elements, we need to render them properly
-            // For now, we'll convert to string if it's a simple element
-            mermaidRef.current.innerHTML = `<div>${fallbackContent}</div>`;
-          } else {
-            // If fallbackContent is a string or HTML
-            mermaidRef.current.innerHTML =
-              typeof fallbackContent === "string" ? fallbackContent : String(fallbackContent);
-          }
+          mermaidRef.current.innerHTML = "<div>Diagram konnte nicht gerendert werden.</div>";
         }
       }
     };
 
     renderDiagram();
-  }, [definition, config, fallbackContent]);
+  }, [definition, config]);
 
   return (
     <div

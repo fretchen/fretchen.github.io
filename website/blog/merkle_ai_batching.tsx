@@ -26,21 +26,6 @@ const MERKLE_TREE_MATH_DEFINITION = `graph TD
     class H1,H2,H3,H4,H12,H34 hashNode
     class ROOT rootNode`;
 
-const MERKLE_TREE_MATH_FALLBACK = (
-  <div
-    style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
-  >
-    <div>
-      <strong>For requests R₁, R₂, R₃, R₄:</strong>
-    </div>
-    <div style={{ margin: "8px 0" }}>H₁ = hash(R₁), H₂ = hash(R₂), H₃ = hash(R₃), H₄ = hash(R₄)</div>
-    <div style={{ margin: "8px 0" }}>H₁₂ = hash(H₁ + H₂), H₃₄ = hash(H₃ + H₄)</div>
-    <div style={{ margin: "8px 0" }}>
-      <strong>Root = hash(H₁₂ + H₃₄)</strong>
-    </div>
-  </div>
-);
-
 const GENIMNET_WORKFLOW_DEFINITION = `sequenceDiagram
     Actor User
     participant Contract as GenImNFT Contract
@@ -62,30 +47,6 @@ const GENIMNET_WORKFLOW_DEFINITION = `sequenceDiagram
     Note over Contract: NFT now has final image
     Contract->>ServiceProvider: 7. Auto-pay service provider
     ServiceProvider-->>Contract: Payment confirmed`;
-
-const GENIMNET_WORKFLOW_FALLBACK = (
-  <div
-    style={{
-      padding: "20px",
-      color: "#ef4444",
-      border: "1px solid #fecaca",
-      borderRadius: "4px",
-      backgroundColor: "#fef2f2",
-    }}
-  >
-    <p>
-      <strong>Workflow Steps:</strong>
-    </p>
-    <ol style={{ textAlign: "left", margin: 0, paddingLeft: "20px" }}>
-      <li>User pays ~$0.10 ETH → safeMint() creates NFT</li>
-      <li>NFT starts with placeholder image</li>
-      <li>Serverless function calls FLUX AI API</li>
-      <li>Generated image uploaded to S3 storage</li>
-      <li>NFT metadata updated with final image</li>
-      <li>Contract auto-pays image provider wallet</li>
-    </ol>
-  </div>
-);
 
 // Merkle Proof Path Diagram for Request 3
 const MERKLE_PROOF_PATH_DEFINITION = `graph TD
@@ -114,23 +75,6 @@ const MERKLE_PROOF_PATH_DEFINITION = `graph TD
     class R3 proofPath
     class H3,H34 proofPath
     class H4,H12 proofNode`;
-
-const MERKLE_PROOF_PATH_FALLBACK = (
-  <div
-    style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
-  >
-    <div>
-      <strong>Proof Path for R₃ (highlighted):</strong>
-    </div>
-    <div style={{ margin: "8px 0" }}>1. Start with: H₃ = hash(R₃)</div>
-    <div style={{ margin: "8px 0" }}>2. Need sibling: H₄ (provided in proof)</div>
-    <div style={{ margin: "8px 0" }}>3. Compute: H₃₄ = hash(H₃ + H₄)</div>
-    <div style={{ margin: "8px 0" }}>4. Need sibling: H₁₂ (provided in proof)</div>
-    <div style={{ margin: "8px 0" }}>
-      <strong>5. Verify: Root = hash(H₁₂ + H₃₄)</strong>
-    </div>
-  </div>
-);
 
 // Updated LLM Prepaid Workflow with Merkle Batching
 const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
@@ -164,24 +108,6 @@ const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
     Contract->>Contract: Mark batch as processed
     Contract->>Blockchain: Single transaction ($15 gas for entire batch)
     Contract-->>Alice: Settlement confirmed + individual proof`;
-
-const UPDATED_LLM_WORKFLOW_FALLBACK = (
-  <div
-    style={{ padding: "20px", color: "#374151", background: "white", borderRadius: "4px", border: "1px solid #d1d5db" }}
-  >
-    <div>
-      <strong>Updated LLM Workflow Steps (Alice&apos;s Journey):</strong>
-    </div>
-    <div style={{ margin: "8px 0" }}>1. Alice deposits $50 upfront (prepaid model)</div>
-    <div style={{ margin: "8px 0" }}>2. Alice makes an LLM request with instant balance check</div>
-    <div style={{ margin: "8px 0" }}>3. Request queued until batch trigger (50 requests or 5 minutes)</div>
-    <div style={{ margin: "8px 0" }}>4. Merkle tree constructed with Alice&apos;s and other requests</div>
-    <div style={{ margin: "8px 0" }}>5. Single blockchain transaction settles entire batch</div>
-    <div style={{ margin: "8px 0" }}>
-      <strong>6. Alice receives individual proof for her request</strong>
-    </div>
-  </div>
-);
 
 // Export meta for blog post
 export const meta = {
@@ -1074,11 +1000,46 @@ const BatchCreator: React.FC = () => {
                 marginBottom: "0.75rem",
               })}
             >
+              {/* Prompt & Response (not part of leaf/hash) */}
+              <div className={css({ marginBottom: "0.5rem" })}>
+                <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.15rem", color: "#0ea5e9" })}>
+                  Prompt (not part of Merkle leaf):
+                </div>
+                <div className={css({
+                  fontSize: "0.85rem",
+                  fontFamily: "monospace",
+                  backgroundColor: "#f0f9ff",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "4px",
+                  border: "1px solid #bae6fd",
+                  marginBottom: "0.3rem",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                })}>
+                  {request.prompt}
+                </div>
+                <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.15rem", color: "#0ea5e9" })}>
+                  Response (not part of Merkle leaf):
+                </div>
+                <div className={css({
+                  fontSize: "0.85rem",
+                  fontFamily: "monospace",
+                  backgroundColor: "#f0fdf4",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "4px",
+                  border: "1px solid #bbf7d0",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                })}>
+                  {request.response}
+                </div>
+              </div>
+
               {/* Leaf Data */}
               {request.leafData && (
                 <div className={css({ marginBottom: "0.5rem" })}>
-                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
-                    Leaf Data R<sub>{index + 1}</sub>:
+                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem", color: "#166534" })}>
+                    Merkle Leaf Data R<sub>{index + 1}</sub> (used for hash):
                   </div>
                   <pre
                     className={css({
@@ -1100,8 +1061,8 @@ const BatchCreator: React.FC = () => {
               {/* Leaf Hash */}
               {request.leafHash && (
                 <div>
-                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
-                    Leaf Hash H<sub>{index + 1}</sub>:
+                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem", color: "#166534" })}>
+                    Merkle Leaf Hash H<sub>{index + 1}</sub>:
                   </div>
                   <code
                     className={css({
@@ -1153,7 +1114,6 @@ export default function MerkleAIBatching() {
         <MermaidDiagram
           definition={GENIMNET_WORKFLOW_DEFINITION}
           title="Workflow for Image Generation"
-          fallbackContent={GENIMNET_WORKFLOW_FALLBACK}
           config={{
             sequence: {
               diagramMarginX: 50,
@@ -1212,11 +1172,7 @@ export default function MerkleAIBatching() {
           request), and each parent node contains a cryptographic hash of its children. The mathematical foundation is:
         </p>
 
-        <MermaidDiagram
-          definition={MERKLE_TREE_MATH_DEFINITION}
-          title="Merkle Tree Mathematical Foundation"
-          fallbackContent={MERKLE_TREE_MATH_FALLBACK}
-        />
+        <MermaidDiagram definition={MERKLE_TREE_MATH_DEFINITION} title="Merkle Tree Mathematical Foundation" />
         <p>
           This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
           requests with just one blockchain transaction while maintaining cryptographic proof of each individual
@@ -1246,11 +1202,7 @@ export default function MerkleAIBatching() {
         </p>
 
         <figure>
-          <MermaidDiagram
-            definition={MERKLE_PROOF_PATH_DEFINITION}
-            title="🔍 Merkle Proof Path for Request 3 (R₃)"
-            fallbackContent={MERKLE_PROOF_PATH_FALLBACK}
-          />
+          <MermaidDiagram definition={MERKLE_PROOF_PATH_DEFINITION} title="🔍 Merkle Proof Path for Request 3 (R₃)" />
           <figcaption>
             Visualization of the Merkle proof for R<sub>3</sub>: Alice needs to provide the request and proof siblings
             that are highlighted in green. The hashes that are highlighted in orange can be calculated from the
@@ -1288,7 +1240,6 @@ export default function MerkleAIBatching() {
         <MermaidDiagram
           definition={UPDATED_LLM_WORKFLOW_DEFINITION}
           title="LLM Workflow with Merkle Tree Batching"
-          fallbackContent={UPDATED_LLM_WORKFLOW_FALLBACK}
           config={{
             sequence: {
               diagramMarginX: 50,
@@ -1398,13 +1349,13 @@ export default function MerkleAIBatching() {
           <br />
           struct Request {`{`}
           <br />
-          &nbsp;&nbsp;bytes32 id;        // Unique request identifier
+          &nbsp;&nbsp;bytes32 id; // Unique request identifier
           <br />
-          &nbsp;&nbsp;string timestamp;  // ISO timestamp string
+          &nbsp;&nbsp;string timestamp; // ISO timestamp string
           <br />
           &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
           <br />
-          &nbsp;&nbsp;address wallet;    // User's wallet address
+          &nbsp;&nbsp;address wallet; // User's wallet address
           <br />
           {`}`}
           <br />

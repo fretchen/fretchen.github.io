@@ -1002,35 +1002,53 @@ const BatchCreator: React.FC = () => {
             >
               {/* Prompt & Response (not part of leaf/hash) */}
               <div className={css({ marginBottom: "0.5rem" })}>
-                <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.15rem", color: "#0ea5e9" })}>
+                <div
+                  className={css({
+                    fontWeight: "medium",
+                    fontSize: "0.85rem",
+                    marginBottom: "0.15rem",
+                    color: "#0ea5e9",
+                  })}
+                >
                   Prompt (not part of Merkle leaf):
                 </div>
-                <div className={css({
-                  fontSize: "0.85rem",
-                  fontFamily: "monospace",
-                  backgroundColor: "#f0f9ff",
-                  padding: "0.4rem 0.6rem",
-                  borderRadius: "4px",
-                  border: "1px solid #bae6fd",
-                  marginBottom: "0.3rem",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                })}>
+                <div
+                  className={css({
+                    fontSize: "0.85rem",
+                    fontFamily: "monospace",
+                    backgroundColor: "#f0f9ff",
+                    padding: "0.4rem 0.6rem",
+                    borderRadius: "4px",
+                    border: "1px solid #bae6fd",
+                    marginBottom: "0.3rem",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  })}
+                >
                   {request.prompt}
                 </div>
-                <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.15rem", color: "#0ea5e9" })}>
+                <div
+                  className={css({
+                    fontWeight: "medium",
+                    fontSize: "0.85rem",
+                    marginBottom: "0.15rem",
+                    color: "#0ea5e9",
+                  })}
+                >
                   Response (not part of Merkle leaf):
                 </div>
-                <div className={css({
-                  fontSize: "0.85rem",
-                  fontFamily: "monospace",
-                  backgroundColor: "#f0fdf4",
-                  padding: "0.4rem 0.6rem",
-                  borderRadius: "4px",
-                  border: "1px solid #bbf7d0",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                })}>
+                <div
+                  className={css({
+                    fontSize: "0.85rem",
+                    fontFamily: "monospace",
+                    backgroundColor: "#f0fdf4",
+                    padding: "0.4rem 0.6rem",
+                    borderRadius: "4px",
+                    border: "1px solid #bbf7d0",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  })}
+                >
                   {request.response}
                 </div>
               </div>
@@ -1038,7 +1056,14 @@ const BatchCreator: React.FC = () => {
               {/* Leaf Data */}
               {request.leafData && (
                 <div className={css({ marginBottom: "0.5rem" })}>
-                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem", color: "#166534" })}>
+                  <div
+                    className={css({
+                      fontWeight: "medium",
+                      fontSize: "0.85rem",
+                      marginBottom: "0.25rem",
+                      color: "#166534",
+                    })}
+                  >
                     Merkle Leaf Data R<sub>{index + 1}</sub> (used for hash):
                   </div>
                   <pre
@@ -1061,7 +1086,14 @@ const BatchCreator: React.FC = () => {
               {/* Leaf Hash */}
               {request.leafHash && (
                 <div>
-                  <div className={css({ fontWeight: "medium", fontSize: "0.85rem", marginBottom: "0.25rem", color: "#166534" })}>
+                  <div
+                    className={css({
+                      fontWeight: "medium",
+                      fontSize: "0.85rem",
+                      marginBottom: "0.25rem",
+                      color: "#166534",
+                    })}
+                  >
                     Merkle Leaf Hash H<sub>{index + 1}</sub>:
                   </div>
                   <code

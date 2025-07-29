@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
-// import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
-import { MerkleTree } from "merkletreejs"; // For interactive demos only
-import { Buffer } from "buffer";
+import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import MermaidDiagram from "../components/MermaidDiagram";
 
 // Mermaid diagram definitions
@@ -189,8 +187,6 @@ const UPDATED_LLM_WORKFLOW_FALLBACK = (
 export const meta = {
   title: "Merkle Trees for LLM API Batching: Cost-Optimized Blockchain Payments for AI Services",
   publishing_date: "2025-07-29",
-  tags: ["Blockchain", "LLM", "API", "Merkle Trees", "Ethereum", "Cost Optimization", "AI Services"],
-  readTime: 8,
 };
 
 // Mock types and interfaces
@@ -231,34 +227,47 @@ const mockPrompts = [
   "Debug this JavaScript code: console.log(hello world)",
 ];
 
-// Synchronous hash function for merkletreejs compatibility
-const createSyncHash = (data: string | Buffer): Buffer => {
-  // Convert to consistent format
-  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
-
-  // Deterministic hash function for demo purposes
-  let hash = 0x811c9dc5; // FNV-1a initial value
-  for (let i = 0; i < bytes.length; i++) {
-    hash ^= bytes[i];
-    hash = (hash * 0x01000193) >>> 0; // FNV-1a prime and ensure 32-bit
-  }
-
-  // Create a deterministic 32-byte buffer
-  const result = new Uint8Array(32);
-  for (let i = 0; i < 32; i += 4) {
-    result[i] = (hash >>> 24) & 0xff;
-    result[i + 1] = (hash >>> 16) & 0xff;
-    result[i + 2] = (hash >>> 8) & 0xff;
-    result[i + 3] = hash & 0xff;
-    hash = (hash * 0x01000193) >>> 0; // Continue hashing for next 4 bytes
-  }
-
-  return Buffer.from(result);
-};
-
-// Shared hash function for Merkle Tree construction
-const createMerkleHashFn = () => {
-  return (data: Buffer) => createSyncHash(data);
+// Sample data for demonstrations
+const sampleBatch = {
+  merkleRoot: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+  requests: [
+    {
+      id: 1,
+      owner: "0xUser1Address...",
+      prompt: "Analyze the sentiment of this customer review: 'The product is amazing!'",
+      leafData: {
+        id: 1,
+        timestamp: "2024-01-15T10:30:00.000Z",
+        tokenCount: 150,
+        wallet: "0xUser1Address...",
+      },
+      leafHash: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+    },
+    {
+      id: 2,
+      owner: "0xUser2Address...",
+      prompt: "Translate this text to German: 'Hello, how are you today?'",
+      leafData: {
+        id: 2,
+        timestamp: "2024-01-15T10:32:00.000Z",
+        tokenCount: 120,
+        wallet: "0xUser2Address...",
+      },
+      leafHash: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+    },
+    {
+      id: 3,
+      owner: "0xUser3Address...",
+      prompt: "Write a short Python function to calculate fibonacci numbers",
+      leafData: {
+        id: 3,
+        timestamp: "2024-01-15T10:35:00.000Z",
+        tokenCount: 180,
+        wallet: "0xUser3Address...",
+      },
+      leafHash: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
+    },
+  ],
 };
 
 // Types for proof demo
@@ -271,55 +280,16 @@ interface MerkleProof {
     wallet: string;
   };
   leafHash: string;
-  proof: Array<{
-    data: string;
-    position: "left" | "right";
-  }>;
+  proof: { data: string; position: "left" | "right" }[];
   root: string;
 }
 
-// Sample data for proof demo (Alice's story)
-const sampleBatch = {
-  requests: [
-    {
-      id: 1,
-      leafData: { id: 1, timestamp: "2025-07-29T10:00:00.000Z", tokenCount: 150, wallet: "0xAliceAddress..." },
-      leafHash: "0xa1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
-      prompt: "Analyze the sentiment of customer feedback",
-      owner: "Alice",
-    },
-    {
-      id: 2,
-      leafData: { id: 2, timestamp: "2025-07-29T10:01:00.000Z", tokenCount: 200, wallet: "0xBobAddress..." },
-      leafHash: "0xb2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567",
-      prompt: "Generate marketing copy for new product",
-      owner: "Bob",
-    },
-    {
-      id: 3,
-      leafData: { id: 3, timestamp: "2025-07-29T10:02:00.000Z", tokenCount: 175, wallet: "0xCharlieAddress..." },
-      leafHash: "0xc3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
-      prompt: "Translate technical documentation to Spanish",
-      owner: "Charlie",
-    },
-    {
-      id: 4,
-      leafData: { id: 4, timestamp: "2025-07-29T10:03:00.000Z", tokenCount: 120, wallet: "0xDaveAddress..." },
-      leafHash: "0xd4e5f6789012345678901234567890abcdef1234567890abcdef123456789",
-      prompt: "Debug Python code for data analysis",
-      owner: "Dave",
-    },
-  ],
-  merkleRoot: "0x1a2b3c4d5e6f789012345678901234567890abcdef1234567890abcdef123456",
-};
-
-// Generate Merkle Proof for a specific leaf (using OpenZeppelin StandardMerkleTree)
+// Generate a Merkle Proof using OpenZeppelin StandardMerkleTree
 const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
-  const requests = sampleBatch.requests;
-  const selectedRequest = requests[leafIndex];
+  const selectedRequest = sampleBatch.requests[leafIndex];
 
-  // For demo: simplified format (production uses Request struct format)
-  const treeData = requests.map((req) => [
+  // Prepare tree data in the same format as calculateMerkleRoot
+  const treeData = sampleBatch.requests.map((req) => [
     req.leafData.id,
     req.leafData.timestamp,
     req.leafData.tokenCount,
@@ -348,49 +318,62 @@ const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
   };
 };
 
-// Validate a Merkle Proof using merkletreejs built-in verification
+// Validate a Merkle Proof using OpenZeppelin StandardMerkleTree
 const validateMerkleProof = async (
   proof: MerkleProof,
 ): Promise<{ isValid: boolean; message: string; steps: string[] }> => {
   try {
-    // Recreate the original tree to use instance verification
+    // Recreate the tree using StandardMerkleTree for validation
     const allRequests = sampleBatch.requests;
-    const allLeafBuffers = allRequests.map((req) => {
-      const serialized = JSON.stringify(req.leafData, Object.keys(req.leafData).sort());
-      return createSyncHash(serialized);
-    });
 
-    const hashFn = createMerkleHashFn();
-    const tree = new MerkleTree(allLeafBuffers, hashFn);
+    // Convert to the same format used in generation
+    const treeData = allRequests.map((req) => [
+      req.leafData.id,
+      req.leafData.timestamp,
+      req.leafData.tokenCount,
+      req.leafData.wallet,
+    ]);
 
-    // Get the leaf buffer for the proof
-    const leafBuffer = createSyncHash(JSON.stringify(proof.leafData, Object.keys(proof.leafData).sort()));
+    const demoTypes = ["uint256", "string", "uint256", "string"];
+    const tree = StandardMerkleTree.of(treeData, demoTypes);
 
-    // Use the tree instance verify method (this is the most reliable approach)
-    const originalProof = tree.getProof(leafBuffer);
-    const treeRoot = tree.getRoot();
-    const isValid = tree.verify(originalProof, leafBuffer, treeRoot);
+    // Get the specific leaf data for verification
+    const leafData = [proof.leafData.id, proof.leafData.timestamp, proof.leafData.tokenCount, proof.leafData.wallet];
 
-    // Alternative: Check if the leaf exists in the tree
-    const leafIndex = allLeafBuffers.findIndex((buf) => buf.equals(leafBuffer));
-    const alternativeValid = leafIndex === proof.leafIndex && leafIndex >= 0;
+    // Convert proof format from our custom format back to StandardMerkleTree format
+    const standardProof = proof.proof.map((p) => p.data);
+
+    // Use StandardMerkleTree's built-in verification
+    const isValid = StandardMerkleTree.verify(tree.root, demoTypes, leafData, standardProof);
+
+    // Additional check: verify the leaf exists in the tree
+    let leafExists = false;
+    let foundIndex = -1;
+    for (const [index, value] of tree.entries()) {
+      if (JSON.stringify(value) === JSON.stringify(leafData)) {
+        leafExists = true;
+        foundIndex = index;
+        break;
+      }
+    }
 
     const steps = [
-      `✅ Used merkletreejs tree.verify()`,
-      `📋 Leaf: ${leafBuffer.toString("hex").substring(0, 10)}...`,
-      `🌳 Tree Root: 0x${treeRoot.toString("hex").substring(0, 10)}...`,
-      `🔍 Proof Root: ${proof.root.substring(0, 10)}...`,
-      `� Leaf Index: ${leafIndex} (expected: ${proof.leafIndex})`,
-      `� Root Match: ${`0x${treeRoot.toString("hex")}` === proof.root}`,
-      `🎯 Index Match: ${alternativeValid}`,
+      `✅ Used OpenZeppelin StandardMerkleTree.verify()`,
+      `📋 Leaf Data: [${leafData.join(", ")}]`,
+      `🌳 Tree Root: ${tree.root.substring(0, 16)}...`,
+      `🔍 Proof Root: ${proof.root.substring(0, 16)}...`,
+      `📍 Leaf Index: ${foundIndex} (expected: ${proof.leafIndex})`,
+      `🎯 Root Match: ${tree.root === proof.root}`,
+      `🔍 Leaf Exists: ${leafExists}`,
       `${isValid ? "✅ Verification: VALID" : "❌ Verification: INVALID"}`,
     ];
 
     return {
-      isValid: isValid && alternativeValid && `0x${treeRoot.toString("hex")}` === proof.root,
-      message: isValid
-        ? "Proof is valid! Alice's payment is confirmed."
-        : "Proof is invalid! This payment cannot be verified.",
+      isValid: isValid && leafExists && tree.root === proof.root,
+      message:
+        isValid && leafExists
+          ? "Proof is valid! Alice's payment is confirmed."
+          : "Proof is invalid! This payment cannot be verified.",
       steps,
     };
   } catch (error) {
@@ -744,79 +727,67 @@ const ProofDemo: React.FC = () => {
   );
 };
 
-// Mock Merkle Tree functions using merkletreejs with consistent hash function
+// Calculate Merkle Root using OpenZeppelin StandardMerkleTree
 const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
-  // Use the actual leaf data from requests (don't recreate timestamps)
-  const publicLeaves = requests.map((req) => req.leafData!);
+  if (requests.length === 0) return "";
 
-  // Convert to buffer format for merkletreejs using same hash function
-  const leafBuffers = publicLeaves.map((leaf) => {
-    const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
-    return createSyncHash(serialized);
-  });
+  // Use the actual leaf data from requests
+  const treeData = requests.map((req) => [
+    req.leafData!.id,
+    req.leafData!.timestamp,
+    req.leafData!.tokenCount,
+    req.leafData!.wallet,
+  ]);
 
-  // Use the shared hash function
-  const hashFn = createMerkleHashFn();
+  // Define types for the tree
+  const demoTypes = ["uint256", "string", "uint256", "string"];
 
-  const tree = new MerkleTree(leafBuffers, hashFn);
-  const root = tree.getRoot();
+  // Create StandardMerkleTree
+  const tree = StandardMerkleTree.of(treeData, demoTypes);
 
-  return `0x${root.toString("hex")}`;
+  return tree.root;
 };
 
-// Function to visualize the Merkle Tree structure
+// Function to visualize the Merkle Tree structure using StandardMerkleTree
 const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
   if (requests.length === 0) return "";
 
-  // Use the same leaf data as in calculateMerkleRoot
-  const publicLeaves = requests.map((req) => req.leafData!);
+  // Use the same leaf data format as calculateMerkleRoot
+  const treeData = requests.map((req) => [
+    req.leafData!.id,
+    req.leafData!.timestamp,
+    req.leafData!.tokenCount,
+    req.leafData!.wallet,
+  ]);
 
-  const leafBuffers = publicLeaves.map((leaf) => {
-    const serialized = JSON.stringify(leaf, Object.keys(leaf).sort());
-    return createSyncHash(serialized);
-  });
+  const demoTypes = ["uint256", "string", "uint256", "string"];
+  const tree = StandardMerkleTree.of(treeData, demoTypes);
 
-  // Use the same hash function as calculateMerkleRoot
-  const hashFn = createMerkleHashFn();
+  let visualization = "Merkle Tree (OpenZeppelin StandardMerkleTree):\n";
+  visualization += `Root: ${tree.root.substring(0, 16)}...\n`;
 
-  const tree = new MerkleTree(leafBuffers, hashFn);
-
-  // Get the layers of the tree
-  const layers = tree.getLayers();
-  let visualization = "Merkle Tree:\n";
-
-  // Root (top level)
-  const root = layers[layers.length - 1][0];
-  visualization += `Root: ${root.toString("hex").substring(0, 8)}\n`;
-
-  // Intermediate levels (if any)
-  for (let i = layers.length - 2; i > 0; i--) {
-    const level = layers[i];
-    const levelHashes = level.map((hash) => hash.toString("hex").substring(0, 8));
-    visualization += `Level ${layers.length - 1 - i}: ${levelHashes.join(" | ")}\n`;
+  // Display tree structure
+  visualization += "\nTree Structure:\n";
+  for (const [index, value] of tree.entries()) {
+    const leafHash = tree.leafHash(value);
+    visualization += `Leaf ${index + 1}: ${leafHash.substring(0, 16)}... (${value[0]}, ${value[3]})\n`;
   }
-
-  // Leaf level
-  const leaves = layers[0];
-  const leafHashes = leaves.map((hash, index) => `H${index + 1}: ${hash.toString("hex").substring(0, 8)}`);
-  visualization += `Leaves: ${leafHashes.join(" | ")}`;
 
   return visualization;
 };
 
 // Interactive Batch Creator Component
+const BATCH_SIZE_THRESHOLD = 4; // Small threshold for demo purposes
+
 const BatchCreator: React.FC = () => {
   const [requests, setRequests] = useState<LLMRequest[]>([]);
   const [merkleRoot, setMerkleRoot] = useState<string>("");
   const [merkleTreeVisualization, setMerkleTreeVisualization] = useState<string>("");
   const [batchRegistered, setBatchRegistered] = useState(false);
   const [nextRequestId, setNextRequestId] = useState(1);
-  const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
   const [currentPrompt, setCurrentPrompt] = useState("");
-
-  const BATCH_SIZE_THRESHOLD = 4; // Create merkle tree after 4 requests
-
-  // Simulate sending an LLM call (like in the notebook)
+  const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
+  // Simulate sending an LLM call (using StandardMerkleTree for consistency)
   const sendLLMCall = async (wallet: string, prompt: string) => {
     // Create leaf data
     const leafData = {
@@ -826,10 +797,13 @@ const BatchCreator: React.FC = () => {
       wallet: wallet,
     };
 
-    // Calculate leaf hash using same hash function as tree construction
-    const serialized = JSON.stringify(leafData, Object.keys(leafData).sort());
-    const leafHashBuffer = createSyncHash(serialized);
-    const leafHash = `0x${leafHashBuffer.toString("hex")}`;
+    // Calculate leaf hash using StandardMerkleTree for consistency
+    const leafArray = [leafData.id, leafData.timestamp, leafData.tokenCount, leafData.wallet];
+    const demoTypes = ["uint256", "string", "uint256", "string"];
+
+    // Create a temporary tree to get the leaf hash
+    const tempTree = StandardMerkleTree.of([leafArray], demoTypes);
+    const leafHash = tempTree.leafHash(leafArray);
 
     // Simulate LLM response
     const mockResponses = [

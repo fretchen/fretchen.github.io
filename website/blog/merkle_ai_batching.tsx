@@ -1300,114 +1300,6 @@ export default function MerkleAIBatching() {
             },
           }}
         />
-        <h3>Complete Workflow</h3>
-        <p>
-          The workflow diagram above shows Alice&apos;s complete journey through our Merkle tree batching system.
-          Let&apos;s break down what is required from each participant in the system:
-        </p>
-
-        <h4>Phase 1: Prepaid Deposit (Alice → LLM Contract)</h4>
-        <div
-          className={css({
-            fontFamily: "monospace",
-            backgroundColor: "#fff",
-            padding: "12px",
-            borderRadius: "4px",
-            fontSize: "13px",
-            lineHeight: "1.4",
-          })}
-        >
-          <div>1. Alice calls: contract.depositForLLM() with $50</div>
-          <div>2. Contract updates: balance[Alice] = $50</div>
-          <div>3. Alice can now make instant LLM requests</div>
-        </div>
-
-        <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-          Phase 2: LLM Request Processing (Off-chain, Instant Response)
-        </h4>
-        <div
-          className={css({
-            fontFamily: "monospace",
-            backgroundColor: "#fff",
-            padding: "12px",
-            borderRadius: "4px",
-            fontSize: "13px",
-            lineHeight: "1.4",
-            marginBottom: "8px",
-          })}
-        >
-          <div>1. Alice calls: contract.depositForLLM() with $50</div>
-          <div>2. Contract updates: balance[Alice] = $50</div>
-          <div>3. Alice can now make instant LLM requests</div>
-        </div>
-
-        <div className={css({ marginBottom: "16px" })}>
-          <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-            Phase 2: LLM Request Processing (Off-chain, Instant Response)
-          </h4>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "13px",
-              lineHeight: "1.4",
-              marginBottom: "8px",
-            })}
-          >
-            <div>1. Alice→Serverless: &quot;Analyze sentiment&quot;</div>
-            <div>2. Serverless→Contract: Check Alice $50 ≥ $2 ✅</div>
-            <div>3. Serverless→LLM API: Process request</div>
-            <div>4. LLM→Serverless→Alice: Instant response</div>
-            <div>5. Serverless→S3: Create leaf for Alice&apos;s request</div>
-          </div>
-        </div>
-
-        <div className={css({ marginBottom: "16px" })}>
-          <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-            Phase 3: Batch Trigger (Merkle Tree Construction)
-          </h4>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "13px",
-              lineHeight: "1.4",
-              marginBottom: "8px",
-            })}
-          >
-            <div>1. S3→S3: Calculate root hash (batch ready)</div>
-            <div>2. S3→S3: Generate proof for Alice&apos;s request</div>
-            <div>3. Batch includes Alice + other users&apos; requests</div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "8px", color: "#047857" })}>
-            Phase 4: Atomic Settlement (Single Blockchain Transaction)
-          </h4>
-          <div
-            className={css({
-              fontFamily: "monospace",
-              backgroundColor: "#fff",
-              padding: "12px",
-              borderRadius: "4px",
-              fontSize: "13px",
-              lineHeight: "1.4",
-            })}
-          >
-            <div>1. S3→Contract: processBatch(root, requests, proofs)</div>
-            <div>2. Contract→Contract: Verify Alice&apos;s proof ✅</div>
-            <div>3. Contract→Contract: Deduct Alice -= $2</div>
-            <div>4. Contract→Contract: Mark batch as processed</div>
-            <div>5. Contract→LLM Wallet: Pay service provider</div>
-            <div>6. Contract→Alice: Settlement confirmed + proof</div>
-            <div>7. ✨ Result: Alice&apos;s $2 request settled with others in 1 transaction!</div>
-          </div>
-        </div>
 
         <h3>Required features from each participant</h3>
         <p>
@@ -1502,21 +1394,17 @@ export default function MerkleAIBatching() {
           import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
           <br />
           <br />
-          {/* Request struct definition - CRITICAL for processBatch compatibility */}
+          {/* Request struct definition - Simplified for efficient Merkle tree processing */}
           <br />
           struct Request {`{`}
           <br />
-          &nbsp;&nbsp;address user;
+          &nbsp;&nbsp;bytes32 id;        // Unique request identifier
           <br />
-          &nbsp;&nbsp;string prompt;
+          &nbsp;&nbsp;string timestamp;  // ISO timestamp string
           <br />
-          &nbsp;&nbsp;uint256 tokenCount;
+          &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
           <br />
-          &nbsp;&nbsp;uint256 cost;
-          <br />
-          &nbsp;&nbsp;uint256 timestamp;
-          <br />
-          &nbsp;&nbsp;string model;
+          &nbsp;&nbsp;address wallet;    // User's wallet address
           <br />
           {`}`}
           <br />
@@ -1568,19 +1456,13 @@ export default function MerkleAIBatching() {
         </div>
 
         <p>
-          <strong>2. verifyMerkleProof() - On-chain vs Off-chain Debate</strong>
+          <strong>2. verifyMerkleProof()</strong>
         </p>
         <p>
           <strong>Gas Cost Clarification:</strong> The <code>verifyMerkleProof()</code> function is marked as{" "}
           <code>pure</code> and only performs computations without state changes, so it costs{" "}
           <strong>no gas when called directly</strong>. Gas is only consumed when it&apos;s called within{" "}
           <code>processBatch()</code> as part of a transaction.
-          <br />
-          <strong>On-chain Benefits:</strong> Trustless verification, transparency, immutable proof validation, no
-          additional gas when called standalone
-          <br />
-          <strong>Off-chain Benefits:</strong> Faster verification, reduced blockchain load
-          <br />
         </p>
         <div
           className={css({
@@ -1969,25 +1851,19 @@ export default function MerkleAIBatching() {
           <br />
           export function createLeafData(requestData) {`{`}
           <br />
+          &nbsp;&nbsp;// Return simplified leaf data structure optimized for Merkle tree
+          <br />
+          &nbsp;&nbsp;// This matches the format used in the proof demo: (id, timestamp, tokenCount, wallet)
+          <br />
           &nbsp;&nbsp;return {`{`}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;id: randomBytes(16).toString("hex"),
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;userAddress: requestData.userAddress,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;prompt: requestData.prompt,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;response: requestData.response,
+          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: requestData.tokenCount,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;cost: requestData.cost,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;model: requestData.model,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;leafHash: null // Will be calculated in batch processing
+          &nbsp;&nbsp;&nbsp;&nbsp;wallet: requestData.userAddress
           <br />
           &nbsp;&nbsp;{`}`};
           <br />

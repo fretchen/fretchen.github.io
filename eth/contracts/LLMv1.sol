@@ -36,7 +36,7 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
     constructor() {
         _disableInitializers();
     }
-    
+
     /**
      * @dev Initializes the contract. Should only be called once.
      * @custom:oz-upgrades-validate-as-initializer
@@ -47,14 +47,13 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
         defaultServiceProvider = msg.sender;
         authorizedProviders[msg.sender] = true;
     }
+    
     // --- LLM batching: deposit funds for LLM usage ---
     function depositForLLM() external payable {
         require(msg.value > 0, "No ETH sent");
         llmBalance[msg.sender] += msg.value;
         emit LLMDeposit(msg.sender, msg.value);
     }
-
-     
 
     // --- LLM batching: check user balance (does NOT subtract pending requests) ---
     function checkBalance(address user) public view returns (uint256) {

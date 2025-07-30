@@ -57,7 +57,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
   // Helper function to create a temporary config file for testing
   async function createTempConfig(genImAddress: string, options: any = {}) {
-    const tempConfigPath = path.join(__dirname, "../scripts/deploy-config-v1-test.json");
+    const tempConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-test.json");
     const config = {
       genImNFTAddress: genImAddress,
       baseMintPrice: "0.001",
@@ -81,8 +81,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
   // Helper function to backup and restore config
   async function withTempConfig(genImAddress: string, options: any, testFn: () => Promise<void>) {
-    const originalConfigPath = path.join(__dirname, "../scripts/deploy-config-v1.json");
-    const backupConfigPath = path.join(__dirname, "../scripts/deploy-config-v1.json.backup");
+    const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
+    const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
     const tempConfigPath = await createTempConfig(genImAddress, options);
 
     try {
@@ -233,7 +233,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
       const { genImAddress } = await deployGenImNFTv3Fixture();
 
       // Create a config with invalid data
-      const invalidConfigPath = path.join(__dirname, "../scripts/deploy-config-v1-invalid.json");
+      const invalidConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-invalid.json");
       const invalidConfig = {
         genImNFTAddress: "invalid-address", // Invalid address format
         baseMintPrice: "invalid-price", // Invalid price format
@@ -244,8 +244,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
       fs.writeFileSync(invalidConfigPath, JSON.stringify(invalidConfig, null, 2));
 
-      const originalConfigPath = path.join(__dirname, "../scripts/deploy-config-v1.json");
-      const backupConfigPath = path.join(__dirname, "../scripts/deploy-config-v1.json.backup");
+      const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
+      const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
 
       try {
         // Backup original config if it exists
@@ -256,8 +256,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
         // Replace with invalid config
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
-        // This should fail due to schema validation
-        await expect(deployCollectorNFT()).to.be.rejectedWith("GenImNFT address required");
+        // This should fail due to format validation
+        await expect(deployCollectorNFT()).to.be.rejectedWith("Invalid genImNFTAddress format");
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -289,7 +289,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.be.true;
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `collector-nft-hardhat-${timestamp}.json`;
+          const deploymentFileName = `collector-nft-v1-hardhat-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.be.true;

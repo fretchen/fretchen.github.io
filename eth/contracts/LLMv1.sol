@@ -88,66 +88,67 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     // --- LLM batching: process a batch of requests (atomic settlement) ---
-    struct LLMRequest {
-        address user;
-        address serviceProvider;
-        string prompt;
-        uint256 tokenCount;
-        uint256 cost;
-        string timestamp;
-        string model;
+    /**
+     * @dev Structure of a single LLM batch entry (leaf) for Merkle tree and settlement.
+     *      Must exactly match the leaf definition used for Merkle tree calculation.
+     *      Fields: user, service provider, token count, cost, timestamp.
+     */
+    struct LLMLeaf {
+        address user;              // User address (payer)
+        address serviceProvider;   // Service provider address (recipient)
+        uint256 tokenCount;        // Number of LLM tokens (optional, for statistics)
+        uint256 cost;              // Amount to be settled in wei
+        string timestamp;          // Request timestamp (e.g. ISO8601)
     }
 
     /**
-     * @dev Process a batch of LLM requests using a Merkle root and proofs. Callable by any authorized service provider.
-     *      Each request must be proven to be in the batch (OpenZeppelin MerkleProof format).
-     *      Deducts cost from user balances and pays each service provider based on their requests.
+     * @dev Processes a batch of LLM leaves using a Merkle root and proofs. Callable by any authorized service provider address.
+     *      Each leaf must be proven by a Merkle proof (OpenZeppelin format).
+     *      Deducts the cost from the user's balance and pays the respective service providers.
      * @param merkleRoot The Merkle root of the batch
-     * @param requests The array of LLMRequest structs (must match leaves)
-     * @param proofs The array of Merkle proofs for each request
+     * @param leaves The array of LLMLeaf structs (must exactly match the leaves in the Merkle tree)
+     * @param proofs The array of Merkle proofs for each leaf
      */
     function processBatch(
         bytes32 merkleRoot,
-        LLMRequest[] calldata requests,
+        LLMLeaf[] calldata leaves,
         bytes32[][] calldata proofs
     ) external {
         require(authorizedProviders[msg.sender], "Not authorized provider");
         require(!processedBatches[merkleRoot], "Batch already processed");
-        require(requests.length == proofs.length, "Mismatched inputs");
+        require(leaves.length == proofs.length, "Mismatched inputs");
 
         uint256 totalCost = 0;
-        
-        for (uint256 i = 0; i < requests.length; i++) {
+
+        for (uint256 i = 0; i < leaves.length; i++) {
             // Verify service provider is authorized
-            require(authorizedProviders[requests[i].serviceProvider], "Invalid service provider");
-            
-            // Construct leaf as keccak256(abi.encode(...)) with serviceProvider included
+            require(authorizedProviders[leaves[i].serviceProvider], "Invalid service provider");
+
+            // Construct leaf as keccak256(abi.encode(...))
             bytes32 leaf = keccak256(abi.encode(
-                requests[i].user,
-                requests[i].serviceProvider,
-                requests[i].prompt,
-                requests[i].tokenCount,
-                requests[i].cost,
-                requests[i].timestamp,
-                requests[i].model
+                leaves[i].user,
+                leaves[i].serviceProvider,
+                leaves[i].tokenCount,
+                leaves[i].cost,
+                leaves[i].timestamp
             ));
             require(verifyMerkleProof(proofs[i], merkleRoot, leaf), "Invalid proof");
-            require(llmBalance[requests[i].user] >= requests[i].cost, "Insufficient balance");
-            
+            require(llmBalance[leaves[i].user] >= leaves[i].cost, "Insufficient balance");
+
             // Deduct from user balance
-            llmBalance[requests[i].user] -= requests[i].cost;
-            totalCost += requests[i].cost;
+            llmBalance[leaves[i].user] -= leaves[i].cost;
+            totalCost += leaves[i].cost;
         }
-        
+
         // Create unique list of providers and calculate their payments
-        address[] memory uniqueProviders = new address[](requests.length);
-        uint256[] memory providerPayments = new uint256[](requests.length);
+        address[] memory uniqueProviders = new address[](leaves.length);
+        uint256[] memory providerPayments = new uint256[](leaves.length);
         uint256 uniqueCount = 0;
-        
-        for (uint256 i = 0; i < requests.length; i++) {
-            address provider = requests[i].serviceProvider;
-            uint256 cost = requests[i].cost;
-            
+
+        for (uint256 i = 0; i < leaves.length; i++) {
+            address provider = leaves[i].serviceProvider;
+            uint256 cost = leaves[i].cost;
+
             // Check if provider already exists in our list
             bool found = false;
             for (uint256 j = 0; j < uniqueCount; j++) {
@@ -157,7 +158,7 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
                     break;
                 }
             }
-            
+
             // If not found, add new provider
             if (!found) {
                 uniqueProviders[uniqueCount] = provider;
@@ -165,13 +166,13 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
                 uniqueCount++;
             }
         }
-        
+
         // Pay each unique service provider
         for (uint256 i = 0; i < uniqueCount; i++) {
             (bool success, ) = payable(uniqueProviders[i]).call{value: providerPayments[i]}("");
             require(success, "Service provider payment failed");
         }
-        
+
         processedBatches[merkleRoot] = true;
         emit BatchProcessed(merkleRoot, totalCost);
     }

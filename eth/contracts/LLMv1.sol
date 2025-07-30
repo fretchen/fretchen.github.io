@@ -9,7 +9,11 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 
+
+
 contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
+
+   
 
     // LLM batching: user balances (prepaid model)
     mapping(address => uint256) public llmBalance;
@@ -28,6 +32,15 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
     event ServiceProviderAdded(address indexed provider);
     event ServiceProviderRemoved(address indexed provider);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    
+    /**
+     * @dev Initializes the contract. Should only be called once.
+     * @custom:oz-upgrades-validate-as-initializer
+     */
     function initialize() initializer public {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
@@ -40,6 +53,8 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
         llmBalance[msg.sender] += msg.value;
         emit LLMDeposit(msg.sender, msg.value);
     }
+
+     
 
     // --- LLM batching: check user balance (does NOT subtract pending requests) ---
     function checkBalance(address user) public view returns (uint256) {

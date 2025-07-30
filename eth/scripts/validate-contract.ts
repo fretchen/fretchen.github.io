@@ -245,7 +245,7 @@ async function validateImplementation(implementationAddress: string, contractNam
 
     // Try to get contract instance (this will fail if ABI doesn't match)
     try {
-      const contract = await ethers.getContractAt(contractName, implementationAddress);
+      await ethers.getContractAt(contractName, implementationAddress);
       console.log(`✅ Contract ABI matches implementation`);
 
       // For implementation contracts, we can't call initialize functions

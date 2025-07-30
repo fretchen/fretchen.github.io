@@ -121,6 +121,7 @@ interface LLMRequest {
   prompt: string;
   model: string;
   recipient: string;
+  serviceProvider: string;
   estimatedTokens: number;
   response?: string;
   leafData?: {
@@ -128,6 +129,7 @@ interface LLMRequest {
     timestamp: string;
     tokenCount: number;
     wallet: string;
+    serviceProvider: string;
   };
   leafHash?: string;
 }
@@ -139,6 +141,14 @@ const mockWallets = [
   "0xUser3Address...",
   "0xUser4Address...",
   "0xUser5Address...",
+];
+
+// Mock service provider addresses
+const mockServiceProviders = [
+  "0xOpenAIProvider...",
+  "0xAnthropicProvider...",
+  "0xLocalAIProvider...",
+  "0xCustomProvider...",
 ];
 
 // Mock prompts for LLM requests
@@ -166,6 +176,7 @@ const sampleBatch = {
         timestamp: "2024-01-15T10:30:00.000Z",
         tokenCount: 150,
         wallet: "0xUser1Address...",
+        serviceProvider: "0xOpenAIProvider...",
       },
       leafHash: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
     },
@@ -178,6 +189,7 @@ const sampleBatch = {
         timestamp: "2024-01-15T10:32:00.000Z",
         tokenCount: 120,
         wallet: "0xUser2Address...",
+        serviceProvider: "0xAnthropicProvider...",
       },
       leafHash: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
     },
@@ -190,6 +202,7 @@ const sampleBatch = {
         timestamp: "2024-01-15T10:35:00.000Z",
         tokenCount: 180,
         wallet: "0xUser3Address...",
+        serviceProvider: "0xLocalAIProvider...",
       },
       leafHash: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
     },
@@ -204,6 +217,7 @@ interface MerkleProof {
     timestamp: string;
     tokenCount: number;
     wallet: string;
+    serviceProvider: string;
   };
   leafHash: string;
   proof: { data: string; position: "left" | "right" }[];
@@ -220,10 +234,11 @@ const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
     req.leafData.timestamp,
     req.leafData.tokenCount,
     req.leafData.wallet,
+    req.leafData.serviceProvider,
   ]);
 
   // Define types for demo (simplified version of production REQUEST_TYPES)
-  const demoTypes = ["uint256", "string", "uint256", "string"];
+  const demoTypes = ["uint256", "string", "uint256", "string", "string"];
 
   // Create StandardMerkleTree
   const tree = StandardMerkleTree.of(treeData, demoTypes);
@@ -258,13 +273,20 @@ const validateMerkleProof = async (
       req.leafData.timestamp,
       req.leafData.tokenCount,
       req.leafData.wallet,
+      req.leafData.serviceProvider,
     ]);
 
-    const demoTypes = ["uint256", "string", "uint256", "string"];
+    const demoTypes = ["uint256", "string", "uint256", "string", "string"];
     const tree = StandardMerkleTree.of(treeData, demoTypes);
 
     // Get the specific leaf data for verification
-    const leafData = [proof.leafData.id, proof.leafData.timestamp, proof.leafData.tokenCount, proof.leafData.wallet];
+    const leafData = [
+      proof.leafData.id,
+      proof.leafData.timestamp,
+      proof.leafData.tokenCount,
+      proof.leafData.wallet,
+      proof.leafData.serviceProvider,
+    ];
 
     // Convert proof format from our custom format back to StandardMerkleTree format
     const standardProof = proof.proof.map((p) => p.data);
@@ -663,10 +685,11 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
     req.leafData!.timestamp,
     req.leafData!.tokenCount,
     req.leafData!.wallet,
+    req.leafData!.serviceProvider,
   ]);
 
   // Define types for the tree
-  const demoTypes = ["uint256", "string", "uint256", "string"];
+  const demoTypes = ["uint256", "string", "uint256", "string", "string"];
 
   // Create StandardMerkleTree
   const tree = StandardMerkleTree.of(treeData, demoTypes);
@@ -684,9 +707,10 @@ const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
     req.leafData!.timestamp,
     req.leafData!.tokenCount,
     req.leafData!.wallet,
+    req.leafData!.serviceProvider,
   ]);
 
-  const demoTypes = ["uint256", "string", "uint256", "string"];
+  const demoTypes = ["uint256", "string", "uint256", "string", "string"];
   const tree = StandardMerkleTree.of(treeData, demoTypes);
 
   let visualization = "Merkle Tree (OpenZeppelin StandardMerkleTree):\n";
@@ -714,18 +738,21 @@ const BatchCreator: React.FC = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
   // Simulate sending an LLM call (using StandardMerkleTree for consistency)
-  const sendLLMCall = async (wallet: string, prompt: string) => {
+  const sendLLMCall = async (wallet: string, prompt: string, serviceProvider?: string) => {
+    const selectedServiceProvider =
+      serviceProvider || mockServiceProviders[Math.floor(Math.random() * mockServiceProviders.length)];
     // Create leaf data
     const leafData = {
       id: nextRequestId,
       timestamp: new Date().toISOString(),
       tokenCount: Math.floor(Math.random() * 200) + 100,
       wallet: wallet,
+      serviceProvider: selectedServiceProvider,
     };
 
     // Calculate leaf hash using StandardMerkleTree for consistency
-    const leafArray = [leafData.id, leafData.timestamp, leafData.tokenCount, leafData.wallet];
-    const demoTypes = ["uint256", "string", "uint256", "string"];
+    const leafArray = [leafData.id, leafData.timestamp, leafData.tokenCount, leafData.wallet, leafData.serviceProvider];
+    const demoTypes = ["uint256", "string", "uint256", "string", "string"];
 
     // Create a temporary tree to get the leaf hash
     const tempTree = StandardMerkleTree.of([leafArray], demoTypes);
@@ -750,6 +777,7 @@ const BatchCreator: React.FC = () => {
       prompt: prompt,
       model: "gpt-4-turbo",
       recipient: wallet,
+      serviceProvider: selectedServiceProvider,
       estimatedTokens: leafData.tokenCount,
       response: response,
       leafData: leafData,
@@ -1365,15 +1393,21 @@ export default function MerkleAIBatching() {
           <br />
           {/* Request struct definition - Simplified for efficient Merkle tree processing */}
           <br />
-          struct Request {`{`}
+          struct LLMRequest {`{`}
           <br />
-          &nbsp;&nbsp;bytes32 id; // Unique request identifier
+          &nbsp;&nbsp;address user; // User's wallet address
           <br />
-          &nbsp;&nbsp;string timestamp; // ISO timestamp string
+          &nbsp;&nbsp;address serviceProvider; // Service provider wallet
+          <br />
+          &nbsp;&nbsp;string prompt; // LLM prompt (for verification)
           <br />
           &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
           <br />
-          &nbsp;&nbsp;address wallet; // User's wallet address
+          &nbsp;&nbsp;uint256 cost; // Cost in wei
+          <br />
+          &nbsp;&nbsp;string timestamp; // ISO timestamp string
+          <br />
+          &nbsp;&nbsp;string model; // AI model used
           <br />
           {`}`}
           <br />
@@ -1381,6 +1415,8 @@ export default function MerkleAIBatching() {
           mapping(address =&gt; uint256) public llmBalance;
           <br />
           mapping(bytes32 =&gt; bool) public processedBatches;
+          <br />
+          mapping(address =&gt; bool) public authorizedProviders;
           <br />
           event LLMDeposit(address user, uint256 amount);
           <br />
@@ -1741,8 +1777,8 @@ export default function MerkleAIBatching() {
           <br />
           const REQUEST_TYPES = [
           <br />
-          &nbsp;&nbsp;&quot;address&quot;, &quot;string&quot;, &quot;uint256&quot;, &quot;uint256&quot;,
-          &quot;uint256&quot;, &quot;string&quot;
+          &nbsp;&nbsp;&quot;address&quot;, &quot;address&quot;, &quot;string&quot;, &quot;uint256&quot;,
+          &quot;uint256&quot;, &quot;string&quot;, &quot;string&quot;
           <br />
           ];
           <br />
@@ -1820,19 +1856,26 @@ export default function MerkleAIBatching() {
           <br />
           export function createLeafData(requestData) {`{`}
           <br />
-          &nbsp;&nbsp;// Return simplified leaf data structure optimized for Merkle tree
+          &nbsp;&nbsp;// Return leaf data structure optimized for multi-provider Merkle tree
           <br />
-          &nbsp;&nbsp;// This matches the format used in the proof demo: (id, timestamp, tokenCount, wallet)
+          &nbsp;&nbsp;// This matches the enhanced format: (user, serviceProvider, prompt, tokenCount, cost, timestamp,
+          model)
           <br />
           &nbsp;&nbsp;return {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;id: randomBytes(16).toString("hex"),
+          &nbsp;&nbsp;&nbsp;&nbsp;user: requestData.userAddress,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
+          &nbsp;&nbsp;&nbsp;&nbsp;serviceProvider: requestData.serviceProvider,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;prompt: requestData.prompt,
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: requestData.tokenCount,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;wallet: requestData.userAddress
+          &nbsp;&nbsp;&nbsp;&nbsp;cost: requestData.cost,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;model: requestData.model
           <br />
           &nbsp;&nbsp;{`}`};
           <br />
@@ -1903,7 +1946,9 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;const treeData = pendingRequests.map(req =&gt; [
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;req.userAddress, {/* user: address */}
+          &nbsp;&nbsp;&nbsp;&nbsp;req.user, {/* user: address */}
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;req.serviceProvider, {/* serviceProvider: address */}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;req.prompt, {/* prompt: string */}
           <br />
@@ -1911,7 +1956,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;req.cost, {/* cost: uint256 */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;Math.floor(new Date(req.timestamp).getTime() / 1000), {/* timestamp: uint256 */}
+          &nbsp;&nbsp;&nbsp;&nbsp;req.timestamp, {/* timestamp: string */}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;req.model {/* model: string */}
           <br />
@@ -1943,21 +1988,23 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;{/* Convert array back to Request struct format */}
+          &nbsp;&nbsp;&nbsp;&nbsp;{/* Convert array back to LLMRequest struct format */}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;contractRequests.push({`{`}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;user: value[0],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt: value[1],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;serviceProvider: value[1],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tokenCount: value[2],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt: value[2],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cost: value[3],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tokenCount: value[3],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: value[4],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cost: value[4],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model: value[5]
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: value[5],
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model: value[6]
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;{`}`});
           <br />
@@ -2185,6 +2232,118 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- schedule: rate(5 minutes) # Auto-trigger batches
         </div>
+      </section>
+
+      <section>
+        <h2>Security Analysis: Multi-Provider Implementation</h2>
+        <p>
+          The enhanced multi-provider system introduces several security considerations while maintaining the core
+          benefits of Merkle tree batching:
+        </p>
+
+        <h3>Security Enhancements</h3>
+        <ul>
+          <li>
+            <strong>Cryptographic Binding:</strong> Each request is cryptographically bound to its specific service
+            provider through the Merkle leaf structure, preventing payment misdirection.
+          </li>
+          <li>
+            <strong>Provider Authorization:</strong> Only whitelisted service providers can participate, maintaining
+            quality control.
+          </li>
+          <li>
+            <strong>Immutable Request-Provider Association:</strong> Once a request is processed, the service provider
+            cannot be changed due to Merkle proof verification.
+          </li>
+          <li>
+            <strong>Distributed Risk:</strong> Multiple providers reduce single points of failure compared to
+            single-provider systems.
+          </li>
+        </ul>
+
+        <h3>Security Considerations</h3>
+        <ul>
+          <li>
+            <strong>Authorization Management:</strong> The contract owner has significant control over provider
+            authorization - consider multi-sig or DAO governance.
+          </li>
+          <li>
+            <strong>Provider Validation:</strong> Each request validates that its service provider is authorized, adding
+            gas overhead but ensuring security.
+          </li>
+          <li>
+            <strong>Batch Integrity:</strong> Mixed-provider batches are still atomic - if one provider payment fails,
+            the entire batch reverts.
+          </li>
+          <li>
+            <strong>Front-running Protection:</strong> Any authorized provider can submit a batch, preventing
+            monopolization by a single provider.
+          </li>
+        </ul>
+
+        <h3>Gas Efficiency vs Security Trade-offs</h3>
+        <div
+          className={css({
+            backgroundColor: "#f0f9ff",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #0ea5e9",
+            marginBottom: "16px",
+          })}
+        >
+          <p>
+            <strong>Multi-Provider Benefits:</strong>
+          </p>
+          <ul>
+            <li>Prevents service provider monopolization</li>
+            <li>Enables competitive pricing between providers</li>
+            <li>Reduces dependency on single providers</li>
+            <li>Allows specialized providers for different models/tasks</li>
+          </ul>
+        </div>
+
+        <div
+          className={css({
+            backgroundColor: "#fef3c7",
+            padding: "16px",
+            borderRadius: "8px",
+            border: "1px solid #f59e0b",
+            marginBottom: "16px",
+          })}
+        >
+          <p>
+            <strong>Gas Cost Considerations:</strong>
+          </p>
+          <ul>
+            <li>Additional provider validation adds ~2,000 gas per request</li>
+            <li>Unique provider payment logic increases batch processing cost</li>
+            <li>Still significantly more efficient than individual transactions</li>
+            <li>Cost scales with number of unique providers, not total requests</li>
+          </ul>
+        </div>
+
+        <h3>Recommended Security Practices</h3>
+        <ol>
+          <li>
+            <strong>Gradual Provider Authorization:</strong> Start with trusted providers and gradually expand the
+            registry.
+          </li>
+          <li>
+            <strong>Provider Reputation System:</strong> Consider implementing on-chain reputation scoring for
+            providers.
+          </li>
+          <li>
+            <strong>Emergency Controls:</strong> Implement emergency pause functionality for suspicious provider
+            behavior.
+          </li>
+          <li>
+            <strong>Monitoring:</strong> Track provider performance and flag unusual patterns in batch composition.
+          </li>
+          <li>
+            <strong>Multi-sig Governance:</strong> Use multi-signature wallets for critical contract operations like
+            provider management.
+          </li>
+        </ol>
       </section>
     </article>
   );

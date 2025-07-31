@@ -31,7 +31,7 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
     event ServiceProviderChanged(address indexed newProvider);
     event ServiceProviderAdded(address indexed provider);
     event ServiceProviderRemoved(address indexed provider);
-
+    event DebugLeafHash(uint256 index, bytes32 hash);
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -105,9 +105,10 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
     /**
      * @dev Structure of a single LLM batch entry (leaf) for Merkle tree and settlement.
      *      Must exactly match the leaf definition used for Merkle tree calculation.
-     *      Fields: user, service provider, token count, cost, timestamp.
+     *      Fields: id, user, service provider, token count, cost, timestamp.
      */
     struct LLMLeaf {
+        int256 id;                 // Unique identifier for the leaf
         address user;              // User address (payer)
         address serviceProvider;   // Service provider address (recipient)
         uint256 tokenCount;        // Number of LLM tokens (optional, for statistics)
@@ -138,13 +139,16 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
             // Verify service provider is authorized
             require(authorizedProviders[leaves[i].serviceProvider], "Invalid service provider");
 
-            // Construct leaf as keccak256(abi.encode(...))
-            bytes32 leaf = keccak256(abi.encode(
-                leaves[i].user,
-                leaves[i].serviceProvider,
-                leaves[i].tokenCount,
-                leaves[i].cost,
-                leaves[i].timestamp
+            // Construct leaf as
+            bytes32 leaf = keccak256(bytes.concat(
+                keccak256(abi.encode(
+                    leaves[i].id,
+                    leaves[i].user,
+                    leaves[i].serviceProvider,
+                    leaves[i].tokenCount,
+                    leaves[i].cost,
+                    leaves[i].timestamp
+                ))
             ));
             require(verifyMerkleProof(proofs[i], merkleRoot, leaf), "Invalid proof");
             require(llmBalance[leaves[i].user] >= leaves[i].cost, "Insufficient balance");

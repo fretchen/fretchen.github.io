@@ -10,7 +10,7 @@ describe("LLMv1 - Functional Tests", function () {
   // Fixture to deploy LLMv1
   async function deployLLMv1Fixture() {
     // The accounts used for testing
-    const [owner, otherAccount] = await hre.ethers.getSigners();
+    const [owner, otherAccount] = await hre.viem.getWalletClients();
 
     // Deploy LLMv1 using ethers (required for OpenZeppelin upgrades)
     const LLMv1Factory = await hre.ethers.getContractFactory("LLMv1");

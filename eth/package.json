@@ -2,7 +2,8 @@
   "name": "hardhat-project",
   "scripts": {
     "test": "hardhat test",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^4.1.0",
@@ -19,5 +20,6 @@
     "eslint-plugin-prettier": "^5.5.3",
     "hardhat-abi-exporter": "^2.11.0",
     "typescript-eslint": "^8.38.0"
-  }
+  },
+  "type": "module"
 }

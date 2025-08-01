@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { getAddress } from "viem";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
 describe("LLMv1 - Functional Tests", function () {
@@ -32,7 +31,7 @@ describe("LLMv1 - Functional Tests", function () {
 
   describe("Basic Deposit Functionality", function () {
     it("Should update balance after deposit", async function () {
-      const { llmContract, otherAccount, serviceProvider } = await loadFixture(deployLLMv1Fixture);
+      const { llmContract, otherAccount } = await loadFixture(deployLLMv1Fixture);
 
       // pay some money to the contract
       const DEPOSIT = hre.ethers.parseEther("0.001");

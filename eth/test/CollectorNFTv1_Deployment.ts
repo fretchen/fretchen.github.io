@@ -151,7 +151,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
       const implementation = await hre.ethers.provider.getStorage(proxyAddress, implementationSlot);
-      
+
       expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
     });
 

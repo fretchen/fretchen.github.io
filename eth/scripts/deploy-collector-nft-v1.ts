@@ -26,7 +26,7 @@ interface CollectorNFTv1Config {
  */
 function loadConfig(): CollectorNFTv1Config {
   const configPath = path.join(__dirname, "collector-nft-v1.config.json");
-  
+
   console.log(`📄 Loading configuration from: ${configPath}`);
 
   if (!fs.existsSync(configPath)) {
@@ -89,7 +89,7 @@ async function deployCollectorNFT() {
 
   // Load configuration
   const config = loadConfig();
-  
+
   const genImNFTAddress = config.genImNFTAddress;
   const baseMintPrice = ethers.parseEther(config.baseMintPrice);
   const options = config.options || {};

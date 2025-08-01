@@ -111,8 +111,9 @@ const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
 
 // Export meta for blog post
 export const meta = {
-  title: "Merkle Trees for LLM API Batching: Cost-Optimized Blockchain Payments for AI Services",
+  title: "A draft on Merkle Trees for LLM API Batching",
   publishing_date: "2025-07-29",
+  tokenID: 38,
 };
 
 // Mock types and interfaces
@@ -121,7 +122,6 @@ interface LLMRequest {
   prompt: string;
   model: string;
   recipient: string;
-  serviceProvider: string;
   estimatedTokens: number;
   response?: string;
   leafData?: {
@@ -129,7 +129,6 @@ interface LLMRequest {
     timestamp: string;
     tokenCount: number;
     wallet: string;
-    serviceProvider: string;
   };
   leafHash?: string;
 }
@@ -141,14 +140,6 @@ const mockWallets = [
   "0xUser3Address...",
   "0xUser4Address...",
   "0xUser5Address...",
-];
-
-// Mock service provider addresses
-const mockServiceProviders = [
-  "0xOpenAIProvider...",
-  "0xAnthropicProvider...",
-  "0xLocalAIProvider...",
-  "0xCustomProvider...",
 ];
 
 // Mock prompts for LLM requests
@@ -176,7 +167,6 @@ const sampleBatch = {
         timestamp: "2024-01-15T10:30:00.000Z",
         tokenCount: 150,
         wallet: "0xUser1Address...",
-        serviceProvider: "0xOpenAIProvider...",
       },
       leafHash: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
     },
@@ -189,7 +179,6 @@ const sampleBatch = {
         timestamp: "2024-01-15T10:32:00.000Z",
         tokenCount: 120,
         wallet: "0xUser2Address...",
-        serviceProvider: "0xAnthropicProvider...",
       },
       leafHash: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
     },
@@ -202,7 +191,6 @@ const sampleBatch = {
         timestamp: "2024-01-15T10:35:00.000Z",
         tokenCount: 180,
         wallet: "0xUser3Address...",
-        serviceProvider: "0xLocalAIProvider...",
       },
       leafHash: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
     },
@@ -217,7 +205,6 @@ interface MerkleProof {
     timestamp: string;
     tokenCount: number;
     wallet: string;
-    serviceProvider: string;
   };
   leafHash: string;
   proof: { data: string; position: "left" | "right" }[];
@@ -234,11 +221,10 @@ const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
     req.leafData.timestamp,
     req.leafData.tokenCount,
     req.leafData.wallet,
-    req.leafData.serviceProvider,
   ]);
 
   // Define types for demo (simplified version of production REQUEST_TYPES)
-  const demoTypes = ["uint256", "string", "uint256", "string", "string"];
+  const demoTypes = ["uint256", "string", "uint256", "string"];
 
   // Create StandardMerkleTree
   const tree = StandardMerkleTree.of(treeData, demoTypes);
@@ -273,20 +259,13 @@ const validateMerkleProof = async (
       req.leafData.timestamp,
       req.leafData.tokenCount,
       req.leafData.wallet,
-      req.leafData.serviceProvider,
     ]);
 
-    const demoTypes = ["uint256", "string", "uint256", "string", "string"];
+    const demoTypes = ["uint256", "string", "uint256", "string"];
     const tree = StandardMerkleTree.of(treeData, demoTypes);
 
     // Get the specific leaf data for verification
-    const leafData = [
-      proof.leafData.id,
-      proof.leafData.timestamp,
-      proof.leafData.tokenCount,
-      proof.leafData.wallet,
-      proof.leafData.serviceProvider,
-    ];
+    const leafData = [proof.leafData.id, proof.leafData.timestamp, proof.leafData.tokenCount, proof.leafData.wallet];
 
     // Convert proof format from our custom format back to StandardMerkleTree format
     const standardProof = proof.proof.map((p) => p.data);
@@ -397,9 +376,9 @@ const ProofDemo: React.FC = () => {
         className={css({
           marginBottom: "20px",
           padding: "16px",
-          backgroundColor: "#f0fdf4",
+          backgroundColor: "#f9fafb",
           borderRadius: "8px",
-          border: "1px solid #bbf7d0",
+          border: "1px solid #d1d5db",
         })}
       >
         <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
@@ -430,13 +409,14 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("generate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "generate" ? "#3b82f6" : "transparent",
-              color: activeTab === "generate" ? "white" : "#6b7280",
-              border: "none",
+              backgroundColor: activeTab === "generate" ? "#f9fafb" : "transparent",
+              color: activeTab === "generate" ? "#374151" : "#6b7280",
+              border: activeTab === "generate" ? "1px solid #d1d5db" : "1px solid transparent",
+              borderBottom: activeTab === "generate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
               fontSize: "14px",
-              fontWeight: "medium",
+              fontWeight: activeTab === "generate" ? "medium" : "normal",
             })}
           >
             Generate Proof
@@ -445,13 +425,14 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("validate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "validate" ? "#3b82f6" : "transparent",
-              color: activeTab === "validate" ? "white" : "#6b7280",
-              border: "none",
+              backgroundColor: activeTab === "validate" ? "#f9fafb" : "transparent",
+              color: activeTab === "validate" ? "#374151" : "#6b7280",
+              border: activeTab === "validate" ? "1px solid #d1d5db" : "1px solid transparent",
+              borderBottom: activeTab === "validate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
               fontSize: "14px",
-              fontWeight: "medium",
+              fontWeight: activeTab === "validate" ? "medium" : "normal",
             })}
           >
             Validate Proof
@@ -495,12 +476,16 @@ const ProofDemo: React.FC = () => {
               onClick={handleGenerateProof}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: "#10b981",
+                backgroundColor: "#374151",
                 color: "white",
-                border: "none",
+                border: "1px solid #374151",
                 borderRadius: "4px",
                 cursor: "pointer",
                 fontSize: "14px",
+                "&:hover": {
+                  backgroundColor: "#4b5563",
+                  borderColor: "#4b5563",
+                },
               })}
             >
               Generate Merkle Proof
@@ -511,12 +496,12 @@ const ProofDemo: React.FC = () => {
             <div
               className={css({
                 padding: "16px",
-                backgroundColor: "#f0fdf4",
+                backgroundColor: "#f9fafb",
                 borderRadius: "4px",
-                border: "1px solid #bbf7d0",
+                border: "1px solid #e5e7eb",
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#374151" })}>
                 Generated Proof for {sampleBatch.requests[selectedUser].owner}
               </h4>
               <div className={css({ marginBottom: "12px" })}>
@@ -610,12 +595,17 @@ const ProofDemo: React.FC = () => {
               disabled={!validationInput.trim()}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: validationInput.trim() ? "#3b82f6" : "#9ca3af",
+                backgroundColor: validationInput.trim() ? "#374151" : "#9ca3af",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
                 cursor: validationInput.trim() ? "pointer" : "not-allowed",
                 fontSize: "14px",
+                "&:hover": validationInput.trim()
+                  ? {
+                      backgroundColor: "#4b5563",
+                    }
+                  : {},
               })}
             >
               Validate Proof
@@ -626,9 +616,9 @@ const ProofDemo: React.FC = () => {
             <div
               className={css({
                 padding: "16px",
-                backgroundColor: validationResult.isValid ? "#f0fdf4" : "#fef2f2",
+                backgroundColor: validationResult.isValid ? "#f9fafb" : "#fef2f2",
                 borderRadius: "4px",
-                border: `1px solid ${validationResult.isValid ? "#bbf7d0" : "#fecaca"}`,
+                border: `1px solid ${validationResult.isValid ? "#d1d5db" : "#fecaca"}`,
               })}
             >
               <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
@@ -685,11 +675,10 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
     req.leafData!.timestamp,
     req.leafData!.tokenCount,
     req.leafData!.wallet,
-    req.leafData!.serviceProvider,
   ]);
 
   // Define types for the tree
-  const demoTypes = ["uint256", "string", "uint256", "string", "string"];
+  const demoTypes = ["uint256", "string", "uint256", "string"];
 
   // Create StandardMerkleTree
   const tree = StandardMerkleTree.of(treeData, demoTypes);
@@ -707,10 +696,9 @@ const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
     req.leafData!.timestamp,
     req.leafData!.tokenCount,
     req.leafData!.wallet,
-    req.leafData!.serviceProvider,
   ]);
 
-  const demoTypes = ["uint256", "string", "uint256", "string", "string"];
+  const demoTypes = ["uint256", "string", "uint256", "string"];
   const tree = StandardMerkleTree.of(treeData, demoTypes);
 
   let visualization = "Merkle Tree (OpenZeppelin StandardMerkleTree):\n";
@@ -738,21 +726,18 @@ const BatchCreator: React.FC = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
   // Simulate sending an LLM call (using StandardMerkleTree for consistency)
-  const sendLLMCall = async (wallet: string, prompt: string, serviceProvider?: string) => {
-    const selectedServiceProvider =
-      serviceProvider || mockServiceProviders[Math.floor(Math.random() * mockServiceProviders.length)];
+  const sendLLMCall = async (wallet: string, prompt: string) => {
     // Create leaf data
     const leafData = {
       id: nextRequestId,
       timestamp: new Date().toISOString(),
       tokenCount: Math.floor(Math.random() * 200) + 100,
       wallet: wallet,
-      serviceProvider: selectedServiceProvider,
     };
 
     // Calculate leaf hash using StandardMerkleTree for consistency
-    const leafArray = [leafData.id, leafData.timestamp, leafData.tokenCount, leafData.wallet, leafData.serviceProvider];
-    const demoTypes = ["uint256", "string", "uint256", "string", "string"];
+    const leafArray = [leafData.id, leafData.timestamp, leafData.tokenCount, leafData.wallet];
+    const demoTypes = ["uint256", "string", "uint256", "string"];
 
     // Create a temporary tree to get the leaf hash
     const tempTree = StandardMerkleTree.of([leafArray], demoTypes);
@@ -777,7 +762,6 @@ const BatchCreator: React.FC = () => {
       prompt: prompt,
       model: "gpt-4-turbo",
       recipient: wallet,
-      serviceProvider: selectedServiceProvider,
       estimatedTokens: leafData.tokenCount,
       response: response,
       leafData: leafData,
@@ -916,13 +900,13 @@ const BatchCreator: React.FC = () => {
             disabled={!currentPrompt.trim()}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: currentPrompt.trim() ? "#3b82f6" : "#9ca3af",
+              backgroundColor: currentPrompt.trim() ? "#374151" : "#9ca3af",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: currentPrompt.trim() ? "#2563eb" : "#9ca3af" },
+              "&:hover": { backgroundColor: currentPrompt.trim() ? "#4b5563" : "#9ca3af" },
             })}
           >
             Send Request
@@ -932,13 +916,13 @@ const BatchCreator: React.FC = () => {
             onClick={handleRandomRequest}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: "#10b981",
+              backgroundColor: "#374151",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: "#059669" },
+              "&:hover": { backgroundColor: "#4b5563" },
             })}
           >
             Send Random Request
@@ -1373,7 +1357,8 @@ export default function MerkleAIBatching() {
             <code>withdrawBalance()</code> - Allow users to withdraw remaining funds
           </li>
         </ul>
-        <div
+
+        <pre
           className={css({
             fontSize: "13px",
             fontFamily: "monospace",
@@ -1382,47 +1367,40 @@ export default function MerkleAIBatching() {
             borderRadius: "4px",
             border: "1px solid #ddd",
             marginBottom: "16px",
+            overflowX: "auto",
           })}
         >
-          {/* Smart Contract Dependencies */}
-          <br />
-          import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
-          <br />
-          import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
-          <br />
-          <br />
-          {/* Request struct definition - Simplified for efficient Merkle tree processing */}
-          <br />
-          struct LLMRequest {`{`}
-          <br />
-          &nbsp;&nbsp;address user; // User's wallet address
-          <br />
-          &nbsp;&nbsp;address serviceProvider; // Service provider wallet
-          <br />
-          &nbsp;&nbsp;string prompt; // LLM prompt (for verification)
-          <br />
-          &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
-          <br />
-          &nbsp;&nbsp;uint256 cost; // Cost in wei
-          <br />
-          &nbsp;&nbsp;string timestamp; // ISO timestamp string
-          <br />
-          &nbsp;&nbsp;string model; // AI model used
-          <br />
-          {`}`}
-          <br />
-          <br />
-          mapping(address =&gt; uint256) public llmBalance;
-          <br />
-          mapping(bytes32 =&gt; bool) public processedBatches;
-          <br />
-          mapping(address =&gt; bool) public authorizedProviders;
-          <br />
-          event LLMDeposit(address user, uint256 amount);
-          <br />
-          event BatchProcessed(bytes32 root, uint256 totalCost);
-        </div>
-
+          <code>
+            {/* Smart Contract Dependencies */}
+            import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
+            <br />
+            import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
+            <br />
+            <br />
+            {/* Request struct definition - Simplified for efficient Merkle tree processing */}
+            <br />
+            struct Request {`{`}
+            <br />
+            &nbsp;&nbsp;bytes32 id; // Unique request identifier
+            <br />
+            &nbsp;&nbsp;string timestamp; // ISO timestamp string
+            <br />
+            &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
+            <br />
+            &nbsp;&nbsp;address wallet; // User&apos;s wallet address
+            <br />
+            {`}`}
+            <br />
+            <br />
+            mapping(address =&gt; uint256) public llmBalance;
+            <br />
+            mapping(bytes32 =&gt; bool) public processedBatches;
+            <br />
+            event LLMDeposit(address user, uint256 amount);
+            <br />
+            event BatchProcessed(bytes32 root, uint256 totalCost);
+          </code>
+        </pre>
         <h5>🔍 Detailed Function Analysis</h5>
 
         <p>
@@ -1454,10 +1432,6 @@ export default function MerkleAIBatching() {
           <br />
           {`}`}
           <br />
-          <br />
-          {/* Off-chain check needed for pending requests: */}
-          <br />
-          {/* actualAvailable = onChainBalance - pendingRequestsCost */}
         </div>
 
         <p>
@@ -1481,7 +1455,6 @@ export default function MerkleAIBatching() {
           })}
         >
           {/* Recommended: Use OpenZeppelin's MerkleProof library */}
-          <br />
           import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
           <br />
           <br />
@@ -1496,11 +1469,6 @@ export default function MerkleAIBatching() {
           &nbsp;&nbsp;return MerkleProof.verify(proof, root, leaf);
           <br />
           {`}`}
-          <br />
-          <br />
-          {/* Alternative: Custom implementation (not recommended) */}
-          <br />
-          {/* function verifyMerkleProofCustom(...) { ... } */}
         </div>
 
         <p>
@@ -1577,7 +1545,7 @@ export default function MerkleAIBatching() {
           {`}`}
         </div>
 
-        <h4>⚡ Serverless Functions (Backend Services)</h4>
+        <h4>Serverless Functions (Backend Services)</h4>
         <p>
           <strong>Role:</strong> Request handler and coordinator between users, blockchain, and AI services
         </p>
@@ -1588,7 +1556,7 @@ export default function MerkleAIBatching() {
         </p>
 
         <h5>
-          🔧 Function 1: LLM Request Handler (<code>llm_handler.js</code>)
+          Function 1: LLM Request Handler (<code>llm_handler.js</code>)
         </h5>
         <p>
           <strong>Comparison to Image Handler:</strong> Similar to <code>readhandler_v2.js</code> but with instant
@@ -1608,11 +1576,11 @@ export default function MerkleAIBatching() {
         >
           import {`{`} getContract, createPublicClient, http {`}`} from &quot;viem&quot;;
           <br />
-          import {`{`} optimism {`}`} from "viem/chains";
+          import {`{`} optimism {`}`} from &quot;viem/chains&quot;;
           <br />
-          import {`{`} llmContractAbi {`}`} from "./llm_abi.js";
+          import {`{`} llmContractAbi {`}`} from &quot;./llm_abi.js&quot;;
           <br />
-          import {`{`} callLLMAPI, createLeafData, queueForBatch {`}`} from "./llm_service.js";
+          import {`{`} callLLMAPI, createLeafData, queueForBatch {`}`} from &quot;./llm_service.js&quot;;
           <br />
           <br />
           export async function handle(event, context, cb) {`{`}
@@ -1623,13 +1591,13 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;const userAddress = event.queryStringParameters.userAddress;
           <br />
-          &nbsp;&nbsp;const model = event.queryStringParameters.model || "gpt-4-turbo";
+          &nbsp;&nbsp;const model = event.queryStringParameters.model || &quot;gpt-4-turbo&quot;;
           <br />
           &nbsp;&nbsp;
           <br />
           &nbsp;&nbsp;if (!prompt || !userAddress) {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse("Missing prompt or userAddress", 400);
+          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse(&quot;Missing prompt or userAddress&quot;, 400);
           <br />
           &nbsp;&nbsp;{`}`}
           <br />
@@ -1649,7 +1617,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;const contract = getContract({`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;address: "0x[LLM_CONTRACT_ADDRESS]",
+          &nbsp;&nbsp;&nbsp;&nbsp;address: &quot;0x[LLM_CONTRACT_ADDRESS]&quot;,
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;abi: llmContractAbi,
           <br />
@@ -1667,7 +1635,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;if (userBalance &lt; estimatedCost) {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse("Insufficient balance", 402);
+          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse(&quot;Insufficient balance&quot;, 402);
           <br />
           &nbsp;&nbsp;{`}`}
           <br />
@@ -1713,7 +1681,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;statusCode: 200,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`} "Content-Type": "application/json" {`}`},
+          &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`} &quot;Content-Type&quot;: &quot;application/json&quot; {`}`},
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;body: JSON.stringify({`{`}
           <br />
@@ -1727,7 +1695,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;userBalance: userBalance.toString(),
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: "Request processed, queued for batch settlement"
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: &quot;Request processed, queued for batch settlement&quot;
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;{`}`})
           <br />
@@ -1737,7 +1705,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <h5>
-          🔧 Function 2: LLM Service Module (<code>llm_service.js</code>)
+          Function 2: LLM Service Module (<code>llm_service.js</code>)
         </h5>
         <p>
           <strong>Comparison to Image Service:</strong> Enhanced version of <code>image_service.js</code> with LLM API
@@ -1777,8 +1745,8 @@ export default function MerkleAIBatching() {
           <br />
           const REQUEST_TYPES = [
           <br />
-          &nbsp;&nbsp;&quot;address&quot;, &quot;address&quot;, &quot;string&quot;, &quot;uint256&quot;,
-          &quot;uint256&quot;, &quot;string&quot;, &quot;string&quot;
+          &nbsp;&nbsp;&quot;address&quot;, &quot;string&quot;, &quot;uint256&quot;, &quot;uint256&quot;,
+          &quot;uint256&quot;, &quot;string&quot;
           <br />
           ];
           <br />
@@ -1856,37 +1824,27 @@ export default function MerkleAIBatching() {
           <br />
           export function createLeafData(requestData) {`{`}
           <br />
-          &nbsp;&nbsp;// Return leaf data structure optimized for multi-provider Merkle tree
+          &nbsp;&nbsp;// Return simplified leaf data structure optimized for Merkle tree
           <br />
-          &nbsp;&nbsp;// This matches the enhanced format: (user, serviceProvider, prompt, tokenCount, cost, timestamp,
-          model)
+          &nbsp;&nbsp;// This matches the format used in the proof demo: (id, timestamp, tokenCount, wallet)
           <br />
           &nbsp;&nbsp;return {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;user: requestData.userAddress,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;serviceProvider: requestData.serviceProvider,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;prompt: requestData.prompt,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: requestData.tokenCount,
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;cost: requestData.cost,
+          &nbsp;&nbsp;&nbsp;&nbsp;id: randomBytes(16).toString(&quot;hex&quot;),
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;model: requestData.model
+          &nbsp;&nbsp;&nbsp;&nbsp;tokenCount: requestData.tokenCount,
+          <br />
+          &nbsp;&nbsp;&nbsp;&nbsp;wallet: requestData.userAddress
           <br />
           &nbsp;&nbsp;{`}`};
           <br />
           {`}`}
           <br />
           <br />
-          /**
+          {/* &nbsp;* Queues leaf data for batch processing (replaces uploadToS3 for metadata) */}
           <br />
-          &nbsp;* Queues leaf data for batch processing (replaces uploadToS3 for metadata)
-          <br />
-          &nbsp;*/
           <br />
           export async function queueForBatch(leafData) {`{`}
           <br />
@@ -1912,7 +1870,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <h5>
-          🔧 Function 3: Batch Processor (<code>batch_processor.js</code>)
+          Function 3: Batch Processor (<code>batch_processor.js</code>)
         </h5>
         <p>
           <strong>New Functionality:</strong> This function has no equivalent in the image generation system. It handles
@@ -1946,9 +1904,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;const treeData = pendingRequests.map(req =&gt; [
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;req.user, {/* user: address */}
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;req.serviceProvider, {/* serviceProvider: address */}
+          &nbsp;&nbsp;&nbsp;&nbsp;req.userAddress, {/* user: address */}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;req.prompt, {/* prompt: string */}
           <br />
@@ -1956,7 +1912,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;req.cost, {/* cost: uint256 */}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;req.timestamp, {/* timestamp: string */}
+          &nbsp;&nbsp;&nbsp;&nbsp;Math.floor(new Date(req.timestamp).getTime() / 1000), {/* timestamp: uint256 */}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;req.model {/* model: string */}
           <br />
@@ -1988,23 +1944,21 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;{/* Convert array back to LLMRequest struct format */}
+          &nbsp;&nbsp;&nbsp;&nbsp;{/* Convert array back to Request struct format */}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;contractRequests.push({`{`}
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;user: value[0],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;serviceProvider: value[1],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt: value[1],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt: value[2],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tokenCount: value[2],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tokenCount: value[3],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cost: value[3],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cost: value[4],
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: value[4],
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: value[5],
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model: value[6]
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model: value[5]
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;{`}`});
           <br />
@@ -2232,118 +2186,6 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- schedule: rate(5 minutes) # Auto-trigger batches
         </div>
-      </section>
-
-      <section>
-        <h2>Security Analysis: Multi-Provider Implementation</h2>
-        <p>
-          The enhanced multi-provider system introduces several security considerations while maintaining the core
-          benefits of Merkle tree batching:
-        </p>
-
-        <h3>Security Enhancements</h3>
-        <ul>
-          <li>
-            <strong>Cryptographic Binding:</strong> Each request is cryptographically bound to its specific service
-            provider through the Merkle leaf structure, preventing payment misdirection.
-          </li>
-          <li>
-            <strong>Provider Authorization:</strong> Only whitelisted service providers can participate, maintaining
-            quality control.
-          </li>
-          <li>
-            <strong>Immutable Request-Provider Association:</strong> Once a request is processed, the service provider
-            cannot be changed due to Merkle proof verification.
-          </li>
-          <li>
-            <strong>Distributed Risk:</strong> Multiple providers reduce single points of failure compared to
-            single-provider systems.
-          </li>
-        </ul>
-
-        <h3>Security Considerations</h3>
-        <ul>
-          <li>
-            <strong>Authorization Management:</strong> The contract owner has significant control over provider
-            authorization - consider multi-sig or DAO governance.
-          </li>
-          <li>
-            <strong>Provider Validation:</strong> Each request validates that its service provider is authorized, adding
-            gas overhead but ensuring security.
-          </li>
-          <li>
-            <strong>Batch Integrity:</strong> Mixed-provider batches are still atomic - if one provider payment fails,
-            the entire batch reverts.
-          </li>
-          <li>
-            <strong>Front-running Protection:</strong> Any authorized provider can submit a batch, preventing
-            monopolization by a single provider.
-          </li>
-        </ul>
-
-        <h3>Gas Efficiency vs Security Trade-offs</h3>
-        <div
-          className={css({
-            backgroundColor: "#f0f9ff",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #0ea5e9",
-            marginBottom: "16px",
-          })}
-        >
-          <p>
-            <strong>Multi-Provider Benefits:</strong>
-          </p>
-          <ul>
-            <li>Prevents service provider monopolization</li>
-            <li>Enables competitive pricing between providers</li>
-            <li>Reduces dependency on single providers</li>
-            <li>Allows specialized providers for different models/tasks</li>
-          </ul>
-        </div>
-
-        <div
-          className={css({
-            backgroundColor: "#fef3c7",
-            padding: "16px",
-            borderRadius: "8px",
-            border: "1px solid #f59e0b",
-            marginBottom: "16px",
-          })}
-        >
-          <p>
-            <strong>Gas Cost Considerations:</strong>
-          </p>
-          <ul>
-            <li>Additional provider validation adds ~2,000 gas per request</li>
-            <li>Unique provider payment logic increases batch processing cost</li>
-            <li>Still significantly more efficient than individual transactions</li>
-            <li>Cost scales with number of unique providers, not total requests</li>
-          </ul>
-        </div>
-
-        <h3>Recommended Security Practices</h3>
-        <ol>
-          <li>
-            <strong>Gradual Provider Authorization:</strong> Start with trusted providers and gradually expand the
-            registry.
-          </li>
-          <li>
-            <strong>Provider Reputation System:</strong> Consider implementing on-chain reputation scoring for
-            providers.
-          </li>
-          <li>
-            <strong>Emergency Controls:</strong> Implement emergency pause functionality for suspicious provider
-            behavior.
-          </li>
-          <li>
-            <strong>Monitoring:</strong> Track provider performance and flag unusual patterns in batch composition.
-          </li>
-          <li>
-            <strong>Multi-sig Governance:</strong> Use multi-signature wallets for critical contract operations like
-            provider management.
-          </li>
-        </ol>
       </section>
     </article>
   );

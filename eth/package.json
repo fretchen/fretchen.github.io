@@ -1,7 +1,9 @@
 {
   "name": "hardhat-project",
   "scripts": {
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^4.1.0",
@@ -14,6 +16,11 @@
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
     "@openzeppelin/merkle-tree": "^1.0.8",
     "ajv": "^8.17.1",
-    "hardhat-abi-exporter": "^2.11.0"
-  }
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.3",
+    "hardhat-abi-exporter": "^2.11.0",
+    "typescript-eslint": "^8.38.0"
+  },
+  "type": "module"
 }

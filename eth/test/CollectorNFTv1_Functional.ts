@@ -153,7 +153,7 @@ describe("CollectorNFTv1 - Functional Tests", function () {
           account: otherAccount.account,
           value: currentPrice,
         });
-        
+
         // After minting, check if price is still reasonable for the next mint
         const nextPrice = await collectorNFTv1.read.getCurrentPrice([0n]);
         if (i < 4) {
@@ -330,7 +330,7 @@ describe("CollectorNFTv1 - Functional Tests", function () {
   describe("Payment Distribution", function () {
     it("Should distribute payments to GenImNFT owners", async function () {
       const { genImNFT, collectorNFTv1, owner, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
-      
+
       const publicClient = await hre.viem.getPublicClient();
 
       // Get initial balances
@@ -364,7 +364,7 @@ describe("CollectorNFTv1 - Functional Tests", function () {
       const { collectorNFTv1, owner } = await loadFixture(deployCollectorNFTv1Fixture);
 
       const newPrice = hre.ethers.parseEther("0.002");
-      
+
       await collectorNFTv1.write.setBaseMintPrice([newPrice], {
         account: owner.account,
       });
@@ -376,7 +376,7 @@ describe("CollectorNFTv1 - Functional Tests", function () {
       const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1Fixture);
 
       const newPrice = hre.ethers.parseEther("0.002");
-      
+
       await expect(
         collectorNFTv1.write.setBaseMintPrice([newPrice], {
           account: otherAccount.account,

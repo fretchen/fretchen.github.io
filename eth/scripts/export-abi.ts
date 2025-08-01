@@ -104,20 +104,20 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
   console.log(`   ❌ Errors: ${errors.length}`);
 
   // Show specific functions based on contract type
-  let specificFunctions: any[] = [];
+  let specificFunctions: ABIItem[] = [];
   if (config.name === "GenImNFTv3") {
     specificFunctions = functions.filter(
-      (f: any) => f.name?.includes("Public") || f.name?.includes("Listed") || f.name === "getAllPublicTokens",
+      (f: ABIItem) => f.name?.includes("Public") || f.name?.includes("Listed") || f.name === "getAllPublicTokens",
     );
     if (specificFunctions.length > 0) {
       console.log("\n🆕 V3 Specific Functions:");
-      specificFunctions.forEach((f: any) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      specificFunctions.forEach((f: ABIItem) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
     }
   } else if (config.name === "CollectorNFT") {
     specificFunctions = functions.filter(
-      (f: any) =>
+      (f: ABIItem) =>
         f.name?.includes("mint") ||
         f.name?.includes("Price") ||
         f.name?.includes("GenIm") ||
@@ -125,13 +125,13 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFT Specific Functions:");
-      specificFunctions.forEach((f: any) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      specificFunctions.forEach((f: ABIItem) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
     }
   } else if (config.name === "CollectorNFTv1") {
     specificFunctions = functions.filter(
-      (f: any) =>
+      (f: ABIItem) =>
         f.name?.includes("mint") ||
         f.name?.includes("Price") ||
         f.name?.includes("GenIm") ||
@@ -141,8 +141,8 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFTv1 Specific Functions:");
-      specificFunctions.forEach((f: any) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      specificFunctions.forEach((f: ABIItem) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
     }
   }

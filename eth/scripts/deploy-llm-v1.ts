@@ -4,11 +4,9 @@ import { getAddress } from "viem";
 import { validateCollectorNFT, validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
-import Ajv from "ajv";
 
-interface DeployConfig {
-  genImNFTAddress: string;
-  baseMintPrice: string;
+interface LLMv1Config {
+  LLMv1Address: string;
   options?: {
     validateOnly?: boolean;
     dryRun?: boolean;
@@ -23,19 +21,19 @@ interface DeployConfig {
 }
 
 /**
- * Load and validate deployment configuration from JSON file
+ * Load LLMv1 deployment configuration
  */
-function loadAndValidateConfig(configPath: string): DeployConfig {
+function loadConfig(): LLMv1Config {
+  const configPath = path.join(__dirname, "llm-v1.config.json");
+
   console.log(`📄 Loading configuration from: ${configPath}`);
 
-  // Check if config file exists
   if (!fs.existsSync(configPath)) {
     throw new Error(`Configuration file not found: ${configPath}`);
   }
 
-  // Load config file
   const configContent = fs.readFileSync(configPath, "utf8");
-  let config: DeployConfig;
+  let config: LLMv1Config;
 
   try {
     config = JSON.parse(configContent);
@@ -43,48 +41,33 @@ function loadAndValidateConfig(configPath: string): DeployConfig {
     throw new Error(`Invalid JSON in configuration file: ${error.message}`);
   }
 
-  // Load schema file
-  const schemaPath = path.join(__dirname, "deploy-config.schema.json");
-  if (!fs.existsSync(schemaPath)) {
-    throw new Error(`Schema file not found: ${schemaPath}`);
+  // Basic validation
+  if (!config.LLMv1Address) {
+    throw new Error("LLMv1Address is required in config");
   }
 
-  const schemaContent = fs.readFileSync(schemaPath, "utf8");
-  let schema: any;
-
+  // Validate address format
   try {
-    schema = JSON.parse(schemaContent);
-  } catch (error: any) {
-    throw new Error(`Invalid JSON in schema file: ${error.message}`);
+    getAddress(config.LLMv1Address);
+  } catch (error) {
+    throw new Error(`Invalid LLMv1Address format: ${config.LLMv1Address}`);
   }
 
-  // Validate config against schema
-  const ajv = new Ajv({ strict: false });
-  const validate = ajv.compile(schema);
-  const valid = validate(config);
-
-  if (!valid) {
-    console.error("❌ Configuration validation failed:");
-    console.error(JSON.stringify(validate.errors, null, 2));
-    throw new Error(`Configuration validation failed: ${ajv.errorsText(validate.errors)}`);
-  }
-
-  console.log("✅ Configuration loaded and validated successfully");
+  console.log("✅ Configuration loaded and validated");
   console.log(`📋 Config: ${JSON.stringify(config, null, 2)}`);
 
   return config;
 }
 
 /**
- * Deploy CollectorNFT using OpenZeppelin Upgrades Plugin
+ * Deploy LLMv1 using OpenZeppelin Upgrades Plugin
  *
  * Usage examples:
- * - Standard deployment: npx hardhat run scripts/deploy-collector-nft-v1.ts --network sepolia
- * - Local testing: npx hardhat run scripts/deploy-collector-nft-v1.ts --network hardhat
+ * - Deploy to testnet: npx hardhat run scripts/deploy-llm-v1.ts --network sepolia
+ * - Deploy locally: npx hardhat run scripts/deploy-llm-v1.ts --network hardhat
  *
- * Configuration is loaded from deploy-config-v1.json and validated against deploy-config.schema.json
+ * Configuration is loaded from llm-v1.config.json
  */
-
 async function deployLLMv1() {
   console.log("🚀 LLMv1 Deployment Script");
   console.log("=".repeat(50));
@@ -92,87 +75,73 @@ async function deployLLMv1() {
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
-  // Load configuration from file
-  let config: DeployConfig | null = null;
-  try {
-    const configPath = path.join(__dirname, "deploy-config.json");
-    config = loadAndValidateConfig(configPath);
-    console.log("📦 Using configuration from deploy-config.json");
-  } catch (error: any) {
-    console.log(`⚠️  Could not load config file: ${error.message}`);
-    console.log("📦 Proceeding without config file");
-  }
+  // Load configuration
+  const config = loadConfig();
 
-  // Get options from config or environment
-  const validateOnly = process.env.VALIDATE_ONLY === "true" || config?.options?.validateOnly || false;
-  const dryRun = process.env.DRY_RUN === "true" || config?.options?.dryRun || false;
-  const verify = config?.options?.verify || false;
-  const waitConfirmations = config?.options?.waitConfirmations || 1;
+  const LLMv1Address = config.LLMv1Address;
+  const options = config.options || {};
+
+  console.log(`📍 LLMv1 Address: ${LLMv1Address}`);
 
   // Check if validation only
-  if (validateOnly) {
+  if (options.validateOnly) {
     console.log("🔍 Validation Only Mode - No deployment will occur");
-    return await validateDeployment(genImNFTAddress, baseMintPrice);
+    return await validateDeployment(LLMv1Address);
   }
 
   // Check if dry run
-  if (dryRun) {
+  if (options.dryRun) {
     console.log("🧪 Dry Run Mode - Simulation only");
-    return await simulateDeployment(genImNFTAddress, baseMintPrice);
+    return await simulateDeployment(LLMv1Address);
   }
 
   // Get contract factory
-  console.log("📦 Getting CollectorNFT contract factory...");
-  const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFTv1");
+  console.log("📦 Getting LLMv1 contract factory...");
+  const LLMv1Factory = await ethers.getContractFactory("LLMv1");
 
-  // Verify GenImNFT contract exists
-  console.log("🔍 Verifying GenImNFT contract...");
-  const genImNFTCode = await ethers.provider.getCode(genImNFTAddress);
-  if (genImNFTCode === "0x") {
-    throw new Error(`No contract found at GenImNFT address: ${genImNFTAddress}`);
+  // Verify LLMv1 contract exists
+  console.log("🔍 Verifying LLMv1 contract...");
+  const LLMv1Code = await ethers.provider.getCode(LLMv1Address);
+  if (LLMv1Code === "0x") {
+    throw new Error(`No contract found at LLMv1 address: ${LLMv1Address}`);
   }
-  console.log("✅ GenImNFT contract verified");
+  console.log("✅ LLMv1 contract verified");
 
   // Deploy the upgradeable contract
   console.log("🚀 Deploying LLMv1...");
   console.log("");
 
-  const llmv1 = await upgrades.deployProxy(LLMv1Factory, [], {
+  const LLMv1 = await upgrades.deployProxy(LLMv1Factory, [LLMv1Address], {
     kind: "uups",
     initializer: "initialize",
   });
 
-  await llmv1.waitForDeployment();
-  const llmv1Address = await llmv1.getAddress();
+  await LLMv1.waitForDeployment();
+  const proxyAddress = await LLMv1.getAddress();
 
   console.log("✅ LLMv1 deployed successfully!");
   console.log("=".repeat(50));
-  console.log(`📍 Proxy Address: ${collectorNFTAddress}`);
-  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(collectorNFTAddress)}`);
-  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(collectorNFTAddress)}`);
+  console.log(`📍 Proxy Address: ${proxyAddress}`);
+  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
+  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
   // Verify deployment
   console.log("🔍 Verifying deployment...");
-  const deployedContract = CollectorNFTFactory.attach(collectorNFTAddress);
+  const deployedContract = LLMv1Factory.attach(proxyAddress);
 
   const contractName = await deployedContract.name();
   const contractSymbol = await deployedContract.symbol();
-  const contractGenImNFT = await deployedContract.genImNFTContract();
-  const contractBaseMintPrice = await deployedContract.baseMintPrice();
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(collectorNFTAddress);
+  const contractLLM = await deployedContract.LLMContract();
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
   console.log(`📄 Contract Name: ${contractName}`);
   console.log(`🏷️  Contract Symbol: ${contractSymbol}`);
-  console.log(`🔗 GenImNFT Address: ${contractGenImNFT}`);
-  console.log(`💰 Base Mint Price: ${ethers.formatEther(contractBaseMintPrice)} ETH`);
+  console.log(`🔗 LLM Address: ${contractLLM}`);
 
-  // Verify configuration
-  if (contractGenImNFT.toLowerCase() !== genImNFTAddress.toLowerCase()) {
-    throw new Error("GenImNFT address mismatch after deployment");
-  }
-  if (contractBaseMintPrice !== baseMintPrice) {
-    throw new Error("Base mint price mismatch after deployment");
+  // Verify configuration matches
+  if (contractLLM.toLowerCase() !== LLMAddress.toLowerCase()) {
+    throw new Error("LLM   address mismatch after deployment");
   }
 
   // Verify implementation contract
@@ -185,7 +154,7 @@ async function deployLLMv1() {
 
   // Test implementation contract ABI compatibility
   try {
-    const implementationContract = CollectorNFTFactory.attach(implementationAddress);
+    const implementationContract = LLMv1Factory.attach(implementationAddress);
     console.log("✅ Implementation contract ABI compatible");
   } catch (error: any) {
     console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message || error);
@@ -194,21 +163,23 @@ async function deployLLMv1() {
   console.log("✅ All verifications passed!");
   console.log("");
 
-  // Export deployment info
+  // Create deployment info
   const deploymentInfo = {
     network: network.name,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
-    proxyAddress: llmv1Address,
-    implementationAddress: await upgrades.erc1967.getImplementationAddress(llmv1Address),
-    adminAddress: await upgrades.erc1967.getAdminAddress(llmv1Address),
-    contractName: "LLMv1",
+    proxyAddress: proxyAddress,
+    implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
+    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    LLMv1Address: LLMv1Address,
+    contractName: contractName,
+    contractSymbol: contractSymbol,
     deploymentOptions: {
-      verify,
-      waitConfirmations,
-      configUsed: config ? "deploy-config-v1.json" : "environment/parameters",
+      verify: options.verify || false,
+      waitConfirmations: options.waitConfirmations || 1,
+      configUsed: "llm-v1.config.json",
     },
-    config: config || undefined,
+    config: config,
   };
 
   console.log("📋 Deployment Summary:");
@@ -221,7 +192,7 @@ async function deployLLMv1() {
   }
 
   const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-  const deploymentFileName = `llmv1-${network.name}-${timestamp}.json`;
+  const deploymentFileName = `llm-v1-${network.name}-${timestamp}.json`;
   const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -230,7 +201,7 @@ async function deployLLMv1() {
   // Comprehensive validation using validate-contract functions
   console.log("\n🔍 Running comprehensive validation...");
   try {
-    await validateCollectorNFT(collectorNFTAddress);
+    await validateCollectorNFT(proxyAddress);
     await validateImplementation(deploymentInfo.implementationAddress, "CollectorNFTv1");
     console.log("✅ Comprehensive validation completed successfully!");
   } catch (error: any) {
@@ -238,7 +209,7 @@ async function deployLLMv1() {
   }
 
   // Contract verification if enabled
-  if (verify) {
+  if (options.verify) {
     console.log("\n🔍 Verifying contract on block explorer...");
     try {
       console.log("📋 Contract verification would be performed here");
@@ -249,8 +220,8 @@ async function deployLLMv1() {
   }
 
   return {
-    contract: llmv1,
-    address: llmv1Address,
+    contract: deployedContract,
+    address: proxyAddress,
     deploymentInfo,
   };
 }
@@ -265,11 +236,11 @@ async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint
   }
 
   // Get contract factory for validation
-  const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
+  const LLMv1Factory = await ethers.getContractFactory("LLMv1");
 
   // Validate contract compilation
-  console.log("✅ CollectorNFT contract compiles successfully");
-  console.log("✅ GenImNFT contract exists at specified address");
+  console.log("✅ LLMv1 contract compiles successfully");
+  console.log("✅ LLMv1 contract exists at specified address");
   console.log(`✅ Base mint price valid: ${ethers.formatEther(baseMintPrice)} ETH`);
 
   console.log("🎉 Validation completed successfully!");
@@ -281,8 +252,8 @@ async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint
 
   await validateDeployment(genImNFTAddress, baseMintPrice);
 
-  // Estimate gas costs
-  const CollectorNFTFactory = await ethers.getContractFactory("CollectorNFT");
+  // Get contract factory for simulation
+  const LLMv1Factory = await ethers.getContractFactory("LLMv1");
 
   console.log("⛽ Estimating deployment costs...");
   console.log("📦 Contract factory created successfully");
@@ -308,4 +279,4 @@ if (require.main === module) {
   main();
 }
 
-export { deployLLMv1, loadAndValidateConfig, DeployConfig };
+export { deployLLMv1, loadConfig, LLMv1Config };

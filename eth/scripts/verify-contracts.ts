@@ -54,7 +54,7 @@ async function detectContractType(proxyAddress: string): Promise<string> {
       const name = await contract.name();
       console.log(`✅ Detected contract type: ${contractType} (name: ${name})`);
       return contractType;
-    } catch (error) {
+    } catch {
       console.log(`⚠️ Not a ${contractType} contract`);
     }
   }
@@ -72,11 +72,11 @@ async function verifyImplementation(implementationAddress: string, contractType:
       contract: `contracts/${contractType}.sol:${contractType}`,
     });
     console.log("✅ Implementation contract verified successfully!");
-  } catch (error: any) {
-    if (error.message.includes("Already Verified")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes("Already Verified")) {
       console.log("✅ Implementation contract already verified!");
     } else {
-      console.error("❌ Implementation verification failed:", error.message);
+      console.error("❌ Implementation verification failed:", error instanceof Error ? error.message : error);
       throw error;
     }
   }
@@ -100,7 +100,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
       });
       console.log("✅ Proxy contract verified as OpenZeppelin ERC1967Proxy!");
-    } catch (ozError: any) {
+    } catch (ozError: unknown) {
       console.log("⚠️ OpenZeppelin proxy verification failed, trying custom proxy...");
 
       // Strategy 2: Try as custom ERC1967Proxy
@@ -111,7 +111,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
         });
         console.log("✅ Proxy contract verified as custom ERC1967Proxy!");
-      } catch (customError: any) {
+      } catch (customError: unknown) {
         console.log("⚠️ Custom proxy verification failed, trying without contract specification...");
 
         // Strategy 3: Try without specifying contract
@@ -121,21 +121,25 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
             constructorArguments: [],
           });
           console.log("✅ Proxy contract verified without contract specification!");
-        } catch (noSpecError: any) {
-          if (noSpecError.message.includes("Already Verified")) {
+        } catch (noSpecError: unknown) {
+          if (noSpecError instanceof Error && noSpecError.message.includes("Already Verified")) {
             console.log("✅ Proxy contract already verified!");
           } else {
             console.log("⚠️ All proxy verification strategies failed:");
-            console.log(`   - OpenZeppelin: ${ozError.message.split("\n")[0]}`);
-            console.log(`   - Custom: ${customError.message.split("\n")[0]}`);
-            console.log(`   - No spec: ${noSpecError.message.split("\n")[0]}`);
+            console.log(`   - OpenZeppelin: ${ozError instanceof Error ? ozError.message.split("\n")[0] : ozError}`);
+            console.log(
+              `   - Custom: ${customError instanceof Error ? customError.message.split("\n")[0] : customError}`,
+            );
+            console.log(
+              `   - No spec: ${noSpecError instanceof Error ? noSpecError.message.split("\n")[0] : noSpecError}`,
+            );
             console.log("💡 This is often normal for proxy contracts - the implementation is what matters.");
           }
         }
       }
     }
-  } catch (error: any) {
-    console.log("⚠️ Proxy verification process failed:", error.message);
+  } catch (error: unknown) {
+    console.log("⚠️ Proxy verification process failed:", error instanceof Error ? error.message : error);
   }
 }
 
@@ -158,7 +162,7 @@ async function testContractFunctionality(proxyAddress: string, contractType: str
       try {
         const allPublicTokens = await contract.getAllPublicTokens();
         console.log(`✅ Public Tokens: ${allPublicTokens.length} tokens`);
-      } catch (e) {
+      } catch {
         console.log("⚠️ V3 functionality test failed - might be a V2 contract");
       }
     } else if (contractType === "CollectorNFT") {
@@ -167,12 +171,12 @@ async function testContractFunctionality(proxyAddress: string, contractType: str
         const baseMintPrice = await contract.baseMintPrice();
         console.log(`✅ GenImNFT Contract: ${genImNFTContract}`);
         console.log(`✅ Base Mint Price: ${ethers.formatEther(baseMintPrice)} ETH`);
-      } catch (e) {
+      } catch {
         console.log("⚠️ CollectorNFT functionality test failed");
       }
     }
-  } catch (error: any) {
-    console.error("❌ Contract functionality test failed:", error.message);
+  } catch (error: unknown) {
+    console.error("❌ Contract functionality test failed:", error instanceof Error ? error.message : error);
   }
 }
 
@@ -191,8 +195,8 @@ async function loadDeploymentFile(filePath: string): Promise<DeploymentData | nu
     console.log(`🔧 Implementation: ${deploymentData.implementationAddress}`);
 
     return deploymentData;
-  } catch (error: any) {
-    console.error("❌ Failed to load deployment file:", error.message);
+  } catch (error: unknown) {
+    console.error("❌ Failed to load deployment file:", error instanceof Error ? error.message : error);
     return null;
   }
 }

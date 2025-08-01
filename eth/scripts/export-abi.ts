@@ -8,6 +8,15 @@ import path from "path";
  * npx hardhat run scripts/export-abi.ts
  */
 
+interface ABIItem {
+  type: string;
+  name?: string;
+  inputs?: Array<{ type: string; name: string }>;
+  outputs?: Array<{ type: string; name?: string }>;
+  stateMutability?: string;
+  [key: string]: unknown;
+}
+
 interface ContractConfig {
   name: string;
   contractFile: string;
@@ -85,9 +94,9 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
   console.log(`✅ TypeScript ABI exported to: ${abiTsPath}`);
 
   // Create a summary of the contract
-  const functions = abi.filter((item: any) => item.type === "function");
-  const events = abi.filter((item: any) => item.type === "event");
-  const errors = abi.filter((item: any) => item.type === "error");
+  const functions = abi.filter((item: ABIItem) => item.type === "function");
+  const events = abi.filter((item: ABIItem) => item.type === "event");
+  const errors = abi.filter((item: ABIItem) => item.type === "error");
 
   console.log(`\n📊 ${config.name} Summary:`);
   console.log(`   📋 Functions: ${functions.length}`);
@@ -95,20 +104,20 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
   console.log(`   ❌ Errors: ${errors.length}`);
 
   // Show specific functions based on contract type
-  let specificFunctions: any[] = [];
+  let specificFunctions: ABIItem[] = [];
   if (config.name === "GenImNFTv3") {
     specificFunctions = functions.filter(
-      (f: any) => f.name?.includes("Public") || f.name?.includes("Listed") || f.name === "getAllPublicTokens",
+      (f: ABIItem) => f.name?.includes("Public") || f.name?.includes("Listed") || f.name === "getAllPublicTokens",
     );
     if (specificFunctions.length > 0) {
       console.log("\n🆕 V3 Specific Functions:");
-      specificFunctions.forEach((f: any) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      specificFunctions.forEach((f: ABIItem) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
     }
   } else if (config.name === "CollectorNFT") {
     specificFunctions = functions.filter(
-      (f: any) =>
+      (f: ABIItem) =>
         f.name?.includes("mint") ||
         f.name?.includes("Price") ||
         f.name?.includes("GenIm") ||
@@ -116,13 +125,13 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFT Specific Functions:");
-      specificFunctions.forEach((f: any) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      specificFunctions.forEach((f: ABIItem) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
     }
   } else if (config.name === "CollectorNFTv1") {
     specificFunctions = functions.filter(
-      (f: any) =>
+      (f: ABIItem) =>
         f.name?.includes("mint") ||
         f.name?.includes("Price") ||
         f.name?.includes("GenIm") ||
@@ -132,8 +141,8 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
     );
     if (specificFunctions.length > 0) {
       console.log("\n🎨 CollectorNFTv1 Specific Functions:");
-      specificFunctions.forEach((f: any) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})`);
+      specificFunctions.forEach((f: ABIItem) => {
+        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
     }
   }
@@ -158,10 +167,10 @@ ${
 
 ${specificFunctions
   .map(
-    (f: any) => `### \`${f.name}\`
+    (f: ABIItem) => `### \`${f.name}\`
 - **Type**: ${f.stateMutability || "function"}
-- **Inputs**: ${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || "none"}
-- **Outputs**: ${f.outputs?.map((o: any) => `${o.type} ${o.name || ""}`).join(", ") || "none"}
+- **Inputs**: ${f.inputs?.map((i: { type: string; name: string }) => `${i.type} ${i.name}`).join(", ") || "none"}
+- **Outputs**: ${f.outputs?.map((o: { type: string; name?: string }) => `${o.type} ${o.name || ""}`).join(", ") || "none"}
 `,
   )
   .join("\n")}
@@ -171,11 +180,11 @@ ${specificFunctions
 
 ## All Functions
 
-${functions.map((f: any) => `- \`${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
+${functions.map((f: ABIItem) => `- \`${f.name}(${f.inputs?.map((i: { type: string; name: string }) => `${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
 
 ## Events
 
-${events.map((e: any) => `- \`${e.name}(${e.inputs?.map((i: any) => `${i.indexed ? "indexed " : ""}${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
+${events.map((e: ABIItem) => `- \`${e.name}(${e.inputs?.map((i: { indexed?: boolean; type: string; name: string }) => `${i.indexed ? "indexed " : ""}${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
 
 ## Usage
 

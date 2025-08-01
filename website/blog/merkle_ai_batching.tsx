@@ -601,9 +601,11 @@ const ProofDemo: React.FC = () => {
                 borderRadius: "4px",
                 cursor: validationInput.trim() ? "pointer" : "not-allowed",
                 fontSize: "14px",
-                "&:hover": validationInput.trim() ? {
-                  backgroundColor: "#4b5563",
-                } : {},
+                "&:hover": validationInput.trim()
+                  ? {
+                      backgroundColor: "#4b5563",
+                    }
+                  : {},
               })}
             >
               Validate Proof
@@ -1355,7 +1357,8 @@ export default function MerkleAIBatching() {
             <code>withdrawBalance()</code> - Allow users to withdraw remaining funds
           </li>
         </ul>
-        <div
+
+        <pre
           className={css({
             fontSize: "13px",
             fontFamily: "monospace",
@@ -1364,39 +1367,40 @@ export default function MerkleAIBatching() {
             borderRadius: "4px",
             border: "1px solid #ddd",
             marginBottom: "16px",
+            overflowX: "auto",
           })}
         >
-          {/* Smart Contract Dependencies */}
-          <br />
-          import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
-          <br />
-          import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
-          <br />
-          <br />
-          {/* Request struct definition - Simplified for efficient Merkle tree processing */}
-          <br />
-          struct Request {`{`}
-          <br />
-          &nbsp;&nbsp;bytes32 id; // Unique request identifier
-          <br />
-          &nbsp;&nbsp;string timestamp; // ISO timestamp string
-          <br />
-          &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
-          <br />
-          &nbsp;&nbsp;address wallet; // User's wallet address
-          <br />
-          {`}`}
-          <br />
-          <br />
-          mapping(address =&gt; uint256) public llmBalance;
-          <br />
-          mapping(bytes32 =&gt; bool) public processedBatches;
-          <br />
-          event LLMDeposit(address user, uint256 amount);
-          <br />
-          event BatchProcessed(bytes32 root, uint256 totalCost);
-        </div>
-
+          <code>
+            {/* Smart Contract Dependencies */}
+            import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
+            <br />
+            import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;
+            <br />
+            <br />
+            {/* Request struct definition - Simplified for efficient Merkle tree processing */}
+            <br />
+            struct Request {`{`}
+            <br />
+            &nbsp;&nbsp;bytes32 id; // Unique request identifier
+            <br />
+            &nbsp;&nbsp;string timestamp; // ISO timestamp string
+            <br />
+            &nbsp;&nbsp;uint256 tokenCount; // Number of tokens consumed
+            <br />
+            &nbsp;&nbsp;address wallet; // User&apos;s wallet address
+            <br />
+            {`}`}
+            <br />
+            <br />
+            mapping(address =&gt; uint256) public llmBalance;
+            <br />
+            mapping(bytes32 =&gt; bool) public processedBatches;
+            <br />
+            event LLMDeposit(address user, uint256 amount);
+            <br />
+            event BatchProcessed(bytes32 root, uint256 totalCost);
+          </code>
+        </pre>
         <h5>🔍 Detailed Function Analysis</h5>
 
         <p>
@@ -1428,10 +1432,6 @@ export default function MerkleAIBatching() {
           <br />
           {`}`}
           <br />
-          <br />
-          {/* Off-chain check needed for pending requests: */}
-          <br />
-          {/* actualAvailable = onChainBalance - pendingRequestsCost */}
         </div>
 
         <p>
@@ -1455,7 +1455,6 @@ export default function MerkleAIBatching() {
           })}
         >
           {/* Recommended: Use OpenZeppelin's MerkleProof library */}
-          <br />
           import &quot;@openzeppelin/contracts/utils/cryptography/MerkleProof.sol&quot;;
           <br />
           <br />
@@ -1470,11 +1469,6 @@ export default function MerkleAIBatching() {
           &nbsp;&nbsp;return MerkleProof.verify(proof, root, leaf);
           <br />
           {`}`}
-          <br />
-          <br />
-          {/* Alternative: Custom implementation (not recommended) */}
-          <br />
-          {/* function verifyMerkleProofCustom(...) { ... } */}
         </div>
 
         <p>
@@ -1551,7 +1545,7 @@ export default function MerkleAIBatching() {
           {`}`}
         </div>
 
-        <h4>⚡ Serverless Functions (Backend Services)</h4>
+        <h4>Serverless Functions (Backend Services)</h4>
         <p>
           <strong>Role:</strong> Request handler and coordinator between users, blockchain, and AI services
         </p>
@@ -1562,7 +1556,7 @@ export default function MerkleAIBatching() {
         </p>
 
         <h5>
-          🔧 Function 1: LLM Request Handler (<code>llm_handler.js</code>)
+          Function 1: LLM Request Handler (<code>llm_handler.js</code>)
         </h5>
         <p>
           <strong>Comparison to Image Handler:</strong> Similar to <code>readhandler_v2.js</code> but with instant
@@ -1582,11 +1576,11 @@ export default function MerkleAIBatching() {
         >
           import {`{`} getContract, createPublicClient, http {`}`} from &quot;viem&quot;;
           <br />
-          import {`{`} optimism {`}`} from "viem/chains";
+          import {`{`} optimism {`}`} from &quot;viem/chains&quot;;
           <br />
-          import {`{`} llmContractAbi {`}`} from "./llm_abi.js";
+          import {`{`} llmContractAbi {`}`} from &quot;./llm_abi.js&quot;;
           <br />
-          import {`{`} callLLMAPI, createLeafData, queueForBatch {`}`} from "./llm_service.js";
+          import {`{`} callLLMAPI, createLeafData, queueForBatch {`}`} from &quot;./llm_service.js&quot;;
           <br />
           <br />
           export async function handle(event, context, cb) {`{`}
@@ -1597,13 +1591,13 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;const userAddress = event.queryStringParameters.userAddress;
           <br />
-          &nbsp;&nbsp;const model = event.queryStringParameters.model || "gpt-4-turbo";
+          &nbsp;&nbsp;const model = event.queryStringParameters.model || &quot;gpt-4-turbo&quot;;
           <br />
           &nbsp;&nbsp;
           <br />
           &nbsp;&nbsp;if (!prompt || !userAddress) {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse("Missing prompt or userAddress", 400);
+          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse(&quot;Missing prompt or userAddress&quot;, 400);
           <br />
           &nbsp;&nbsp;{`}`}
           <br />
@@ -1623,7 +1617,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;const contract = getContract({`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;address: "0x[LLM_CONTRACT_ADDRESS]",
+          &nbsp;&nbsp;&nbsp;&nbsp;address: &quot;0x[LLM_CONTRACT_ADDRESS]&quot;,
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;abi: llmContractAbi,
           <br />
@@ -1641,7 +1635,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;if (userBalance &lt; estimatedCost) {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse("Insufficient balance", 402);
+          &nbsp;&nbsp;&nbsp;&nbsp;return errorResponse(&quot;Insufficient balance&quot;, 402);
           <br />
           &nbsp;&nbsp;{`}`}
           <br />
@@ -1687,7 +1681,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;statusCode: 200,
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`} "Content-Type": "application/json" {`}`},
+          &nbsp;&nbsp;&nbsp;&nbsp;headers: {`{`} &quot;Content-Type&quot;: &quot;application/json&quot; {`}`},
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;body: JSON.stringify({`{`}
           <br />
@@ -1701,7 +1695,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;userBalance: userBalance.toString(),
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: "Request processed, queued for batch settlement"
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: &quot;Request processed, queued for batch settlement&quot;
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;{`}`})
           <br />
@@ -1711,7 +1705,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <h5>
-          🔧 Function 2: LLM Service Module (<code>llm_service.js</code>)
+          Function 2: LLM Service Module (<code>llm_service.js</code>)
         </h5>
         <p>
           <strong>Comparison to Image Service:</strong> Enhanced version of <code>image_service.js</code> with LLM API
@@ -1836,7 +1830,7 @@ export default function MerkleAIBatching() {
           <br />
           &nbsp;&nbsp;return {`{`}
           <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;id: randomBytes(16).toString("hex"),
+          &nbsp;&nbsp;&nbsp;&nbsp;id: randomBytes(16).toString(&quot;hex&quot;),
           <br />
           &nbsp;&nbsp;&nbsp;&nbsp;timestamp: requestData.timestamp,
           <br />
@@ -1849,11 +1843,8 @@ export default function MerkleAIBatching() {
           {`}`}
           <br />
           <br />
-          /**
+          {/* &nbsp;* Queues leaf data for batch processing (replaces uploadToS3 for metadata) */}
           <br />
-          &nbsp;* Queues leaf data for batch processing (replaces uploadToS3 for metadata)
-          <br />
-          &nbsp;*/
           <br />
           export async function queueForBatch(leafData) {`{`}
           <br />
@@ -1879,7 +1870,7 @@ export default function MerkleAIBatching() {
         </div>
 
         <h5>
-          🔧 Function 3: Batch Processor (<code>batch_processor.js</code>)
+          Function 3: Batch Processor (<code>batch_processor.js</code>)
         </h5>
         <p>
           <strong>New Functionality:</strong> This function has no equivalent in the image generation system. It handles

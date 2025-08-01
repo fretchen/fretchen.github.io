@@ -108,22 +108,22 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
     try {
       await contract.isImageUpdated(0);
       console.log("✅ isImageUpdated function works");
-    } catch (error: any) {
-      if (error.message && error.message.includes("Token does not exist")) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message && error.message.includes("Token does not exist")) {
         console.log("✅ isImageUpdated function works (no token 0 exists)");
       } else {
-        console.log("❌ isImageUpdated function failed:", error.message || error);
+        console.log("❌ isImageUpdated function failed:", error instanceof Error ? error.message : error);
       }
     }
 
     try {
       await contract.getAuthorizedImageUpdater(0);
       console.log("✅ getAuthorizedImageUpdater function works");
-    } catch (error: any) {
-      if (error.message && error.message.includes("Token does not exist")) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message && error.message.includes("Token does not exist")) {
         console.log("✅ getAuthorizedImageUpdater function works (no token 0 exists)");
       } else {
-        console.log("❌ getAuthorizedImageUpdater function failed:", error.message || error);
+        console.log("❌ getAuthorizedImageUpdater function failed:", error instanceof Error ? error.message : error);
       }
     }
 
@@ -140,8 +140,8 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
       console.log(`✅ ERC721 Interface: ${supportsERC721 ? "✓" : "✗"}`);
       console.log(`✅ ERC721Enumerable Interface: ${supportsEnumerable ? "✓" : "✗"}`);
       console.log(`✅ ERC721Burnable Interface: ${supportsBurnable ? "✓" : "✗"}`);
-    } catch (error: any) {
-      console.log("❌ Interface check failed:", error.message || error);
+    } catch (error: unknown) {
+      console.log("❌ Interface check failed:", error instanceof Error ? error.message : error);
     }
 
     return {
@@ -152,8 +152,8 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
       totalSupply: totalSupply.toString(),
       implementation,
     };
-  } catch (error: any) {
-    console.error("❌ Contract validation failed:", error.message || error);
+  } catch (error: unknown) {
+    console.error("❌ Contract validation failed:", error instanceof Error ? error.message : error);
     throw error;
   }
 }
@@ -195,8 +195,8 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
       const signerAddress = await signer.getAddress();
       await contract.canMint(signerAddress, 1);
       console.log("✅ canMint function works");
-    } catch (error: any) {
-      console.log("⚠️  canMint function test failed:", error.message || error);
+    } catch (error: unknown) {
+      console.log("⚠️  canMint function test failed:", error instanceof Error ? error.message : error);
     }
 
     // Check if contract supports expected interfaces
@@ -212,8 +212,8 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
       console.log(`✅ ERC721 Interface: ${supportsERC721 ? "✓" : "✗"}`);
       console.log(`✅ ERC721Enumerable Interface: ${supportsEnumerable ? "✓" : "✗"}`);
       console.log(`✅ ERC721Burnable Interface: ${supportsBurnable ? "✓" : "✗"}`);
-    } catch (error: any) {
-      console.log("❌ Interface check failed:", error.message || error);
+    } catch (error: unknown) {
+      console.log("❌ Interface check failed:", error instanceof Error ? error.message : error);
     }
 
     return {
@@ -224,8 +224,8 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
       totalSupply: totalSupply.toString(),
       implementation,
     };
-  } catch (error: any) {
-    console.error("❌ CollectorNFT validation failed:", error.message || error);
+  } catch (error: unknown) {
+    console.error("❌ CollectorNFT validation failed:", error instanceof Error ? error.message : error);
     throw error;
   }
 }
@@ -251,11 +251,14 @@ async function validateImplementation(implementationAddress: string, contractNam
       // For implementation contracts, we can't call initialize functions
       // but we can check if the contract has the expected structure
       console.log(`✅ ${contractName} implementation validation passed`);
-    } catch (error: any) {
-      console.log(`⚠️  Could not attach contract ABI to implementation:`, error.message || error);
+    } catch (error: unknown) {
+      console.log(
+        `⚠️  Could not attach contract ABI to implementation:`,
+        error instanceof Error ? error.message : error,
+      );
     }
-  } catch (error: any) {
-    console.error(`❌ Implementation validation failed:`, error.message || error);
+  } catch (error: unknown) {
+    console.error(`❌ Implementation validation failed:`, error instanceof Error ? error.message : error);
     throw error;
   }
 }
@@ -290,8 +293,8 @@ async function checkUpgradeReadiness(proxyAddress: string, contractType: string 
         // This should not actually change anything, just test access
         await contract.setMintPrice.staticCall(await contract.mintPrice());
         console.log("✅ Owner functions are accessible");
-      } catch (error: any) {
-        console.log("❌ Cannot access owner functions:", error.message || error);
+      } catch (error: unknown) {
+        console.log("❌ Cannot access owner functions:", error instanceof Error ? error.message : error);
       }
     }
 
@@ -308,8 +311,8 @@ async function checkUpgradeReadiness(proxyAddress: string, contractType: string 
     }
 
     console.log(`✅ ${contractType} is ready for upgrade`);
-  } catch (error: any) {
-    console.error("❌ Upgrade readiness check failed:", error.message || error);
+  } catch (error: unknown) {
+    console.error("❌ Upgrade readiness check failed:", error instanceof Error ? error.message : error);
   }
 }
 
@@ -328,8 +331,8 @@ async function loadDeploymentFile(filePath: string): Promise<DeploymentData | nu
     console.log(`🔧 Implementation: ${deploymentData.implementationAddress}`);
 
     return deploymentData;
-  } catch (error: any) {
-    console.error("❌ Failed to load deployment file:", error.message || error);
+  } catch (error: unknown) {
+    console.error("❌ Failed to load deployment file:", error instanceof Error ? error.message : error);
     return null;
   }
 }
@@ -347,8 +350,8 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
       console.log("\n📋 CollectorNFT Summary:");
       console.log("=".repeat(30));
       console.log(JSON.stringify(collectorInfo, null, 2));
-    } catch (error: any) {
-      console.error("❌ CollectorNFT validation failed:", error.message || error);
+    } catch (error: unknown) {
+      console.error("❌ CollectorNFT validation failed:", error instanceof Error ? error.message : error);
     }
   }
 
@@ -356,8 +359,11 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
   if (deploymentData.implementationAddress) {
     try {
       await validateImplementation(deploymentData.implementationAddress, "CollectorNFT");
-    } catch (error: any) {
-      console.error("❌ CollectorNFT implementation validation failed:", error.message || error);
+    } catch (error: unknown) {
+      console.error(
+        "❌ CollectorNFT implementation validation failed:",
+        error instanceof Error ? error.message : error,
+      );
     }
   }
 
@@ -370,8 +376,8 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
       console.log("\n📋 GenImNFT Summary:");
       console.log("=".repeat(30));
       console.log(JSON.stringify(genImInfo, null, 2));
-    } catch (error: any) {
-      console.error("❌ GenImNFT validation failed:", error.message || error);
+    } catch (error: unknown) {
+      console.error("❌ GenImNFT validation failed:", error instanceof Error ? error.message : error);
     }
   }
 }
@@ -444,8 +450,8 @@ async function main() {
     console.log("\n📋 Summary:");
     console.log("=".repeat(20));
     console.log(JSON.stringify(info, null, 2));
-  } catch (error: any) {
-    console.error("Script failed:", error.message || error);
+  } catch (error: unknown) {
+    console.error("Script failed:", error instanceof Error ? error.message : error);
     process.exit(1);
   }
 }

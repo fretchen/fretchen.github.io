@@ -39,7 +39,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
   // Validate proxy address format
   try {
     getAddress(proxyAddress);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid proxy address: ${proxyAddress}`);
   }
 
@@ -75,8 +75,11 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
       try {
         await upgrades.validateUpgrade(proxyAddress, GenImNFTv3Factory);
         console.log("✅ OpenZeppelin upgrade validation passed");
-      } catch (error: any) {
-        console.log("⚠️  OpenZeppelin validation failed (likely Ignition deployment):", error.message);
+      } catch (error: unknown) {
+        console.log(
+          "⚠️  OpenZeppelin validation failed (likely Ignition deployment):",
+          error instanceof Error ? error.message : error,
+        );
         console.log("🔄 Continuing with manual validation...");
 
         // Manual validation: Check if it's a proxy
@@ -84,8 +87,10 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
           const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
           const implementationAddress = await ethers.provider.getStorage(proxyAddress, implementationSlot);
           console.log(`✅ Found implementation at: 0x${implementationAddress.slice(26)}`);
-        } catch (error: any) {
-          throw new Error(`Not a valid ERC1967 proxy: ${error.message}`);
+        } catch (proxyError: unknown) {
+          throw new Error(
+            `Not a valid ERC1967 proxy: ${proxyError instanceof Error ? proxyError.message : proxyError}`,
+          );
         }
       }
     } else {
@@ -101,8 +106,8 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
           const tokenOwner = await currentProxy.ownerOf(i);
           const tokenURI = await currentProxy.tokenURI(i);
           console.log(`  Token ${i}: Owner=${tokenOwner.slice(0, 8)}..., URI=${tokenURI.slice(0, 20)}...`);
-        } catch (error) {
-          console.log(`  Token ${i}: Error reading (${error})`);
+        } catch {
+          console.log(`  Token ${i}: Error reading`);
         }
       }
     }
@@ -178,7 +183,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
           },
         });
         console.log("✅ OpenZeppelin upgrade successful");
-      } catch (error: any) {
+      } catch {
         console.log("⚠️  OpenZeppelin upgrade failed (likely Ignition deployment)");
         console.log("🔄 Falling back to manual upgrade...");
 
@@ -275,7 +280,7 @@ async function upgradeToV3(options: UpgradeOptions = {}) {
       upgradedProxy,
     };
   } catch (error) {
-    console.error("❌ Upgrade failed:", error);
+    console.error("❌ Upgrade failed:", error instanceof Error ? error.message : error);
     throw error;
   }
 }

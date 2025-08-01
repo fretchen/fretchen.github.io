@@ -40,7 +40,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   // Validate proxy address format
   try {
     getAddress(proxyAddress);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid proxy address: ${proxyAddress}`);
   }
 

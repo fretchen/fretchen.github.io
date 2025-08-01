@@ -1,19 +1,21 @@
-require("@nomicfoundation/hardhat-toolbox-viem");
-require("@nomicfoundation/hardhat-verify");
-require("hardhat-abi-exporter");
-require("hardhat-gas-reporter");
-require("@openzeppelin/hardhat-upgrades");
-const { vars } = require("hardhat/config");
+
+import "@nomicfoundation/hardhat-toolbox-viem";
+import "@nomicfoundation/hardhat-verify";
+import "hardhat-abi-exporter";
+import "hardhat-gas-reporter";
+import "@openzeppelin/hardhat-upgrades";
+import { vars } from "hardhat/config";
 
 // Use default values for CI/testing if environment variables are not set
-const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY", "dummy-key-for-testing");
-const SEPOLIA_PRIVATE_KEY = vars.get(
+const ALCHEMY_API_KEY: string = vars.get("ALCHEMY_API_KEY", "dummy-key-for-testing");
+const SEPOLIA_PRIVATE_KEY: string = vars.get(
   "SEPOLIA_PRIVATE_KEY",
   "0x1234567890123456789012345678901234567890123456789012345678901234",
 );
-const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
-const OPTIMISTIC_ETHERSCAN_API_KEY = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY", "dummy-optimistic-key");
-const COINMARKETCAP_API_KEY = vars.get("COINMARKETCAP_API_KEY", "dummy-cmc-key");
+const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
+const OPTIMISTIC_ETHERSCAN_API_KEY: string = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY", "dummy-optimistic-key");
+const COINMARKETCAP_API_KEY: string = vars.get("COINMARKETCAP_API_KEY", "dummy-cmc-key");
+
 const config = {
   solidity: "0.8.28",
   gasReporter: {
@@ -57,4 +59,4 @@ const config = {
   },
 };
 
-module.exports = config;
+export default config;

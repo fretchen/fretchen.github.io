@@ -111,8 +111,9 @@ const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
 
 // Export meta for blog post
 export const meta = {
-  title: "Merkle Trees for LLM API Batching: Cost-Optimized Blockchain Payments for AI Services",
+  title: "A draft on Merkle Trees for LLM API Batching",
   publishing_date: "2025-07-29",
+  tokenID: 38,
 };
 
 // Mock types and interfaces

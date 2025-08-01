@@ -119,9 +119,19 @@ describe("LLMv1 - Functional Tests", function () {
         // 4. Get the proofs for each leaf (by index!)
         const proofs = llmLeafsArray.map((_, i) => tree.getProof(i));
 
+        const publicClient = await hre.viem.getPublicClient();
+        const initialServiceBalance = await publicClient.getBalance({ address: serviceProvider.account.address });
+        console.log("Initial service provider balance:", initialServiceBalance.toString());
         // 5. Call processBatch with the struct array and the proofs
         await llmContract.write.processBatch([root, llmLeafStructs, proofs]);
+     
+        // 6. Check the ETH balance of the service provider wallet using viem
+        const newServiceBalance = await publicClient.getBalance({ address: serviceProvider.account.address });
+        console.log("New service provider balance:", newServiceBalance.toString());
+        expect(Number(newServiceBalance)).to.be.greaterThan(Number(initialServiceBalance));
       });
+
+      
     });
 
 

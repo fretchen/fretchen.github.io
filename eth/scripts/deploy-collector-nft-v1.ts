@@ -38,8 +38,8 @@ function loadConfig(): CollectorNFTv1Config {
 
   try {
     config = JSON.parse(configContent);
-  } catch (error: any) {
-    throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+  } catch (error: unknown) {
+    throw new Error(`Invalid JSON in configuration file: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // Basic validation
@@ -54,14 +54,14 @@ function loadConfig(): CollectorNFTv1Config {
   // Validate address format
   try {
     getAddress(config.genImNFTAddress);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid genImNFTAddress format: ${config.genImNFTAddress}`);
   }
 
   // Validate price format
   try {
     ethers.parseEther(config.baseMintPrice);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid baseMintPrice format: ${config.baseMintPrice}`);
   }
 
@@ -173,10 +173,13 @@ async function deployCollectorNFT() {
 
   // Test implementation contract ABI compatibility
   try {
-    const implementationContract = CollectorNFTv1Factory.attach(implementationAddress);
+    CollectorNFTv1Factory.attach(implementationAddress);
     console.log("✅ Implementation contract ABI compatible");
-  } catch (error: any) {
-    console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message || error);
+  } catch (error: unknown) {
+    console.log(
+      "⚠️  Warning: Could not attach ABI to implementation contract:",
+      error instanceof Error ? error.message : String(error),
+    );
   }
 
   console.log("✅ All verifications passed!");
@@ -224,8 +227,11 @@ async function deployCollectorNFT() {
     await validateCollectorNFT(proxyAddress);
     await validateImplementation(deploymentInfo.implementationAddress, "CollectorNFTv1");
     console.log("✅ Comprehensive validation completed successfully!");
-  } catch (error: any) {
-    console.log("⚠️  Warning: Comprehensive validation failed:", error.message || error);
+  } catch (error: unknown) {
+    console.log(
+      "⚠️  Warning: Comprehensive validation failed:",
+      error instanceof Error ? error.message : String(error),
+    );
   }
 
   // Contract verification if enabled
@@ -234,8 +240,8 @@ async function deployCollectorNFT() {
     try {
       console.log("📋 Contract verification would be performed here");
       console.log("✅ Contract verification completed successfully!");
-    } catch (error: any) {
-      console.log("⚠️  Warning: Contract verification failed:", error.message || error);
+    } catch (error: unknown) {
+      console.log("⚠️  Warning: Contract verification failed:", error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -256,7 +262,7 @@ async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint
   }
 
   // Get contract factory for validation
-  const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
+  await ethers.getContractFactory("CollectorNFTv1");
 
   // Validate contract compilation
   console.log("✅ CollectorNFTv1 contract compiles successfully");
@@ -273,7 +279,7 @@ async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint
   await validateDeployment(genImNFTAddress, baseMintPrice);
 
   // Get contract factory for simulation
-  const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
+  await ethers.getContractFactory("CollectorNFTv1");
 
   console.log("⛽ Estimating deployment costs...");
   console.log("📦 Contract factory created successfully");

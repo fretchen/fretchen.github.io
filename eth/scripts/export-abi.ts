@@ -8,6 +8,15 @@ import path from "path";
  * npx hardhat run scripts/export-abi.ts
  */
 
+interface ABIItem {
+  type: string;
+  name?: string;
+  inputs?: Array<{ type: string; name: string }>;
+  outputs?: Array<{ type: string; name?: string }>;
+  stateMutability?: string;
+  [key: string]: unknown;
+}
+
 interface ContractConfig {
   name: string;
   contractFile: string;
@@ -85,9 +94,9 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
   console.log(`✅ TypeScript ABI exported to: ${abiTsPath}`);
 
   // Create a summary of the contract
-  const functions = abi.filter((item: any) => item.type === "function");
-  const events = abi.filter((item: any) => item.type === "event");
-  const errors = abi.filter((item: any) => item.type === "error");
+  const functions = abi.filter((item: ABIItem) => item.type === "function");
+  const events = abi.filter((item: ABIItem) => item.type === "event");
+  const errors = abi.filter((item: ABIItem) => item.type === "error");
 
   console.log(`\n📊 ${config.name} Summary:`);
   console.log(`   📋 Functions: ${functions.length}`);

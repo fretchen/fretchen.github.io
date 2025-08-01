@@ -56,3 +56,27 @@ jobs:
           file: ./eth/coverage/lcov.info
           flags: smart-contracts
         continue-on-error: true
+
+  lint-contracts:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./eth
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: eth/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint on scripts
+        run: npx eslint scripts

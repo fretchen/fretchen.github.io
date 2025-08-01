@@ -167,10 +167,10 @@ ${
 
 ${specificFunctions
   .map(
-    (f: any) => `### \`${f.name}\`
+    (f: ABIItem) => `### \`${f.name}\`
 - **Type**: ${f.stateMutability || "function"}
-- **Inputs**: ${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || "none"}
-- **Outputs**: ${f.outputs?.map((o: any) => `${o.type} ${o.name || ""}`).join(", ") || "none"}
+- **Inputs**: ${f.inputs?.map((i: { type: string; name: string }) => `${i.type} ${i.name}`).join(", ") || "none"}
+- **Outputs**: ${f.outputs?.map((o: { type: string; name?: string }) => `${o.type} ${o.name || ""}`).join(", ") || "none"}
 `,
   )
   .join("\n")}
@@ -180,11 +180,11 @@ ${specificFunctions
 
 ## All Functions
 
-${functions.map((f: any) => `- \`${f.name}(${f.inputs?.map((i: any) => `${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
+${functions.map((f: ABIItem) => `- \`${f.name}(${f.inputs?.map((i: { type: string; name: string }) => `${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
 
 ## Events
 
-${events.map((e: any) => `- \`${e.name}(${e.inputs?.map((i: any) => `${i.indexed ? "indexed " : ""}${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
+${events.map((e: ABIItem) => `- \`${e.name}(${e.inputs?.map((i: { indexed?: boolean; type: string; name: string }) => `${i.indexed ? "indexed " : ""}${i.type} ${i.name}`).join(", ") || ""})\``).join("\n")}
 
 ## Usage
 

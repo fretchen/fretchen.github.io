@@ -376,9 +376,9 @@ const ProofDemo: React.FC = () => {
         className={css({
           marginBottom: "20px",
           padding: "16px",
-          backgroundColor: "#f0fdf4",
+          backgroundColor: "#f9fafb",
           borderRadius: "8px",
-          border: "1px solid #bbf7d0",
+          border: "1px solid #d1d5db",
         })}
       >
         <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
@@ -409,13 +409,14 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("generate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "generate" ? "#3b82f6" : "transparent",
-              color: activeTab === "generate" ? "white" : "#6b7280",
-              border: "none",
+              backgroundColor: activeTab === "generate" ? "#f9fafb" : "transparent",
+              color: activeTab === "generate" ? "#374151" : "#6b7280",
+              border: activeTab === "generate" ? "1px solid #d1d5db" : "1px solid transparent",
+              borderBottom: activeTab === "generate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
               fontSize: "14px",
-              fontWeight: "medium",
+              fontWeight: activeTab === "generate" ? "medium" : "normal",
             })}
           >
             Generate Proof
@@ -424,13 +425,14 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("validate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "validate" ? "#3b82f6" : "transparent",
-              color: activeTab === "validate" ? "white" : "#6b7280",
-              border: "none",
+              backgroundColor: activeTab === "validate" ? "#f9fafb" : "transparent",
+              color: activeTab === "validate" ? "#374151" : "#6b7280",
+              border: activeTab === "validate" ? "1px solid #d1d5db" : "1px solid transparent",
+              borderBottom: activeTab === "validate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
               fontSize: "14px",
-              fontWeight: "medium",
+              fontWeight: activeTab === "validate" ? "medium" : "normal",
             })}
           >
             Validate Proof
@@ -474,12 +476,16 @@ const ProofDemo: React.FC = () => {
               onClick={handleGenerateProof}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: "#10b981",
+                backgroundColor: "#374151",
                 color: "white",
-                border: "none",
+                border: "1px solid #374151",
                 borderRadius: "4px",
                 cursor: "pointer",
                 fontSize: "14px",
+                "&:hover": {
+                  backgroundColor: "#4b5563",
+                  borderColor: "#4b5563",
+                },
               })}
             >
               Generate Merkle Proof
@@ -490,12 +496,12 @@ const ProofDemo: React.FC = () => {
             <div
               className={css({
                 padding: "16px",
-                backgroundColor: "#f0fdf4",
+                backgroundColor: "#f9fafb",
                 borderRadius: "4px",
-                border: "1px solid #bbf7d0",
+                border: "1px solid #e5e7eb",
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#374151" })}>
                 Generated Proof for {sampleBatch.requests[selectedUser].owner}
               </h4>
               <div className={css({ marginBottom: "12px" })}>
@@ -589,12 +595,15 @@ const ProofDemo: React.FC = () => {
               disabled={!validationInput.trim()}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: validationInput.trim() ? "#3b82f6" : "#9ca3af",
+                backgroundColor: validationInput.trim() ? "#374151" : "#9ca3af",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
                 cursor: validationInput.trim() ? "pointer" : "not-allowed",
                 fontSize: "14px",
+                "&:hover": validationInput.trim() ? {
+                  backgroundColor: "#4b5563",
+                } : {},
               })}
             >
               Validate Proof
@@ -605,9 +614,9 @@ const ProofDemo: React.FC = () => {
             <div
               className={css({
                 padding: "16px",
-                backgroundColor: validationResult.isValid ? "#f0fdf4" : "#fef2f2",
+                backgroundColor: validationResult.isValid ? "#f9fafb" : "#fef2f2",
                 borderRadius: "4px",
-                border: `1px solid ${validationResult.isValid ? "#bbf7d0" : "#fecaca"}`,
+                border: `1px solid ${validationResult.isValid ? "#d1d5db" : "#fecaca"}`,
               })}
             >
               <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
@@ -889,13 +898,13 @@ const BatchCreator: React.FC = () => {
             disabled={!currentPrompt.trim()}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: currentPrompt.trim() ? "#3b82f6" : "#9ca3af",
+              backgroundColor: currentPrompt.trim() ? "#374151" : "#9ca3af",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: currentPrompt.trim() ? "#2563eb" : "#9ca3af" },
+              "&:hover": { backgroundColor: currentPrompt.trim() ? "#4b5563" : "#9ca3af" },
             })}
           >
             Send Request
@@ -905,13 +914,13 @@ const BatchCreator: React.FC = () => {
             onClick={handleRandomRequest}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: "#10b981",
+              backgroundColor: "#374151",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: "#059669" },
+              "&:hover": { backgroundColor: "#4b5563" },
             })}
           >
             Send Random Request

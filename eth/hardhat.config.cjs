@@ -1,10 +1,9 @@
-import type { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox-viem";
-import "@nomicfoundation/hardhat-verify";
-import "hardhat-abi-exporter";
-import "hardhat-gas-reporter";
-import "@openzeppelin/hardhat-upgrades";
-import { vars } from "hardhat/config";
+require("@nomicfoundation/hardhat-toolbox-viem");
+require("@nomicfoundation/hardhat-verify");
+require("hardhat-abi-exporter");
+require("hardhat-gas-reporter");
+require("@openzeppelin/hardhat-upgrades");
+const { vars } = require("hardhat/config");
 
 // Use default values for CI/testing if environment variables are not set
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY", "dummy-key-for-testing");
@@ -15,7 +14,7 @@ const SEPOLIA_PRIVATE_KEY = vars.get(
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
 const OPTIMISTIC_ETHERSCAN_API_KEY = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY", "dummy-optimistic-key");
 const COINMARKETCAP_API_KEY = vars.get("COINMARKETCAP_API_KEY", "dummy-cmc-key");
-const config: HardhatUserConfig = {
+const config = {
   solidity: "0.8.28",
   gasReporter: {
     currency: "EUR",
@@ -58,4 +57,4 @@ const config: HardhatUserConfig = {
   },
 };
 
-export default config;
+module.exports = config;

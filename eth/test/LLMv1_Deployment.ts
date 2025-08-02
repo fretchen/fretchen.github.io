@@ -4,6 +4,13 @@ import { deployLLMv1 } from "../scripts/deploy-llm-v1";
 import * as fs from "fs";
 import * as path from "path";
 
+type LLMv1ConfigOptions = Partial<{
+  validateOnly: boolean;
+  dryRun: boolean;
+  verify: boolean;
+  waitConfirmations: number;
+}>;
+
 describe("LLMv1 - Deployment Tests", function () {
   // Fixture to deploy LLMv1 using OpenZeppelin upgrades
   async function deployLLMv1Fixture() {
@@ -29,7 +36,7 @@ describe("LLMv1 - Deployment Tests", function () {
   }
 
   // Helper function to create a temporary config file for testing
-  async function createTempConfig(options: any = {}) {
+  async function createTempConfig(options: LLMv1ConfigOptions = {}) {
     const tempConfigPath = path.join(__dirname, "../scripts/llm-v1.config-test.json");
     const config = {
       options: {
@@ -51,7 +58,7 @@ describe("LLMv1 - Deployment Tests", function () {
   }
 
   // Helper function to backup and restore config
-  async function withTempConfig(options: any, testFn: () => Promise<void>) {
+  async function withTempConfig(options: LLMv1ConfigOptions, testFn: () => Promise<void>) {
     const originalConfigPath = path.join(__dirname, "../scripts/llm-v1.config.json");
     const backupConfigPath = path.join(__dirname, "../scripts/llm-v1.config.json.backup");
     const tempConfigPath = await createTempConfig(options);
@@ -126,7 +133,7 @@ describe("LLMv1 - Deployment Tests", function () {
 
           // Verify the deployed contract using ethers
           const llmV1 = await hre.ethers.getContractAt("LLMv1", result.address);
-          expect(llmV1).to.not.be.null;
+          expect(llmV1).to.not.equal(null);
           // Verify deployment info
           expect(result.deploymentInfo.network).to.equal("hardhat");
         }
@@ -139,7 +146,7 @@ describe("LLMv1 - Deployment Tests", function () {
         const result = await deployLLMv1();
 
         // In validation mode, the result should be true
-        expect(result).to.be.true;
+        expect(result).to.equal(true);
       });
     });
 
@@ -149,7 +156,7 @@ describe("LLMv1 - Deployment Tests", function () {
         const result = await deployLLMv1();
 
         // In dry run mode, the result should be true
-        expect(result).to.be.true;
+        expect(result).to.equal(true);
       });
     });
 
@@ -204,13 +211,13 @@ describe("LLMv1 - Deployment Tests", function () {
         if (typeof result === "object" && result !== null) {
           // Check that deployment file was created
           const deploymentsDir = path.join(__dirname, "../scripts/deployments");
-          expect(fs.existsSync(deploymentsDir)).to.be.true;
+          expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
           const deploymentFileName = `llm-v1-hardhat-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
-          expect(fs.existsSync(deploymentFilePath)).to.be.true;
+          expect(fs.existsSync(deploymentFilePath)).to.equal(true);
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));

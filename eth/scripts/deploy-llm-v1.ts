@@ -8,16 +8,16 @@ import { z } from "zod";
 // Zod Schema für Validierung
 const LLMv1ConfigSchema = z.object({
   options: z.object({
-    validateOnly: z.boolean().optional(),
-    dryRun: z.boolean().optional(),
-    verify: z.boolean().optional(),
+    validateOnly: z.boolean(),
+    dryRun: z.boolean(),
+    verify: z.boolean(),
     waitConfirmations: z.number().optional(),
-  }).optional(),
+  }),
   metadata: z.object({
-    description: z.string().optional(),
-    version: z.string().optional(),
-    environment: z.string().optional(),
-  }).optional(),
+    description: z.string(),
+    version: z.string(),
+    environment: z.string(),
+  }),
 });
 
 // TypeScript-Typ automatisch aus Zod-Schema generieren

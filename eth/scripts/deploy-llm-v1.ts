@@ -1,22 +1,27 @@
 #!/usr/bin/env npx hardhat run
 import { ethers, upgrades, network } from "hardhat";
-import { validateCollectorNFT, validateImplementation } from "./validate-contract";
+import { validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
+import { z } from "zod";
 
-interface LLMv1Config {
-  options?: {
-    validateOnly?: boolean;
-    dryRun?: boolean;
-    verify?: boolean;
-    waitConfirmations?: number;
-  };
-  metadata?: {
-    description?: string;
-    version?: string;
-    environment?: string;
-  };
-}
+// Zod Schema für Validierung
+const LLMv1ConfigSchema = z.object({
+  options: z.object({
+    validateOnly: z.boolean().optional(),
+    dryRun: z.boolean().optional(),
+    verify: z.boolean().optional(),
+    waitConfirmations: z.number().optional(),
+  }).optional(),
+  metadata: z.object({
+    description: z.string().optional(),
+    version: z.string().optional(),
+    environment: z.string().optional(),
+  }).optional(),
+});
+
+// TypeScript-Typ automatisch aus Zod-Schema generieren
+type LLMv1Config = z.infer<typeof LLMv1ConfigSchema>;
 
 /**
  * Load LLMv1 deployment configuration
@@ -31,10 +36,10 @@ function loadConfig(): LLMv1Config {
   }
 
   const configContent = fs.readFileSync(configPath, "utf8");
-  let config: LLMv1Config;
+  let configRaw: unknown;
 
   try {
-    config = JSON.parse(configContent);
+    configRaw = JSON.parse(configContent);
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw new Error(`Invalid JSON in configuration file: ${error.message}`);
@@ -42,8 +47,16 @@ function loadConfig(): LLMv1Config {
     throw error;
   }
 
-  // Basic validation - no specific validation needed for LLMv1
-  // Configuration is valid if it can be parsed as JSON
+  // Zod-Validierung
+  let config: LLMv1Config;
+  try {
+    config = LLMv1ConfigSchema.parse(configRaw);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Config validation failed: ${error.message}`);
+    }
+    throw error;
+  }
 
   console.log("✅ Configuration loaded and validated");
   console.log(`📋 Config: ${JSON.stringify(config, null, 2)}`);
@@ -174,8 +187,7 @@ async function deployLLMv1() {
   // Comprehensive validation using validate-contract functions
   console.log("\n🔍 Running comprehensive validation...");
   try {
-    await validateCollectorNFT(proxyAddress);
-    await validateImplementation(deploymentInfo.implementationAddress, "CollectorNFTv1");
+    await validateImplementation(deploymentInfo.implementationAddress, "LLMv1");
     console.log("✅ Comprehensive validation completed successfully!");
   } catch (error: unknown) {
     if (error instanceof Error) {

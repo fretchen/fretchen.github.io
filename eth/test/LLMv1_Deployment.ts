@@ -177,7 +177,7 @@ describe("LLMv1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail due to format validation
-        await expect(deployLLMv1()).to.be.rejectedWith("Invalid genImNFTAddress format");
+        await expect(deployLLMv1()).to.be.rejectedWith(/^Config validation failed:/);
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -207,7 +207,7 @@ describe("LLMv1 - Deployment Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.be.true;
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `collector-nft-v1-hardhat-${timestamp}.json`;
+          const deploymentFileName = `llm-v1-hardhat-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.be.true;

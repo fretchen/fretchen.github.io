@@ -1,6 +1,5 @@
 #!/usr/bin/env npx hardhat run
 import { ethers, upgrades, network } from "hardhat";
-import { getAddress } from "viem";
 import { validateCollectorNFT, validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
@@ -71,40 +70,29 @@ async function deployLLMv1() {
   // Load configuration
   const config = loadConfig();
 
-  const LLMv1Address = config.LLMv1Address;
   const options = config.options || {};
-
-  console.log(`📍 LLMv1 Address: ${LLMv1Address}`);
 
   // Check if validation only
   if (options.validateOnly) {
     console.log("🔍 Validation Only Mode - No deployment will occur");
-    return await validateDeployment(LLMv1Address);
+    return await validateDeployment();
   }
 
   // Check if dry run
   if (options.dryRun) {
     console.log("🧪 Dry Run Mode - Simulation only");
-    return await simulateDeployment(LLMv1Address);
+    return await simulateDeployment();
   }
 
   // Get contract factory
   console.log("📦 Getting LLMv1 contract factory...");
   const LLMv1Factory = await ethers.getContractFactory("LLMv1");
 
-  // Verify LLMv1 contract exists
-  console.log("🔍 Verifying LLMv1 contract...");
-  const LLMv1Code = await ethers.provider.getCode(LLMv1Address);
-  if (LLMv1Code === "0x") {
-    throw new Error(`No contract found at LLMv1 address: ${LLMv1Address}`);
-  }
-  console.log("✅ LLMv1 contract verified");
-
   // Deploy the upgradeable contract
   console.log("🚀 Deploying LLMv1...");
   console.log("");
 
-  const LLMv1 = await upgrades.deployProxy(LLMv1Factory, [LLMv1Address], {
+  const LLMv1 = await upgrades.deployProxy(LLMv1Factory, [], {
     kind: "uups",
     initializer: "initialize",
   });
@@ -123,19 +111,9 @@ async function deployLLMv1() {
   console.log("🔍 Verifying deployment...");
   const deployedContract = LLMv1Factory.attach(proxyAddress);
 
-  const contractName = await deployedContract.name();
-  const contractSymbol = await deployedContract.symbol();
-  const contractLLM = await deployedContract.LLMContract();
   const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
-  console.log(`📄 Contract Name: ${contractName}`);
-  console.log(`🏷️  Contract Symbol: ${contractSymbol}`);
-  console.log(`🔗 LLM Address: ${contractLLM}`);
-
-  // Verify configuration matches
-  if (contractLLM.toLowerCase() !== LLMv1Address.toLowerCase()) {
-    throw new Error("LLMv1 address mismatch after deployment");
-  }
+  console.log(`📄 Contract deployed at: ${proxyAddress}`);
 
   // Verify implementation contract
   console.log("🔧 Verifying implementation contract...");
@@ -168,9 +146,7 @@ async function deployLLMv1() {
     proxyAddress: proxyAddress,
     implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
     adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
-    LLMv1Address: LLMv1Address,
-    contractName: contractName,
-    contractSymbol: contractSymbol,
+    contractType: "LLMv1",
     deploymentOptions: {
       verify: options.verify || false,
       waitConfirmations: options.waitConfirmations || 1,
@@ -231,30 +207,23 @@ async function deployLLMv1() {
   };
 }
 
-async function validateDeployment(LLMv1Address: string) {
+async function validateDeployment() {
   console.log("🔍 Validating deployment configuration...");
-
-  // Verify LLMv1 contract
-  const LLMv1Code = await ethers.provider.getCode(LLMv1Address);
-  if (LLMv1Code === "0x") {
-    throw new Error(`No contract found at LLMv1 address: ${LLMv1Address}`);
-  }
 
   // Get contract factory for validation
   await ethers.getContractFactory("LLMv1");
 
   // Validate contract compilation
   console.log("✅ LLMv1 contract compiles successfully");
-  console.log("✅ LLMv1 contract exists at specified address");
 
   console.log("🎉 Validation completed successfully!");
   return true;
 }
 
-async function simulateDeployment(LLMv1Address: string) {
+async function simulateDeployment() {
   console.log("🧪 Simulating deployment...");
 
-  await validateDeployment(LLMv1Address);
+  await validateDeployment();
 
   // Get contract factory for simulation
   await ethers.getContractFactory("LLMv1");

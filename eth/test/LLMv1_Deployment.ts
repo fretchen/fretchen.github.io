@@ -136,7 +136,7 @@ describe("LLMv1 - Deployment Tests", function () {
     it("Should validate deployment configuration", async function () {
       await withTempConfig({ validateOnly: true }, async () => {
         // Import and run the deployment script in validation mode
-        const result = await deployCollectorNFT();
+        const result = await deployLLMv1();
 
         // In validation mode, the result should be true
         expect(result).to.be.true;
@@ -146,7 +146,7 @@ describe("LLMv1 - Deployment Tests", function () {
     it("Should perform dry run", async function () {
       await withTempConfig({ dryRun: true }, async () => {
         // Import and run the deployment script in dry run mode
-        const result = await deployCollectorNFT();
+        const result = await deployLLMv1();
 
         // In dry run mode, the result should be true
         expect(result).to.be.true;

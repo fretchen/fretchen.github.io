@@ -214,8 +214,12 @@ async function deployLLMv1() {
     try {
       console.log("📋 Contract verification would be performed here");
       console.log("✅ Contract verification completed successfully!");
-    } catch (error: any) {
-      console.log("⚠️  Warning: Contract verification failed:", error.message || error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log("⚠️  Warning: Contract verification failed:", error.message);
+      } else {
+        console.log("⚠️  Warning: Contract verification failed:", error);
+      }
     }
   }
 
@@ -226,34 +230,33 @@ async function deployLLMv1() {
   };
 }
 
-async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint) {
+async function validateDeployment(LLMv1Address: string) {
   console.log("🔍 Validating deployment configuration...");
 
-  // Verify GenImNFT contract
-  const genImNFTCode = await ethers.provider.getCode(genImNFTAddress);
-  if (genImNFTCode === "0x") {
-    throw new Error(`No contract found at GenImNFT address: ${genImNFTAddress}`);
+  // Verify LLMv1 contract
+  const LLMv1Code = await ethers.provider.getCode(LLMv1Address);
+  if (LLMv1Code === "0x") {
+    throw new Error(`No contract found at LLMv1 address: ${LLMv1Address}`);
   }
 
   // Get contract factory for validation
-  const LLMv1Factory = await ethers.getContractFactory("LLMv1");
+  await ethers.getContractFactory("LLMv1");
 
   // Validate contract compilation
   console.log("✅ LLMv1 contract compiles successfully");
   console.log("✅ LLMv1 contract exists at specified address");
-  console.log(`✅ Base mint price valid: ${ethers.formatEther(baseMintPrice)} ETH`);
 
   console.log("🎉 Validation completed successfully!");
   return true;
 }
 
-async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint) {
+async function simulateDeployment(LLMv1Address: string) {
   console.log("🧪 Simulating deployment...");
 
-  await validateDeployment(genImNFTAddress, baseMintPrice);
+  await validateDeployment(LLMv1Address);
 
   // Get contract factory for simulation
-  const LLMv1Factory = await ethers.getContractFactory("LLMv1");
+  await ethers.getContractFactory("LLMv1");
 
   console.log("⛽ Estimating deployment costs...");
   console.log("📦 Contract factory created successfully");

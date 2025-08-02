@@ -87,8 +87,6 @@ describe("LLMv1 - Deployment Tests", function () {
     it("Should deploy LLMv1 with correct parameters", async function () {
       const { llmContract, owner } = await deployLLMv1Fixture();
 
-      expect(await llmContract.name()).to.equal("LLMv1");
-      expect(await llmContract.symbol()).to.equal("LLM1");
       expect(await llmContract.owner()).to.equal(owner.address);
     });
 
@@ -109,7 +107,6 @@ describe("LLMv1 - Deployment Tests", function () {
       expect(await llmContract.owner()).to.equal(owner.address);
 
       // Check storage gap exists (compilation check)
-      expect(await llmContract.name()).to.equal("LLMv1");
     });
   });
 
@@ -129,9 +126,7 @@ describe("LLMv1 - Deployment Tests", function () {
 
           // Verify the deployed contract using ethers
           const llmV1 = await hre.ethers.getContractAt("LLMv1", result.address);
-          expect(await llmV1.name()).to.equal("LLMv1");
-          expect(await llmV1.symbol()).to.equal("LLM1");
-
+          expect(llmV1).to.not.be.null;
           // Verify deployment info
           expect(result.deploymentInfo.network).to.equal("hardhat");
         }

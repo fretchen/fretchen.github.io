@@ -6,7 +6,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 interface LLMv1Config {
-  LLMv1Address: string;
   options?: {
     validateOnly?: boolean;
     dryRun?: boolean;
@@ -44,20 +43,8 @@ function loadConfig(): LLMv1Config {
     throw error;
   }
 
-  // Basic validation
-  if (!config.LLMv1Address) {
-    throw new Error("LLMv1Address is required in config");
-  }
-
-  // Validate address format
-  try {
-    getAddress(config.LLMv1Address);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      throw new Error(`Invalid LLMv1Address format: ${config.LLMv1Address}`);
-    }
-    throw error;
-  }
+  // Basic validation - no specific validation needed for LLMv1
+  // Configuration is valid if it can be parsed as JSON
 
   console.log("✅ Configuration loaded and validated");
   console.log(`📋 Config: ${JSON.stringify(config, null, 2)}`);

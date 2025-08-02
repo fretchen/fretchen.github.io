@@ -37,8 +37,11 @@ function loadConfig(): LLMv1Config {
 
   try {
     config = JSON.parse(configContent);
-  } catch (error: any) {
-    throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+    }
+    throw error;
   }
 
   // Basic validation
@@ -49,8 +52,11 @@ function loadConfig(): LLMv1Config {
   // Validate address format
   try {
     getAddress(config.LLMv1Address);
-  } catch (error) {
-    throw new Error(`Invalid LLMv1Address format: ${config.LLMv1Address}`);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Invalid LLMv1Address format: ${config.LLMv1Address}`);
+    }
+    throw error;
   }
 
   console.log("✅ Configuration loaded and validated");
@@ -140,8 +146,8 @@ async function deployLLMv1() {
   console.log(`🔗 LLM Address: ${contractLLM}`);
 
   // Verify configuration matches
-  if (contractLLM.toLowerCase() !== LLMAddress.toLowerCase()) {
-    throw new Error("LLM   address mismatch after deployment");
+  if (contractLLM.toLowerCase() !== LLMv1Address.toLowerCase()) {
+    throw new Error("LLMv1 address mismatch after deployment");
   }
 
   // Verify implementation contract
@@ -154,10 +160,14 @@ async function deployLLMv1() {
 
   // Test implementation contract ABI compatibility
   try {
-    const implementationContract = LLMv1Factory.attach(implementationAddress);
+    LLMv1Factory.attach(implementationAddress);
     console.log("✅ Implementation contract ABI compatible");
-  } catch (error: any) {
-    console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message || error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message);
+    } else {
+      console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error);
+    }
   }
 
   console.log("✅ All verifications passed!");
@@ -204,8 +214,12 @@ async function deployLLMv1() {
     await validateCollectorNFT(proxyAddress);
     await validateImplementation(deploymentInfo.implementationAddress, "CollectorNFTv1");
     console.log("✅ Comprehensive validation completed successfully!");
-  } catch (error: any) {
-    console.log("⚠️  Warning: Comprehensive validation failed:", error.message || error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.log("⚠️  Warning: Comprehensive validation failed:", error.message);
+    } else {
+      console.log("⚠️  Warning: Comprehensive validation failed:", error);
+    }
   }
 
   // Contract verification if enabled

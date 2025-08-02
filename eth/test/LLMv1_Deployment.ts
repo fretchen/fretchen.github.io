@@ -1,54 +1,27 @@
 import { expect } from "chai";
 import hre from "hardhat";
-import { deployCollectorNFT } from "../scripts/deploy-collector-nft-v1";
+import { deployLLMv1 } from "../scripts/deploy-llm-v1";
 import * as fs from "fs";
 import * as path from "path";
 
-const BASE_MINT_PRICE = hre.ethers.parseEther("0.001");
-
-describe("CollectorNFTv1 - Deployment Tests", function () {
-  // Fixture to deploy GenImNFTv3 for testing (using ethers for OpenZeppelin compatibility)
-  async function deployGenImNFTv3Fixture() {
+describe("LLMv1 - Deployment Tests", function () {
+  // Fixture to deploy LLMv1 using OpenZeppelin upgrades
+  async function deployLLMv1Fixture() {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
-    // Deploy GenImNFTv3 for testing
-    const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
-    const genImProxy = await hre.upgrades.deployProxy(GenImNFTv3Factory, [], {
+    // Deploy LLMv1 using OpenZeppelin upgrades
+    const LLMv1Factory = await hre.ethers.getContractFactory("LLMv1");
+    const llmProxy = await hre.upgrades.deployProxy(LLMv1Factory, [], {
       initializer: "initialize",
       kind: "uups",
     });
-    await genImProxy.waitForDeployment();
+    await llmProxy.waitForDeployment();
 
-    const genImAddress = await genImProxy.getAddress();
-    const genImNFT = await hre.ethers.getContractAt("GenImNFTv3", genImAddress);
-
-    return {
-      genImNFT,
-      genImAddress,
-      owner,
-      otherAccount,
-    };
-  }
-
-  // Fixture to deploy CollectorNFTv1 using OpenZeppelin upgrades
-  async function deployCollectorNFTv1Fixture() {
-    const { genImNFT, genImAddress, owner, otherAccount } = await deployGenImNFTv3Fixture();
-
-    // Deploy CollectorNFTv1 using OpenZeppelin upgrades
-    const CollectorNFTv1Factory = await hre.ethers.getContractFactory("CollectorNFTv1");
-    const collectorProxy = await hre.upgrades.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
-      initializer: "initialize",
-      kind: "uups",
-    });
-    await collectorProxy.waitForDeployment();
-
-    const proxyAddress = await collectorProxy.getAddress();
-    const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", proxyAddress);
+    const proxyAddress = await llmProxy.getAddress();
+    const llmContract = await hre.ethers.getContractAt("LLMv1", proxyAddress);
 
     return {
-      genImNFT,
-      genImAddress,
-      collectorNFTv1,
+      llmContract,
       proxyAddress,
       owner,
       otherAccount,
@@ -56,11 +29,9 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
   }
 
   // Helper function to create a temporary config file for testing
-  async function createTempConfig(genImAddress: string, options: any = {}) {
-    const tempConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-test.json");
+  async function createTempConfig(options: any = {}) {
+    const tempConfigPath = path.join(__dirname, "../scripts/llm-v1.config-test.json");
     const config = {
-      genImNFTAddress: genImAddress,
-      baseMintPrice: "0.001",
       options: {
         validateOnly: false,
         dryRun: false,
@@ -69,7 +40,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
         ...options,
       },
       metadata: {
-        description: "Test deployment configuration for CollectorNFTv1",
+        description: "Test deployment configuration for LLMv1",
         version: "1.0.0-test",
         environment: "development",
       },
@@ -80,10 +51,10 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
   }
 
   // Helper function to backup and restore config
-  async function withTempConfig(genImAddress: string, options: any, testFn: () => Promise<void>) {
-    const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
-    const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
-    const tempConfigPath = await createTempConfig(genImAddress, options);
+  async function withTempConfig(options: any, testFn: () => Promise<void>) {
+    const originalConfigPath = path.join(__dirname, "../scripts/llm-v1.config.json");
+    const backupConfigPath = path.join(__dirname, "../scripts/llm-v1.config.json.backup");
+    const tempConfigPath = await createTempConfig(options);
 
     try {
       // Backup original config if it exists
@@ -113,40 +84,16 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
   }
 
   describe("Basic Deployment", function () {
-    it("Should deploy CollectorNFTv1 with correct parameters", async function () {
-      const { collectorNFTv1, genImAddress, owner } = await deployCollectorNFTv1Fixture();
+    it("Should deploy LLMv1 with correct parameters", async function () {
+      const { llmContract, owner } = await deployLLMv1Fixture();
 
-      expect(await collectorNFTv1.name()).to.equal("CollectorNFTv1");
-      expect(await collectorNFTv1.symbol()).to.equal("COLLECTORv1");
-      expect(await collectorNFTv1.owner()).to.equal(owner.address);
-      expect(await collectorNFTv1.genImNFTContract()).to.equal(genImAddress);
-      expect(await collectorNFTv1.baseMintPrice()).to.equal(BASE_MINT_PRICE);
-      expect(await collectorNFTv1.totalSupply()).to.equal(0n);
-    });
-
-    it("Should emit ContractInitialized event during deployment", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
-
-      // Deploy and check for initialization event
-      const CollectorNFTv1Factory = await hre.ethers.getContractFactory("CollectorNFTv1");
-      const collectorProxy = await hre.upgrades.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
-        initializer: "initialize",
-        kind: "uups",
-      });
-      await collectorProxy.waitForDeployment();
-
-      const proxyAddress = await collectorProxy.getAddress();
-      const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", proxyAddress);
-      const filter = collectorNFTv1.filters.ContractInitialized();
-      const events = await collectorNFTv1.queryFilter(filter);
-
-      expect(events).to.have.length(1);
-      expect(events[0].args?.genImNFTContract).to.equal(genImAddress);
-      expect(events[0].args?.baseMintPrice).to.equal(BASE_MINT_PRICE);
+      expect(await llmContract.name()).to.equal("LLMv1");
+      expect(await llmContract.symbol()).to.equal("LLM1");
+      expect(await llmContract.owner()).to.equal(owner.address);
     });
 
     it("Should be upgradeable (UUPS proxy)", async function () {
-      const { proxyAddress } = await deployCollectorNFTv1Fixture();
+      const { proxyAddress } = await deployLLMv1Fixture();
 
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -156,23 +103,21 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
     });
 
     it("Should be ready for future upgrades", async function () {
-      const { collectorNFTv1, owner } = await deployCollectorNFTv1Fixture();
+      const { llmContract, owner } = await deployLLMv1Fixture();
 
       // Check that owner can authorize upgrades
-      expect(await collectorNFTv1.owner()).to.equal(owner.address);
+      expect(await llmContract.owner()).to.equal(owner.address);
 
       // Check storage gap exists (compilation check)
-      expect(await collectorNFTv1.name()).to.equal("CollectorNFTv1");
+      expect(await llmContract.name()).to.equal("LLMv1");
     });
   });
 
   describe("Script Integration Tests", function () {
     it("Should deploy using the deployment script with config file", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
-
-      await withTempConfig(genImAddress, { dryRun: false }, async () => {
+      await withTempConfig({ dryRun: false }, async () => {
         // Import and run the deployment script
-        const result = await deployCollectorNFT();
+        const result = await deployLLMv1();
 
         // Check if result is a deployment result (not validation/dry run)
         expect(result).to.not.be.a("boolean");
@@ -183,23 +128,18 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", result.address);
-          expect(await collectorNFTv1.name()).to.equal("CollectorNFTv1");
-          expect(await collectorNFTv1.symbol()).to.equal("COLLECTORv1");
-          expect(await collectorNFTv1.genImNFTContract()).to.equal(genImAddress);
+          const llmV1 = await hre.ethers.getContractAt("LLMv1", result.address);
+          expect(await llmV1.name()).to.equal("LLMv1");
+          expect(await llmV1.symbol()).to.equal("LLM1");
 
           // Verify deployment info
           expect(result.deploymentInfo.network).to.equal("hardhat");
-          expect(result.deploymentInfo.genImNFTAddress).to.equal(genImAddress);
-          expect(result.deploymentInfo.baseMintPrice).to.equal("0.001");
         }
       });
     });
 
     it("Should validate deployment configuration", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
-
-      await withTempConfig(genImAddress, { validateOnly: true }, async () => {
+      await withTempConfig({ validateOnly: true }, async () => {
         // Import and run the deployment script in validation mode
         const result = await deployCollectorNFT();
 
@@ -209,9 +149,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
     });
 
     it("Should perform dry run", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
-
-      await withTempConfig(genImAddress, { dryRun: true }, async () => {
+      await withTempConfig({ dryRun: true }, async () => {
         // Import and run the deployment script in dry run mode
         const result = await deployCollectorNFT();
 
@@ -220,23 +158,10 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
       });
     });
 
-    it("Should handle missing GenImNFT contract", async function () {
-      const invalidAddress = "0x1234567890123456789012345678901234567890";
-
-      await withTempConfig(invalidAddress, { validateOnly: true }, async () => {
-        // This should fail because the contract doesn't exist
-        await expect(deployCollectorNFT()).to.be.rejectedWith("No contract found at GenImNFT address");
-      });
-    });
-
     it("Should validate config file schema", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
-
       // Create a config with invalid data
-      const invalidConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-invalid.json");
+      const invalidConfigPath = path.join(__dirname, "../scripts/llm-v1.config-invalid.json");
       const invalidConfig = {
-        genImNFTAddress: "invalid-address", // Invalid address format
-        baseMintPrice: "invalid-price", // Invalid price format
         options: {
           validateOnly: "not-boolean", // Invalid type
         },
@@ -244,8 +169,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
       fs.writeFileSync(invalidConfigPath, JSON.stringify(invalidConfig, null, 2));
 
-      const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
-      const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
+      const originalConfigPath = path.join(__dirname, "../scripts/llm-v1.config.json");
+      const backupConfigPath = path.join(__dirname, "../scripts/llm-v1.config.json.backup");
 
       try {
         // Backup original config if it exists
@@ -257,7 +182,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail due to format validation
-        await expect(deployCollectorNFT()).to.be.rejectedWith("Invalid genImNFTAddress format");
+        await expect(deployLLMv1()).to.be.rejectedWith("Invalid genImNFTAddress format");
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -275,10 +200,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
     });
 
     it("Should save deployment info to file", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
-
-      await withTempConfig(genImAddress, { dryRun: false }, async () => {
-        const result = await deployCollectorNFT();
+      await withTempConfig({ dryRun: false }, async () => {
+        const result = await deployLLMv1();
 
         // Check if result is a deployment result (not validation/dry run)
         expect(result).to.not.be.a("boolean");
@@ -298,8 +221,6 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
           expect(deploymentData.network).to.equal("hardhat");
           expect(deploymentData.proxyAddress).to.equal(result.address);
-          expect(deploymentData.genImNFTAddress).to.equal(genImAddress);
-          expect(deploymentData.baseMintPrice).to.equal("0.001");
 
           // Clean up deployment file
           fs.unlinkSync(deploymentFilePath);

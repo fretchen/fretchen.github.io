@@ -14,11 +14,12 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
-    "ajv": "^8.17.1",
+    "@openzeppelin/merkle-tree": "^1.0.8",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
     "hardhat-abi-exporter": "^2.11.0",
-    "typescript-eslint": "^8.38.0"
+    "typescript-eslint": "^8.38.0",
+    "zod": "^3.25.76"
   }
 }

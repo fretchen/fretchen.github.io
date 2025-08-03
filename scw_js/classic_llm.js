@@ -1,7 +1,7 @@
 /**
  * A module for generating images and uploading them to S3.
  */
-import { generateAndUploadImage } from "./image_service.js";
+import { callLLMAPI } from "./llm_service.js";
 
 /**
  * Handler function for the serverless environment.
@@ -21,50 +21,18 @@ export async function handle(event, _context) {
     const queryParams = event.queryStringParameters || {};
     const prompt = queryParams.prompt;
 
-    // Extract tokenId from query parameters if present
-    // Set to "0" if not present or invalid
-    const tokenId = queryParams.tokenId || "0";
+    console.log(`Generating answer for prompt: "${prompt}"`);
 
-    // Extract the size parameter, default to "1024x1024"
-    const size = queryParams.size || "1024x1024";
-
-    // Validate the prompt
-    if (!prompt) {
-      return {
-        body: JSON.stringify({ error: "No prompt provided." }),
-        statusCode: 400,
-        headers,
-      };
-    }
-
-    // Validate the size parameter
-    const validSizes = ["1024x1024", "1792x1024"];
-    if (!validSizes.includes(size)) {
-      return {
-        body: JSON.stringify({
-          error: `Invalid image size. Allowed: ${validSizes.join(", ")}`,
-        }),
-        statusCode: 400,
-        headers,
-      };
-    }
-
-    console.log(`Generating image for prompt: "${prompt}", TokenID: ${tokenId}, Size: ${size}`);
-
-    // Pass prompt, tokenId, and size to the function
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId, size);
+    // Pass prompt to the function
+    const data = await callLLMAPI(prompt);
 
     return {
-      body: JSON.stringify({
-        metadata_url: metadataUrl,
-        token_id: tokenId,
-        size,
-      }),
+      body: data,
       statusCode: 200,
       headers,
     };
   } catch (error) {
-    console.error(`Error during image generation: ${error}`);
+    console.error(`Error during answer generation: ${error}`);
     const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
 
     return {

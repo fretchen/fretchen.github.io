@@ -19,6 +19,8 @@ export async function callLLMAPI(prompt) {
   if (!prompt) {
     throw new Error("No prompt provided.");
   }
+  console.log("Generating answer for prompt:", prompt);
+  const promptArray = JSON.parse(prompt);
 
   const headers = {
     Authorization: `Bearer ${ionosApiToken}`,
@@ -27,7 +29,7 @@ export async function callLLMAPI(prompt) {
 
   const body = {
     model: MODEL_NAME,
-    messages: prompt,
+    messages: promptArray,
   };
 
   console.log("Sending answer generation request...");

@@ -1,5 +1,6 @@
 /**
- * A module for generating prompt answers and uploading them to S3.
+ * A module for generating prompt answers and uploading them to S3. All integrated
+ * with a smart contract on the blockchain.
  */
 import { callLLMAPI } from "./llm_service.js";
 

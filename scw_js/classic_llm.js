@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * A module for generating prompt answers and uploading them to S3.
  */
@@ -6,21 +8,28 @@ import { callLLMAPI } from "./llm_service.js";
 /**
  * Handler function for the serverless environment.
  * @param {Object} event - The event object.
- * @param {Object} context - The invocation context.
- * @returns {Object} - The HTTP response.
+ * @param {Object} _context - The invocation context.
+ * @returns {Promise<{ body: any, statusCode: number, headers: Record<string, string> }>} - The HTTP response.
  */
 export async function handle(event, _context) {
+  const prompt = event.queryStringParameters.prompt;
+  if (!prompt) {
+    return {
+      body: JSON.stringify({ error: "No prompt provided" }),
+      headers: { "Content-Type": ["application/json"] },
+      statusCode: 400,
+    };
+  }
+  console.log("Prompt: ", prompt);
+
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "*",
     "Access-Control-Allow-Methods": "*",
     "Content-Type": "application/json",
   };
-
+  // check for the prompt in the query parameters
   try {
-    const queryParams = event.queryStringParameters || {};
-    const prompt = queryParams.prompt;
-
     console.log(`Generating answer for prompt: "${prompt}"`);
 
     // Pass prompt to the function

@@ -1,10 +1,12 @@
+// @ts-check
+
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 
 /**
  * Generates an answer based on the prompt
  * @param {string} prompt - The prompt for image generation
- * @returns {Promise<string>} - The generated prompt
+ * @returns {Promise<{ content: any, usage: any, model: any, }>} - The generated prompt
  */
 
 export async function callLLMAPI(prompt) {

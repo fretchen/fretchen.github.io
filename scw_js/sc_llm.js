@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * A module for generating prompt answers and uploading them to S3. All integrated
  * with a smart contract on the blockchain.
@@ -7,10 +9,39 @@ import { callLLMAPI } from "./llm_service.js";
 /**
  * Handler function for the serverless environment.
  * @param {Object} event - The event object.
- * @param {Object} context - The invocation context.
- * @returns {Object} - The HTTP response.
+ * @param {Object} _context - The invocation context.
+ * @returns {Promise<{ body: any, statusCode: number, headers: Record<string, string> }>} - The HTTP response.
  */
 export async function handle(event, _context) {
+  // get the prompt from the event
+  let prompt;
+  let body;
+  if (event.httpMethod === "POST") {
+    // Body parsen (JSON-String zu Objekt)
+    body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    console.log("Parsed body: ", body);
+  } else {
+    return {
+      body: JSON.stringify({ error: "Only POST requests are supported" }),
+      headers: { "Content-Type": "application/json" },
+      statusCode: 400,
+    };
+  }
+
+  // check if the prompt is in the body
+  if (body && body.data && body.data.prompt) {
+    prompt = body.data.prompt;
+  } else {
+    return {
+      body: JSON.stringify({ error: "No prompt provided" }),
+      headers: { "Content-Type": "application/json" },
+      statusCode: 400,
+    };
+  }
+  console.log("Prompt: ", prompt);
+  console.log("Event: ", event.httpMethod);
+
+  // check that the submitting wallet has enough balance
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "*",
@@ -19,14 +50,15 @@ export async function handle(event, _context) {
   };
 
   try {
-    const queryParams = event.queryStringParameters || {};
-    const prompt = queryParams.prompt;
-
     console.log(`Generating answer for prompt: "${prompt}"`);
 
     // Pass prompt to the function
-    const data = await callLLMAPI(prompt);
-
+    // const data = await callLLMAPI(prompt);
+    const data = {
+      content: "I am a placeholder for the LLM response",
+      usage: "placeholder usage",
+      model: "placeholder model",
+    };
     return {
       body: data,
       statusCode: 200,
@@ -34,14 +66,15 @@ export async function handle(event, _context) {
     };
   } catch (error) {
     console.error(`Error during answer generation: ${error}`);
-    const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
-
-    return {
-      body: JSON.stringify({ error: error.message }),
-      statusCode,
-      headers,
-    };
   }
+
+  const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
+
+  return {
+    body: JSON.stringify({ error: error.message }),
+    statusCode,
+    headers,
+  };
 }
 
 /* This is used to test locally and will not be executed on Scaleway Functions */

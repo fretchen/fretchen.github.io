@@ -49,6 +49,12 @@ const contracts: ContractConfig[] = [
     contractName: "Support",
     description: "Support contract for donations and likes functionality",
   },
+  {
+    name: "LLMv1",
+    contractFile: "LLMv1.sol",
+    contractName: "LLMv1",
+    description: "LLM Version 1 to interact with LLMs",
+  },
 ];
 
 async function exportContractABI(config: ContractConfig) {

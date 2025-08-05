@@ -51,10 +51,19 @@ export async function handle(event, _context) {
       statusCode: 400,
     };
   }
+  // now also make sure that the necessary information is provided
+  if (!auth.address || !auth.signature || !auth.message) {
+    return {
+      body: JSON.stringify({ error: "Incomplete auth data" }),
+      headers: { "Content-Type": "application/json" },
+      statusCode: 400,
+    };
+  }
+  const { address, signature, message } = auth;
 
   try {
     // Extract necessary information for wallet verification
-    await verify_wallet(auth);
+    await verify_wallet(address, signature, message);
   } catch (error) {
     console.error("Wallet verification failed:", error);
     return {

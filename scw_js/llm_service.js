@@ -1,5 +1,7 @@
 // @ts-check
 
+import { verifyMessage } from "viem";
+
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 
@@ -56,22 +58,22 @@ export async function callLLMAPI(prompt) {
 }
 
 /**
- * Verifies that an ethereum wallet really signed the request
- * @param {Object} auth - The auth object containing the wallet address, signature, etc.
- * @returns {Promise<void>}
+ * Verifies that an ethereum wallet really signed the request.
+ * The parameters must match the expected input for viem's verifyMessage function:
+ *   - address: The Ethereum address that should have signed the message.
+ *   - signature: The hex-encoded signature string (with 0x prefix).
+ *   - message: The original message string that was signed.
+ * @param {`0x${string}`} address - The Ethereum address of the signer (must start with 0x).
+ * @param {`0x${string}`} signature - The hex-encoded signature (must include 0x prefix).
+ * @param {string} message - The original message that was signed.
+ * @returns {Promise<void>} Throws an error if the signature is invalid.
  */
-export async function verify_wallet(auth) {
-  console.log("auth:", auth);
-  const { address, signature, message } = auth;
-
-  // 5. Verify the signature using viem
-  const { verifyMessage } = await import("viem");
-
+export async function verify_wallet(address, signature, message) {
   try {
     const isValid = await verifyMessage({
-      address: address,
-      message: message,
-      signature: signature,
+      address,
+      message,
+      signature,
     });
 
     if (!isValid) {

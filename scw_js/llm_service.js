@@ -54,3 +54,33 @@ export async function callLLMAPI(prompt) {
     model: data.model,
   };
 }
+
+/**
+ * Verifies that an ethereum wallet really signed the request
+ * @param {Object} auth - The auth object containing the wallet address, signature, etc.
+ * @returns {Promise<void>}
+ */
+export async function verify_wallet(auth) {
+  console.log("auth:", auth);
+  const { address, signature, message } = auth;
+
+  // 5. Verify the signature using viem
+  const { verifyMessage } = await import("viem");
+
+  try {
+    const isValid = await verifyMessage({
+      address: address,
+      message: message,
+      signature: signature,
+    });
+
+    if (!isValid) {
+      throw new Error("Invalid wallet signature.");
+    } else {
+      console.log("Wallet signature verified successfully.");
+    }
+  } catch (error) {
+    console.error("Signature verification failed:", error);
+    throw new Error("Invalid wallet signature.");
+  }
+}

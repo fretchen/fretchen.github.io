@@ -4,7 +4,7 @@
  * A module for generating prompt answers and uploading them to S3. All integrated
  * with a smart contract on the blockchain.
  */
-import { callLLMAPI } from "./llm_service.js";
+import { callLLMAPI, verify_wallet } from "./llm_service.js";
 
 /**
  * Handler function for the serverless environment.
@@ -39,7 +39,30 @@ export async function handle(event, _context) {
     };
   }
   console.log("Prompt: ", prompt);
-  console.log("Event: ", event.httpMethod);
+
+  // verify that the official wallet actually sent the request
+  let auth;
+  if (body && body.auth) {
+    auth = body.auth;
+  } else {
+    return {
+      body: JSON.stringify({ error: "No auth data provided" }),
+      headers: { "Content-Type": "application/json" },
+      statusCode: 400,
+    };
+  }
+
+  try {
+    // Extract necessary information for wallet verification
+    await verify_wallet(auth);
+  } catch (error) {
+    console.error("Wallet verification failed:", error);
+    return {
+      body: JSON.stringify({ error: error.message }),
+      headers: { "Content-Type": "application/json" },
+      statusCode: 401,
+    };
+  }
 
   // check that the submitting wallet has enough balance
   const headers = {

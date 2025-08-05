@@ -1,6 +1,6 @@
 // Auto-generated ABI for CollectorNFTv1
 // CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
-// Generated on: 2025-06-15T14:54:48.728Z
+// Generated on: 2025-08-05T16:01:22.277Z
 
 export const CollectorNFTv1ABI = [
   {

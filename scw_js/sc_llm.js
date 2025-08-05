@@ -73,7 +73,8 @@ export async function handle(event, _context) {
     };
   }
 
-  // check that the submitting wallet has enough balance
+  // check that the submitting wallet has enough balance in the contract
+
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "*",

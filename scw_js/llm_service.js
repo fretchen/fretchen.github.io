@@ -1,7 +1,9 @@
 // @ts-check
 
 import { verifyMessage } from "viem";
+import { getContract, createWalletClient, createPublicClient, http } from "viem";
 
+import { getChain, getLLMv1ContractConfig } from "./getChain.js";
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 
@@ -84,5 +86,35 @@ export async function verify_wallet(address, signature, message) {
   } catch (error) {
     console.error("Signature verification failed:", error);
     throw new Error("Invalid wallet signature.");
+  }
+}
+
+/**
+ * Checks that the address that called the LLM service has enough balance to pay for the service.
+ * @param {`0x${string}`} address - The Ethereum address of the caller.
+ * @param {number} requiredBalance - The minimum balance required to call the service.
+ * @returns {Promise<void>} Resolves if the balance is sufficient, rejects otherwise.
+ */
+export async function checkWalletBalance(address, requiredBalance) {
+  // set up the wallets
+  const activeChain = getChain();
+  const publicClient = createPublicClient({
+    chain: activeChain,
+    transport: http(),
+  });
+
+  const { address: contractAddress, abi: llmAbi } = getLLMv1ContractConfig();
+  const contract = getContract({
+    address: contractAddress,
+    abi: llmAbi,
+    client: {
+      public: publicClient,
+    },
+  });
+
+  const hasBalance = await contract.read.checkBalance([address]);
+  console.log(`Checking balance for ${address}: ${hasBalance}`);
+  if (!hasBalance) {
+    throw new Error("Insufficient balance");
   }
 }

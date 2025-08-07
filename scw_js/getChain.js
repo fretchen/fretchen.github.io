@@ -1,10 +1,12 @@
 // @ts-check
-
+import fs from "fs";
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import { CollectorNFTv1ABI } from "../eth/abi/contracts/CollectorNFTv1";
-import { GenImNFTv3ABI } from "../eth/abi/contracts/GenImNFTv3";
-// SupportABI import ergänzen, falls benötigt
-// import { SupportABI } from "../eth/abi/contracts/Support";
+
+const CollectorNFTv1ABI = JSON.parse(
+  fs.readFileSync("../eth/abi/contracts/CollectorNFTv1.json", "utf8"),
+);
+const GenImNFTv3ABI = JSON.parse(fs.readFileSync("../eth/abi/contracts/GenImNFTv3.json", "utf8"));
+const LLMv1ABI = JSON.parse(fs.readFileSync("../eth/abi/contracts/LLMv1.json", "utf8"));
 
 /**
  * Get environment variable in both Node.js and Vite contexts
@@ -49,6 +51,19 @@ export function getChain() {
       return optimismSepolia;
     default:
       return optimism;
+  }
+}
+
+/** returns the config of the LLMv1 contract
+ * @returns {{ address: `0x${string}`, abi: any }}
+ */
+export function getLLMv1ContractConfig() {
+  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimismSepolia");
+  switch (chainName) {
+    case "optimismSepolia":
+      return { address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", abi: LLMv1ABI };
+    default:
+      return { address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", abi: LLMv1ABI };
   }
 }
 

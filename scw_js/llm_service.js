@@ -1,9 +1,9 @@
 // @ts-check
 
-import { verifyMessage } from "viem";
-import { getContract, createWalletClient, createPublicClient, http } from "viem";
+import { verifyMessage, getContract, createPublicClient, http } from "viem";
 
 import { getChain, getLLMv1ContractConfig } from "./getChain.js";
+
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 
@@ -112,9 +112,11 @@ export async function checkWalletBalance(address, requiredBalance) {
     },
   });
 
-  const hasBalance = await contract.read.checkBalance([address]);
-  console.log(`Checking balance for ${address}: ${hasBalance}`);
-  if (!hasBalance) {
-    throw new Error("Insufficient balance");
+  const currentBalance = /** @type {bigint} */ (await contract.read.checkBalance([address]));
+  console.log(`Checking balance for ${address}: ${currentBalance}`);
+  if (currentBalance < requiredBalance) {
+    throw new Error(
+      `Insufficient balance. Required: ${requiredBalance}, Current: ${currentBalance}`,
+    );
   }
 }

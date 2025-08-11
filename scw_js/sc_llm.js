@@ -4,7 +4,7 @@
  * A module for generating prompt answers and uploading them to S3. All integrated
  * with a smart contract on the blockchain.
  */
-import { checkWalletBalance, verify_wallet } from "./llm_service.js";
+import { checkWalletBalance, saveLeafToTree, verify_wallet } from "./llm_service.js";
 
 /**
  * Handler function for the serverless environment.
@@ -91,31 +91,35 @@ export async function handle(event, _context) {
     "Access-Control-Allow-Methods": "*",
     "Content-Type": "application/json",
   };
-
+  let data;
   try {
     console.log(`Generating answer for prompt: "${prompt}"`);
 
     // Pass prompt to the function
-    // const data = await callLLMAPI(prompt);
-    const data = {
+    // data = await callLLMAPI(prompt);
+    data = {
       content: "I am a placeholder for the LLM response",
       usage: "placeholder usage",
       model: "placeholder model",
     };
-    return {
-      body: data,
-      statusCode: 200,
-      headers,
-    };
   } catch (error) {
     console.error(`Error during answer generation: ${error}`);
+    const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
+    return {
+      body: JSON.stringify({ error: error.message }),
+      statusCode,
+      headers,
+    };
   }
 
-  const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
-
+  // here we create a dummy cost that is based on the usage.
+  // we will have to clean this up later
+  const cost = 0.001;
+  // time to save the message and the leaf to the tree
+  await saveLeafToTree(address, "serviceProviderAdress", data.usage, cost);
   return {
-    body: JSON.stringify({ error: error.message }),
-    statusCode,
+    body: data,
+    statusCode: 200,
     headers,
   };
 }

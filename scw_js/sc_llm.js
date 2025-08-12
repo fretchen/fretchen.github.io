@@ -4,7 +4,13 @@
  * A module for generating prompt answers and uploading them to S3. All integrated
  * with a smart contract on the blockchain.
  */
-import { callLLMAPI, checkWalletBalance, saveLeafToTree, verify_wallet } from "./llm_service.js";
+import {
+  convertTokensToCost,
+  callLLMAPI,
+  checkWalletBalance,
+  saveLeafToTree,
+  verify_wallet,
+} from "./llm_service.js";
 
 /**
  * Handler function for the serverless environment.
@@ -109,9 +115,17 @@ export async function handle(event, _context) {
 
   // here we create a dummy cost that is based on the usage.
   // we will have to clean this up later
-  const cost = 0.001;
+  const cost = convertTokensToCost(data.usage.total_tokens);
   // time to save the message and the leaf to the tree
-  await saveLeafToTree(address, "serviceProviderAdress", data.usage, cost);
+
+  const serviceProviderAddress = process.env.NFT_WALLET_PUBLIC_KEY;
+
+  if (!serviceProviderAddress) {
+    throw new Error(
+      "Service provider address not found. Please configure the NFT_WALLET_PUBLIC_KEY environment variable.",
+    );
+  }
+  await saveLeafToTree(address, serviceProviderAddress, data.usage.total_tokens, cost);
   return {
     body: data,
     statusCode: 200,

@@ -82,6 +82,23 @@ export async function callLLMAPI(prompt, dummy = false) {
 }
 
 /**
+ * Converts the used tokens directly to a cost in ether.
+ * @param {number} tokenCount - The number of tokens used.
+ * @returns {number} - The cost in ether.
+ */
+export function convertTokensToCost(tokenCount) {
+  // let us first define the price per million token for the model
+  const pricePerMillionTokensInEUR = 0.71;
+
+  // now the conversiion rate from EUR to ether. We fix it here.
+  const conversionRate = 3000; // Example conversion rate, adjust as needed
+
+  const pricePerMillionTokens = pricePerMillionTokensInEUR / conversionRate;
+  const tokenPrice = pricePerMillionTokens / 1_000_000;
+  return tokenCount * tokenPrice;
+}
+
+/**
  * Verifies that an ethereum wallet really signed the request.
  * The parameters must match the expected input for viem's verifyMessage function:
  *   - address: The Ethereum address that should have signed the message.

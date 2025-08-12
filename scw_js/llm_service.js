@@ -10,12 +10,32 @@ export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
 
 /**
- * Generates an answer based on the prompt
- * @param {string} prompt - The prompt for image generation
- * @returns {Promise<{ content: any, usage: any, model: any, }>} - The generated prompt
+ * Generates an answer based on the prompt.
+ * @param {string} prompt - The prompt for image generation.
+ * @param {boolean} dummy - If true, returns a dummy response.
+ * @returns {Promise<{
+ *   content: string,
+ *   usage: {
+ *     prompt_tokens: number,
+ *     completion_tokens: number,
+ *     total_tokens: number
+ *   },
+ *   model: string
+ * }>} - The generated prompt response.
  */
 
-export async function callLLMAPI(prompt) {
+export async function callLLMAPI(prompt, dummy = false) {
+  if (dummy) {
+    return {
+      content: "I am a placeholder for the LLM response",
+      usage: {
+        prompt_tokens: 5,
+        completion_tokens: 15,
+        total_tokens: 15,
+      },
+      model: "placeholder model",
+    };
+  }
   const ionosApiToken = process.env.IONOS_API_TOKEN;
 
   if (!ionosApiToken) {

@@ -113,10 +113,8 @@ export async function handle(event, _context) {
     };
   }
 
-  // here we create a dummy cost that is based on the usage.
-  // we will have to clean this up later
-  const cost = convertTokensToCost(data.usage.total_tokens);
   // time to save the message and the leaf to the tree
+  const cost = convertTokensToCost(data.usage.total_tokens);
 
   const serviceProviderAddress = process.env.NFT_WALLET_PUBLIC_KEY;
 
@@ -126,6 +124,9 @@ export async function handle(event, _context) {
     );
   }
   await saveLeafToTree(address, serviceProviderAddress, data.usage.total_tokens, cost);
+  // time to see if the merkle tree is so big that we should process it and settle
+  // the transactions on the blockchain.
+
   return {
     body: data,
     statusCode: 200,

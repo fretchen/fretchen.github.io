@@ -10,7 +10,19 @@ import {
   checkWalletBalance,
   saveLeafToTree,
   verify_wallet,
+  processMerkleTree,
 } from "./llm_service.js";
+
+const MERKLE_TREE_THRESHOLD = 4;
+
+/**
+ * Type predicate: returns true if addr is a 0x-prefixed 40-hex-char string.
+ * @param {unknown} addr
+ * @returns {addr is `0x${string}`}
+ */
+function isHexAddress(addr) {
+  return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
 
 /**
  * Handler function for the serverless environment.
@@ -118,15 +130,31 @@ export async function handle(event, _context) {
 
   const serviceProviderAddress = process.env.NFT_WALLET_PUBLIC_KEY;
 
-  if (!serviceProviderAddress) {
-    throw new Error(
-      "Service provider address not found. Please configure the NFT_WALLET_PUBLIC_KEY environment variable.",
-    );
+  if (!serviceProviderAddress || !isHexAddress(serviceProviderAddress)) {
+    return {
+      body: JSON.stringify({
+        error:
+          "Service provider address not configured or invalid. Set NFT_WALLET_PUBLIC_KEY to a 0x-prefixed 40-hex-char address.",
+      }),
+      headers: { "Content-Type": "application/json" },
+      statusCode: 500,
+    };
   }
-  await saveLeafToTree(address, serviceProviderAddress, data.usage.total_tokens, cost);
+  const newMerkleLength = await saveLeafToTree(
+    address,
+    serviceProviderAddress,
+    data.usage.total_tokens,
+    cost,
+  );
   // time to see if the merkle tree is so big that we should process it and settle
   // the transactions on the blockchain.
-
+  if (newMerkleLength >= MERKLE_TREE_THRESHOLD) {
+    console.log("Time to process the batch");
+    await processMerkleTree("merkle/leaves.json");
+  } else {
+    console.log(`Merkle tree of length ${newMerkleLength} is not ready for processing`);
+  }
+  console.log("Answer generated and saved to Merkle Tree:", data);
   return {
     body: data,
     statusCode: 200,

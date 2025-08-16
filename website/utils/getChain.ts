@@ -3,6 +3,7 @@ import type { Chain } from "wagmi/chains";
 import { CollectorNFTv1ABI } from "../../eth/abi/contracts/CollectorNFTv1";
 import { GenImNFTv3ABI } from "../../eth/abi/contracts/GenImNFTv3";
 import { SupportABI } from "../../eth/abi/contracts/Support";
+import { LLMv1ABI } from "../../eth/abi/contracts/LLMv1";
 
 /**
  * Get environment variable in both Node.js and Vite contexts
@@ -92,5 +93,25 @@ export function getCollectorNFTContractConfig() {
       return { address: "0x0000000000000000000000000000000000000000", abi: CollectorNFTv1ABI } as const;
     default:
       return { address: "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea", abi: CollectorNFTv1ABI } as const;
+  }
+}
+
+/**
+ * Get LLMv1 contract configuration for chat functionality
+ */
+export function getLLMv1ContractConfig() {
+  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimismSepolia");
+  
+  switch (chainName) {
+    case "optimismSepolia":
+      return {
+        address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
+        abi: LLMv1ABI,
+      } as const;
+    default:
+      return {
+        address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
+        abi: LLMv1ABI,
+      } as const;
   }
 }

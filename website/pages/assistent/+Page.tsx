@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
+import {
+  useAccount,
+  useSignMessage,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  usePublicClient,
+} from "wagmi";
+import { formatEther, parseEther } from "viem";
+import { getLLMv1ContractConfig } from "../../utils/getChain";
 import * as styles from "../../layouts/styles";
 
 interface ChatMessage {
@@ -8,14 +17,107 @@ interface ChatMessage {
   timestamp: number;
 }
 
+// Balance Display Component
+interface BalanceDisplayProps {
+  address: `0x${string}` | undefined;
+  onRefetchBalance?: (refetchFn: () => void) => void;
+}
+
+function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
+  // LLM Contract configuration
+  const llmContract = getLLMv1ContractConfig();
+
+  // Read user's balance from contract
+  const {
+    data: balance,
+    refetch: refetchBalance,
+    error,
+  } = useReadContract({
+    address: llmContract.address as `0x${string}`,
+    abi: llmContract.abi,
+    functionName: "checkBalance",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address, // Only execute when address is available
+    },
+  });
+  
+  console.log("Balance data:", balance);
+  console.log("Balance error:", error);
+  console.log("Address:", address);
+  console.log("Contract address:", llmContract.address);
+  // Send ETH transaction for top-up using depositForLLM function
+  const { writeContract, data: hash } = useWriteContract();
+  
+  // Wait for transaction to be mined
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  // Top-up function with fixed amount
+  const handleTopUp = () => {
+    if (!address) return;
+    writeContract({
+      address: llmContract.address as `0x${string}`,
+      abi: llmContract.abi,
+      functionName: "depositForLLM",
+      value: parseEther("0.01"), // Fixed 0.01 ETH top-up
+    });
+  };
+
+  // Refetch balance when transaction is confirmed
+  React.useEffect(() => {
+    if (isConfirmed) {
+      refetchBalance();
+    }
+  }, [isConfirmed, refetchBalance]);
+
+  // Pass refetch function to parent
+  React.useEffect(() => {
+    if (onRefetchBalance) {
+      onRefetchBalance(refetchBalance);
+    }
+  }, [refetchBalance, onRefetchBalance]);
+
+  if (!address) return null;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <span>Balance: {balance ? formatEther(balance as bigint) : "0"} ETH</span>
+      <button
+        onClick={handleTopUp}
+        disabled={isConfirming}
+        style={{
+          padding: "0.25rem 0.5rem",
+          background: isConfirming ? "#ccc" : "#4CAF50",
+          color: "white",
+          border: "none",
+          borderRadius: "3px",
+          cursor: isConfirming ? "not-allowed" : "pointer",
+          fontSize: "0.8rem",
+        }}
+        title={isConfirming ? "Transaction pending..." : "Top up with 0.01 ETH"}
+      >
+        {isConfirming ? "..." : "+"}
+      </button>
+    </div>
+  );
+}
+
 export default function Page() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [authSignature, setAuthSignature] = useState<string | null>(null);
+  const [refetchBalance, setRefetchBalance] = useState<(() => void) | null>(null);
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+
+  // Callback to receive refetch function from BalanceDisplay
+  const handleRefetchBalance = (refetchFn: () => void) => {
+    setRefetchBalance(() => refetchFn);
+  };
 
   // Authenticate wallet once per session
   const authenticateWallet = async () => {
@@ -91,6 +193,10 @@ export default function Page() {
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
+      // Refresh balance after successful message
+      if (refetchBalance) {
+        refetchBalance();
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       const errorMsg: ChatMessage = {
@@ -149,6 +255,10 @@ export default function Page() {
           }}
         >
           <h2>Chat Assistant</h2>
+
+          {/* Balance Display */}
+          <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+
           <button
             onClick={clearChat}
             style={{

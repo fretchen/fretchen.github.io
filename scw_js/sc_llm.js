@@ -33,6 +33,22 @@ function isHexAddress(addr) {
  * @returns {Promise<{ body: any, statusCode: number, headers: Record<string, string> }>} - The HTTP response.
  */
 export async function handle(event, _context) {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "*",
+    "Content-Type": "application/json",
+  };
+
+  // Handle CORS preflight requests
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: "",
+    };
+  }
+
   // get the prompt from the event
   let prompt;
   let body;
@@ -43,7 +59,7 @@ export async function handle(event, _context) {
   } else {
     return {
       body: JSON.stringify({ error: "Only POST requests are supported" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -54,11 +70,24 @@ export async function handle(event, _context) {
   } else {
     return {
       body: JSON.stringify({ error: "No prompt provided" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
   console.log("Prompt: ", prompt);
+  // check if we would like to work with dummy data. If no value is provided, we set it to false
+  let useDummyData = false;
+  if (body.data && body.data.useDummyData !== undefined) {
+    // check that the useDummyData flag is a boolean
+    if (typeof body.data.useDummyData !== "boolean") {
+      return {
+        body: JSON.stringify({ error: "Invalid useDummyData flag" }),
+        headers,
+        statusCode: 400,
+      };
+    }
+    useDummyData = body.data.useDummyData;
+  }
 
   // verify that the official wallet actually sent the request
   let auth;
@@ -67,7 +96,7 @@ export async function handle(event, _context) {
   } else {
     return {
       body: JSON.stringify({ error: "No auth data provided" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -75,7 +104,7 @@ export async function handle(event, _context) {
   if (!auth.address || !auth.signature || !auth.message) {
     return {
       body: JSON.stringify({ error: "Incomplete auth data" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -88,13 +117,13 @@ export async function handle(event, _context) {
     console.error("Wallet verification failed:", error);
     return {
       body: JSON.stringify({ error: error.message }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 401,
     };
   }
 
   // check that the submitting wallet has enough balance in the contract
-  const requiredBalance = "0.001"; // Example value, adjust as needed
+  const requiredBalance = "0.00001"; // Example value, adjust as needed
 
   const requiredBalanceInWei = parseEther(requiredBalance);
   try {
@@ -103,22 +132,16 @@ export async function handle(event, _context) {
     console.error("Wallet balance check failed:", error);
     return {
       body: JSON.stringify({ error: error.message }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 402, // Payment Required
     };
   }
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "*",
-    "Content-Type": "application/json",
-  };
   let data;
   try {
     console.log(`Generating answer for prompt: "${prompt}"`);
 
     // Pass prompt to the function
-    data = await callLLMAPI(prompt, true);
+    data = await callLLMAPI(prompt, useDummyData);
   } catch (error) {
     console.error(`Error during answer generation: ${error}`);
     const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
@@ -147,7 +170,7 @@ export async function handle(event, _context) {
   const newMerkleLength = await saveLeafToTree(
     address,
     serviceProviderAddress,
-    data.usage.total_tokens,
+    BigInt(data.usage.total_tokens), // Convert to bigint
     cost,
   );
   // time to see if the merkle tree is so big that we should process it and settle

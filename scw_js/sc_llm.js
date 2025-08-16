@@ -11,6 +11,7 @@ import {
   saveLeafToTree,
   verify_wallet,
   processMerkleTree,
+  startNewTree,
 } from "./llm_service.js";
 
 import { parseEther } from "viem";
@@ -177,7 +178,11 @@ export async function handle(event, _context) {
   // the transactions on the blockchain.
   if (newMerkleLength >= MERKLE_TREE_THRESHOLD) {
     console.log("Time to process the batch");
-    await processMerkleTree("merkle/leaves.json");
+    await processMerkleTree("merkle/trees.json");
+
+    // After processing, start a new tree for future leaves
+    console.log("Starting new tree after processing");
+    await startNewTree("merkle/trees.json");
   } else {
     console.log(`Merkle tree of length ${newMerkleLength} is not ready for processing`);
   }

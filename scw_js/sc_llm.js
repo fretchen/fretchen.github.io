@@ -33,6 +33,22 @@ function isHexAddress(addr) {
  * @returns {Promise<{ body: any, statusCode: number, headers: Record<string, string> }>} - The HTTP response.
  */
 export async function handle(event, _context) {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "*",
+    "Content-Type": "application/json",
+  };
+
+  // Handle CORS preflight requests
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: "",
+    };
+  }
+
   // get the prompt from the event
   let prompt;
   let body;
@@ -43,7 +59,7 @@ export async function handle(event, _context) {
   } else {
     return {
       body: JSON.stringify({ error: "Only POST requests are supported" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -54,7 +70,7 @@ export async function handle(event, _context) {
   } else {
     return {
       body: JSON.stringify({ error: "No prompt provided" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -67,7 +83,7 @@ export async function handle(event, _context) {
   } else {
     return {
       body: JSON.stringify({ error: "No auth data provided" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -75,7 +91,7 @@ export async function handle(event, _context) {
   if (!auth.address || !auth.signature || !auth.message) {
     return {
       body: JSON.stringify({ error: "Incomplete auth data" }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 400,
     };
   }
@@ -88,7 +104,7 @@ export async function handle(event, _context) {
     console.error("Wallet verification failed:", error);
     return {
       body: JSON.stringify({ error: error.message }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 401,
     };
   }
@@ -103,16 +119,10 @@ export async function handle(event, _context) {
     console.error("Wallet balance check failed:", error);
     return {
       body: JSON.stringify({ error: error.message }),
-      headers: { "Content-Type": "application/json" },
+      headers,
       statusCode: 402, // Payment Required
     };
   }
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "*",
-    "Content-Type": "application/json",
-  };
   let data;
   try {
     console.log(`Generating answer for prompt: "${prompt}"`);
@@ -147,7 +157,7 @@ export async function handle(event, _context) {
   const newMerkleLength = await saveLeafToTree(
     address,
     serviceProviderAddress,
-    data.usage.total_tokens,
+    BigInt(data.usage.total_tokens), // Convert to bigint
     cost,
   );
   // time to see if the merkle tree is so big that we should process it and settle

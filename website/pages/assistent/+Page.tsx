@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  useAccount,
-  useSignMessage,
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  usePublicClient,
-} from "wagmi";
+import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getLLMv1ContractConfig } from "../../utils/getChain";
 import * as styles from "../../layouts/styles";
@@ -153,8 +146,15 @@ export default function Page() {
       // Authenticate if needed
       const signature = await authenticateWallet();
 
-      // Prepare the prompt as array (same format as Python notebook)
-      const promptArray = [{ role: "user", content: userMessage.trim() }];
+      // Prepare the prompt as array including full conversation history
+      const promptArray = [
+        { role: "system", content: "You are a helpful assistant." },
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        { role: "user", content: userMessage.trim() },
+      ];
 
       // TODO: Replace with your actual serverless endpoint URL
       // Example: "https://your-serverless-endpoint.scw.cloud"

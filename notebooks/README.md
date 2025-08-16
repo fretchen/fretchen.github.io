@@ -27,6 +27,7 @@ This directory contains Jupyter notebooks for exploring Merkle trees and their a
 ## Notebooks
 
 - `merkle_tree.ipynb` - Basic exploration of Merkle tree concepts and implementation
+- `ionos_llm.ipynb` - Tutorial for text generation using foundation models via the IONOS AI Model Hub API. Demonstrates how to retrieve available models, send prompts to generate text responses, and interpret results. Includes examples for building conversational agents, virtual assistants, and content creation applications using various LLMs including Llama 3.1, Mistral, and other models.
 
 ## Dependencies
 
@@ -54,3 +55,7 @@ Run linting:
 ```bash
 poetry run flake8 .
 ```
+
+### Kernel for VSCode
+
+poetry run python -m ipykernel install --user --name=merkle-tree-notebooks

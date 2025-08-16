@@ -153,7 +153,7 @@ export default function Page() {
       // Authenticate if needed
       const signature = await authenticateWallet();
 
-      // Prepare the prompt as JSON array (like in your backend)
+      // Prepare the prompt as array (same format as Python notebook)
       const promptArray = [{ role: "user", content: userMessage.trim() }];
 
       // TODO: Replace with your actual serverless endpoint URL
@@ -174,7 +174,7 @@ export default function Page() {
             message: `Authenticate wallet: ${address}`,
           },
           data: {
-            prompt: JSON.stringify(promptArray), // Send as JSON string, not array
+            prompt: promptArray, // Send as array directly, like in Python notebook
           },
         }),
       });

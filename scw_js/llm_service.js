@@ -447,15 +447,17 @@ function bigintReplacer(_key, value) {
  * @returns {any[]}
  */
 function restoreBigIntsInLeaves(arr) {
-  if (!Array.isArray(arr)) return arr;
+  if (!Array.isArray(arr)) {
+    return arr;
+  }
   return arr.map((leaf) => {
-    try {
-      if (leaf && typeof leaf === "object") {
-        if (leaf.tokenCount != null) leaf.tokenCount = BigInt(leaf.tokenCount);
-        if (leaf.cost != null) leaf.cost = BigInt(leaf.cost);
+    if (leaf && typeof leaf === "object") {
+      if (leaf.tokenCount !== undefined && leaf.tokenCount !== null) {
+        leaf.tokenCount = BigInt(leaf.tokenCount);
       }
-    } catch (e) {
-      // ignore conversion errors, caller will handle invalid data
+      if (leaf.cost !== undefined && leaf.cost !== null) {
+        leaf.cost = BigInt(leaf.cost);
+      }
     }
     return leaf;
   });

@@ -39,7 +39,7 @@ export async function callLLMAPI(prompt, dummy = false) {
     };
   }
   const ionosApiToken = process.env.IONOS_API_TOKEN;
-
+  console.log("Work with real API");
   if (!ionosApiToken) {
     throw new Error(
       "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
@@ -50,7 +50,6 @@ export async function callLLMAPI(prompt, dummy = false) {
     throw new Error("No prompt provided.");
   }
   console.log("Generating answer for prompt:", prompt);
-  const promptArray = JSON.parse(prompt);
 
   const headers = {
     Authorization: `Bearer ${ionosApiToken}`,
@@ -59,7 +58,7 @@ export async function callLLMAPI(prompt, dummy = false) {
 
   const body = {
     model: MODEL_NAME,
-    messages: promptArray,
+    messages: prompt,
   };
 
   console.log("Sending answer generation request...");

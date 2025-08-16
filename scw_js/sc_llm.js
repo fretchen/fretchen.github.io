@@ -75,6 +75,19 @@ export async function handle(event, _context) {
     };
   }
   console.log("Prompt: ", prompt);
+  // check if we would like to work with dummy data. If no value is provided, we set it to false
+  let useDummyData = false;
+  if (body.data && body.data.useDummyData !== undefined) {
+    // check that the useDummyData flag is a boolean
+    if (typeof body.data.useDummyData !== "boolean") {
+      return {
+        body: JSON.stringify({ error: "Invalid useDummyData flag" }),
+        headers,
+        statusCode: 400,
+      };
+    }
+    useDummyData = body.data.useDummyData;
+  }
 
   // verify that the official wallet actually sent the request
   let auth;
@@ -110,7 +123,7 @@ export async function handle(event, _context) {
   }
 
   // check that the submitting wallet has enough balance in the contract
-  const requiredBalance = "0.001"; // Example value, adjust as needed
+  const requiredBalance = "0.00001"; // Example value, adjust as needed
 
   const requiredBalanceInWei = parseEther(requiredBalance);
   try {
@@ -128,7 +141,7 @@ export async function handle(event, _context) {
     console.log(`Generating answer for prompt: "${prompt}"`);
 
     // Pass prompt to the function
-    data = await callLLMAPI(prompt, true);
+    data = await callLLMAPI(prompt, useDummyData);
   } catch (error) {
     console.error(`Error during answer generation: ${error}`);
     const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;

@@ -67,7 +67,6 @@ export async function callLLMAPI(prompt, dummy = false) {
     method: "POST",
     headers,
     body: JSON.stringify(body),
-    timeout: 60000,
   });
 
   if (!response.ok) {
@@ -253,10 +252,11 @@ export async function appendToS3Json(dataToAppend, fileName) {
   } else if (Array.isArray(existingData)) {
     // calculate the length of the existingData
     const existingLength = existingData.length;
-    // set the id of the element to existing length
-    dataToAppend.id = existingLength;
+    // set the id of the element to existing length (avoid mutating input)
+    const dataToAppendWithId = { ...dataToAppend, id: existingLength };
     // Append to existing array
-    updatedData = [...existingData, dataToAppend];
+    updatedData = [...existingData, dataToAppendWithId];
+
     batchSize = existingLength + 1;
   } else {
     // This should not happen, so raise an error.
@@ -295,7 +295,7 @@ async function streamToString(stream) {
 /**
  * Checks that the address that called the LLM service has enough balance to pay for the service.
  * @param {`0x${string}`} address - The Ethereum address of the caller.
- * @param {number} requiredBalance - The minimum balance required to call the service.
+ * @param {bigint} requiredBalance - The minimum balance required to call the service.
  * @returns {Promise<void>} Resolves if the balance is sufficient, rejects otherwise.
  */
 export async function checkWalletBalance(address, requiredBalance) {
@@ -325,9 +325,8 @@ export async function checkWalletBalance(address, requiredBalance) {
 }
 
 /**
- * Checks that the address that called the LLM service has enough balance to pay for the service.
+ * Processes the Merkle tree for the address that called the LLM service.
  * @param {string} fileName - The filename of the JSON file in S3
- * @param {number} requiredBalance - The minimum balance required to call the service.
  * @returns {Promise<void>} Resolves if the balance is sufficient, rejects otherwise.
  */
 export async function processMerkleTree(fileName) {

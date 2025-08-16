@@ -16,7 +16,7 @@ export async function handle(event, _context) {
   if (!prompt) {
     return {
       body: JSON.stringify({ error: "No prompt provided" }),
-      headers: { "Content-Type": ["application/json"] },
+      headers: { "Content-Type": "application/json" },
       statusCode: 400,
     };
   }

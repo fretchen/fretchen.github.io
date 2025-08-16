@@ -13,6 +13,8 @@ import {
   processMerkleTree,
 } from "./llm_service.js";
 
+import { parseEther } from "viem";
+
 const MERKLE_TREE_THRESHOLD = 4;
 
 /**
@@ -47,7 +49,7 @@ export async function handle(event, _context) {
   }
 
   // check if the prompt is in the body
-  if (body && body.data && body.data.prompt) {
+  if (body.data && body.data.prompt) {
     prompt = body.data.prompt;
   } else {
     return {
@@ -60,7 +62,7 @@ export async function handle(event, _context) {
 
   // verify that the official wallet actually sent the request
   let auth;
-  if (body && body.auth) {
+  if (body.auth) {
     auth = body.auth;
   } else {
     return {
@@ -92,9 +94,11 @@ export async function handle(event, _context) {
   }
 
   // check that the submitting wallet has enough balance in the contract
-  const requiredBalance = 0.01; // Example value, adjust as needed
+  const requiredBalance = "0.001"; // Example value, adjust as needed
+
+  const requiredBalanceInWei = parseEther(requiredBalance);
   try {
-    await checkWalletBalance(address, requiredBalance);
+    await checkWalletBalance(address, requiredBalanceInWei);
   } catch (error) {
     console.error("Wallet balance check failed:", error);
     return {

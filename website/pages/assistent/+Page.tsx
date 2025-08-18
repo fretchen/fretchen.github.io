@@ -158,8 +158,8 @@ export default function Page() {
 
       // TODO: Replace with your actual serverless endpoint URL
       // Example: "https://your-serverless-endpoint.scw.cloud"
-      const serverlessEndpoint = import.meta.env.VITE_LLM_ENDPOINT || "http://localhost:8080";
-
+      const serverlessEndpoint = import.meta.env.PUBLIC_ENV__LLM_ENDPOINT || "http://localhost:8080";
+      console.log("Serverless endpoint:", serverlessEndpoint);
       // Call the serverless function - format like Python code
       const response = await fetch(serverlessEndpoint, {
         method: "POST",

@@ -34,14 +34,14 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       enabled: !!address, // Only execute when address is available
     },
   });
-  
+
   console.log("Balance data:", balance);
   console.log("Balance error:", error);
   console.log("Address:", address);
   console.log("Contract address:", llmContract.address);
   // Send ETH transaction for top-up using depositForLLM function
   const { writeContract, data: hash } = useWriteContract();
-  
+
   // Wait for transaction to be mined
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,

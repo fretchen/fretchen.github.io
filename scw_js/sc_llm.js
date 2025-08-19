@@ -20,6 +20,7 @@ import pino from "pino";
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const MERKLE_TREE_THRESHOLD = 4;
+const REQUIRED_BALANCE = "0.00001";
 
 /**
  * Type predicate: returns true if addr is a 0x-prefixed 40-hex-char string.
@@ -57,9 +58,9 @@ export async function handle(event, _context) {
   let prompt;
   let body;
   if (event.httpMethod === "POST") {
-  // Body parsen (JSON-String zu Objekt)
-  body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-  logger.debug({ body }, "Parsed body");
+    // Body parsen (JSON-String zu Objekt)
+    body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    logger.debug({ body }, "Parsed body");
   } else {
     return {
       body: JSON.stringify({ error: "Only POST requests are supported" }),
@@ -118,7 +119,7 @@ export async function handle(event, _context) {
     // Extract necessary information for wallet verification
     await verify_wallet(address, signature, message);
   } catch (error) {
-  logger.error({ err: error }, "Wallet verification failed");
+    logger.error({ err: error }, "Wallet verification failed");
     return {
       body: JSON.stringify({ error: error.message }),
       headers,
@@ -126,14 +127,11 @@ export async function handle(event, _context) {
     };
   }
 
-  // check that the submitting wallet has enough balance in the contract
-  const requiredBalance = "0.00001"; // Example value, adjust as needed
-
-  const requiredBalanceInWei = parseEther(requiredBalance);
+  const requiredBalanceInWei = parseEther(REQUIRED_BALANCE);
   try {
     await checkWalletBalance(address, requiredBalanceInWei);
   } catch (error) {
-  logger.error({ err: error }, "Wallet balance check failed");
+    logger.error({ err: error }, "Wallet balance check failed");
     return {
       body: JSON.stringify({ error: error.message }),
       headers,
@@ -142,12 +140,12 @@ export async function handle(event, _context) {
   }
   let data;
   try {
-  logger.info({ prompt }, "Generating answer for prompt");
+    logger.info({ prompt }, "Generating answer for prompt");
 
     // Pass prompt to the function
     data = await callLLMAPI(prompt, useDummyData);
   } catch (error) {
-  logger.error({ err: error }, "Error during answer generation");
+    logger.error({ err: error }, "Error during answer generation");
     const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
     return {
       body: JSON.stringify({ error: error.message }),
@@ -180,14 +178,14 @@ export async function handle(event, _context) {
   // time to see if the merkle tree is so big that we should process it and settle
   // the transactions on the blockchain.
   if (newMerkleLength >= MERKLE_TREE_THRESHOLD) {
-  logger.info("Time to process the batch");
+    logger.info("Time to process the batch");
     await processMerkleTree("merkle/trees.json");
 
     // After processing, start a new tree for future leaves
-  logger.info("Starting new tree after processing");
+    logger.info("Starting new tree after processing");
     await startNewTree("merkle/trees.json");
   } else {
-  logger.info({ length: newMerkleLength }, "Merkle tree not ready for processing");
+    logger.info({ length: newMerkleLength }, "Merkle tree not ready for processing");
   }
   logger.info({ data }, "Answer generated and saved to Merkle Tree");
   return {

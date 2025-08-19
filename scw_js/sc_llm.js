@@ -21,6 +21,7 @@ const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const MERKLE_TREE_THRESHOLD = 4;
 const REQUIRED_BALANCE = "0.00001";
+const MERKLE_TREE_FILE = "merkle/trees.json";
 
 /**
  * Type predicate: returns true if addr is a 0x-prefixed 40-hex-char string.
@@ -203,11 +204,11 @@ export async function handle(event, _context) {
   // the transactions on the blockchain.
   if (newMerkleLength >= MERKLE_TREE_THRESHOLD) {
     logger.info("Time to process the batch");
-    await processMerkleTree("merkle/trees.json");
+    await processMerkleTree(MERKLE_TREE_FILE);
 
     // After processing, start a new tree for future leaves
     logger.info("Starting new tree after processing");
-    await startNewTree("merkle/trees.json");
+    await startNewTree(MERKLE_TREE_FILE);
   } else {
     logger.info({ length: newMerkleLength }, "Merkle tree not ready for processing");
   }

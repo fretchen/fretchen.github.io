@@ -11,7 +11,7 @@ const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
-
+const MERKLE_TREE_FILE = "merkle/trees.json";
 // ---- new: pino logger ----
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -181,7 +181,7 @@ export async function saveLeafToTree(userAddress, serviceProvider, tokenCount, c
   };
 
   logger.info({ leaf: newLeaf }, "Saving leaf to tree");
-  return appendLeafToTrees(newLeaf, "merkle/trees.json");
+  return appendLeafToTrees(newLeaf, MERKLE_TREE_FILE);
 }
 
 /**

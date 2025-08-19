@@ -155,7 +155,30 @@ export async function handle(event, _context) {
   }
 
   // time to save the message and the leaf to the tree
-  const cost = convertTokensToCost(data.usage.total_tokens);
+  // Validate token count from LLM response
+  const totalTokensRaw = data?.usage?.total_tokens;
+  if (
+    totalTokensRaw === null ||
+    totalTokensRaw === undefined ||
+    (typeof totalTokensRaw !== "number" &&
+      typeof totalTokensRaw !== "bigint" &&
+      !/^\d+$/.test(String(totalTokensRaw)))
+  ) {
+    logger.error({ data }, "Invalid total_tokens in LLM response");
+    return {
+      body: JSON.stringify({ error: "Invalid token count from LLM" }),
+      headers,
+      statusCode: 500,
+    };
+  }
+
+  // Convert to BigInt safely
+  const tokenCountBigInt =
+    typeof totalTokensRaw === "bigint"
+      ? totalTokensRaw
+      : BigInt(Math.floor(Number(totalTokensRaw)));
+
+  const cost = convertTokensToCost(tokenCountBigInt);
 
   const serviceProviderAddress = process.env.NFT_WALLET_PUBLIC_KEY;
 
@@ -169,10 +192,11 @@ export async function handle(event, _context) {
       statusCode: 500,
     };
   }
+
   const newMerkleLength = await saveLeafToTree(
     address,
     serviceProviderAddress,
-    BigInt(data.usage.total_tokens), // Convert to bigint
+    tokenCountBigInt, // validated BigInt token count
     cost,
   );
   // time to see if the merkle tree is so big that we should process it and settle

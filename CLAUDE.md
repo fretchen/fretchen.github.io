@@ -7,13 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a multi-project repository containing fretchen's personal website and associated blockchain/NFT projects. The repository consists of four main components:
 
 1. **Website** (`/website/`) - Personal blog and documentation site built with Vike (React SSG framework)
-2. **Ethereum Contracts** (`/eth/`) - Smart contracts for NFT generation and collection system 
+2. **Ethereum Contracts** (`/eth/`) - Smart contracts for NFT generation and collection system
 3. **Serverless Functions** (`/scw_js/`) - Node.js serverless functions for AI image generation and blockchain interaction
 4. **Source Components** (`/src/`) - Shared components and utilities
 
 ## Development Commands
 
 ### Website Development (`/website/`)
+
 ```bash
 cd website
 npm run dev          # Start development server
@@ -27,6 +28,7 @@ npm run lint:fix     # Fix ESLint issues
 ```
 
 ### Ethereum Development (`/eth/`)
+
 ```bash
 cd eth
 npx hardhat compile  # Compile smart contracts
@@ -45,6 +47,7 @@ npx hardhat run scripts/export-abi.ts
 ```
 
 ### Serverless Functions (`/scw_js/`)
+
 ```bash
 cd scw_js
 npm test             # Run tests
@@ -64,6 +67,7 @@ serverless deploy
 ## Architecture Overview
 
 ### Smart Contract System
+
 The project implements an upgradeable NFT system using OpenZeppelin's UUPS proxy pattern:
 
 - **GenImNFTv3**: Main NFT contract for AI-generated images, upgradeable from GenImNFTv2
@@ -71,12 +75,14 @@ The project implements an upgradeable NFT system using OpenZeppelin's UUPS proxy
 - **Support**: Like button implementation contract
 
 Key features:
+
 - Dynamic pricing for CollectorNFT (doubles every 5 mints)
 - Authorized image updaters for GenImNFT tokens
 - Public/private listing system for NFTs
 - Payment routing to original GenImNFT owners
 
 ### Website Architecture
+
 Built with Vike (React-based SSG framework) featuring:
 
 - **Layout System**: Single layout (`LayoutDefault.tsx`) with responsive navigation
@@ -86,6 +92,7 @@ Built with Vike (React-based SSG framework) featuring:
 - **Static Generation**: Pre-rendered pages for blog and quantum content
 
 ### Serverless Architecture
+
 Node.js functions deployed on Scaleway for:
 
 - **Image Generation**: IONOS AI API integration for creating NFT images
@@ -102,6 +109,7 @@ Node.js functions deployed on Scaleway for:
 ## Environment Variables
 
 ### Ethereum Development (`/eth/`)
+
 ```
 ALCHEMY_API_KEY=your_alchemy_key
 SEPOLIA_PRIVATE_KEY=your_private_key
@@ -111,25 +119,29 @@ COINMARKETCAP_API_KEY=your_cmc_key
 ```
 
 ### Networks
+
 - **Sepolia** (testnet): `--network sepolia`
-- **Optimism Sepolia** (testnet): `--network optsepolia`  
+- **Optimism Sepolia** (testnet): `--network optsepolia`
 - **Optimism Mainnet** (production): `--network optimisticEthereum`
 
 ## Testing Strategy
 
 ### Contract Testing
+
 - Comprehensive test suites for each contract version
 - Deployment and functional tests separated
 - Shared test utilities in `test/shared/`
 - OpenZeppelin upgrade compatibility testing
 
 ### Frontend Testing
+
 - Vitest with jsdom environment
 - React Testing Library for component tests
 - Coverage reporting enabled
 - Integration tests for blockchain components
 
 ### Serverless Testing
+
 - Vitest with Node.js environment
 - Unit tests for individual functions
 - Integration tests for API endpoints
@@ -138,6 +150,7 @@ COINMARKETCAP_API_KEY=your_cmc_key
 ## Production Deployment
 
 Current production deployment on Optimism Mainnet:
+
 - **Proxy Address**: `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb`
 - **Version**: GenImNFTv2 (upgradeable to v3)
 - **Network**: Optimism Mainnet

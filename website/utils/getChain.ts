@@ -100,7 +100,7 @@ export function getCollectorNFTContractConfig() {
  * Get LLMv1 contract configuration for chat functionality
  */
 export function getLLMv1ContractConfig() {
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimismSepolia");
+  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
 
   switch (chainName) {
     case "optimismSepolia":
@@ -108,6 +108,9 @@ export function getLLMv1ContractConfig() {
         address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
         abi: LLMv1ABI,
       } as const;
+    case "optimism":
+      return { address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1" as `0x${string}`, abi: LLMv1ABI } as const;
+
     default:
       return {
         address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,

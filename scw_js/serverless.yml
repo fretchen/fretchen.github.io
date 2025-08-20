@@ -27,3 +27,5 @@ functions:
     handler: readhandler_v2.handle
   llm:
     handler: sc_llm.handle
+  leafhistory:
+    handler: leaf_history.handle

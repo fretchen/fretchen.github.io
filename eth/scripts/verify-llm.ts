@@ -21,14 +21,8 @@ interface DeploymentData {
  * - Automatic contract type detection
  * - Multiple verification strategies for different deployment methods
  *
- * Usage:
- * npx hardhat run scripts/verify-contracts.ts --network sepolia
- *
- * Or with specific proxy address:
- * PROXY_ADDRESS=0x123... npx hardhat run scripts/verify-contracts.ts --network sepolia
- *
  * Or with deployment file (recommended):
- * DEPLOYMENT_FILE=path/to/deployment.json npx hardhat run scripts/verify-contracts.ts --network optimisticEthereum
+ * DEPLOYMENT_FILE=path/to/deployment.json npx hardhat run scripts/verify-llm.ts --network optimisticEthereum
  *
  * Features:
  * - Automatic detection of deployment files from deployments/ directory

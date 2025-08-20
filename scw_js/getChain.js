@@ -51,10 +51,12 @@ export function getChain() {
  * @returns {{ address: `0x${string}`, abi: any }}
  */
 export function getLLMv1ContractConfig() {
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimismSepolia");
+  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
   switch (chainName) {
     case "optimismSepolia":
       return { address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", abi: LLMv1ABI };
+    case "optimism":
+      return { address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1", abi: LLMv1ABI };
     default:
       return { address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", abi: LLMv1ABI };
   }

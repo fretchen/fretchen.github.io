@@ -1,0 +1,27 @@
+{
+  "network": "optimisticEthereum",
+  "timestamp": "2025-08-20T19:30:28.345Z",
+  "blockNumber": 140059725,
+  "proxyAddress": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1",
+  "implementationAddress": "0x88e1dDEb93f46a82a5f057ec2214558e067795Bc",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "LLMv1",
+  "deploymentOptions": {
+    "verify": true,
+    "waitConfirmations": 1,
+    "configUsed": "llm-v1.config.json"
+  },
+  "config": {
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": true,
+      "waitConfirmations": 1
+    },
+    "metadata": {
+      "description": "LLM v1 deployment configuration",
+      "version": "1.0.0",
+      "environment": "sepolia"
+    }
+  }
+}

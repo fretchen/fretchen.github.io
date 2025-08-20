@@ -152,7 +152,9 @@ export default function Page() {
         { role: "user", content: userMessage.trim() },
       ];
 
-      const serverlessEndpoint = import.meta.env.PUBLIC_ENV__LLM_ENDPOINT || "http://localhost:8080";
+      const serverlessEndpoint =
+        import.meta.env.PUBLIC_ENV__LLM_ENDPOINT ||
+        "https://mypersonaljscloudivnad9dy-llm.functions.fnc.fr-par.scw.cloud";
       // Call the serverless function - format like Python code
       const response = await fetch(serverlessEndpoint, {
         method: "POST",

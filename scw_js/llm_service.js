@@ -5,11 +5,15 @@ import { getChain, getLLMv1ContractConfig } from "./getChain.js";
 import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { privateKeyToAccount } from "viem/accounts";
+import pino from "pino";
 
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
+const MERKLE_TREE_FILE = "merkle/trees.json";
+// ---- new: pino logger ----
+const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
  * Generates an answer based on the prompt.
@@ -39,7 +43,7 @@ export async function callLLMAPI(prompt, dummy = false) {
     };
   }
   const ionosApiToken = process.env.IONOS_API_TOKEN;
-
+  logger.info("Work with real API");
   if (!ionosApiToken) {
     throw new Error(
       "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
@@ -49,8 +53,7 @@ export async function callLLMAPI(prompt, dummy = false) {
   if (!prompt) {
     throw new Error("No prompt provided.");
   }
-  console.log("Generating answer for prompt:", prompt);
-  const promptArray = JSON.parse(prompt);
+  logger.info({ prompt }, "Generating answer for prompt");
 
   const headers = {
     Authorization: `Bearer ${ionosApiToken}`,
@@ -59,10 +62,10 @@ export async function callLLMAPI(prompt, dummy = false) {
 
   const body = {
     model: MODEL_NAME,
-    messages: promptArray,
+    messages: prompt,
   };
 
-  console.log("Sending answer generation request...");
+  logger.debug("Sending answer generation request...");
   const response = await fetch(ENDPOINT, {
     method: "POST",
     headers,
@@ -70,7 +73,7 @@ export async function callLLMAPI(prompt, dummy = false) {
   });
 
   if (!response.ok) {
-    console.error(`IONOS API Error: ${response.status} ${response.statusText}`);
+    logger.error({ status: response.status, statusText: response.statusText }, "IONOS API Error");
     throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
   }
 
@@ -145,18 +148,19 @@ export async function verify_wallet(address, signature, message) {
     });
 
     if (!isValid) {
+      logger.warn({ address }, "Invalid wallet signature.");
       throw new Error("Invalid wallet signature.");
     } else {
-      console.log("Wallet signature verified successfully.");
+      logger.info({ address }, "Wallet signature verified successfully.");
     }
   } catch (error) {
-    console.error("Signature verification failed:", error);
+    logger.error({ err: error }, "Signature verification failed");
     throw new Error("Invalid wallet signature.");
   }
 }
 
 /**
- * Appends a leaf to a file that can be later processed as a Merkle Tree
+ * Appends a leaf to the current active Merkle Tree
  * @param {`0x${string}`} userAddress -
  * @param {`0x${string}`} serviceProvider -
  * @param {bigint} tokenCount -
@@ -165,30 +169,19 @@ export async function verify_wallet(address, signature, message) {
  */
 
 export async function saveLeafToTree(userAddress, serviceProvider, tokenCount, cost) {
-  // Implementation for saving the message and its metadata to the tree structure
-
-  // each leaf has the structure
-  // id: an int generated within the merkletree
-  // user: the public address of the user that ordered the request
-  // serviceProvider: the public address of the service provider
-  // tokenCount: the number of tokens used for the request
-  // cost: the cost of the request in ether
-  // timestamp: the timestamp of the request
-
-  // generate the timestamp as a string when, the function is called
   const timestamp = new Date().toISOString();
 
-  // the id shall be simply an increment for each new leaf
   const newLeaf = {
-    id: 1,
+    id: 0, // Will be set correctly in appendLeafToTrees
     user: userAddress,
     serviceProvider,
     tokenCount,
     cost,
     timestamp,
   };
-  console.log("Saving leaf to tree:", newLeaf);
-  return appendToS3Json(newLeaf, "merkle/leaves.json");
+
+  logger.info({ leaf: newLeaf }, "Saving leaf to tree");
+  return appendLeafToTrees(newLeaf, MERKLE_TREE_FILE);
 }
 
 /**
@@ -200,6 +193,164 @@ export async function saveLeafToTree(userAddress, serviceProvider, tokenCount, c
  * @property {bigint} cost
  * @property {string} timestamp
  */
+
+/**
+ * @typedef {Object} MerkleTree
+ * @property {number} treeIndex
+ * @property {string|null} root
+ * @property {boolean} processed
+ * @property {string} createdAt
+ * @property {string|null} processedAt
+ * @property {Leaf[]} leaves
+ */
+
+/**
+ * @typedef {Object} TreesData
+ * @property {number} currentTreeIndex
+ * @property {MerkleTree[]} trees
+ */
+
+/**
+ * Appends a leaf to the current active tree in the trees structure
+ * @param {Leaf} dataToAppend - The leaf to append
+ * @param {string} fileName - The filename of the trees JSON file in S3
+ * @returns {Promise<number>} - Total number of leaves across all trees
+ */
+export async function appendLeafToTrees(dataToAppend, fileName) {
+  const accessKey = process.env.SCW_ACCESS_KEY;
+  const secretKey = process.env.SCW_SECRET_KEY;
+
+  const s3Client = new S3Client({
+    region: "nl-ams",
+    endpoint: "https://s3.nl-ams.scw.cloud",
+    credentials: {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+    },
+  });
+
+  let treesData = null;
+
+  // Try to get existing file
+  const getParams = {
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+  };
+
+  try {
+    const getResult = await s3Client.send(new GetObjectCommand(getParams));
+    const bodyContents = await streamToString(getResult.Body);
+    treesData = JSON.parse(bodyContents);
+    // Restore BigInts in all trees
+    treesData.trees = treesData.trees.map((tree) => ({
+      ...tree,
+      leaves: restoreBigIntsInLeaves(tree.leaves),
+    }));
+  } catch {
+    logger.info({ file: fileName }, "File doesn't exist, creating new trees structure");
+    treesData = null;
+  }
+
+  // Initialize if no data exists
+  if (treesData === null) {
+    treesData = {
+      currentTreeIndex: 0,
+      trees: [
+        {
+          treeIndex: 0,
+          root: null,
+          processed: false,
+          createdAt: new Date().toISOString(),
+          processedAt: null,
+          leaves: [],
+        },
+      ],
+    };
+  }
+
+  // Get current tree
+  const currentTree = treesData.trees[treesData.currentTreeIndex];
+
+  // Set correct leaf ID
+  const leafWithId = {
+    ...dataToAppend,
+    id: currentTree.leaves.length,
+  };
+
+  // Add leaf to current tree
+  currentTree.leaves.push(leafWithId);
+
+  // Upload the updated data
+  const putParams = {
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+    Body: JSON.stringify(treesData, bigintReplacer, 2),
+    ContentType: "application/json",
+    ACL: "public-read",
+  };
+
+  await s3Client.send(new PutObjectCommand(putParams));
+  logger.info({ treeIndex: treesData.currentTreeIndex }, "Successfully appended leaf to tree");
+
+  // Return total number of leaves in current tree
+  return currentTree.leaves.length;
+}
+
+/**
+ * Creates a new tree and sets it as the current active tree
+ * @param {string} fileName - The filename of the trees JSON file in S3
+ * @returns {Promise<number>} - The index of the new tree
+ */
+export async function startNewTree(fileName) {
+  const accessKey = process.env.SCW_ACCESS_KEY;
+  const secretKey = process.env.SCW_SECRET_KEY;
+
+  const s3Client = new S3Client({
+    region: "nl-ams",
+    endpoint: "https://s3.nl-ams.scw.cloud",
+    credentials: {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+    },
+  });
+
+  // Get existing data
+  const getParams = {
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+  };
+
+  const getResult = await s3Client.send(new GetObjectCommand(getParams));
+  const bodyContents = await streamToString(getResult.Body);
+  const treesData = JSON.parse(bodyContents);
+
+  // Create new tree
+  const newTreeIndex = treesData.trees.length;
+  const newTree = {
+    treeIndex: newTreeIndex,
+    root: null,
+    processed: false,
+    createdAt: new Date().toISOString(),
+    processedAt: null,
+    leaves: [],
+  };
+
+  treesData.trees.push(newTree);
+  treesData.currentTreeIndex = newTreeIndex;
+
+  // Upload updated data
+  const putParams = {
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+    Body: JSON.stringify(treesData, bigintReplacer, 2),
+    ContentType: "application/json",
+    ACL: "public-read",
+  };
+
+  await s3Client.send(new PutObjectCommand(putParams));
+  logger.info({ newTreeIndex }, "Started new tree");
+  return newTreeIndex;
+}
 
 /**
  * Appends a dictionary to an existing JSON file in S3, or creates a new file if it doesn't exist.
@@ -237,7 +388,7 @@ export async function appendToS3Json(dataToAppend, fileName) {
     existingData = restoreBigIntsInLeaves(existingData);
   } catch {
     // File doesn't exist, we'll create a new one
-    console.log(`File ${fileName} doesn't exist, creating new file`);
+    logger.info({ file: fileName }, "File doesn't exist, creating new file");
     existingData = null;
   }
 
@@ -263,7 +414,7 @@ export async function appendToS3Json(dataToAppend, fileName) {
     throw new Error("Unexpected data format");
   }
 
-  console.log(`Updated data for ${fileName}:`, updatedData);
+  logger.debug(`Updated data for ${fileName}:`, updatedData);
   // Upload the updated data
   const putParams = {
     Bucket: BUCKET_NAME,
@@ -275,7 +426,7 @@ export async function appendToS3Json(dataToAppend, fileName) {
   };
 
   await s3Client.send(new PutObjectCommand(putParams));
-  console.log(`Successfully appended to ${fileName}`);
+  logger.info({ file: fileName }, "Successfully appended to file");
   return batchSize; // Return the size of the updated file
 }
 
@@ -316,7 +467,7 @@ export async function checkWalletBalance(address, requiredBalance) {
   });
 
   const currentBalance = /** @type {bigint} */ (await contract.read.checkBalance([address]));
-  console.log(`Checking balance for ${address}: ${currentBalance}`);
+  logger.info({ address, balance: String(currentBalance) }, "Checking balance");
   if (currentBalance < requiredBalance) {
     throw new Error(
       `Insufficient balance. Required: ${requiredBalance}, Current: ${currentBalance}`,
@@ -325,12 +476,12 @@ export async function checkWalletBalance(address, requiredBalance) {
 }
 
 /**
- * Processes the Merkle tree for the address that called the LLM service.
- * @param {string} fileName - The filename of the JSON file in S3
- * @returns {Promise<void>} Resolves if the balance is sufficient, rejects otherwise.
+ * Processes the Merkle tree for a specific tree index
+ * @param {string} fileName - The filename of the trees JSON file in S3
+ * @param {number} treeIndex - The index of the tree to process (optional, processes current tree if not specified)
+ * @returns {Promise<void>} Resolves if processing is successful
  */
-export async function processMerkleTree(fileName) {
-  // Implementation for processing the Merkle tree
+export async function processMerkleTree(fileName, treeIndex = null) {
   const accessKey = process.env.SCW_ACCESS_KEY;
   const secretKey = process.env.SCW_SECRET_KEY;
 
@@ -351,9 +502,9 @@ export async function processMerkleTree(fileName) {
     },
   });
 
-  let llmLeafStructs = null;
+  let treesData = null;
 
-  // Try to get existing file
+  // Get existing file
   const getParams = {
     Bucket: BUCKET_NAME,
     Key: fileName,
@@ -362,16 +513,31 @@ export async function processMerkleTree(fileName) {
   try {
     const getResult = await s3Client.send(new GetObjectCommand(getParams));
     const bodyContents = await streamToString(getResult.Body);
-    llmLeafStructs = JSON.parse(bodyContents);
-    // restore BigInt fields (tokenCount, cost) which were serialized as strings
-    llmLeafStructs = restoreBigIntsInLeaves(llmLeafStructs);
+    treesData = JSON.parse(bodyContents);
+    // Restore BigInts in all trees
+    treesData.trees = treesData.trees.map((tree) => ({
+      ...tree,
+      leaves: restoreBigIntsInLeaves(tree.leaves),
+    }));
   } catch {
-    // File doesn't exist, we'll create a new one
-    console.log(`File ${fileName} doesn't exist, creating new file`);
     throw new Error(`File ${fileName} doesn't exist`);
   }
 
-  // 2. Create the array of arrays for the Merkle tree
+  // Determine which tree to process
+  const targetTreeIndex = treeIndex !== null ? treeIndex : treesData.currentTreeIndex;
+  const targetTree = treesData.trees[targetTreeIndex];
+
+  if (!targetTree) {
+    throw new Error(`Tree with index ${targetTreeIndex} doesn't exist`);
+  }
+
+  if (targetTree.processed) {
+    throw new Error(`Tree ${targetTreeIndex} has already been processed`);
+  }
+
+  const llmLeafStructs = targetTree.leaves;
+
+  // Create the array of arrays for the Merkle tree
   const llmLeafsArray = llmLeafStructs.map((leaf) => [
     leaf.id,
     leaf.user,
@@ -381,7 +547,7 @@ export async function processMerkleTree(fileName) {
     leaf.timestamp,
   ]);
 
-  // 3. Create a Merkle tree from the LLMLeafs with the openzeppelin library
+  // Create a Merkle tree from the LLMLeafs with the openzeppelin library
   const tree = StandardMerkleTree.of(llmLeafsArray, [
     "int256",
     "address",
@@ -391,21 +557,18 @@ export async function processMerkleTree(fileName) {
     "string",
   ]);
   const root = tree.root;
-  console.log(`Prepared the merkle tree with root ${root}`);
+  logger.info({ treeIndex: targetTreeIndex, root }, "Prepared the merkle tree");
 
-  // prepare the proofs
+  // Prepare the proofs
   const proofs = llmLeafsArray.map((_, i) => tree.getProof(i));
-  // prep for writing everything
-  // Wallet-Client mit dem Account erstellen
-  // Private Key aus der Umgebungsvariable laden
+
+  // Setup wallet and contract
   const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
   if (!privateKey) {
     throw new Error("NFT_WALLET_PRIVATE_KEY nicht konfiguriert");
   }
 
-  // Account aus dem privaten Schlüssel erstellen
   const account = privateKeyToAccount(`0x${privateKey}`);
-
   const activeChain = getChain();
   const publicClient = createPublicClient({
     chain: activeChain,
@@ -427,8 +590,27 @@ export async function processMerkleTree(fileName) {
       wallet: walletClient,
     },
   });
+
+  // Process the batch
   await llmContract.write.processBatch([root, llmLeafStructs, proofs]);
-  console.log(`Processed Merkle tree with root ${root} and proofs`, proofs);
+  logger.info({ treeIndex: targetTreeIndex, root }, "Processed Merkle tree");
+
+  // Mark tree as processed
+  targetTree.processed = true;
+  targetTree.root = root;
+  targetTree.processedAt = new Date().toISOString();
+
+  // Upload updated data
+  const putParams = {
+    Bucket: BUCKET_NAME,
+    Key: fileName,
+    Body: JSON.stringify(treesData, bigintReplacer, 2),
+    ContentType: "application/json",
+    ACL: "public-read",
+  };
+
+  await s3Client.send(new PutObjectCommand(putParams));
+  logger.info({ treeIndex: targetTreeIndex }, "Tree marked as processed");
 }
 
 /**

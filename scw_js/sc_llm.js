@@ -15,8 +15,13 @@ import {
 } from "./llm_service.js";
 
 import { parseEther } from "viem";
+import pino from "pino";
+
+const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const MERKLE_TREE_THRESHOLD = 4;
+const REQUIRED_BALANCE = "0.00001";
+const MERKLE_TREE_FILE = "merkle/trees.json";
 
 /**
  * Type predicate: returns true if addr is a 0x-prefixed 40-hex-char string.
@@ -56,7 +61,7 @@ export async function handle(event, _context) {
   if (event.httpMethod === "POST") {
     // Body parsen (JSON-String zu Objekt)
     body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    console.log("Parsed body: ", body);
+    logger.debug({ body }, "Parsed body");
   } else {
     return {
       body: JSON.stringify({ error: "Only POST requests are supported" }),
@@ -75,7 +80,7 @@ export async function handle(event, _context) {
       statusCode: 400,
     };
   }
-  console.log("Prompt: ", prompt);
+  logger.debug({ prompt }, "Prompt received");
   // check if we would like to work with dummy data. If no value is provided, we set it to false
   let useDummyData = false;
   if (body.data && body.data.useDummyData !== undefined) {
@@ -115,7 +120,7 @@ export async function handle(event, _context) {
     // Extract necessary information for wallet verification
     await verify_wallet(address, signature, message);
   } catch (error) {
-    console.error("Wallet verification failed:", error);
+    logger.error({ err: error }, "Wallet verification failed");
     return {
       body: JSON.stringify({ error: error.message }),
       headers,
@@ -123,14 +128,11 @@ export async function handle(event, _context) {
     };
   }
 
-  // check that the submitting wallet has enough balance in the contract
-  const requiredBalance = "0.00001"; // Example value, adjust as needed
-
-  const requiredBalanceInWei = parseEther(requiredBalance);
+  const requiredBalanceInWei = parseEther(REQUIRED_BALANCE);
   try {
     await checkWalletBalance(address, requiredBalanceInWei);
   } catch (error) {
-    console.error("Wallet balance check failed:", error);
+    logger.error({ err: error }, "Wallet balance check failed");
     return {
       body: JSON.stringify({ error: error.message }),
       headers,
@@ -139,12 +141,12 @@ export async function handle(event, _context) {
   }
   let data;
   try {
-    console.log(`Generating answer for prompt: "${prompt}"`);
+    logger.info({ prompt }, "Generating answer for prompt");
 
     // Pass prompt to the function
     data = await callLLMAPI(prompt, useDummyData);
   } catch (error) {
-    console.error(`Error during answer generation: ${error}`);
+    logger.error({ err: error }, "Error during answer generation");
     const statusCode = error.message.includes("API Token nicht gefunden") ? 401 : 500;
     return {
       body: JSON.stringify({ error: error.message }),
@@ -154,7 +156,30 @@ export async function handle(event, _context) {
   }
 
   // time to save the message and the leaf to the tree
-  const cost = convertTokensToCost(data.usage.total_tokens);
+  // Validate token count from LLM response
+  const totalTokensRaw = data?.usage?.total_tokens;
+  if (
+    totalTokensRaw === null ||
+    totalTokensRaw === undefined ||
+    (typeof totalTokensRaw !== "number" &&
+      typeof totalTokensRaw !== "bigint" &&
+      !/^\d+$/.test(String(totalTokensRaw)))
+  ) {
+    logger.error({ data }, "Invalid total_tokens in LLM response");
+    return {
+      body: JSON.stringify({ error: "Invalid token count from LLM" }),
+      headers,
+      statusCode: 500,
+    };
+  }
+
+  // Convert to BigInt safely
+  const tokenCountBigInt =
+    typeof totalTokensRaw === "bigint"
+      ? totalTokensRaw
+      : BigInt(Math.floor(Number(totalTokensRaw)));
+
+  const cost = convertTokensToCost(tokenCountBigInt);
 
   const serviceProviderAddress = process.env.NFT_WALLET_PUBLIC_KEY;
 
@@ -168,25 +193,26 @@ export async function handle(event, _context) {
       statusCode: 500,
     };
   }
+
   const newMerkleLength = await saveLeafToTree(
     address,
     serviceProviderAddress,
-    BigInt(data.usage.total_tokens), // Convert to bigint
+    tokenCountBigInt, // validated BigInt token count
     cost,
   );
   // time to see if the merkle tree is so big that we should process it and settle
   // the transactions on the blockchain.
   if (newMerkleLength >= MERKLE_TREE_THRESHOLD) {
-    console.log("Time to process the batch");
-    await processMerkleTree("merkle/trees.json");
+    logger.info("Time to process the batch");
+    await processMerkleTree(MERKLE_TREE_FILE);
 
     // After processing, start a new tree for future leaves
-    console.log("Starting new tree after processing");
-    await startNewTree("merkle/trees.json");
+    logger.info("Starting new tree after processing");
+    await startNewTree(MERKLE_TREE_FILE);
   } else {
-    console.log(`Merkle tree of length ${newMerkleLength} is not ready for processing`);
+    logger.info({ length: newMerkleLength }, "Merkle tree not ready for processing");
   }
-  console.log("Answer generated and saved to Merkle Tree:", data);
+  logger.info({ data }, "Answer generated and saved to Merkle Tree");
   return {
     body: data,
     statusCode: 200,
@@ -205,5 +231,5 @@ if (process.env.NODE_ENV === "test") {
     // Load serverless functions and start server
     const scw_fnc_node = await import("@scaleway/serverless-functions");
     scw_fnc_node.serveHandler(handle, 8080);
-  })().catch((err) => console.error("Error starting local server:", err));
+  })().catch((err) => logger.error({ err }, "Error starting local server"));
 }

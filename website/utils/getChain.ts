@@ -101,7 +101,7 @@ export function getCollectorNFTContractConfig() {
  */
 export function getLLMv1ContractConfig() {
   const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimismSepolia");
-  
+
   switch (chainName) {
     case "optimismSepolia":
       return {

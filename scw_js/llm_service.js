@@ -5,11 +5,15 @@ import { getChain, getLLMv1ContractConfig } from "./getChain.js";
 import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { privateKeyToAccount } from "viem/accounts";
+import pino from "pino";
 
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
+const MERKLE_TREE_FILE = "merkle/trees.json";
+// ---- new: pino logger ----
+const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
  * Generates an answer based on the prompt.
@@ -39,7 +43,7 @@ export async function callLLMAPI(prompt, dummy = false) {
     };
   }
   const ionosApiToken = process.env.IONOS_API_TOKEN;
-  console.log("Work with real API");
+  logger.info("Work with real API");
   if (!ionosApiToken) {
     throw new Error(
       "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
@@ -49,7 +53,7 @@ export async function callLLMAPI(prompt, dummy = false) {
   if (!prompt) {
     throw new Error("No prompt provided.");
   }
-  console.log("Generating answer for prompt:", prompt);
+  logger.info({ prompt }, "Generating answer for prompt");
 
   const headers = {
     Authorization: `Bearer ${ionosApiToken}`,
@@ -61,7 +65,7 @@ export async function callLLMAPI(prompt, dummy = false) {
     messages: prompt,
   };
 
-  console.log("Sending answer generation request...");
+  logger.debug("Sending answer generation request...");
   const response = await fetch(ENDPOINT, {
     method: "POST",
     headers,
@@ -69,7 +73,7 @@ export async function callLLMAPI(prompt, dummy = false) {
   });
 
   if (!response.ok) {
-    console.error(`IONOS API Error: ${response.status} ${response.statusText}`);
+    logger.error({ status: response.status, statusText: response.statusText }, "IONOS API Error");
     throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
   }
 
@@ -144,12 +148,13 @@ export async function verify_wallet(address, signature, message) {
     });
 
     if (!isValid) {
+      logger.warn({ address }, "Invalid wallet signature.");
       throw new Error("Invalid wallet signature.");
     } else {
-      console.log("Wallet signature verified successfully.");
+      logger.info({ address }, "Wallet signature verified successfully.");
     }
   } catch (error) {
-    console.error("Signature verification failed:", error);
+    logger.error({ err: error }, "Signature verification failed");
     throw new Error("Invalid wallet signature.");
   }
 }
@@ -175,8 +180,8 @@ export async function saveLeafToTree(userAddress, serviceProvider, tokenCount, c
     timestamp,
   };
 
-  console.log("Saving leaf to tree:", newLeaf);
-  return appendLeafToTrees(newLeaf, "merkle/trees.json");
+  logger.info({ leaf: newLeaf }, "Saving leaf to tree");
+  return appendLeafToTrees(newLeaf, MERKLE_TREE_FILE);
 }
 
 /**
@@ -242,7 +247,7 @@ export async function appendLeafToTrees(dataToAppend, fileName) {
       leaves: restoreBigIntsInLeaves(tree.leaves),
     }));
   } catch {
-    console.log(`File ${fileName} doesn't exist, creating new trees structure`);
+    logger.info({ file: fileName }, "File doesn't exist, creating new trees structure");
     treesData = null;
   }
 
@@ -285,7 +290,7 @@ export async function appendLeafToTrees(dataToAppend, fileName) {
   };
 
   await s3Client.send(new PutObjectCommand(putParams));
-  console.log(`Successfully appended leaf to tree ${treesData.currentTreeIndex}`);
+  logger.info({ treeIndex: treesData.currentTreeIndex }, "Successfully appended leaf to tree");
 
   // Return total number of leaves in current tree
   return currentTree.leaves.length;
@@ -343,8 +348,7 @@ export async function startNewTree(fileName) {
   };
 
   await s3Client.send(new PutObjectCommand(putParams));
-  console.log(`Started new tree with index ${newTreeIndex}`);
-
+  logger.info({ newTreeIndex }, "Started new tree");
   return newTreeIndex;
 }
 
@@ -384,7 +388,7 @@ export async function appendToS3Json(dataToAppend, fileName) {
     existingData = restoreBigIntsInLeaves(existingData);
   } catch {
     // File doesn't exist, we'll create a new one
-    console.log(`File ${fileName} doesn't exist, creating new file`);
+    logger.info({ file: fileName }, "File doesn't exist, creating new file");
     existingData = null;
   }
 
@@ -410,7 +414,7 @@ export async function appendToS3Json(dataToAppend, fileName) {
     throw new Error("Unexpected data format");
   }
 
-  console.log(`Updated data for ${fileName}:`, updatedData);
+  logger.debug(`Updated data for ${fileName}:`, updatedData);
   // Upload the updated data
   const putParams = {
     Bucket: BUCKET_NAME,
@@ -422,7 +426,7 @@ export async function appendToS3Json(dataToAppend, fileName) {
   };
 
   await s3Client.send(new PutObjectCommand(putParams));
-  console.log(`Successfully appended to ${fileName}`);
+  logger.info({ file: fileName }, "Successfully appended to file");
   return batchSize; // Return the size of the updated file
 }
 
@@ -463,7 +467,7 @@ export async function checkWalletBalance(address, requiredBalance) {
   });
 
   const currentBalance = /** @type {bigint} */ (await contract.read.checkBalance([address]));
-  console.log(`Checking balance for ${address}: ${currentBalance}`);
+  logger.info({ address, balance: String(currentBalance) }, "Checking balance");
   if (currentBalance < requiredBalance) {
     throw new Error(
       `Insufficient balance. Required: ${requiredBalance}, Current: ${currentBalance}`,
@@ -553,7 +557,7 @@ export async function processMerkleTree(fileName, treeIndex = null) {
     "string",
   ]);
   const root = tree.root;
-  console.log(`Prepared the merkle tree ${targetTreeIndex} with root ${root}`);
+  logger.info({ treeIndex: targetTreeIndex, root }, "Prepared the merkle tree");
 
   // Prepare the proofs
   const proofs = llmLeafsArray.map((_, i) => tree.getProof(i));
@@ -589,7 +593,7 @@ export async function processMerkleTree(fileName, treeIndex = null) {
 
   // Process the batch
   await llmContract.write.processBatch([root, llmLeafStructs, proofs]);
-  console.log(`Processed Merkle tree ${targetTreeIndex} with root ${root}`);
+  logger.info({ treeIndex: targetTreeIndex, root }, "Processed Merkle tree");
 
   // Mark tree as processed
   targetTree.processed = true;
@@ -606,7 +610,7 @@ export async function processMerkleTree(fileName, treeIndex = null) {
   };
 
   await s3Client.send(new PutObjectCommand(putParams));
-  console.log(`Tree ${targetTreeIndex} marked as processed`);
+  logger.info({ treeIndex: targetTreeIndex }, "Tree marked as processed");
 }
 
 /**

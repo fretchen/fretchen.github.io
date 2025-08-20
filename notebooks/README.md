@@ -5,16 +5,19 @@ This directory contains Jupyter notebooks for exploring Merkle trees and their a
 ## Setup
 
 1. Install Poetry if you haven't already:
+
    ```bash
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
 2. Install dependencies:
+
    ```bash
    poetry install
    ```
 
 3. Activate the virtual environment:
+
    ```bash
    poetry shell
    ```
@@ -41,17 +44,20 @@ This directory contains Jupyter notebooks for exploring Merkle trees and their a
 ## Development
 
 Code formatting is handled by:
+
 - **black**: Code formatter
 - **isort**: Import sorter
 - **flake8**: Linter
 
 Run formatting:
+
 ```bash
 poetry run black .
 poetry run isort .
 ```
 
 Run linting:
+
 ```bash
 poetry run flake8 .
 ```

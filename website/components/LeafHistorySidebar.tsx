@@ -31,7 +31,7 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
 
   const fetchLeafHistory = async () => {
     if (!address) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch(`http://localhost:8080?address=${address}`);
@@ -86,14 +86,10 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
         <div>Loading...</div>
       ) : (
         <div>
-          <div style={{ marginBottom: "1rem", fontSize: "0.9rem", color: "#666" }}>
-            Total: {leaves.length} requests
-          </div>
-          
+          <div style={{ marginBottom: "1rem", fontSize: "0.9rem", color: "#666" }}>Total: {leaves.length} requests</div>
+
           {leaves.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#999", marginTop: "2rem" }}>
-              No requests found
-            </div>
+            <div style={{ textAlign: "center", color: "#999", marginTop: "2rem" }}>No requests found</div>
           ) : (
             leaves.slice(0, 10).map((leaf) => {
               // Determine status colors and text
@@ -141,13 +137,10 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
                       {statusStyle.icon} {statusStyle.text}
                     </span>
                     <span style={{ fontSize: "0.7rem", color: "#666", marginLeft: "auto" }}>
-                      {new Date(leaf.timestamp).toLocaleDateString()}{" "}
-                      {new Date(leaf.timestamp).toLocaleTimeString()}
+                      {new Date(leaf.timestamp).toLocaleDateString()} {new Date(leaf.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
-                  <div style={{ marginBottom: "0.25rem", color: "#333" }}>
-                    Tokens: {leaf.tokenCount}
-                  </div>
+                  <div style={{ marginBottom: "0.25rem", color: "#333" }}>Tokens: {leaf.tokenCount}</div>
                   <div style={{ marginBottom: "0.25rem", color: "#333" }}>
                     Cost: {formatEther(BigInt(leaf.cost))} ETH
                   </div>
@@ -158,7 +151,7 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
               );
             })
           )}
-          
+
           {leaves.length > 10 && (
             <div style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.8rem", color: "#666" }}>
               Showing first 10 of {leaves.length} requests

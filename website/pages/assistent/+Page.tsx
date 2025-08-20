@@ -22,10 +22,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   const llmContract = getLLMv1ContractConfig();
 
   // Read user's balance from contract
-  const {
-    data: balance,
-    refetch: refetchBalance,
-  } = useReadContract({
+  const { data: balance, refetch: refetchBalance } = useReadContract({
     address: llmContract.address as `0x${string}`,
     abi: llmContract.abi,
     functionName: "checkBalance",

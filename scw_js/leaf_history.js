@@ -4,24 +4,11 @@
  * A module that gets the leafs for the wallet and then allows you later to
  * confirm them
  */
-import {
-  convertTokensToCost,
-  callLLMAPI,
-  checkWalletBalance,
-  saveLeafToTree,
-  verify_wallet,
-  processMerkleTree,
-  startNewTree,
-} from "./llm_service.js";
-
-import { parseEther } from "viem";
 import pino from "pino";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
-const MERKLE_TREE_THRESHOLD = 4;
-const REQUIRED_BALANCE = "0.00001";
 const MERKLE_TREE_FILE = "merkle/trees.json";
 
 /**

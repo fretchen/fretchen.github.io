@@ -259,26 +259,30 @@ export default function Page() {
               onClick={() => setIsSidebarOpen(true)}
               style={{
                 padding: "0.5rem 1rem",
-                background: "#2196F3",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
+                background: "transparent",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: "2px",
                 cursor: "pointer",
+                fontSize: "0.85rem",
+                fontWeight: "500",
               }}
               title="View request history"
             >
-              📊 History
+              History
             </button>
 
             <button
               onClick={clearChat}
               style={{
                 padding: "0.5rem 1rem",
-                background: "#f44336",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
+                background: "transparent",
+                color: "#666",
+                border: "1px solid #ddd",
+                borderRadius: "2px",
                 cursor: "pointer",
+                fontSize: "0.85rem",
+                fontWeight: "500",
               }}
             >
               Clear Chat
@@ -291,14 +295,14 @@ export default function Page() {
           style={{
             flex: 1,
             overflow: "auto",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
+            border: "1px solid #e0e0e0",
+            borderRadius: "4px",
             padding: "1rem",
-            backgroundColor: "#f9f9f9",
+            backgroundColor: "#ffffff",
           }}
         >
           {messages.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#666", padding: "2rem" }}>
+            <div style={{ textAlign: "center", color: "#888", padding: "2rem", fontSize: "0.9rem" }}>
               Start a conversation by typing a message below.
             </div>
           ) : (
@@ -307,23 +311,34 @@ export default function Page() {
                 key={index}
                 style={{
                   margin: "1rem 0",
-                  padding: "0.75rem",
-                  borderRadius: "8px",
-                  backgroundColor: message.role === "user" ? "#e3f2fd" : "#f1f8e9",
-                  marginLeft: message.role === "user" ? "20%" : "0",
-                  marginRight: message.role === "assistant" ? "20%" : "0",
+                  display: "flex",
+                  justifyContent: message.role === "user" ? "flex-end" : "flex-start",
                 }}
               >
                 <div
                   style={{
-                    fontWeight: "bold",
-                    marginBottom: "0.25rem",
-                    color: message.role === "user" ? "#1976d2" : "#388e3c",
+                    maxWidth: message.role === "user" ? "70%" : "80%",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    backgroundColor: message.role === "user" ? "#2d3748" : "#f8f9fa",
+                    color: message.role === "user" ? "white" : "#333",
+                    border: message.role === "user" ? "none" : "1px solid #e2e8f0",
                   }}
                 >
-                  {message.role === "user" ? "You" : "Assistant"}
+                  <div
+                    style={{
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                      fontSize: "0.85rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      opacity: 0.8,
+                    }}
+                  >
+                    {message.role === "user" ? "You" : "Assistant"}
+                  </div>
+                  <div style={{ whiteSpace: "pre-wrap", lineHeight: "1.5" }}>{message.content}</div>
                 </div>
-                <div style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
               </div>
             ))
           )}
@@ -332,15 +347,23 @@ export default function Page() {
             <div
               style={{
                 margin: "1rem 0",
-                padding: "0.75rem",
-                borderRadius: "8px",
-                backgroundColor: "#f1f8e9",
-                marginRight: "20%",
-                fontStyle: "italic",
-                color: "#666",
+                display: "flex",
+                justifyContent: "flex-start",
               }}
             >
-              Assistant is typing...
+              <div
+                style={{
+                  maxWidth: "80%",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "8px",
+                  backgroundColor: "#f8f9fa",
+                  color: "#333",
+                  border: "1px solid #e2e8f0",
+                  fontStyle: "italic",
+                }}
+              >
+                Assistant is typing...
+              </div>
             </div>
           )}
         </div>
@@ -361,12 +384,16 @@ export default function Page() {
             disabled={isLoading}
             style={{
               flex: 1,
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
+              padding: "1rem",
+              border: "1px solid #e0e0e0",
+              borderRadius: "2px",
               resize: "vertical",
               minHeight: "60px",
               maxHeight: "120px",
+              fontSize: "0.9rem",
+              lineHeight: "1.5",
+              outline: "none",
+              backgroundColor: "#ffffff",
             }}
           />
           <button
@@ -374,12 +401,14 @@ export default function Page() {
             disabled={isLoading || !currentInput.trim()}
             style={{
               padding: "0.75rem 1.5rem",
-              background: isLoading || !currentInput.trim() ? "#ccc" : "#4caf50",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
+              background: isLoading || !currentInput.trim() ? "#f5f5f5" : "#333",
+              color: isLoading || !currentInput.trim() ? "#999" : "white",
+              border: "1px solid #ddd",
+              borderRadius: "2px",
               cursor: isLoading || !currentInput.trim() ? "not-allowed" : "pointer",
               whiteSpace: "nowrap",
+              fontSize: "0.9rem",
+              fontWeight: "500",
             }}
           >
             {isLoading ? "Sending..." : "Send"}

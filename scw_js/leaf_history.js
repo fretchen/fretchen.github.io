@@ -90,13 +90,13 @@ export async function handle(event, _context) {
       const bodyStr = await streamToString(getResult.Body);
       const treesData = JSON.parse(bodyStr);
 
-      // Collect all leaves for the given address across all trees
-      const leaves = [];
+      // Collect all leafs for the given address across all trees
+      const leafs = [];
       (treesData.trees || []).forEach((tree) => {
         const treeIndex = tree.treeIndex ?? treesData.trees.indexOf(tree);
-        (tree.leaves || []).forEach((leaf) => {
+        (tree.leafs || []).forEach((leaf) => {
           if (leaf.user?.toLowerCase?.() === address.toLowerCase()) {
-            leaves.push({
+            leafs.push({
               id: leaf.id,
               user: leaf.user,
               serviceProvider: leaf.serviceProvider,
@@ -112,14 +112,14 @@ export async function handle(event, _context) {
       });
 
       // Sort by timestamp desc (newest first)
-      leaves.sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1));
+      leafs.sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1));
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          leaves,
-          count: leaves.length,
+          leafs,
+          count: leafs.length,
           address,
         }),
       };

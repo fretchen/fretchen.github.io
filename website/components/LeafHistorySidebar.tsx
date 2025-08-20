@@ -34,7 +34,8 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080?address=${address}`);
+      const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
+      const response = await fetch(`${LEAF_BASE_URL}?address=${address}`);
       const data: LeafHistoryResponse = await response.json();
       setLeaves(data.leaves || []);
     } catch (error) {

@@ -35,10 +35,6 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
     },
   });
 
-  console.log("Balance data:", balance);
-  console.log("Balance error:", error);
-  console.log("Address:", address);
-  console.log("Contract address:", llmContract.address);
   // Send ETH transaction for top-up using depositForLLM function
   const { writeContract, data: hash } = useWriteContract();
 
@@ -156,10 +152,7 @@ export default function Page() {
         { role: "user", content: userMessage.trim() },
       ];
 
-      // TODO: Replace with your actual serverless endpoint URL
-      // Example: "https://your-serverless-endpoint.scw.cloud"
       const serverlessEndpoint = import.meta.env.PUBLIC_ENV__LLM_ENDPOINT || "http://localhost:8080";
-      console.log("Serverless endpoint:", serverlessEndpoint);
       // Call the serverless function - format like Python code
       const response = await fetch(serverlessEndpoint, {
         method: "POST",
@@ -198,7 +191,6 @@ export default function Page() {
         refetchBalance();
       }
     } catch (error) {
-      console.error("Error sending message:", error);
       const errorMsg: ChatMessage = {
         role: "assistant",
         content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,

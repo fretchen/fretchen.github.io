@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getLLMv1ContractConfig } from "../../utils/getChain";
+import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import * as styles from "../../layouts/styles";
 
 interface ChatMessage {
@@ -24,7 +25,6 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   const {
     data: balance,
     refetch: refetchBalance,
-    error,
   } = useReadContract({
     address: llmContract.address as `0x${string}`,
     abi: llmContract.abi,
@@ -99,6 +99,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [authSignature, setAuthSignature] = useState<string | null>(null);
   const [refetchBalance, setRefetchBalance] = useState<(() => void) | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
@@ -253,19 +254,36 @@ export default function Page() {
           {/* Balance Display */}
           <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
 
-          <button
-            onClick={clearChat}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#f44336",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Clear Chat
-          </button>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#2196F3",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+              title="View request history"
+            >
+              📊 History
+            </button>
+
+            <button
+              onClick={clearChat}
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#f44336",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Clear Chat
+            </button>
+          </div>
         </div>
 
         {/* Messages Container */}
@@ -368,6 +386,9 @@ export default function Page() {
           </button>
         </div>
       </div>
+
+      {/* Leaf History Sidebar */}
+      <LeafHistorySidebar address={address} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </div>
   );
 }

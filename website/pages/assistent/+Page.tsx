@@ -29,7 +29,6 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
     args: address ? [address] : undefined,
     ...(chain?.id && { chainId: chain.id }),
   });
-  console.log("BalanceDisplay Debug:", { address, balance, llmContractConfig });
   // Send ETH transaction for top-up using depositForLLM function
   const { writeContract, data: hash } = useWriteContract();
 
@@ -87,16 +86,25 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
     }
   }, [refetchBalance, onRefetchBalance]);
 
-  if (!address) return null;
+  // Helper function for user-friendly balance formatting
+  const formatBalance = (balanceWei: bigint): string => {
+    const balanceEth = parseFloat(formatEther(balanceWei));
 
-  console.log("BalanceDisplay Debug:", { address, balance, llmContract });
+    if (balanceEth === 0) return "0";
+    if (balanceEth >= 1) return balanceEth.toFixed(3); // 3 decimals for amounts >= 1 ETH
+    if (balanceEth >= 0.1) return balanceEth.toFixed(4); // 4 decimals for 0.1-1 ETH
+    if (balanceEth >= 0.001) return balanceEth.toFixed(5); // 5 decimals for 0.001-0.1 ETH
+    return balanceEth.toFixed(6); // 6 decimals for very small amounts
+  };
+
+  if (!address) return null;
 
   return (
     <>
       {/* Simple Balance Display */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
         <span style={{ fontSize: "0.9rem", color: "#333" }}>
-          Balance: {balance ? formatEther(balance as bigint) : "0"} ETH
+          LLM Chat Credits: {balance ? formatBalance(balance as bigint) : "0"} ETH
         </span>
         <button
           onClick={() => setShowTopUpModal(true)}
@@ -147,7 +155,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 
             <div style={{ marginBottom: "1rem" }}>
               <div style={{ marginBottom: "0.5rem", fontSize: "0.9rem", color: "#666" }}>
-                Current balance: {balance ? formatEther(balance as bigint) : "0"} ETH
+                Current balance: {balance ? formatBalance(balance as bigint) : "0"} ETH
               </div>
             </div>
 
@@ -392,8 +400,6 @@ export default function Page() {
             padding: "1rem 0",
           }}
         >
-          <h2>Chat Assistant</h2>
-
           {/* Balance Display */}
           <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
 

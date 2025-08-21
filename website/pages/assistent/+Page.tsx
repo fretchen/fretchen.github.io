@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
-import { getLLMv1ContractConfig } from "../../utils/getChain";
+import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import * as styles from "../../layouts/styles";
 
@@ -19,19 +19,16 @@ interface BalanceDisplayProps {
 
 function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   // LLM Contract configuration
-  const llmContract = getLLMv1ContractConfig();
+  const llmContractConfig = getLLMv1ContractConfig();
+  const chain = getChain();
 
   // Read user's balance from contract
   const { data: balance, refetch: refetchBalance } = useReadContract({
-    address: llmContract.address as `0x${string}`,
-    abi: llmContract.abi,
+    ...llmContractConfig,
     functionName: "checkBalance",
     args: address ? [address] : undefined,
-    query: {
-      enabled: !!address, // Only execute when address is available
-    },
+    ...(chain?.id && { chainId: chain.id }),
   });
-
   // Send ETH transaction for top-up using depositForLLM function
   const { writeContract, data: hash } = useWriteContract();
 
@@ -44,10 +41,10 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   const handleTopUp = () => {
     if (!address) return;
     writeContract({
-      address: llmContract.address as `0x${string}`,
-      abi: llmContract.abi,
+      ...llmContractConfig,
       functionName: "depositForLLM",
       value: parseEther("0.01"), // Fixed 0.01 ETH top-up
+      ...(chain?.id && { chainId: chain.id }), // explicit chain
     });
   };
 

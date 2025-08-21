@@ -6,22 +6,22 @@ import { SupportABI } from "../../eth/abi/contracts/Support";
 import { LLMv1ABI } from "../../eth/abi/contracts/LLMv1";
 
 /**
- * Get environment variable in both Node.js and Vite contexts
+ * Get PUBLIC_ENV__CHAIN_NAME in both Node.js and Vite contexts
+ * only the default value is required now
  */
-function getEnvironmentVariable(key: string, defaultValue: string): string {
+function getEnvironmentVariable(defaultValue: string): string {
   try {
-    // Try Vite environment (browser/build context)
+    // Vite supports only static dot-notation — handle the known key explicitly
     if (typeof import.meta !== "undefined" && import.meta.env) {
-      return import.meta.env[key] || defaultValue;
+      return import.meta.env.PUBLIC_ENV__CHAIN_NAME || defaultValue;
     }
   } catch {
-    // Fallback to Node.js environment
+    // Fall through to Node.js check
   }
 
   try {
-    // Try Node.js environment
     if (typeof process !== "undefined" && process.env) {
-      return process.env[key] || defaultValue;
+      return process.env.PUBLIC_ENV__CHAIN_NAME || defaultValue;
     }
   } catch {
     // Fallback to default
@@ -36,7 +36,7 @@ function getEnvironmentVariable(key: string, defaultValue: string): string {
  */
 export function getChain(): Chain {
   // Environmentvariable lesen, Fallback auf 'optimism'
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
+  const chainName = getEnvironmentVariable("optimism");
   // Chain-Objekt je nach Umgebungsvariable auswählen
   switch (chainName) {
     case "sepolia":
@@ -51,7 +51,7 @@ export function getChain(): Chain {
 }
 
 export function getGenAiNFTContractConfig() {
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
+  const chainName = getEnvironmentVariable("optimism");
   // ChainConfig based on Env Variable
   switch (chainName) {
     case "sepolia":
@@ -64,7 +64,7 @@ export function getGenAiNFTContractConfig() {
 }
 
 export function getSupportContractConfig() {
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
+  const chainName = getEnvironmentVariable("optimism");
   // ChainConfig based on Env Variable
   switch (chainName) {
     case "sepolia":
@@ -79,7 +79,7 @@ export function getSupportContractConfig() {
 }
 
 export function getCollectorNFTContractConfig() {
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
+  const chainName = getEnvironmentVariable("optimism");
   // ChainConfig based on Env Variable
   switch (chainName) {
     case "sepolia":
@@ -100,8 +100,7 @@ export function getCollectorNFTContractConfig() {
  * Get LLMv1 contract configuration for chat functionality
  */
 export function getLLMv1ContractConfig() {
-  const chainName = getEnvironmentVariable("PUBLIC_ENV__CHAIN_NAME", "optimism");
-
+  const chainName = getEnvironmentVariable("optimism");
   switch (chainName) {
     case "optimismSepolia":
       return {

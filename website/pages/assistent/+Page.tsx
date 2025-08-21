@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
-import { getLLMv1ContractConfig } from "../../utils/getChain";
+import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import * as styles from "../../layouts/styles";
 
@@ -19,19 +19,17 @@ interface BalanceDisplayProps {
 
 function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   // LLM Contract configuration
-  const llmContract = getLLMv1ContractConfig();
+  const llmContractConfig = getLLMv1ContractConfig();
+  const chain = getChain();
 
   // Read user's balance from contract
-  const { data: balance, refetch: refetchBalance, error, isLoading, status } = useReadContract({
-    address: llmContract.address as `0x${string}`,
-    abi: llmContract.abi,
+  const { data: balance, refetch: refetchBalance } = useReadContract({
+    ...llmContractConfig,
     functionName: "checkBalance",
     args: address ? [address] : undefined,
-    query: {
-      enabled: !!address, // Only execute when address is available
-    },
+    ...(chain?.id && { chainId: chain.id }),
   });
-  console.log("BalanceDisplay Debug:", { address, balance, llmContract });
+  console.log("BalanceDisplay Debug:", { address, balance, llmContractConfig });
   // Send ETH transaction for top-up using depositForLLM function
   const { writeContract, data: hash } = useWriteContract();
 
@@ -51,23 +49,23 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 
   const handleTopUp = async () => {
     if (!address) return;
-    
+
     try {
       const amountStr = getAmountToSend();
       const amountWei = parseEther(amountStr);
-      
+
       if (!amountWei || amountWei <= 0n) {
         alert("Enter a valid amount greater than 0");
         return;
       }
 
       writeContract({
-        address: llmContract.address as `0x${string}`,
-        abi: llmContract.abi,
+        ...llmContractConfig,
         functionName: "depositForLLM",
         value: amountWei,
+        ...(chain?.id && { chainId: chain.id }),
       });
-      
+
       setShowTopUpModal(false);
     } catch (err) {
       console.error("Top-up failed", err);
@@ -146,7 +144,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.1rem" }}>Top up Balance</h3>
-            
+
             <div style={{ marginBottom: "1rem" }}>
               <div style={{ marginBottom: "0.5rem", fontSize: "0.9rem", color: "#666" }}>
                 Current balance: {balance ? formatEther(balance as bigint) : "0"} ETH
@@ -195,9 +193,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
                   fontSize: "0.9rem",
                 }}
               />
-              <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.25rem" }}>
-                Amount in ETH (e.g., 0.025)
-              </div>
+              <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.25rem" }}>Amount in ETH (e.g., 0.025)</div>
             </div>
 
             {/* Action buttons */}

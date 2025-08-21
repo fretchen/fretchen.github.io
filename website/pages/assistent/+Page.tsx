@@ -22,7 +22,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   const llmContract = getLLMv1ContractConfig();
 
   // Read user's balance from contract
-  const { data: balance, refetch: refetchBalance } = useReadContract({
+  const { data: balance, refetch: refetchBalance, error, isLoading, status } = useReadContract({
     address: llmContract.address as `0x${string}`,
     abi: llmContract.abi,
     functionName: "checkBalance",
@@ -31,7 +31,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       enabled: !!address, // Only execute when address is available
     },
   });
-
+  console.log("BalanceDisplay Debug:", { address, balance, llmContract });
   // Send ETH transaction for top-up using depositForLLM function
   const { writeContract, data: hash } = useWriteContract();
 
@@ -40,15 +40,39 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
     hash,
   });
 
-  // Top-up function with fixed amount
-  const handleTopUp = () => {
+  // Top-up modal state
+  const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
+  const [selectedAmount, setSelectedAmount] = useState<string>("0.01");
+  const [customAmount, setCustomAmount] = useState<string>("");
+
+  const getAmountToSend = (): string => {
+    return customAmount.trim() || selectedAmount;
+  };
+
+  const handleTopUp = async () => {
     if (!address) return;
-    writeContract({
-      address: llmContract.address as `0x${string}`,
-      abi: llmContract.abi,
-      functionName: "depositForLLM",
-      value: parseEther("0.01"), // Fixed 0.01 ETH top-up
-    });
+    
+    try {
+      const amountStr = getAmountToSend();
+      const amountWei = parseEther(amountStr);
+      
+      if (!amountWei || amountWei <= 0n) {
+        alert("Enter a valid amount greater than 0");
+        return;
+      }
+
+      writeContract({
+        address: llmContract.address as `0x${string}`,
+        abi: llmContract.abi,
+        functionName: "depositForLLM",
+        value: amountWei,
+      });
+      
+      setShowTopUpModal(false);
+    } catch (err) {
+      console.error("Top-up failed", err);
+      alert("Invalid amount format");
+    }
   };
 
   // Refetch balance when transaction is confirmed
@@ -67,26 +91,152 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 
   if (!address) return null;
 
+  console.log("BalanceDisplay Debug:", { address, balance, llmContract });
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-      <span>Balance: {balance ? formatEther(balance as bigint) : "0"} ETH</span>
-      <button
-        onClick={handleTopUp}
-        disabled={isConfirming}
-        style={{
-          padding: "0.25rem 0.5rem",
-          background: isConfirming ? "#ccc" : "#4CAF50",
-          color: "white",
-          border: "none",
-          borderRadius: "3px",
-          cursor: isConfirming ? "not-allowed" : "pointer",
-          fontSize: "0.8rem",
-        }}
-        title={isConfirming ? "Transaction pending..." : "Top up with 0.01 ETH"}
-      >
-        {isConfirming ? "..." : "+"}
-      </button>
-    </div>
+    <>
+      {/* Simple Balance Display */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <span style={{ fontSize: "0.9rem", color: "#333" }}>
+          Balance: {balance ? formatEther(balance as bigint) : "0"} ETH
+        </span>
+        <button
+          onClick={() => setShowTopUpModal(true)}
+          disabled={isConfirming}
+          style={{
+            padding: "0.35rem 0.6rem",
+            background: "transparent",
+            color: "#333",
+            border: "1px solid #ddd",
+            borderRadius: "3px",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            fontWeight: "500",
+          }}
+        >
+          + Top up
+        </button>
+      </div>
+
+      {/* Top-up Modal */}
+      {showTopUpModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowTopUpModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "2rem",
+              borderRadius: "8px",
+              minWidth: "300px",
+              maxWidth: "400px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.1rem" }}>Top up Balance</h3>
+            
+            <div style={{ marginBottom: "1rem" }}>
+              <div style={{ marginBottom: "0.5rem", fontSize: "0.9rem", color: "#666" }}>
+                Current balance: {balance ? formatEther(balance as bigint) : "0"} ETH
+              </div>
+            </div>
+
+            {/* Preset amounts */}
+            <div style={{ marginBottom: "1rem" }}>
+              <div style={{ marginBottom: "0.5rem", fontSize: "0.9rem", fontWeight: "500" }}>Quick amounts:</div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {["0.001", "0.005", "0.01"].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => {
+                      setSelectedAmount(amount);
+                      setCustomAmount("");
+                    }}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      border: selectedAmount === amount && !customAmount ? "2px solid #333" : "1px solid #ddd",
+                      background: selectedAmount === amount && !customAmount ? "#f8f9fa" : "white",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    {amount} ETH
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom amount */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ marginBottom: "0.5rem", fontSize: "0.9rem", fontWeight: "500" }}>Custom amount:</div>
+              <input
+                type="text"
+                value={customAmount}
+                onChange={(e) => setCustomAmount(e.target.value)}
+                placeholder="0.0"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  fontSize: "0.9rem",
+                }}
+              />
+              <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.25rem" }}>
+                Amount in ETH (e.g., 0.025)
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowTopUpModal(false)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "transparent",
+                  color: "#666",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTopUp}
+                disabled={isConfirming || (!customAmount && !selectedAmount)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: isConfirming ? "#f5f5f5" : "#333",
+                  color: isConfirming ? "#999" : "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: isConfirming ? "not-allowed" : "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "500",
+                }}
+              >
+                {isConfirming ? "Processing..." : `Top up ${getAmountToSend()} ETH`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

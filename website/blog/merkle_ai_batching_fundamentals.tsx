@@ -1073,7 +1073,7 @@ export default function MerkleAIBatching() {
         <p>
           The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem
           remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an
-          application? In this blog post, I will explore the possible setup and it might be extend through merkle trees.
+          application? In this blog post, I will explore how it might become possible with Merkle trees.
         </p>
       </section>
 
@@ -1090,95 +1090,99 @@ export default function MerkleAIBatching() {
         </p>
 
         <p>
-          But when I started thinking about LLM text generation, I hit a wall: <strong>cost multiplication</strong>. 
-          If someone wants to analyze 10 documents or generate multiple pieces of content, they&apos;d need 10 separate 
-          blockchain transactions. That&apos;s roughly $8.40 in gas fees alone (at ~$0.84 per transaction), plus the 
-          hassle of confirming each transaction in their wallet.
-        </p>
-
-        <div
-          className={css({
-            padding: "16px",
-            backgroundColor: "#fef2f2",
-            borderRadius: "8px",
-            border: "1px solid #fecaca",
-            marginBottom: "16px",
-          })}
-        >
-          <h4>The Scale Problem</h4>
-          <ul>
-            <li>🔥 Current system: 1 AI request = 1 transaction = $0.84 in gas</li>
-            <li>💰 For 10 requests: 10 transactions = $8.40 in gas fees</li>
-            <li>⏱️ User experience: 10 wallet confirmations, 10 wait times</li>
-            <li>🚫 Result: Great for single images, terrible for LLM workflows</li>
-          </ul>
-        </div>
-      </section>
-
-      <section>
-        <h2>The Batching Breakthrough: One Transaction, Many Requests</h2>
-
-        <p>
-          The solution hit me when I thought about expense reports. When you travel for business, you don&apos;t 
-          submit a separate expense report for every coffee or taxi ride. Instead, you collect all your receipts 
-          and submit them together in one report. The accounting department can still verify each individual 
-          expense, but you only go through the submission process once.
+          But when I started thinking about LLM text generation, I run into trouble. If someone wants to analyze 10
+          documents or generate multiple pieces of content, they&apos;d need 10 separate blockchain transactions.
+          That&apos;s roughly stubstantial gas fees alone, plus the hassle of confirming each transaction in their
+          wallet.
         </p>
 
         <p>
-          <strong>Key Insight:</strong> What if blockchain transactions worked the same way? Bundle multiple LLM 
-          requests together, submit them as one transaction, but still maintain cryptographic proof that each 
-          individual request is valid and accounted for.
-        </p>
-
-        <div
-          className={css({
-            padding: "16px",
-            backgroundColor: "#f0fdf4",
-            borderRadius: "8px",
-            border: "1px solid #bbf7d0",
-            marginBottom: "16px",
-          })}
-        >
-          <h4>🌳 The Merkle Tree Solution</h4>
-          <p>
-            This is exactly what Merkle Trees enable: <strong>cryptographic batching</strong>. Think of it as 
-            a mathematical way to create one &quot;receipt&quot; that proves all your individual purchases 
-            without revealing what others bought.
-          </p>
-          <ul>
-            <li>📦 Bundle 10 LLM requests into 1 blockchain transaction</li>
-            <li>💰 Gas cost: $0.84 total instead of $8.40</li>
-            <li>🔒 Each user can still prove their specific request was included</li>
-            <li>🎭 Other users&apos; requests remain private</li>
-          </ul>
-        </div>
-      </section>
-
-      <section>
-        <h2>How Merkle Trees Make This Magic Possible</h2>
-        <p>
-          A Merkle tree is a binary tree structure where each leaf represents a data element (in our case, an LLM
-          request), and each parent node contains a cryptographic hash of its children. The mathematical foundation is:
-        </p>
-
-        <MermaidDiagram definition={MERKLE_TREE_MATH_DEFINITION} title="Merkle Tree Mathematical Foundation" />
-        <p>
-          This single root hash can represent an entire batch of requests, enabling us to register thousands of LLM
-          requests with just one blockchain transaction while maintaining cryptographic proof of each individual
-          request.
+          An interesting solution lies in a mathematical concept called <strong>Merkle trees</strong> - think of it like
+          a business expense report system. When you travel for business, you don&apos;t submit a separate expense
+          report for every coffee or taxi ride. Instead, you collect all your receipts and submit them together in one
+          report. The accounting department can still verify each individual expense, but you only go through the
+          submission process once.
         </p>
 
         <p>
-          With Merkle Trees, we can bundle multiple LLM API payments into a single blockchain transaction. Try it in the
-          interactive demo:
+          Merkle trees work similarly on the blockchain: you can bundle multiple LLM requests together and submit them
+          as one transaction, while still maintaining cryptographic proof that each individual request is valid and
+          accounted for.
+        </p>
+
+        <p>
+          To see this in action, try the interactive demo below. Send a few LLM requests and watch how each one would
+          normally require its own blockchain transaction. Once you reach 4 requests, you&apos;ll see how the Merkle
+          tree automatically bundles everything into a single transaction:
         </p>
 
         <BatchCreator />
       </section>
 
       <section>
-        <h3>Proving Individual Transactions with Merkle Proofs</h3>
+        <h2>How Merkle Trees Make This Magic Possible</h2>
+
+        <p>
+          In our expense report analogy, the accounting department needs to verify individual receipts. But how do they
+          do this efficiently? Here&apos;s where Merkle Trees provide the mathematical solution.
+        </p>
+
+        <p>The mapping is straightforward:</p>
+        <p>
+          <ul>
+            <li>individual receipts become Merkle leaves (each LLM request gets its own cryptographic fingerprint)</li>
+            <li>summary pages become internal nodes (groups of receipts get combined into summary fingerprints)</li>
+            <li>the master receipt becomes the Merkle root (one final fingerprint represents the entire batch)</li>
+            <li>proof of purchase becomes a Merkle proof (you can prove any receipt belongs without showing others)</li>
+          </ul>
+        </p>
+
+        <p>
+          But what exactly is a &quot;cryptographic fingerprint&quot;? When we say each LLM request gets processed
+          through a hash function, we mean it goes through a special mathematical algorithm called{" "}
+          <a href="https://en.wikipedia.org/wiki/SHA-3">Keccak256</a> (the same one Ethereum uses). For example, if you
+          input <code>{`{id: 1, timestamp: "2024-01-15T10:30:00Z", tokens: 150, wallet: "0xUser1..."}`}</code>, you get
+          output like <code>0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b</code>.
+        </p>
+
+        <p>This process has four key properties that make it perfect for our use case:</p>
+        <p>
+          <ul>
+            <li>it&apos;s deterministic (same input always produces the same hash)</li>
+            <li>collision resistant (nearly impossible for two different inputs to produce the same hash)</li>
+            <li>fixed length (always 64 characters regardless of input size)</li>
+            <li>irreversible (you cannot recreate the original data from the hash alone)</li>
+          </ul>
+        </p>
+        <h3>Building up the Merkle Tree</h3>
+
+        <p>
+          A Merkle tree is then built up step by step. Let&apos;s say we have 4 LLM requests from our batching example.
+          We now build the tree in three steps:
+          <ol>
+            <li>First, each request gets its own hash (H₁, H₂, H₃, H₄). </li>
+            <li>Then we pair them up - combine H₁+H₂ into H₁₂, and H₃+H₄ into H₃₄.</li>
+            <li>
+              Finally, we create the root by combining H₁₂+H₃₄ into the final ROOT hash. This ROOT hash is like the
+              master receipt number that represents all 4 requests.
+            </li>
+          </ol>
+        </p>
+
+        <p>Here&apos;s what this tree-building process looks like visually:</p>
+
+        <MermaidDiagram definition={MERKLE_TREE_MATH_DEFINITION} title="Merkle Tree Mathematical Foundation" />
+
+        <p>
+          As you can see in the diagram above, the ROOT hash represents all 4 requests in a single value. This means
+          instead of needing 4 separate blockchain transactions (one for each request), we need just 1 transaction to
+          register the entire batch. The ROOT hash enables us to register thousands of LLM requests with just one
+          blockchain transaction while maintaining cryptographic proof of each individual request.
+        </p>
+      </section>
+
+      <section>
+        <h2>Proving Individual Transactions with Merkle Proofs</h2>
 
         <p>
           Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, there is actually another cool feature
@@ -1211,21 +1215,27 @@ export default function MerkleAIBatching() {
       </section>
 
       <section>
-        <h2>From Theory to Practice - Prepaid Settlement Workflow</h2>
+        <h2>From Problem to Solution</h2>
 
         <p>
-          Now that we understand how Merkle proofs work, let&apos;s see how we can use it to extend our current workflow
-          towards the LLM systems. The first major change is that we will not settle costs after each request, but
-          rather require users to deposit funds upfront. This way, we can ensure that the user has enough balance to
-          cover the costs of their requests. This is similar to a prepaid model, where users deposit funds users to
-          deposit funds upfront. This creates a trustless system where:
+          This brings us to the end of this blog post. We started this journey with a significant cost problem: someone
+          wanting to send 10 LLM requests would face significant gas fees alone, plus the hassle of confirming 10
+          separate transactions in their wallet. For any practical LLM application on the blockchain, this creates an
+          immediate barrier to adoption.
         </p>
-        <ul>
-          <li>User deposits $50 → Guaranteed $50 available</li>
-          <li>LLM requests consume balance → No payment risk</li>
-          <li>Batch settlement → Efficient blockchain transactions</li>
-          <li>Refunds possible → User controls remaining balance</li>
-        </ul>
+
+        <p>
+          We saw how Merkle trees provide an elegant mathematical solution that transforms this experience entirely.
+          Those same 10 LLM requests can now be bundled into a single blockchain transaction, reducing gas costs by 90%
+          and eliminating the multi-transaction friction. Users get immediate LLM responses while cryptographic proofs
+          ensure every request is verifiable and secure.
+        </p>
+
+        <p>
+          This isn&apos;t just theory - it&apos;s the foundation for my new LLM assistant. In the next post, I&apos;ll
+          show you how I built such a system with smart contracts, batching services, and the corresponding frontend
+          integration. Stay tuned!
+        </p>
       </section>
     </article>
   );

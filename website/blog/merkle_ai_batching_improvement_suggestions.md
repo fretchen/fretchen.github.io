@@ -389,16 +389,19 @@ SCW_SECRET_KEY=...
 ### 🔴 Major Consistency Problems Identified
 
 #### 1. **Inconsistent Mathematical Depth**
+
 - **Problem:** Abstract notation (`H₁₂ = hash(H₁ + H₂)`) without explaining hash functions or algorithms
 - **Current State:** Uses "hash" without defining it as Keccak256 or providing concrete examples
 - **Solution:** Either define hash functions early with concrete examples, or keep all math at conceptual level
 
-#### 2. **Sudden Technical Jumps** 
+#### 2. **Sudden Technical Jumps**
+
 - **Problem:** Goes from basic "binary tree" explanation to complex React/TypeScript code demos
 - **Gap:** Missing bridge between conceptual understanding and interactive implementation
 - **Solution:** Add "How the Demo Works" sections before each interactive component
 
 #### 3. **Assumption Inconsistencies**
+
 - **Problem:** Sometimes explains basics (binary trees), other times assumes knowledge (StandardMerkleTree, gas costs)
 - **Example:** Explains what a binary tree is, but uses "StandardMerkleTree" without introduction
 - **Solution:** Pick consistent technical baseline and maintain throughout
@@ -406,7 +409,9 @@ SCW_SECRET_KEY=...
 ### 🟡 Structural Improvements for Consistency
 
 #### 4. **Add Technical Context Boxes**
+
 **Recommendation:** Add at beginning of post:
+
 ```markdown
 💡 **Technical Detail Level:** Intermediate
 📚 **Prerequisites:** Basic blockchain knowledge, understanding of hash functions  
@@ -415,13 +420,16 @@ SCW_SECRET_KEY=...
 ```
 
 #### 5. **Consistent Explanation Pattern**
+
 **Implement for each major concept:**
+
 - **What it is** (conceptual overview)
-- **Why it matters** (practical benefit) 
+- **Why it matters** (practical benefit)
 - **How it works** (technical details)
 - **See it in action** (interactive demo)
 
 #### 6. **Progressive Disclosure Structure**
+
 - Start each section with simple summary
 - Add expandable "Technical Details" sections for deeper explanations
 - Use consistent terminology throughout
@@ -430,16 +438,19 @@ SCW_SECRET_KEY=...
 ### 🟢 Specific Content Adjustments
 
 #### 7. **Standardize Code Comments**
+
 - **Current Issue:** Mix of technical and beginner-friendly comments in React components
 - **Recommendation:** Use consistent comment style: `// Technical note: This uses Keccak256 hashing`
 - **Focus Areas:** BatchCreator and ProofDemo components need clearer technical explanations
 
 #### 8. **Consistent Complexity in Examples**
+
 - **Current Problem:** Simple 4-request batches, then suddenly complex proof validation
 - **Graduated Approach:** Scale examples progressively (2 requests → 4 requests → larger batches)
 - **Demo Consistency:** Align interactive demos with explanation complexity level
 
 #### 9. **Unified Terminology**
+
 - **Problem:** Switches between "transaction," "request," "call" inconsistently
 - **Solution:** Create glossary at start and use defined terms consistently
 - **Key Terms to Standardize:**
@@ -450,23 +461,29 @@ SCW_SECRET_KEY=...
 ### 📊 Reader Experience Improvements
 
 #### 10. **Technical Breadcrumbs**
+
 **Add learning progress indicators:**
+
 ```
 🎯 Learning Journey: Problem → Math Concepts → Practical Demo → Real Implementation
 You are here: ████████░░ (80% complete)
 ```
 
 #### 11. **Consistent Visual Cues**
+
 **Standardize icons for content types:**
+
 - 🔬 = Mathematical concepts
-- 💡 = Key insights  
+- 💡 = Key insights
 - ⚠️ = Technical assumptions
 - 🛠️ = Implementation details
 - 📊 = Performance metrics
 - 🎯 = Learning objectives
 
 #### 12. **Scaffolded Learning Sections**
+
 **Add to each major section:**
+
 ```markdown
 📖 **Quick Review:** What we learned so far
 🎯 **Up Next:** What we'll explore in this section  
@@ -478,11 +495,13 @@ You are here: ████████░░ (80% complete)
 #### **High Priority (Implement First):**
 
 1. **Add Technical Prerequisites Section**
+
    - Define target audience knowledge level
    - List required background concepts
    - Provide links to foundational resources
 
 2. **Create Consistent Explanation Templates**
+
    - Standardize how mathematical concepts are introduced
    - Uniform depth across all technical explanations
    - Consistent examples and analogies
@@ -495,11 +514,13 @@ You are here: ████████░░ (80% complete)
 #### **Medium Priority:**
 
 4. **Standardize Mathematical Explanations**
+
    - Either use concrete hash examples throughout OR stay purely conceptual
    - Consistent notation and symbol usage
    - Clear definition of technical terms on first use
 
 5. **Add Progressive Complexity Indicators**
+
    - Mark sections by difficulty level
    - Show what concepts build on previous ones
    - Allow readers to skip/dive deeper as needed
@@ -512,11 +533,13 @@ You are here: ████████░░ (80% complete)
 #### **Low Priority (Future Enhancements):**
 
 7. **Interactive Glossary Tooltips**
+
    - Hover definitions for technical terms
    - Consistent definitions across all posts
    - Links to external resources
 
 8. **"Further Reading" Sections**
+
    - Link to advanced topics
    - Academic paper references
    - Related implementation guides
@@ -529,6 +552,7 @@ You are here: ████████░░ (80% complete)
 ### 💡 Example of Improved Section Structure
 
 **Current Structure:**
+
 ```
 ## Merkle Tree Mathematical Foundation
 [Immediately shows complex diagram]
@@ -536,6 +560,7 @@ You are here: ████████░░ (80% complete)
 ```
 
 **Improved Structure:**
+
 ```
 ## Merkle Tree Mathematical Foundation
 
@@ -558,6 +583,7 @@ You are here: ████████░░ (80% complete)
 ### 📋 Implementation Checklist for Post 1
 
 **Content Structure:**
+
 - [ ] Add technical prerequisites section at beginning
 - [ ] Implement consistent explanation pattern for each concept
 - [ ] Add bridging paragraphs between sections
@@ -565,18 +591,21 @@ You are here: ████████░░ (80% complete)
 - [ ] Standardize terminology throughout
 
 **Visual Consistency:**
+
 - [ ] Add consistent icons for different content types
 - [ ] Implement progress indicators
 - [ ] Create technical breadcrumbs
 - [ ] Standardize code comment style
 
 **Reader Experience:**
+
 - [ ] Add difficulty ratings per section
 - [ ] Create scaffolded learning sections
 - [ ] Implement progressive complexity indicators
 - [ ] Add glossary tooltips for technical terms
 
 **Code & Demos:**
+
 - [ ] Align demo complexity with explanation level
 - [ ] Add "How this demo works" explanations
 - [ ] Standardize technical comments in React components
@@ -585,16 +614,19 @@ You are here: ████████░░ (80% complete)
 ### 🎉 Expected Outcomes After Implementation
 
 **For Technical Readers:**
+
 - Consistent depth allows focused engagement
 - Clear prerequisites prevent confusion
 - Progressive complexity enables deep learning
 
 **For General Audience:**
+
 - Expandable sections allow skipping complex details
 - Visual cues help navigate content
 - Scaffolded learning reduces cognitive load
 
 **For Content Maintenance:**
+
 - Template-based structure ensures consistency
 - Standardized terminology reduces errors
 - Modular sections enable easy updates
@@ -604,21 +636,25 @@ You are here: ████████░░ (80% complete)
 ## 📋 SUMMARY: Complete Blog Strategy Status
 
 ### ✅ **COMPLETED:**
+
 1. **Post 1 Creation:** `merkle_ai_batching_fundamentals.tsx` - Educational Merkle Tree fundamentals
-2. **Content Splitting:** Successfully separated educational vs. implementation content  
+2. **Content Splitting:** Successfully separated educational vs. implementation content
 3. **Translation:** Full English translation completed
 4. **Technical Analysis:** Identified consistency issues and improvement strategy
 
 ### 🚧 **IN PROGRESS:**
+
 1. **Technical Consistency:** Improvement suggestions documented (this section)
 
 ### 📋 **TODO:**
+
 1. **Post 1 Technical Improvements:** Implement consistency recommendations above
 2. **Post 2 Creation:** `llm_batching_implementation_case_study.tsx` - Practical implementation showcase
 3. **Cross-referencing:** Link both posts together appropriately
 
 ### 🎯 **Success Metrics:**
+
 - **Engagement:** Clear learning progression for different skill levels
-- **Technical Quality:** Consistent depth and terminology throughout  
+- **Technical Quality:** Consistent depth and terminology throughout
 - **Educational Value:** Readers can follow from basic concepts to implementation
 - **Portfolio Impact:** Demonstrates both teaching ability and technical implementation skills

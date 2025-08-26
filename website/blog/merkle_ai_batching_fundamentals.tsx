@@ -1071,6 +1071,14 @@ export default function MerkleAIBatching() {
     <article>
       <section>
         <p>
+          <strong>
+            Update on 2025-08-26: I substantially overhauled this blog post to improve clarity and focus on the Merkle
+            tree topic.
+          </strong>
+        </p>
+      </section>
+      <section>
+        <p>
           The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem
           remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an
           application? In this blog post, I will explore how it might become possible with Merkle trees.

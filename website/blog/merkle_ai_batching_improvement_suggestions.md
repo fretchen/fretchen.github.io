@@ -7,6 +7,7 @@
 ## 🎯 Neue Strategie: Zwei spezialisierte Blog Posts
 
 Nach der Analyse ist klar geworden, dass der ursprüngliche Post zwei verschiedene Themen vermischt:
+
 1. **Merkle Tree Mathematik & Konzepte** (educational, theoretisch)
 2. **LLM Implementation Details** (praktisch, code-fokussiert)
 
@@ -15,37 +16,45 @@ Nach der Analyse ist klar geworden, dass der ursprüngliche Post zwei verschiede
 ## 📋 Post 1: "Merkle Trees für AI Batching - Mathematische Grundlagen"
 
 ### 🎯 Ziel dieses Posts
+
 Rein **educational/conceptual** - Fokus auf Merkle Tree Verständnis und mathematische Konzepte ohne Implementation-Details.
 
 ### 📝 Was aus dem aktuellen Post BEHALTEN wird:
 
 #### ✅ Kernbereiche die funktionieren:
+
 - **Merkle Tree Mathematik** - Die Mermaid-Diagramme und mathematischen Erklärungen
-- **Cryptographische Proof-Konzepte** - Wie Merkle Proofs funktionieren  
+- **Cryptographische Proof-Konzepte** - Wie Merkle Proofs funktionieren
 - **Interactive Demo** - Die BatchCreator Komponente für hands-on Verständnis
 - **Proof Verification** - Die MerkleProofChecker Demonstration
 - **Use Case Motivation** - Warum Merkle Trees für AI Batching sinnvoll sind
 
 #### 🔧 Kleine Verbesserungen für Post 1:
+
 - **Titel:** "Merkle Trees für AI API Batching - Cryptographische Grundlagen verstehen"
 - **Fokus:** Rein educational, keine echten Implementation-Details
 - **Zielgruppe:** Entwickler die Merkle Trees verstehen wollen
 - **Ton:** Tutorial-artig, konzeptuell
 
 #### 📚 Neue Struktur für Post 1:
+
 1. **"Das Problem: Hohe Blockchain-Kosten für AI APIs"**
+
    - Aktueller GenImNFT Use Case (behalten)
    - Cost-Problem Illustration
 
-2. **"Die Lösung: Merkle Tree Batching"**  
+2. **"Die Lösung: Merkle Tree Batching"**
+
    - Mathematische Grundlagen (behalten & erweitern)
    - Tree-Konstruktion Schritt-für-Schritt
 
 3. **"Wie Merkle Proofs funktionieren"**
+
    - Proof-Path Visualization (behalten)
    - Interactive Proof Demo (behalten)
 
 4. **"Hands-on: Batch Creation Demo"**
+
    - BatchCreator Component (behalten & verbessern)
    - Live Tree Visualization
 
@@ -55,6 +64,7 @@ Rein **educational/conceptual** - Fokus auf Merkle Tree Verständnis und mathema
    - Efficiency Analysis
 
 #### 🚫 Was aus Post 1 ENTFERNT wird:
+
 - Alle echten Code-Snippets (LLMv1.sol, Serverless Functions)
 - Deployment-Details und Environment Setup
 - Performance-Metriken mit echten Zahlen
@@ -64,18 +74,18 @@ Rein **educational/conceptual** - Fokus auf Merkle Tree Verständnis und mathema
 
 ## 📋 Post 2: "LLM Batching Implementation - Von der Theorie zur Praxis"
 
-### 🎯 Ziel dieses Posts  
+### 🎯 Ziel dieses Posts
+
 **Praktische Implementation** - Showcase der echten Code-Basis und production-ready System.
 
 ### 📝 Neue Inhalte für Post 2:
 
 #### 🏗️ System Architecture Deep Dive
 
-
 **Tech Stack:**
 
 - Frontend: React/TypeScript (diese Website)
-- Smart Contract: Solidity auf Optimism Network  
+- Smart Contract: Solidity auf Optimism Network
 - Backend: Scaleway Serverless Functions (Node.js)
 - Storage: AWS S3 für Merkle Trees
 - APIs: OpenAI/Anthropic für LLM Calls
@@ -84,7 +94,7 @@ Rein **educational/conceptual** - Fokus auf Merkle Tree Verständnis und mathema
 
 - Contract Address: `0x...` auf Optimism
 - Serverless Function URLs
-- S3 Bucket Konfiguration  
+- S3 Bucket Konfiguration
 - GitHub Repository Structure
 
 #### 💻 Smart Contract Implementation
@@ -99,7 +109,7 @@ function depositForLLM() external payable {
     emit LLMDeposit(msg.sender, msg.value);
 }
 
-// processBatch Implementierung  
+// processBatch Implementierung
 function processBatch(
     bytes32 merkleRoot,
     LLMLeaf[] calldata leaves,
@@ -112,7 +122,7 @@ function processBatch(
 **Wichtige Features:**
 
 - OpenZeppelin MerkleProof Integration
-- UUPS Upgradeable Pattern  
+- UUPS Upgradeable Pattern
 - Gas-optimierte Batch-Verarbeitung
 
 #### ⚡ Serverless Backend Implementation
@@ -124,13 +134,13 @@ function processBatch(
 export async function handle(event, _context) {
   // Balance Check
   const balance = await checkWalletBalance(walletAddress);
-  
+
   // LLM API Call
   const response = await callLLMAPI(prompt, model);
-  
+
   // Merkle Tree Leaf Creation
   await saveLeafToTree(walletAddress, serviceProvider, tokenCount, cost);
-  
+
   // Batch Processing Trigger
   if (shouldProcessBatch()) {
     await processMerkleTree();
@@ -143,20 +153,18 @@ export async function handle(event, _context) {
 ```javascript
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
-const tree = StandardMerkleTree.of(llmLeafsArray, [
-  "uint256", "string", "uint256", "address", "uint256"
-]);
+const tree = StandardMerkleTree.of(llmLeafsArray, ["uint256", "string", "uint256", "address", "uint256"]);
 ```
 
 #### 📊 Performance & Cost Analysis
 
 **Echte Metriken:**
 
-| Metric | Ohne Batching | Mit Batching (4 Requests) | Savings |
-|--------|---------------|---------------------------|---------|
-| Gas Cost | 84,000 × 4 = 336,000 | 95,000 × 1 = 95,000 | 72% |
-| USD Cost | $8.40 | $2.38 | $6.02 |
-| Transactions | 4 | 1 | 75% weniger |
+| Metric       | Ohne Batching        | Mit Batching (4 Requests) | Savings     |
+| ------------ | -------------------- | ------------------------- | ----------- |
+| Gas Cost     | 84,000 × 4 = 336,000 | 95,000 × 1 = 95,000       | 72%         |
+| USD Cost     | $8.40                | $2.38                     | $6.02       |
+| Transactions | 4                    | 1                         | 75% weniger |
 
 **Response Time Trade-offs:**
 
@@ -234,19 +242,22 @@ SCW_SECRET_KEY=...
 ### 🎯 Was erreicht wurde:
 
 **✅ Rein educational/conceptual:**
+
 - Fokus auf Merkle Tree Verständnis und mathematische Konzepte
 - Keine echten Implementation-Details
 - Tutorial-artiger, konzeptueller Ton
 - Interaktive Demos für hands-on Verständnis
 
 **✅ Kernbereiche die funktionieren (behalten):**
+
 - ✅ Merkle Tree Mathematik mit Mermaid-Diagrammen
-- ✅ Cryptographische Proof-Konzepte  
+- ✅ Cryptographische Proof-Konzepte
 - ✅ Interactive Demo (BatchCreator) für hands-on Verständnis
 - ✅ Proof Verification (ProofDemo) Demonstration
 - ✅ Use Case Motivation - warum Merkle Trees für AI Batching
 
 **✅ Verbesserungen umgesetzt:**
+
 - ✅ Neuer Titel: "Merkle Trees für AI API Batching - Cryptographische Grundlagen verstehen"
 - ✅ Educational Fokus ohne echte Implementation-Details
 - ✅ Zielgruppe: Entwickler die Merkle Trees verstehen wollen
@@ -254,12 +265,14 @@ SCW_SECRET_KEY=...
 - ✅ Mehr Visualisierungen und interaktive Demos
 
 **✅ Entfernt (wie geplant):**
+
 - ❌ Alle echten Code-Snippets (LLMv1.sol, Serverless Functions)
 - ❌ Deployment-Details und Environment Setup
 - ❌ Performance-Metriken mit echten Zahlen
 - ❌ Developer Setup Guides
 
 **✅ Neue Struktur umgesetzt:**
+
 1. ✅ **"Das Problem: Hohe Blockchain-Kosten für AI APIs"** - Cost-Problem Illustration
 2. ✅ **"Die Lösung: Merkle Tree Mathematik"** - Mathematische Grundlagen erweitert
 3. ✅ **"Proving Individual Transactions with Merkle Proofs"** - Interactive Proof Demo
@@ -277,39 +290,46 @@ SCW_SECRET_KEY=...
 ### 📝 Inhalte für Post 2 (aus den obigen Vorschlägen):
 
 1. **"From Theory to Production"** (neue Einleitung)
-   - Persönliche Entwicklungsreise  
+
+   - Persönliche Entwicklungsreise
    - Link zurück zu Post 1: "Grundlagen verstanden? Jetzt zur Implementation!"
    - Was wurde tatsächlich implementiert
 
-2. **"Real-World Architecture"** 
+2. **"Real-World Architecture"**
+
    - Tech Stack: React/TypeScript, Solidity, Scaleway Serverless, AWS S3, OpenAI APIs
    - Deployment Details: Contract Addresses, Serverless URLs, S3 Buckets
    - GitHub Repository Structure Walkthrough
 
 3. **"Smart Contract Deep Dive"**
-   - Echte Code-Snippets aus `LLMv1.sol` 
+
+   - Echte Code-Snippets aus `LLMv1.sol`
    - OpenZeppelin MerkleProof Integration
    - UUPS Upgradeable Pattern
    - Gas-optimierte Batch-Verarbeitung
 
 4. **"Serverless Backend Implementation"**
+
    - Code-Beispiele aus `sc_llm.js` und `llm_service.js`
    - StandardMerkleTree Integration
    - Balance Checks und LLM API Calls
    - Batch Processing Trigger Logic
 
 5. **"Performance Analysis mit echten Metriken"**
+
    - Tabelle: Gas Costs, USD Costs, Transactions
-   - Response Time Trade-offs  
+   - Response Time Trade-offs
    - Scalability Benchmarks
 
 6. **"Development Challenges & Solutions"**
+
    - Off-chain Coordination zwischen S3 und Contract
    - Error Handling bei partial batch failures
    - Gas Optimization Entscheidungen
    - Security Considerations
 
 7. **"Developer Setup Guide"**
+
    - Clone, Environment Setup, Deploy Contract, Deploy Functions
    - Required Environment Variables
    - Integration Examples
@@ -324,9 +344,11 @@ SCW_SECRET_KEY=...
 ## 🔗 Cross-Referencing Plan
 
 ### Post 1 → Post 2 Links (bereits eingebaut):
+
 ✅ "Möchten Sie sehen, wie das in der Praxis implementiert wird? Der nächste Post zeigt eine vollständige Implementation..."
 
 ### Post 2 → Post 1 Links (für kommenden Post):
+
 - "Grundlagen zu Merkle Trees nicht verstanden? → [Teil 1: Mathematische Grundlagen]"
 - "Wie Merkle Proofs funktionieren → [Siehe Teil 1]"
 - "Warum Merkle Trees? → [Siehe Motivation in Teil 1]"
@@ -352,7 +374,6 @@ SCW_SECRET_KEY=...
 **Für beide zusammen:**
 
 - ✅ Bessere SEO durch spezialisierte Keywords
-- ✅ Verschiedene Zielgruppen optimal angesprochen  
+- ✅ Verschiedene Zielgruppen optimal angesprochen
 - ✅ Modular aufgebaute Content-Strategie
 - ✅ Einfachere Wartung und Updates
-

@@ -1,30 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
-import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import MermaidDiagram from "../components/MermaidDiagram";
-
-// Mermaid diagram definitions
-const MERKLE_TREE_MATH_DEFINITION = `graph TD
-    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
-    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
-    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
-    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
-    
-    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
-    H2 --> H12
-    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
-    H4 --> H34
-    
-    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
-    H34 --> ROOT
-    
-    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
-    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
-    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
-    
-    class R1,R2,R3,R4 requestNode
-    class H1,H2,H3,H4,H12,H34 hashNode
-    class ROOT rootNode`;
 
 // Updated LLM Prepaid Workflow with Merkle Batching
 const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram

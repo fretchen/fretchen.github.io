@@ -2,38 +2,31 @@ import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
 import MermaidDiagram from "../components/MermaidDiagram";
 
-// Updated LLM Prepaid Workflow with Merkle Batching
+// Simplified LLM Prepaid Workflow with Merkle Batching
 const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
     Actor Alice as Alice
-    participant Contract as LLM Contract
-    participant Serverless as Serverless Function
-    participant LLM as LLM API
-    participant MerkleTree as Merkle Tree on S3 Storage
-    Actor Blockchain as LLM Wallet
+    participant Contract as Smart Contract
+    participant AIService as AI Service
+    participant BatchCoord as Batch Coordinator
+    participant Settlement as Settlement Layer
 
-    Note over Alice,Contract: Phase 1: Prepaid Deposit
-    Alice->>Contract: depositForLLM() - $50
-    Contract->>Contract: Update balance[Alice] = $50
+    Note over Alice,Contract: Phase 1: Setup - Prepaid Deposit
+    Alice->>Contract: Deposit ETH for AI usage
+    Contract->>Contract: Update user balance
 
-    Note over Alice,Blockchain: Phase 2: LLM Request Processing (Off-chain)
-    Alice->>Serverless: Request: "Analyze sentiment"
-    Serverless->>Contract: Check balance: Alice $50 ≥ $2 ✅
-    Serverless->>LLM: Call LLM API
-    LLM-->>Serverless: Generated response
-    Serverless-->>Alice: LLM Response
-    Serverless->>MerkleTree: Create leaf from call
+    Note over Alice,Settlement: Phase 2: Usage - Instant AI Interactions
+    Alice->>AIService: Request: "Analyze sentiment"
+    AIService->>Contract: Validate sufficient balance
+    AIService->>AIService: Process with LLM API
+    AIService-->>Alice: Instant AI response
+    AIService->>BatchCoord: Queue request for batching
 
-    Note over Serverless,MerkleTree: Phase 3: Batch Trigger (Once the Merkle tree is ready)
-    MerkleTree->>MerkleTree: Calculate root hash
-    MerkleTree->>MerkleTree: Generate proof for Alice's request
-
-    Note over Contract,Blockchain: Phase 4: Atomic Settlement (On-chain)
-    MerkleTree->>Contract: processBatch(root, requests, proofs)
-    Contract->>Contract: Verify Alice's proof
-    Contract->>Contract: Deduct: Alice -= $2
-    Contract->>Contract: Mark batch as processed
-    Contract->>Blockchain: Single transaction ($15 gas for entire batch)
-    Contract-->>Alice: Settlement confirmed + individual proof`;
+    Note over BatchCoord,Settlement: Phase 3: Settlement - Efficient Batch Processing
+    BatchCoord->>BatchCoord: Build Merkle tree from queued requests
+    BatchCoord->>Contract: Process batch settlement
+    Contract->>Contract: Verify proofs and deduct costs
+    Contract->>Settlement: Single efficient transaction
+    Settlement-->>Alice: Settlement confirmation`;
 
 // Export meta for blog post
 export const meta = {
@@ -48,31 +41,19 @@ export default function MerkleAIBatching() {
     <article>
       <section>
         <p>
-          Connect your wallet, ask any question, get AI-powered answers, and pay exactly what you use - no
-          subscriptions, no accounts, no data harvesting. This is what I dream about when I envision AI services working
-          in the Web3 era.
+          While working on some DeFi projects, I noticed something odd: I kept paying ChatGPT with my credit card while
+          having ETH sitting in my wallet. We can swap tokens instantly without KYC, but AI services still require email
+          verification and monthly subscriptions. So I started wondering - what would an AI that accepts crypto payments
+          actually look like?
         </p>
 
         <p>
-          Unlike traditional AI services like ChatGPT Plus or Claude Pro, the user should maintain as much control as
-          possible, keeping his conversations private, his payments transparent, and should have the ability to choose
-          when and how much to spend.
-        </p>
-
-        <p>
-          If you&apos;ve been building in Web3, you&apos;ve probably faced this frustration: why do AI services still
-          operate like Web2 platforms? Monthly subscriptions, data collection, and zero interoperability between
-          services. You can swap tokens trustlessly, but can&apos;t pay ChatGPT with ETH.
-        </p>
-
-        <p>
-          With these ideas in mind I built my AI assistant that integrates smart contracts, AI APIs, and efficient
-          payment processing. To{" "}
+          <strong>The answer is live:</strong>{" "}
           <a href="/assistent" style={{ fontWeight: "bold", color: "#667eea" }}>
-            try my AI assistant
+            Try my AI assistant
           </a>{" "}
-          - just connect your wallet, deposit ETH, and chat with an LLM without subscriptions or accounts. It&apos;s
-          live and ready to use.
+          - connect your wallet, deposit ETH, and chat with an LLM. No subscriptions, no accounts, no data harvesting.
+          Just pay for exactly what you use.
         </p>
 
         <p>
@@ -123,9 +104,11 @@ export default function MerkleAIBatching() {
         <h2>LLM System Architecture</h2>
 
         <p>
-          The key innovation for LLM services lies in Merkle tree batching - a technique I explored in detail in my{" "}
-          <a href="/blog/15">previous post on Merkle tree fundamentals</a>. While that post covered the mathematical
-          foundations, here we&apos;ll focus on the practical implementation for real-time AI services.
+          After evaluating different approaches, Merkle tree batching emerged as the optimal solution - providing
+          cryptographic proof of each interaction while enabling efficient batch processing. This approach balances the
+          competing demands of user experience, cost efficiency, and technical simplicity. I explored this technique in
+          detail in my <a href="/blog/15">previous post on Merkle tree fundamentals</a>. While that post covered the
+          mathematical foundations, here we&apos;ll focus on the practical implementation for real-time AI services.
         </p>
 
         <p>
@@ -148,7 +131,7 @@ export default function MerkleAIBatching() {
 
         <MermaidDiagram
           definition={UPDATED_LLM_WORKFLOW_DEFINITION}
-          title="Complete User Journey: From Deposit to Settlement"
+          title="Simplified User Journey: Prepaid AI with Batch Settlement"
           config={{
             sequence: {
               diagramMarginX: 50,
@@ -163,9 +146,9 @@ export default function MerkleAIBatching() {
 
         <h3>System Data Flow</h3>
         <p>
-          The diagram above illustrates the complete data flow from user request to blockchain settlement. The system
-          operates in four distinct phases, each handled by different components working together to enable instant LLM
-          responses with efficient batch settlement.
+          The diagram above illustrates the simplified system architecture with three distinct phases: Setup (deposit),
+          Usage (instant AI interactions), and Settlement (efficient batch processing). Each phase optimizes for
+          different goals - user experience, response speed, and cost efficiency.
         </p>
 
         <h3>Core Components</h3>
@@ -177,123 +160,73 @@ export default function MerkleAIBatching() {
         <h4>Smart Contract - LLMv1.sol</h4>
         <p>
           <strong>Purpose:</strong> Manages user deposits, tracks balances, and processes Merkle tree batches for
-          settlement. Built as an upgradeable contract using OpenZeppelin&apos;s UUPS pattern.
+          settlement. Built as an upgradeable contract using{" "}
+          <a
+            href="https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#uups"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OpenZeppelin&apos;s UUPS pattern
+          </a>
+          .
         </p>
         <p>
-          <strong>Key Functions:</strong>
-        </p>
-        <ul>
-          <li>
-            <code>depositForLLM()</code> - Accept ETH deposits from users for prepaid LLM usage
-          </li>
-          <li>
-            <code>checkBalance(address user)</code> - Return user&apos;s available balance (settled funds only)
-          </li>
-          <li>
-            <code>processBatch(bytes32 root, LLMRequest[] requests, bytes32[][] proofs)</code> - Verify Merkle proofs
-            and settle batch payments
-          </li>
-          <li>
-            <code>withdrawBalance(uint256 amount)</code> - Allow users to withdraw unused funds
-          </li>
-        </ul>
-        <p>
-          <strong>Integration Points:</strong> Called by users for deposits/withdrawals, and by serverless functions for
-          balance checks and batch settlement.
+          <strong>Core Functions:</strong> Accept ETH deposits, track user balances, verify Merkle proofs for batch
+          settlement, and enable fund withdrawals.
         </p>
 
-        <h4>Serverless Function - sc_llm.js</h4>
+        <h4>AI Service (sc_llm.js)</h4>
         <p>
-          <strong>Purpose:</strong> Orchestrates the entire LLM request flow - from initial balance validation to LLM
-          API calls, response delivery, and Merkle tree batch coordination.
+          <strong>Purpose:</strong> Orchestrates the entire LLM request flow - from balance validation to LLM API calls
+          and batch coordination.
         </p>
         <p>
-          <strong>Key Functions:</strong>
-        </p>
-        <ul>
-          <li>Validate user balance against estimated request cost</li>
-          <li>Call external LLM API (OpenAI/Anthropic) and return immediate response</li>
-          <li>Queue processed requests into Merkle trees for batch settlement</li>
-          <li>Trigger batch processing when threshold (4 requests) is reached</li>
-        </ul>
-        <p>
-          <strong>Integration Points:</strong> Receives requests from frontend, calls smart contract for balance checks,
-          communicates with LLM APIs, and manages S3 storage for Merkle tree data.
+          <strong>Core Functions:</strong> Validate user balances, process LLM requests instantly through
+          OpenAI/Anthropic APIs, and coordinate Merkle tree batching when 4 requests accumulate.
         </p>
 
-        <h4>Frontend - assistent/+Page.tsx</h4>
+        <h4>Frontend Interface</h4>
         <p>
-          <strong>Purpose:</strong> Provides the user interface for wallet connection, balance management, chat
-          interaction, and request history viewing.
+          <strong>Purpose:</strong> Provides the user interface for wallet connection, balance management, and chat
+          interaction.
         </p>
         <p>
-          <strong>Key Functions:</strong>
-        </p>
-        <ul>
-          <li>Wallet connection and balance display with real-time updates</li>
-          <li>
-            ETH deposit interface using smart contract&apos;s <code>depositForLLM()</code> function
-          </li>
-          <li>Chat interface for sending prompts and receiving instant LLM responses</li>
-          <li>Request history sidebar showing past interactions and settlement status</li>
-        </ul>
-        <p>
-          <strong>Integration Points:</strong> Connects to user&apos;s wallet, calls smart contract functions for
-          deposits/balance checks, and sends requests to serverless function for LLM processing.
+          <strong>Core Functions:</strong> Wallet integration, ETH deposits, real-time chat with LLM, and request
+          history tracking.
         </p>
 
         <h3>Critical Implementation Details</h3>
         <p>
-          The system&apos;s innovation lies in three key technical decisions that enable instant responses with
-          efficient blockchain settlement:
+          The system&apos;s efficiency comes from three key design decisions that enable instant responses while
+          maintaining cost efficiency:
         </p>
 
-        <h4>OpenZeppelin Merkle Tree Compatibility</h4>
+        <h4>Merkle Tree Batching</h4>
         <p>
-          Using OpenZeppelin&apos;s <code>StandardMerkleTree</code> library ensures perfect compatibility between
-          off-chain tree generation in the serverless function and on-chain verification in the smart contract. Each LLM
-          request becomes a structured leaf containing user address, cost, token count, and timestamp - enabling both
-          settlement and analytics.
-        </p>
-
-        <h4>Automatic Batch Processing</h4>
-        <p>
-          The system automatically triggers batch settlement when 4 requests accumulate, balancing transaction frequency
-          with gas efficiency. This threshold provides near-real-time settlement while reducing per-request costs by
-          approximately 60% compared to individual transactions.
+          Using{" "}
+          <a href="https://github.com/OpenZeppelin/merkle-tree" target="_blank" rel="noopener noreferrer">
+            OpenZeppelin&apos;s StandardMerkleTree
+          </a>{" "}
+          library, multiple AI requests get bundled into single blockchain transactions. This reduces per-request costs
+          by approximately 60% compared to individual transactions while maintaining cryptographic proof of each
+          interaction.
         </p>
 
         <h4>Prepaid Balance Architecture</h4>
         <p>
-          The prepaid model eliminates the need for users to approve transactions for each request, enabling instant
-          responses. Users deposit ETH once, consume balance through LLM requests, and can withdraw remaining funds at
-          any time - maintaining full control while enjoying seamless interaction.
+          Users deposit ETH once and consume balance through LLM requests without repeated wallet confirmations. This
+          eliminates transaction friction while maintaining full control - unused funds can be withdrawn anytime.
         </p>
 
-        <h2>Economic Outlook: L2 and Pectra Opportunities</h2>
+        <h4>Automatic Settlement</h4>
         <p>
-          While mainnet gas costs can make frequent AI interactions expensive, we&apos;re already operating on Layer 2
-          solutions where the economics are fundamentally different:
-        </p>
-
-        <p>
-          <strong>Current L2 Implementation:</strong> The AI assistant runs on{" "}
-          <a href="http://optimism.io/" target="_blank" rel="noopener noreferrer">
+          The system triggers batch settlement when 4 requests accumulate, balancing real-time settlement with
+          transaction efficiency. Running on{" "}
+          <a href="https://docs.optimism.io/get-started/superchain" target="_blank" rel="noopener noreferrer">
             Optimism
-          </a>{" "}
-          with average transaction costs under 1 cent, making micro-payments for AI services economically viable today.
-          This represents a 100x+ improvement over mainnet costs.
-        </p>
-
-        <p>
-          <strong>Pectra Upgrade Impact:</strong> The recent{" "}
-          <a href="https://eip7702.io/" target="_blank" rel="noopener noreferrer">
-            EIP-7702
-          </a>{" "}
-          enables smart accounts with native transaction batching capabilities. This means users could batch multiple AI
-          requests into a single account abstraction transaction, potentially reducing costs by another order of
-          magnitude while improving UX through gasless interactions. Maybe the whole Merkle tree on the serverless side,
-          will soon be unnecessary.
+          </a>
+          , this threshold ensures users see balance updates quickly while keeping transaction costs under 1 cent -
+          making micro-payments for AI services economically viable today.
         </p>
 
         <h2>Help Shape This Project</h2>
@@ -362,18 +295,22 @@ export default function MerkleAIBatching() {
             <strong>Enhanced Batching:</strong> Dynamic batch sizes and cross-user optimization for even lower costs
           </li>
           <li>
-            <strong>Easier User Journey:</strong> The UX will have to improve to make it easier to understand and use.
+            <strong>Account Abstraction Integration:</strong> The{" "}
+            <a href="https://eip7702.io/" target="_blank" rel="noopener noreferrer">
+              EIP-7702 upgrade
+            </a>{" "}
+            enables smart accounts with native batching capabilities, potentially making the current Merkle tree
+            approach unnecessary while improving UX through gasless interactions
           </li>
           <li>
-            <strong>More Resources:</strong> Connect the assistant to external resources and improve its specialized
-            knowledge this way.
+            <strong>Easier User Journey:</strong> Improved UX to make the system more accessible and intuitive
           </li>
         </ul>
 
         <p>
-          I believe that this kind of technologies might enable more user sovereignty over data surveillance. By
-          combining blockchain payments with efficient batching techniques, we can build AI services that respect
-          privacy, provide transparency, and align incentives between users and providers.
+          I believe these technologies might enable more user sovereignty over data surveillance. By combining
+          blockchain payments with efficient batching techniques, we can build AI services that respect privacy, provide
+          transparency, and align incentives between users and providers through the settlement layer.
         </p>
       </section>
     </article>

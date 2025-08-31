@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { css } from "../styled-system/css";
 import MermaidDiagram from "../components/MermaidDiagram";
 
@@ -49,7 +49,14 @@ export default function MerkleAIBatching() {
 
         <p>
           <strong>The answer is live:</strong>{" "}
-          <a href="/assistent" style={{ fontWeight: "bold", color: "#667eea" }}>
+          <a
+            href="/assistent"
+            className={css({
+              fontWeight: "bold",
+              color: "indigo.600",
+              _hover: { color: "indigo.700" },
+            })}
+          >
             Try my AI assistant
           </a>{" "}
           - connect your wallet, deposit ETH, and chat with an LLM. No subscriptions, no accounts, no data harvesting.
@@ -62,21 +69,36 @@ export default function MerkleAIBatching() {
         </p>
 
         <div
-          style={{
-            background: "#f8f9fa",
-            border: "1px solid #e9ecef",
-            borderRadius: "8px",
-            padding: "20px",
-            margin: "20px 0",
-          }}
+          className={css({
+            bg: "gray.50",
+            border: "1px solid",
+            borderColor: "gray.200",
+            borderRadius: "lg",
+            p: "md",
+            my: "md",
+          })}
         >
-          <h3 style={{ margin: "0 0 15px 0" }}>Working Proof-of-Concept</h3>
-          <p style={{ margin: "0 0 15px 0" }}>
+          <h3
+            className={css({
+              margin: "0 0 {spacing.3} 0",
+            })}
+          >
+            Working Proof-of-Concept
+          </h3>
+          <p
+            className={css({
+              margin: "0 0 {spacing.3} 0",
+            })}
+          >
             This is a functional implementation that demonstrates crypto-native AI payments in production. While fully
             operational, it&apos;s in active development with significant opportunities for optimization and community
             contributions.
           </p>
-          <p style={{ margin: "0" }}>
+          <p
+            className={css({
+              margin: "0",
+            })}
+          >
             <strong>Your input shapes this project:</strong> Cost optimizations, UX improvements, and feature requests
             directly influence the development roadmap.
           </p>
@@ -238,41 +260,76 @@ export default function MerkleAIBatching() {
         </p>
 
         <div
-          style={{
-            background: "#f8f9fa",
-            border: "1px solid #e9ecef",
-            borderRadius: "8px",
-            padding: "20px",
-            margin: "20px 0",
-          }}
+          className={css({
+            bg: "gray.50",
+            border: "1px solid",
+            borderColor: "gray.200",
+            borderRadius: "lg",
+            p: "md",
+            my: "md",
+          })}
         >
-          <h3 style={{ margin: "0 0 15px 0" }}>Critical Feedback Areas</h3>
+          <h3
+            className={css({
+              margin: "0 0 {spacing.3} 0",
+            })}
+          >
+            Critical Feedback Areas
+          </h3>
 
-          <div style={{ marginBottom: "15px" }}>
+          <div
+            className={css({
+              mb: "3",
+            })}
+          >
             <strong>Economics:</strong>
-            <span style={{ marginLeft: "8px" }}>
+            <span
+              className={css({
+                ml: "2",
+              })}
+            >
               What cost structure would make crypto-AI payments compelling vs. traditional subscriptions? How do L2 fees
               feel in practice?
             </span>
           </div>
 
-          <div style={{ marginBottom: "15px" }}>
+          <div
+            className={css({
+              mb: "3",
+            })}
+          >
             <strong>User Experience:</strong>
-            <span style={{ marginLeft: "8px" }}>
+            <span
+              className={css({
+                ml: "2",
+              })}
+            >
               Where does wallet integration feel clunky? What onboarding steps cause confusion? How intuitive is the
               prepaid balance model?
             </span>
           </div>
 
-          <div style={{ marginBottom: "15px" }}>
+          <div
+            className={css({
+              mb: "3",
+            })}
+          >
             <strong>Technical Features:</strong>
-            <span style={{ marginLeft: "8px" }}>
+            <span
+              className={css({
+                ml: "2",
+              })}
+            >
               What AI capabilities would justify blockchain overhead? How could batch settlement be optimized? Should
               the system support other LLM providers?
             </span>
           </div>
 
-          <p style={{ margin: "0" }}>
+          <p
+            className={css({
+              margin: "0",
+            })}
+          >
             <strong>Share your thoughts:</strong> Comments below or in{" "}
             <a href="https://github.com/fretchen/fretchen.github.io/issues">GitHub issues</a> - help to build a better
             crypto-native AI infrastructure.

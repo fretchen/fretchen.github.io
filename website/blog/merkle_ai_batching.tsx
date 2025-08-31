@@ -60,10 +60,46 @@ export default function MerkleAIBatching() {
         </p>
 
         <p>
-          With these ideas in mind I build up my AI assistant that integrates smart contracts, AI APIs, and efficient
-          payment processing. In this post, I&apos;ll walk you through the complete technical implementation - from
-          smart contract architecture to serverless functions.
+          If you&apos;ve been building in Web3, you&apos;ve probably faced this frustration: why do AI services still
+          operate like Web2 platforms? Monthly subscriptions, data collection, and zero interoperability between
+          services. You can swap tokens trustlessly, but can&apos;t pay ChatGPT with ETH.
         </p>
+
+        <p>
+          With these ideas in mind I built my AI assistant that integrates smart contracts, AI APIs, and efficient
+          payment processing. To{" "}
+          <a href="/assistent" style={{ fontWeight: "bold", color: "#667eea" }}>
+            try my AI assistant
+          </a>{" "}
+          - just connect your wallet, deposit ETH, and chat with an LLM without subscriptions or accounts. It&apos;s
+          live and ready to use.
+        </p>
+
+        <p>
+          In this post, I&apos;ll walk you through the complete technical implementation - from smart contract
+          architecture to serverless functions - showing my approach to the crypto-native AI problem.
+        </p>
+
+        <div
+          style={{
+            background: "#f8f9fa",
+            border: "1px solid #e9ecef",
+            borderRadius: "8px",
+            padding: "20px",
+            margin: "20px 0",
+          }}
+        >
+          <h3 style={{ margin: "0 0 15px 0" }}>Working Proof-of-Concept</h3>
+          <p style={{ margin: "0 0 15px 0" }}>
+            This is a functional implementation that demonstrates crypto-native AI payments in production. While fully
+            operational, it&apos;s in active development with significant opportunities for optimization and community
+            contributions.
+          </p>
+          <p style={{ margin: "0" }}>
+            <strong>Your input shapes this project:</strong> Cost optimizations, UX improvements, and feature requests
+            directly influence the development roadmap.
+          </p>
+        </div>
       </section>
 
       <section>
@@ -234,37 +270,84 @@ export default function MerkleAIBatching() {
           any time - maintaining full control while enjoying seamless interaction.
         </p>
 
-        <h2>Try It Yourself</h2>
+        <h2>Economic Outlook: L2 and Pectra Opportunities</h2>
         <p>
-          The best way to understand this system is to experience it firsthand. The AI assistant is live and ready to
-          use - no registration required, just connect your wallet and start chatting.
+          While mainnet gas costs can make frequent AI interactions expensive, we&apos;re already operating on Layer 2
+          solutions where the economics are fundamentally different:
         </p>
 
         <p>
-          <strong>
-            🚀 <a href="/assistent">Access the AI Assistant</a>
-          </strong>
+          <strong>Current L2 Implementation:</strong> The AI assistant runs on{" "}
+          <a href="http://optimism.io/" target="_blank" rel="noopener noreferrer">
+            Optimism
+          </a>{" "}
+          with average transaction costs under 1 cent, making micro-payments for AI services economically viable today.
+          This represents a 100x+ improvement over mainnet costs.
         </p>
 
         <p>
-          <strong>How to get started:</strong>
+          <strong>Pectra Upgrade Impact:</strong> The recent{" "}
+          <a href="https://eip7702.io/" target="_blank" rel="noopener noreferrer">
+            EIP-7702
+          </a>{" "}
+          enables smart accounts with native transaction batching capabilities. This means users could batch multiple AI
+          requests into a single account abstraction transaction, potentially reducing costs by another order of
+          magnitude while improving UX through gasless interactions. Maybe the whole Merkle tree on the serverless side,
+          will soon be unnecessary.
         </p>
-        <ol>
-          <li>Connect your Web3 wallet (MetaMask, WalletConnect, etc.)</li>
-          <li>Deposit a small amount of ETH (0.01 ETH ≈ $25 covers hundreds of requests)</li>
-          <li>Ask any question and receive instant AI-powered responses</li>
-          <li>Watch your balance decrease incrementally with each request</li>
-          <li>View your request history and settlement proofs in the sidebar</li>
-        </ol>
+
+        <h2>Help Shape This Project</h2>
 
         <p>
-          <strong>Help improve the system:</strong> This is a new experimental approach to AI payments, and your
-          feedback is greatly appreciated. After trying the assistant, please share your experience in the comments
-          below - what worked well, what felt confusing, any bugs you encountered, or ideas for improvement. Your input
-          directly shapes the future development of this AI service.
+          As an early-stage implementation, your feedback directly influences development priorities and helps validate
+          the crypto-native AI approach. This is exactly the kind of input that makes the Web3 innovation so attractive
+          to me.
         </p>
+
+        <div
+          style={{
+            background: "#f8f9fa",
+            border: "1px solid #e9ecef",
+            borderRadius: "8px",
+            padding: "20px",
+            margin: "20px 0",
+          }}
+        >
+          <h3 style={{ margin: "0 0 15px 0" }}>Critical Feedback Areas</h3>
+
+          <div style={{ marginBottom: "15px" }}>
+            <strong>Economics:</strong>
+            <span style={{ marginLeft: "8px" }}>
+              What cost structure would make crypto-AI payments compelling vs. traditional subscriptions? How do L2 fees
+              feel in practice?
+            </span>
+          </div>
+
+          <div style={{ marginBottom: "15px" }}>
+            <strong>User Experience:</strong>
+            <span style={{ marginLeft: "8px" }}>
+              Where does wallet integration feel clunky? What onboarding steps cause confusion? How intuitive is the
+              prepaid balance model?
+            </span>
+          </div>
+
+          <div style={{ marginBottom: "15px" }}>
+            <strong>Technical Features:</strong>
+            <span style={{ marginLeft: "8px" }}>
+              What AI capabilities would justify blockchain overhead? How could batch settlement be optimized? Should
+              the system support other LLM providers?
+            </span>
+          </div>
+
+          <p style={{ margin: "0" }}>
+            <strong>Share your thoughts:</strong> Comments below or in{" "}
+            <a href="https://github.com/fretchen/fretchen.github.io/issues">GitHub issues</a> - help to build a better
+            crypto-native AI infrastructure.
+          </p>
+        </div>
 
         <h2>What&apos;s Next</h2>
+
         <p>
           This implementation proves that blockchain-native AI services can deliver both user control and excellent
           performance. The next steps focus on expanding capabilities and improving accessibility:

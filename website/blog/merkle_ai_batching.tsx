@@ -32,7 +32,7 @@ const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
 export const meta = {
   title: "My AI Assistant That Takes ETH Instead of Subscriptions",
   publishing_date: "2025-08-28",
-  tokenID: 38,
+  tokenID: 41,
 };
 
 // Main Blog Post Component
@@ -41,7 +41,7 @@ export default function MerkleAIBatching() {
     <article>
       <section>
         <p>
-          While working on some DeFi projects, I noticed something odd: I kept paying ChatGPT with my credit card while
+          While working on some DeFi projects, I noticed something odd: I kept paying Copilot with my credit card while
           having ETH sitting in my wallet. We can swap tokens instantly without KYC, but AI services still require email
           verification and monthly subscriptions. So I started wondering - what would an AI that accepts crypto payments
           actually look like?

@@ -61,6 +61,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
                 <Link href="/imagegen">ImageGen</Link>
               </div>
               <div className={layout.navigationLink}>
+                <Link href="/assistent">AI Assistent</Link>
+              </div>
+              <div className={layout.navigationLink}>
                 <WalletOptions />
               </div>
             </div>

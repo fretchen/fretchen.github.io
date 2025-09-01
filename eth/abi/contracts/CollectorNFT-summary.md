@@ -2,9 +2,10 @@
 
 NFT collection based on GenImNFT tokens
 
-Generated on: 2025-06-15T14:54:48.726Z
+Generated on: 2025-08-05T16:01:22.274Z
 
 ## Contract Information
+
 - **Name**: CollectorNFT
 - **Functions**: 33
 - **Events**: 10
@@ -13,46 +14,52 @@ Generated on: 2025-06-15T14:54:48.726Z
 ## Key Functions
 
 ### `baseMintPrice`
+
 - **Type**: view
 - **Inputs**: none
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `collectorTokensByGenImToken`
+
 - **Type**: view
-- **Inputs**: uint256 , uint256 
-- **Outputs**: uint256 
+- **Inputs**: uint256 , uint256
+- **Outputs**: uint256
 
 ### `getCollectorTokensForGenIm`
+
 - **Type**: view
 - **Inputs**: uint256 genImTokenId
-- **Outputs**: uint256[] 
+- **Outputs**: uint256[]
 
 ### `getCurrentPrice`
+
 - **Type**: view
 - **Inputs**: uint256 genImTokenId
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `mintCollectorNFT`
+
 - **Type**: payable
 - **Inputs**: uint256 genImTokenId, string uri
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `mintCountPerGenImToken`
+
 - **Type**: view
-- **Inputs**: uint256 
-- **Outputs**: uint256 
+- **Inputs**: uint256
+- **Outputs**: uint256
 
 ### `setBaseMintPrice`
+
 - **Type**: nonpayable
-- **Inputs**: uint256 _baseMintPrice
+- **Inputs**: uint256 \_baseMintPrice
 - **Outputs**: none
 
 ### `updateGenImNFTContract`
+
 - **Type**: nonpayable
-- **Inputs**: address _genImNFTContract
+- **Inputs**: address \_genImNFTContract
 - **Outputs**: none
-
-
 
 ## All Functions
 
@@ -106,14 +113,16 @@ Generated on: 2025-06-15T14:54:48.726Z
 ## Usage
 
 ### TypeScript/JavaScript ES Modules
+
 ```typescript
-import { CollectorNFTABI } from './CollectorNFT';
+import { CollectorNFTABI } from "./CollectorNFT";
 // Use with ethers, web3, viem, etc.
 ```
 
 ### JSON (Direct import)
+
 ```javascript
-import abi from './CollectorNFT.json';
+import abi from "./CollectorNFT.json";
 // Or for Node.js/CommonJS environments:
-const abi = require('./CollectorNFT.json');
+const abi = require("./CollectorNFT.json");
 ```

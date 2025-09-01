@@ -1,0 +1,27 @@
+{
+  "network": "optsepolia",
+  "timestamp": "2025-08-03T09:28:38.749Z",
+  "blockNumber": 31205389,
+  "proxyAddress": "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56",
+  "implementationAddress": "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "LLMv1",
+  "deploymentOptions": {
+    "verify": true,
+    "waitConfirmations": 1,
+    "configUsed": "llm-v1.config.json"
+  },
+  "config": {
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": true,
+      "waitConfirmations": 1
+    },
+    "metadata": {
+      "description": "LLM v1 deployment configuration",
+      "version": "1.0.0",
+      "environment": "sepolia"
+    }
+  }
+}

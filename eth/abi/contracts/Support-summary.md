@@ -2,15 +2,14 @@
 
 Support contract for donations and likes functionality
 
-Generated on: 2025-06-15T14:54:48.729Z
+Generated on: 2025-08-05T16:01:22.278Z
 
 ## Contract Information
+
 - **Name**: Support
 - **Functions**: 6
 - **Events**: 2
 - **Errors**: 3
-
-
 
 ## All Functions
 
@@ -29,14 +28,16 @@ Generated on: 2025-06-15T14:54:48.729Z
 ## Usage
 
 ### TypeScript/JavaScript ES Modules
+
 ```typescript
-import { SupportABI } from './Support';
+import { SupportABI } from "./Support";
 // Use with ethers, web3, viem, etc.
 ```
 
 ### JSON (Direct import)
+
 ```javascript
-import abi from './Support.json';
+import abi from "./Support.json";
 // Or for Node.js/CommonJS environments:
-const abi = require('./Support.json');
+const abi = require("./Support.json");
 ```

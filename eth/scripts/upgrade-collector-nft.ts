@@ -11,12 +11,12 @@ interface UpgradeOptions {
 
 /**
  * Upgrade CollectorNFT to CollectorNFTv2 using OpenZeppelin Upgrades Plugin
- * 
+ *
  * New features in v2:
  * - Automatic URI inheritance from GenImNFT tokens
  * - Enhanced relationship tracking between CollectorNFT and GenImNFT
  * - Backward compatibility with custom URI function
- * 
+ *
  * Usage examples:
  * - Environment variable: PROXY_ADDRESS=0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5 npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
  * - Script parameter: npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
@@ -26,20 +26,21 @@ interface UpgradeOptions {
  */
 async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   console.log("🚀 CollectorNFT -> CollectorNFTv2 Upgrade Script");
-  console.log("=" .repeat(50));
+  console.log("=".repeat(50));
   console.log(`Network: ${network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
   // Get proxy address from environment or parameter (default to Optimism mainnet address)
-  const proxyAddress = options.proxyAddress || process.env.PROXY_ADDRESS || "0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5";
-  
+  const proxyAddress =
+    options.proxyAddress || process.env.PROXY_ADDRESS || "0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5";
+
   console.log(`📍 Proxy Address: ${proxyAddress}`);
 
   // Validate proxy address format
   try {
     getAddress(proxyAddress);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid proxy address: ${proxyAddress}`);
   }
 
@@ -102,7 +103,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   const newImplementation = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
   console.log("✅ CollectorNFT upgraded to v2 successfully!");
-  console.log("=" .repeat(50));
+  console.log("=".repeat(50));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
   console.log(`📍 Old Implementation: ${currentImplementation}`);
   console.log(`📍 New Implementation: ${newImplementation}`);
@@ -115,7 +116,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
     const reinitTx = await upgradedContract.reinitialize();
     await reinitTx.wait();
     console.log("✅ Reinitialize completed successfully!");
-    
+
     // Listen for the reinitialize event to get the number of tokens updated
     const filter = upgradedContract.filters.ContractReinitializedToV2();
     const events = await upgradedContract.queryFilter(filter, reinitTx.blockNumber, reinitTx.blockNumber);
@@ -131,7 +132,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
 
   // Verify upgrade and test new features
   console.log("🔍 Verifying upgrade and testing new features...");
-  
+
   const newName = await upgradedContract.name();
   const newSymbol = await upgradedContract.symbol();
   const newGenImNFT = await upgradedContract.genImNFTContract();
@@ -146,20 +147,19 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   // Test new v2 features
   console.log("");
   console.log("🆕 Testing CollectorNFTv2 new features...");
-  
+
   try {
     // Test if new functions are available
-    const hasNewFunction1 = typeof upgradedContract.getGenImTokenIdForCollector === 'function';
-    const hasNewFunction2 = typeof upgradedContract.getOriginalGenImURI === 'function';
-    const hasNewFunction3 = typeof upgradedContract.mintCollectorNFTWithCustomURI === 'function';
-    
-    console.log(`✅ getGenImTokenIdForCollector function: ${hasNewFunction1 ? 'Available' : 'Missing'}`);
-    console.log(`✅ getOriginalGenImURI function: ${hasNewFunction2 ? 'Available' : 'Missing'}`);
-    console.log(`✅ mintCollectorNFTWithCustomURI function: ${hasNewFunction3 ? 'Available' : 'Missing'}`);
-    
+    const hasNewFunction1 = typeof upgradedContract.getGenImTokenIdForCollector === "function";
+    const hasNewFunction2 = typeof upgradedContract.getOriginalGenImURI === "function";
+    const hasNewFunction3 = typeof upgradedContract.mintCollectorNFTWithCustomURI === "function";
+
+    console.log(`✅ getGenImTokenIdForCollector function: ${hasNewFunction1 ? "Available" : "Missing"}`);
+    console.log(`✅ getOriginalGenImURI function: ${hasNewFunction2 ? "Available" : "Missing"}`);
+    console.log(`✅ mintCollectorNFTWithCustomURI function: ${hasNewFunction3 ? "Available" : "Missing"}`);
+
     // Test the enhanced mintCollectorNFT function (no URI parameter required)
     console.log("✅ Enhanced mintCollectorNFT function (automatic URI): Available");
-    
   } catch (error) {
     console.warn("⚠️  Error testing new features:", error);
   }
@@ -175,7 +175,9 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
     console.warn(`⚠️  GenImNFT address changed: ${oldGenImNFT} -> ${newGenImNFT}`);
   }
   if (newBaseMintPrice !== oldBaseMintPrice) {
-    console.warn(`⚠️  Base mint price changed: ${ethers.formatEther(oldBaseMintPrice)} -> ${ethers.formatEther(newBaseMintPrice)} ETH`);
+    console.warn(
+      `⚠️  Base mint price changed: ${ethers.formatEther(oldBaseMintPrice)} -> ${ethers.formatEther(newBaseMintPrice)} ETH`,
+    );
   }
 
   console.log("✅ All verifications completed!");
@@ -202,7 +204,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
       "Automatic URI inheritance from GenImNFT",
       "Enhanced relationship tracking",
       "Backward compatibility with custom URI",
-      "Existing token URI updates via reinitialize"
+      "Existing token URI updates via reinitialize",
     ],
     statePreserved: {
       name: newName === oldName,
@@ -224,7 +226,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
 
 async function validateUpgrade(proxyAddress: string) {
   console.log("🔍 Validating CollectorNFTv2 upgrade configuration...");
-  
+
   // Verify proxy contract
   const proxyCode = await ethers.provider.getCode(proxyAddress);
   if (proxyCode === "0x") {
@@ -241,25 +243,25 @@ async function validateUpgrade(proxyAddress: string) {
   console.log("✅ Proxy contract exists at specified address");
   console.log("✅ Upgrade compatibility validated");
   console.log("✅ New features: Automatic URI inheritance, relationship tracking");
-  
+
   console.log("🎉 Validation completed successfully!");
   return true;
 }
 
 async function simulateUpgrade(proxyAddress: string) {
   console.log("🧪 Simulating CollectorNFTv2 upgrade...");
-  
+
   await validateUpgrade(proxyAddress);
-  
+
   // Get current implementation
   const currentImplementation = await upgrades.erc1967.getImplementationAddress(proxyAddress);
   console.log(`📍 Current Implementation: ${currentImplementation}`);
-  
+
   console.log("⛽ Estimating upgrade costs...");
   console.log("📦 CollectorNFTv2 contract factory created successfully");
   console.log("🆕 New features ready: Automatic URI inheritance");
   console.log("💡 Ready for upgrade to v2");
-  
+
   console.log("🎉 Simulation completed successfully!");
   return true;
 }

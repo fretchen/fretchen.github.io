@@ -1,0 +1,13 @@
+{
+  "options": {
+    "validateOnly": false,
+    "dryRun": false,
+    "verify": true,
+    "waitConfirmations": 1
+  },
+  "metadata": {
+    "description": "LLM v1 deployment configuration",
+    "version": "1.0.0",
+    "environment": "sepolia"
+  }
+}

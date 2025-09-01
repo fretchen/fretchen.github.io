@@ -2,9 +2,10 @@
 
 CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
 
-Generated on: 2025-06-15T14:54:48.728Z
+Generated on: 2025-08-05T16:01:22.277Z
 
 ## Contract Information
+
 - **Name**: CollectorNFTv1
 - **Functions**: 36
 - **Events**: 11
@@ -13,71 +14,82 @@ Generated on: 2025-06-15T14:54:48.728Z
 ## Key Functions
 
 ### `baseMintPrice`
+
 - **Type**: view
 - **Inputs**: none
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `collectorToGenImToken`
+
 - **Type**: view
-- **Inputs**: uint256 
-- **Outputs**: uint256 
+- **Inputs**: uint256
+- **Outputs**: uint256
 
 ### `collectorTokensByGenImToken`
+
 - **Type**: view
-- **Inputs**: uint256 , uint256 
-- **Outputs**: uint256 
+- **Inputs**: uint256 , uint256
+- **Outputs**: uint256
 
 ### `getCollectorTokensForGenIm`
+
 - **Type**: view
 - **Inputs**: uint256 genImTokenId
-- **Outputs**: uint256[] 
+- **Outputs**: uint256[]
 
 ### `getCurrentPrice`
+
 - **Type**: view
 - **Inputs**: uint256 genImTokenId
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `getGenImTokenIdForCollector`
+
 - **Type**: view
 - **Inputs**: uint256 collectorTokenId
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `getOriginalGenImURI`
+
 - **Type**: view
 - **Inputs**: uint256 collectorTokenId
-- **Outputs**: string 
+- **Outputs**: string
 
 ### `initialize`
+
 - **Type**: nonpayable
-- **Inputs**: address _genImNFTContract, uint256 _baseMintPrice
+- **Inputs**: address \_genImNFTContract, uint256 \_baseMintPrice
 - **Outputs**: none
 
 ### `mintCollectorNFT`
+
 - **Type**: payable
 - **Inputs**: uint256 genImTokenId
-- **Outputs**: uint256 
+- **Outputs**: uint256
 
 ### `mintCountPerGenImToken`
+
 - **Type**: view
-- **Inputs**: uint256 
-- **Outputs**: uint256 
+- **Inputs**: uint256
+- **Outputs**: uint256
 
 ### `setBaseMintPrice`
+
 - **Type**: nonpayable
-- **Inputs**: uint256 _baseMintPrice
+- **Inputs**: uint256 \_baseMintPrice
 - **Outputs**: none
 
 ### `updateGenImNFTContract`
+
 - **Type**: nonpayable
-- **Inputs**: address _genImNFTContract
+- **Inputs**: address \_genImNFTContract
 - **Outputs**: none
 
 ### `upgradeToAndCall`
+
 - **Type**: payable
 - **Inputs**: address newImplementation, bytes data
 - **Outputs**: none
-
-
 
 ## All Functions
 
@@ -135,14 +147,16 @@ Generated on: 2025-06-15T14:54:48.728Z
 ## Usage
 
 ### TypeScript/JavaScript ES Modules
+
 ```typescript
-import { CollectorNFTv1ABI } from './CollectorNFTv1';
+import { CollectorNFTv1ABI } from "./CollectorNFTv1";
 // Use with ethers, web3, viem, etc.
 ```
 
 ### JSON (Direct import)
+
 ```javascript
-import abi from './CollectorNFTv1.json';
+import abi from "./CollectorNFTv1.json";
 // Or for Node.js/CommonJS environments:
-const abi = require('./CollectorNFTv1.json');
+const abi = require("./CollectorNFTv1.json");
 ```

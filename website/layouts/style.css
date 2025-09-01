@@ -51,3 +51,14 @@ body.page-is-transitioning #page-content {
     transform: rotate(360deg);
   }
 }
+
+/* Pulse Animation for scroll indicator */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}

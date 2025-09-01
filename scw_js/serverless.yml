@@ -12,6 +12,7 @@ provider:
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
+    NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
 
 plugins:
   - serverless-scaleway-functions
@@ -24,5 +25,7 @@ package:
 functions:
   readnftv2:
     handler: readhandler_v2.handle
-  classicai:
-    handler: dec_ai.handle
+  llm:
+    handler: sc_llm.handle
+  leafhistory:
+    handler: leaf_history.handle

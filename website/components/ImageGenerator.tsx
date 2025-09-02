@@ -5,6 +5,7 @@ import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
+import InfoIcon from "./InfoIcon";
 
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
@@ -224,6 +225,8 @@ export function ImageGenerator({
               className={`${styles.imageGen.compactButton} ${
                 isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
+              title="Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere."
+              aria-describedby="create-artwork-info"
             >
               {isLoading ? (
                 <>
@@ -231,10 +234,68 @@ export function ImageGenerator({
                   {mintingStatus === "minting" ? "Creating..." : "Generating..."}
                 </>
               ) : (
-                "🎨 Create Artwork"
+                <>
+                  🎨 Create Artwork
+                  <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
+                </>
               )}
             </button>
           </div>
+        </div>
+
+        {/* Contract details under Create Artwork button */}
+        <div className={css({ mt: "2", fontSize: "xs", color: "gray.600", textAlign: "center" })}>
+          Powered by{" "}
+          <a
+            href="https://optimism.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Learn more about Optimism (opens in new tab)"
+            className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
+          >
+            Optimism
+          </a>{" "}
+          •{" "}
+          <a
+            href={`https://optimistic.etherscan.io/address/${genAiNFTContractConfig.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View smart contract on Optimism Etherscan (opens in new tab)"
+            className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
+          >
+            View Contract ↗
+          </a>
+        </div>
+
+        {/* Hidden accessible description used by aria-describedby for the Create Artwork button */}
+        <span
+          id="create-artwork-info"
+          className={css({
+            position: "absolute",
+            left: "-9999px",
+            top: "auto",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+          })}
+        >
+          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
+          not stored elsewhere. View transaction details after minting.
+        </span>
+
+        {/* Mobile Info Text - only visible on small screens */}
+        <div
+          className={css({
+            display: { base: "block", md: "none" },
+            mt: "2",
+            fontSize: "xs",
+            color: "gray.600",
+            textAlign: "center",
+          })}
+        >
+          <InfoIcon size="xs" className={css({ mr: "1" })} />
+          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
+          not stored elsewhere.
         </div>
 
         {/* Status-Anzeige */}

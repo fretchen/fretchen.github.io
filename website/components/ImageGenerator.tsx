@@ -225,7 +225,7 @@ export function ImageGenerator({
               className={`${styles.imageGen.compactButton} ${
                 isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
-              title="Mints on Optimism (network fee &lt; 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere."
+              title="Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere."
               aria-describedby="create-artwork-info"
             >
               {isLoading ? (
@@ -279,11 +279,11 @@ export function ImageGenerator({
             overflow: "hidden",
           })}
         >
-          Mints on Optimism (network fee &lt; 1¢). Sovereign generation — your prompt can only be used for your NFT, not
-          stored elsewhere. View transaction details after minting.
+          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
+          not stored elsewhere. View transaction details after minting.
         </span>
 
-        {/* Mobile Info Text - nur auf kleinen Bildschirmen sichtbar */}
+        {/* Mobile Info Text - only visible on small screens */}
         <div
           className={css({
             display: { base: "block", md: "none" },
@@ -294,7 +294,8 @@ export function ImageGenerator({
           })}
         >
           <InfoIcon size="xs" className={css({ mr: "1" })} />
-          Private generation (~$0.02) - your prompt stays on your device
+          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
+          not stored elsewhere.
         </div>
 
         {/* Status-Anzeige */}

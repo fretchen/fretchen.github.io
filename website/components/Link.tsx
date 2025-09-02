@@ -2,9 +2,28 @@ import React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { css } from "../styled-system/css";
 
-export function Link({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
+export function Link({
+  href,
+  children,
+  locale,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  locale?: string;
+  className?: string;
+}) {
   const pageContext = usePageContext();
   const { urlPathname } = pageContext;
+  if (locale) {
+    console.log("Locale is set to:", locale);
+  }
+  console.log("pageContext Link:", pageContext.locale);
+  const localeDefault = "en";
+  locale = locale || pageContext.locale;
+  if (locale !== localeDefault) {
+    href = "/" + locale + href;
+  }
   const isActive = href === "/" ? urlPathname === href : urlPathname.startsWith(href);
 
   return (

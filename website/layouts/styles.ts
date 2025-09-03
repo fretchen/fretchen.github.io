@@ -709,14 +709,14 @@ export const layout = {
   main: css({
     display: "flex",
     flexDirection: "column",
-    width: "100%",                    // Full width instead of constrained
-    padding: "0 2rem",                // Generous side margins for breathing room
-    backgroundColor: "gray.50",       // Subtle background for content area
+    width: "100%", // Full width instead of constrained
+    padding: "0 2rem", // Generous side margins for breathing room
+    backgroundColor: "gray.50", // Subtle background for content area
     "@media (max-width: 768px)": {
-      padding: "0 1rem",              // Smaller margins on tablet
+      padding: "0 1rem", // Smaller margins on tablet
     },
     "@media (max-width: 480px)": {
-      padding: "0 0.5rem",            // Minimal margins on mobile
+      padding: "0 0.5rem", // Minimal margins on mobile
     },
   }),
   title: css({
@@ -736,17 +736,17 @@ export const layout = {
   }),
   appbar: css({
     width: "100%",
-    padding: "token(spacing.sm) 0",
+    padding: "token(spacing.xs) 0", // Reduced from sm to xs (10px → 5px)
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     borderBottom: "token(borders.light)",
-    backgroundColor: "white",         // White background for contrast
+    backgroundColor: "white", // White background for contrast
     position: "relative",
     // Mobile responsive styles
     "@media (max-width: 768px)": {
-      padding: "token(spacing.sm)",
+      padding: "token(spacing.xs)", // Also reduced for mobile
       gap: "token(spacing.sm)",
     },
     "@media (max-width: 480px)": {
@@ -843,20 +843,19 @@ export const layout = {
   }),
   content: css({
     padding: "token(spacing.md)",
-    paddingBottom: "token(spacing.xl)",
+    paddingBottom: "0", // Removed bottom padding
     minHeight: "token(sizes.screen)",
-    maxWidth: "1200px",               // Prevent content from getting too wide
-    margin: "0 auto",                 // Center content within full-width container
+    maxWidth: "1200px", // Prevent content from getting too wide
+    margin: "0 auto", // Center content within full-width container
   }),
   footer: css({
     width: "100%",
     padding: "token(spacing.md) 0",
     textAlign: "center",
-    borderTop: "1px solid",
-    borderColor: "gray.200",
-    marginTop: "token(spacing.xl)",
+    borderTop: "token(borders.light)",
+    marginTop: "0", // Removed top margin
     color: "gray.600",
-    backgroundColor: "gray.50",       // Match main background
+    backgroundColor: "white", // Changed from gray.50 to white
   }),
   footerAttribution: css({
     fontSize: "sm",

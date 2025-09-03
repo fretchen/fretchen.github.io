@@ -1,10 +1,12 @@
 import React from "react";
 import { Card } from "../../components/Card";
 import { titleBar } from "../../layouts/styles";
+import * as styles from "../../layouts/styles";
 
 const QuantumPage: React.FC = () => {
   return (
-    <>
+    
+        <div className={styles.container}>
       <h1 className={titleBar.title}>Quantum</h1>
 
       <p>
@@ -31,7 +33,7 @@ const QuantumPage: React.FC = () => {
         description="Introduction to quantum hardware platforms."
         link="/quantum/hardware"
       />
-    </>
+    </div>
   );
 };
 

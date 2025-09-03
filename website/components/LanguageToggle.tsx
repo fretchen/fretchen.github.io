@@ -1,35 +1,23 @@
 import React from "react";
 import { css } from "../styled-system/css";
-
-// Keep locales as a simple, editable list of strings (matching +onBeforeRoute.ts)
-const LOCALES: string[] = ["de", "en"];
-
-function getLocaleFromPathname(pathname: string): string | null {
-  if (!pathname) return null;
-  // normalize and split: "/de/whatever" -> ["de", "whatever"]
-  const parts = pathname.replace(/^\//, "").toLowerCase().split("/");
-  const candidate = parts[0] || "";
-  return LOCALES.includes(candidate) ? candidate : null;
-}
-
-function stripLocalePrefix(pathname: string): string {
-  const locale = getLocaleFromPathname(pathname);
-  if (!locale) return pathname;
-  return pathname.replace(new RegExp(`^/${locale}`), "") || "/";
-}
+import { usePageContext } from "vike-react/usePageContext";
+import { extractLocale } from "../locales/extractLocale";
+import { locales, defaultLocale } from "../locales/locales";
 
 export default function LanguageToggle() {
-  const currentPathname = typeof window !== "undefined" ? window.location.pathname : "";
-  const currentLocale = getLocaleFromPathname(currentPathname) || "en";
+  const pageContext = usePageContext();
+
+  // Use pageContext.urlOriginal - no window fallback needed for SSR compatibility
+  const currentPathname = pageContext.urlOriginal || "";
+
+  // Use the robust extractLocale logic from locales/extractLocale
+  const { locale: currentLocale, urlPathnameWithoutLocale } = extractLocale(currentPathname);
+
+  // Determine the other locale
   const otherLocale = currentLocale === "de" ? "en" : "de";
 
-  const handleLanguageSwitch = () => {
-    if (typeof window === "undefined") return;
-
-    const pathWithoutLocale = stripLocalePrefix(currentPathname);
-    const newPath = `/${otherLocale}${pathWithoutLocale}`;
-    window.location.href = newPath;
-  };
+  // Build new path for language switch
+  const newPath = `/${otherLocale}${urlPathnameWithoutLocale}`;
 
   const toggleStyles = css({
     display: "inline-flex",
@@ -61,8 +49,8 @@ export default function LanguageToggle() {
   });
 
   return (
-    <button
-      onClick={handleLanguageSwitch}
+    <a
+      href={newPath}
       className={toggleStyles}
       aria-label={`Switch language to ${otherLocale.toUpperCase()}`}
       title={`Switch to ${otherLocale === "de" ? "Deutsch" : "English"}`}
@@ -70,6 +58,6 @@ export default function LanguageToggle() {
       <span className={currentLocale === "de" ? activeLocaleStyles : ""}>DE</span>
       <span className={css({ margin: "0 xs", color: "gray.400" })}>|</span>
       <span className={currentLocale === "en" ? activeLocaleStyles : ""}>EN</span>
-    </button>
+    </a>
   );
 }

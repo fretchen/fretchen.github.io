@@ -12,6 +12,10 @@ function extractLocale(urlPathname) {
   if (locales.includes(first)) {
     locale = first;
     urlPathnameWithoutLocale = "/" + path.slice(2).join("/");
+    // Handle root path case: "/de" should become "/"
+    if (urlPathnameWithoutLocale === "/") {
+      urlPathnameWithoutLocale = "/";
+    }
   } else {
     locale = defaultLocale;
     urlPathnameWithoutLocale = urlPathname;

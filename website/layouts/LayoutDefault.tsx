@@ -65,13 +65,13 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
                 <Link href="/assistent">AI Assistent</Link>
               </div>
               <div className={layout.navigationLink}>
-                <LanguageToggle />
-              </div>
-              <div className={layout.navigationLink}>
                 <WalletOptions />
               </div>
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
+          </div>
+          <div className={layout.headerControls}>
+            <LanguageToggle />
           </div>
         </Appbar>
         <Content>{children}</Content>

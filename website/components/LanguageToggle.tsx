@@ -2,7 +2,6 @@ import React from "react";
 import { css } from "../styled-system/css";
 import { usePageContext } from "vike-react/usePageContext";
 import { extractLocale } from "../locales/extractLocale";
-import { locales, defaultLocale } from "../locales/locales";
 
 export default function LanguageToggle() {
   const pageContext = usePageContext();
@@ -13,51 +12,72 @@ export default function LanguageToggle() {
   // Use the robust extractLocale logic from locales/extractLocale
   const { locale: currentLocale, urlPathnameWithoutLocale } = extractLocale(currentPathname);
 
-  // Determine the other locale
-  const otherLocale = currentLocale === "de" ? "en" : "de";
+  // Build paths for both languages - ensure proper path formatting
+  let cleanPath = urlPathnameWithoutLocale;
+  if (cleanPath === "//" || cleanPath === "") {
+    cleanPath = "/";
+  }
+  
+  const dePath = cleanPath === "/" ? "/de" : `/de${cleanPath}`;
+  const enPath = cleanPath === "/" ? "/en" : `/en${cleanPath}`;
 
-  // Build new path for language switch
-  const newPath = `/${otherLocale}${urlPathnameWithoutLocale}`;
-
-  const toggleStyles = css({
-    display: "inline-flex",
+  const containerStyles = css({
+    display: "flex",
     alignItems: "center",
-    padding: "xs sm",
-    fontSize: "sm",
-    fontWeight: "medium",
-    color: "gray.700",
+    gap: "2px",
+    padding: "4px",
     backgroundColor: "gray.100",
-    border: "1px solid",
-    borderColor: "gray.300",
-    borderRadius: "sm",
-    cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: "xs",
+    fontWeight: "medium",
+  });
+
+  const pillStyles = css({
+    padding: "4px 8px",
+    borderRadius: "4px",
+    textDecoration: "none",
     transition: "all 0.2s",
-    _hover: {
+    fontSize: "xs",
+    fontWeight: "medium",
+    "&:hover": {
       backgroundColor: "gray.200",
-      borderColor: "gray.400",
     },
-    _focus: {
+    "&:focus": {
       outline: "2px solid",
       outlineColor: "blue.500",
-      outlineOffset: "2px",
+      outlineOffset: "1px",
     },
   });
 
-  const activeLocaleStyles = css({
-    fontWeight: "bold",
-    color: "blue.600",
+  const activePillStyles = css({
+    backgroundColor: "white",
+    color: "gray.900",
+    fontWeight: "semibold",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+  });
+
+  const inactivePillStyles = css({
+    color: "gray.600",
   });
 
   return (
-    <a
-      href={newPath}
-      className={toggleStyles}
-      aria-label={`Switch language to ${otherLocale.toUpperCase()}`}
-      title={`Switch to ${otherLocale === "de" ? "Deutsch" : "English"}`}
-    >
-      <span className={currentLocale === "de" ? activeLocaleStyles : ""}>DE</span>
-      <span className={css({ margin: "0 xs", color: "gray.400" })}>|</span>
-      <span className={currentLocale === "en" ? activeLocaleStyles : ""}>EN</span>
-    </a>
+    <div className={containerStyles} role="group" aria-label="Language selection">
+      <a
+        href={dePath}
+        className={`${pillStyles} ${currentLocale === "de" ? activePillStyles : inactivePillStyles}`}
+        aria-label="Switch to German"
+        aria-current={currentLocale === "de" ? "page" : undefined}
+      >
+        DE
+      </a>
+      <a
+        href={enPath}
+        className={`${pillStyles} ${currentLocale === "en" ? activePillStyles : inactivePillStyles}`}
+        aria-label="Switch to English"
+        aria-current={currentLocale === "en" ? "page" : undefined}
+      >
+        EN
+      </a>
+    </div>
   );
 }

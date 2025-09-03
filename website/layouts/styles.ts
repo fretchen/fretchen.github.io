@@ -709,8 +709,15 @@ export const layout = {
   main: css({
     display: "flex",
     flexDirection: "column",
-    maxWidth: "token(sizes.container)",
-    margin: "auto",
+    width: "100%",                    // Full width instead of constrained
+    padding: "0 2rem",                // Generous side margins for breathing room
+    backgroundColor: "gray.50",       // Subtle background for content area
+    "@media (max-width: 768px)": {
+      padding: "0 1rem",              // Smaller margins on tablet
+    },
+    "@media (max-width: 480px)": {
+      padding: "0 0.5rem",            // Minimal margins on mobile
+    },
   }),
   title: css({
     textAlign: "center",
@@ -735,6 +742,7 @@ export const layout = {
     alignItems: "center",
     justifyContent: "center",
     borderBottom: "token(borders.light)",
+    backgroundColor: "white",         // White background for contrast
     position: "relative",
     // Mobile responsive styles
     "@media (max-width: 768px)": {
@@ -837,15 +845,18 @@ export const layout = {
     padding: "token(spacing.md)",
     paddingBottom: "token(spacing.xl)",
     minHeight: "token(sizes.screen)",
+    maxWidth: "1200px",               // Prevent content from getting too wide
+    margin: "0 auto",                 // Center content within full-width container
   }),
   footer: css({
     width: "100%",
     padding: "token(spacing.md) 0",
     textAlign: "center",
-    borderTop: "token(borders.light)",
+    borderTop: "1px solid",
+    borderColor: "gray.200",
     marginTop: "token(spacing.xl)",
     color: "gray.600",
-    backgroundColor: "white",
+    backgroundColor: "gray.50",       // Match main background
   }),
   footerAttribution: css({
     fontSize: "sm",

@@ -1,14 +1,14 @@
 // pages/+onBeforeRoute.ts
 // Environment: server & client
 
-export { onBeforeRoute };
-
 import type { PageContext } from "vike/types";
 import { modifyUrl } from "vike/modifyUrl";
 import type { Url } from "vike/types";
+import i18n from "../i18n";
 
-function onBeforeRoute(pageContext: PageContext) {
+export async function onBeforeRoute(pageContext: PageContext) {
   const { urlWithoutLocale, locale } = extractLocale(pageContext.urlParsed);
+  await i18n.changeLanguage(locale);
   return {
     pageContext: {
       // Make locale available as pageContext.locale

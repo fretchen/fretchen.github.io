@@ -3,6 +3,8 @@ import ImageGenerator from "../../components/ImageGenerator";
 import NFTList from "../../components/NFTList";
 import { NFTMetadata } from "../../types/components";
 import * as styles from "../../layouts/styles";
+import { useTranslation } from "react-i18next";
+import { usePageContext } from "vike-react/usePageContext";
 
 export default function Page() {
   const [newlyCreatedNFT, setNewlyCreatedNFT] = useState<{
@@ -30,8 +32,13 @@ export default function Page() {
     setNewlyCreatedNFT(null);
   };
 
+  const pageContext = usePageContext();
+  const locale = pageContext.locale;
+  const { t } = useTranslation();
+
   return (
     <div className={styles.container}>
+      <h1>{t('products.title')}</h1>
       {/* Einfacher, konstanter Generator */}
       <ImageGenerator onSuccess={handleSuccess} onError={handleError} />
 

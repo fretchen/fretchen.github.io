@@ -43,7 +43,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   }, []);
 
   return (
-    <div className={layout.main}>
+    <div>
       <WagmiProvider config={config}>
         <Appbar>
           <div className={layout.navigationContainer}>
@@ -70,7 +70,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
           </div>
         </Appbar>
-        <Content>{children}</Content>
+        <div className={layout.main}>
+          <Content>{children}</Content>
+        </div>
         <Footer />
       </WagmiProvider>
     </div>

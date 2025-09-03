@@ -728,17 +728,18 @@ export const layout = {
     },
   }),
   appbar: css({
-    padding: "token(spacing.sm) token(spacing.md)",
-    width: "token(sizes.full)",
+    width: "100%",
+    padding: "token(spacing.sm) 0",
     display: "flex",
     flexDirection: "row",
-    gap: "token(spacing.md)",
-    borderBottom: "token(borders.light)",
     alignItems: "center",
-    // Mobile responsive styles - simplere Struktur
+    justifyContent: "center",
+    borderBottom: "token(borders.light)",
+    position: "relative",
+    // Mobile responsive styles
     "@media (max-width: 768px)": {
-      gap: "token(spacing.sm)",
       padding: "token(spacing.sm)",
+      gap: "token(spacing.sm)",
     },
     "@media (max-width: 480px)": {
       gap: "token(spacing.xs)",
@@ -748,10 +749,18 @@ export const layout = {
   // Navigation container wrapper for positioning scroll indicator
   navigationContainer: css({
     position: "relative",
-    flex: 1,
+    width: "100%",
+    maxWidth: "1200px",
     display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0 token(spacing.md)",
     "@media (max-width: 768px)": {
-      width: "100%",
+      padding: "0 token(spacing.sm)",
+      maxWidth: "100%",
+    },
+    "@media (max-width: 480px)": {
+      padding: "0 token(spacing.xs)",
     },
   }),
   navigationLinks: css({
@@ -830,11 +839,13 @@ export const layout = {
     minHeight: "token(sizes.screen)",
   }),
   footer: css({
-    padding: "token(spacing.md)",
+    width: "100%",
+    padding: "token(spacing.md) 0",
     textAlign: "center",
-    borderTop: "1px solid token(colors.border)",
+    borderTop: "token(borders.light)",
     marginTop: "token(spacing.xl)",
     color: "gray.600",
+    backgroundColor: "white",
   }),
   footerAttribution: css({
     fontSize: "sm",

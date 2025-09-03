@@ -17,7 +17,7 @@ export default function LanguageToggle() {
   if (cleanPath === "//" || cleanPath === "") {
     cleanPath = "/";
   }
-  
+
   const dePath = cleanPath === "/" ? "/de" : `/de${cleanPath}`;
   const enPath = cleanPath === "/" ? "/en" : `/en${cleanPath}`;
 

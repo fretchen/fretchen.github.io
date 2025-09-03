@@ -30,7 +30,6 @@ export default function Page() {
     setNewlyCreatedNFT(null);
   };
 
-
   return (
     <div className={styles.container}>
       <h1>{"products.title"}</h1>

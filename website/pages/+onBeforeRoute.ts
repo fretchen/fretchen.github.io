@@ -5,6 +5,7 @@ import type { PageContext } from "vike/types";
 import { modifyUrl } from "vike/modifyUrl";
 import type { Url } from "vike/types";
 
+import { locales, defaultLocale } from "../locales/locales";
 export function onBeforeRoute(pageContext: PageContext) {
   const { urlWithoutLocale, locale } = extractLocale(pageContext.urlParsed);
   console.log("Locale detected:", locale);
@@ -28,7 +29,7 @@ function getLocaleFromPathname(pathname: string): Locale {
   // normalize and split: "/de/whatever" -> ["de", "whatever"]
   const parts = pathname.replace(/^\//, "").toLowerCase().split("/");
   const candidate = parts[0] || "";
-  return LOCALES.includes(candidate) ? candidate : null;
+  return locales.includes(candidate) ? candidate : null;
 }
 
 function hasLocalePrefix(pathname: string): boolean {

@@ -2,6 +2,8 @@ import React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { css } from "../styled-system/css";
 
+import { defaultLocale } from "../locales/locales";
+
 export function Link({
   href,
   children,
@@ -19,12 +21,11 @@ export function Link({
   }
   const { urlPathname } = pageContext;
 
-  const localeDefault = "en";
   if (!locale && pageContext.locale) {
     locale = pageContext.locale;
   }
   if (!locale && !pageContext.locale) {
-    locale = localeDefault;
+    locale = defaultLocale;
   }
 
   href = "/" + locale + href;

@@ -6,9 +6,10 @@ import { modifyUrl } from "vike/modifyUrl";
 import type { Url } from "vike/types";
 import i18n from "../i18n";
 
-export async function onBeforeRoute(pageContext: PageContext) {
+export function onBeforeRoute(pageContext: PageContext) {
   const { urlWithoutLocale, locale } = extractLocale(pageContext.urlParsed);
-  await i18n.changeLanguage(locale);
+  console.log("Locale detected:", locale);
+  i18n.changeLanguage(locale);
   return {
     pageContext: {
       // Make locale available as pageContext.locale

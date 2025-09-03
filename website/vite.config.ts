@@ -9,7 +9,7 @@ export default defineConfig({
     outDir: "build",
   },
   i18n: {
-    locales: ["en", "fr", "es"],
-    defaultLocale: "en",
+    locales: ["en", "de"],
+    defaultLocale: "de",
   },
 });

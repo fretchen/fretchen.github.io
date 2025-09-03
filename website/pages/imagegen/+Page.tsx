@@ -32,13 +32,11 @@ export default function Page() {
     setNewlyCreatedNFT(null);
   };
 
-  const pageContext = usePageContext();
-  const locale = pageContext.locale;
   const { t } = useTranslation();
 
   return (
     <div className={styles.container}>
-      <h1>{t('products.title')}</h1>
+      <h1>{t("products.title")}</h1>
       {/* Einfacher, konstanter Generator */}
       <ImageGenerator onSuccess={handleSuccess} onError={handleError} />
 

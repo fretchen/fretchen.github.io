@@ -14,16 +14,21 @@ export function Link({
   className?: string;
 }) {
   const pageContext = usePageContext();
-  const { urlPathname } = pageContext;
   if (locale) {
     console.log("Locale is set to:", locale);
   }
-  console.log("pageContext Link:", pageContext.locale);
+  const { urlPathname } = pageContext;
+
   const localeDefault = "en";
-  locale = locale || pageContext.locale;
-  if (locale !== localeDefault) {
-    href = "/" + locale + href;
+  if (!locale && pageContext.locale) {
+    locale = pageContext.locale;
   }
+  if (!locale && !pageContext.locale) {
+    locale = localeDefault;
+  }
+
+  href = "/" + locale + href;
+
   const isActive = href === "/" ? urlPathname === href : urlPathname.startsWith(href);
 
   return (

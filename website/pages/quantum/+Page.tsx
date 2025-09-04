@@ -8,7 +8,6 @@ const QuantumPage: React.FC = () => {
     
         <div className={styles.container}>
       <h1 className={titleBar.title}>Quantum</h1>
-
       <p>
         Over the years, I worked on various projects in the field of quantum physics. Here, I collect some of the
         resulting notes.

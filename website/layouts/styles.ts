@@ -740,7 +740,7 @@ export const layout = {
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     borderBottom: "token(borders.light)",
     backgroundColor: "white", // White background for contrast
     position: "relative",
@@ -860,6 +860,15 @@ export const layout = {
   footerAttribution: css({
     fontSize: "sm",
     color: "gray.500",
+  }),
+  headerControls: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.sm)",
+    marginLeft: "auto",
+    "@media (max-width: 768px)": {
+      marginLeft: "token(spacing.sm)",
+    },
   }),
 };
 

@@ -6,7 +6,8 @@ import { TransactionReceipt, MintingStatus } from "../types/blockchain";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
-
+import { LocaleText } from "./LocaleText";
+import { useLocale } from "../hooks/useLocale";
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
   return new Promise<TransactionReceipt>((resolve, reject) => {
@@ -170,10 +171,12 @@ export function ImageGenerator({
     <div className={styles.imageGen.compactLayout}>
       <div className={styles.imageGen.compactContainer}>
         <div className={styles.imageGen.compactHeader}>
-          <h3 className={styles.imageGen.compactTitle}>🎨 Create Your Digital Artwork</h3>
+          <h3 className={styles.imageGen.compactTitle}>
+            🎨
+            <LocaleText label="imagegen.title" />
+          </h3>
           <span className={styles.imageGen.compactSubtitle}>
-            Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on
-            the blockchain.
+            <LocaleText label="imagegen.description" />
           </span>
         </div>
 
@@ -181,7 +184,7 @@ export function ImageGenerator({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset with neon lights reflecting in the water')"
+            placeholder={useLocale({ label: "imagegen.promptPlaceholder" })}
             disabled={isLoading || mintingStatus !== "idle"}
             className={styles.imageGen.compactTextarea}
           />
@@ -196,8 +199,8 @@ export function ImageGenerator({
                 className={styles.imageGen.compactSelect}
                 aria-label="Select image format for your artwork"
               >
-                <option value="1024x1024">◼ Square</option>
-                <option value="1792x1024">▬ Wide</option>
+                <option value="1024x1024">{useLocale({ label: "imagegen.square" })}</option>
+                <option value="1792x1024">{useLocale({ label: "imagegen.wide" })}</option>
               </select>
 
               <label
@@ -215,7 +218,7 @@ export function ImageGenerator({
                   disabled={isLoading || mintingStatus !== "idle"}
                   className={styles.nftCard.checkbox}
                 />
-                Listed
+                <LocaleText label="imagegen.listed" />
               </label>
             </div>
 
@@ -225,7 +228,7 @@ export function ImageGenerator({
               className={`${styles.imageGen.compactButton} ${
                 isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
-              title="Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere."
+              title={useLocale({ label: "imagegen.mintingInfo" })}
               aria-describedby="create-artwork-info"
             >
               {isLoading ? (
@@ -235,7 +238,7 @@ export function ImageGenerator({
                 </>
               ) : (
                 <>
-                  🎨 Create Artwork
+                  🎨 <LocaleText label="imagegen.createArtwork" />
                   <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
                 </>
               )}
@@ -279,8 +282,7 @@ export function ImageGenerator({
             overflow: "hidden",
           })}
         >
-          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
-          not stored elsewhere. View transaction details after minting.
+          {useLocale({ label: "imagegen.mintingInfo" })}
         </span>
 
         {/* Mobile Info Text - only visible on small screens */}
@@ -294,8 +296,8 @@ export function ImageGenerator({
           })}
         >
           <InfoIcon size="xs" className={css({ mr: "1" })} />
-          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
-          not stored elsewhere.
+          Mints on Optimism (network fee &lt;\u003c 1¢). Sovereign generation — your prompt can only be used for your
+          NFT, not stored elsewhere.
         </div>
 
         {/* Status-Anzeige */}
@@ -306,7 +308,11 @@ export function ImageGenerator({
           </div>
         )}
 
-        {!isConnected && <div className={styles.imageGen.compactError}>Connect your account to create artwork</div>}
+        {!isConnected && (
+          <div className={styles.imageGen.compactError}>
+            <LocaleText label="imagegen.connectWallet" />
+          </div>
+        )}
 
         {error && <div className={styles.imageGen.compactError}>{error}</div>}
 

@@ -199,12 +199,8 @@ export function ImageGenerator({
                 className={styles.imageGen.compactSelect}
                 aria-label="Select image format for your artwork"
               >
-                <option value="1024x1024">
-                  <LocaleText label="imagegen.square" />
-                </option>
-                <option value="1792x1024">
-                  <LocaleText label="imagegen.wide" />
-                </option>
+                <option value="1024x1024">{useLocale({ label: "imagegen.square" })}</option>
+                <option value="1792x1024">{useLocale({ label: "imagegen.wide" })}</option>
               </select>
 
               <label
@@ -286,8 +282,7 @@ export function ImageGenerator({
             overflow: "hidden",
           })}
         >
-          Mints on Optimism (network fee \u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
-          not stored elsewhere. View transaction details after minting.
+          {useLocale({ label: "imagegen.mintingInfo" })}
         </span>
 
         {/* Mobile Info Text - only visible on small screens */}

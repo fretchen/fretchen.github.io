@@ -1,4 +1,4 @@
-// locales/fr.ts
+// locales/de.ts
 export default {
   imagegen: {
     title: "Erstelle Dein digitales Kunstwerk",

@@ -6,7 +6,7 @@ import * as styles from "../layouts/styles";
 import { Tab } from "./Tab";
 import { MyNFTList } from "./MyNFTList";
 import { PublicNFTList } from "./PublicNFTList";
-
+import { useLocale } from "../hooks/useLocale";
 export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
@@ -33,11 +33,19 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
       <div className={styles.tabs.container}>
         <div className={styles.tabs.tabList}>
           <Tab
-            label={isConnected ? `My Artworks (${userBalance?.toString() || "0"})` : "My Artworks"}
+            label={
+              isConnected
+                ? `${useLocale({ label: "imagegen.myArtworks" })} (${userBalance?.toString() || "0"})`
+                : useLocale({ label: "imagegen.myArtworks" })
+            }
             isActive={activeTab === "my"}
             onClick={() => setActiveTab("my")}
           />
-          <Tab label="All Public Artworks" isActive={activeTab === "public"} onClick={() => setActiveTab("public")} />
+          <Tab
+            label={useLocale({ label: "imagegen.allPublicArtworks" })}
+            isActive={activeTab === "public"}
+            onClick={() => setActiveTab("public")}
+          />
         </div>
       </div>
 

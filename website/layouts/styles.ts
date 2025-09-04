@@ -735,6 +735,7 @@ export const layout = {
     gap: "token(spacing.md)",
     borderBottom: "token(borders.light)",
     alignItems: "center",
+    justifyContent: "space-between",
     // Mobile responsive styles - simplere Struktur
     "@media (max-width: 768px)": {
       gap: "token(spacing.sm)",
@@ -839,6 +840,15 @@ export const layout = {
   footerAttribution: css({
     fontSize: "sm",
     color: "gray.500",
+  }),
+  headerControls: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "token(spacing.sm)",
+    marginLeft: "auto",
+    "@media (max-width: 768px)": {
+      marginLeft: "token(spacing.sm)",
+    },
   }),
 };
 

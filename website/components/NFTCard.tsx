@@ -9,7 +9,7 @@ import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
 import * as styles from "../layouts/styles";
-
+import { useLocale } from "../hooks/useLocale";
 // NFT Card Component
 export function NFTCard({
   tokenId,
@@ -290,7 +290,7 @@ export function NFTCard({
             <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
-                alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
+                alt={nft.metadata?.name || `${useLocale({ label: "imagegen.artwork" })} #${nft.tokenId}`}
                 className={styles.nftCard.image}
                 onClick={handleImageClick}
                 style={{ cursor: "pointer" }}
@@ -326,7 +326,7 @@ export function NFTCard({
                   disabled={isToggling || isListingConfirming}
                   className={styles.nftCard.checkbox}
                 />
-                Listed
+                {useLocale({ label: "imagegen.listed" })}
               </label>
             )}
             {isPublicView && owner && (
@@ -353,7 +353,7 @@ export function NFTCard({
                 className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
                 title="Download image"
               >
-                ⬇️ Download
+                ⬇️ {useLocale({ label: "imagegen.download" })}
               </button>
             )}
             <button
@@ -361,7 +361,7 @@ export function NFTCard({
               className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
               title="Share your artwork on the marketplace"
             >
-              📤 Share
+              📤 {useLocale({ label: "imagegen.share" })}
             </button>
             {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
             {!isPublicView && (
@@ -372,7 +372,11 @@ export function NFTCard({
                 title="Delete artwork (permanent)"
                 style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
               >
-                {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : "🗑️ Delete"}
+                {isBurning
+                  ? "🗑️ Deleting..."
+                  : isConfirming
+                    ? "⏳ Confirming..."
+                    : `🗑️ ${useLocale({ label: "imagegen.delete" })}`}
               </button>
             )}
           </div>

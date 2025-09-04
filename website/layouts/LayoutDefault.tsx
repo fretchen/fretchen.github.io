@@ -3,6 +3,7 @@ import "./panda.css";
 import React, { useEffect, useRef } from "react";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";
+import LanguageToggle from "../components/LanguageToggle";
 import Footer from "../components/Footer";
 
 import { WagmiProvider } from "wagmi";
@@ -68,6 +69,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
               </div>
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
+          </div>
+          <div className={layout.headerControls}>
+            <LanguageToggle />
           </div>
         </Appbar>
         <Content>{children}</Content>

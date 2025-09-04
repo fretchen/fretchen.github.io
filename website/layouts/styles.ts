@@ -777,12 +777,6 @@ export const layout = {
     gap: "token(spacing.md)",
     alignItems: "center",
     flex: 1,
-    // Desktop: Last item (Connect button) should be pushed to the right
-    "@media (min-width: 769px)": {
-      "& > :last-child": {
-        marginLeft: "auto",
-      },
-    },
     // Mobile responsive styles - horizontal scrolling
     "@media (max-width: 768px)": {
       overflowX: "auto",
@@ -865,9 +859,14 @@ export const layout = {
     display: "flex",
     alignItems: "center",
     gap: "token(spacing.sm)",
-    marginLeft: "auto",
+    flexShrink: 0, // Prevent shrinking on smaller screens
+    // Mobile: Stack vertically or hide some elements
     "@media (max-width: 768px)": {
-      marginLeft: "token(spacing.sm)",
+      gap: "token(spacing.xs)",
+    },
+    "@media (max-width: 480px)": {
+      gap: "token(spacing.xs)",
+      // Consider hiding language toggle on very small screens if needed
     },
   }),
 };

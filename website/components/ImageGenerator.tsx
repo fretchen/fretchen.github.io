@@ -7,7 +7,7 @@ import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
-
+import {useLocale} from "../hooks/useLocale";
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
   return new Promise<TransactionReceipt>((resolve, reject) => {
@@ -184,7 +184,7 @@ export function ImageGenerator({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your image in detail... (e.g., 'A futuristic city skyline at sunset with neon lights reflecting in the water')"
+            placeholder={useLocale({label: "imagegen.promptPlaceholder"})}
             disabled={isLoading || mintingStatus !== "idle"}
             className={styles.imageGen.compactTextarea}
           />
@@ -232,7 +232,7 @@ export function ImageGenerator({
               className={`${styles.imageGen.compactButton} ${
                 isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
-              title="Mints on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere."
+              title={useLocale({label: "imagegen.mintingInfo"})}
               aria-describedby="create-artwork-info"
             >
               {isLoading ? (
@@ -301,8 +301,8 @@ export function ImageGenerator({
           })}
         >
           <InfoIcon size="xs" className={css({ mr: "1" })} />
-          Mints on Optimism (network fee &lt;\u003c 1¢). Sovereign generation — your prompt can only be used for your NFT,
-          not stored elsewhere.
+          Mints on Optimism (network fee &lt;\u003c 1¢). Sovereign generation — your prompt can only be used for your
+          NFT, not stored elsewhere.
         </div>
 
         {/* Status-Anzeige */}
@@ -313,7 +313,11 @@ export function ImageGenerator({
           </div>
         )}
 
-        {!isConnected && <div className={styles.imageGen.compactError}><LocaleText label="imagegen.connectWallet" /></div>}
+        {!isConnected && (
+          <div className={styles.imageGen.compactError}>
+            <LocaleText label="imagegen.connectWallet" />
+          </div>
+        )}
 
         {error && <div className={styles.imageGen.compactError}>{error}</div>}
 

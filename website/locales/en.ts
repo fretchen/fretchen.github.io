@@ -1,5 +1,3 @@
-import de from "./de";
-
 // locales/en.ts
 export default {
   imagegen: {
@@ -13,7 +11,8 @@ export default {
     listed: "Listed",
     createArtwork: "Create Artwork",
     connectWallet: "Connect your account to create artwork",
-    mintingInfo: "Mints on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
+    mintingInfo:
+      "Mints on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
     myArtworks: "My Artworks",
     allPublicArtworks: "All Public Artworks",
     artwork: "Artwork",

@@ -7,7 +7,7 @@ import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
-import {useLocale} from "../hooks/useLocale";
+import { useLocale } from "../hooks/useLocale";
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
   return new Promise<TransactionReceipt>((resolve, reject) => {
@@ -184,7 +184,7 @@ export function ImageGenerator({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={useLocale({label: "imagegen.promptPlaceholder"})}
+            placeholder={useLocale({ label: "imagegen.promptPlaceholder" })}
             disabled={isLoading || mintingStatus !== "idle"}
             className={styles.imageGen.compactTextarea}
           />
@@ -232,7 +232,7 @@ export function ImageGenerator({
               className={`${styles.imageGen.compactButton} ${
                 isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
               }`}
-              title={useLocale({label: "imagegen.mintingInfo"})}
+              title={useLocale({ label: "imagegen.mintingInfo" })}
               aria-describedby="create-artwork-info"
             >
               {isLoading ? (

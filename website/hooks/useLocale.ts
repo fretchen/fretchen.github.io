@@ -1,4 +1,3 @@
-import React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { getProperty } from "dot-prop";
 import { defaultLocale } from "../locales/locales";

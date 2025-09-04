@@ -11,7 +11,8 @@ export default {
     listed: "Gelistet",
     createArtwork: "Kunstwerk erstellen",
     connectWallet: "Verbinde dein Konto, um Kunstwerke zu erstellen",
-    mintingInfo: "Registrierung auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
+    mintingInfo:
+      "Registrierung auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
     myArtworks: "Meine Kunstwerke",
     allPublicArtworks: "Alle öffentlichen Kunstwerke",
     artwork: "Kunstwerk",

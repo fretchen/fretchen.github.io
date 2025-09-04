@@ -3,7 +3,7 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import { formatEther } from "viem";
 import { getCollectorNFTContractConfig, getChain } from "../utils/getChain";
 import * as styles from "../layouts/styles";
-import {useLocale} from "../hooks/useLocale";
+import { useLocale } from "../hooks/useLocale";
 interface SimpleCollectButtonProps {
   genImTokenId: bigint;
 }
@@ -119,7 +119,11 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
       className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
-      {isLoading || isPending ? "📦 Collecting..." : isSuccess ? "✅ Collected!" : `📦 ${useLocale({label: 'imagegen.collect'})} (${getMintCount()})`}
+      {isLoading || isPending
+        ? "📦 Collecting..."
+        : isSuccess
+          ? "✅ Collected!"
+          : `📦 ${useLocale({ label: "imagegen.collect" })} (${getMintCount()})`}
     </button>
   );
 }

@@ -709,8 +709,15 @@ export const layout = {
   main: css({
     display: "flex",
     flexDirection: "column",
-    maxWidth: "token(sizes.container)",
-    margin: "auto",
+    width: "100%", // Full width instead of constrained
+    padding: "0 2rem", // Generous side margins for breathing room
+    backgroundColor: "gray.50", // Subtle background for content area
+    "@media (max-width: 768px)": {
+      padding: "0 1rem", // Smaller margins on tablet
+    },
+    "@media (max-width: 480px)": {
+      padding: "0 0.5rem", // Minimal margins on mobile
+    },
   }),
   title: css({
     textAlign: "center",
@@ -728,18 +735,19 @@ export const layout = {
     },
   }),
   appbar: css({
-    padding: "token(spacing.sm) token(spacing.md)",
-    width: "token(sizes.full)",
+    width: "100%",
+    padding: "token(spacing.xs) 0", // Reduced from sm to xs (10px → 5px)
     display: "flex",
     flexDirection: "row",
-    gap: "token(spacing.md)",
-    borderBottom: "token(borders.light)",
     alignItems: "center",
     justifyContent: "space-between",
-    // Mobile responsive styles - simplere Struktur
+    borderBottom: "token(borders.light)",
+    backgroundColor: "white", // White background for contrast
+    position: "relative",
+    // Mobile responsive styles
     "@media (max-width: 768px)": {
+      padding: "token(spacing.xs)", // Also reduced for mobile
       gap: "token(spacing.sm)",
-      padding: "token(spacing.sm)",
     },
     "@media (max-width: 480px)": {
       gap: "token(spacing.xs)",
@@ -749,10 +757,18 @@ export const layout = {
   // Navigation container wrapper for positioning scroll indicator
   navigationContainer: css({
     position: "relative",
-    flex: 1,
+    width: "100%",
+    maxWidth: "1200px",
     display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0 token(spacing.md)",
     "@media (max-width: 768px)": {
-      width: "100%",
+      padding: "0 token(spacing.sm)",
+      maxWidth: "100%",
+    },
+    "@media (max-width: 480px)": {
+      padding: "0 token(spacing.xs)",
     },
   }),
   navigationLinks: css({
@@ -761,12 +777,6 @@ export const layout = {
     gap: "token(spacing.md)",
     alignItems: "center",
     flex: 1,
-    // Desktop: Last item (Connect button) should be pushed to the right
-    "@media (min-width: 769px)": {
-      "& > :last-child": {
-        marginLeft: "auto",
-      },
-    },
     // Mobile responsive styles - horizontal scrolling
     "@media (max-width: 768px)": {
       overflowX: "auto",
@@ -827,15 +837,19 @@ export const layout = {
   }),
   content: css({
     padding: "token(spacing.md)",
-    paddingBottom: "token(spacing.xl)",
+    paddingBottom: "0", // Removed bottom padding
     minHeight: "token(sizes.screen)",
+    maxWidth: "1200px", // Prevent content from getting too wide
+    margin: "0 auto", // Center content within full-width container
   }),
   footer: css({
-    padding: "token(spacing.md)",
+    width: "100%",
+    padding: "token(spacing.md) 0",
     textAlign: "center",
-    borderTop: "1px solid token(colors.border)",
-    marginTop: "token(spacing.xl)",
+    borderTop: "token(borders.light)",
+    marginTop: "0", // Removed top margin
     color: "gray.600",
+    backgroundColor: "white", // Changed from gray.50 to white
   }),
   footerAttribution: css({
     fontSize: "sm",
@@ -845,9 +859,14 @@ export const layout = {
     display: "flex",
     alignItems: "center",
     gap: "token(spacing.sm)",
-    marginLeft: "auto",
+    flexShrink: 0, // Prevent shrinking on smaller screens
+    // Mobile: Stack vertically or hide some elements
     "@media (max-width: 768px)": {
-      marginLeft: "token(spacing.sm)",
+      gap: "token(spacing.xs)",
+    },
+    "@media (max-width: 480px)": {
+      gap: "token(spacing.xs)",
+      // Consider hiding language toggle on very small screens if needed
     },
   }),
 };
@@ -877,9 +896,17 @@ export const nftList = {
   }),
   grid: css({
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
     gap: "lg",
     marginTop: "lg",
+    // Mobile: Adjust gap for better mobile layout
+    "@media (max-width: 768px)": {
+      gap: "md",
+    },
+    "@media (max-width: 480px)": {
+      gap: "sm",
+      marginTop: "md",
+    },
   }),
   walletPrompt: css({
     textAlign: "center",
@@ -900,6 +927,14 @@ export const nftCard = {
     _hover: {
       transform: "translateY(-2px)",
       boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+    },
+    // Mobile: Reduce padding for more content space
+    "@media (max-width: 768px)": {
+      padding: "sm",
+    },
+    "@media (max-width: 480px)": {
+      padding: "xs",
+      borderRadius: "sm",
     },
   }),
   highlighted: css({
@@ -942,6 +977,15 @@ export const nftCard = {
     borderRadius: "sm",
     marginBottom: "sm",
     overflow: "hidden",
+    // Mobile: Slightly smaller height for better proportion
+    "@media (max-width: 768px)": {
+      height: "180px",
+      marginBottom: "xs",
+    },
+    "@media (max-width: 480px)": {
+      height: "160px",
+      marginBottom: "2xs",
+    },
   }),
   image: css({
     width: "100%",
@@ -959,6 +1003,17 @@ export const nftCard = {
     justifyContent: "center",
     color: "gray.600",
     fontSize: "sm",
+    // Mobile: Match image container height adjustments
+    "@media (max-width: 768px)": {
+      height: "180px",
+      marginBottom: "xs",
+      fontSize: "xs",
+    },
+    "@media (max-width: 480px)": {
+      height: "160px",
+      marginBottom: "2xs",
+      fontSize: "2xs",
+    },
   }),
   imageError: css({
     display: "flex",
@@ -967,6 +1022,10 @@ export const nftCard = {
     height: "100%",
     color: "gray.600",
     fontSize: "sm",
+    // Mobile: Adjust font size
+    "@media (max-width: 480px)": {
+      fontSize: "2xs",
+    },
   }),
   title: css({
     fontSize: "md",
@@ -975,6 +1034,14 @@ export const nftCard = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+    // Mobile: Smaller font size for better fit
+    "@media (max-width: 768px)": {
+      fontSize: "sm",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "xs",
+      marginBottom: "2xs",
+    },
   }),
   description: css({
     fontSize: "sm",
@@ -984,6 +1051,16 @@ export const nftCard = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     maxHeight: "2.8em",
+    // Mobile: Smaller font and reduced max height
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+      maxHeight: "2.1em",
+      marginBottom: "xs",
+    },
+    "@media (max-width: 480px)": {
+      maxHeight: "1.4em", // Show only 1 line on very small screens
+      marginBottom: "2xs",
+    },
   }),
   footer: css({
     display: "flex",
@@ -993,6 +1070,16 @@ export const nftCard = {
     color: "gray.400",
     flexWrap: "wrap",
     gap: "xs",
+    // Mobile: Stack vertically for better mobile layout
+    "@media (max-width: 768px)": {
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: "sm",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "2xs",
+      gap: "xs",
+    },
   }),
   metadataLink: css({
     color: "brand",
@@ -1012,6 +1099,11 @@ export const nftCard = {
     _hover: {
       color: "gray.800",
     },
+    // Mobile: More compact layout
+    "@media (max-width: 480px)": {
+      fontSize: "2xs",
+      gap: "2xs",
+    },
   }),
   checkbox: css({
     width: "14px",
@@ -1030,6 +1122,16 @@ export const nftCard = {
     gap: "xs",
     marginTop: "sm",
     justifyContent: "center",
+    // Mobile: Stack vertically and adjust spacing
+    "@media (max-width: 768px)": {
+      flexDirection: "column",
+      gap: "sm",
+      marginTop: "xs",
+    },
+    "@media (max-width: 480px)": {
+      gap: "xs",
+      marginTop: "2xs",
+    },
   }),
   actionButton: css({
     padding: "xs sm",
@@ -1041,6 +1143,18 @@ export const nftCard = {
     textDecoration: "none",
     textAlign: "center",
     minWidth: "60px",
+    // Mobile: Larger touch targets and better spacing
+    "@media (max-width: 768px)": {
+      padding: "sm md",
+      fontSize: "sm",
+      minWidth: "80px",
+    },
+    "@media (max-width: 480px)": {
+      padding: "xs sm",
+      fontSize: "xs",
+      minWidth: "70px",
+      minHeight: "36px", // Ensure minimum touch target
+    },
   }),
 
   // Vereinfachtes Modal

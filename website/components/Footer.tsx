@@ -9,7 +9,9 @@ import { layout } from "../layouts/styles";
 const Footer: React.FC = () => {
   return (
     <footer className={layout.footer}>
-      <span className={layout.footerAttribution}>by fretchen</span>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 1rem" }}>
+        <span className={layout.footerAttribution}>by fretchen</span>
+      </div>
     </footer>
   );
 };

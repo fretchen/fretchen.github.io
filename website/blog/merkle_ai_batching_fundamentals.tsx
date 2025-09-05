@@ -1099,9 +1099,8 @@ export default function MerkleAIBatching() {
 
         <p>
           But when I started thinking about LLM text generation, I run into trouble. If someone wants to analyze 10
-          documents or generate multiple pieces of content, they&apos;d need 10 separate blockchain transactions.
-          That&apos;s roughly stubstantial gas fees alone, plus the hassle of confirming each transaction in their
-          wallet.
+          documents or generate multiple pieces of content, they&apos;d need 10 separate blockchain transactions. These
+          are substantial gas fees, plus the hassle of confirming each transaction in their wallet.
         </p>
 
         <p>

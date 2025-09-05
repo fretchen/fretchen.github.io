@@ -166,6 +166,7 @@ export function ImageGenerator({
       setIsLoading(false);
     }
   };
+  const mintingInfoLabel = useLocale({ label: "imagegen.mintingInfo" });
 
   return (
     <div className={styles.imageGen.compactLayout}>
@@ -296,8 +297,7 @@ export function ImageGenerator({
           })}
         >
           <InfoIcon size="xs" className={css({ mr: "1" })} />
-          Mints on Optimism (network fee &lt;\u003c 1¢). Sovereign generation — your prompt can only be used for your
-          NFT, not stored elsewhere.
+          {mintingInfoLabel}
         </div>
 
         {/* Status-Anzeige */}

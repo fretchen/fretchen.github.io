@@ -21,4 +21,9 @@ export default {
     download: "Herunterladen",
     collect: "Sammeln",
   },
+  walletoptions: {
+    connect: "Verbinden",
+    connectAccount: "Konto verbinden",
+    disconnect: "Trennen",
+  },
 };

@@ -35,6 +35,13 @@ export function NFTCard({
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
 
+  // Locale labels - moved to component level to fix hook order
+  const artworkLabel = useLocale({ label: "imagegen.artwork" });
+  const listedLabel = useLocale({ label: "imagegen.listed" });
+  const downloadLabel = useLocale({ label: "imagegen.download" });
+  const shareLabel = useLocale({ label: "imagegen.share" });
+  const deleteLabel = useLocale({ label: "imagegen.delete" });
+
   // Memoize the public client to prevent recreation on every render
   const publicClient = useMemo(
     () =>
@@ -290,7 +297,7 @@ export function NFTCard({
             <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
-                alt={nft.metadata?.name || `${useLocale({ label: "imagegen.artwork" })} #${nft.tokenId}`}
+                alt={nft.metadata?.name || `${artworkLabel} #${nft.tokenId}`}
                 className={styles.nftCard.image}
                 onClick={handleImageClick}
                 style={{ cursor: "pointer" }}
@@ -326,7 +333,7 @@ export function NFTCard({
                   disabled={isToggling || isListingConfirming}
                   className={styles.nftCard.checkbox}
                 />
-                {useLocale({ label: "imagegen.listed" })}
+                {listedLabel}
               </label>
             )}
             {isPublicView && owner && (
@@ -353,7 +360,7 @@ export function NFTCard({
                 className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
                 title="Download image"
               >
-                ⬇️ {useLocale({ label: "imagegen.download" })}
+                ⬇️ {downloadLabel}
               </button>
             )}
             <button
@@ -361,7 +368,7 @@ export function NFTCard({
               className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
               title="Share your artwork on the marketplace"
             >
-              📤 {useLocale({ label: "imagegen.share" })}
+              📤 {shareLabel}
             </button>
             {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
             {!isPublicView && (
@@ -372,11 +379,7 @@ export function NFTCard({
                 title="Delete artwork (permanent)"
                 style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
               >
-                {isBurning
-                  ? "🗑️ Deleting..."
-                  : isConfirming
-                    ? "⏳ Confirming..."
-                    : `🗑️ ${useLocale({ label: "imagegen.delete" })}`}
+                {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : `🗑️ ${deleteLabel}`}
               </button>
             )}
           </div>

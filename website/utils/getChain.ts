@@ -1,9 +1,9 @@
 import { sepolia, optimism, optimismSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
-import { CollectorNFTv1ABI } from "../../eth/abi/contracts/CollectorNFTv1";
-import { GenImNFTv3ABI } from "../../eth/abi/contracts/GenImNFTv3";
-import { SupportABI } from "../../eth/abi/contracts/Support";
-import { LLMv1ABI } from "../../eth/abi/contracts/LLMv1";
+import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
+import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
+import SupportABI from "../../eth/abi/contracts/Support.json";
+import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 /**
  * Get PUBLIC_ENV__CHAIN_NAME in both Node.js and Vite contexts

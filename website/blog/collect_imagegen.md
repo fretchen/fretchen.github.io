@@ -12,7 +12,7 @@ In the [previous blog post](./11), I described how I set up an image generator t
 They are all nicely visible in the screen shot below.
 
 <figure id="screenshot">
-<img src="./ScreenShot_PublicGallery.png" width="100%" />
+<img src="/blog/ScreenShot_PublicGallery.png" width="100%" />
 <figcaption>Screen shot of the new public gallery with a collect feature.</figcaption>
 </figure>
 

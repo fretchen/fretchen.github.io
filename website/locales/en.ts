@@ -21,4 +21,9 @@ export default {
     download: "Download",
     collect: "Collect",
   },
+  walletoptions: {
+    connect: "Connect",
+    connectAccount: "Connect Account",
+    disconnect: "Disconnect",
+  },
 };

@@ -166,6 +166,7 @@ export function ImageGenerator({
       setIsLoading(false);
     }
   };
+  const mintingInfoLabel = useLocale({ label: "imagegen.mintingInfo" });
 
   return (
     <div className={styles.imageGen.compactLayout}>
@@ -296,7 +297,7 @@ export function ImageGenerator({
           })}
         >
           <InfoIcon size="xs" className={css({ mr: "1" })} />
-          {useLocale({ label: "imagegen.mintingInfo" })}
+          {mintingInfoLabel}
         </div>
 
         {/* Status-Anzeige */}

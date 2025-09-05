@@ -74,19 +74,20 @@ export default function WalletOptions() {
   };
 
   // Display address or connect message
+  const connectLabel = useLocale({ label: "walletoptions.connect" });
+  const connectAccountLabel = useLocale({ label: "walletoptions.connectAccount" });
   const displayText =
     isMounted && isConnected
       ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
       : isMobile
-        ? useLocale({ label: "walletoptions.connect" })
-        : useLocale({ label: "walletoptions.connectAccount" });
+        ? connectLabel
+        : connectAccountLabel;
 
   // Get menu items based on connection status
+  const disconnectLabel = useLocale({ label: "walletoptions.disconnect" });
   const getMenuItems = () => {
     if (isMounted && isConnected) {
-      return [
-        { id: "disconnect", label: useLocale({ label: "walletoptions.disconnect" }), action: () => disconnect() },
-      ];
+      return [{ id: "disconnect", label: disconnectLabel, action: () => disconnect() }];
     } else {
       return connectors.map((connector) => ({
         id: connector.uid,

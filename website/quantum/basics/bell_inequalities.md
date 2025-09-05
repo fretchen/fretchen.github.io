@@ -106,7 +106,7 @@ ax.axhline(0, color="k")
 
     <matplotlib.lines.Line2D at 0x1111181f0>
 
-![png](bell_inequalities_files/bell_inequalities_7_1.png)
+![png](/quantum/basics/bell_inequalities_files/bell_inequalities_7_1.png)
 
 ## Breaking the casino with quantum technologies
 
@@ -121,7 +121,7 @@ qc.cx(0, 1)
 qc.draw("mpl")
 ```
 
-![png](bell_inequalities_files/bell_inequalities_9_0.png)
+![png](/quantum/basics/bell_inequalities_files/bell_inequalities_9_0.png)
 
 As a result of the circuit they have created a pair of entangled qubits. Imagine now that Alice and Bob can each one take one of the qubits into their cabin to play the quantum game. Given that Alice and Bob have to carry the qubit they have to have it in a box with two buttons.
 
@@ -266,7 +266,7 @@ ax.set_xlim(0, n_games)
 
     (0.0, 10000.0)
 
-![png](bell_inequalities_files/bell_inequalities_15_1.png)
+![png](/quantum/basics/bell_inequalities_files/bell_inequalities_15_1.png)
 
 This graph nicely summarizes that Alice and Bob have found a clear **quantum advantage** in the game. They could break the casino if the casino let's them play long enough. It is fairly crucial to underline that Alice and Bob did not cheat in any way. They were simply able to do **more** with quantum technologies than it would be possible with any classical approach.
 

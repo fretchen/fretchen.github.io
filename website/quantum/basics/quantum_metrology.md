@@ -24,7 +24,7 @@ Precise time keeping is essential to mondern industry. Financial services are hi
 
 You might have heard that atoms consist of a nucleus which is positively charged and a bunch of negatively charged electrons circling around this nucleus. And as for satellites that orbit around earth, their speed is different in different orbits. So, electrons that are closer to the core, in a lower orbit, take less time to circle around the core than electrons that that further away, in a higher orbit. And it was one of the first discoveries by quantum mechanics that only a number of very specific orbits with sharply defined frequencies are allowed.
 
-![Atoms](AtomWithOrbits.png)
+![Atoms](/quantum/basics/AtomWithOrbits.png)
 
 And then then electrons can then jump from one orbit to another if you shine in microwave radiation at the corresponding frequency. Yes, it is the same kind of radiation that heats up your food in the microwave oven. Except that here the radiation does not heat the atom it just makes the electron jump to another orbit. And this highly controlled transition of the electron between two orbits is what atomic clocks are building upon. Actually, we have now defined the second based on this idea. The definition reads:
 

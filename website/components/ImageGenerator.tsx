@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
 import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
@@ -49,6 +49,8 @@ export function ImageGenerator({
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const chain = getChain();
+  const currentChainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
   // Read mint price from contract
   const { data: mintPrice } = useReadContract({
@@ -68,6 +70,25 @@ export function ImageGenerator({
       onError?.(errorMsg);
       return;
     }
+
+    // Check if connected to the correct chain
+    const expectedChainId = chain?.id;
+    if (expectedChainId && currentChainId !== expectedChainId) {
+      try {
+        setError("Switching to Optimism network...");
+        await switchChain({ chainId: expectedChainId });
+        // Wait a bit for the chain switch to take effect
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setError(null);
+      } catch (switchError) {
+        console.error("Failed to switch chain:", switchError);
+        const errorMsg = "Please switch to Optimism network to create artworks";
+        setError(errorMsg);
+        onError?.(errorMsg);
+        return;
+      }
+    }
+
     if (!prompt.trim()) {
       const errorMsg = "Please enter a prompt";
       setError(errorMsg);
@@ -186,7 +207,7 @@ export function ImageGenerator({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={useLocale({ label: "imagegen.promptPlaceholder" })}
-            disabled={isLoading || mintingStatus !== "idle"}
+            disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
             className={styles.imageGen.compactTextarea}
           />
 
@@ -196,7 +217,7 @@ export function ImageGenerator({
                 id="imageSizeSelect"
                 value={size}
                 onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
-                disabled={isLoading || mintingStatus !== "idle"}
+                disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
                 className={styles.imageGen.compactSelect}
                 aria-label="Select image format for your artwork"
               >
@@ -216,7 +237,7 @@ export function ImageGenerator({
                   type="checkbox"
                   checked={isListed}
                   onChange={(e) => setIsListed(e.target.checked)}
-                  disabled={isLoading || mintingStatus !== "idle"}
+                  disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
                   className={styles.nftCard.checkbox}
                 />
                 <LocaleText label="imagegen.listed" />
@@ -225,14 +246,21 @@ export function ImageGenerator({
 
             <button
               onClick={handleMintAndGenerate}
-              disabled={isLoading || !prompt.trim() || !isConnected}
+              disabled={isLoading || !prompt.trim() || !isConnected || isSwitchingChain}
               className={`${styles.imageGen.compactButton} ${
-                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
+                isLoading || !prompt.trim() || !isConnected || isSwitchingChain
+                  ? styles.imageGen.compactButtonDisabled
+                  : ""
               }`}
               title={useLocale({ label: "imagegen.mintingInfo" })}
               aria-describedby="create-artwork-info"
             >
-              {isLoading ? (
+              {isSwitchingChain ? (
+                <>
+                  <div className={styles.spinner}></div>
+                  Switching Network...
+                </>
+              ) : isLoading ? (
                 <>
                   <div className={styles.spinner}></div>
                   {mintingStatus === "minting" ? "Creating..." : "Generating..."}

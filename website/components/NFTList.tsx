@@ -7,11 +7,11 @@ import { Tab } from "./Tab";
 import { MyNFTList } from "./MyNFTList";
 import { PublicNFTList } from "./PublicNFTList";
 import { useLocale } from "../hooks/useLocale";
-export function NFTList({ 
-  newlyCreatedNFT, 
-  onNewNFTDisplayed, 
+export function NFTList({
+  newlyCreatedNFT,
+  onNewNFTDisplayed,
   activeTab: controlledActiveTab,
-  onTabChange 
+  onTabChange,
 }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();

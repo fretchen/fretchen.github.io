@@ -7,7 +7,7 @@ import * as styles from "../../layouts/styles";
 
 export default function Page() {
   const { isConnected } = useAccount();
-  
+
   const [newlyCreatedNFT, setNewlyCreatedNFT] = useState<{
     tokenId: bigint;
     imageUrl: string;

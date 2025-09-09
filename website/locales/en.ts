@@ -10,7 +10,12 @@ export default {
     wide: "▬ Wide",
     listed: "Listed",
     createArtwork: "Create Artwork",
-    connectWallet: "Connect your account to create artwork",
+    connectWalletButton: "Connect your account to create artwork",
+    connectWalletTitle: "Connect your wallet to create artwork",
+    enterPrompt: "Enter a prompt to create",
+    switchingNetwork: "Switching Network...",
+    creating: "Creating...",
+    generating: "Generating...",
     mintingInfo:
       "Mints on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
     myArtworks: "My Artworks",

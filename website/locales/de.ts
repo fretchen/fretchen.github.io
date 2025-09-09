@@ -10,7 +10,12 @@ export default {
     wide: "▬ breit",
     listed: "Gelistet",
     createArtwork: "Kunstwerk erstellen",
-    connectWallet: "Verbinde dein Konto, um Kunstwerke zu erstellen",
+    connectWalletButton: "Verbinde dein Konto, um Kunstwerke zu erstellen",
+    connectWalletTitle: "Verbinde deine Wallet, um Kunstwerke zu erstellen",
+    enterPrompt: "Gib einen Prompt ein, um zu erstellen",
+    switchingNetwork: "Netzwerk wird gewechselt...",
+    creating: "Wird erstellt...",
+    generating: "Wird generiert...",
     mintingInfo:
       "Registrierung auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
     myArtworks: "Meine Kunstwerke",

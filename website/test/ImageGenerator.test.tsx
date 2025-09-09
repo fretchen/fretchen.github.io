@@ -9,15 +9,16 @@
  * - Automatic chain switching when user is on wrong network
  * - User interaction simulation (form input and button clicks)
  * - Integration with wagmi hooks for blockchain operations
+ * - Progressive disclosure: Connect Wallet → Create Artwork flow
  *
  * Testing Strategy:
  * - Mocks external dependencies (wagmi hooks, utilities, styles)
  * - Focuses on component behavior rather than implementation details
- * - Uses test IDs for reliable element selection
+ * - Uses semantic selectors (roles, accessible names) for reliable element selection
  * - Simulates real user interactions to test complete workflows
  *
  * Mock Setup:
- * - wagmi hooks: Mocked to simulate blockchain state and operations
+ * - wagmi hooks: Mocked to simulate blockchain state and operations (useAccount, useChainId, useSwitchChain, useConnect, useReadContract, useWriteContract)
  * - getChain utility: Returns Optimism network (chain ID 10)
  * - Styles: Minimal mocking to avoid brittleness
  * - Locale components: Simplified to return predictable test IDs
@@ -39,6 +40,7 @@ const mockUseChainId = vi.fn();
 const mockUseSwitchChain = vi.fn();
 const mockUseReadContract = vi.fn();
 const mockUseWriteContract = vi.fn();
+const mockUseConnect = vi.fn();
 
 vi.mock("wagmi", () => ({
   useAccount: () => mockUseAccount(),
@@ -46,6 +48,7 @@ vi.mock("wagmi", () => ({
   useSwitchChain: () => mockUseSwitchChain(),
   useReadContract: () => mockUseReadContract(),
   useWriteContract: () => mockUseWriteContract(),
+  useConnect: () => mockUseConnect(),
 }));
 
 // Mock other dependencies
@@ -102,6 +105,11 @@ beforeEach(() => {
   mockUseWriteContract.mockReturnValue({
     writeContractAsync: vi.fn(),
   });
+
+  mockUseConnect.mockReturnValue({
+    connectors: [{ id: "mock-connector", name: "Mock Wallet" }],
+    connect: vi.fn(),
+  });
 });
 
 describe("ImageGenerator Component", () => {
@@ -136,8 +144,8 @@ describe("ImageGenerator Component", () => {
     const textarea = screen.getByPlaceholderText("mocked-imagegen.promptPlaceholder");
     fireEvent.change(textarea, { target: { value: "Test artwork prompt" } });
 
-    // Simulate user interaction: click the create button (find by test ID)
-    const createButton = screen.getByTestId("locale-imagegen.createArtwork");
+    // Simulate user interaction: click the create button (find by role and accessible name)
+    const createButton = screen.getByRole("button", { name: /mocked-imagegen\.createArtwork/i });
     fireEvent.click(createButton);
 
     // Verify that switchChain was called with the correct chain ID

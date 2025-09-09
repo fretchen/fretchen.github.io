@@ -72,6 +72,15 @@ export function ImageGenerator({
   };
 
   // Helper functions for button state
+  // Localized button texts
+  const connectWalletButtonText = useLocale({ label: "imagegen.connectWalletButton" });
+  const connectWalletTitleText = useLocale({ label: "imagegen.connectWalletTitle" });
+  const enterPromptText = useLocale({ label: "imagegen.enterPrompt" });
+  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
+  const creatingText = useLocale({ label: "imagegen.creating" });
+  const generatingText = useLocale({ label: "imagegen.generating" });
+  const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
+
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
     if (isLoading) return "loading";
@@ -83,17 +92,17 @@ export function ImageGenerator({
   const getButtonText = (state: string) => {
     switch (state) {
       case "switching":
-        return "Switching Network...";
+        return switchingNetworkText;
       case "loading":
-        return mintingStatus === "minting" ? "Creating..." : "Generating...";
+        return mintingStatus === "minting" ? creatingText : generatingText;
       case "connect":
-        return "Connect Wallet";
+        return connectWalletButtonText;
       case "needsPrompt":
-        return "Enter a prompt to create";
+        return enterPromptText;
       case "ready":
-        return "Create Artwork";
+        return createArtworkText;
       default:
-        return "Create Artwork";
+        return createArtworkText;
     }
   };
 
@@ -104,10 +113,10 @@ export function ImageGenerator({
     <button
       onClick={handleWalletConnection}
       className={`${styles.imageGen.compactButton}`}
-      title="Connect your wallet to create artwork"
+      title={connectWalletTitleText}
       aria-describedby="create-artwork-info"
     >
-      🔗 Connect Wallet
+      🔗 {connectWalletButtonText}
     </button>
   );
 

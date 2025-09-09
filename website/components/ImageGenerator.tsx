@@ -281,9 +281,6 @@ export function ImageGenerator({
             🎨
             <LocaleText label="imagegen.title" />
           </h3>
-          <span className={styles.imageGen.compactSubtitle}>
-            <LocaleText label="imagegen.description" />
-          </span>
         </div>
 
         <div className={styles.imageGen.compactForm}>

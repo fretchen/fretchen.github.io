@@ -1,11 +1,8 @@
 // locales/en.ts
 export default {
   imagegen: {
-    title: "Create Your Digital Artwork",
-    description:
-      "Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on the blockchain.",
-    promptPlaceholder:
-      "Describe your image in detail... (e.g., 'A futuristic city skyline at sunset with neon lights reflecting in the water')",
+    title: "Create Collectible AI Art • 10¢",
+    promptPlaceholder: "Describe your image in detail...",
     square: "◼ Square",
     wide: "▬ Wide",
     listed: "Listed",

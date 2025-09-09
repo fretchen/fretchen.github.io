@@ -1,11 +1,8 @@
 // locales/de.ts
 export default {
   imagegen: {
-    title: "Erstelle Dein digitales Kunstwerk",
-    description:
-      "Beschreibe Deine Vision und generiere ein einzigartiges KI-Kunstwerk für ~10¢. Deine Kreation wird als NFT auf der Blockchain registriert.",
-    promptPlaceholder:
-      "Beschreibe Dein Bild im Detail... (z.B. 'Eine futuristische Stadtansicht bei Sonnenuntergang mit Neonlichtern, die sich im Wasser spiegeln')",
+    title: "Erstelle einzigartige KI Kunstwerke • 10¢",
+    promptPlaceholder: "Beschreibe dein Bild im Detail...",
     square: "◼ quadratisch",
     wide: "▬ breit",
     listed: "Gelistet",

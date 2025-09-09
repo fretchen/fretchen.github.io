@@ -18,17 +18,21 @@ export function NFTCard({
   onListedStatusChanged,
   isHighlighted = false,
   isPublicView = false,
+  preloadedImageUrl,
+  preloadedMetadata,
 }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
-  // NFT state - always load from blockchain
+  // NFT state - initialize with preloaded data if available
   const [nft, setNft] = useState<NFT>({
     tokenId,
     tokenURI: "",
-    isLoading: true,
+    imageUrl: preloadedImageUrl,
+    metadata: preloadedMetadata,
+    isLoading: !preloadedImageUrl, // Not loading if we have preloaded data
   });
   const [owner, setOwner] = useState<string>("");
 
@@ -90,6 +94,16 @@ export function NFTCard({
 
         const tokenURI = tokenURIResult as string;
 
+        // Skip fetching if tokenURI is empty and we have preloaded data
+        if (!tokenURI && (preloadedImageUrl || preloadedMetadata)) {
+          setNft((prev) => ({
+            ...prev,
+            tokenURI: "",
+            isLoading: false,
+          }));
+          return;
+        }
+
         // Get owner if in public view
         let nftOwner = "";
         if (isPublicView) {
@@ -118,14 +132,23 @@ export function NFTCard({
           }
         }
 
-        // Fetch metadata
-        const metadata = await fetchNFTMetadata(tokenURI);
+        // Fetch metadata only if tokenURI is available
+        let metadata = preloadedMetadata; // Keep preloaded metadata as fallback
+        let finalImageUrl = preloadedImageUrl; // Keep preloaded image as fallback
+
+        if (tokenURI) {
+          const contractMetadata = await fetchNFTMetadata(tokenURI);
+          if (contractMetadata) {
+            metadata = contractMetadata;
+            finalImageUrl = contractMetadata.image;
+          }
+        }
 
         setNft({
           tokenId,
           tokenURI,
-          metadata: metadata || undefined,
-          imageUrl: metadata?.image,
+          metadata,
+          imageUrl: finalImageUrl,
           isLoading: false,
           isListed,
         });
@@ -134,6 +157,8 @@ export function NFTCard({
         setNft({
           tokenId,
           tokenURI: "",
+          imageUrl: preloadedImageUrl, // Keep preloaded image on error
+          metadata: preloadedMetadata, // Keep preloaded metadata on error
           isLoading: false,
           error: `Failed to load NFT #${tokenId}: ${error instanceof Error ? error.message : "Unknown error"}`,
         });
@@ -141,7 +166,7 @@ export function NFTCard({
     };
 
     loadNFTData();
-  }, [tokenId, isPublicView]);
+  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({

@@ -7,14 +7,22 @@ import { Tab } from "./Tab";
 import { MyNFTList } from "./MyNFTList";
 import { PublicNFTList } from "./PublicNFTList";
 import { useLocale } from "../hooks/useLocale";
-export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
+export function NFTList({
+  newlyCreatedNFT,
+  onNewNFTDisplayed,
+  activeTab: controlledActiveTab,
+  onTabChange,
+}: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
   const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  // Tab state - start with "public" if wallet not connected, otherwise "my"
-  const [activeTab, setActiveTab] = useState<"my" | "public">(() => {
+  // Use controlled tab state if provided, otherwise use local state
+  const [localActiveTab, setLocalActiveTab] = useState<"my" | "public">(() => {
     return isConnected ? "my" : "public";
   });
+
+  const activeTab = controlledActiveTab ?? localActiveTab;
+  const setActiveTab = onTabChange ?? setLocalActiveTab;
 
   // Get user's NFT balance for display in tab
   const { data: userBalance } = useReadContract({

@@ -1,16 +1,18 @@
 // locales/en.ts
 export default {
   imagegen: {
-    title: "Create Your Digital Artwork",
-    description:
-      "Describe your vision and generate a unique AI artwork for ~10¢. Your creation will be minted as an NFT on the blockchain.",
-    promptPlaceholder:
-      "Describe your image in detail... (e.g., 'A futuristic city skyline at sunset with neon lights reflecting in the water')",
+    title: "Create Collectible AI Art • 10¢",
+    promptPlaceholder: "Describe your image in detail...",
     square: "◼ Square",
     wide: "▬ Wide",
     listed: "Listed",
     createArtwork: "Create Artwork",
-    connectWallet: "Connect your account to create artwork",
+    connectWalletButton: "Connect your account to create artwork",
+    connectWalletTitle: "Connect your wallet to create artwork",
+    enterPrompt: "Enter a prompt to create",
+    switchingNetwork: "Switching Network...",
+    creating: "Creating...",
+    generating: "Generating...",
     mintingInfo:
       "Mints on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
     myArtworks: "My Artworks",
@@ -20,6 +22,7 @@ export default {
     delete: "Delete",
     download: "Download",
     collect: "Collect",
+    connectForArtwork: "Connect your account to create artwork",
   },
   walletoptions: {
     connect: "Connect",

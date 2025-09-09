@@ -192,13 +192,27 @@ export const imageGen = {
     fontSize: "lg",
     fontWeight: "bold",
     margin: 0,
+    marginBottom: "md",
     color: "brand",
+    lineHeight: "1.3",
+    "@media (max-width: 640px)": {
+      fontSize: "md",
+      lineHeight: "1.2",
+    },
   }),
   compactSubtitle: css({
     fontSize: "sm",
     color: "gray.600",
     marginTop: "xs",
     lineHeight: "1.4",
+  }),
+  compactSubtitleSimplified: css({
+    fontSize: "sm",
+    color: "gray.500",
+    marginTop: "xs",
+    marginBottom: "md",
+    lineHeight: "1.3",
+    fontWeight: "normal",
   }),
   compactForm: css({
     display: "flex",
@@ -326,6 +340,10 @@ export const imageGen = {
     resize: "vertical",
     transition: "all 0.2s ease",
     fontFamily: "inherit",
+    _placeholder: {
+      color: "gray.400",
+      opacity: 1,
+    },
     _focus: {
       borderColor: "brand",
       outline: "none",

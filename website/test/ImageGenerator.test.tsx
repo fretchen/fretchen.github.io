@@ -1,52 +1,154 @@
+/**
+ * ImageGenerator Component Tests
+ *
+ * This test suite verifies the functionality of the ImageGenerator component,
+ * which allows users to create AI-generated artwork and mint it as NFTs on the blockchain.
+ *
+ * Key Features Tested:
+ * - Component rendering with and without props
+ * - Automatic chain switching when user is on wrong network
+ * - User interaction simulation (form input and button clicks)
+ * - Integration with wagmi hooks for blockchain operations
+ * - Progressive disclosure: Connect Wallet → Create Artwork flow
+ *
+ * Testing Strategy:
+ * - Mocks external dependencies (wagmi hooks, utilities, styles)
+ * - Focuses on component behavior rather than implementation details
+ * - Uses semantic selectors (roles, accessible names) for reliable element selection
+ * - Simulates real user interactions to test complete workflows
+ *
+ * Mock Setup:
+ * - wagmi hooks: Mocked to simulate blockchain state and operations (useAccount, useChainId, useSwitchChain, useConnect, useReadContract, useWriteContract)
+ * - getChain utility: Returns Optimism network (chain ID 10)
+ * - Styles: Minimal mocking to avoid brittleness
+ * - Locale components: Simplified to return predictable test IDs
+ *
+ * Test Scenarios:
+ * 1. Basic rendering - Verifies component mounts correctly
+ * 2. Props handling - Ensures component accepts and uses props
+ * 3. Chain switching - Tests automatic network switching before minting
+ */
+
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { ImageGenerator } from "../components/ImageGenerator";
 
-// Simple mock for ImageGenerator component
-const MockImageGenerator = vi.fn(() => <div data-testid="image-generator">Image Generator Component</div>);
+// Mock wagmi hooks
+const mockUseAccount = vi.fn();
+const mockUseChainId = vi.fn();
+const mockUseSwitchChain = vi.fn();
+const mockUseReadContract = vi.fn();
+const mockUseWriteContract = vi.fn();
+const mockUseConnect = vi.fn();
 
-vi.mock("../components/ImageGenerator", () => ({
-  default: MockImageGenerator,
-  ImageGenerator: MockImageGenerator,
+vi.mock("wagmi", () => ({
+  useAccount: () => mockUseAccount(),
+  useChainId: () => mockUseChainId(),
+  useSwitchChain: () => mockUseSwitchChain(),
+  useReadContract: () => mockUseReadContract(),
+  useWriteContract: () => mockUseWriteContract(),
+  useConnect: () => mockUseConnect(),
 }));
 
-// Mock all complex dependencies
+// Mock other dependencies
 vi.mock("../utils/getChain", () => ({
-  getChain: vi.fn(() => ({ id: 1 })),
-  getGenAiNFTContractConfig: vi.fn(() => ({ address: "0x123", abi: [] })),
+  getChain: vi.fn(() => ({ id: 10 })), // Optimism chain ID
+  getGenAiNFTContractConfig: vi.fn(() => ({
+    address: "0x1234567890123456789012345678901234567890",
+    abi: [],
+  })),
 }));
 
 vi.mock("../layouts/styles", () => ({
-  imageGen: {
-    cardLayout: "mock-layout",
-    column: "mock-column",
-    columnHeading: "mock-heading",
-    promptTextarea: "mock-textarea",
-    button: "mock-button",
-    spinner: "mock-spinner",
-  },
+  imageGen: {},
+  nftCard: {},
+  spinner: "mock-spinner",
 }));
 
 vi.mock("../styled-system/css", () => ({
-  css: vi.fn(() => "mock-css-class"),
+  css: () => "mock-css-class",
 }));
+
+vi.mock("../components/LocaleText", () => ({
+  LocaleText: ({ label }: { label: string }) => <span data-testid={`locale-${label}`}>{label}</span>,
+}));
+
+vi.mock("../hooks/useLocale", () => ({
+  useLocale: ({ label }: { label: string }) => `mocked-${label}`,
+}));
+
+// Mock window.ethereum
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  // Mock window.ethereum for blockchain interactions
+  global.window = Object.create(window);
+  global.window.ethereum = { request: vi.fn() };
+
+  // Set up default wagmi hook mocks
+  mockUseAccount.mockReturnValue({
+    address: "0x1234567890123456789012345678901234567890",
+    isConnected: true,
+  });
+
+  mockUseChainId.mockReturnValue(1); // Wrong chain (not Optimism)
+  mockUseSwitchChain.mockReturnValue({
+    switchChain: vi.fn(),
+    isPending: false,
+  });
+
+  mockUseReadContract.mockReturnValue({
+    data: BigInt("10000000000000000"), // 0.01 ETH in wei
+  });
+
+  mockUseWriteContract.mockReturnValue({
+    writeContractAsync: vi.fn(),
+  });
+
+  mockUseConnect.mockReturnValue({
+    connectors: [{ id: "mock-connector", name: "Mock Wallet" }],
+    connect: vi.fn(),
+  });
+});
 
 describe("ImageGenerator Component", () => {
   it("should render ImageGenerator component", () => {
-    render(<MockImageGenerator />);
+    render(<ImageGenerator />);
 
-    expect(screen.getByTestId("image-generator")).toBeInTheDocument();
-    expect(screen.getByText("Image Generator Component")).toBeInTheDocument();
+    expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
   });
 
   it("should render with props", () => {
     const mockProps = {
-      onImageGenerated: vi.fn(),
-      onNFTCreated: vi.fn(),
+      apiUrl: "https://test-api.com",
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
     };
 
-    render(<MockImageGenerator {...mockProps} />);
+    render(<ImageGenerator {...mockProps} />);
 
-    expect(screen.getByTestId("image-generator")).toBeInTheDocument();
+    expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
+  });
+
+  it("should call switchChain when user attempts to create artwork on wrong network", async () => {
+    const mockSwitchChain = vi.fn().mockResolvedValue(undefined);
+    mockUseSwitchChain.mockReturnValue({
+      switchChain: mockSwitchChain,
+      isPending: false,
+    });
+
+    render(<ImageGenerator />);
+
+    // Simulate user interaction: fill in the prompt
+    const textarea = screen.getByPlaceholderText("mocked-imagegen.promptPlaceholder");
+    fireEvent.change(textarea, { target: { value: "Test artwork prompt" } });
+
+    // Simulate user interaction: click the create button (find by role and accessible name)
+    const createButton = screen.getByRole("button", { name: /mocked-imagegen\.createArtwork/i });
+    fireEvent.click(createButton);
+
+    // Verify that switchChain was called with the correct chain ID
+    expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 10 });
   });
 });

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useConnect } from "wagmi";
 import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
 import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
@@ -49,6 +49,9 @@ export function ImageGenerator({
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const chain = getChain();
+  const currentChainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const { connectors, connect } = useConnect();
 
   // Read mint price from contract
   const { data: mintPrice } = useReadContract({
@@ -61,6 +64,109 @@ export function ImageGenerator({
   // Contract write operations
   const { writeContractAsync } = useWriteContract();
 
+  // Helper function to wait for chain switch completion
+  const waitForChainSwitch = async (targetChainId: number): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const checkChain = () => {
+        if (currentChainId === targetChainId) {
+          resolve();
+        } else {
+          setTimeout(checkChain, 100); // Check every 100ms
+        }
+      };
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        reject(new Error("Chain switch timeout - please try again"));
+      }, 10000);
+      
+      checkChain();
+    });
+  };
+
+  // Handle wallet connection
+  const handleWalletConnection = () => {
+    if (connectors.length > 0) {
+      connect({ connector: connectors[0] }); // Use first available connector
+    }
+  };
+
+  // Helper functions for button state
+  // Localized button texts
+  const connectWalletButtonText = useLocale({ label: "imagegen.connectWalletButton" });
+  const connectWalletTitleText = useLocale({ label: "imagegen.connectWalletTitle" });
+  const enterPromptText = useLocale({ label: "imagegen.enterPrompt" });
+  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
+  const creatingText = useLocale({ label: "imagegen.creating" });
+  const generatingText = useLocale({ label: "imagegen.generating" });
+  const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
+
+  const getButtonState = () => {
+    if (isSwitchingChain) return "switching";
+    if (isLoading) return "loading";
+    if (!isConnected) return "connect";
+    if (!prompt.trim()) return "needsPrompt";
+    return "ready";
+  };
+
+  const getButtonText = (state: string) => {
+    switch (state) {
+      case "switching":
+        return switchingNetworkText;
+      case "loading":
+        return mintingStatus === "minting" ? creatingText : generatingText;
+      case "connect":
+        return connectWalletButtonText;
+      case "needsPrompt":
+        return enterPromptText;
+      case "ready":
+        return createArtworkText;
+      default:
+        return createArtworkText;
+    }
+  };
+
+  const buttonState = getButtonState();
+
+  // Button Components
+  const ConnectWalletButton = () => (
+    <button
+      onClick={handleWalletConnection}
+      className={`${styles.imageGen.compactButton}`}
+      title={connectWalletTitleText}
+      aria-describedby="create-artwork-info"
+    >
+      🔗 {connectWalletButtonText}
+    </button>
+  );
+
+  const CreateArtworkButton = () => {
+    const isDisabled = buttonState === "needsPrompt";
+    const isLoadingState = buttonState === "loading" || buttonState === "switching";
+
+    return (
+      <button
+        onClick={handleMintAndGenerate}
+        disabled={isDisabled}
+        className={`${styles.imageGen.compactButton} ${isDisabled ? styles.imageGen.compactButtonDisabled : ""}`}
+        title={useLocale({ label: "imagegen.mintingInfo" })}
+        aria-describedby="create-artwork-info"
+      >
+        {isLoadingState ? (
+          <>
+            <div className={styles.spinner}></div>
+            {getButtonText(buttonState)}
+          </>
+        ) : (
+          <>
+            🎨 {getButtonText(buttonState)}
+            <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
+          </>
+        )}
+      </button>
+    );
+  };
+
   const handleMintAndGenerate = async () => {
     if (!isConnected || !address) {
       const errorMsg = "Please connect your account first";
@@ -68,6 +174,29 @@ export function ImageGenerator({
       onError?.(errorMsg);
       return;
     }
+
+    // Check if connected to the correct chain
+    const expectedChainId = chain?.id;
+    if (expectedChainId && currentChainId !== expectedChainId) {
+      try {
+        setError("Switching to Optimism network...");
+        await switchChain({ chainId: expectedChainId });
+        
+        // Wait for the chain switch to complete using polling
+        await waitForChainSwitch(expectedChainId);
+        
+        setError(null);
+      } catch (switchError) {
+        console.error("Failed to switch chain:", switchError);
+        const errorMsg = switchError instanceof Error
+          ? switchError.message
+          : "Please switch to Optimism network to create artworks";
+        setError(errorMsg);
+        onError?.(errorMsg);
+        return;
+      }
+    }
+
     if (!prompt.trim()) {
       const errorMsg = "Please enter a prompt";
       setError(errorMsg);
@@ -86,8 +215,8 @@ export function ImageGenerator({
     setMintingStatus("minting");
 
     try {
-      // Start minting with a temporary URI and listing preference
-      const tempUri = `ipfs://tempURI/${Date.now()}`;
+      // Start minting with empty URI - backend will update it with real metadata
+      const tempUri = "";
       const txHash = await writeContractAsync({
         ...genAiNFTContractConfig,
         functionName: "safeMint",
@@ -176,9 +305,6 @@ export function ImageGenerator({
             🎨
             <LocaleText label="imagegen.title" />
           </h3>
-          <span className={styles.imageGen.compactSubtitle}>
-            <LocaleText label="imagegen.description" />
-          </span>
         </div>
 
         <div className={styles.imageGen.compactForm}>
@@ -186,7 +312,7 @@ export function ImageGenerator({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={useLocale({ label: "imagegen.promptPlaceholder" })}
-            disabled={isLoading || mintingStatus !== "idle"}
+            disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
             className={styles.imageGen.compactTextarea}
           />
 
@@ -196,7 +322,7 @@ export function ImageGenerator({
                 id="imageSizeSelect"
                 value={size}
                 onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
-                disabled={isLoading || mintingStatus !== "idle"}
+                disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
                 className={styles.imageGen.compactSelect}
                 aria-label="Select image format for your artwork"
               >
@@ -216,34 +342,14 @@ export function ImageGenerator({
                   type="checkbox"
                   checked={isListed}
                   onChange={(e) => setIsListed(e.target.checked)}
-                  disabled={isLoading || mintingStatus !== "idle"}
+                  disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
                   className={styles.nftCard.checkbox}
                 />
                 <LocaleText label="imagegen.listed" />
               </label>
             </div>
 
-            <button
-              onClick={handleMintAndGenerate}
-              disabled={isLoading || !prompt.trim() || !isConnected}
-              className={`${styles.imageGen.compactButton} ${
-                isLoading || !prompt.trim() || !isConnected ? styles.imageGen.compactButtonDisabled : ""
-              }`}
-              title={useLocale({ label: "imagegen.mintingInfo" })}
-              aria-describedby="create-artwork-info"
-            >
-              {isLoading ? (
-                <>
-                  <div className={styles.spinner}></div>
-                  {mintingStatus === "minting" ? "Creating..." : "Generating..."}
-                </>
-              ) : (
-                <>
-                  🎨 <LocaleText label="imagegen.createArtwork" />
-                  <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
-                </>
-              )}
-            </button>
+            {buttonState === "connect" ? <ConnectWalletButton /> : <CreateArtworkButton />}
           </div>
         </div>
 
@@ -305,12 +411,6 @@ export function ImageGenerator({
           <div className={styles.imageGen.compactStatus}>
             <div className={styles.spinner}></div>
             <span>{mintingStatus === "minting" ? "Creating your artwork..." : "Generating image..."}</span>
-          </div>
-        )}
-
-        {!isConnected && (
-          <div className={styles.imageGen.compactError}>
-            <LocaleText label="imagegen.connectWallet" />
           </div>
         )}
 

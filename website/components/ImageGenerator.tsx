@@ -119,9 +119,7 @@ export function ImageGenerator({
       <button
         onClick={handleMintAndGenerate}
         disabled={isDisabled}
-        className={`${styles.imageGen.compactButton} ${
-          isDisabled ? styles.imageGen.compactButtonDisabled : ""
-        }`}
+        className={`${styles.imageGen.compactButton} ${isDisabled ? styles.imageGen.compactButtonDisabled : ""}`}
         title={useLocale({ label: "imagegen.mintingInfo" })}
         aria-describedby="create-artwork-info"
       >

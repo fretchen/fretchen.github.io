@@ -208,6 +208,10 @@ export interface NFTListProps extends BaseComponentProps {
   };
   /** Callback fired when the newly created NFT has been displayed and highlighting is removed */
   onNewNFTDisplayed?: () => void;
+  /** Current active tab state (controlled from parent component) */
+  activeTab?: "my" | "public";
+  /** Callback to change the active tab */
+  onTabChange?: (tab: "my" | "public") => void;
 }
 
 /**

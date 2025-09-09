@@ -1,3 +1,33 @@
+/**
+ * ImageGenerator Component Tests
+ *
+ * This test suite verifies the functionality of the ImageGenerator component,
+ * which allows users to create AI-generated artwork and mint it as NFTs on the blockchain.
+ *
+ * Key Features Tested:
+ * - Component rendering with and without props
+ * - Automatic chain switching when user is on wrong network
+ * - User interaction simulation (form input and button clicks)
+ * - Integration with wagmi hooks for blockchain operations
+ *
+ * Testing Strategy:
+ * - Mocks external dependencies (wagmi hooks, utilities, styles)
+ * - Focuses on component behavior rather than implementation details
+ * - Uses test IDs for reliable element selection
+ * - Simulates real user interactions to test complete workflows
+ *
+ * Mock Setup:
+ * - wagmi hooks: Mocked to simulate blockchain state and operations
+ * - getChain utility: Returns Optimism network (chain ID 10)
+ * - Styles: Minimal mocking to avoid brittleness
+ * - Locale components: Simplified to return predictable test IDs
+ *
+ * Test Scenarios:
+ * 1. Basic rendering - Verifies component mounts correctly
+ * 2. Props handling - Ensures component accepts and uses props
+ * 3. Chain switching - Tests automatic network switching before minting
+ */
+
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";

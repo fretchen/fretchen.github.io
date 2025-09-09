@@ -20,6 +20,7 @@ export default {
     delete: "Löschen",
     download: "Herunterladen",
     collect: "Sammeln",
+    connectForArtwork: "Verbinde dein Konto, um Kunstwerke zu erstellen",
   },
   walletoptions: {
     connect: "Verbinden",

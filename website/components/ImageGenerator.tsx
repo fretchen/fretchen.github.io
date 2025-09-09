@@ -64,6 +64,26 @@ export function ImageGenerator({
   // Contract write operations
   const { writeContractAsync } = useWriteContract();
 
+  // Helper function to wait for chain switch completion
+  const waitForChainSwitch = async (targetChainId: number): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const checkChain = () => {
+        if (currentChainId === targetChainId) {
+          resolve();
+        } else {
+          setTimeout(checkChain, 100); // Check every 100ms
+        }
+      };
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        reject(new Error("Chain switch timeout - please try again"));
+      }, 10000);
+      
+      checkChain();
+    });
+  };
+
   // Handle wallet connection
   const handleWalletConnection = () => {
     if (connectors.length > 0) {
@@ -161,12 +181,16 @@ export function ImageGenerator({
       try {
         setError("Switching to Optimism network...");
         await switchChain({ chainId: expectedChainId });
-        // Wait a bit for the chain switch to take effect
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        
+        // Wait for the chain switch to complete using polling
+        await waitForChainSwitch(expectedChainId);
+        
         setError(null);
       } catch (switchError) {
         console.error("Failed to switch chain:", switchError);
-        const errorMsg = "Please switch to Optimism network to create artworks";
+        const errorMsg = switchError instanceof Error
+          ? switchError.message
+          : "Please switch to Optimism network to create artworks";
         setError(errorMsg);
         onError?.(errorMsg);
         return;

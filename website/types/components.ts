@@ -182,6 +182,10 @@ export interface NFTCardProps extends BaseComponentProps {
   isPublicView?: boolean;
   /** Callback when the listed status changes (only for private NFTs) */
   onListedStatusChanged?: (tokenId: bigint, isListed: boolean) => void;
+  /** Preloaded image URL for immediate display (bypasses contract fetching initially) */
+  preloadedImageUrl?: string;
+  /** Preloaded metadata for immediate display (bypasses contract fetching initially) */
+  preloadedMetadata?: NFTMetadata;
 }
 
 /**

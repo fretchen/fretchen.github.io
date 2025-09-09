@@ -192,17 +192,26 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   return (
     <>
       <div className={styles.nftList.grid}>
-        {tokenIds.map((tokenId, index) => (
-          <NFTCard
-            key={`my-${tokenId}-${index}`}
-            tokenId={tokenId}
-            onImageClick={setSelectedImage}
-            onNftBurned={() => loadUserTokenIds()}
-            onListedStatusChanged={handleListedStatusChanged}
-            isHighlighted={highlightedNFT === tokenId}
-            isPublicView={false}
-          />
-        ))}
+        {tokenIds.map((tokenId, index) => {
+          // Check if this is the newly created NFT with preloaded data
+          const isNewlyCreated = newlyCreatedNFT?.tokenId === tokenId;
+          const preloadedImageUrl = isNewlyCreated ? newlyCreatedNFT.imageUrl : undefined;
+          const preloadedMetadata = isNewlyCreated ? newlyCreatedNFT.metadata : undefined;
+
+          return (
+            <NFTCard
+              key={`my-${tokenId}-${index}`}
+              tokenId={tokenId}
+              onImageClick={setSelectedImage}
+              onNftBurned={() => loadUserTokenIds()}
+              onListedStatusChanged={handleListedStatusChanged}
+              isHighlighted={highlightedNFT === tokenId}
+              isPublicView={false}
+              preloadedImageUrl={preloadedImageUrl}
+              preloadedMetadata={preloadedMetadata}
+            />
+          );
+        })}
       </div>
 
       {/* Bildvergrößerungs-Modal */}

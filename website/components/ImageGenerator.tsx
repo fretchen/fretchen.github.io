@@ -191,8 +191,8 @@ export function ImageGenerator({
     setMintingStatus("minting");
 
     try {
-      // Start minting with a temporary URI and listing preference
-      const tempUri = `ipfs://tempURI/${Date.now()}`;
+      // Start minting with empty URI - backend will update it with real metadata
+      const tempUri = "";
       const txHash = await writeContractAsync({
         ...genAiNFTContractConfig,
         functionName: "safeMint",

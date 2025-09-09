@@ -28,63 +28,38 @@ vi.mock("../utils/getChain", () => ({
 }));
 
 vi.mock("../layouts/styles", () => ({
-  imageGen: {
-    compactLayout: "compact-layout",
-    compactContainer: "compact-container",
-    compactHeader: "compact-header",
-    compactTitle: "compact-title",
-    compactSubtitle: "compact-subtitle",
-    compactForm: "compact-form",
-    compactTextarea: "compact-textarea",
-    controlBar: "control-bar",
-    optionsGroup: "options-group",
-    compactSelect: "compact-select",
-    compactButton: "compact-button",
-    compactButtonDisabled: "compact-button-disabled",
-    compactStatus: "compact-status",
-    compactError: "compact-error",
-  },
-  nftCard: {
-    checkboxLabel: "checkbox-label",
-    checkbox: "checkbox",
-  },
-  spinner: "spinner",
+  imageGen: {},
+  nftCard: {},
+  spinner: "mock-spinner",
 }));
 
 vi.mock("../styled-system/css", () => ({
-  css: vi.fn(() => "mock-css-class"),
-}));
-
-vi.mock("../components/InfoIcon", () => ({
-  default: vi.fn(() => <div data-testid="info-icon" />),
+  css: () => "mock-css-class",
 }));
 
 vi.mock("../components/LocaleText", () => ({
-  LocaleText: vi.fn(({ label }) => <span data-testid={`locale-${label}`}>{label}</span>),
+  LocaleText: ({ label }: { label: string }) => <span data-testid={`locale-${label}`}>{label}</span>,
 }));
 
 vi.mock("../hooks/useLocale", () => ({
-  useLocale: vi.fn(() => "mocked text"),
+  useLocale: ({ label }: { label: string }) => `mocked-${label}`,
 }));
 
 // Mock window.ethereum
-const mockEthereum = {
-  request: vi.fn(),
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
-  global.window = Object.create(window);
-  global.window.ethereum = mockEthereum;
 
-  // Default mock implementations
+  // Mock window.ethereum for blockchain interactions
+  global.window = Object.create(window);
+  global.window.ethereum = { request: vi.fn() };
+
+  // Set up default wagmi hook mocks
   mockUseAccount.mockReturnValue({
     address: "0x1234567890123456789012345678901234567890",
     isConnected: true,
   });
 
   mockUseChainId.mockReturnValue(1); // Wrong chain (not Optimism)
-
   mockUseSwitchChain.mockReturnValue({
     switchChain: vi.fn(),
     isPending: false,
@@ -128,7 +103,7 @@ describe("ImageGenerator Component", () => {
     render(<ImageGenerator />);
 
     // Simulate user interaction: fill in the prompt
-    const textarea = screen.getByPlaceholderText("mocked text");
+    const textarea = screen.getByPlaceholderText("mocked-imagegen.promptPlaceholder");
     fireEvent.change(textarea, { target: { value: "Test artwork prompt" } });
 
     // Simulate user interaction: click the create button (find by test ID)

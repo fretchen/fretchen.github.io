@@ -97,32 +97,48 @@ export function ImageGenerator({
     }
   };
 
-  const getButtonIcon = (state: string) => {
-    switch (state) {
-      case "connect":
-        return "🔗";
-      case "ready":
-        return "🎨";
-      default:
-        return null;
-    }
-  };
-
-  const getButtonDisabled = (state: string) => {
-    return ["switching", "loading", "needsPrompt"].includes(state);
-  };
-
-  const getButtonOnClick = (state: string) => {
-    return state === "connect" ? handleWalletConnection : handleMintAndGenerate;
-  };
-
-  const getButtonTitle = (state: string) => {
-    return state === "connect"
-      ? "Connect your wallet to create artwork"
-      : useLocale({ label: "imagegen.mintingInfo" });
-  };
-
   const buttonState = getButtonState();
+
+  // Button Components
+  const ConnectWalletButton = () => (
+    <button
+      onClick={handleWalletConnection}
+      className={`${styles.imageGen.compactButton}`}
+      title="Connect your wallet to create artwork"
+      aria-describedby="create-artwork-info"
+    >
+      🔗 Connect Wallet
+    </button>
+  );
+
+  const CreateArtworkButton = () => {
+    const isDisabled = buttonState === "needsPrompt";
+    const isLoadingState = buttonState === "loading" || buttonState === "switching";
+
+    return (
+      <button
+        onClick={handleMintAndGenerate}
+        disabled={isDisabled}
+        className={`${styles.imageGen.compactButton} ${
+          isDisabled ? styles.imageGen.compactButtonDisabled : ""
+        }`}
+        title={useLocale({ label: "imagegen.mintingInfo" })}
+        aria-describedby="create-artwork-info"
+      >
+        {isLoadingState ? (
+          <>
+            <div className={styles.spinner}></div>
+            {getButtonText(buttonState)}
+          </>
+        ) : (
+          <>
+            🎨 {getButtonText(buttonState)}
+            <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
+          </>
+        )}
+      </button>
+    );
+  };
 
   const handleMintAndGenerate = async () => {
     if (!isConnected || !address) {
@@ -305,27 +321,7 @@ export function ImageGenerator({
               </label>
             </div>
 
-            <button
-              onClick={getButtonOnClick(buttonState)}
-              disabled={getButtonDisabled(buttonState)}
-              className={`${styles.imageGen.compactButton} ${
-                getButtonDisabled(buttonState) ? styles.imageGen.compactButtonDisabled : ""
-              }`}
-              title={getButtonTitle(buttonState)}
-              aria-describedby="create-artwork-info"
-            >
-              {buttonState === "switching" || buttonState === "loading" ? (
-                <>
-                  <div className={styles.spinner}></div>
-                  {getButtonText(buttonState)}
-                </>
-              ) : (
-                <>
-                  {getButtonIcon(buttonState)} {getButtonText(buttonState)}
-                  {buttonState === "ready" && <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />}
-                </>
-              )}
-            </button>
+            {buttonState === "connect" ? <ConnectWalletButton /> : <CreateArtworkButton />}
           </div>
         </div>
 

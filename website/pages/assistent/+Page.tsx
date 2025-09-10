@@ -247,10 +247,22 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 export default function Page() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authSignature, setAuthSignature] = useState<string | null>(null);
   const [refetchBalance, setRefetchBalance] = useState<(() => void) | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Mobile detection
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
@@ -383,185 +395,262 @@ export default function Page() {
     <div className={styles.container}>
       <div
         style={{
-          maxWidth: "800px",
-          margin: "0 auto",
-          height: "80vh",
-          display: "flex",
-          flexDirection: "column",
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "200px 1fr",
+          gridTemplateRows: isMobile ? "auto 1fr" : "none",
+          height: "100vh",
           gap: "1rem",
+          padding: "1rem",
         }}
       >
-        {/* Header */}
+        {/* Sidebar - nur auf Desktop */}
+        {!isMobile && (
+          <div
+            style={{
+              backgroundColor: "#f8f9fa",
+              borderRadius: "8px",
+              padding: "1rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+            }}
+          >
+            {/* Balance Section */}
+            <div>
+              <h4 style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", fontWeight: "600" }}>Balance</h4>
+              <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+            </div>
+
+            {/* Actions Section */}
+            <div>
+              <h4 style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", fontWeight: "600" }}>Actions</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  style={{
+                    padding: "0.5rem",
+                    background: "transparent",
+                    color: "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    textAlign: "left",
+                  }}
+                  title="View request history"
+                >
+                  📜 History
+                </button>
+
+                <button
+                  onClick={clearChat}
+                  style={{
+                    padding: "0.5rem",
+                    background: "transparent",
+                    color: "#666",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    textAlign: "left",
+                  }}
+                >
+                  🗑️ Clear Chat
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chat Area */}
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "1rem 0",
+            flexDirection: "column",
+            height: "100%",
+            gap: "1rem",
           }}
         >
-          {/* Balance Display */}
-          <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
-
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button
-              onClick={() => setIsSidebarOpen(true)}
+          {/* Mobile Header - nur auf Mobile */}
+          {isMobile && (
+            <div
               style={{
-                padding: "0.5rem 1rem",
-                background: "transparent",
-                color: "#333",
-                border: "1px solid #ddd",
-                borderRadius: "2px",
-                cursor: "pointer",
-                fontSize: "0.85rem",
-                fontWeight: "500",
-              }}
-              title="View request history"
-            >
-              History
-            </button>
-
-            <button
-              onClick={clearChat}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "transparent",
-                color: "#666",
-                border: "1px solid #ddd",
-                borderRadius: "2px",
-                cursor: "pointer",
-                fontSize: "0.85rem",
-                fontWeight: "500",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "0.5rem 0",
+                borderBottom: "1px solid #e0e0e0",
+                marginBottom: "0.5rem",
               }}
             >
-              Clear Chat
-            </button>
-          </div>
-        </div>
-
-        {/* Messages Container */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            border: "1px solid #e0e0e0",
-            borderRadius: "4px",
-            padding: "1rem",
-            backgroundColor: "#ffffff",
-          }}
-        >
-          {messages.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#888", padding: "2rem", fontSize: "0.9rem" }}>
-              Start a conversation by typing a message below.
-            </div>
-          ) : (
-            messages.map((message, index) => (
-              <div
-                key={index}
-                style={{
-                  margin: "1rem 0",
-                  display: "flex",
-                  justifyContent: message.role === "user" ? "flex-end" : "flex-start",
-                }}
-              >
-                <div
+              <h2 style={{ margin: 0, fontSize: "1.2rem" }}>AI Assistant</h2>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
                   style={{
-                    maxWidth: message.role === "user" ? "70%" : "80%",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "8px",
-                    backgroundColor: message.role === "user" ? "#2d3748" : "#f8f9fa",
-                    color: message.role === "user" ? "white" : "#333",
-                    border: message.role === "user" ? "none" : "1px solid #e2e8f0",
+                    padding: "0.25rem 0.5rem",
+                    background: "transparent",
+                    color: "#666",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                  }}
+                  title="History"
+                >
+                  📜
+                </button>
+                <button
+                  onClick={clearChat}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    background: "transparent",
+                    color: "#666",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                  }}
+                  title="Clear Chat"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Desktop Header - nur auf Desktop */}
+          {!isMobile && (
+            <div style={{ padding: "0" }}>
+              <h2 style={{ margin: 0, fontSize: "1.5rem" }}>AI Assistant</h2>
+            </div>
+          )}
+
+          {/* Messages Container */}
+          <div
+            style={{
+              flex: 1,
+              overflow: "auto",
+              border: "1px solid #e0e0e0",
+              borderRadius: "4px",
+              padding: "1rem",
+              backgroundColor: "#ffffff",
+            }}
+          >
+            {messages.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#888", padding: "2rem", fontSize: "0.9rem" }}>
+                Start a conversation by typing a message below.
+              </div>
+            ) : (
+              messages.map((message, index) => (
+                <div
+                  key={index}
+                  style={{
+                    margin: "1rem 0",
+                    display: "flex",
+                    justifyContent: message.role === "user" ? "flex-end" : "flex-start",
                   }}
                 >
                   <div
                     style={{
-                      fontWeight: "500",
-                      marginBottom: "0.5rem",
-                      fontSize: "0.85rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      opacity: 0.8,
+                      maxWidth: message.role === "user" ? "70%" : "80%",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "8px",
+                      backgroundColor: message.role === "user" ? "#2d3748" : "#f8f9fa",
+                      color: message.role === "user" ? "white" : "#333",
+                      border: message.role === "user" ? "none" : "1px solid #e2e8f0",
                     }}
                   >
-                    {message.role === "user" ? "You" : "Assistant"}
+                    <div
+                      style={{
+                        fontWeight: "500",
+                        marginBottom: "0.5rem",
+                        fontSize: "0.85rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        opacity: 0.8,
+                      }}
+                    >
+                      {message.role === "user" ? "You" : "Assistant"}
+                    </div>
+                    <div style={{ whiteSpace: "pre-wrap", lineHeight: "1.5" }}>{message.content}</div>
                   </div>
-                  <div style={{ whiteSpace: "pre-wrap", lineHeight: "1.5" }}>{message.content}</div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
 
-          {isLoading && (
-            <div
-              style={{
-                margin: "1rem 0",
-                display: "flex",
-                justifyContent: "flex-start",
-              }}
-            >
+            {isLoading && (
               <div
                 style={{
-                  maxWidth: "80%",
-                  padding: "0.75rem 1rem",
-                  borderRadius: "8px",
-                  backgroundColor: "#f8f9fa",
-                  color: "#333",
-                  border: "1px solid #e2e8f0",
-                  fontStyle: "italic",
+                  margin: "1rem 0",
+                  display: "flex",
+                  justifyContent: "flex-start",
                 }}
               >
-                Assistant is typing...
+                <div
+                  style={{
+                    maxWidth: "80%",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    backgroundColor: "#f8f9fa",
+                    color: "#333",
+                    border: "1px solid #e2e8f0",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Assistant is typing...
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Input Area */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            padding: "1rem 0",
-          }}
-        >
-          <textarea
-            value={currentInput}
-            onChange={(e) => setCurrentInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message here..."
-            disabled={isLoading}
+          {/* Input Area */}
+          <div
             style={{
-              flex: 1,
-              padding: "1rem",
-              border: "1px solid #e0e0e0",
-              borderRadius: "2px",
-              resize: "vertical",
-              minHeight: "60px",
-              maxHeight: "120px",
-              fontSize: "0.9rem",
-              lineHeight: "1.5",
-              outline: "none",
-              backgroundColor: "#ffffff",
-            }}
-          />
-          <button
-            onClick={() => sendMessage(currentInput)}
-            disabled={isLoading || !currentInput.trim()}
-            style={{
-              padding: "0.75rem 1.5rem",
-              background: isLoading || !currentInput.trim() ? "#f5f5f5" : "#333",
-              color: isLoading || !currentInput.trim() ? "#999" : "white",
-              border: "1px solid #ddd",
-              borderRadius: "2px",
-              cursor: isLoading || !currentInput.trim() ? "not-allowed" : "pointer",
-              whiteSpace: "nowrap",
-              fontSize: "0.9rem",
-              fontWeight: "500",
+              display: "flex",
+              gap: "0.5rem",
+              padding: "1rem 0",
             }}
           >
-            {isLoading ? "Sending..." : "Send"}
-          </button>
+            <textarea
+              value={currentInput}
+              onChange={(e) => setCurrentInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message here..."
+              disabled={isLoading}
+              style={{
+                flex: 1,
+                padding: "1rem",
+                border: "1px solid #e0e0e0",
+                borderRadius: "2px",
+                resize: "vertical",
+                minHeight: "60px",
+                maxHeight: "120px",
+                fontSize: "0.9rem",
+                lineHeight: "1.5",
+                outline: "none",
+                backgroundColor: "#ffffff",
+              }}
+            />
+            <button
+              onClick={() => sendMessage(currentInput)}
+              disabled={isLoading || !currentInput.trim()}
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: isLoading || !currentInput.trim() ? "#f5f5f5" : "#333",
+                color: isLoading || !currentInput.trim() ? "#999" : "white",
+                border: "1px solid #ddd",
+                borderRadius: "2px",
+                cursor: isLoading || !currentInput.trim() ? "not-allowed" : "pointer",
+                whiteSpace: "nowrap",
+                fontSize: "0.9rem",
+                fontWeight: "500",
+              }}
+            >
+              {isLoading ? "Sending..." : "Send"}
+            </button>
+          </div>
         </div>
       </div>
 

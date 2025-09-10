@@ -74,12 +74,12 @@ export function ImageGenerator({
           setTimeout(checkChain, 100); // Check every 100ms
         }
       };
-      
+
       // Timeout after 10 seconds
       setTimeout(() => {
         reject(new Error("Chain switch timeout - please try again"));
       }, 10000);
-      
+
       checkChain();
     });
   };
@@ -181,16 +181,15 @@ export function ImageGenerator({
       try {
         setError("Switching to Optimism network...");
         await switchChain({ chainId: expectedChainId });
-        
+
         // Wait for the chain switch to complete using polling
         await waitForChainSwitch(expectedChainId);
-        
+
         setError(null);
       } catch (switchError) {
         console.error("Failed to switch chain:", switchError);
-        const errorMsg = switchError instanceof Error
-          ? switchError.message
-          : "Please switch to Optimism network to create artworks";
+        const errorMsg =
+          switchError instanceof Error ? switchError.message : "Please switch to Optimism network to create artworks";
         setError(errorMsg);
         onError?.(errorMsg);
         return;

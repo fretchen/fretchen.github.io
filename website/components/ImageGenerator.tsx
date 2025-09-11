@@ -132,7 +132,7 @@ export function ImageGenerator({
   const ConnectWalletButton = () => (
     <button
       onClick={handleWalletConnection}
-      className={`${styles.imageGen.compactButton}`}
+      className={`${styles.primaryButton}`}
       title={connectWalletTitleText}
       aria-describedby="create-artwork-info"
     >
@@ -148,7 +148,7 @@ export function ImageGenerator({
       <button
         onClick={handleMintAndGenerate}
         disabled={isDisabled}
-        className={`${styles.imageGen.compactButton} ${isDisabled ? styles.imageGen.compactButtonDisabled : ""}`}
+        className={`${styles.primaryButton} ${isDisabled ? styles.primaryButtonDisabled : ""}`}
         title={useLocale({ label: "imagegen.mintingInfo" })}
         aria-describedby="create-artwork-info"
       >

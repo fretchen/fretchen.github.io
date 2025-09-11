@@ -166,7 +166,7 @@ export function NFTCard({
     };
 
     loadNFTData();
-  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata]);
+  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, genAiNFTContractConfig, publicClient]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -186,7 +186,7 @@ export function NFTCard({
         onNftBurned();
       }, 1000);
     }
-  }, [isConfirmed]); // Entfernt: onNftBurned aus Dependencies
+  }, [isConfirmed, onNftBurned]);
 
   // Handle successful listing status change
   useEffect(() => {
@@ -194,7 +194,7 @@ export function NFTCard({
       // The UI is already updated optimistically, just show success toast
       showToast("Listing status updated successfully!", "success");
     }
-  }, [isListingConfirmed]); // Entfernt: onListedStatusChanged, showToast aus Dependencies
+  }, [isListingConfirmed, onListedStatusChanged, showToast]);
 
   const handleImageClick = () => {
     if (nft.imageUrl) {

@@ -110,28 +110,31 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     } finally {
       setIsLoadingTokenIds(false);
     }
-  }, [isConnected, address]); // Entfernt: genAiNFTContractConfig
+  }, [isConnected, address, genAiNFTContractConfig]);
 
   // Handle newly created NFT - just add to token list
-  const handleNewlyCreatedNFT = (newTokenId: bigint) => {
-    // Set highlighting for the new NFT
-    setHighlightedNFT(newTokenId);
+  const handleNewlyCreatedNFT = useCallback(
+    (newTokenId: bigint) => {
+      // Set highlighting for the new NFT
+      setHighlightedNFT(newTokenId);
 
-    // Add to top of token list if not already present
-    setTokenIds((prevTokenIds) => {
-      const exists = prevTokenIds.includes(newTokenId);
-      if (exists) {
-        return prevTokenIds;
-      }
-      return [newTokenId, ...prevTokenIds];
-    });
+      // Add to top of token list if not already present
+      setTokenIds((prevTokenIds) => {
+        const exists = prevTokenIds.includes(newTokenId);
+        if (exists) {
+          return prevTokenIds;
+        }
+        return [newTokenId, ...prevTokenIds];
+      });
 
-    // Remove highlighting after 5 seconds
-    setTimeout(() => {
-      setHighlightedNFT(null);
-      onNewNFTDisplayed?.();
-    }, 5000);
-  };
+      // Remove highlighting after 5 seconds
+      setTimeout(() => {
+        setHighlightedNFT(null);
+        onNewNFTDisplayed?.();
+      }, 5000);
+    },
+    [onNewNFTDisplayed],
+  );
 
   // Handle listing status changes
   const handleListedStatusChanged = useCallback((tokenId: bigint, isListed: boolean) => {
@@ -145,14 +148,14 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     if (isConnected && address) {
       loadUserTokenIds();
     }
-  }, [address, isConnected]); // Entfernt: userBalance to prevent too frequent reloads
+  }, [address, isConnected, loadUserTokenIds]); // Entfernt: userBalance to prevent too frequent reloads
 
   // Handle newly created NFT
   useEffect(() => {
     if (newlyCreatedNFT) {
       handleNewlyCreatedNFT(newlyCreatedNFT.tokenId);
     }
-  }, [newlyCreatedNFT]); // Entfernt: onNewNFTDisplayed
+  }, [newlyCreatedNFT, handleNewlyCreatedNFT]); // Entfernt: onNewNFTDisplayed
 
   const isLoading = isLoadingBalance || isLoadingTokenIds;
 

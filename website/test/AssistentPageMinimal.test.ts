@@ -1,6 +1,6 @@
 /**
  * Minimal Assistant Page Tests
- * 
+ *
  * Basic tests to verify the assistant page component structure
  * Following the same pattern as Card.test.tsx
  */

@@ -24,6 +24,9 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   const llmContractConfig = getLLMv1ContractConfig();
   const chain = getChain();
 
+  // localized message
+  const invalidAmountMessage = useLocale({ label: "assistent.invalidAmount" });
+  const invalidAmountFormatMessage = useLocale({ label: "assistent.invalidAmountFormat" });
   // Read user's balance from contract
   const { data: balance, refetch: refetchBalance } = useReadContract({
     ...llmContractConfig,
@@ -56,7 +59,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       const amountWei = parseEther(amountStr);
 
       if (!amountWei || amountWei <= 0n) {
-        alert(useLocale({ label: "assistent.invalidAmount" }));
+        alert(invalidAmountMessage);
         return;
       }
 
@@ -70,7 +73,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       setShowTopUpModal(false);
     } catch (err) {
       console.error("Top-up failed", err);
-      alert(useLocale({ label: "assistent.invalidAmountFormat" }));
+      alert(invalidAmountFormatMessage);
     }
   };
 
@@ -189,6 +192,10 @@ export default function Page() {
   const [refetchBalance, setRefetchBalance] = useState<(() => void) | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Localized messages
+  const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
+  const noResponseMessage =  useLocale({ label: "assistent.noResponse" });
+  const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   // Mobile detection
   React.useEffect(() => {
     const checkMobile = () => {
@@ -251,7 +258,7 @@ export default function Page() {
       return authSignature; // Already authenticated
     }
 
-    const message = useLocale({ label: "assistent.authMessage" }).replace("{address}", address);
+    const message = `Authenticate wallet: ${address}`;
     const signature = await signMessageAsync({ message });
     setAuthSignature(signature);
     return signature;
@@ -277,7 +284,7 @@ export default function Page() {
 
       // Prepare the prompt as array including full conversation history
       const promptArray = [
-        { role: "system", content: useLocale({ label: "assistent.systemPrompt" }) },
+        { role: "system", content: systemPromptMessage },
         ...messages.map((msg) => ({
           role: msg.role,
           content: msg.content,
@@ -299,7 +306,7 @@ export default function Page() {
           auth: {
             address,
             signature,
-            message: useLocale({ label: "assistent.authMessage" }).replace("{address}", address),
+            message: `Authenticate wallet: ${address}`,
           },
           data: {
             prompt: promptArray, // Send as array directly, like in Python notebook
@@ -317,7 +324,7 @@ export default function Page() {
       // Add assistant message
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.content || useLocale({ label: "assistent.noResponse" }),
+        content: data.content || noResponseMessage,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -328,7 +335,7 @@ export default function Page() {
     } catch (error) {
       const errorMsg: ChatMessage = {
         role: "assistant",
-        content: `${useLocale({ label: "assistent.errorPrefix" })} ${error instanceof Error ? error.message : useLocale({ label: "assistent.unknownError" })}`,
+        content: `${errorPrefixMessage} ${error instanceof Error ? error.message : useLocale({ label: "assistent.unknownError" })}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);

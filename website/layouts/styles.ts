@@ -86,12 +86,6 @@ export const baseButton = css({
   },
 });
 
-export const primaryButton = css({
-  backgroundColor: "brand",
-  color: "light",
-  _hover: { backgroundColor: "#0052a3" },
-});
-
 export const secondaryButton = css({
   backgroundColor: "gray.200",
   color: "gray.800",
@@ -352,43 +346,6 @@ export const imageGen = {
     },
     _hover: {
       borderColor: "gray.400",
-    },
-  }),
-  compactButton: css({
-    paddingY: "sm",
-    paddingX: "lg",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
-    borderRadius: "md",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "sm",
-    whiteSpace: "nowrap",
-    display: "flex",
-    alignItems: "center",
-    gap: "xs",
-    transition: "all 0.2s ease",
-    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-    _hover: {
-      backgroundColor: "#0052a3",
-      transform: "translateY(-1px)",
-      boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
-    },
-    _active: {
-      transform: "translateY(0)",
-      boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-    },
-  }),
-  compactButtonDisabled: css({
-    backgroundColor: "gray.300",
-    color: "gray.500",
-    cursor: "not-allowed",
-    boxShadow: "none",
-    _hover: {
-      backgroundColor: "gray.300",
-      transform: "none",
-      boxShadow: "none",
     },
   }),
   compactStatus: css({
@@ -1932,28 +1889,54 @@ export const messageInput = css({
   minWidth: 0, // allow flexbox shrink on small screens
 });
 
-export const sendButton = css({
-  flex: "0 0 auto",
-  padding: "0.5rem 0.9rem",
-  minWidth: "96px",
-  background: "text",
-  color: "background",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
+// Unified primary button style for actions (send, create, etc.)
+export const primaryButton = css({
+  paddingY: "sm",
+  paddingX: "lg",
+  backgroundColor: "brand",
+  color: "light",
+  border: "none",
+  borderRadius: "md",
   cursor: "pointer",
-  whiteSpace: "nowrap",
+  fontWeight: "bold",
   fontSize: "sm",
-  fontWeight: "500",
-  alignSelf: "center",
+  whiteSpace: "nowrap",
+  display: "flex",
+  alignItems: "center",
+  gap: "xs",
   transition: "all 0.2s ease",
+  boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
   _hover: {
-    backgroundColor: "#555",
+    backgroundColor: "#0052a3",
+    transform: "translateY(-1px)",
+    boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
+  },
+  _active: {
+    transform: "translateY(0)",
+    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
   },
   _disabled: {
-    backgroundColor: "#f5f5f5",
-    color: "#999",
+    backgroundColor: "gray.300",
+    color: "gray.500",
     cursor: "not-allowed",
+    boxShadow: "none",
+    _hover: {
+      backgroundColor: "gray.300",
+      transform: "none",
+      boxShadow: "none",
+    },
+  },
+});
+
+export const primaryButtonDisabled = css({
+  backgroundColor: "gray.300",
+  color: "gray.500",
+  cursor: "not-allowed",
+  boxShadow: "none",
+  _hover: {
+    backgroundColor: "gray.300",
+    transform: "none",
+    boxShadow: "none",
   },
 });
 

@@ -416,7 +416,7 @@ export default function Page() {
             <button
               onClick={() => sendMessage(currentInput)}
               disabled={isLoading || !currentInput.trim()}
-              className={styles.sendButton}
+              className={styles.primaryButton}
             >
               {isLoading ? "Sending..." : "Send"}
             </button>

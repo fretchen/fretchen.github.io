@@ -148,14 +148,14 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     if (isConnected && address) {
       loadUserTokenIds();
     }
-  }, [address, isConnected, loadUserTokenIds]); // Entfernt: userBalance to prevent too frequent reloads
+  }, [address, isConnected, loadUserTokenIds]);
 
   // Handle newly created NFT
   useEffect(() => {
     if (newlyCreatedNFT) {
       handleNewlyCreatedNFT(newlyCreatedNFT.tokenId);
     }
-  }, [newlyCreatedNFT, handleNewlyCreatedNFT]); // Entfernt: onNewNFTDisplayed
+  }, [newlyCreatedNFT, handleNewlyCreatedNFT]);
 
   const isLoading = isLoadingBalance || isLoadingTokenIds;
 

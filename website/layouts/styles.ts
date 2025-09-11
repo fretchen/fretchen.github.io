@@ -1637,3 +1637,415 @@ export const metadataLine = {
     },
   }),
 };
+
+// ===== ASSISTANT PAGE STYLES =====
+
+// Single consolidated width definition for assistant page
+export const assistantPageContainer = css({
+  width: "100%",
+  maxWidth: "1200px", // Use layout's maxWidth instead of container's 900px
+  mx: "auto",
+  px: "md",
+});
+
+// Main grid layout
+export const assistantGrid = css({
+  display: "grid",
+  height: "100vh",
+  gap: "md",
+  padding: "md",
+});
+
+export const assistantGridDesktop = css({
+  gridTemplateColumns: "200px 1fr",
+});
+
+export const assistantGridMobile = css({
+  gridTemplateColumns: "1fr",
+  gridTemplateRows: "auto 1fr",
+});
+
+// Sidebar styles
+export const sidebar = css({
+  backgroundColor: "#f8f9fa",
+  borderRadius: "sm",
+  padding: "md",
+  display: "flex",
+  flexDirection: "column",
+  gap: "md",
+});
+
+export const sidebarSection = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "sm",
+});
+
+export const sidebarHeading = css({
+  margin: 0,
+  fontSize: "sm",
+  fontWeight: "600",
+  color: "text",
+});
+
+// Balance display
+export const balanceContainer = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "xs",
+});
+
+export const balanceText = css({
+  fontSize: "sm",
+  color: "text",
+});
+
+export const balanceButton = css({
+  padding: "xs sm",
+  background: "transparent",
+  color: "text",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  cursor: "pointer",
+  fontSize: "xs",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  _hover: {
+    backgroundColor: "#f0f0f0",
+  },
+  _disabled: {
+    cursor: "not-allowed",
+    opacity: 0.6,
+  },
+});
+
+// Actions section
+export const actionsContainer = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "xs",
+});
+
+export const actionButton = css({
+  padding: "xs",
+  background: "transparent",
+  color: "text",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  cursor: "pointer",
+  fontSize: "xs",
+  textAlign: "left",
+  transition: "all 0.2s ease",
+  _hover: {
+    backgroundColor: "#f0f0f0",
+  },
+});
+
+export const actionButtonSecondary = css({
+  color: "#666",
+});
+
+// Chat area
+export const chatArea = css({
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  gap: "md",
+});
+
+// Mobile header
+export const mobileHeader = css({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "xs 0",
+  borderBottom: "1px solid",
+  borderColor: "border",
+  marginBottom: "xs",
+});
+
+export const mobileTitle = css({
+  margin: 0,
+  fontSize: "lg",
+});
+
+export const mobileActions = css({
+  display: "flex",
+  gap: "xs",
+  alignItems: "center",
+});
+
+export const mobileActionButton = css({
+  padding: "xs",
+  background: "transparent",
+  color: "#666",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  cursor: "pointer",
+  fontSize: "xs",
+});
+
+// Desktop header
+export const desktopHeader = css({
+  padding: 0,
+});
+
+export const desktopTitle = css({
+  margin: 0,
+  fontSize: "xl",
+});
+
+// Messages container
+export const messagesContainer = css({
+  flex: 1,
+  overflow: "auto",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  padding: "md",
+  backgroundColor: "background",
+});
+
+export const emptyState = css({
+  textAlign: "center",
+  color: "#888",
+  padding: "2xl",
+  fontSize: "sm",
+});
+
+// Message bubbles
+export const messageContainer = css({
+  margin: "md 0",
+  display: "flex",
+});
+
+export const messageContainerUser = css({
+  justifyContent: "flex-end",
+});
+
+export const messageContainerAssistant = css({
+  justifyContent: "flex-start",
+});
+
+export const messageBubble = css({
+  padding: "sm md",
+  borderRadius: "sm",
+  maxWidth: "80%",
+});
+
+export const messageBubbleUser = css({
+  backgroundColor: "#2d3748",
+  color: "white",
+});
+
+export const messageBubbleAssistant = css({
+  backgroundColor: "#f8f9fa",
+  color: "text",
+  border: "1px solid #e2e8f0",
+});
+
+export const messageRole = css({
+  fontWeight: "500",
+  marginBottom: "xs",
+  fontSize: "xs",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  opacity: 0.8,
+});
+
+export const messageContent = css({
+  whiteSpace: "pre-wrap",
+  lineHeight: "1.5",
+});
+
+// Loading message
+export const loadingMessage = css({
+  margin: "md 0",
+  display: "flex",
+  justifyContent: "flex-start",
+});
+
+export const loadingBubble = css({
+  maxWidth: "80%",
+  padding: "sm md",
+  borderRadius: "sm",
+  backgroundColor: "#f8f9fa",
+  color: "text",
+  border: "1px solid #e2e8f0",
+  fontStyle: "italic",
+});
+
+// Input area
+export const inputArea = css({
+  display: "flex",
+  gap: "xs",
+  padding: "md 0",
+});
+
+export const messageInput = css({
+  flex: 1,
+  padding: "md",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  resize: "vertical",
+  minHeight: "60px",
+  maxHeight: "120px",
+  fontSize: "sm",
+  lineHeight: "1.5",
+  outline: "none",
+  backgroundColor: "background",
+  _focus: {
+    borderColor: "brand",
+  },
+});
+
+export const sendButton = css({
+  padding: "sm lg",
+  background: "text",
+  color: "background",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  fontSize: "sm",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  _hover: {
+    backgroundColor: "#555",
+  },
+  _disabled: {
+    backgroundColor: "#f5f5f5",
+    color: "#999",
+    cursor: "not-allowed",
+  },
+});
+
+// Modal styles
+export const modalOverlay = css({
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1000,
+});
+
+export const modalContent = css({
+  backgroundColor: "background",
+  padding: "2xl",
+  borderRadius: "sm",
+  minWidth: "300px",
+  maxWidth: "400px",
+});
+
+export const modalTitle = css({
+  margin: "0 0 md 0",
+  fontSize: "lg",
+});
+
+export const modalSection = css({
+  marginBottom: "md",
+});
+
+export const modalLabel = css({
+  marginBottom: "xs",
+  fontSize: "sm",
+  color: "#666",
+});
+
+export const modalText = css({
+  fontSize: "sm",
+  color: "#666",
+  marginBottom: "xs",
+});
+
+export const modalInput = css({
+  width: "100%",
+  padding: "md",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  fontSize: "sm",
+  _focus: {
+    borderColor: "brand",
+  },
+});
+
+export const modalButtons = css({
+  display: "flex",
+  gap: "xs",
+  justifyContent: "flex-end",
+});
+
+export const modalButtonCancel = css({
+  padding: "xs md",
+  background: "transparent",
+  color: "#666",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  cursor: "pointer",
+  fontSize: "sm",
+});
+
+export const modalButtonPrimary = css({
+  padding: "xs md",
+  background: "text",
+  color: "background",
+  border: "none",
+  borderRadius: "xs",
+  cursor: "pointer",
+  fontSize: "sm",
+  fontWeight: "500",
+  _disabled: {
+    backgroundColor: "#f5f5f5",
+    color: "#999",
+    cursor: "not-allowed",
+  },
+});
+
+// Preset amount buttons
+export const presetButtons = css({
+  display: "flex",
+  gap: "xs",
+});
+
+export const presetButton = css({
+  padding: "xs lg",
+  border: "1px solid",
+  borderColor: "border",
+  background: "background",
+  borderRadius: "xs",
+  cursor: "pointer",
+  fontSize: "sm",
+  transition: "all 0.2s ease",
+});
+
+export const presetButtonActive = css({
+  borderColor: "text",
+  backgroundColor: "#f8f9fa",
+});
+
+// Disconnected state
+export const disconnectedContainer = css({
+  textAlign: "center",
+  padding: "2xl",
+});
+
+export const disconnectedTitle = css({
+  fontSize: "xl",
+  marginBottom: "sm",
+});
+
+export const disconnectedText = css({
+  color: "#666",
+});

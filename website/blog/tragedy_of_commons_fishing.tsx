@@ -74,6 +74,13 @@ const MODEL_PARAMS = {
   nplayers: 4,
 };
 
+// Community governance parameters
+const COMMUNITY_PARAMS = {
+  base_quota: 0.2, // Base quota for least efficient
+  efficiency_bonus: 0.1, // Additional quota per efficiency level
+  cooperation_bonus: 0.05, // Bonus for community participation
+};
+
 const calculateEfficientBoats = (s_t: number, c_t: number): number => {
   /**
    * What is the number of boats that gives us maximum catch with no losses?
@@ -896,10 +903,6 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
   // Auto-simulate all rounds when scenario changes
   useEffect(() => {
-    simulateAllRounds();
-  }, [scenario]);
-
-  const simulateAllRounds = () => {
     const nRounds = 3;
     let currentStock = MODEL_PARAMS.s_init;
     const newHistory: IslandRoundHistory[] = [];
@@ -983,7 +986,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
 
     setHistory(newHistory);
     setFishStock(currentStock);
-  };
+  }, [scenario]);
 
   // Scenario Selector Component
   function ScenarioSelector() {
@@ -1223,99 +1226,64 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
   // Auto-simulate all rounds when scenario changes
   useEffect(() => {
-    simulateAllRounds();
-  }, [scenario]);
+    const applyRedistribution = (originalCatches: number[], leader: number) => {
+      const redistributionResult = leaderRedistribution(leader);
+      const redistributionRate = redistributionResult.redistributionRate;
 
-  // Community governance parameters
-  const COMMUNITY_PARAMS = {
-    base_quota: 0.2, // Base quota for least efficient
-    efficiency_bonus: 0.1, // Additional quota per efficiency level
-    cooperation_bonus: 0.05, // Bonus for community participation
-  };
+      // Calculate sustainable catch per player (like in Python)
+      const sustainableCatchPerPlayer =
+        calculateTotalCatch(fishStock, calculateSustainableBoats(fishStock)) / MODEL_PARAMS.nplayers;
 
-  const applyRedistribution = (originalCatches: number[], leader: number) => {
-    const redistributionResult = leaderRedistribution(leader);
-    const redistributionRate = redistributionResult.redistributionRate;
+      // Initialize arrays
+      const redistributionTax = new Array(MODEL_PARAMS.nplayers).fill(0);
+      const underfished = new Array(MODEL_PARAMS.nplayers).fill(0);
+      const finalCatches = [...originalCatches];
 
-    // Calculate sustainable catch per player (like in Python)
-    const sustainableCatchPerPlayer =
-      calculateTotalCatch(fishStock, calculateSustainableBoats(fishStock)) / MODEL_PARAMS.nplayers;
-
-    // Initialize arrays
-    const redistributionTax = new Array(MODEL_PARAMS.nplayers).fill(0);
-    const underfished = new Array(MODEL_PARAMS.nplayers).fill(0);
-    const finalCatches = [...originalCatches];
-
-    // Step 1: Calculate redistribution tax for players above sustainable catch
-    for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
-      if (originalCatches[jj] > sustainableCatchPerPlayer) {
-        // Calculate tax for excess catch
-        const excessCatch = originalCatches[jj] - sustainableCatchPerPlayer;
-        redistributionTax[jj] = excessCatch * redistributionRate;
-        finalCatches[jj] -= redistributionTax[jj];
-      } else {
-        redistributionTax[jj] = 0.0;
-      }
-    }
-
-    // Step 2: Calculate underfished amounts for players below sustainable catch
-    for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
-      if (finalCatches[jj] < sustainableCatchPerPlayer) {
-        underfished[jj] = sustainableCatchPerPlayer - finalCatches[jj];
-      } else {
-        underfished[jj] = 0;
-      }
-    }
-
-    // Step 3: Redistribute the collected tax to underfished players
-    const totalRedistributionAmount = redistributionTax.reduce((sum, tax) => sum + tax, 0);
-    const totalUnderfished = underfished.reduce((sum, amount) => sum + amount, 0);
-
-    const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
-
-    if (totalUnderfished > 0) {
+      // Step 1: Calculate redistribution tax for players above sustainable catch
       for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
-        if (underfished[jj] > 0) {
-          // Calculate redistribution share based on underfished amount
-          const share = underfished[jj] / totalUnderfished;
-          const redistributionShare = totalRedistributionAmount * share;
-          finalCatches[jj] += redistributionShare;
-          redistributionReceived[jj] = redistributionShare;
+        if (originalCatches[jj] > sustainableCatchPerPlayer) {
+          // Calculate tax for excess catch
+          const excessCatch = originalCatches[jj] - sustainableCatchPerPlayer;
+          redistributionTax[jj] = excessCatch * redistributionRate;
+          finalCatches[jj] -= redistributionTax[jj];
+        } else {
+          redistributionTax[jj] = 0.0;
         }
       }
-    }
 
-    return {
-      finalCatches,
-      redistributionAmount: totalRedistributionAmount,
-      netTransfers: redistributionReceived.map((received, i) => received - redistributionTax[i]),
+      // Step 2: Calculate underfished amounts for players below sustainable catch
+      for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
+        if (finalCatches[jj] < sustainableCatchPerPlayer) {
+          underfished[jj] = sustainableCatchPerPlayer - finalCatches[jj];
+        } else {
+          underfished[jj] = 0;
+        }
+      }
+
+      // Step 3: Redistribute the collected tax to underfished players
+      const totalRedistributionAmount = redistributionTax.reduce((sum, tax) => sum + tax, 0);
+      const totalUnderfished = underfished.reduce((sum, amount) => sum + amount, 0);
+
+      const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
+
+      if (totalUnderfished > 0) {
+        for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {
+          if (underfished[jj] > 0) {
+            // Calculate redistribution share based on underfished amount
+            const share = underfished[jj] / totalUnderfished;
+            const redistributionShare = totalRedistributionAmount * share;
+            finalCatches[jj] += redistributionShare;
+            redistributionReceived[jj] = redistributionShare;
+          }
+        }
+      }
+
+      return {
+        finalCatches,
+        redistributionAmount: totalRedistributionAmount,
+        netTransfers: redistributionReceived.map((received, i) => received - redistributionTax[i]),
+      };
     };
-  };
-
-  const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
-    const principles = [];
-
-    if (scenario === "democratic") {
-      // Democratic governance implements most of Ostrom's principles
-      principles.push("1. Clearly defined boundaries");
-      principles.push("2. Collective choice arrangements");
-      principles.push("3. Community monitoring");
-      principles.push("4. Graduated sanctions");
-      principles.push("5. Conflict resolution mechanisms");
-      principles.push("7. Nested enterprises");
-      if (leader !== 0) principles.push("6. Recognition of rights to organize"); // When others lead, shows external respect
-      // Principle 8 (Local congruence) is inherently present as rules adapt to local conditions
-    } else {
-      // Hierarchical governance implements fewer principles
-      principles.push("1. Clearly defined boundaries");
-      principles.push("8. Congruence with local conditions");
-      if (leader === 0) principles.push("3. Monitoring by authorities"); // Moana-led monitoring
-    }
-
-    return principles;
-  };
-
-  const simulateAllRounds = () => {
     const nRounds = 5; // Increased from 3 to 5 for better strategy progression
     let currentStock = MODEL_PARAMS.s_init;
     const newHistory: CommunityRoundHistory[] = [];
@@ -1461,6 +1429,29 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
     setHistory(newHistory);
     setFishStock(currentStock);
+  }, [scenario, fishStock]);
+
+  const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
+    const principles = [];
+
+    if (scenario === "democratic") {
+      // Democratic governance implements most of Ostrom's principles
+      principles.push("1. Clearly defined boundaries");
+      principles.push("2. Collective choice arrangements");
+      principles.push("3. Community monitoring");
+      principles.push("4. Graduated sanctions");
+      principles.push("5. Conflict resolution mechanisms");
+      principles.push("7. Nested enterprises");
+      if (leader !== 0) principles.push("6. Recognition of rights to organize"); // When others lead, shows external respect
+      // Principle 8 (Local congruence) is inherently present as rules adapt to local conditions
+    } else {
+      // Hierarchical governance implements fewer principles
+      principles.push("1. Clearly defined boundaries");
+      principles.push("8. Congruence with local conditions");
+      if (leader === 0) principles.push("3. Monitoring by authorities"); // Moana-led monitoring
+    }
+
+    return principles;
   };
 
   // Scenario Selector Component

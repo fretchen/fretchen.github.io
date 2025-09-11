@@ -6,8 +6,9 @@ import { stack } from "../styled-system/patterns";
 // Container styles
 export const container = css({
   maxWidth: "900px",
-  mx: "auto",
+  mx: "auto", // Center the container
   px: "md",
+  width: "100%", // Take full width up to maxWidth
 });
 
 export const flexColumn = css({
@@ -857,8 +858,8 @@ export const layout = {
     padding: "token(spacing.md)",
     paddingBottom: "0", // Removed bottom padding
     minHeight: "token(sizes.screen)",
-    maxWidth: "1200px", // Prevent content from getting too wide
-    margin: "0 auto", // Center content within full-width container
+    // Removed maxWidth to avoid conflicts with page-specific containers
+    // Individual pages should define their own width constraints
   }),
   footer: css({
     width: "100%",
@@ -1642,16 +1643,15 @@ export const metadataLine = {
 
 // Single consolidated width definition for assistant page
 export const assistantPageContainer = css({
-  width: "100%",
-  maxWidth: "1200px", // Use layout's maxWidth instead of container's 900px
-  mx: "auto",
+  width: "100%", // Full width for chat interface
+  // Removed maxWidth for full-screen chat experience
   px: "md",
 });
 
 // Main grid layout
 export const assistantGrid = css({
   display: "grid",
-  height: "100vh",
+  minHeight: "calc(100vh - 120px)", // Account for header (~60px) + footer (~60px)
   gap: "md",
   padding: "md",
 });
@@ -1753,6 +1753,7 @@ export const chatArea = css({
   flexDirection: "column",
   height: "100%",
   gap: "md",
+  minHeight: 0, // Allow flex item to shrink below content size
 });
 
 // Mobile header
@@ -1800,13 +1801,14 @@ export const desktopTitle = css({
 
 // Messages container
 export const messagesContainer = css({
-  flex: 1,
+  flex: "1 1 auto", // Allow grow, shrink, and base on content
   overflow: "auto",
   border: "1px solid",
   borderColor: "border",
   borderRadius: "xs",
   padding: "md",
   backgroundColor: "background",
+  minHeight: 0, // Allow flex item to shrink below content size
 });
 
 export const emptyState = css({
@@ -1883,6 +1885,7 @@ export const inputArea = css({
   display: "flex",
   gap: "xs",
   padding: "md 0",
+  flexShrink: 0, // Don't shrink the input area
 });
 
 export const messageInput = css({

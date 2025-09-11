@@ -8,10 +8,14 @@ vi.mock("wagmi", () => ({
     address: "0x123456789abcdef",
     isConnected: false,
   })),
+  useSignMessage: vi.fn(() => ({
+    signMessageAsync: vi.fn(),
+  })),
   useReadContract: vi.fn(() => ({
     data: undefined,
     error: null,
     isPending: false,
+    refetch: vi.fn(),
   })),
   useWriteContract: vi.fn(() => ({
     writeContract: vi.fn(),
@@ -70,10 +74,19 @@ vi.mock("./utils/getChain", () => ({
     address: "0xTestContract",
     abi: [],
   })),
+  getLLMv1ContractConfig: vi.fn(() => ({
+    address: "0xTestLLMContract",
+    abi: [],
+  })),
   getSupportContractConfig: vi.fn(() => ({
     address: "0xSupportContract",
     abi: [],
   })),
+}));
+
+// Mock useLocale hook
+vi.mock("./hooks/useLocale", () => ({
+  useLocale: vi.fn(({ label }: { label: string }) => label),
 }));
 
 // Clean up after each test

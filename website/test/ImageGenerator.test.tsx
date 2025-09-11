@@ -64,6 +64,9 @@ vi.mock("../layouts/styles", () => ({
   imageGen: {},
   nftCard: {},
   spinner: "mock-spinner",
+  primaryButton: "mock-primary-button",
+  primaryButtonDisabled: "mock-primary-button-disabled",
+  successMessage: "mock-success-message",
 }));
 
 vi.mock("../styled-system/css", () => ({

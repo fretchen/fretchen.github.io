@@ -194,7 +194,7 @@ export default function Page() {
 
   // Localized messages
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
-  const noResponseMessage =  useLocale({ label: "assistent.noResponse" });
+  const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   // Mobile detection
   React.useEffect(() => {

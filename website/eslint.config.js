@@ -3,6 +3,7 @@
 import eslint from "@eslint/js";
 import prettier from "eslint-plugin-prettier/recommended";
 import react from "eslint-plugin-react/configs/recommended.js";
+import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 

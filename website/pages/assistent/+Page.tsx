@@ -4,6 +4,8 @@ import { formatEther, parseEther } from "viem";
 import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import * as styles from "../../layouts/styles";
+import { useLocale } from "../../hooks/useLocale";
+import { useConnect } from "wagmi";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -54,7 +56,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       const amountWei = parseEther(amountStr);
 
       if (!amountWei || amountWei <= 0n) {
-        alert("Enter a valid amount greater than 0");
+        alert(useLocale({ label: "assistent.invalidAmount" }));
         return;
       }
 
@@ -68,7 +70,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       setShowTopUpModal(false);
     } catch (err) {
       console.error("Top-up failed", err);
-      alert("Invalid amount format");
+      alert(useLocale({ label: "assistent.invalidAmountFormat" }));
     }
   };
 
@@ -105,7 +107,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       <div className={styles.balanceContainer}>
         <span className={styles.balanceText}>{balance ? formatBalance(balance as bigint) : "0"} ETH</span>
         <button onClick={() => setShowTopUpModal(true)} disabled={isConfirming} className={styles.balanceButton}>
-          + Top up
+          {useLocale({ label: "assistent.topUp" })}
         </button>
       </div>
 
@@ -113,17 +115,18 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       {showTopUpModal && (
         <div className={styles.modalOverlay} onClick={() => setShowTopUpModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Top up Balance</h3>
+            <h3 className={styles.modalTitle}>{useLocale({ label: "assistent.topUpBalance" })}</h3>
 
             <div className={styles.modalSection}>
               <div className={styles.modalText}>
-                Current balance: {balance ? formatBalance(balance as bigint) : "0"} ETH
+                {useLocale({ label: "assistent.currentBalance" })} {balance ? formatBalance(balance as bigint) : "0"}{" "}
+                ETH
               </div>
             </div>
 
             {/* Preset amounts */}
             <div className={styles.modalSection}>
-              <div className={styles.modalLabel}>Quick amounts:</div>
+              <div className={styles.modalLabel}>{useLocale({ label: "assistent.quickAmounts" })}</div>
               <div className={styles.presetButtons}>
                 {["0.001", "0.005", "0.01"].map((amount) => (
                   <button
@@ -144,7 +147,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 
             {/* Custom amount */}
             <div className={styles.modalSection}>
-              <div className={styles.modalLabel}>Custom amount:</div>
+              <div className={styles.modalLabel}>{useLocale({ label: "assistent.customAmount" })}</div>
               <input
                 type="text"
                 value={customAmount}
@@ -152,20 +155,22 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
                 placeholder="0.0"
                 className={styles.modalInput}
               />
-              <div className={styles.modalText}>Amount in ETH (e.g., 0.025)</div>
+              <div className={styles.modalText}>{useLocale({ label: "assistent.amountHint" })}</div>
             </div>
 
             {/* Action buttons */}
             <div className={styles.modalButtons}>
               <button onClick={() => setShowTopUpModal(false)} className={styles.modalButtonCancel}>
-                Cancel
+                {useLocale({ label: "assistent.cancel" })}
               </button>
               <button
                 onClick={handleTopUp}
                 disabled={isConfirming || (!customAmount && !selectedAmount)}
                 className={styles.modalButtonPrimary}
               >
-                {isConfirming ? "Processing..." : `Top up ${getAmountToSend()} ETH`}
+                {isConfirming
+                  ? useLocale({ label: "assistent.processing" })
+                  : useLocale({ label: "assistent.topUpAmount" }).replace("{amount}", getAmountToSend())}
               </button>
             </div>
           </div>
@@ -197,6 +202,39 @@ export default function Page() {
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { connectors, connect } = useConnect();
+
+  // Handle wallet connection
+  const handleWalletConnection = () => {
+    if (connectors.length > 0) {
+      connect({ connector: connectors[0] }); // Use first available connector
+    }
+  };
+
+  // Button state logic similar to ImageGenerator
+  const getButtonState = () => {
+    if (!isConnected) return "connect";
+    if (isLoading) return "loading";
+    if (!currentInput.trim()) return "empty";
+    return "ready";
+  };
+
+  const getButtonText = (state: string) => {
+    switch (state) {
+      case "connect":
+        return useLocale({ label: "assistent.connectWalletMessage" });
+      case "loading":
+        return useLocale({ label: "assistent.sending" });
+      case "empty":
+        return useLocale({ label: "assistent.send" });
+      case "ready":
+        return useLocale({ label: "assistent.send" });
+      default:
+        return useLocale({ label: "assistent.send" });
+    }
+  };
+
+  const buttonState = getButtonState();
 
   // Callback to receive refetch function from BalanceDisplay
   const handleRefetchBalance = (refetchFn: () => void) => {
@@ -213,7 +251,7 @@ export default function Page() {
       return authSignature; // Already authenticated
     }
 
-    const message = `Authenticate wallet: ${address}`;
+    const message = useLocale({ label: "assistent.authMessage" }).replace("{address}", address);
     const signature = await signMessageAsync({ message });
     setAuthSignature(signature);
     return signature;
@@ -239,7 +277,7 @@ export default function Page() {
 
       // Prepare the prompt as array including full conversation history
       const promptArray = [
-        { role: "system", content: "You are a helpful assistant." },
+        { role: "system", content: useLocale({ label: "assistent.systemPrompt" }) },
         ...messages.map((msg) => ({
           role: msg.role,
           content: msg.content,
@@ -261,7 +299,7 @@ export default function Page() {
           auth: {
             address,
             signature,
-            message: `Authenticate wallet: ${address}`,
+            message: useLocale({ label: "assistent.authMessage" }).replace("{address}", address),
           },
           data: {
             prompt: promptArray, // Send as array directly, like in Python notebook
@@ -279,7 +317,7 @@ export default function Page() {
       // Add assistant message
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.content || "No response received",
+        content: data.content || useLocale({ label: "assistent.noResponse" }),
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -290,7 +328,7 @@ export default function Page() {
     } catch (error) {
       const errorMsg: ChatMessage = {
         role: "assistant",
-        content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        content: `${useLocale({ label: "assistent.errorPrefix" })} ${error instanceof Error ? error.message : useLocale({ label: "assistent.unknownError" })}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -307,20 +345,19 @@ export default function Page() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(currentInput);
+      if (isConnected) {
+        sendMessage(currentInput);
+      }
     }
   };
 
-  if (!isConnected) {
-    return (
-      <div className={styles.assistantPageContainer}>
-        <div className={styles.disconnectedContainer}>
-          <h2 className={styles.disconnectedTitle}>Chat Assistant</h2>
-          <p className={styles.disconnectedText}>Please connect your wallet to use the chat assistant.</p>
-        </div>
-      </div>
-    );
-  }
+  const handleSendClick = () => {
+    if (!isConnected) {
+      handleWalletConnection();
+      return;
+    }
+    sendMessage(currentInput);
+  };
 
   return (
     <div className={styles.assistantPageContainer}>
@@ -330,24 +367,24 @@ export default function Page() {
           <div className={styles.sidebar}>
             {/* Balance Section */}
             <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>Balance</h4>
+              <h4 className={styles.sidebarHeading}>{useLocale({ label: "assistent.balance" })}</h4>
               <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
             </div>
 
             {/* Actions Section */}
             <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>Actions</h4>
+              <h4 className={styles.sidebarHeading}>{useLocale({ label: "assistent.actions" })}</h4>
               <div className={styles.actionsContainer}>
                 <button
                   onClick={() => setIsSidebarOpen(true)}
                   className={styles.actionButton}
                   title="View request history"
                 >
-                  📜 History
+                  {useLocale({ label: "assistent.history" })}
                 </button>
 
                 <button onClick={clearChat} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
-                  🗑️ Clear Chat
+                  {useLocale({ label: "assistent.clearChat" })}
                 </button>
               </div>
             </div>
@@ -359,7 +396,7 @@ export default function Page() {
           {/* Mobile Header - nur auf Mobile */}
           {isMobile && (
             <div className={styles.mobileHeader}>
-              <h2 className={styles.mobileTitle}>AI Assistant</h2>
+              <h2 className={styles.mobileTitle}>{useLocale({ label: "assistent.mobileTitle" })}</h2>
               <div className={styles.mobileActions}>
                 <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
                 <button onClick={() => setIsSidebarOpen(true)} className={styles.mobileActionButton} title="History">
@@ -375,7 +412,7 @@ export default function Page() {
           {/* Messages Container */}
           <div className={styles.messagesContainer}>
             {messages.length === 0 ? (
-              <div className={styles.emptyState}>Start a conversation by typing a message below.</div>
+              <div className={styles.emptyState}>{useLocale({ label: "assistent.emptyState" })}</div>
             ) : (
               messages.map((message, index) => (
                 <div
@@ -389,7 +426,11 @@ export default function Page() {
                       message.role === "user" ? styles.messageBubbleUser : styles.messageBubbleAssistant
                     }`}
                   >
-                    <div className={styles.messageRole}>{message.role === "user" ? "You" : "Assistant"}</div>
+                    <div className={styles.messageRole}>
+                      {message.role === "user"
+                        ? useLocale({ label: "assistent.you" })
+                        : useLocale({ label: "assistent.assistant" })}
+                    </div>
                     <div className={styles.messageContent}>{message.content}</div>
                   </div>
                 </div>
@@ -398,7 +439,7 @@ export default function Page() {
 
             {isLoading && (
               <div className={styles.loadingMessage}>
-                <div className={styles.loadingBubble}>Assistant is typing...</div>
+                <div className={styles.loadingBubble}>{useLocale({ label: "assistent.typing" })}</div>
               </div>
             )}
           </div>
@@ -409,16 +450,17 @@ export default function Page() {
               value={currentInput}
               onChange={(e) => setCurrentInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type your message here..."
+              placeholder={useLocale({ label: "assistent.placeholder" })}
               disabled={isLoading}
               className={styles.messageInput}
             />
             <button
-              onClick={() => sendMessage(currentInput)}
-              disabled={isLoading || !currentInput.trim()}
+              onClick={handleSendClick}
+              disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
               className={styles.primaryButton}
             >
-              {isLoading ? "Sending..." : "Send"}
+              {buttonState === "connect" ? "🔗 " : ""}
+              {getButtonText(buttonState)}
             </button>
           </div>
         </div>

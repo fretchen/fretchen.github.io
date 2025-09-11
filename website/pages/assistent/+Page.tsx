@@ -103,9 +103,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
     <>
       {/* Simple Balance Display */}
       <div className={styles.balanceContainer}>
-        <span className={styles.balanceText}>
-          LLM Chat Credits: {balance ? formatBalance(balance as bigint) : "0"} ETH
-        </span>
+        <span className={styles.balanceText}>{balance ? formatBalance(balance as bigint) : "0"} ETH</span>
         <button onClick={() => setShowTopUpModal(true)} disabled={isConfirming} className={styles.balanceButton}>
           + Top up
         </button>
@@ -371,13 +369,6 @@ export default function Page() {
                   🗑️
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* Desktop Header - nur auf Desktop */}
-          {!isMobile && (
-            <div className={styles.desktopHeader}>
-              <h2 className={styles.desktopTitle}>AI Assistant</h2>
             </div>
           )}
 

@@ -1646,6 +1646,10 @@ export const assistantPageContainer = css({
   width: "100%", // Full width for chat interface
   // Removed maxWidth for full-screen chat experience
   px: "md",
+  // On desktop, make room for a fixed sidebar at the viewport left
+  "@media (min-width: 769px)": {
+    paddingLeft: "240px",
+  },
 });
 
 // Main grid layout
@@ -1657,7 +1661,8 @@ export const assistantGrid = css({
 });
 
 export const assistantGridDesktop = css({
-  gridTemplateColumns: "200px 1fr",
+  // Sidebar is fixed outside the flow; grid only needs the main content column
+  gridTemplateColumns: "1fr",
 });
 
 export const assistantGridMobile = css({
@@ -1667,12 +1672,30 @@ export const assistantGridMobile = css({
 
 // Sidebar styles
 export const sidebar = css({
-  backgroundColor: "#f8f9fa",
+  backgroundColor: "#fbfcfe",
   borderRadius: "sm",
   padding: "md",
   display: "flex",
   flexDirection: "column",
   gap: "md",
+  borderLeft: "1px solid",
+  borderColor: "border",
+  boxShadow: "0 1px 0 rgba(0,0,0,0.02)",
+  // On desktop, fix the sidebar to the left edge of the viewport
+  position: "fixed",
+  left: 0,
+  top: "var(--header-height, 64px)",
+  width: "240px",
+  height: "calc(100vh - var(--header-height, 64px) - var(--footer-height, 60px))",
+  overflow: "auto",
+  zIndex: 40,
+  // Keep the same visual when narrow screens use the inline sidebar
+  "@media (max-width: 768px)": {
+    position: "relative",
+    width: "100%",
+    left: "auto",
+    top: "auto",
+  },
 });
 
 export const sidebarSection = css({
@@ -1754,6 +1777,7 @@ export const chatArea = css({
   height: "100%",
   gap: "md",
   minHeight: 0, // Allow flex item to shrink below content size
+  // Ensure chat area stretches properly inside the grid column
 });
 
 // Mobile header
@@ -1886,6 +1910,7 @@ export const inputArea = css({
   gap: "xs",
   padding: "md 0",
   flexShrink: 0, // Don't shrink the input area
+  alignItems: "flex-end", // keep button visually aligned to input
 });
 
 export const messageInput = css({
@@ -1904,10 +1929,13 @@ export const messageInput = css({
   _focus: {
     borderColor: "brand",
   },
+  minWidth: 0, // allow flexbox shrink on small screens
 });
 
 export const sendButton = css({
-  padding: "sm lg",
+  flex: "0 0 auto",
+  padding: "0.5rem 0.9rem",
+  minWidth: "96px",
   background: "text",
   color: "background",
   border: "1px solid",
@@ -1917,6 +1945,7 @@ export const sendButton = css({
   whiteSpace: "nowrap",
   fontSize: "sm",
   fontWeight: "500",
+  alignSelf: "center",
   transition: "all 0.2s ease",
   _hover: {
     backgroundColor: "#555",

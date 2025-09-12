@@ -203,6 +203,19 @@ export default function Page() {
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
+  const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
+  const loadingLabel = useLocale({ label: "assistent.loading" });
+  const sendLabel = useLocale({ label: "assistent.send" });
+  const unknownErrorLabel = useLocale({ label: "assistent.unknownError" });
+  const balanceLabel = useLocale({ label: "assistent.balance" });
+  const typingLabel = useLocale({ label: "assistent.typing" });
+  const actionsLabel = useLocale({ label: "assistent.actions" });
+  const historyLabel = useLocale({ label: "assistent.history" });
+  const clearChatLabel = useLocale({ label: "assistent.clearChat" });
+  const mobileTitleLabel = useLocale({ label: "assistent.mobileTitle" });
+  const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
+  const youLabel = useLocale({ label: "assistent.you" });
+  const assistantLabel = useLocale({ label: "assistent.assistant" });
   // Mobile detection
   React.useEffect(() => {
     const checkMobile = () => {
@@ -236,15 +249,15 @@ export default function Page() {
   const getButtonText = (state: string) => {
     switch (state) {
       case "connect":
-        return useLocale({ label: "assistent.connectWalletMessage" });
+        return connectWalletMessageLabel;
       case "loading":
-        return useLocale({ label: "assistent.sending" });
+        return loadingLabel;
       case "empty":
-        return useLocale({ label: "assistent.send" });
+        return sendLabel;
       case "ready":
-        return useLocale({ label: "assistent.send" });
+        return sendLabel;
       default:
-        return useLocale({ label: "assistent.send" });
+        return sendLabel;
     }
   };
 
@@ -342,7 +355,7 @@ export default function Page() {
     } catch (error) {
       const errorMsg: ChatMessage = {
         role: "assistant",
-        content: `${errorPrefixMessage} ${error instanceof Error ? error.message : useLocale({ label: "assistent.unknownError" })}`,
+        content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -381,24 +394,24 @@ export default function Page() {
           <div className={styles.sidebar}>
             {/* Balance Section */}
             <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>{useLocale({ label: "assistent.balance" })}</h4>
+              <h4 className={styles.sidebarHeading}>{balanceLabel}</h4>
               <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
             </div>
 
             {/* Actions Section */}
             <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>{useLocale({ label: "assistent.actions" })}</h4>
+              <h4 className={styles.sidebarHeading}>{actionsLabel}</h4>
               <div className={styles.actionsContainer}>
                 <button
                   onClick={() => setIsSidebarOpen(true)}
                   className={styles.actionButton}
                   title="View request history"
                 >
-                  {useLocale({ label: "assistent.history" })}
+                  {historyLabel}
                 </button>
 
                 <button onClick={clearChat} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
-                  {useLocale({ label: "assistent.clearChat" })}
+                  {clearChatLabel}
                 </button>
               </div>
             </div>
@@ -410,7 +423,7 @@ export default function Page() {
           {/* Mobile Header - nur auf Mobile */}
           {isMobile && (
             <div className={styles.mobileHeader}>
-              <h2 className={styles.mobileTitle}>{useLocale({ label: "assistent.mobileTitle" })}</h2>
+              <h2 className={styles.mobileTitle}>{mobileTitleLabel}</h2>
               <div className={styles.mobileActions}>
                 <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
                 <button onClick={() => setIsSidebarOpen(true)} className={styles.mobileActionButton} title="History">
@@ -426,7 +439,7 @@ export default function Page() {
           {/* Messages Container */}
           <div className={styles.messagesContainer}>
             {messages.length === 0 ? (
-              <div className={styles.emptyState}>{useLocale({ label: "assistent.emptyState" })}</div>
+              <div className={styles.emptyState}>{emptyStateLabel}</div>
             ) : (
               messages.map((message, index) => (
                 <div
@@ -440,11 +453,7 @@ export default function Page() {
                       message.role === "user" ? styles.messageBubbleUser : styles.messageBubbleAssistant
                     }`}
                   >
-                    <div className={styles.messageRole}>
-                      {message.role === "user"
-                        ? useLocale({ label: "assistent.you" })
-                        : useLocale({ label: "assistent.assistant" })}
-                    </div>
+                    <div className={styles.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
                     <div className={styles.messageContent}>{message.content}</div>
                   </div>
                 </div>
@@ -453,7 +462,7 @@ export default function Page() {
 
             {isLoading && (
               <div className={styles.loadingMessage}>
-                <div className={styles.loadingBubble}>{useLocale({ label: "assistent.typing" })}</div>
+                <div className={styles.loadingBubble}>{typingLabel}</div>
               </div>
             )}
           </div>

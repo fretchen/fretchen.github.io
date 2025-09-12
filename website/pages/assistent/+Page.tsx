@@ -27,6 +27,16 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   // localized message
   const invalidAmountMessage = useLocale({ label: "assistent.invalidAmount" });
   const invalidAmountFormatMessage = useLocale({ label: "assistent.invalidAmountFormat" });
+  const topUpLabel = useLocale({ label: "assistent.topUp" });
+  const topUpBalanceLabel = useLocale({ label: "assistent.topUpBalance" });
+  const currentBalanceLabel = useLocale({ label: "assistent.currentBalance" });
+  const quickAmountsLabel = useLocale({ label: "assistent.quickAmounts" });
+  const customAmountLabel = useLocale({ label: "assistent.customAmount" });
+  const customHintLabel = useLocale({ label: "assistent.amountHint" });
+  const cancelLabel = useLocale({ label: "assistent.cancel" });
+  const processingLabel = useLocale({ label: "assistent.processing" });
+  const topUpAmountLabel = useLocale({ label: "assistent.topUpAmount" });
+
   // Read user's balance from contract
   const { data: balance, refetch: refetchBalance } = useReadContract({
     ...llmContractConfig,
@@ -110,7 +120,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       <div className={styles.balanceContainer}>
         <span className={styles.balanceText}>{balance ? formatBalance(balance as bigint) : "0"} ETH</span>
         <button onClick={() => setShowTopUpModal(true)} disabled={isConfirming} className={styles.balanceButton}>
-          {useLocale({ label: "assistent.topUp" })}
+          {topUpLabel}
         </button>
       </div>
 
@@ -118,18 +128,17 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       {showTopUpModal && (
         <div className={styles.modalOverlay} onClick={() => setShowTopUpModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>{useLocale({ label: "assistent.topUpBalance" })}</h3>
+            <h3 className={styles.modalTitle}>{topUpBalanceLabel}</h3>
 
             <div className={styles.modalSection}>
               <div className={styles.modalText}>
-                {useLocale({ label: "assistent.currentBalance" })} {balance ? formatBalance(balance as bigint) : "0"}{" "}
-                ETH
+                {currentBalanceLabel} {balance ? formatBalance(balance as bigint) : "0"} ETH
               </div>
             </div>
 
             {/* Preset amounts */}
             <div className={styles.modalSection}>
-              <div className={styles.modalLabel}>{useLocale({ label: "assistent.quickAmounts" })}</div>
+              <div className={styles.modalLabel}>{quickAmountsLabel}</div>
               <div className={styles.presetButtons}>
                 {["0.001", "0.005", "0.01"].map((amount) => (
                   <button
@@ -150,7 +159,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 
             {/* Custom amount */}
             <div className={styles.modalSection}>
-              <div className={styles.modalLabel}>{useLocale({ label: "assistent.customAmount" })}</div>
+              <div className={styles.modalLabel}>{customAmountLabel}</div>
               <input
                 type="text"
                 value={customAmount}
@@ -158,22 +167,20 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
                 placeholder="0.0"
                 className={styles.modalInput}
               />
-              <div className={styles.modalText}>{useLocale({ label: "assistent.amountHint" })}</div>
+              <div className={styles.modalText}>{customHintLabel}</div>
             </div>
 
             {/* Action buttons */}
             <div className={styles.modalButtons}>
               <button onClick={() => setShowTopUpModal(false)} className={styles.modalButtonCancel}>
-                {useLocale({ label: "assistent.cancel" })}
+                {cancelLabel}
               </button>
               <button
                 onClick={handleTopUp}
                 disabled={isConfirming || (!customAmount && !selectedAmount)}
                 className={styles.modalButtonPrimary}
               >
-                {isConfirming
-                  ? useLocale({ label: "assistent.processing" })
-                  : useLocale({ label: "assistent.topUpAmount" }).replace("{amount}", getAmountToSend())}
+                {isConfirming ? processingLabel : topUpAmountLabel.replace("{amount}", getAmountToSend())}
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { createPublicClient, http } from "viem";
 import { optimism } from "viem/chains";
-import { getGenAiNFTContractConfig } from "./getChain";
+import { genAiNFTContractConfig } from "./getChain";
 import { NFTMetadata } from "../types/BlogPost";
 
 interface NFTMetadataJSON {
@@ -19,7 +19,7 @@ export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | nu
       transport: http(),
     });
 
-    const genAiNFTContractConfig = getGenAiNFTContractConfig();
+    // Verwende die stabile genAiNFTContractConfig Konstante
 
     // Get token URI from contract
     const tokenURIResult = await publicClient.readContract({

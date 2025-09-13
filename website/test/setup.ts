@@ -64,25 +64,8 @@ vi.mock("vike-react/usePageContext", () => ({
   })),
 }));
 
-// Mock utils
-vi.mock("./utils/getChain", () => ({
-  getChain: vi.fn(() => ({
-    id: 10,
-    name: "Optimism",
-  })),
-  getGenAiNFTContractConfig: vi.fn(() => ({
-    address: "0xTestContract",
-    abi: [],
-  })),
-  getLLMv1ContractConfig: vi.fn(() => ({
-    address: "0xTestLLMContract",
-    abi: [],
-  })),
-  getSupportContractConfig: vi.fn(() => ({
-    address: "0xSupportContract",
-    abi: [],
-  })),
-}));
+// No need to mock utils/getChain - it's just reading env vars and returning constants
+// The real implementation works fine in tests and ensures we test realistic configurations
 
 // Mock useLocale hook
 vi.mock("./hooks/useLocale", () => ({

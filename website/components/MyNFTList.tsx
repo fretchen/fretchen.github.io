@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
-import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { getChain, genAiNFTContractConfig } from "../utils/getChain";
 import { NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
@@ -20,7 +20,6 @@ interface MyNFTListProps {
 export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps) {
   const { address, isConnected } = useAccount();
   const chain = getChain();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
   // My NFTs state - now just store token IDs
   const [tokenIds, setTokenIds] = useState<bigint[]>([]);
@@ -110,7 +109,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     } finally {
       setIsLoadingTokenIds(false);
     }
-  }, [isConnected, address, genAiNFTContractConfig]);
+  }, [isConnected, address]); // Removed genAiNFTContractConfig as it's now stable
 
   // Handle newly created NFT - just add to token list
   const handleNewlyCreatedNFT = useCallback(

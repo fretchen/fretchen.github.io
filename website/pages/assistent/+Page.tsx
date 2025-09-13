@@ -68,6 +68,8 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
     if (isConfirming) return processingLabel;
     return topUpAmountLabel.replace("{amount}", amountToSend);
   }, [isConfirming, processingLabel, topUpAmountLabel, amountToSend]);
+
+  const handleTopUp = async () => {
     if (!address) return;
 
     try {

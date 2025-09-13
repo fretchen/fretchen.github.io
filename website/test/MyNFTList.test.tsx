@@ -110,7 +110,7 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     // Wait a bit to let effects run
     await waitFor(
       () => {
-        // Mit stabilen Konstanten sollten nur wenige Renders auftreten
+        // With stable constants, only a few renders should occur
         expect(renderCount).toBeLessThanOrEqual(3);
       },
       { timeout: 2000 },

@@ -19,7 +19,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the contract config to prevent infinite re-renders
-  // Die stabile genAiNFTContractConfig Konstante wird direkt verwendet
+  // The stable genAiNFTContractConfig constant is used directly
 
   // Extract prompt from description for display (reusing utility function)
   const getPromptPreview = (description: string | null): string => {

@@ -8,7 +8,7 @@ import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
 
 export function PublicNFTList() {
-  // Verwende die stabile genAiNFTContractConfig Konstante
+  // Use the stable genAiNFTContractConfig constant
 
   // Public NFTs state - now just store token IDs
   const [publicTokenIds, setPublicTokenIds] = useState<bigint[]>([]);

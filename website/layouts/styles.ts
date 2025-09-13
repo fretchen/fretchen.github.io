@@ -1098,6 +1098,8 @@ export const nftCard = {
     gap: "xs",
     marginTop: "sm",
     justifyContent: "center",
+    flexWrap: "wrap", // Allow wrapping if needed
+    width: "100%",
     // Mobile: Stack vertically and adjust spacing
     "@media (max-width: 768px)": {
       flexDirection: "column",
@@ -1130,6 +1132,143 @@ export const nftCard = {
       fontSize: "xs",
       minWidth: "70px",
       minHeight: "36px", // Ensure minimum touch target
+    },
+  }),
+
+  // Compact action button style - recreates the original compact styling
+  compactActionButton: css({
+    paddingY: "sm",
+    paddingX: "md",
+    fontSize: "sm",
+    border: "1px solid",
+    borderRadius: "md",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    textDecoration: "none",
+    textAlign: "center",
+    minWidth: "auto", // Allow natural width
+    whiteSpace: "nowrap",
+    // Mobile: Maintain compact but readable sizing
+    "@media (max-width: 768px)": {
+      paddingY: "sm",
+      paddingX: "md",
+      fontSize: "sm",
+    },
+    "@media (max-width: 480px)": {
+      paddingY: "xs",
+      paddingX: "sm",
+      fontSize: "xs",
+      minHeight: "36px", // Ensure minimum touch target
+    },
+  }),
+
+  // Self-contained compact primary button - combines structure and primary colors
+  compactPrimaryButton: css({
+    paddingY: "sm",
+    paddingX: "sm",
+    fontSize: "sm",
+    backgroundColor: "brand",
+    color: "light",
+    border: "none",
+    borderRadius: "md",
+    cursor: "pointer",
+    fontWeight: "bold",
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
+    textDecoration: "none",
+    textAlign: "center",
+    minWidth: "auto",
+    maxWidth: "100%",
+    flexShrink: 1,
+    overflow: "hidden",
+    _hover: {
+      backgroundColor: "#0052a3",
+      transform: "translateY(-1px)",
+      boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
+    },
+    _active: {
+      transform: "translateY(0)",
+      boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
+    },
+    _disabled: {
+      backgroundColor: "gray.300",
+      color: "gray.500",
+      cursor: "not-allowed",
+      boxShadow: "none",
+      _hover: {
+        backgroundColor: "gray.300",
+        transform: "none",
+        boxShadow: "none",
+      },
+    },
+    // Mobile: Maintain compact but readable sizing
+    "@media (max-width: 768px)": {
+      paddingY: "xs",
+      paddingX: "sm",
+      fontSize: "sm",
+    },
+    "@media (max-width: 480px)": {
+      paddingY: "xs",
+      paddingX: "xs",
+      fontSize: "xs",
+      minHeight: "36px",
+    },
+  }),
+
+  // Self-contained compact secondary button - combines structure and secondary colors
+  compactSecondaryButton: css({
+    paddingY: "sm",
+    paddingX: "sm",
+    fontSize: "sm",
+    backgroundColor: "gray.200",
+    color: "gray.800",
+    border: "1px solid",
+    borderColor: "gray.300",
+    borderRadius: "md",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
+    transition: "all 0.2s ease",
+    textDecoration: "none",
+    textAlign: "center",
+    minWidth: "auto",
+    maxWidth: "100%",
+    flexShrink: 1,
+    overflow: "hidden",
+    _hover: {
+      backgroundColor: "gray.300",
+      borderColor: "gray.400",
+    },
+    _active: {
+      transform: "translateY(0)",
+    },
+    _disabled: {
+      backgroundColor: "gray.100",
+      color: "gray.500",
+      cursor: "not-allowed",
+      borderColor: "gray.200",
+      _hover: {
+        backgroundColor: "gray.100",
+        borderColor: "gray.200",
+      },
+    },
+    // Mobile: Maintain compact but readable sizing
+    "@media (max-width: 768px)": {
+      paddingY: "xs",
+      paddingX: "sm",
+      fontSize: "sm",
+    },
+    "@media (max-width: 480px)": {
+      paddingY: "xs",
+      paddingX: "xs",
+      fontSize: "xs",
+      minHeight: "36px",
     },
   }),
 

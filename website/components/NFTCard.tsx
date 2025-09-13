@@ -364,7 +364,7 @@ export function NFTCard({
             {nft.imageUrl && (
               <button
                 onClick={handleImageClick}
-                className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
+                className={styles.nftCard.compactSecondaryButton}
                 title="View full size"
               >
                 🔍 Zoom
@@ -373,7 +373,7 @@ export function NFTCard({
             {nft.imageUrl && (
               <button
                 onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
+                className={styles.nftCard.compactPrimaryButton}
                 title="Download image"
               >
                 ⬇️ {downloadLabel}
@@ -381,7 +381,7 @@ export function NFTCard({
             )}
             <button
               onClick={handleShare}
-              className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
+              className={styles.nftCard.compactSecondaryButton}
               title="Share your artwork on the marketplace"
             >
               📤 {shareLabel}
@@ -391,7 +391,7 @@ export function NFTCard({
               <button
                 onClick={handleBurn}
                 disabled={isBurning || isConfirming}
-                className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
+                className={`${styles.nftCard.compactSecondaryButton} ${isBurning || isConfirming ? "" : styles.errorStatus}`}
                 title="Delete artwork (permanent)"
                 style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
               >

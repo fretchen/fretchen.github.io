@@ -1057,11 +1057,6 @@ export const nftCard = {
       gap: "xs",
     },
   }),
-  metadataLink: css({
-    color: "brand",
-    textDecoration: "none",
-    _hover: { textDecoration: "underline" },
-  }),
 
   // Checkbox für Listed Status
   checkboxLabel: css({
@@ -1109,56 +1104,6 @@ export const nftCard = {
     "@media (max-width: 480px)": {
       gap: "xs",
       marginTop: "2xs",
-    },
-  }),
-  actionButton: css({
-    padding: "xs sm",
-    fontSize: "xs",
-    border: "1px solid",
-    borderRadius: "sm",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    textDecoration: "none",
-    textAlign: "center",
-    minWidth: "60px",
-    // Mobile: Larger touch targets and better spacing
-    "@media (max-width: 768px)": {
-      padding: "sm md",
-      fontSize: "sm",
-      minWidth: "80px",
-    },
-    "@media (max-width: 480px)": {
-      padding: "xs sm",
-      fontSize: "xs",
-      minWidth: "70px",
-      minHeight: "36px", // Ensure minimum touch target
-    },
-  }),
-
-  // Compact action button style - recreates the original compact styling
-  compactActionButton: css({
-    paddingY: "sm",
-    paddingX: "md",
-    fontSize: "sm",
-    border: "1px solid",
-    borderRadius: "md",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    textDecoration: "none",
-    textAlign: "center",
-    minWidth: "auto", // Allow natural width
-    whiteSpace: "nowrap",
-    // Mobile: Maintain compact but readable sizing
-    "@media (max-width: 768px)": {
-      paddingY: "sm",
-      paddingX: "md",
-      fontSize: "sm",
-    },
-    "@media (max-width: 480px)": {
-      paddingY: "xs",
-      paddingX: "sm",
-      fontSize: "xs",
-      minHeight: "36px", // Ensure minimum touch target
     },
   }),
 

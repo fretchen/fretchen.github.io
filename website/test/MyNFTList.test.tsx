@@ -166,8 +166,8 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
 
     await waitFor(
       () => {
-        // Mit stabilen Konstanten läuft der Effect nur noch 2 mal
-        // (einmal initial, einmal nach dem ersten useEffect Update)
+        // With stable constants, the effect only runs 2 times
+        // (once initial, once after the first useEffect update)
         expect(effectRunCount).toBeLessThanOrEqual(2);
       },
       { timeout: 1000 },

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
@@ -230,12 +230,12 @@ export default function Page() {
   };
 
   // Button state logic similar to ImageGenerator
-  const getButtonState = () => {
+  const buttonState = useMemo(() => {
     if (!isConnected) return "connect";
     if (isLoading) return "loading";
     if (!currentInput.trim()) return "empty";
     return "ready";
-  };
+  }, [isConnected, isLoading, currentInput]);
 
   const getButtonText = (state: string) => {
     switch (state) {
@@ -251,8 +251,6 @@ export default function Page() {
         return sendLabel;
     }
   };
-
-  const buttonState = getButtonState();
 
   // Authenticate wallet once per session
   const authenticateWallet = async () => {

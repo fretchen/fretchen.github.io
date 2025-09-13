@@ -117,27 +117,6 @@ export function getChain(): Chain {
   }
 }
 
-// Legacy functions for backward compatibility - use the stable constants instead
-/** @deprecated Use genAiNFTContractConfig constant instead for stable references */
-export function getGenAiNFTContractConfig() {
-  return genAiNFTContractConfig;
-}
-
-/** @deprecated Use supportContractConfig constant instead for stable references */
-export function getSupportContractConfig() {
-  return supportContractConfig;
-}
-
-/** @deprecated Use collectorNFTContractConfig constant instead for stable references */
-export function getCollectorNFTContractConfig() {
-  return collectorNFTContractConfig;
-}
-
-/** @deprecated Use llmV1ContractConfig constant instead for stable references */
-export function getLLMv1ContractConfig() {
-  return llmV1ContractConfig;
-}
-
 /**
  * Gibt einen PublicClient zurück, der mit der korrekten Chain konfiguriert ist
  * Benutzt die Umgebungskonfiguration statt der Wallet-Chain

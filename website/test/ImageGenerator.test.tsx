@@ -84,7 +84,7 @@ describe("ImageGenerator Component", () => {
     render(<ImageGenerator />);
 
     expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
-    
+
     // Check that basic form elements are present
     const textarea = screen.queryByPlaceholderText("mocked-imagegen.promptPlaceholder");
     expect(textarea).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("ImageGenerator Component", () => {
 
   it("should call switchChain when user attempts to create artwork on wrong network", async () => {
     const mockSwitchChain = vi.fn().mockResolvedValue(undefined);
-    
+
     // Override the centralized mocks for this specific test
     // Mock a connected wallet on the wrong chain (Ethereum mainnet = 1)
     vi.mocked(useAccount).mockReturnValueOnce({
@@ -100,10 +100,10 @@ describe("ImageGenerator Component", () => {
       isConnected: true,
       status: "connected",
     } as ReturnType<typeof useAccount>);
-    
+
     // Mock that user is on wrong chain (Ethereum mainnet instead of Optimism)
     vi.mocked(useChainId).mockReturnValueOnce(1);
-    
+
     // Mock the switchChain function with unknown cast to bypass strict typing
     vi.mocked(useSwitchChain).mockReturnValueOnce({
       switchChain: mockSwitchChain,
@@ -126,10 +126,10 @@ describe("ImageGenerator Component", () => {
         button.textContent?.toLowerCase().includes("artwork") ||
         button.textContent?.toLowerCase().includes("mint"),
     );
-    
+
     if (createButton) {
       fireEvent.click(createButton);
-      
+
       // Verify that switchChain was called with Optimism chain ID (10)
       expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 10 });
     } else {

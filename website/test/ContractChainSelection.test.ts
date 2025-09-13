@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { getChain, genAiNFTContractConfig, getConfiguredPublicClient } from "../utils/getChain";
+import { genAiNFTContractConfig, getConfiguredPublicClient } from "../utils/getChain";
 
 vi.mock("wagmi/chains", async () => {
   return {
@@ -26,9 +26,6 @@ vi.mock("@wagmi/core", () => ({
 
 describe("Contract Chain Selection", () => {
   it("should use configured chain even when wallet is on different chain", async () => {
-    // Get the chain that should be used according to our config
-    const expectedChain = getChain();
-    
     // Use our new function that should enforce the correct chain
     const client = getConfiguredPublicClient();
     expect(client).toBeDefined();

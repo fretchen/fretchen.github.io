@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
-import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { getChain, genAiNFTContractConfig } from "../utils/getChain";
 import { NFTListProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import { Tab } from "./Tab";
@@ -14,7 +14,6 @@ export function NFTList({
   onTabChange,
 }: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
   // Use controlled tab state if provided, otherwise use local state
   const [localActiveTab, setLocalActiveTab] = useState<"my" | "public">(() => {

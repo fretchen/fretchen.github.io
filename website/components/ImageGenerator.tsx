@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useConnect } from "wagmi";
-import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { getChain, genAiNFTContractConfig } from "../utils/getChain";
 import { css } from "../styled-system/css";
 import { TransactionReceipt, MintingStatus } from "../types/blockchain";
 import { ImageGeneratorProps } from "../types/components";
@@ -35,7 +35,7 @@ export function ImageGenerator({
   onSuccess,
   onError,
 }: ImageGeneratorProps) {
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  // Verwende die stabile genAiNFTContractConfig Konstante
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 

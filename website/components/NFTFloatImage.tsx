@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { createPublicClient, http } from "viem";
 import { optimism } from "viem/chains";
-import { getGenAiNFTContractConfig } from "../utils/getChain";
+import { genAiNFTContractConfig } from "../utils/getChain";
 import { extractPromptFromDescription } from "../utils/nftLoader";
 import * as styles from "../layouts/styles";
 
@@ -19,7 +19,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the contract config to prevent infinite re-renders
-  const genAiNFTContractConfig = useMemo(() => getGenAiNFTContractConfig(), []);
+  // Die stabile genAiNFTContractConfig Konstante wird direkt verwendet
 
   // Extract prompt from description for display (reusing utility function)
   const getPromptPreview = (description: string | null): string => {
@@ -101,7 +101,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     };
 
     loadNFTData();
-  }, [tokenId, publicClient, genAiNFTContractConfig]);
+  }, [tokenId, publicClient]);
 
   if (isLoading) {
     return (

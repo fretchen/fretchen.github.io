@@ -60,7 +60,14 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
     return customAmount.trim() || selectedAmount;
   };
 
-  const handleTopUp = async () => {
+  // Memoize the amount to send to avoid unnecessary recalculations
+  const amountToSend = useMemo(() => getAmountToSend(), [customAmount, selectedAmount]);
+
+  // Memoize the button text to avoid string replacement on every render
+  const buttonText = useMemo(() => {
+    if (isConfirming) return processingLabel;
+    return topUpAmountLabel.replace("{amount}", amountToSend);
+  }, [isConfirming, processingLabel, topUpAmountLabel, amountToSend]);
     if (!address) return;
 
     try {
@@ -172,7 +179,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
                 disabled={isConfirming || (!customAmount && !selectedAmount)}
                 className={styles.modalButtonPrimary}
               >
-                {isConfirming ? processingLabel : topUpAmountLabel.replace("{amount}", getAmountToSend())}
+                {buttonText}
               </button>
             </div>
           </div>

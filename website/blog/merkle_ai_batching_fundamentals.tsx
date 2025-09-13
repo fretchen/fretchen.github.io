@@ -735,7 +735,7 @@ const BatchCreator: React.FC = () => {
     };
 
     createMerkleTree();
-  }, [requests.length, batchRegistered]);
+  }, [requests, batchRegistered]);
 
   const handleSendRequest = async () => {
     if (!currentPrompt.trim()) return;

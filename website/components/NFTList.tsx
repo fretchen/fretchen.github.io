@@ -35,22 +35,22 @@ export function NFTList({
     },
   });
 
+  // Move useLocale calls to top level to avoid conditional hook calls
+  const myArtworksLabel = useLocale({ label: "imagegen.myArtworks" });
+  const allPublicArtworksLabel = useLocale({ label: "imagegen.allPublicArtworks" });
+
   return (
     <div className={styles.nftList.container}>
       {/* Tab Navigation */}
       <div className={styles.tabs.container}>
         <div className={styles.tabs.tabList}>
           <Tab
-            label={
-              isConnected
-                ? `${useLocale({ label: "imagegen.myArtworks" })} (${userBalance?.toString() || "0"})`
-                : useLocale({ label: "imagegen.myArtworks" })
-            }
+            label={isConnected ? `${myArtworksLabel} (${userBalance?.toString() || "0"})` : myArtworksLabel}
             isActive={activeTab === "my"}
             onClick={() => setActiveTab("my")}
           />
           <Tab
-            label={useLocale({ label: "imagegen.allPublicArtworks" })}
+            label={allPublicArtworksLabel}
             isActive={activeTab === "public"}
             onClick={() => setActiveTab("public")}
           />

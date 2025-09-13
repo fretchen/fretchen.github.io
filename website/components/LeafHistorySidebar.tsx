@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { formatEther } from "viem";
 
 // Types
@@ -29,7 +29,7 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
   const [leaves, setLeaves] = useState<LeafHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchLeafHistory = async () => {
+  const fetchLeafHistory = useCallback(async () => {
     if (!address) return;
 
     setLoading(true);
@@ -43,13 +43,13 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
     } finally {
       setLoading(false);
     }
-  };
+  }, [address]);
 
   useEffect(() => {
     if (isOpen && address) {
       fetchLeafHistory();
     }
-  }, [isOpen, address]);
+  }, [isOpen, address, fetchLeafHistory]);
 
   if (!isOpen) return null;
 

@@ -56,12 +56,12 @@ export function PublicNFTList() {
     } finally {
       setIsLoadingTokenIds(false);
     }
-  }, []); // Keine Dependencies, da publicClient und genAiNFTContractConfig stabil sind
+  }, [genAiNFTContractConfig, publicClient]);
 
   // Load data when component mounts
   useEffect(() => {
     loadPublicTokenIds();
-  }, []);
+  }, [loadPublicTokenIds]);
 
   if (isLoadingTokenIds && publicTokenIds.length === 0) {
     return (

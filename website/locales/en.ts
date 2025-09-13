@@ -55,6 +55,7 @@ export default {
     noResponse: "No response received",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
+    loading: "Loading...",
   },
   walletoptions: {
     connect: "Connect",

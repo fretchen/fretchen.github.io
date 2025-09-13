@@ -56,12 +56,8 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
   const [selectedAmount, setSelectedAmount] = useState<string>("0.01");
   const [customAmount, setCustomAmount] = useState<string>("");
 
-  const getAmountToSend = (): string => {
-    return customAmount.trim() || selectedAmount;
-  };
-
   // Memoize the amount to send to avoid unnecessary recalculations
-  const amountToSend = useMemo(() => getAmountToSend(), [customAmount, selectedAmount]);
+  const amountToSend = useMemo(() => customAmount.trim() || selectedAmount, [customAmount, selectedAmount]);
 
   // Memoize the button text to avoid string replacement on every render
   const buttonText = useMemo(() => {
@@ -73,7 +69,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
     if (!address) return;
 
     try {
-      const amountStr = getAmountToSend();
+      const amountStr = amountToSend;
       const amountWei = parseEther(amountStr);
 
       if (!amountWei || amountWei <= 0n) {

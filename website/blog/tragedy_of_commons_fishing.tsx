@@ -1226,13 +1226,13 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
   // Auto-simulate all rounds when scenario changes
   useEffect(() => {
-    const applyRedistribution = (originalCatches: number[], leader: number) => {
+    const applyRedistribution = (originalCatches: number[], leader: number, currentStock: number) => {
       const redistributionResult = leaderRedistribution(leader);
       const redistributionRate = redistributionResult.redistributionRate;
 
       // Calculate sustainable catch per player (like in Python)
       const sustainableCatchPerPlayer =
-        calculateTotalCatch(fishStock, calculateSustainableBoats(fishStock)) / MODEL_PARAMS.nplayers;
+        calculateTotalCatch(currentStock, calculateSustainableBoats(currentStock)) / MODEL_PARAMS.nplayers;
 
       // Initialize arrays
       const redistributionTax = new Array(MODEL_PARAMS.nplayers).fill(0);
@@ -1371,7 +1371,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
         leaderDistributionMethod = distributionResult.method;
 
         // Apply community redistribution
-        const redistribution = applyRedistribution(originalCatches, leader);
+        const redistribution = applyRedistribution(originalCatches, leader, currentStock);
         const redistributionResult = leaderRedistribution(leader);
         leaderRedistributionPolicy = redistributionResult.policy;
 
@@ -1429,7 +1429,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
 
     setHistory(newHistory);
     setFishStock(currentStock);
-  }, [scenario, fishStock]);
+  }, [scenario]);
 
   const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
     const principles = [];

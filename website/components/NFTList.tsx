@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { getChain, genAiNFTContractConfig } from "../utils/getChain";
 import { NFTListProps } from "../types/components";
@@ -24,7 +24,7 @@ export function NFTList({
   const setActiveTab = onTabChange ?? setLocalActiveTab;
 
   // Get user's NFT balance for display in tab
-  const { data: userBalance } = useReadContract({
+  const userBalanceQuery = useReadContract({
     ...genAiNFTContractConfig,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
@@ -33,6 +33,15 @@ export function NFTList({
       enabled: !!address && isConnected,
     },
   });
+
+  const { data: userBalance, refetch: refetchUserBalance } = userBalanceQuery;
+
+  // Refetch balance when a new NFT is created to update the tab count
+  useEffect(() => {
+    if (newlyCreatedNFT && refetchUserBalance) {
+      refetchUserBalance();
+    }
+  }, [newlyCreatedNFT, refetchUserBalance]);
 
   // Move useLocale calls to top level to avoid conditional hook calls
   const myArtworksLabel = useLocale({ label: "imagegen.myArtworks" });

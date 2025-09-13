@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { genAiNFTContractConfig } from "../utils/getChain";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
-import { extractPromptFromDescription } from "../utils/nftLoader";
+import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
 import * as styles from "../layouts/styles";
 
 interface NFTFloatImageProps {

@@ -1,5 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render } from "@testing-library/react";
+import { useReadContract } from "wagmi";
 import { NFTList } from "../components/NFTList";
 import { NFTListProps } from "../types/components";
 
@@ -29,6 +31,12 @@ vi.mock("../layouts/styles", () => ({
     tabList: "tab-list",
     tab: "tab",
     activeTab: "active-tab",
+  },
+  tabs: {
+    container: "tabs-container",
+    tabList: "tab-list",
+    tabPanel: "tab-panel",
+    hiddenPanel: "hidden-panel",
   },
 }));
 
@@ -250,31 +258,41 @@ describe("NFTList Component", () => {
   });
 
   /**
-   * Balance Update Bug Documentation
-   * Simple test that documents the missing refetch mechanism
+   * Balance Update Bug Documentation and Validation
    */
   describe("Balance Update Bug", () => {
-    it("documents the missing refetch mechanism", () => {
-      // This test simply documents what should happen
-      // No need to actually test complex mock interactions
-      
-      // CURRENT BEHAVIOR:
-      // When newlyCreatedNFT prop is provided, NFTList doesn't refetch userBalance
-      // This means the tab count (e.g., "My Artworks (2)") stays outdated
-      
-      // EXPECTED BEHAVIOR after fix:
-      // NFTList should call refetch() when newlyCreatedNFT prop changes
-      // This would update the balance count in the tab immediately
-      
-      // IMPLEMENTATION NEEDED:
-      // Add useEffect in NFTList that watches newlyCreatedNFT and calls userBalance.refetch()
-      
-      console.log("📝 Current: Balance count in tab is not updated after NFT creation");
-      console.log("📝 Expected: NFTList should call refetch() when newlyCreatedNFT changes");
-      console.log("📝 Solution: Add useEffect that watches newlyCreatedNFT and calls refetch");
-      
-      // This test passes because it's just documentation
-      expect(true).toBe(true);
+    it("validates that refetch is called when newlyCreatedNFT prop changes", () => {
+      const mockRefetch = vi.fn();
+
+      // Override the global mock for this specific test
+      const mockUseReadContract = vi.mocked(useReadContract);
+      mockUseReadContract.mockReturnValue({
+        data: 2n,
+        isLoading: false,
+        refetch: mockRefetch,
+      } as unknown as ReturnType<typeof useReadContract>);
+
+      const TestComponent = ({ newlyCreatedNFT }: { newlyCreatedNFT?: NFTListProps["newlyCreatedNFT"] }) => (
+        <NFTList newlyCreatedNFT={newlyCreatedNFT} />
+      );
+
+      // Initial render without newlyCreatedNFT
+      const { rerender } = render(<TestComponent />);
+
+      // refetch should not be called initially
+      expect(mockRefetch).not.toHaveBeenCalled();
+
+      // Now provide a newlyCreatedNFT
+      const newNFT = {
+        tokenId: 123n,
+        imageUrl: "test.png",
+        metadata: { name: "Test NFT", description: "Test", image: "test.png" },
+      };
+
+      rerender(<TestComponent newlyCreatedNFT={newNFT} />);
+
+      // Now refetch should have been called because of our useEffect
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
     });
   });
 });

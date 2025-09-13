@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
-import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
+import { getChain, llmV1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import * as styles from "../../layouts/styles";
 import { useLocale } from "../../hooks/useLocale";
@@ -20,7 +20,6 @@ interface BalanceDisplayProps {
 
 function BalanceDisplay({ address }: BalanceDisplayProps) {
   // LLM Contract configuration
-  const llmContractConfig = getLLMv1ContractConfig();
   const chain = getChain();
 
   // localized message
@@ -38,7 +37,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 
   // Read user's balance from contract
   const { data: balance, refetch: refetchBalance } = useReadContract({
-    ...llmContractConfig,
+    ...llmV1ContractConfig,
     functionName: "checkBalance",
     args: address ? [address] : undefined,
     ...(chain?.id && { chainId: chain.id }),
@@ -78,7 +77,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
       }
 
       writeContract({
-        ...llmContractConfig,
+        ...llmV1ContractConfig,
         functionName: "depositForLLM",
         value: amountWei,
         ...(chain?.id && { chainId: chain.id }),

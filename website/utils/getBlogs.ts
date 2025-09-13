@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { BlogPost } from "../types/BlogPost";
 import { BlogOptions } from "../types/BlogOptions";
-import { loadMultipleNFTMetadata } from "./nftLoader";
+import { loadMultipleNFTMetadataNode } from "./nodeNftLoader";
 
 // Helper function to process markdown/mdx files
 const processMarkdownPost = (file: string, blogDirectory: string): BlogPost => {
@@ -129,8 +129,8 @@ export const getBlogs = async ({
     if (tokenIDs.length > 0) {
       console.log(`Found ${tokenIDs.length} blogs with NFT tokens: ${tokenIDs.join(", ")}`);
 
-      // Load all NFT metadata
-      const nftMetadataMap = await loadMultipleNFTMetadata(tokenIDs);
+      // Load all NFT metadata using Node.js implementation
+      const nftMetadataMap = await loadMultipleNFTMetadataNode(tokenIDs);
 
       // Add NFT metadata to blogs
       blogs.forEach((blog) => {

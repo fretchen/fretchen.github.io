@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "wagmi/actions";
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
 import { config } from "../wagmi.config";
 import { genAiNFTContractConfig } from "../utils/getChain";
+import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
@@ -45,15 +44,8 @@ export function NFTCard({
   const shareLabel = useLocale({ label: "imagegen.share" });
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
-  // Memoize the public client to prevent recreation on every render
-  const publicClient = useMemo(
-    () =>
-      createPublicClient({
-        chain: optimism,
-        transport: http(),
-      }),
-    [],
-  );
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient();
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -372,24 +364,20 @@ export function NFTCard({
             {nft.imageUrl && (
               <button
                 onClick={handleImageClick}
-                className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
+                className={styles.nftCard.compactSecondaryButton}
                 title="View full size"
               >
                 🔍 Zoom
               </button>
             )}
             {nft.imageUrl && (
-              <button
-                onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
-                title="Download image"
-              >
+              <button onClick={handleDownload} className={styles.nftCard.compactPrimaryButton} title="Download image">
                 ⬇️ {downloadLabel}
               </button>
             )}
             <button
               onClick={handleShare}
-              className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
+              className={styles.nftCard.compactSecondaryButton}
               title="Share your artwork on the marketplace"
             >
               📤 {shareLabel}
@@ -399,7 +387,7 @@ export function NFTCard({
               <button
                 onClick={handleBurn}
                 disabled={isBurning || isConfirming}
-                className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
+                className={`${styles.nftCard.compactSecondaryButton} ${isBurning || isConfirming ? "" : styles.errorStatus}`}
                 title="Delete artwork (permanent)"
                 style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
               >

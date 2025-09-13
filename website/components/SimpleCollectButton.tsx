@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from "wagmi";
 import { formatEther } from "viem";
-import { getCollectorNFTContractConfig, getChain } from "../utils/getChain";
+import { collectorNFTContractConfig, getChain } from "../utils/getChain";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 interface SimpleCollectButtonProps {
@@ -25,7 +25,6 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
 
   // Chain and contract configuration
   const chain = getChain();
-  const collectorContractConfig = getCollectorNFTContractConfig();
   const isCorrectNetwork = chainId === chain.id;
 
   const collectLabel = useLocale({ label: "imagegen.collect" });
@@ -37,7 +36,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     isPending: isReadPending,
     refetch,
   } = useReadContract({
-    ...collectorContractConfig,
+    ...collectorNFTContractConfig,
     functionName: "getMintStats",
     args: [genImTokenId],
     chainId: chain.id,
@@ -54,7 +53,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     const [, currentPrice] = mintStats as [bigint, bigint, bigint];
 
     writeContract({
-      ...collectorContractConfig,
+      ...collectorNFTContractConfig,
       functionName: "mintCollectorNFT",
       args: [genImTokenId], // CollectorNFTv1 doesn't need URI parameter
       value: currentPrice,

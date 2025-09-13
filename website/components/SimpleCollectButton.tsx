@@ -28,6 +28,8 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   const collectorContractConfig = getCollectorNFTContractConfig();
   const isCorrectNetwork = chainId === chain.id;
 
+  const collectLabel = useLocale({ label: "imagegen.collect" });
+
   // Read mint stats
   const {
     data: mintStats,
@@ -123,7 +125,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
         ? "📦 Collecting..."
         : isSuccess
           ? "✅ Collected!"
-          : `📦 ${useLocale({ label: "imagegen.collect" })} (${getMintCount()})`}
+          : `📦 ${collectLabel} (${getMintCount()})`}
     </button>
   );
 }

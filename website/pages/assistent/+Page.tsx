@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
@@ -16,10 +16,9 @@ interface ChatMessage {
 // Balance Display Component
 interface BalanceDisplayProps {
   address: `0x${string}` | undefined;
-  onRefetchBalance?: (refetchFn: () => void) => void;
 }
 
-function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
+function BalanceDisplay({ address }: BalanceDisplayProps) {
   // LLM Contract configuration
   const llmContractConfig = getLLMv1ContractConfig();
   const chain = getChain();
@@ -27,6 +26,16 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   // localized message
   const invalidAmountMessage = useLocale({ label: "assistent.invalidAmount" });
   const invalidAmountFormatMessage = useLocale({ label: "assistent.invalidAmountFormat" });
+  const topUpLabel = useLocale({ label: "assistent.topUp" });
+  const topUpBalanceLabel = useLocale({ label: "assistent.topUpBalance" });
+  const currentBalanceLabel = useLocale({ label: "assistent.currentBalance" });
+  const quickAmountsLabel = useLocale({ label: "assistent.quickAmounts" });
+  const customAmountLabel = useLocale({ label: "assistent.customAmount" });
+  const customHintLabel = useLocale({ label: "assistent.amountHint" });
+  const cancelLabel = useLocale({ label: "assistent.cancel" });
+  const processingLabel = useLocale({ label: "assistent.processing" });
+  const topUpAmountLabel = useLocale({ label: "assistent.topUpAmount" });
+
   // Read user's balance from contract
   const { data: balance, refetch: refetchBalance } = useReadContract({
     ...llmContractConfig,
@@ -47,15 +56,20 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
   const [selectedAmount, setSelectedAmount] = useState<string>("0.01");
   const [customAmount, setCustomAmount] = useState<string>("");
 
-  const getAmountToSend = (): string => {
-    return customAmount.trim() || selectedAmount;
-  };
+  // Memoize the amount to send to avoid unnecessary recalculations
+  const amountToSend = useMemo(() => customAmount.trim() || selectedAmount, [customAmount, selectedAmount]);
+
+  // Memoize the button text to avoid string replacement on every render
+  const buttonText = useMemo(() => {
+    if (isConfirming) return processingLabel;
+    return topUpAmountLabel.replace("{amount}", amountToSend);
+  }, [isConfirming, processingLabel, topUpAmountLabel, amountToSend]);
 
   const handleTopUp = async () => {
     if (!address) return;
 
     try {
-      const amountStr = getAmountToSend();
+      const amountStr = amountToSend;
       const amountWei = parseEther(amountStr);
 
       if (!amountWei || amountWei <= 0n) {
@@ -84,13 +98,6 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
     }
   }, [isConfirmed, refetchBalance]);
 
-  // Pass refetch function to parent
-  React.useEffect(() => {
-    if (onRefetchBalance) {
-      onRefetchBalance(refetchBalance);
-    }
-  }, [refetchBalance, onRefetchBalance]);
-
   // Helper function for user-friendly balance formatting
   const formatBalance = (balanceWei: bigint): string => {
     const balanceEth = parseFloat(formatEther(balanceWei));
@@ -110,7 +117,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       <div className={styles.balanceContainer}>
         <span className={styles.balanceText}>{balance ? formatBalance(balance as bigint) : "0"} ETH</span>
         <button onClick={() => setShowTopUpModal(true)} disabled={isConfirming} className={styles.balanceButton}>
-          {useLocale({ label: "assistent.topUp" })}
+          {topUpLabel}
         </button>
       </div>
 
@@ -118,18 +125,17 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       {showTopUpModal && (
         <div className={styles.modalOverlay} onClick={() => setShowTopUpModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>{useLocale({ label: "assistent.topUpBalance" })}</h3>
+            <h3 className={styles.modalTitle}>{topUpBalanceLabel}</h3>
 
             <div className={styles.modalSection}>
               <div className={styles.modalText}>
-                {useLocale({ label: "assistent.currentBalance" })} {balance ? formatBalance(balance as bigint) : "0"}{" "}
-                ETH
+                {currentBalanceLabel} {balance ? formatBalance(balance as bigint) : "0"} ETH
               </div>
             </div>
 
             {/* Preset amounts */}
             <div className={styles.modalSection}>
-              <div className={styles.modalLabel}>{useLocale({ label: "assistent.quickAmounts" })}</div>
+              <div className={styles.modalLabel}>{quickAmountsLabel}</div>
               <div className={styles.presetButtons}>
                 {["0.001", "0.005", "0.01"].map((amount) => (
                   <button
@@ -150,7 +156,7 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
 
             {/* Custom amount */}
             <div className={styles.modalSection}>
-              <div className={styles.modalLabel}>{useLocale({ label: "assistent.customAmount" })}</div>
+              <div className={styles.modalLabel}>{customAmountLabel}</div>
               <input
                 type="text"
                 value={customAmount}
@@ -158,22 +164,20 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
                 placeholder="0.0"
                 className={styles.modalInput}
               />
-              <div className={styles.modalText}>{useLocale({ label: "assistent.amountHint" })}</div>
+              <div className={styles.modalText}>{customHintLabel}</div>
             </div>
 
             {/* Action buttons */}
             <div className={styles.modalButtons}>
               <button onClick={() => setShowTopUpModal(false)} className={styles.modalButtonCancel}>
-                {useLocale({ label: "assistent.cancel" })}
+                {cancelLabel}
               </button>
               <button
                 onClick={handleTopUp}
                 disabled={isConfirming || (!customAmount && !selectedAmount)}
                 className={styles.modalButtonPrimary}
               >
-                {isConfirming
-                  ? useLocale({ label: "assistent.processing" })
-                  : useLocale({ label: "assistent.topUpAmount" }).replace("{amount}", getAmountToSend())}
+                {buttonText}
               </button>
             </div>
           </div>
@@ -189,13 +193,25 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authSignature, setAuthSignature] = useState<string | null>(null);
-  const [refetchBalance, setRefetchBalance] = useState<(() => void) | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Localized messages
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
+  const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
+  const loadingLabel = useLocale({ label: "assistent.loading" });
+  const sendLabel = useLocale({ label: "assistent.send" });
+  const unknownErrorLabel = useLocale({ label: "assistent.unknownError" });
+  const balanceLabel = useLocale({ label: "assistent.balance" });
+  const typingLabel = useLocale({ label: "assistent.typing" });
+  const actionsLabel = useLocale({ label: "assistent.actions" });
+  const historyLabel = useLocale({ label: "assistent.history" });
+  const clearChatLabel = useLocale({ label: "assistent.clearChat" });
+  const mobileTitleLabel = useLocale({ label: "assistent.mobileTitle" });
+  const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
+  const youLabel = useLocale({ label: "assistent.you" });
+  const assistantLabel = useLocale({ label: "assistent.assistant" });
   // Mobile detection
   React.useEffect(() => {
     const checkMobile = () => {
@@ -219,33 +235,26 @@ export default function Page() {
   };
 
   // Button state logic similar to ImageGenerator
-  const getButtonState = () => {
+  const buttonState = useMemo(() => {
     if (!isConnected) return "connect";
     if (isLoading) return "loading";
     if (!currentInput.trim()) return "empty";
     return "ready";
-  };
+  }, [isConnected, isLoading, currentInput]);
 
   const getButtonText = (state: string) => {
     switch (state) {
       case "connect":
-        return useLocale({ label: "assistent.connectWalletMessage" });
+        return connectWalletMessageLabel;
       case "loading":
-        return useLocale({ label: "assistent.sending" });
+        return loadingLabel;
       case "empty":
-        return useLocale({ label: "assistent.send" });
+        return sendLabel;
       case "ready":
-        return useLocale({ label: "assistent.send" });
+        return sendLabel;
       default:
-        return useLocale({ label: "assistent.send" });
+        return sendLabel;
     }
-  };
-
-  const buttonState = getButtonState();
-
-  // Callback to receive refetch function from BalanceDisplay
-  const handleRefetchBalance = (refetchFn: () => void) => {
-    setRefetchBalance(() => refetchFn);
   };
 
   // Authenticate wallet once per session
@@ -328,14 +337,11 @@ export default function Page() {
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-      // Refresh balance after successful message
-      if (refetchBalance) {
-        refetchBalance();
-      }
+      // Balance is automatically refreshed by BalanceDisplay component after transactions
     } catch (error) {
       const errorMsg: ChatMessage = {
         role: "assistant",
-        content: `${errorPrefixMessage} ${error instanceof Error ? error.message : useLocale({ label: "assistent.unknownError" })}`,
+        content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -374,24 +380,24 @@ export default function Page() {
           <div className={styles.sidebar}>
             {/* Balance Section */}
             <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>{useLocale({ label: "assistent.balance" })}</h4>
-              <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+              <h4 className={styles.sidebarHeading}>{balanceLabel}</h4>
+              <BalanceDisplay address={address} />
             </div>
 
             {/* Actions Section */}
             <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>{useLocale({ label: "assistent.actions" })}</h4>
+              <h4 className={styles.sidebarHeading}>{actionsLabel}</h4>
               <div className={styles.actionsContainer}>
                 <button
                   onClick={() => setIsSidebarOpen(true)}
                   className={styles.actionButton}
                   title="View request history"
                 >
-                  {useLocale({ label: "assistent.history" })}
+                  {historyLabel}
                 </button>
 
                 <button onClick={clearChat} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
-                  {useLocale({ label: "assistent.clearChat" })}
+                  {clearChatLabel}
                 </button>
               </div>
             </div>
@@ -403,9 +409,9 @@ export default function Page() {
           {/* Mobile Header - nur auf Mobile */}
           {isMobile && (
             <div className={styles.mobileHeader}>
-              <h2 className={styles.mobileTitle}>{useLocale({ label: "assistent.mobileTitle" })}</h2>
+              <h2 className={styles.mobileTitle}>{mobileTitleLabel}</h2>
               <div className={styles.mobileActions}>
-                <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+                <BalanceDisplay address={address} />
                 <button onClick={() => setIsSidebarOpen(true)} className={styles.mobileActionButton} title="History">
                   📜
                 </button>
@@ -419,7 +425,7 @@ export default function Page() {
           {/* Messages Container */}
           <div className={styles.messagesContainer}>
             {messages.length === 0 ? (
-              <div className={styles.emptyState}>{useLocale({ label: "assistent.emptyState" })}</div>
+              <div className={styles.emptyState}>{emptyStateLabel}</div>
             ) : (
               messages.map((message, index) => (
                 <div
@@ -433,11 +439,7 @@ export default function Page() {
                       message.role === "user" ? styles.messageBubbleUser : styles.messageBubbleAssistant
                     }`}
                   >
-                    <div className={styles.messageRole}>
-                      {message.role === "user"
-                        ? useLocale({ label: "assistent.you" })
-                        : useLocale({ label: "assistent.assistant" })}
-                    </div>
+                    <div className={styles.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
                     <div className={styles.messageContent}>{message.content}</div>
                   </div>
                 </div>
@@ -446,7 +448,7 @@ export default function Page() {
 
             {isLoading && (
               <div className={styles.loadingMessage}>
-                <div className={styles.loadingBubble}>{useLocale({ label: "assistent.typing" })}</div>
+                <div className={styles.loadingBubble}>{typingLabel}</div>
               </div>
             )}
           </div>

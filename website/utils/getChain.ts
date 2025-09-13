@@ -6,32 +6,10 @@ import SupportABI from "../../eth/abi/contracts/Support.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 /**
- * Get PUBLIC_ENV__CHAIN_NAME in both Node.js and Vite contexts
- * only the default value is required now
+ * Get PUBLIC_ENV__CHAIN_NAME in Vite context (Browser)
+ * Direct inline implementation for simplicity
  */
-function getEnvironmentVariable(defaultValue: string): string {
-  try {
-    // Vite supports only static dot-notation — handle the known key explicitly
-    if (typeof import.meta !== "undefined" && import.meta.env) {
-      return import.meta.env.PUBLIC_ENV__CHAIN_NAME || defaultValue;
-    }
-  } catch {
-    // Fall through to Node.js check
-  }
-
-  try {
-    if (typeof process !== "undefined" && process.env) {
-      return process.env.PUBLIC_ENV__CHAIN_NAME || defaultValue;
-    }
-  } catch {
-    // Fallback to default
-  }
-
-  return defaultValue;
-}
-
-// Get chain name once at module load time for stable references
-const CHAIN_NAME = getEnvironmentVariable("optimism");
+const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
 
 // Create stable contract config references at module level - computed once when module loads
 const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
@@ -113,25 +91,4 @@ export function getChain(): Chain {
     default:
       return optimism;
   }
-}
-
-// Legacy functions for backward compatibility - use the stable constants instead
-/** @deprecated Use genAiNFTContractConfig constant instead for stable references */
-export function getGenAiNFTContractConfig() {
-  return genAiNFTContractConfig;
-}
-
-/** @deprecated Use supportContractConfig constant instead for stable references */
-export function getSupportContractConfig() {
-  return supportContractConfig;
-}
-
-/** @deprecated Use collectorNFTContractConfig constant instead for stable references */
-export function getCollectorNFTContractConfig() {
-  return collectorNFTContractConfig;
-}
-
-/** @deprecated Use llmV1ContractConfig constant instead for stable references */
-export function getLLMv1ContractConfig() {
-  return llmV1ContractConfig;
 }

@@ -28,6 +28,10 @@ vi.mock("wagmi", () => ({
     isSuccess: false,
   })),
   useChainId: vi.fn(() => 10),
+  useSwitchChain: vi.fn(() => ({
+    switchChain: vi.fn(),
+    chains: [],
+  })),
   useConnect: vi.fn(() => ({
     connectors: [],
     connect: vi.fn(),
@@ -40,6 +44,7 @@ vi.mock("wagmi", () => ({
   })),
   createConfig: vi.fn(() => ({})),
   http: vi.fn(),
+  WagmiProvider: vi.fn(({ children }) => children),
 }));
 
 // Mock wagmi/chains
@@ -47,6 +52,7 @@ vi.mock("wagmi/chains", () => ({
   mainnet: { id: 1, name: "Ethereum" },
   sepolia: { id: 11155111, name: "Sepolia" },
   optimism: { id: 10, name: "Optimism" },
+  optimismSepolia: { id: 11155420, name: "Optimism Sepolia" },
 }));
 
 // Mock wagmi/connectors
@@ -54,6 +60,14 @@ vi.mock("wagmi/connectors", () => ({
   injected: vi.fn(() => ({})),
   walletConnect: vi.fn(() => ({})),
   metaMask: vi.fn(() => ({})),
+}));
+
+// Mock @wagmi/core
+vi.mock("@wagmi/core", () => ({
+  getPublicClient: vi.fn(() => ({
+    readContract: vi.fn().mockResolvedValue("https://ipfs.io/ipfs/QmTest123/metadata.json"),
+    chain: { id: 10, name: "Optimism" },
+  })),
 }));
 
 // Mock vike-react hooks

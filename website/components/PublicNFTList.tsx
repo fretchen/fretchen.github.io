@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
+import React, { useState, useEffect, useCallback } from "react";
 import { genAiNFTContractConfig } from "../utils/getChain";
+import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
@@ -15,15 +14,8 @@ export function PublicNFTList() {
   const [isLoadingTokenIds, setIsLoadingTokenIds] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
-  // Create a public client for reading contract data without wallet connection (memoized)
-  const publicClient = useMemo(
-    () =>
-      createPublicClient({
-        chain: optimism,
-        transport: http(),
-      }),
-    [],
-  );
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient();
 
   // Load all public token IDs using getAllPublicTokens
   const loadPublicTokenIds = useCallback(async () => {

@@ -1,5 +1,7 @@
 import { sepolia, optimism, optimismSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
+import { getPublicClient } from "@wagmi/core";
+import { config } from "../wagmi.config";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
 import SupportABI from "../../eth/abi/contracts/Support.json";
@@ -115,23 +117,11 @@ export function getChain(): Chain {
   }
 }
 
-// Legacy functions for backward compatibility - use the stable constants instead
-/** @deprecated Use genAiNFTContractConfig constant instead for stable references */
-export function getGenAiNFTContractConfig() {
-  return genAiNFTContractConfig;
-}
-
-/** @deprecated Use supportContractConfig constant instead for stable references */
-export function getSupportContractConfig() {
-  return supportContractConfig;
-}
-
-/** @deprecated Use collectorNFTContractConfig constant instead for stable references */
-export function getCollectorNFTContractConfig() {
-  return collectorNFTContractConfig;
-}
-
-/** @deprecated Use llmV1ContractConfig constant instead for stable references */
-export function getLLMv1ContractConfig() {
-  return llmV1ContractConfig;
+/**
+ * Gibt einen PublicClient zurück, der mit der korrekten Chain konfiguriert ist
+ * Benutzt die Umgebungskonfiguration statt der Wallet-Chain
+ */
+export function getConfiguredPublicClient() {
+  const chain = getChain();
+  return getPublicClient({ ...config, chains: [chain] });
 }

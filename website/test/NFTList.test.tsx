@@ -8,10 +8,6 @@ import { NFTListProps } from "../types/components";
 /**
  * Mock complex dependencies to focus on component logic
  */
-vi.mock("wagmi", () => ({
-  useAccount: vi.fn(() => ({ address: "0x123" })),
-  useReadContract: vi.fn(() => ({ data: [], isLoading: false })),
-}));
 
 vi.mock("../components/MyNFTList", () => ({
   MyNFTList: vi.fn(() => <div data-testid="my-nft-list">My NFTs</div>),

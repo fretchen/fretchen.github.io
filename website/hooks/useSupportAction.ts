@@ -2,7 +2,7 @@ import * as React from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { parseEther } from "viem";
 import { useReadContract } from "wagmi";
-import { getChain, getSupportContractConfig } from "../utils/getChain";
+import { getChain, supportContractConfig } from "../utils/getChain";
 
 /**
  * Custom hook for handling support/like functionality
@@ -32,7 +32,6 @@ export function useSupportAction(url: string) {
 
   // Chain and contract configuration
   const chain = getChain();
-  const supportContractConfig = getSupportContractConfig();
   const isCorrectNetwork = chainId === chain.id;
 
   // Read support data
@@ -69,7 +68,7 @@ export function useSupportAction(url: string) {
       args: [fullUrl],
       value: donationAmount,
     });
-  }, [fullUrl, isCorrectNetwork, chain.name, writeContract, supportContractConfig, donationAmount]);
+  }, [fullUrl, isCorrectNetwork, chain.name, writeContract, donationAmount]);
 
   // Update state after transaction
   React.useEffect(() => {

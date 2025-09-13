@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "wagmi/actions";
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
 import { config } from "../wagmi.config";
 import { genAiNFTContractConfig } from "../utils/getChain";
+import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
@@ -45,15 +44,8 @@ export function NFTCard({
   const shareLabel = useLocale({ label: "imagegen.share" });
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
-  // Memoize the public client to prevent recreation on every render
-  const publicClient = useMemo(
-    () =>
-      createPublicClient({
-        chain: optimism,
-        transport: http(),
-      }),
-    [],
-  );
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient();
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {

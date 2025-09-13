@@ -1,6 +1,4 @@
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
-import { genAiNFTContractConfig } from "./getChain";
+import { getConfiguredPublicClient, genAiNFTContractConfig } from "./getChain";
 import { NFTMetadata } from "../types/BlogPost";
 
 interface NFTMetadataJSON {
@@ -14,10 +12,7 @@ interface NFTMetadataJSON {
  */
 export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | null> {
   try {
-    const publicClient = createPublicClient({
-      chain: optimism,
-      transport: http(),
-    });
+    const publicClient = getConfiguredPublicClient();
 
     // Verwende die stabile genAiNFTContractConfig Konstante
 

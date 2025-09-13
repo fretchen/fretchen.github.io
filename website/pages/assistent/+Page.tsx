@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getChain, getLLMv1ContractConfig } from "../../utils/getChain";
@@ -16,10 +16,9 @@ interface ChatMessage {
 // Balance Display Component
 interface BalanceDisplayProps {
   address: `0x${string}` | undefined;
-  onRefetchBalance?: (refetchFn: () => void) => void;
 }
 
-function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
+function BalanceDisplay({ address }: BalanceDisplayProps) {
   // LLM Contract configuration
   const llmContractConfig = getLLMv1ContractConfig();
   const chain = getChain();
@@ -93,13 +92,6 @@ function BalanceDisplay({ address, onRefetchBalance }: BalanceDisplayProps) {
       refetchBalance();
     }
   }, [isConfirmed, refetchBalance]);
-
-  // Pass refetch function to parent
-  React.useEffect(() => {
-    if (onRefetchBalance) {
-      onRefetchBalance(refetchBalance);
-    }
-  }, [refetchBalance, onRefetchBalance]);
 
   // Helper function for user-friendly balance formatting
   const formatBalance = (balanceWei: bigint): string => {
@@ -196,7 +188,6 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authSignature, setAuthSignature] = useState<string | null>(null);
-  const [refetchBalance, setRefetchBalance] = useState<(() => void) | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Localized messages
@@ -262,11 +253,6 @@ export default function Page() {
   };
 
   const buttonState = getButtonState();
-
-  // Callback to receive refetch function from BalanceDisplay
-  const handleRefetchBalance = (refetchFn: () => void) => {
-    setRefetchBalance(() => refetchFn);
-  };
 
   // Authenticate wallet once per session
   const authenticateWallet = async () => {
@@ -348,10 +334,7 @@ export default function Page() {
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-      // Refresh balance after successful message
-      if (refetchBalance) {
-        refetchBalance();
-      }
+      // Balance is automatically refreshed by BalanceDisplay component after transactions
     } catch (error) {
       const errorMsg: ChatMessage = {
         role: "assistant",
@@ -395,7 +378,7 @@ export default function Page() {
             {/* Balance Section */}
             <div className={styles.sidebarSection}>
               <h4 className={styles.sidebarHeading}>{balanceLabel}</h4>
-              <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+              <BalanceDisplay address={address} />
             </div>
 
             {/* Actions Section */}
@@ -425,7 +408,7 @@ export default function Page() {
             <div className={styles.mobileHeader}>
               <h2 className={styles.mobileTitle}>{mobileTitleLabel}</h2>
               <div className={styles.mobileActions}>
-                <BalanceDisplay address={address} onRefetchBalance={handleRefetchBalance} />
+                <BalanceDisplay address={address} />
                 <button onClick={() => setIsSidebarOpen(true)} className={styles.mobileActionButton} title="History">
                   📜
                 </button>

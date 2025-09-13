@@ -1,5 +1,7 @@
 import { useMemo } from "react";
-import { getConfiguredPublicClient } from "../utils/getChain";
+import { getPublicClient } from "@wagmi/core";
+import { config } from "../wagmi.config";
+import { getChain } from "../utils/getChain";
 
 /**
  * Custom hook that provides a stable reference to the configured public client.
@@ -11,5 +13,8 @@ import { getConfiguredPublicClient } from "../utils/getChain";
  * @returns A stable public client instance configured with the correct chain
  */
 export function useConfiguredPublicClient() {
-  return useMemo(() => getConfiguredPublicClient(), []);
+  return useMemo(() => {
+    const chain = getChain();
+    return getPublicClient({ ...config, chains: [chain] });
+  }, []);
 }

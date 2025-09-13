@@ -1,12 +1,26 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
-import { getConfiguredPublicClient } from "../utils/getChain";
 
-// Mock the utility function
+// Mock the dependencies
 vi.mock("../utils/getChain", () => ({
-  getConfiguredPublicClient: vi.fn(() => ({
+  getChain: vi.fn(() => ({
+    id: 10,
+    name: "optimism",
+  })),
+}));
+
+vi.mock("../wagmi.config", () => ({
+  config: {
+    chains: [],
+    transports: {},
+  },
+}));
+
+vi.mock("@wagmi/core", () => ({
+  getPublicClient: vi.fn(() => ({
     readContract: vi.fn(),
+    chain: { id: 10 },
     // Mock a minimal public client
   })),
 }));
@@ -28,21 +42,22 @@ describe("useConfiguredPublicClient Hook", () => {
     expect(firstClient).toBe(secondClient);
   });
 
-  it("should only call getConfiguredPublicClient once", () => {
-    const mockGetConfiguredPublicClient = vi.mocked(getConfiguredPublicClient);
+  it("should maintain stable client reference within hook instance", () => {
+    // Reset all mocks
+    vi.clearAllMocks();
 
-    // Reset the mock call count
-    mockGetConfiguredPublicClient.mockClear();
+    const { result, rerender } = renderHook(() => useConfiguredPublicClient());
 
-    const { rerender } = renderHook(() => useConfiguredPublicClient());
+    const initialClient = result.current;
 
     // Re-render multiple times
     rerender();
     rerender();
     rerender();
 
-    // Should only be called once due to useMemo
-    expect(mockGetConfiguredPublicClient).toHaveBeenCalledTimes(1);
+    // The client reference should remain stable within the same hook instance
+    expect(result.current).toBe(initialClient);
+    expect(result.current).toBeDefined();
   });
 
   it("should prevent infinite re-render loops in useEffect dependencies", () => {

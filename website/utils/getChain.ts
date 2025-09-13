@@ -1,7 +1,5 @@
 import { sepolia, optimism, optimismSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
-import { getPublicClient } from "@wagmi/core";
-import { config } from "../wagmi.config";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
 import SupportABI from "../../eth/abi/contracts/Support.json";
@@ -115,13 +113,4 @@ export function getChain(): Chain {
     default:
       return optimism;
   }
-}
-
-/**
- * Gibt einen PublicClient zurück, der mit der korrekten Chain konfiguriert ist
- * Benutzt die Umgebungskonfiguration statt der Wallet-Chain
- */
-export function getConfiguredPublicClient() {
-  const chain = getChain();
-  return getPublicClient({ ...config, chains: [chain] });
 }

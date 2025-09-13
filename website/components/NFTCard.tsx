@@ -371,11 +371,7 @@ export function NFTCard({
               </button>
             )}
             {nft.imageUrl && (
-              <button
-                onClick={handleDownload}
-                className={styles.nftCard.compactPrimaryButton}
-                title="Download image"
-              >
+              <button onClick={handleDownload} className={styles.nftCard.compactPrimaryButton} title="Download image">
                 ⬇️ {downloadLabel}
               </button>
             )}

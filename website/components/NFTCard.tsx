@@ -4,7 +4,7 @@ import { readContract } from "wagmi/actions";
 import { createPublicClient, http } from "viem";
 import { optimism } from "viem/chains";
 import { config } from "../wagmi.config";
-import { getGenAiNFTContractConfig } from "../utils/getChain";
+import { genAiNFTContractConfig } from "../utils/getChain";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
@@ -23,7 +23,6 @@ export function NFTCard({
 }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   // NFT state - initialize with preloaded data if available
@@ -166,7 +165,7 @@ export function NFTCard({
     };
 
     loadNFTData();
-  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, genAiNFTContractConfig, publicClient]);
+  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, publicClient]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({

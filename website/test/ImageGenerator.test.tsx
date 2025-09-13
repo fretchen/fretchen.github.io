@@ -51,14 +51,8 @@ vi.mock("wagmi", () => ({
   useConnect: () => mockUseConnect(),
 }));
 
-// Mock other dependencies
-vi.mock("../utils/getChain", () => ({
-  getChain: vi.fn(() => ({ id: 10 })), // Optimism chain ID
-  getGenAiNFTContractConfig: vi.fn(() => ({
-    address: "0x1234567890123456789012345678901234567890",
-    abi: [],
-  })),
-}));
+// No need to mock getChain - it's just reading env vars and returning constants
+// The real implementation works fine in tests
 
 vi.mock("../layouts/styles", () => ({
   imageGen: {},

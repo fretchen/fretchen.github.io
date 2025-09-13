@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { createPublicClient, http } from "viem";
 import { optimism } from "viem/chains";
-import { getGenAiNFTContractConfig } from "../utils/getChain";
+import { genAiNFTContractConfig } from "../utils/getChain";
 import { ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
 
 export function PublicNFTList() {
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
+  // Use the stable genAiNFTContractConfig constant
 
   // Public NFTs state - now just store token IDs
   const [publicTokenIds, setPublicTokenIds] = useState<bigint[]>([]);
@@ -56,7 +56,7 @@ export function PublicNFTList() {
     } finally {
       setIsLoadingTokenIds(false);
     }
-  }, [genAiNFTContractConfig, publicClient]);
+  }, [publicClient]);
 
   // Load data when component mounts
   useEffect(() => {

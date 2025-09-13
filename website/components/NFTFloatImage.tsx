@@ -1,7 +1,5 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
-import { genAiNFTContractConfig } from "../utils/getChain";
+import React, { useEffect, useState } from "react";
+import { genAiNFTContractConfig, getConfiguredPublicClient } from "../utils/getChain";
 import { extractPromptFromDescription } from "../utils/nftLoader";
 import * as styles from "../layouts/styles";
 
@@ -9,7 +7,7 @@ interface NFTFloatImageProps {
   tokenId: number;
 }
 
-import { NFTMetadata } from "../types/NFTMetadata";
+import { NFTMetadata } from "../types/components";
 
 export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -36,15 +34,8 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     return nftTitle ? `Article Illustration: ${nftTitle}` : `Article Illustration: NFT #${tokenId}`;
   };
 
-  // Memoize the public client
-  const publicClient = useMemo(
-    () =>
-      createPublicClient({
-        chain: optimism,
-        transport: http(),
-      }),
-    [],
-  );
+  // Use wagmi's public client instead of creating our own
+  const publicClient = getConfiguredPublicClient();
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {

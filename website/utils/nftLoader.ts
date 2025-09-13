@@ -1,5 +1,5 @@
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
+import { getPublicClient } from "@wagmi/core";
+import { config } from "../wagmi.config";
 import { genAiNFTContractConfig } from "./getChain";
 import { NFTMetadata } from "../types/BlogPost";
 
@@ -14,10 +14,7 @@ interface NFTMetadataJSON {
  */
 export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | null> {
   try {
-    const publicClient = createPublicClient({
-      chain: optimism,
-      transport: http(),
-    });
+    const publicClient = getPublicClient(config);
 
     // Verwende die stabile genAiNFTContractConfig Konstante
 

@@ -1,6 +1,4 @@
-import { getPublicClient } from "@wagmi/core";
-import { config } from "../wagmi.config";
-import { genAiNFTContractConfig } from "./getChain";
+import { getConfiguredPublicClient, genAiNFTContractConfig } from "./getChain";
 import { NFTMetadata } from "../types/BlogPost";
 
 interface NFTMetadataJSON {
@@ -14,7 +12,7 @@ interface NFTMetadataJSON {
  */
 export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | null> {
   try {
-    const publicClient = getPublicClient(config);
+    const publicClient = getConfiguredPublicClient();
 
     // Verwende die stabile genAiNFTContractConfig Konstante
 

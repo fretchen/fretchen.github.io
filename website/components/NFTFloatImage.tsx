@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { genAiNFTContractConfig, getConfiguredPublicClient } from "../utils/getChain";
+import { genAiNFTContractConfig } from "../utils/getChain";
+import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { extractPromptFromDescription } from "../utils/nftLoader";
 import * as styles from "../layouts/styles";
 
@@ -34,8 +35,8 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     return nftTitle ? `Article Illustration: ${nftTitle}` : `Article Illustration: NFT #${tokenId}`;
   };
 
-  // Use wagmi's public client instead of creating our own
-  const publicClient = getConfiguredPublicClient();
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient();
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {

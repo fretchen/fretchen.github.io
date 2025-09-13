@@ -21,7 +21,6 @@ export function NFTCard({
   preloadedImageUrl,
   preloadedMetadata,
 }: NFTCardProps) {
-  }) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);

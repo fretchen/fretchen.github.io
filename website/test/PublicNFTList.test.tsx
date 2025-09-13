@@ -16,12 +16,7 @@ vi.mock("viem/chains", () => ({
   optimism: { id: 10, name: "Optimism" },
 }));
 
-vi.mock("../utils/getChain", () => ({
-  getGenAiNFTContractConfig: vi.fn(() => ({
-    address: "0x1234567890123456789012345678901234567890",
-    abi: [],
-  })),
-}));
+// No need to mock getChain - it's just reading env vars and returning constants
 
 vi.mock("../components/NFTCard", () => ({
   NFTCard: vi.fn(() => <div data-testid="nft-card">Mock NFT Card</div>),

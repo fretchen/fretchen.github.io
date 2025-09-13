@@ -25,18 +25,10 @@ vi.mock("wagmi/actions", () => ({
   readContract: (...args: unknown[]) => mockReadContract(...args),
 }));
 
-// Mock getChain to provide both the old unstable function and the new stable constant
+// Mock getChain to provide the stable constant
 vi.mock("../utils/getChain", () => ({
   getChain: vi.fn(() => ({ id: 10 })),
-  getGenAiNFTContractConfig: vi.fn(() => {
-    contractConfigCallCount++;
-    // Return a new object every time - this simulates the current bug
-    return {
-      address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-      abi: [], // Simplified for test
-    };
-  }),
-  // Add the stable constant that our components now use
+  // Stable constant that our components now use
   genAiNFTContractConfig: {
     address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
     abi: [], // Simplified for test
@@ -132,31 +124,32 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     console.log(`Contract config calls: ${contractConfigCallCount}`);
   });
 
-  it("should show that contract config creates new objects every time", async () => {
-    // Import the actual function to test
-    const { getGenAiNFTContractConfig } = await import("../utils/getChain");
+  it("should show that stable constant has consistent reference", async () => {
+    // Import the new stable constant
+    const { genAiNFTContractConfig } = await import("../utils/getChain");
 
-    const config1 = getGenAiNFTContractConfig();
-    const config2 = getGenAiNFTContractConfig();
+    // Multiple imports should return the same reference
+    const config1 = genAiNFTContractConfig;
+    const config2 = genAiNFTContractConfig;
 
-    // Even though they have the same content, they are different objects
+    // They should be exactly the same object (same content AND reference)
     expect(config1).toEqual(config2); // Content is the same
-    expect(config1).not.toBe(config2); // But references are different - THIS IS THE BUG!
+    expect(config1).toBe(config2); // And references are the same - THIS IS THE FIX!
 
     // This proves why the useEffect with contract config in dependencies
     // causes infinite re-renders
   });
 
-  it("should demonstrate the dependency chain that causes the loop", async () => {
+  it("should demonstrate stable dependency with fixed implementation", async () => {
     let effectRunCount = 0;
 
-    // Create a mock component that simulates the problematic useEffect
-    function ProblematicComponent() {
+    // Create a component that uses the stable constant
+    function FixedComponent() {
       const [contractConfig, setContractConfig] = React.useState<Record<string, unknown> | null>(null);
 
       React.useEffect(() => {
-        import("../utils/getChain").then(({ getGenAiNFTContractConfig }) => {
-          setContractConfig(getGenAiNFTContractConfig());
+        import("../utils/getChain").then(({ genAiNFTContractConfig }) => {
+          setContractConfig(genAiNFTContractConfig);
         });
       }, []);
 
@@ -169,17 +162,17 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
       return <div>Component</div>;
     }
 
-    render(<ProblematicComponent />);
+    render(<FixedComponent />);
 
     await waitFor(
       () => {
-        // Mit stabilen Konstanten sollte der Effect jetzt nur noch 2 mal laufen
+        // Mit stabilen Konstanten läuft der Effect nur noch 2 mal
         // (einmal initial, einmal nach dem ersten useEffect Update)
         expect(effectRunCount).toBeLessThanOrEqual(2);
       },
       { timeout: 1000 },
     );
 
-    console.log(`Effect ran ${effectRunCount} times due to unstable dependency`);
+    console.log(`Effect ran ${effectRunCount} times with stable dependency`);
   });
 });

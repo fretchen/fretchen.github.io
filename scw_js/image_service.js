@@ -17,9 +17,20 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 
-// Configuration constants
-const MODEL_NAME = "black-forest-labs/FLUX.1-schnell";
-const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/images/generations";
+// Provider configurations
+const PROVIDER_CONFIGS = {
+  ionos: {
+    endpoint: "https://openai.inference.de-txl.ionos.com/v1/images/generations",
+    model: "black-forest-labs/FLUX.1-schnell",
+    tokenEnvVar: "IONOS_API_TOKEN",
+  },
+  bfl: {
+    endpoint: "https://api.bfl.ml/v1/flux-pro-1.1",
+    model: "flux-pro-1.1",
+    tokenEnvVar: "BFL_API_TOKEN",
+  },
+};
+
 export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
 
@@ -93,44 +104,34 @@ export async function uploadToS3(data, fileName, contentType = "application/json
 }
 
 /**
- * Generates an image based on the prompt and uploads it to S3 along with ERC-721 metadata
+ * Generates an image using IONOS API
  * @param {string} prompt - The prompt for image generation
- * @param {string|number} tokenId - The NFT token ID to include in metadata
- * @param {string} size - Image size, either "1024x1024" or "1792x1024"
- * @returns {Promise<string>} - Path to the generated metadata file
+ * @param {string} size - Image size
+ * @returns {Promise<string>} - Base64 encoded image
  */
-export async function generateAndUploadImage(prompt, tokenId = "unknown", size = "1024x1024") {
-  const ionosApiToken = process.env.IONOS_API_TOKEN;
+async function generateImageIONOS(prompt, size) {
+  const config = PROVIDER_CONFIGS.ionos;
+  const apiToken = process.env[config.tokenEnvVar];
 
-  if (!ionosApiToken) {
+  if (!apiToken) {
     throw new Error(
-      "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
+      `API token not found. Please configure the ${config.tokenEnvVar} environment variable.`,
     );
   }
 
-  if (!prompt) {
-    throw new Error("No prompt provided.");
-  }
-
-  // Validate size parameter
-  const validSizes = ["1024x1024", "1792x1024"];
-  if (!validSizes.includes(size)) {
-    throw new Error(`Invalid size parameter. Must be one of: ${validSizes.join(", ")}`);
-  }
-
   const headers = {
-    Authorization: `Bearer ${ionosApiToken}`,
+    Authorization: `Bearer ${apiToken}`,
     "Content-Type": "application/json",
   };
 
   const body = {
-    model: MODEL_NAME,
+    model: config.model,
     prompt,
     size,
   };
 
-  console.log("Sending image generation request...");
-  const response = await fetch(ENDPOINT, {
+  console.log("Sending IONOS image generation request...");
+  const response = await fetch(config.endpoint, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -143,8 +144,93 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown", size =
   }
 
   const responseData = await response.json();
-  const imageBase64 = responseData.data[0].b64_json;
-  console.log("Image received");
+  return responseData.data[0].b64_json;
+}
+
+/**
+ * Generates an image using BFL API
+ * @param {string} prompt - The prompt for image generation
+ * @param {string} size - Image size
+ * @returns {Promise<string>} - Base64 encoded image
+ */
+async function generateImageBFL(prompt, size) {
+  const config = PROVIDER_CONFIGS.bfl;
+  const apiToken = process.env[config.tokenEnvVar];
+
+  if (!apiToken) {
+    throw new Error(
+      `API token not found. Please configure the ${config.tokenEnvVar} environment variable.`,
+    );
+  }
+
+  const headers = {
+    Authorization: `Bearer ${apiToken}`,
+    "Content-Type": "application/json",
+  };
+
+  const body = {
+    prompt,
+    width: size === "1792x1024" ? 1792 : 1024,
+    height: size === "1792x1024" ? 1024 : 1024,
+  };
+
+  console.log("Sending BFL image generation request...");
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    timeout: 60000,
+  });
+
+  if (!response.ok) {
+    console.error(`BFL API Error: ${response.status} ${response.statusText}`);
+    throw new Error(`Could not reach BFL: ${response.status} ${response.statusText}`);
+  }
+
+  const responseData = await response.json();
+  return responseData.result.sample; // BFL returns image in different format
+}
+
+/**
+ * Generates an image from the specified provider
+ * @param {string} prompt - The prompt for image generation
+ * @param {string} provider - The provider to use ('ionos' or 'bfl')
+ * @param {string} size - Image size
+ * @returns {Promise<string>} - Base64 encoded image
+ */
+async function generateImageFromProvider(prompt, provider, size) {
+  switch (provider) {
+    case 'ionos':
+      return generateImageIONOS(prompt, size);
+    case 'bfl':
+      return generateImageBFL(prompt, size);
+    default:
+      throw new Error(`Unknown provider: ${provider}`);
+  }
+}
+
+/**
+ * Generates an image based on the prompt and uploads it to S3 along with ERC-721 metadata
+ * @param {string} prompt - The prompt for image generation
+ * @param {string|number} tokenId - The NFT token ID to include in metadata
+ * @param {string} provider - The image generation provider ('ionos' or 'bfl')
+ * @param {string} size - Image size, either "1024x1024" or "1792x1024"
+ * @returns {Promise<string>} - Path to the generated metadata file
+ */
+export async function generateAndUploadImage(prompt, tokenId = "unknown", provider = "ionos", size = "1024x1024") {
+  if (!prompt) {
+    throw new Error("No prompt provided.");
+  }
+
+  // Validate size parameter
+  const validSizes = ["1024x1024", "1792x1024"];
+  if (!validSizes.includes(size)) {
+    throw new Error(`Invalid size parameter. Must be one of: ${validSizes.join(", ")}`);
+  }
+
+  // Generate image using the specified provider
+  const imageBase64 = await generateImageFromProvider(prompt, provider, size);
+  console.log("Image received from", provider);
 
   // Upload the image as PNG in the images subfolder
   const imageFileName = `images/image_${tokenId}_${getRandomString()}.png`;

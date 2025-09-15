@@ -175,6 +175,7 @@ describe("readhandler_v2.js Tests", () => {
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
         "beautiful landscape",
         "1",
+        "ionos",
         "1024x1024",
       );
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
@@ -275,7 +276,7 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "ionos", "1024x1024");
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1024x1024");
@@ -303,7 +304,7 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "1792x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "ionos", "1792x1024");
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1792x1024");
@@ -426,7 +427,7 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "ionos", "1024x1024");
     });
   });
 });

@@ -257,7 +257,7 @@ export async function generateAndUploadImage(
       },
       {
         trait_type: "Model",
-        value: MODEL_NAME,
+        value: PROVIDER_CONFIGS[provider].model,
       },
       {
         trait_type: "Image Size",

@@ -200,9 +200,9 @@ async function generateImageBFL(prompt, size) {
  */
 async function generateImageFromProvider(prompt, provider, size) {
   switch (provider) {
-    case 'ionos':
+    case "ionos":
       return generateImageIONOS(prompt, size);
-    case 'bfl':
+    case "bfl":
       return generateImageBFL(prompt, size);
     default:
       throw new Error(`Unknown provider: ${provider}`);
@@ -217,7 +217,12 @@ async function generateImageFromProvider(prompt, provider, size) {
  * @param {string} size - Image size, either "1024x1024" or "1792x1024"
  * @returns {Promise<string>} - Path to the generated metadata file
  */
-export async function generateAndUploadImage(prompt, tokenId = "unknown", provider, size = "1024x1024") {
+export async function generateAndUploadImage(
+  prompt,
+  tokenId = "unknown",
+  provider,
+  size = "1024x1024",
+) {
   if (!prompt) {
     throw new Error("No prompt provided.");
   }

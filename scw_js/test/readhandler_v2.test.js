@@ -3,54 +3,32 @@
  */
 import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 
-// Mock der externen Abhängigkeiten
-const mockViemFunctions = {
-  createPublicClient: vi.fn(),
-  createWalletClient: vi.fn(),
-  getContract: vi.fn(),
-  http: vi.fn(),
-  parseEther: vi.fn(),
-  privateKeyToAccount: vi.fn(),
-};
+// Import common setup
+import {
+  setupGlobalMocks,
+  createMockContract,
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  setupDefaultMocks,
+  mockFetchResponse,
+  mockMetadataResponse,
+  mockViemFunctions,
+  mockGenerateAndUploadImage,
+} from "./setup.js";
 
-const mockGenerateAndUploadImage = vi.fn();
-
-// Setup der Mocks
-vi.mock("viem", () => mockViemFunctions);
-vi.mock("viem/chains", () => ({
-  sepolia: { id: 11155111 },
-  optimism: { id: 10 },
-}));
-vi.mock("viem/accounts", () => ({
-  privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
-}));
-vi.mock("../image_service.js", () => ({
-  generateAndUploadImage: mockGenerateAndUploadImage,
-  JSON_BASE_PATH: "https://my-imagestore.s3.nl-ams.scw.cloud/",
-}));
+// Setup global mocks
+setupGlobalMocks();
 
 describe("readhandler_v2.js Tests", () => {
   let handle;
   let mockContract;
 
   beforeAll(async () => {
-    // Setup Mock-Contract
-    mockContract = {
-      read: {
-        ownerOf: vi.fn(),
-        mintPrice: vi.fn(),
-        isImageUpdated: vi.fn(),
-      },
-      write: {
-        requestImageUpdate: vi.fn(),
-      },
-    };
+    // Create mock contract
+    mockContract = createMockContract();
 
-    mockViemFunctions.getContract.mockReturnValue(mockContract);
-    mockViemFunctions.createPublicClient.mockReturnValue({});
-    mockViemFunctions.createWalletClient.mockReturnValue({});
-    mockViemFunctions.privateKeyToAccount.mockReturnValue({ address: "0x123" });
-    mockViemFunctions.http.mockReturnValue({});
+    // Setup default mocks
+    setupDefaultMocks(mockContract);
 
     // Dynamischer Import nach dem Setup der Mocks
     const module = await import("../readhandler_v2.js");
@@ -59,25 +37,20 @@ describe("readhandler_v2.js Tests", () => {
 
   beforeEach(() => {
     // Environment-Setup für Tests
-    process.env.NFT_WALLET_PRIVATE_KEY = "test-private-key";
+    setupTestEnvironment();
 
     // Reset aller Mocks
     vi.clearAllMocks();
 
-    // Standard-Mock-Rückgabewerte
-    mockContract.read.mintPrice.mockResolvedValue(BigInt("1000000000000000000")); // 1 ETH
-    mockContract.read.isImageUpdated.mockResolvedValue(false);
-    mockContract.read.ownerOf.mockResolvedValue("0x123456789");
-    mockGenerateAndUploadImage.mockResolvedValue(
-      "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
-    );
-    mockContract.write.requestImageUpdate.mockResolvedValue(
-      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    );
+    // Setup default mock values
+    setupDefaultMocks(mockContract);
+
+    // Mock fetch for metadata retrieval
+    mockFetchResponse(mockMetadataResponse);
   });
 
   afterEach(() => {
-    delete process.env.NFT_WALLET_PRIVATE_KEY;
+    cleanupTestEnvironment();
   });
 
   describe("handle() - Hauptfunktion Tests", () => {
@@ -276,7 +249,12 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "ionos", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        "1",
+        "ionos",
+        "1024x1024",
+      );
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1024x1024");
@@ -304,7 +282,12 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "1", "ionos", "1792x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        "1",
+        "ionos",
+        "1792x1024",
+      );
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1792x1024");
@@ -427,7 +410,12 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "ionos", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        longPrompt,
+        "1",
+        "ionos",
+        "1024x1024",
+      );
     });
   });
 });

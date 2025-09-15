@@ -187,9 +187,15 @@ describe("image_service.js Tests", () => {
     });
 
     test("sollte Fehler werfen wenn kein Prompt bereitgestellt wird", async () => {
-      await expect(generateAndUploadImage("", "123", "ionos")).rejects.toThrow("No prompt provided.");
-      await expect(generateAndUploadImage(null, "123", "ionos")).rejects.toThrow("No prompt provided.");
-      await expect(generateAndUploadImage(undefined, "123", "ionos")).rejects.toThrow("No prompt provided.");
+      await expect(generateAndUploadImage("", "123", "ionos")).rejects.toThrow(
+        "No prompt provided.",
+      );
+      await expect(generateAndUploadImage(null, "123", "ionos")).rejects.toThrow(
+        "No prompt provided.",
+      );
+      await expect(generateAndUploadImage(undefined, "123", "ionos")).rejects.toThrow(
+        "No prompt provided.",
+      );
     });
 
     test("sollte Fehler werfen wenn IONOS API Token fehlt", async () => {
@@ -310,7 +316,9 @@ describe("image_service.js Tests", () => {
     test("sollte Netzwerk-Timeouts handhaben", async () => {
       global.fetch.mockRejectedValue(new Error("Network timeout"));
 
-      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow("Network timeout");
+      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
+        "Network timeout",
+      );
     });
 
     test("sollte custom size Parameter verwenden", async () => {

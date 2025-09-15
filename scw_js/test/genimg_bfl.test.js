@@ -3,57 +3,32 @@
  */
 import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 
-// Mock der externen Abhängigkeiten
-const mockViemFunctions = {
-  createPublicClient: vi.fn(),
-  createWalletClient: vi.fn(),
-  getContract: vi.fn(),
-  http: vi.fn(),
-  parseEther: vi.fn(),
-  privateKeyToAccount: vi.fn(),
-};
+// Import common setup
+import {
+  setupGlobalMocks,
+  createMockContract,
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  setupDefaultMocks,
+  mockFetchResponse,
+  mockMetadataResponse,
+  mockViemFunctions,
+  mockGenerateAndUploadImage,
+} from "./setup.js";
 
-const mockGenerateAndUploadImage = vi.fn();
-
-// Setup der Mocks
-vi.mock("viem", () => mockViemFunctions);
-vi.mock("viem/chains", () => ({
-  sepolia: { id: 11155111 },
-  optimism: { id: 10 },
-}));
-vi.mock("viem/accounts", () => ({
-  privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
-}));
-// Mock für fetch (global)
-global.fetch = vi.fn();
-
-vi.mock("../image_service.js", () => ({
-  generateAndUploadImage: mockGenerateAndUploadImage,
-  JSON_BASE_PATH: "https://my-imagestore.s3.nl-ams.scw.cloud/",
-}));
+// Setup global mocks
+setupGlobalMocks();
 
 describe("genimg_bfl.js Tests", () => {
   let handle;
   let mockContract;
 
   beforeAll(async () => {
-    // Setup Mock-Contract
-    mockContract = {
-      read: {
-        ownerOf: vi.fn(),
-        mintPrice: vi.fn(),
-        isImageUpdated: vi.fn(),
-      },
-      write: {
-        requestImageUpdate: vi.fn(),
-      },
-    };
+    // Create mock contract
+    mockContract = createMockContract();
 
-    mockViemFunctions.getContract.mockReturnValue(mockContract);
-    mockViemFunctions.createPublicClient.mockReturnValue({});
-    mockViemFunctions.createWalletClient.mockReturnValue({});
-    mockViemFunctions.privateKeyToAccount.mockReturnValue({ address: "0x123" });
-    mockViemFunctions.http.mockReturnValue({});
+    // Setup default mocks
+    setupDefaultMocks(mockContract);
 
     // Dynamischer Import nach dem Setup der Mocks
     const module = await import("../genimg_bfl.js");
@@ -62,49 +37,20 @@ describe("genimg_bfl.js Tests", () => {
 
   beforeEach(() => {
     // Environment-Setup für Tests
-    process.env.NFT_WALLET_PRIVATE_KEY = "test-private-key";
+    setupTestEnvironment();
 
     // Reset aller Mocks
     vi.clearAllMocks();
 
-    // Standard-Mock-Rückgabewerte
-    mockContract.read.mintPrice.mockResolvedValue(BigInt("1000000000000000000")); // 1 ETH
-    mockContract.read.isImageUpdated.mockResolvedValue(false);
-    mockContract.read.ownerOf.mockResolvedValue("0x123456789");
-    mockGenerateAndUploadImage.mockResolvedValue(
-      "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
-    );
-    mockContract.write.requestImageUpdate.mockResolvedValue(
-      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    );
+    // Setup default mock values
+    setupDefaultMocks(mockContract);
 
     // Mock fetch for metadata retrieval
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        name: "AI Generated Art #1",
-        description: "AI generated artwork based on the prompt: \"beautiful landscape\"",
-        image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_1_test.png",
-        attributes: [
-          {
-            trait_type: "Prompt",
-            value: "beautiful landscape",
-          },
-          {
-            trait_type: "Model",
-            value: "flux-pro-1.1",
-          },
-          {
-            trait_type: "Image Size",
-            value: "1024x1024",
-          },
-        ],
-      }),
-    });
+    mockFetchResponse(mockMetadataResponse);
   });
 
   afterEach(() => {
-    delete process.env.NFT_WALLET_PRIVATE_KEY;
+    cleanupTestEnvironment();
   });
 
   describe("handle() - Hauptfunktion Tests", () => {
@@ -220,7 +166,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Fehler behandeln wenn Metadaten-Fetch fehlschlägt", async () => {
       // Mock fetch to simulate metadata fetch failure
-      global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+      const { mockFetchError } = await import("./setup.js");
+      mockFetchError("Network error");
 
       const event = {
         queryStringParameters: { prompt: "test prompt", tokenId: "1" },
@@ -367,12 +314,7 @@ describe("genimg_bfl.js Tests", () => {
       expect(result.statusCode).toBe(200);
 
       // Verifikation dass langer Prompt korrekt verarbeitet wurde
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
-        longPrompt,
-        "1",
-        "bfl",
-        "1024x1024",
-      );
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "bfl", "1024x1024");
     });
   });
 });

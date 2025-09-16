@@ -25,8 +25,8 @@ const PROVIDER_CONFIGS = {
     tokenEnvVar: "IONOS_API_TOKEN",
   },
   bfl: {
-    endpoint: "https://api.bfl.ml/v1/flux-pro-1.1",
-    model: "flux-pro-1.1",
+    endpoint: "https://api.bfl.ai/v1/flux-kontext-pro",
+    model: "flux-kontext-pro",
     tokenEnvVar: "BFL_API_TOKEN",
   },
 };
@@ -148,7 +148,7 @@ async function generateImageIONOS(prompt, size) {
 }
 
 /**
- * Generates an image using BFL API
+ * Generates an image using BFL API with proper polling
  * @param {string} prompt - The prompt for image generation
  * @param {string} size - Image size
  * @returns {Promise<string>} - Base64 encoded image
@@ -163,23 +163,21 @@ async function generateImageBFL(prompt, size) {
     );
   }
 
-  const headers = {
-    Authorization: `Bearer ${apiToken}`,
-    "Content-Type": "application/json",
-  };
-
-  const body = {
-    prompt,
-    width: size === "1792x1024" ? 1792 : 1024,
-    height: size === "1792x1024" ? 1024 : 1024,
-  };
-
   console.log("Sending BFL image generation request...");
+
+  // Step 1: Start image generation
   const response = await fetch(config.endpoint, {
     method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    timeout: 60000,
+    headers: {
+      accept: "application/json",
+      "x-key": apiToken, // Correct header for BFL
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      aspect_ratio: size === "1792x1024" ? "16:9" : "1:1", // Use aspect_ratio instead of width/height
+      output_format: "png", // Ensure consistent PNG format
+    }),
   });
 
   if (!response.ok) {
@@ -187,8 +185,72 @@ async function generateImageBFL(prompt, size) {
     throw new Error(`Could not reach BFL: ${response.status} ${response.statusText}`);
   }
 
-  const responseData = await response.json();
-  return responseData.result.sample; // BFL returns image in different format
+  const initData = await response.json();
+  const { id: requestId, polling_url } = initData;
+
+  console.log(`BFL request started with ID: ${requestId}`);
+
+  // Step 2: Poll for completion
+  const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
+  const pollInterval = 5000; // 5 seconds
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Polling attempt ${attempt + 1}/${maxAttempts}...`);
+
+    // Wait before polling (except first attempt)
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+
+    try {
+      const pollResponse = await fetch(polling_url, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          "x-key": apiToken,
+        },
+      });
+
+      if (!pollResponse.ok) {
+        console.warn(`Poll request failed: ${pollResponse.status}`);
+        continue; // Retry on next attempt
+      }
+
+      const pollData = await pollResponse.json();
+      console.log(`Poll status: ${pollData.status}`);
+
+      if (pollData.status === "Ready") {
+        console.log("BFL image generation completed!");
+        const imageUrl = pollData.result.sample;
+
+        // Step 3: Download the actual image
+        console.log("Downloading image from:", imageUrl);
+        const imageResponse = await fetch(imageUrl);
+
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to download image: ${imageResponse.status}`);
+        }
+
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString("base64");
+
+        console.log("BFL image successfully downloaded and encoded");
+        return base64Image;
+      } else if (pollData.status === "Error" || pollData.status === "Failed") {
+        console.error("BFL generation failed:", pollData);
+        throw new Error(`BFL generation failed: ${JSON.stringify(pollData)}`);
+      }
+
+      // Status is still "processing" or similar, continue polling
+    } catch (error) {
+      console.warn(`Polling error (attempt ${attempt + 1}):`, error.message);
+      // Continue to next attempt
+    }
+  }
+
+  throw new Error(
+    `BFL polling timed out after ${maxAttempts} attempts (${(maxAttempts * pollInterval) / 1000} seconds)`,
+  );
 }
 
 /**

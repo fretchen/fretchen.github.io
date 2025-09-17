@@ -91,7 +91,7 @@ export function setupTestEnvironment(envVars: Record<string, string> = {}) {
 }
 
 export function cleanupTestEnvironment(envVars: string[] = Object.keys(testEnvironment)) {
-  envVars.forEach(key => {
+  envVars.forEach((key) => {
     delete process.env[key];
   });
 }
@@ -114,9 +114,7 @@ export function setupDefaultMocks(mockContract: any) {
   mockGenerateAndUploadImage.mockResolvedValue(
     "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
   );
-  mockUploadToS3.mockResolvedValue(
-    "https://my-imagestore.s3.nl-ams.scw.cloud/test_file.json",
-  );
+  mockUploadToS3.mockResolvedValue("https://my-imagestore.s3.nl-ams.scw.cloud/test_file.json");
 
   // AWS S3 defaults
   mockS3Send.mockResolvedValue({});
@@ -146,7 +144,7 @@ export function mockFetchError(error: string = "Network error") {
 // ===== METADATA MOCK =====
 export const mockMetadataResponse = {
   name: "AI Generated Art #1",
-  description: "AI generated artwork based on the prompt: \"beautiful landscape\"",
+  description: 'AI generated artwork based on the prompt: "beautiful landscape"',
   image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_1_test.png",
   attributes: [
     {

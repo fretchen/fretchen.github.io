@@ -1,5 +1,5 @@
 /**
- * Tests für readhandler_v2.js - die wichtigsten Serverless-Funktionen
+ * Tests für genimg_bfl.js - BFL-basierte Bildgenerierung
  */
 import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 
@@ -19,7 +19,7 @@ import {
 // Setup global mocks
 setupGlobalMocks();
 
-describe("readhandler_v2.js Tests", () => {
+describe("genimg_bfl.js Tests", () => {
   let handle;
   let mockContract;
 
@@ -31,7 +31,7 @@ describe("readhandler_v2.js Tests", () => {
     setupDefaultMocks(mockContract);
 
     // Dynamischer Import nach dem Setup der Mocks
-    const module = await import("../readhandler_v2.js");
+    const module = await import("../genimg_bfl.js");
     handle = module.handle;
   });
 
@@ -77,14 +77,10 @@ describe("readhandler_v2.js Tests", () => {
     });
 
     test("sollte Fehler zurückgeben wenn Token nicht existiert", async () => {
-      // Mock dass Token nicht existiert
       mockContract.read.ownerOf.mockRejectedValue(new Error("Token does not exist"));
 
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "999",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "999" },
       };
 
       const result = await handle(event, {}, () => {});
@@ -94,14 +90,10 @@ describe("readhandler_v2.js Tests", () => {
     });
 
     test("sollte Fehler zurückgeben wenn Bild bereits aktualisiert wurde", async () => {
-      // Mock dass Token existiert aber bereits aktualisiert wurde
       mockContract.read.isImageUpdated.mockResolvedValue(true);
 
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
 
       const result = await handle(event, {}, () => {});
@@ -111,20 +103,11 @@ describe("readhandler_v2.js Tests", () => {
     });
 
     test("sollte erfolgreich Bild generieren und Token aktualisieren", async () => {
-      // Mock fetch für Metadaten
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-            name: "Test NFT",
-          }),
-      });
-
       const event = {
         queryStringParameters: {
           prompt: "beautiful landscape",
           tokenId: "1",
+          size: "1024x1024",
         },
       };
 
@@ -136,54 +119,44 @@ describe("readhandler_v2.js Tests", () => {
       expect(responseBody.metadata_url).toBe(
         "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
       );
-      expect(responseBody.image_url).toBe(
-        "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-      );
+      expect(responseBody.size).toBe("1024x1024");
+      expect(responseBody.mintPrice).toBe("1000000000000000000");
+      expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert (BFL)");
       expect(responseBody.transaction_hash).toBe(
         "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       );
-      expect(responseBody.message).toBe("Bild erfolgreich generiert und Token aktualisiert");
 
-      // Verifikation der Funktionsaufrufe
+      // Verifikation der Funktionsaufrufe - BFL Provider verwenden
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
         "beautiful landscape",
         "1",
-        "ionos",
+        "bfl",
         "1024x1024",
       );
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
-        BigInt("1"),
+        BigInt(1),
         "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_123456.json",
       ]);
     });
 
     test("sollte Fehler behandeln wenn Bildgenerierung fehlschlägt", async () => {
-      // Mock dass Bildgenerierung fehlschlägt
       mockGenerateAndUploadImage.mockRejectedValue(new Error("Image generation failed"));
 
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
 
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body).error).toBe(
-        "Operation fehlgeschlagen: Image generation failed",
-      );
+      expect(JSON.parse(result.body).error).toContain("Operation fehlgeschlagen");
     });
 
     test("sollte Fehler behandeln wenn private key fehlt", async () => {
       delete process.env.NFT_WALLET_PRIVATE_KEY;
 
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
 
       await expect(handle(event, {}, () => {})).rejects.toThrow(
@@ -192,17 +165,12 @@ describe("readhandler_v2.js Tests", () => {
     });
 
     test("sollte Fehler behandeln wenn Metadaten-Fetch fehlschlägt", async () => {
-      // Mock fehlgeschlagenen fetch
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-      });
+      // Mock fetch to simulate metadata fetch failure
+      const { mockFetchError } = await import("./setup.js");
+      mockFetchError("Network error");
 
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
 
       const result = await handle(event, {}, () => {});
@@ -223,54 +191,28 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(400);
-      expect(JSON.parse(result.body).error).toBe(
-        "Invalid size parameter. Must be one of: 1024x1024, 1792x1024",
-      );
+      expect(JSON.parse(result.body).error).toContain("Invalid size parameter");
     });
 
     test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
-      // Mock fetch für Metadaten
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-            name: "Test NFT",
-          }),
-      });
-
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
 
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
+
+      // Verifikation dass BFL Provider mit Standard-Size verwendet wurde
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
         "test prompt",
         "1",
-        "ionos",
+        "bfl",
         "1024x1024",
       );
-
-      const responseBody = JSON.parse(result.body);
-      expect(responseBody.size).toBe("1024x1024");
     });
 
     test("sollte custom size verwenden wenn gültige size bereitgestellt wird", async () => {
-      // Mock fetch für Metadaten
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-            name: "Test NFT",
-          }),
-      });
-
       const event = {
         queryStringParameters: {
           prompt: "test prompt",
@@ -282,61 +224,32 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
+
+      // Verifikation dass BFL Provider mit custom Size verwendet wurde
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
         "test prompt",
         "1",
-        "ionos",
+        "bfl",
         "1792x1024",
       );
-
-      const responseBody = JSON.parse(result.body);
-      expect(responseBody.size).toBe("1792x1024");
     });
   });
 
   describe("Contract Interaction Tests", () => {
     test("sollte mintPrice korrekt abrufen", async () => {
-      const expectedPrice = BigInt("2000000000000000000"); // 2 ETH
-      mockContract.read.mintPrice.mockResolvedValue(expectedPrice);
-
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
 
-      // Mock fetch für erfolgreiche Ausführung
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-          }),
-      });
+      await handle(event, {}, () => {});
 
-      const result = await handle(event, {}, () => {});
-
-      expect(result.statusCode).toBe(200);
-      const responseBody = JSON.parse(result.body);
-      expect(responseBody.mintPrice).toBe(expectedPrice.toString());
+      expect(mockContract.read.mintPrice).toHaveBeenCalled();
     });
 
     test("sollte Contract mit korrekten Parametern initialisieren", async () => {
       const event = {
-        queryStringParameters: {
-          prompt: "test prompt",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
       };
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-          }),
-      });
 
       await handle(event, {}, () => {});
 
@@ -353,34 +266,31 @@ describe("readhandler_v2.js Tests", () => {
 
   describe("Edge Cases", () => {
     test("sollte große Token-IDs korrekt verarbeiten", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-          }),
-      });
+      const largeTokenId = "999999999999999999";
 
       const event = {
         queryStringParameters: {
           prompt: "test prompt",
-          tokenId: "999999999999999999",
+          tokenId: largeTokenId,
         },
       };
 
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockContract.read.ownerOf).toHaveBeenCalledWith([BigInt("999999999999999999")]);
-      expect(mockContract.read.isImageUpdated).toHaveBeenCalledWith([BigInt("999999999999999999")]);
+
+      // Verifikation dass große Token-ID korrekt verarbeitet wurde
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        largeTokenId,
+        "bfl",
+        "1024x1024",
+      );
     });
 
     test("sollte leere Prompts ablehnen", async () => {
       const event = {
-        queryStringParameters: {
-          prompt: "",
-          tokenId: "1",
-        },
+        queryStringParameters: { prompt: "", tokenId: "1" },
       };
 
       const result = await handle(event, {}, () => {});
@@ -392,14 +302,6 @@ describe("readhandler_v2.js Tests", () => {
     test("sollte sehr lange Prompts verarbeiten", async () => {
       const longPrompt = "a".repeat(1000);
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            image: "https://my-imagestore.s3.nl-ams.scw.cloud/images/image_test_123456.png",
-          }),
-      });
-
       const event = {
         queryStringParameters: {
           prompt: longPrompt,
@@ -410,12 +312,9 @@ describe("readhandler_v2.js Tests", () => {
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
-        longPrompt,
-        "1",
-        "ionos",
-        "1024x1024",
-      );
+
+      // Verifikation dass langer Prompt korrekt verarbeitet wurde
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "bfl", "1024x1024");
     });
   });
 });

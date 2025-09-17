@@ -170,7 +170,7 @@ async function generateImageBFL(prompt, size) {
     method: "POST",
     headers: {
       accept: "application/json",
-      "x-key": apiToken, // Correct header for BFL
+      "x-key": apiToken, // BFL API requires authentication via the non-standard 'x-key' header instead of the standard 'Authorization' header. See BFL API docs for details.
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

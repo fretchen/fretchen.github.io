@@ -1,28 +1,29 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
-global.fetch = vi.fn();
+// Import common setup
+import {
+  setupGlobalMocks,
+  setupTestEnvironment,
+  cleanupTestEnvironment,
+  mockFetchResponse,
+  mockLLMResponse,
+} from "./setup.js";
+
+// Setup global mocks
+setupGlobalMocks();
 
 // direktes Named-Import statt dynamic import in beforeAll
 import { callLLMAPI } from "../llm_service.js";
 
 describe("llm_service.js", () => {
   beforeEach(() => {
-    process.env.IONOS_API_TOKEN = "test-token";
+    setupTestEnvironment();
     vi.clearAllMocks();
-    global.fetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () =>
-        Promise.resolve({
-          choices: [{ message: { content: "Antwort vom LLM" } }],
-          usage: { prompt_tokens: 5, completion_tokens: 7, total_tokens: 12 },
-          model: "meta-llama/Llama-3.3-70B-Instruct",
-        }),
-    });
+    mockFetchResponse(mockLLMResponse);
   });
 
   afterEach(() => {
-    delete process.env.IONOS_API_TOKEN;
+    cleanupTestEnvironment();
   });
 
   test("gibt Antwort und usage zurück bei gültigem Prompt", async () => {

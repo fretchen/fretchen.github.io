@@ -131,8 +131,8 @@ async function handle(event, context, cb) {
   // Wenn das Token existiert und noch nicht aktualisiert wurde
   try {
     // Generiere ein Bild basierend auf dem Prompt und lade es hoch
-    // Übergebe jetzt auch die tokenId und size an die Funktion
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId, "ionos", size);
+    // Verwende BFL als Provider anstatt IONOS
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId, "bfl", size);
 
     // Metadaten laden, um die Bild-URL zu extrahieren
     // Validate the metadataUrl against a trusted allow-list
@@ -161,7 +161,7 @@ async function handle(event, context, cb) {
         image_url: imageUrl,
         size,
         mintPrice: mintPrice.toString(),
-        message: "Bild erfolgreich generiert und Token aktualisiert",
+        message: "Bild erfolgreich generiert und Token aktualisiert (BFL)",
         transaction_hash: txHash,
       }),
       headers: { "Content-Type": ["application/json"] },

@@ -28,10 +28,25 @@ export async function handle(event, _context) {
     // Extrahiere den size Parameter, mit Standardwert "1024x1024"
     const size = queryParams.size || "1024x1024";
 
+    // Extrahiere den provider Parameter, mit Standardwert "ionos"
+    const provider = queryParams.provider || "ionos";
+
     // Validiere den Prompt
     if (!prompt) {
       return {
         body: JSON.stringify({ error: "Kein Prompt angegeben." }),
+        statusCode: 400,
+        headers,
+      };
+    }
+
+    // Validiere den provider Parameter
+    const validProviders = ["ionos", "bfl"];
+    if (!validProviders.includes(provider)) {
+      return {
+        body: JSON.stringify({
+          error: `Ungültiger Provider. Erlaubt sind: ${validProviders.join(", ")}`,
+        }),
         statusCode: 400,
         headers,
       };
@@ -49,16 +64,19 @@ export async function handle(event, _context) {
       };
     }
 
-    console.log(`Generiere Bild für Prompt: "${prompt}", TokenID: ${tokenId}, Größe: ${size}`);
+    console.log(
+      `Generiere Bild für Prompt: "${prompt}", TokenID: ${tokenId}, Größe: ${size}, Provider: ${provider}`,
+    );
 
-    // Übergebe Prompt, tokenId und size an die Funktion
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId, size);
+    // Übergebe Prompt, tokenId, provider und size an die Funktion
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId, provider, size);
 
     return {
       body: JSON.stringify({
         metadata_url: metadataUrl,
         token_id: tokenId,
         size,
+        provider,
       }),
       statusCode: 200,
       headers,

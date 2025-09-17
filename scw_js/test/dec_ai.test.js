@@ -69,7 +69,12 @@ describe("dec_ai.js Tests", () => {
       const result = await handle(event, {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "0", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        "0",
+        "ionos",
+        "1024x1024",
+      );
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.metadata_url).toBe(
@@ -77,6 +82,7 @@ describe("dec_ai.js Tests", () => {
       );
       expect(responseBody.token_id).toBe("0");
       expect(responseBody.size).toBe("1024x1024");
+      expect(responseBody.provider).toBe("ionos");
     });
 
     test("sollte custom size verwenden wenn gültige size bereitgestellt wird", async () => {
@@ -93,6 +99,7 @@ describe("dec_ai.js Tests", () => {
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
         "beautiful landscape",
         "0",
+        "ionos",
         "1792x1024",
       );
 
@@ -102,22 +109,95 @@ describe("dec_ai.js Tests", () => {
       );
       expect(responseBody.token_id).toBe("0");
       expect(responseBody.size).toBe("1792x1024");
+      expect(responseBody.provider).toBe("ionos");
     });
 
-    test("sollte Fehler behandeln wenn Bildgenerierung fehlschlägt", async () => {
-      // Mock dass Bildgenerierung fehlschlägt
-      mockGenerateAndUploadImage.mockRejectedValue(new Error("Image generation failed"));
-
+    test("sollte BFL Provider verwenden wenn provider=bfl angegeben wird", async () => {
       const event = {
         queryStringParameters: {
-          prompt: "test prompt",
+          prompt: "beautiful landscape",
+          provider: "bfl",
+          size: "1024x1024",
         },
       };
 
       const result = await handle(event, {});
 
-      expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body).error).toBe("Image generation failed");
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "bfl",
+        "1024x1024",
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.metadata_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_0.json",
+      );
+      expect(responseBody.token_id).toBe("0");
+      expect(responseBody.size).toBe("1024x1024");
+      expect(responseBody.provider).toBe("bfl");
+    });
+
+    test("sollte IONOS als Standard-Provider verwenden wenn kein provider angegeben", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "beautiful landscape",
+          size: "1024x1024",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "ionos",
+        "1024x1024",
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.provider).toBe("ionos");
+    });
+
+    test("sollte Fehler zurückgeben wenn ungültiger provider angegeben wird", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "test prompt",
+          provider: "invalid_provider",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Ungültiger Provider. Erlaubt sind: ionos, bfl");
+    });
+
+    test("sollte BFL Provider mit custom size verwenden", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "beautiful landscape",
+          provider: "bfl",
+          size: "1792x1024",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "bfl",
+        "1792x1024",
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.size).toBe("1792x1024");
+      expect(responseBody.provider).toBe("bfl");
     });
   });
 });

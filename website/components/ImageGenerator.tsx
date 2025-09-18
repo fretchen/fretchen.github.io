@@ -8,6 +8,10 @@ import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
+
+
+const defaultImageUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud";
+
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
   return new Promise<TransactionReceipt>((resolve, reject) => {
@@ -31,7 +35,7 @@ export const waitForTransaction = async (hash: `0x${string}`): Promise<Transacti
 };
 
 export function ImageGenerator({
-  apiUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud",
+  apiUrl = import.meta.env.PUBLIC_ENV___IMAGE_URL || defaultImageUrl,
   onSuccess,
   onError,
 }: ImageGeneratorProps) {

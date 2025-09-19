@@ -9,7 +9,6 @@ import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
 
-
 const defaultImageUrl = "https://mypersonaljscloudivnad9dy-readnftv2.functions.fnc.fr-par.scw.cloud";
 
 // Helper function to wait for transaction confirmation
@@ -46,6 +45,14 @@ export function ImageGenerator({
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
   const [isEditingMode, setIsEditingMode] = useState(false);
+
+  // Reference image state
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [referencePreviewUrl, setReferencePreviewUrl] = useState<string | null>(null);
+
+  // Preview area state machine
+  type PreviewState = "empty" | "reference" | "generated" | "editing";
+  const [previewState, setPreviewState] = useState<PreviewState>("empty");
 
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState<"1024x1024" | "1792x1024">("1024x1024");
@@ -262,6 +269,7 @@ export function ImageGenerator({
       const imageUrl = data.image_url;
       setGeneratedImageUrl(imageUrl);
       setCurrentPreviewImage(imageUrl); // Set preview image
+      setPreviewState("generated"); // Transition to generated state
       setMintingStatus("idle");
 
       // Erstelle Metadaten-Objekt aus der API-Antwort
@@ -285,14 +293,16 @@ export function ImageGenerator({
       // Erfolgreich - rufe Callback auf mit erweiterten Daten
       onSuccess?.(newTokenId, imageUrl, metadata);
 
-      // Reset form für nächste Erstellung
+      // Reset form für nächste Erstellung (but keep preview visible)
       setTimeout(() => {
-        setPrompt("");
-        setSize("1024x1024");
+        if (!isEditingMode) {
+          setPrompt("");
+          setSize("1024x1024");
+        }
         setGeneratedImageUrl(undefined);
-        setCurrentPreviewImage(undefined); // Clear preview
         setTokenId(undefined);
         setError(null);
+        // Don't clear currentPreviewImage or previewState - let it persist for editing
       }, 3000);
     } catch (err) {
       console.error("Error:", err);
@@ -306,6 +316,72 @@ export function ImageGenerator({
   };
   const mintingInfoLabel = useLocale({ label: "imagegen.mintingInfo" });
 
+  // File handling logic
+  const validateImageFile = (file: File): boolean => {
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!validTypes.includes(file.type)) {
+      setError("Please upload a valid image file (JPEG, PNG, WebP, or GIF)");
+      return false;
+    }
+
+    if (file.size > maxSize) {
+      setError("Image file size must be less than 10MB");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (!validateImageFile(file)) return;
+
+    setReferenceImage(file);
+    setError(null);
+
+    // Generate preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setReferencePreviewUrl(e.target?.result as string);
+      setPreviewState("reference");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const clearReferenceImage = () => {
+    setReferenceImage(null);
+    setReferencePreviewUrl(null);
+    setPreviewState("empty");
+  };
+
   return (
     <div className={styles.imageGen.compactLayout}>
       <div className={styles.imageGen.compactContainer}>
@@ -317,93 +393,294 @@ export function ImageGenerator({
         </div>
 
         <div className={styles.imageGen.compactForm}>
-          {/* Preview Area */}
-          {currentPreviewImage && (
-            <div className={css({
+          {/* Unified Preview/Upload Area */}
+          <div
+            className={css({
               mb: "4",
-              p: "3",
-              border: "1px solid",
-              borderColor: "gray.200",
-              borderRadius: "md",
-              bg: "gray.50",
-              position: "relative"
-            })}>
-              <div className={css({
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: "2"
-              })}>
-                <h4 className={css({
-                  fontSize: "sm",
-                  fontWeight: "semibold",
-                  color: "gray.700",
-                  m: 0
-                })}>
-                  🎨 Current Preview
-                </h4>
-                <button
-                  onClick={() => setIsEditingMode(!isEditingMode)}
+              p: "6",
+              border: "2px dashed",
+              borderColor: previewState === "empty" ? "gray.300" : "blue.400",
+              borderRadius: "lg",
+              bg: previewState === "empty" ? "gray.50" : "blue.50",
+              position: "relative",
+              transition: "all 0.2s ease",
+              cursor: previewState === "empty" ? "pointer" : "default",
+              _hover: {
+                borderColor: previewState === "empty" ? "blue.400" : undefined,
+                bg: previewState === "empty" ? "blue.50" : undefined,
+              },
+            })}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDrop={handleDrop}
+            onClick={() => {
+              if (previewState === "empty") {
+                document.getElementById("reference-image-input")?.click();
+              }
+            }}
+          >
+            {/* Hidden file input */}
+            <input
+              id="reference-image-input"
+              type="file"
+              accept="image/*"
+              onChange={handleFileInputChange}
+              className={css({
+                position: "absolute",
+                opacity: 0,
+                width: 0,
+                height: 0,
+                pointerEvents: "none",
+              })}
+            />
+
+            {previewState === "empty" && (
+              <div
+                className={css({
+                  textAlign: "center",
+                  py: "8",
+                })}
+              >
+                <div
                   className={css({
-                    px: "2",
-                    py: "1",
-                    fontSize: "xs",
-                    bg: isEditingMode ? "blue.500" : "gray.200",
-                    color: isEditingMode ? "white" : "gray.700",
-                    border: "none",
-                    borderRadius: "sm",
-                    cursor: "pointer",
-                    _hover: {
-                      bg: isEditingMode ? "blue.600" : "gray.300"
-                    }
+                    fontSize: "3xl",
+                    mb: "2",
                   })}
-                  disabled={isLoading || mintingStatus !== "idle"}
                 >
-                  {isEditingMode ? "✏️ Editing" : "👁️ Preview"}
-                </button>
-              </div>
-
-              <div className={css({
-                display: "flex",
-                justifyContent: "center",
-                maxHeight: "300px",
-                overflow: "hidden",
-                borderRadius: "sm"
-              })}>
-                <img
-                  src={currentPreviewImage}
-                  alt="Generated artwork preview"
-                  className={css({
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                    borderRadius: "sm",
-                    boxShadow: "sm"
-                  })}
-                />
-              </div>
-
-              {isEditingMode && (
-                <div className={css({
-                  mt: "2",
-                  p: "2",
-                  bg: "blue.50",
-                  borderRadius: "sm",
-                  border: "1px solid",
-                  borderColor: "blue.200"
-                })}>
-                  <p className={css({
-                    fontSize: "xs",
-                    color: "blue.700",
-                    m: 0,
-                    textAlign: "center"
-                  })}>
-                    💡 Edit your prompt below to refine this image
-                  </p>
+                  📸
                 </div>
-              )}
-            </div>
-          )}
+                <h4
+                  className={css({
+                    fontSize: "lg",
+                    fontWeight: "semibold",
+                    color: "gray.700",
+                    mb: "2",
+                  })}
+                >
+                  Upload Reference Image (Optional)
+                </h4>
+                <p
+                  className={css({
+                    fontSize: "sm",
+                    color: "gray.600",
+                    mb: "4",
+                  })}
+                >
+                  Drag & drop an image here, or click to browse
+                </p>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                  })}
+                >
+                  Supports JPEG, PNG, WebP, GIF • Max 10MB
+                </p>
+              </div>
+            )}
+
+            {previewState === "reference" && referencePreviewUrl && (
+              <div>
+                <div
+                  className={css({
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: "3",
+                  })}
+                >
+                  <h4
+                    className={css({
+                      fontSize: "sm",
+                      fontWeight: "semibold",
+                      color: "gray.700",
+                      m: 0,
+                    })}
+                  >
+                    📸 Reference Image
+                  </h4>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearReferenceImage();
+                    }}
+                    className={css({
+                      px: "2",
+                      py: "1",
+                      fontSize: "xs",
+                      bg: "red.500",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "sm",
+                      cursor: "pointer",
+                      _hover: {
+                        bg: "red.600",
+                      },
+                    })}
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+                <div
+                  className={css({
+                    display: "flex",
+                    justifyContent: "center",
+                    maxHeight: "250px",
+                    overflow: "hidden",
+                    borderRadius: "md",
+                  })}
+                >
+                  <img
+                    src={referencePreviewUrl}
+                    alt="Reference image"
+                    className={css({
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain",
+                      borderRadius: "md",
+                      boxShadow: "sm",
+                    })}
+                  />
+                </div>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "blue.600",
+                    textAlign: "center",
+                    mt: "2",
+                  })}
+                >
+                  💡 This image will be used as reference for generation
+                </p>
+              </div>
+            )}
+
+            {previewState === "generated" && currentPreviewImage && (
+              <div>
+                <div
+                  className={css({
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: "3",
+                  })}
+                >
+                  <h4
+                    className={css({
+                      fontSize: "sm",
+                      fontWeight: "semibold",
+                      color: "gray.700",
+                      m: 0,
+                    })}
+                  >
+                    🎨 Generated Artwork
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setPreviewState(previewState === "generated" ? "editing" : "generated");
+                      setIsEditingMode(!isEditingMode);
+                    }}
+                    className={css({
+                      px: "2",
+                      py: "1",
+                      fontSize: "xs",
+                      bg: isEditingMode ? "blue.500" : "gray.200",
+                      color: isEditingMode ? "white" : "gray.700",
+                      border: "none",
+                      borderRadius: "sm",
+                      cursor: "pointer",
+                      _hover: {
+                        bg: isEditingMode ? "blue.600" : "gray.300",
+                      },
+                    })}
+                    disabled={isLoading || mintingStatus !== "idle"}
+                  >
+                    {isEditingMode ? "✏️ Editing" : "👁️ Preview"}
+                  </button>
+                </div>
+                <div
+                  className={css({
+                    display: "flex",
+                    justifyContent: "center",
+                    maxHeight: "250px",
+                    overflow: "hidden",
+                    borderRadius: "md",
+                  })}
+                >
+                  <img
+                    src={currentPreviewImage}
+                    alt="Generated artwork"
+                    className={css({
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain",
+                      borderRadius: "md",
+                      boxShadow: "sm",
+                    })}
+                  />
+                </div>
+                {isEditingMode && (
+                  <div
+                    className={css({
+                      mt: "3",
+                      p: "3",
+                      bg: "blue.50",
+                      borderRadius: "md",
+                      border: "1px solid",
+                      borderColor: "blue.200",
+                    })}
+                  >
+                    <p
+                      className={css({
+                        fontSize: "xs",
+                        color: "blue.700",
+                        m: 0,
+                        textAlign: "center",
+                      })}
+                    >
+                      💡 Edit your prompt below to refine this artwork
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {previewState === "editing" && (
+              <div
+                className={css({
+                  textAlign: "center",
+                  py: "8",
+                })}
+              >
+                <div
+                  className={css({
+                    fontSize: "2xl",
+                    mb: "2",
+                  })}
+                >
+                  ✏️
+                </div>
+                <h4
+                  className={css({
+                    fontSize: "lg",
+                    fontWeight: "semibold",
+                    color: "gray.700",
+                    mb: "2",
+                  })}
+                >
+                  Editing Mode
+                </h4>
+                <p
+                  className={css({
+                    fontSize: "sm",
+                    color: "gray.600",
+                  })}
+                >
+                  Modify your prompt below to refine the artwork
+                </p>
+              </div>
+            )}
+          </div>
 
           <textarea
             value={prompt}

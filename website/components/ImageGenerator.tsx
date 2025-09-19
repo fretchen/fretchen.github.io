@@ -43,6 +43,10 @@ export function ImageGenerator({
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
+  // Preview area state
+  const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
+  const [isEditingMode, setIsEditingMode] = useState(false);
+
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState<"1024x1024" | "1792x1024">("1024x1024");
   const [isListed, setIsListed] = useState(false); // Default: not publicly listed
@@ -257,6 +261,7 @@ export function ImageGenerator({
       console.log("Image generation completed", data);
       const imageUrl = data.image_url;
       setGeneratedImageUrl(imageUrl);
+      setCurrentPreviewImage(imageUrl); // Set preview image
       setMintingStatus("idle");
 
       // Erstelle Metadaten-Objekt aus der API-Antwort
@@ -285,6 +290,7 @@ export function ImageGenerator({
         setPrompt("");
         setSize("1024x1024");
         setGeneratedImageUrl(undefined);
+        setCurrentPreviewImage(undefined); // Clear preview
         setTokenId(undefined);
         setError(null);
       }, 3000);
@@ -311,6 +317,94 @@ export function ImageGenerator({
         </div>
 
         <div className={styles.imageGen.compactForm}>
+          {/* Preview Area */}
+          {currentPreviewImage && (
+            <div className={css({
+              mb: "4",
+              p: "3",
+              border: "1px solid",
+              borderColor: "gray.200",
+              borderRadius: "md",
+              bg: "gray.50",
+              position: "relative"
+            })}>
+              <div className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: "2"
+              })}>
+                <h4 className={css({
+                  fontSize: "sm",
+                  fontWeight: "semibold",
+                  color: "gray.700",
+                  m: 0
+                })}>
+                  🎨 Current Preview
+                </h4>
+                <button
+                  onClick={() => setIsEditingMode(!isEditingMode)}
+                  className={css({
+                    px: "2",
+                    py: "1",
+                    fontSize: "xs",
+                    bg: isEditingMode ? "blue.500" : "gray.200",
+                    color: isEditingMode ? "white" : "gray.700",
+                    border: "none",
+                    borderRadius: "sm",
+                    cursor: "pointer",
+                    _hover: {
+                      bg: isEditingMode ? "blue.600" : "gray.300"
+                    }
+                  })}
+                  disabled={isLoading || mintingStatus !== "idle"}
+                >
+                  {isEditingMode ? "✏️ Editing" : "👁️ Preview"}
+                </button>
+              </div>
+
+              <div className={css({
+                display: "flex",
+                justifyContent: "center",
+                maxHeight: "300px",
+                overflow: "hidden",
+                borderRadius: "sm"
+              })}>
+                <img
+                  src={currentPreviewImage}
+                  alt="Generated artwork preview"
+                  className={css({
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                    borderRadius: "sm",
+                    boxShadow: "sm"
+                  })}
+                />
+              </div>
+
+              {isEditingMode && (
+                <div className={css({
+                  mt: "2",
+                  p: "2",
+                  bg: "blue.50",
+                  borderRadius: "sm",
+                  border: "1px solid",
+                  borderColor: "blue.200"
+                })}>
+                  <p className={css({
+                    fontSize: "xs",
+                    color: "blue.700",
+                    m: 0,
+                    textAlign: "center"
+                  })}>
+                    💡 Edit your prompt below to refine this image
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}

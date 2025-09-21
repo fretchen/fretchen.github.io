@@ -89,17 +89,37 @@ describe("genimg_bfl.js Tests", () => {
       expect(JSON.parse(result.body).error).toBe("Token does not exist");
     });
 
-    test("sollte Fehler zurückgeben wenn Bild bereits aktualisiert wurde", async () => {
+    test("sollte Fehler zurückgeben wenn Bild bereits aktualisiert wurde (generate mode)", async () => {
       mockContract.read.isImageUpdated.mockResolvedValue(true);
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        queryStringParameters: { prompt: "test prompt", tokenId: "1", mode: "generate" },
       };
 
       const result = await handle(event, {}, () => {});
 
       expect(result.statusCode).toBe(400);
       expect(JSON.parse(result.body).error).toBe("Image already updated");
+    });
+
+    test("sollte edit mode erlauben auch wenn Bild bereits aktualisiert wurde", async () => {
+      mockContract.read.isImageUpdated.mockResolvedValue(true);
+
+      const event = {
+        queryStringParameters: {
+          prompt: "change color to red",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+        },
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet und Token aktualisiert (BFL)");
     });
 
     test("sollte erfolgreich Bild generieren und Token aktualisieren", async () => {
@@ -132,6 +152,8 @@ describe("genimg_bfl.js Tests", () => {
         "1",
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
         BigInt(1),
@@ -209,6 +231,8 @@ describe("genimg_bfl.js Tests", () => {
         "1",
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
     });
 
@@ -231,7 +255,53 @@ describe("genimg_bfl.js Tests", () => {
         "1",
         "bfl",
         "1792x1024",
+        "generate",
+        null,
       );
+    });
+
+    test("sollte edit mode korrekt handhaben", async () => {
+      const referenceImageBase64 =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+
+      const event = {
+        queryStringParameters: {
+          prompt: "change color to red",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage: referenceImageBase64,
+        },
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "change color to red",
+        "1",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImageBase64,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet und Token aktualisiert (BFL)");
+    });
+
+    test("sollte Fehler zurückgeben wenn edit mode ohne referenceImage verwendet wird", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "change color to red",
+          tokenId: "1",
+          mode: "edit",
+        },
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Edit mode requires referenceImage parameter");
     });
   });
 
@@ -285,6 +355,8 @@ describe("genimg_bfl.js Tests", () => {
         largeTokenId,
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
     });
 
@@ -314,7 +386,14 @@ describe("genimg_bfl.js Tests", () => {
       expect(result.statusCode).toBe(200);
 
       // Verifikation dass langer Prompt korrekt verarbeitet wurde
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "bfl", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        longPrompt,
+        "1",
+        "bfl",
+        "1024x1024",
+        "generate",
+        null,
+      );
     });
   });
 });

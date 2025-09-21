@@ -55,6 +55,10 @@ async function handle(event, context, cb) {
   }
   console.log("TokenId: ", tokenId);
 
+  // get the mode parameter (generate or edit)
+  const mode = event.queryStringParameters.mode || "generate";
+  console.log("Mode: ", mode);
+
   // get the size parameter with default value
   const size = event.queryStringParameters.size || "1024x1024";
 
@@ -70,6 +74,23 @@ async function handle(event, context, cb) {
     };
   }
   console.log("Size: ", size);
+
+  // Handle reference image for edit mode
+  let referenceImageBase64 = null;
+  if (mode === "edit") {
+    // Try to get image from query parameter (base64 encoded)
+    referenceImageBase64 = event.queryStringParameters.referenceImage;
+
+    if (!referenceImageBase64) {
+      return {
+        body: JSON.stringify({ error: "Edit mode requires referenceImage parameter" }),
+        headers: { "Content-Type": ["application/json"] },
+        statusCode: 400,
+      };
+    }
+
+    console.log("Reference image provided for editing");
+  }
 
   const publicClient = createPublicClient({
     chain: optimism,
@@ -115,24 +136,34 @@ async function handle(event, context, cb) {
   }
   console.log("Token exists: ", tokenExists);
 
-  // Prüfen, ob das Bild bereits aktualisiert wurde
-  const isUpdated = await contract.read.isImageUpdated([BigInt(tokenId)]);
-  console.log(`Token ${tokenId} existiert. Bild-Update-Status: ${isUpdated}`);
+  // Prüfen, ob das Bild bereits aktualisiert wurde (only for generate mode)
+  if (mode === "generate") {
+    const isUpdated = await contract.read.isImageUpdated([BigInt(tokenId)]);
+    console.log(`Token ${tokenId} existiert. Bild-Update-Status: ${isUpdated}`);
 
-  // Wenn das Bild bereits aktualisiert wurde, geben wir einen Fehler zurück
-  if (isUpdated) {
-    return {
-      body: JSON.stringify({ error: "Image already updated" }),
-      headers: { "Content-Type": ["application/json"] },
-      statusCode: 400,
-    };
+    // Wenn das Bild bereits aktualisiert wurde, geben wir einen Fehler zurück
+    if (isUpdated) {
+      return {
+        body: JSON.stringify({ error: "Image already updated" }),
+        headers: { "Content-Type": ["application/json"] },
+        statusCode: 400,
+      };
+    }
   }
 
-  // Wenn das Token existiert und noch nicht aktualisiert wurde
+  // Wenn das Token existiert und noch nicht aktualisiert wurde (generate mode) oder in edit mode
   try {
     // Generiere ein Bild basierend auf dem Prompt und lade es hoch
     // Verwende BFL als Provider anstatt IONOS
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId, "bfl", size);
+    // Pass reference image for edit mode
+    const metadataUrl = await generateAndUploadImage(
+      prompt,
+      tokenId,
+      "bfl",
+      size,
+      mode,
+      referenceImageBase64,
+    );
 
     // Metadaten laden, um die Bild-URL zu extrahieren
     // Validate the metadataUrl against a trusted allow-list
@@ -161,7 +192,7 @@ async function handle(event, context, cb) {
         image_url: imageUrl,
         size,
         mintPrice: mintPrice.toString(),
-        message: "Bild erfolgreich generiert und Token aktualisiert (BFL)",
+        message: `Bild erfolgreich ${mode === "edit" ? "bearbeitet" : "generiert"} und Token aktualisiert (BFL)`,
         transaction_hash: txHash,
       }),
       headers: { "Content-Type": ["application/json"] },

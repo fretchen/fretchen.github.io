@@ -115,6 +115,8 @@ export function ImageGenerator({
   const creatingText = useLocale({ label: "imagegen.creating" });
   const generatingText = useLocale({ label: "imagegen.generating" });
   const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
+  const promptPlaceholderText = useLocale({ label: "imagegen.promptPlaceholder" });
+  const editImageText = "Edit the image now";
 
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
@@ -135,9 +137,9 @@ export function ImageGenerator({
       case "needsPrompt":
         return enterPromptText;
       case "ready":
-        return createArtworkText;
+        return previewState !== "empty" ? editImageText : createArtworkText;
       default:
-        return createArtworkText;
+        return previewState !== "empty" ? editImageText : createArtworkText;
     }
   };
 
@@ -380,6 +382,12 @@ export function ImageGenerator({
     setReferenceImage(null);
     setReferencePreviewUrl(null);
     setPreviewState("empty");
+
+    // Clear the file input so it can accept the same file again
+    const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
+    }
   };
 
   return (
@@ -685,7 +693,7 @@ export function ImageGenerator({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={useLocale({ label: "imagegen.promptPlaceholder" })}
+            placeholder={previewState !== "empty" ? "Describe the changes to the image..." : promptPlaceholderText}
             disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
             className={styles.imageGen.compactTextarea}
           />

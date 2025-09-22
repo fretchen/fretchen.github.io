@@ -17,6 +17,12 @@ export async function handle(event, _context) {
     "Content-Type": "application/json",
   };
 
+  // Debug: Log request details
+  console.log("📨 Incoming request:");
+  console.log("- Method:", event.httpMethod);
+  console.log("- Content-Length:", event.headers?.["content-length"] || "unknown");
+  console.log("- Body size (chars):", event.body ? event.body.length : "no body");
+
   // Handle CORS preflight requests
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -28,19 +34,15 @@ export async function handle(event, _context) {
 
   let body;
   if (event.httpMethod === "POST") {
-    try {
-      // Body parsen (JSON-String zu Objekt) mit verbesserter Fehlerbehandlung
-      body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    } catch (parseError) {
-      console.error("JSON Parse Error:", parseError);
-      return {
-        body: JSON.stringify({ 
-          error: "Invalid JSON in request body",
-          details: parseError.message,
-        }),
-        statusCode: 400,
-        headers,
-      };
+    // Body parsen (JSON-String zu Objekt)
+    body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+
+    // Debug: Log parsed body details
+    console.log("📦 Parsed body:");
+    console.log("- Has referenceImage:", !!body.referenceImage);
+    if (body.referenceImage) {
+      console.log("- referenceImage size (chars):", body.referenceImage.length);
+      console.log("- referenceImage size (bytes):", Buffer.byteLength(body.referenceImage, 'utf8'));
     }
   } else {
     return {
@@ -66,15 +68,6 @@ export async function handle(event, _context) {
     console.log(`Provider: ${provider}`);
     if (referenceImage) {
       console.log(`Reference image provided for editing`);
-      // Log der Base64-Größe für Debugging
-      const base64Size = referenceImage.length;
-      const estimatedMB = (base64Size * 0.75) / (1024 * 1024); // Base64 ist ~33% größer
-      console.log(`Reference image size: ${base64Size} chars (~${estimatedMB.toFixed(2)} MB)`);
-      
-      // Warnung bei sehr großen Bildern
-      if (base64Size > 5 * 1024 * 1024) { // 5MB Base64 Limit
-        console.warn(`Large reference image detected: ${estimatedMB.toFixed(2)} MB`);
-      }
     }
 
     // Validiere den Prompt
@@ -177,8 +170,79 @@ if (process.env.NODE_ENV === "test") {
     const dotenvModule = await import("dotenv");
     dotenvModule.config();
 
-    // Serverless-Funktionen laden und Server starten
-    const scw_fnc_node = await import("@scaleway/serverless-functions");
-    scw_fnc_node.serveHandler(handle, 8080);
-  })().catch((err) => console.error("Fehler beim Starten des lokalen Servers:", err));
+    console.log("🔧 Creating custom Fastify server for local testing with increased bodyLimit...");
+
+    // Erstelle eine eigene Fastify-Instanz für lokale Tests mit erhöhtem bodyLimit
+    const fastify = (await import("fastify")).default({
+      bodyLimit: 10 * 1024 * 1024, // 10MB für große Base64-codierte Referenzbilder
+      logger: true,
+    });
+
+    // CORS Setup
+    await fastify.register(await import("@fastify/cors"), {
+      origin: true,
+      methods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    });
+
+    // URL Data Plugin für Query Parameter
+    await fastify.register(await import("@fastify/url-data"));
+
+    // Content Type Parser für verschiedene Formate
+    fastify.addContentTypeParser("text/json", { parseAs: "string" }, fastify.defaultTextParser);
+    fastify.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, fastify.defaultTextParser);
+    fastify.addContentTypeParser("application/json", { parseAs: "string" }, fastify.defaultTextParser);
+
+    // Route für alle HTTP-Methoden außer OPTIONS (CORS übernimmt das)
+    fastify.route({
+      method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+      url: "/*",
+      handler: async (request, reply) => {
+        try {
+          // Emuliere das Scaleway Event Format
+          const event = {
+            httpMethod: request.method,
+            headers: request.headers,
+            body: request.body,
+            path: request.url,
+            queryStringParameters: request.query,
+          };
+
+          const context = {
+            memoryLimitInMb: 128,
+            functionName: "handle",
+            functionVersion: "",
+          };
+
+          // Rufe die Handler-Funktion auf
+          const result = await handle(event, context);
+
+          // Setze Response basierend auf dem Handler-Ergebnis
+          const statusCode = result.statusCode || 200;
+          const headers = result.headers || {};
+          const body = result.body || "";
+
+          reply.status(statusCode);
+          for (const [key, value] of Object.entries(headers)) {
+            reply.header(key, value);
+          }
+
+          return body;
+        } catch (error) {
+          console.error("❌ Handler error:", error);
+          reply.status(500).send({ error: error.message });
+        }
+      },
+    });
+
+    // Server starten
+    try {
+      await fastify.listen({ port: 8080, host: "0.0.0.0" });
+      console.log("� Custom Fastify server listening at http://localhost:8080");
+      console.log("📏 Body limit set to 10MB");
+    } catch (err) {
+      console.error("❌ Failed to start server:", err);
+      process.exit(1);
+    }
+  })().catch((err) => console.error("❌ Fehler beim Starten des lokalen Servers:", err));
 }

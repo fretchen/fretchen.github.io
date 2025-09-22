@@ -17,26 +17,48 @@ export async function handle(event, _context) {
     "Content-Type": "application/json",
   };
 
+  // Handle CORS preflight requests
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: "",
+    };
+  }
+
+  let body;
+  if (event.httpMethod === "POST") {
+    try {
+      // Body parsen (JSON-String zu Objekt) mit verbesserter Fehlerbehandlung
+      body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    } catch (parseError) {
+      console.error("JSON Parse Error:", parseError);
+      return {
+        body: JSON.stringify({ 
+          error: "Invalid JSON in request body",
+          details: parseError.message,
+        }),
+        statusCode: 400,
+        headers,
+      };
+    }
+  } else {
+    return {
+      body: JSON.stringify({ error: "Only POST requests are supported" }),
+      headers,
+      statusCode: 400,
+    };
+  }
+
+  // Extrahiere Parameter aus dem Body
+  const prompt = body.prompt;
+  const tokenId = body.tokenId || "0";
+  const size = body.size || "1024x1024";
+  const provider = body.provider || "ionos";
+  const mode = body.mode || "generate";
+  const referenceImage = body.referenceImage || null;
+
   try {
-    const queryParams = event.queryStringParameters || {};
-    const prompt = queryParams.prompt;
-
-    // Extrahiere die tokenId aus den Abfrageparametern, falls vorhanden
-    // Setze sie auf "0", wenn sie nicht vorhanden ist oder ungültig
-    const tokenId = queryParams.tokenId || "0";
-
-    // Extrahiere den size Parameter, mit Standardwert "1024x1024"
-    const size = queryParams.size || "1024x1024";
-
-    // Extrahiere den provider Parameter, mit Standardwert "ionos"
-    const provider = queryParams.provider || "ionos";
-
-    // Extrahiere mode Parameter, mit Standardwert "generate"
-    const mode = queryParams.mode || "generate";
-
-    // Extrahiere referenceImage Parameter für Edit Mode
-    const referenceImage = queryParams.referenceImage || null;
-
     console.log(`Prompt: ${prompt}`);
     console.log(`TokenId: ${tokenId}`);
     console.log(`Mode: ${mode}`);
@@ -44,6 +66,15 @@ export async function handle(event, _context) {
     console.log(`Provider: ${provider}`);
     if (referenceImage) {
       console.log(`Reference image provided for editing`);
+      // Log der Base64-Größe für Debugging
+      const base64Size = referenceImage.length;
+      const estimatedMB = (base64Size * 0.75) / (1024 * 1024); // Base64 ist ~33% größer
+      console.log(`Reference image size: ${base64Size} chars (~${estimatedMB.toFixed(2)} MB)`);
+      
+      // Warnung bei sehr großen Bildern
+      if (base64Size > 5 * 1024 * 1024) { // 5MB Base64 Limit
+        console.warn(`Large reference image detected: ${estimatedMB.toFixed(2)} MB`);
+      }
     }
 
     // Validiere den Prompt

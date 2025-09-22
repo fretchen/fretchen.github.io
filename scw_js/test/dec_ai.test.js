@@ -74,6 +74,8 @@ describe("dec_ai.js Tests", () => {
         "0",
         "ionos",
         "1024x1024",
+        "generate",
+        null,
       );
 
       const responseBody = JSON.parse(result.body);
@@ -101,6 +103,8 @@ describe("dec_ai.js Tests", () => {
         "0",
         "ionos",
         "1792x1024",
+        "generate",
+        null,
       );
 
       const responseBody = JSON.parse(result.body);
@@ -129,6 +133,8 @@ describe("dec_ai.js Tests", () => {
         "0",
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
 
       const responseBody = JSON.parse(result.body);
@@ -156,6 +162,8 @@ describe("dec_ai.js Tests", () => {
         "0",
         "ionos",
         "1024x1024",
+        "generate",
+        null,
       );
 
       const responseBody = JSON.parse(result.body);
@@ -193,11 +201,95 @@ describe("dec_ai.js Tests", () => {
         "0",
         "bfl",
         "1792x1024",
+        "generate",
+        null,
       );
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.size).toBe("1792x1024");
       expect(responseBody.provider).toBe("bfl");
+    });
+
+    test("sollte edit mode korrekt handhaben", async () => {
+      const referenceImageBase64 =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+
+      const event = {
+        queryStringParameters: {
+          prompt: "change color to red",
+          mode: "edit",
+          referenceImage: referenceImageBase64,
+          provider: "bfl",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "change color to red",
+        "0",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImageBase64,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.mode).toBe("edit");
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet");
+    });
+
+    test("sollte generate mode als default verwenden", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "beautiful landscape",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "ionos",
+        "1024x1024",
+        "generate",
+        null,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.mode).toBe("generate");
+      expect(responseBody.message).toBe("Bild erfolgreich generiert");
+    });
+
+    test("sollte Fehler zurückgeben wenn edit mode ohne referenceImage verwendet wird", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "change color to red",
+          mode: "edit",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Edit mode requires referenceImage parameter");
+    });
+
+    test("sollte Fehler zurückgeben wenn ungültiger mode angegeben wird", async () => {
+      const event = {
+        queryStringParameters: {
+          prompt: "test prompt",
+          mode: "invalid_mode",
+        },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Ungültiger Mode. Erlaubt sind: generate, edit");
     });
   });
 });

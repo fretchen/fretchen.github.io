@@ -31,10 +31,46 @@ export async function handle(event, _context) {
     // Extrahiere den provider Parameter, mit Standardwert "ionos"
     const provider = queryParams.provider || "ionos";
 
+    // Extrahiere mode Parameter, mit Standardwert "generate"
+    const mode = queryParams.mode || "generate";
+
+    // Extrahiere referenceImage Parameter für Edit Mode
+    const referenceImage = queryParams.referenceImage || null;
+
+    console.log(`Prompt: ${prompt}`);
+    console.log(`TokenId: ${tokenId}`);
+    console.log(`Mode: ${mode}`);
+    console.log(`Size: ${size}`);
+    console.log(`Provider: ${provider}`);
+    if (referenceImage) {
+      console.log(`Reference image provided for editing`);
+    }
+
     // Validiere den Prompt
     if (!prompt) {
       return {
         body: JSON.stringify({ error: "Kein Prompt angegeben." }),
+        statusCode: 400,
+        headers,
+      };
+    }
+
+    // Validiere Edit Mode Anforderungen
+    if (mode === "edit" && !referenceImage) {
+      return {
+        body: JSON.stringify({ error: "Edit mode requires referenceImage parameter" }),
+        statusCode: 400,
+        headers,
+      };
+    }
+
+    // Validiere mode Parameter
+    const validModes = ["generate", "edit"];
+    if (!validModes.includes(mode)) {
+      return {
+        body: JSON.stringify({
+          error: `Ungültiger Mode. Erlaubt sind: ${validModes.join(", ")}`,
+        }),
         statusCode: 400,
         headers,
       };
@@ -65,11 +101,18 @@ export async function handle(event, _context) {
     }
 
     console.log(
-      `Generiere Bild für Prompt: "${prompt}", TokenID: ${tokenId}, Größe: ${size}, Provider: ${provider}`,
+      `Generiere/Bearbeite Bild für Prompt: "${prompt}", TokenID: ${tokenId}, Größe: ${size}, Provider: ${provider}, Mode: ${mode}`,
     );
 
-    // Übergebe Prompt, tokenId, provider und size an die Funktion
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId, provider, size);
+    // Übergebe Prompt, tokenId, provider, size, mode und referenceImage an die Funktion
+    const metadataUrl = await generateAndUploadImage(
+      prompt,
+      tokenId,
+      provider,
+      size,
+      mode,
+      referenceImage,
+    );
 
     return {
       body: JSON.stringify({
@@ -77,6 +120,8 @@ export async function handle(event, _context) {
         token_id: tokenId,
         size,
         provider,
+        mode,
+        message: mode === "edit" ? "Bild erfolgreich bearbeitet" : "Bild erfolgreich generiert",
       }),
       statusCode: 200,
       headers,

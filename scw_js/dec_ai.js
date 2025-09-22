@@ -17,12 +17,6 @@ export async function handle(event, _context) {
     "Content-Type": "application/json",
   };
 
-  // Debug: Log request details
-  console.log("📨 Incoming request:");
-  console.log("- Method:", event.httpMethod);
-  console.log("- Content-Length:", event.headers?.["content-length"] || "unknown");
-  console.log("- Body size (chars):", event.body ? event.body.length : "no body");
-
   // Handle CORS preflight requests
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -36,14 +30,6 @@ export async function handle(event, _context) {
   if (event.httpMethod === "POST") {
     // Body parsen (JSON-String zu Objekt)
     body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-
-    // Debug: Log parsed body details
-    console.log("📦 Parsed body:");
-    console.log("- Has referenceImage:", !!body.referenceImage);
-    if (body.referenceImage) {
-      console.log("- referenceImage size (chars):", body.referenceImage.length);
-      console.log("- referenceImage size (bytes):", Buffer.byteLength(body.referenceImage, 'utf8'));
-    }
   } else {
     return {
       body: JSON.stringify({ error: "Only POST requests are supported" }),
@@ -170,12 +156,9 @@ if (process.env.NODE_ENV === "test") {
     const dotenvModule = await import("dotenv");
     dotenvModule.config();
 
-    console.log("🔧 Creating custom Fastify server for local testing with increased bodyLimit...");
-
     // Erstelle eine eigene Fastify-Instanz für lokale Tests mit erhöhtem bodyLimit
     const fastify = (await import("fastify")).default({
       bodyLimit: 10 * 1024 * 1024, // 10MB für große Base64-codierte Referenzbilder
-      logger: true,
     });
 
     // CORS Setup
@@ -229,7 +212,7 @@ if (process.env.NODE_ENV === "test") {
 
           return body;
         } catch (error) {
-          console.error("❌ Handler error:", error);
+          console.error("Handler error:", error);
           reply.status(500).send({ error: error.message });
         }
       },
@@ -238,8 +221,7 @@ if (process.env.NODE_ENV === "test") {
     // Server starten
     try {
       await fastify.listen({ port: 8080, host: "0.0.0.0" });
-      console.log("� Custom Fastify server listening at http://localhost:8080");
-      console.log("📏 Body limit set to 10MB");
+      console.log("🚀 Local Fastify server listening at http://localhost:8080");
     } catch (err) {
       console.error("❌ Failed to start server:", err);
       process.exit(1);

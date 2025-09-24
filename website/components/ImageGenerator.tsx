@@ -46,9 +46,8 @@ export function ImageGenerator({
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
   const [isEditingMode, setIsEditingMode] = useState(false);
 
-  // Reference image state
-  const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [referencePreviewUrl, setReferencePreviewUrl] = useState<string | null>(null);
+  // Unified reference image state (base64 for all sources)
+  const [referenceImageBase64, setReferenceImageBase64] = useState<string | null>(null);
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated" | "editing";
@@ -262,28 +261,26 @@ export function ImageGenerator({
       setMintingStatus("generating");
 
       // Determine mode and prepare request body
-      const isEditMode = referenceImage !== null;
+      const isEditMode = referenceImageBase64 !== null;
       const mode = isEditMode ? "edit" : "generate";
 
       // Prepare request body
-      const requestBody = {
+      const requestBody: {
+        prompt: string;
+        tokenId: string;
+        size: string;
+        mode: string;
+        referenceImage?: string;
+      } = {
         prompt,
         tokenId: newTokenId.toString(),
         size,
         mode,
       };
 
-      // If in edit mode, convert reference image to base64
-      if (isEditMode && referenceImage) {
-        const base64Image = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(referenceImage);
-        });
-        // Remove the data:image/jpeg;base64, prefix to get just the base64 data
-        const base64Data = base64Image.split(",")[1];
-        requestBody.referenceImage = base64Data;
+      // If in edit mode, use the base64 reference image
+      if (isEditMode && referenceImageBase64) {
+        requestBody.referenceImage = referenceImageBase64;
       }
 
       const response = await fetch(apiUrl, {
@@ -305,6 +302,24 @@ export function ImageGenerator({
       setCurrentPreviewImage(imageUrl); // Set preview image
       setPreviewState("generated"); // Transition to generated state
       setMintingStatus("idle");
+
+      // Convert generated image to base64 for potential editing
+      try {
+        const imageResponse = await fetch(imageUrl);
+        const imageBlob = await imageResponse.blob();
+        const base64String = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageBlob);
+        });
+        // Remove the data:image/jpeg;base64, prefix to get just the base64 data
+        const base64Data = base64String.split(",")[1];
+        setReferenceImageBase64(base64Data);
+      } catch (error) {
+        console.warn("Failed to convert generated image to base64:", error);
+        // Don't fail the whole operation if base64 conversion fails
+      }
 
       // Erstelle Metadaten-Objekt aus der API-Antwort
       const metadata = {
@@ -371,16 +386,18 @@ export function ImageGenerator({
   const handleFileSelect = (file: File) => {
     if (!validateImageFile(file)) return;
 
-    setReferenceImage(file);
-    setError(null);
-
-    // Generate preview URL
+    // Convert file to base64 immediately
     const reader = new FileReader();
     reader.onload = (e) => {
-      setReferencePreviewUrl(e.target?.result as string);
+      const base64String = e.target?.result as string;
+      // Remove the data:image/jpeg;base64, prefix to get just the base64 data
+      const base64Data = base64String.split(",")[1];
+      setReferenceImageBase64(base64Data);
       setPreviewState("reference");
     };
     reader.readAsDataURL(file);
+
+    setError(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -411,8 +428,7 @@ export function ImageGenerator({
   };
 
   const clearReferenceImage = () => {
-    setReferenceImage(null);
-    setReferencePreviewUrl(null);
+    setReferenceImageBase64(null);
     setPreviewState("empty");
 
     // Clear the file input so it can accept the same file again
@@ -519,7 +535,7 @@ export function ImageGenerator({
               </div>
             )}
 
-            {previewState === "reference" && referencePreviewUrl && (
+            {previewState === "reference" && referenceImageBase64 && (
               <div>
                 <div
                   className={css({
@@ -571,7 +587,7 @@ export function ImageGenerator({
                   })}
                 >
                   <img
-                    src={referencePreviewUrl}
+                    src={`data:image/jpeg;base64,${referenceImageBase64}`}
                     alt="Reference image"
                     className={css({
                       maxWidth: "100%",

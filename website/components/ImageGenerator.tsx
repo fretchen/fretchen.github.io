@@ -44,13 +44,12 @@ export function ImageGenerator({
 
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
-  const [isEditingMode, setIsEditingMode] = useState(false);
 
   // Unified reference image state (base64 for all sources)
   const [referenceImageBase64, setReferenceImageBase64] = useState<string | null>(null);
 
   // Preview area state machine
-  type PreviewState = "empty" | "reference" | "generated" | "editing";
+  type PreviewState = "empty" | "reference" | "generated";
   const [previewState, setPreviewState] = useState<PreviewState>("empty");
 
   const [prompt, setPrompt] = useState("");
@@ -344,10 +343,8 @@ export function ImageGenerator({
 
       // Reset form für nächste Erstellung (but keep preview visible)
       setTimeout(() => {
-        if (!isEditingMode) {
-          setPrompt("");
-          setSize("1024x1024");
-        }
+        setPrompt("");
+        setSize("1024x1024");
         setGeneratedImageUrl(undefined);
         setTokenId(undefined);
         setError(null);
@@ -631,28 +628,27 @@ export function ImageGenerator({
                   >
                     🎨 Generated Artwork
                   </h4>
-                  <button
-                    onClick={() => {
-                      setPreviewState(previewState === "generated" ? "editing" : "generated");
-                      setIsEditingMode(!isEditingMode);
-                    }}
-                    className={css({
-                      px: "2",
-                      py: "1",
-                      fontSize: "xs",
-                      bg: isEditingMode ? "blue.500" : "gray.200",
-                      color: isEditingMode ? "white" : "gray.700",
-                      border: "none",
-                      borderRadius: "sm",
-                      cursor: "pointer",
-                      _hover: {
-                        bg: isEditingMode ? "blue.600" : "gray.300",
-                      },
-                    })}
-                    disabled={isLoading || mintingStatus !== "idle"}
-                  >
-                    {isEditingMode ? "✏️ Editing" : "👁️ Preview"}
-                  </button>
+                  <div className={css({ display: "flex", gap: "2" })}>
+                    <button
+                      onClick={clearReferenceImage}
+                      className={css({
+                        px: "2",
+                        py: "1",
+                        fontSize: "xs",
+                        bg: "red.500",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "sm",
+                        cursor: "pointer",
+                        _hover: {
+                          bg: "red.600",
+                        },
+                      })}
+                      disabled={isLoading || mintingStatus !== "idle"}
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
                 </div>
                 <div
                   className={css({
@@ -675,73 +671,16 @@ export function ImageGenerator({
                     })}
                   />
                 </div>
-                {isEditingMode && (
-                  <div
-                    className={css({
-                      mt: "3",
-                      p: "3",
-                      bg: "blue.50",
-                      borderRadius: "md",
-                      border: "1px solid",
-                      borderColor: "blue.200",
-                    })}
-                  >
-                    <p
-                      className={css({
-                        fontSize: "xs",
-                        color: "blue.700",
-                        m: 0,
-                        textAlign: "center",
-                      })}
-                    >
-                      💡 Edit your prompt below to refine this artwork
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
-            {previewState === "editing" && (
-              <div
-                className={css({
-                  textAlign: "center",
-                  py: "8",
-                })}
-              >
-                <div
-                  className={css({
-                    fontSize: "2xl",
-                    mb: "2",
-                  })}
-                >
-                  ✏️
-                </div>
-                <h4
-                  className={css({
-                    fontSize: "lg",
-                    fontWeight: "semibold",
-                    color: "gray.700",
-                    mb: "2",
-                  })}
-                >
-                  Editing Mode
-                </h4>
-                <p
-                  className={css({
-                    fontSize: "sm",
-                    color: "gray.600",
-                  })}
-                >
-                  Modify your prompt below to refine the artwork
-                </p>
-              </div>
-            )}
+            {/* Hidden file input */}
           </div>
 
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={previewState !== "empty" ? "Describe the changes to the image..." : promptPlaceholderText}
+            placeholder={promptPlaceholderText}
             disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
             className={styles.imageGen.compactTextarea}
           />

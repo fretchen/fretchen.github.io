@@ -173,8 +173,16 @@ if (process.env.NODE_ENV === "test") {
 
     // Content Type Parser für verschiedene Formate
     fastify.addContentTypeParser("text/json", { parseAs: "string" }, fastify.defaultTextParser);
-    fastify.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, fastify.defaultTextParser);
-    fastify.addContentTypeParser("application/json", { parseAs: "string" }, fastify.defaultTextParser);
+    fastify.addContentTypeParser(
+      "application/x-www-form-urlencoded",
+      { parseAs: "string" },
+      fastify.defaultTextParser,
+    );
+    fastify.addContentTypeParser(
+      "application/json",
+      { parseAs: "string" },
+      fastify.defaultTextParser,
+    );
 
     // Route für alle HTTP-Methoden außer OPTIONS (CORS übernimmt das)
     fastify.route({

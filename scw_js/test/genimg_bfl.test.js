@@ -56,7 +56,8 @@ describe("genimg_bfl.js Tests", () => {
   describe("handle() - Hauptfunktion Tests", () => {
     test("sollte Fehler zurückgeben wenn kein Prompt bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {},
+        httpMethod: "POST",
+        body: JSON.stringify({}),
       };
 
       const result = await handle(event, {}, () => {});
@@ -67,7 +68,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Fehler zurückgeben wenn keine tokenId bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -80,7 +82,8 @@ describe("genimg_bfl.js Tests", () => {
       mockContract.read.ownerOf.mockRejectedValue(new Error("Token does not exist"));
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "999" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "999" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -93,7 +96,8 @@ describe("genimg_bfl.js Tests", () => {
       mockContract.read.isImageUpdated.mockResolvedValue(true);
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1", mode: "generate" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1", mode: "generate" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -106,13 +110,14 @@ describe("genimg_bfl.js Tests", () => {
       mockContract.read.isImageUpdated.mockResolvedValue(true);
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "change color to red",
           tokenId: "1",
           mode: "edit",
           referenceImage:
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -124,11 +129,12 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte erfolgreich Bild generieren und Token aktualisieren", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "beautiful landscape",
           tokenId: "1",
           size: "1024x1024",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -165,7 +171,8 @@ describe("genimg_bfl.js Tests", () => {
       mockGenerateAndUploadImage.mockRejectedValue(new Error("Image generation failed"));
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -178,7 +185,8 @@ describe("genimg_bfl.js Tests", () => {
       delete process.env.NFT_WALLET_PRIVATE_KEY;
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       await expect(handle(event, {}, () => {})).rejects.toThrow(
@@ -192,7 +200,8 @@ describe("genimg_bfl.js Tests", () => {
       mockFetchError("Network error");
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -203,11 +212,12 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Fehler zurückgeben wenn ungültige size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
           tokenId: "1",
           size: "invalid_size",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -218,7 +228,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -238,11 +249,12 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte custom size verwenden wenn gültige size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
           tokenId: "1",
           size: "1792x1024",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -265,12 +277,13 @@ describe("genimg_bfl.js Tests", () => {
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "change color to red",
           tokenId: "1",
           mode: "edit",
           referenceImage: referenceImageBase64,
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -291,11 +304,12 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Fehler zurückgeben wenn edit mode ohne referenceImage verwendet wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "change color to red",
           tokenId: "1",
           mode: "edit",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -308,7 +322,8 @@ describe("genimg_bfl.js Tests", () => {
   describe("Contract Interaction Tests", () => {
     test("sollte mintPrice korrekt abrufen", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       await handle(event, {}, () => {});
@@ -318,7 +333,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Contract mit korrekten Parametern initialisieren", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       await handle(event, {}, () => {});
@@ -339,10 +355,11 @@ describe("genimg_bfl.js Tests", () => {
       const largeTokenId = "999999999999999999";
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
           tokenId: largeTokenId,
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -362,7 +379,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte leere Prompts ablehnen", async () => {
       const event = {
-        queryStringParameters: { prompt: "", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -375,10 +393,11 @@ describe("genimg_bfl.js Tests", () => {
       const longPrompt = "a".repeat(1000);
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: longPrompt,
           tokenId: "1",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});

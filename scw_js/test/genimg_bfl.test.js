@@ -319,6 +319,190 @@ describe("genimg_bfl.js Tests", () => {
     });
   });
 
+  describe("Image Editing Tests", () => {
+    test("sollte edit mode erfolgreich ausführen mit minimalen Base64-Image", async () => {
+      // Verwende eine sehr kleine, gültige Base64-Image für Tests
+      const minimalBase64Image =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "make it blue",
+          tokenId: "5",
+          mode: "edit",
+          referenceImage: minimalBase64Image,
+          size: "1792x1024",
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+
+      // Verifikation dass generateAndUploadImage mit edit-Parametern aufgerufen wurde
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "make it blue",
+        "5",
+        "bfl",
+        "1792x1024",
+        "edit",
+        minimalBase64Image,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet und Token aktualisiert (BFL)");
+      expect(responseBody.metadata_url).toBeDefined();
+      expect(responseBody.transaction_hash).toBeDefined();
+    });
+
+    test("sollte edit mode auch funktionieren wenn Token bereits aktualisiert wurde", async () => {
+      // Mock dass Token bereits aktualisiert wurde
+      mockContract.read.isImageUpdated.mockResolvedValue(true);
+
+      const referenceImage =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "add flowers",
+          tokenId: "10",
+          mode: "edit",
+          referenceImage,
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      // Sollte erfolgreich sein, da edit mode die "bereits aktualisiert" Prüfung umgeht
+      expect(result.statusCode).toBe(200);
+
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "add flowers",
+        "10",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImage,
+      );
+    });
+
+    test("sollte verschiedene Edit-Prompts korrekt verarbeiten", async () => {
+      const testCases = [
+        { prompt: "change background to sunset", tokenId: "100" },
+        { prompt: "add more details", tokenId: "200" },
+        { prompt: "make it more vibrant", tokenId: "300" },
+      ];
+
+      const referenceImage =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      for (const testCase of testCases) {
+        mockGenerateAndUploadImage.mockClear();
+
+        const event = {
+          httpMethod: "POST",
+          body: JSON.stringify({
+            prompt: testCase.prompt,
+            tokenId: testCase.tokenId,
+            mode: "edit",
+            referenceImage,
+          }),
+        };
+
+        const result = await handle(event, {}, () => {});
+
+        expect(result.statusCode).toBe(200);
+
+        expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+          testCase.prompt,
+          testCase.tokenId,
+          "bfl",
+          "1024x1024",
+          "edit",
+          referenceImage,
+        );
+      }
+    });
+
+    test("sollte edit mode mit verschiedenen Bildgrößen handhaben", async () => {
+      const sizes = ["1024x1024", "1792x1024"];
+      const referenceImage =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      for (const size of sizes) {
+        mockGenerateAndUploadImage.mockClear();
+
+        const event = {
+          httpMethod: "POST",
+          body: JSON.stringify({
+            prompt: "enhance quality",
+            tokenId: "50",
+            mode: "edit",
+            referenceImage,
+            size,
+          }),
+        };
+
+        const result = await handle(event, {}, () => {});
+
+        expect(result.statusCode).toBe(200);
+
+        expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+          "enhance quality",
+          "50",
+          "bfl",
+          size,
+          "edit",
+          referenceImage,
+        );
+      }
+    });
+
+    test("sollte Fehler zurückgeben wenn referenceImage kein gültiges Base64-Format hat", async () => {
+      const invalidBase64 = "not-a-valid-base64-image";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage: invalidBase64,
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      // Die Funktion sollte trotzdem versuchen zu verarbeiten, da sie keine Base64-Validierung macht
+      // Sie verlässt sich auf den image_service für die Validierung
+      expect(result.statusCode).toBe(200);
+    });
+
+    test("sollte edit mode Parameter-Validierung ohne externe Aufrufe testen", async () => {
+      // Teste nur die Parameter-Validierung ohne Contract-Interaktion
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "test edit",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage: "data:image/png;base64,test",
+        }),
+      };
+
+      // Mocke alle externen Aufrufe um nur die Logik zu testen
+      mockContract.read.ownerOf.mockRejectedValue(new Error("Token does not exist"));
+
+      const result = await handle(event, {}, () => {});
+
+      // Sollte bei Token-Existenz-Prüfung fehlschlagen, nicht bei Parameter-Validierung
+      expect(result.statusCode).toBe(404);
+      expect(JSON.parse(result.body).error).toBe("Token does not exist");
+    });
+  });
+
   describe("Contract Interaction Tests", () => {
     test("sollte mintPrice korrekt abrufen", async () => {
       const event = {

@@ -260,7 +260,39 @@ export function ImageGenerator({
 
       // Proceed with image generation
       setMintingStatus("generating");
-      const response = await fetch(`${apiUrl}?prompt=${encodeURIComponent(prompt)}&tokenId=${newTokenId}&size=${size}`);
+
+      // Determine mode and prepare request body
+      const isEditMode = referenceImage !== null;
+      const mode = isEditMode ? "edit" : "generate";
+
+      // Prepare request body
+      const requestBody = {
+        prompt,
+        tokenId: newTokenId.toString(),
+        size,
+        mode,
+      };
+
+      // If in edit mode, convert reference image to base64
+      if (isEditMode && referenceImage) {
+        const base64Image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(referenceImage);
+        });
+        // Remove the data:image/jpeg;base64, prefix to get just the base64 data
+        const base64Data = base64Image.split(",")[1];
+        requestBody.referenceImage = base64Data;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);

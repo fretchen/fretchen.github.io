@@ -14,11 +14,11 @@ const defaultImageUrl = "https://mypersonaljscloudivnad9dy-genimgbfl.functions.f
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
   const aspectRatio = originalWidth / originalHeight;
-  
+
   if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
     return { width: originalWidth, height: originalHeight };
   }
-  
+
   if (originalWidth > originalHeight) {
     return {
       width: maxDimension,
@@ -37,30 +37,30 @@ const compressImage = (file: File, maxSizeKB: number = 1024): Promise<string> =>
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     const img = new Image();
-    
+
     img.onload = () => {
       const { width, height } = calculateOptimalDimensions(img.width, img.height);
       canvas.width = width;
       canvas.height = height;
-      
+
       if (!ctx) {
         reject(new Error("Could not get canvas context"));
         return;
       }
-      
+
       // Weißer Hintergrund für PNG → JPEG Konvertierung (Transparenz)
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, width, height);
-      
+
       // Zeichne das Bild auf den Canvas
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       // Progressive Qualitätsreduzierung bis Zielgröße erreicht
       let quality = 0.9;
       const attemptCompression = () => {
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
         const sizeKB = (compressedDataUrl.length * 0.75) / 1024; // Base64 Overhead
-        
+
         if (sizeKB <= maxSizeKB || quality <= 0.1) {
           resolve(compressedDataUrl.split(",")[1]); // Return base64 without prefix
         } else {
@@ -70,7 +70,7 @@ const compressImage = (file: File, maxSizeKB: number = 1024): Promise<string> =>
       };
       attemptCompression();
     };
-    
+
     img.onerror = () => reject(new Error("Failed to load image"));
     img.src = URL.createObjectURL(file);
   });
@@ -456,7 +456,7 @@ export function ImageGenerator({
       const compressedBase64 = await compressImage(file, 1024);
       setReferenceImageBase64(compressedBase64);
       setPreviewState("reference");
-      
+
       // Zeige Erfolg-Feedback
       const originalSizeKB = Math.round(file.size / 1024);
       const compressedSizeKB = Math.round((compressedBase64.length * 0.75) / 1024);

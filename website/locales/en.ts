@@ -23,6 +23,7 @@ export default {
     download: "Download",
     collect: "Collect",
     connectForArtwork: "Connect your account to create artwork",
+    editImage: "Edit the image now",
   },
   assistent: {
     title: "Chat Assistant",

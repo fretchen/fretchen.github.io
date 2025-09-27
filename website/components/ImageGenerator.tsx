@@ -179,7 +179,7 @@ export function ImageGenerator({
   const generatingText = useLocale({ label: "imagegen.generating" });
   const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
   const promptPlaceholderText = useLocale({ label: "imagegen.promptPlaceholder" });
-  const editImageText = "Edit the image now";
+  const editImageText = useLocale({ label: "imagegen.editImage" });
 
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";

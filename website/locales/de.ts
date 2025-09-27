@@ -23,6 +23,7 @@ export default {
     download: "Herunterladen",
     collect: "Sammeln",
     connectForArtwork: "Verbinde dein Konto, um Kunstwerke zu erstellen",
+    editImage: "Bild jetzt bearbeiten",
   },
   assistent: {
     title: "Chat-Assistent",

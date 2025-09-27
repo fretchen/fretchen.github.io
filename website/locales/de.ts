@@ -35,7 +35,7 @@ export default {
     // File upload
     uploadReferenceImage: "Referenzbild hochladen (Optional)",
     dragDropHere: "Bild hierher ziehen oder klicken zum Durchsuchen",
-    supportedFormats: "Unterstützt JPEG, PNG, WebP, GIF • Max 10MB",
+    supportedFormats: "Unterstützt JPEG, PNG • Max 10MB (PNG wird zu JPEG konvertiert)",
     referenceImageTitle: "📸 Referenzbild",
     generatedArtworkTitle: "🎨 Generiertes Kunstwerk",
     remove: "Entfernen",
@@ -43,7 +43,7 @@ export default {
     generatedArtworkAlt: "Generiertes Kunstwerk",
     referenceImageHint: "💡 Dieses Bild wird als Referenz für die Generierung verwendet",
     // File validation
-    invalidFileType: "Bitte lade eine gültige Bilddatei hoch (JPEG, PNG, WebP oder GIF)",
+    invalidFileType: "Bitte lade nur JPEG- oder PNG-Bilddateien hoch",
     fileTooLarge: "Bilddateigröße muss kleiner als 10MB sein",
     compressionFailed: "Bildkomprimierung fehlgeschlagen",
     failedToProcessImage: "Bild konnte nicht verarbeitet werden",

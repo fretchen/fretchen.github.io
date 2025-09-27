@@ -35,7 +35,7 @@ export default {
     // File upload
     uploadReferenceImage: "Upload Reference Image (Optional)",
     dragDropHere: "Drag & drop an image here, or click to browse",
-    supportedFormats: "Supports JPEG, PNG, WebP, GIF • Max 10MB",
+    supportedFormats: "Supports JPEG, PNG • Max 10MB (PNG will be converted to JPEG)",
     referenceImageTitle: "📸 Reference Image",
     generatedArtworkTitle: "🎨 Generated Artwork",
     remove: "Remove",
@@ -43,7 +43,7 @@ export default {
     generatedArtworkAlt: "Generated artwork",
     referenceImageHint: "💡 This image will be used as reference for generation",
     // File validation
-    invalidFileType: "Please upload a valid image file (JPEG, PNG, WebP, or GIF)",
+    invalidFileType: "Please upload a JPEG or PNG image file only",
     fileTooLarge: "Image file size must be less than 10MB",
     compressionFailed: "Image compression failed",
     failedToProcessImage: "Failed to process image",

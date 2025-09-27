@@ -32,7 +32,7 @@ const calculateOptimalDimensions = (originalWidth: number, originalHeight: numbe
   }
 };
 
-const compressImage = (file: File, maxSizeKB: number = 1024): Promise<string> => {
+const compressImage = (file: File, maxSizeKB: number = 1024): Promise<{ base64: string; mimeType: string }> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -58,11 +58,15 @@ const compressImage = (file: File, maxSizeKB: number = 1024): Promise<string> =>
       // Progressive Qualitätsreduzierung bis Zielgröße erreicht
       let quality = 0.9;
       const attemptCompression = () => {
+        // Explizit zu JPEG konvertieren - garantiert einheitliches Format
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
         const sizeKB = (compressedDataUrl.length * 0.75) / 1024; // Base64 Overhead
 
         if (sizeKB <= maxSizeKB || quality <= 0.1) {
-          resolve(compressedDataUrl.split(",")[1]); // Return base64 without prefix
+          resolve({
+            base64: compressedDataUrl.split(",")[1], // Return base64 without prefix
+            mimeType: "image/jpeg", // Garantiert JPEG nach Konvertierung
+          });
         } else {
           quality -= 0.1;
           setTimeout(attemptCompression, 0); // Non-blocking iteration
@@ -112,6 +116,7 @@ export function ImageGenerator({
 
   // Unified reference image state (base64 for all sources)
   const [referenceImageBase64, setReferenceImageBase64] = useState<string | null>(null);
+  const [referenceImageMimeType, setReferenceImageMimeType] = useState<string>("image/jpeg");
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -467,7 +472,8 @@ export function ImageGenerator({
 
   // File handling logic
   const validateImageFile = (file: File): boolean => {
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    // Strikte Validierung: Nur JPEG und PNG erlaubt
+    const validTypes = ["image/jpeg", "image/png"];
     const maxSize = 10 * 1024 * 1024; // 10MB
 
     if (!validTypes.includes(file.type)) {
@@ -491,14 +497,17 @@ export function ImageGenerator({
 
     try {
       // Komprimiere das Bild auf unter 1MB (PNG → JPEG Konvertierung)
-      const compressedBase64 = await compressImage(file, 1024);
-      setReferenceImageBase64(compressedBase64);
+      const compressedResult = await compressImage(file, 1024);
+      setReferenceImageBase64(compressedResult.base64);
+      setReferenceImageMimeType(compressedResult.mimeType);
       setPreviewState("reference");
 
       // Zeige Erfolg-Feedback
       const originalSizeKB = Math.round(file.size / 1024);
-      const compressedSizeKB = Math.round((compressedBase64.length * 0.75) / 1024);
-      console.log(`Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB`);
+      const compressedSizeKB = Math.round((compressedResult.base64.length * 0.75) / 1024);
+      console.log(
+        `Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB (${file.type} → ${compressedResult.mimeType})`,
+      );
     } catch (err) {
       console.error("Image compression failed:", err);
       const errorMsg = err instanceof Error ? err.message : failedToProcessImageText;
@@ -537,6 +546,7 @@ export function ImageGenerator({
 
   const clearReferenceImage = () => {
     setReferenceImageBase64(null);
+    setReferenceImageMimeType("image/jpeg"); // Reset to default
     setPreviewState("empty");
 
     // Clear the file input so it can accept the same file again
@@ -695,7 +705,7 @@ export function ImageGenerator({
                   })}
                 >
                   <img
-                    src={`data:image/jpeg;base64,${referenceImageBase64}`}
+                    src={`data:${referenceImageMimeType};base64,${referenceImageBase64}`}
                     alt={referenceImageAltText}
                     className={css({
                       maxWidth: "100%",

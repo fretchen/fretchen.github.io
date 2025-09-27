@@ -66,8 +66,8 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte JPEG Dateien akzeptieren", () => {
       render(<ImageGenerator />);
 
-      const jpegFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "test.jpg", { 
-        type: "image/jpeg" 
+      const jpegFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "test.jpg", {
+        type: "image/jpeg",
       });
 
       const fileInput = screen.getByTestId("reference-image-input");
@@ -86,8 +86,8 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte PNG Dateien akzeptieren", () => {
       render(<ImageGenerator />);
 
-      const pngFile = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "test.png", { 
-        type: "image/png" 
+      const pngFile = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "test.png", {
+        type: "image/png",
       });
 
       const fileInput = screen.getByTestId("reference-image-input");
@@ -107,7 +107,7 @@ describe("ImageGenerator Reference Image Integration", () => {
       render(<ImageGenerator />);
 
       const dropZone = screen.getByTestId("drop-zone");
-      
+
       // Drop Zone ist da und hat richtige Hints
       expect(dropZone).toBeInTheDocument();
       expect(screen.getByText("Upload Reference Image (Optional)")).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
       expect(textarea).toBeInTheDocument();
-      
+
       // Textarea sollte funktionieren
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
       expect(textarea).toHaveValue("Test prompt");
@@ -147,7 +147,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
-      
+
       // Select sollte funktionieren
       fireEvent.change(sizeSelect, { target: { value: "1792x1024" } });
       expect(sizeSelect).toHaveValue("1792x1024");

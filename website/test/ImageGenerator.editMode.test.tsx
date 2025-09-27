@@ -82,9 +82,9 @@ describe("ImageGenerator Edit Mode Integration", () => {
       render(<ImageGenerator />);
 
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
-      
+
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      
+
       expect(textarea).toHaveValue("Test prompt");
     });
   });

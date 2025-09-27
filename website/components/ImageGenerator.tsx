@@ -569,6 +569,7 @@ export function ImageGenerator({
         <div className={styles.imageGen.compactForm}>
           {/* Unified Preview/Upload Area */}
           <div
+            data-testid="drop-zone"
             className={css({
               mb: "4",
               p: "6",
@@ -596,6 +597,7 @@ export function ImageGenerator({
             {/* Hidden file input */}
             <input
               id="reference-image-input"
+              data-testid="reference-image-input"
               type="file"
               accept="image/*"
               onChange={handleFileInputChange}

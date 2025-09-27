@@ -236,7 +236,7 @@ describe("image_service.js Tests", () => {
         name: `AI Generated Art #${tokenId}`,
         description: `AI generated artwork based on the prompt: "${prompt}"`,
         image: expect.stringMatching(
-          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.png$/,
+          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.jpg$/,
         ),
         attributes: [
           {
@@ -291,7 +291,7 @@ describe("image_service.js Tests", () => {
 
       // Finde den Bild-Upload-Aufruf
       const imageCall = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/png",
+        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/jpeg",
       );
 
       expect(imageCall).toBeDefined();

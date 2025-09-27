@@ -163,10 +163,10 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
 
       // Überprüfe Bild-Upload
       const imageUpload = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].ContentType === "image/png",
+        (call) => call[0].ContentType === "image/jpeg",
       );
       expect(imageUpload).toBeDefined();
-      expect(imageUpload[0].Key).toMatch(/^images\/image_42_[a-f0-9]{12}\.png$/);
+      expect(imageUpload[0].Key).toMatch(/^images\/image_42_[a-f0-9]{12}\.jpg$/);
 
       // Überprüfe Metadaten-Upload
       const metadataUpload = mockPutObjectCommand.mock.calls.find(
@@ -402,7 +402,7 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
 
       // Überprüfe dass große Datei korrekt verarbeitet wurde
       const imageUpload = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].ContentType === "image/png",
+        (call) => call[0].ContentType === "image/jpeg",
       );
       expect(Buffer.isBuffer(imageUpload[0].Body)).toBe(true);
       expect(imageUpload[0].Body.length).toBeGreaterThan(40000);

@@ -153,7 +153,7 @@ async function generateImageIONOS(prompt, size) {
  * @param {string} size - Image size
  * @returns {Promise<string>} - Base64 encoded image
  */
-async function generateImageBFL(prompt, size) {
+async function generateImageBFL(prompt, size, mode = "generate", referenceImageBase64 = null) {
   const config = PROVIDER_CONFIGS.bfl;
   const apiToken = process.env[config.tokenEnvVar];
 
@@ -163,7 +163,20 @@ async function generateImageBFL(prompt, size) {
     );
   }
 
-  console.log("Sending BFL image generation request...");
+  console.log(`Sending BFL image generation request in ${mode} mode...`);
+
+  // Prepare request body based on mode
+  const requestBody = {
+    prompt,
+    aspect_ratio: size === "1792x1024" ? "16:9" : "1:1", // Use aspect_ratio instead of width/height
+    output_format: "jpeg", // Ensure consistent JPEG format
+  };
+
+  // Add reference image for edit mode
+  if (mode === "edit" && referenceImageBase64) {
+    requestBody.input_image = referenceImageBase64;
+    console.log("Reference image added for editing");
+  }
 
   // Step 1: Start image generation
   const response = await fetch(config.endpoint, {
@@ -173,11 +186,7 @@ async function generateImageBFL(prompt, size) {
       "x-key": apiToken, // BFL API requires authentication via the non-standard 'x-key' header instead of the standard 'Authorization' header. See BFL API docs for details.
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      prompt,
-      aspect_ratio: size === "1792x1024" ? "16:9" : "1:1", // Use aspect_ratio instead of width/height
-      output_format: "png", // Ensure consistent PNG format
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -260,12 +269,18 @@ async function generateImageBFL(prompt, size) {
  * @param {string} size - Image size
  * @returns {Promise<string>} - Base64 encoded image
  */
-async function generateImageFromProvider(prompt, provider, size) {
+async function generateImageFromProvider(
+  prompt,
+  provider,
+  size,
+  mode = "generate",
+  referenceImageBase64 = null,
+) {
   switch (provider) {
     case "ionos":
       return generateImageIONOS(prompt, size);
     case "bfl":
-      return generateImageBFL(prompt, size);
+      return generateImageBFL(prompt, size, mode, referenceImageBase64);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -284,6 +299,8 @@ export async function generateAndUploadImage(
   tokenId = "unknown",
   provider,
   size = "1024x1024",
+  mode = "generate",
+  referenceImageBase64 = null,
 ) {
   if (!prompt) {
     throw new Error("No prompt provided.");
@@ -296,13 +313,19 @@ export async function generateAndUploadImage(
   }
 
   // Generate image using the specified provider
-  const imageBase64 = await generateImageFromProvider(prompt, provider, size);
-  console.log("Image received from", provider);
+  const imageBase64 = await generateImageFromProvider(
+    prompt,
+    provider,
+    size,
+    mode,
+    referenceImageBase64,
+  );
+  console.log("Image received from", provider, "in", mode, "mode");
 
-  // Upload the image as PNG in the images subfolder
-  const imageFileName = `images/image_${tokenId}_${getRandomString()}.png`;
+  // Upload the image as JPEG in the images subfolder
+  const imageFileName = `images/image_${tokenId}_${getRandomString()}.jpg`;
   const imageBuffer = base64ToBuffer(imageBase64);
-  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/png");
+  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/jpeg");
 
   // Create and upload ERC-721 compliant metadata in the metadata subfolder
   const metadataFileName = `metadata/metadata_${tokenId}_${getRandomString()}.json`;
@@ -311,7 +334,7 @@ export async function generateAndUploadImage(
   const metadata = {
     name: `AI Generated Art #${tokenId}`,
     description: `AI generated artwork based on the prompt: "${prompt}"`,
-    image: imageUrl, // Reference to the PNG image
+    image: imageUrl, // Reference to the JPEG image
     attributes: [
       {
         trait_type: "Prompt",

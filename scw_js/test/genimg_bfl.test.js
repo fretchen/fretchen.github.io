@@ -56,7 +56,8 @@ describe("genimg_bfl.js Tests", () => {
   describe("handle() - Hauptfunktion Tests", () => {
     test("sollte Fehler zurückgeben wenn kein Prompt bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {},
+        httpMethod: "POST",
+        body: JSON.stringify({}),
       };
 
       const result = await handle(event, {}, () => {});
@@ -67,7 +68,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Fehler zurückgeben wenn keine tokenId bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -80,7 +82,8 @@ describe("genimg_bfl.js Tests", () => {
       mockContract.read.ownerOf.mockRejectedValue(new Error("Token does not exist"));
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "999" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "999" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -89,11 +92,12 @@ describe("genimg_bfl.js Tests", () => {
       expect(JSON.parse(result.body).error).toBe("Token does not exist");
     });
 
-    test("sollte Fehler zurückgeben wenn Bild bereits aktualisiert wurde", async () => {
+    test("sollte Fehler zurückgeben wenn Bild bereits aktualisiert wurde (generate mode)", async () => {
       mockContract.read.isImageUpdated.mockResolvedValue(true);
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1", mode: "generate" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -102,13 +106,35 @@ describe("genimg_bfl.js Tests", () => {
       expect(JSON.parse(result.body).error).toBe("Image already updated");
     });
 
+    test("sollte edit mode erlauben auch wenn Bild bereits aktualisiert wurde", async () => {
+      mockContract.read.isImageUpdated.mockResolvedValue(true);
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color to red",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet und Token aktualisiert (BFL)");
+    });
+
     test("sollte erfolgreich Bild generieren und Token aktualisieren", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "beautiful landscape",
           tokenId: "1",
           size: "1024x1024",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -132,6 +158,8 @@ describe("genimg_bfl.js Tests", () => {
         "1",
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
         BigInt(1),
@@ -143,7 +171,8 @@ describe("genimg_bfl.js Tests", () => {
       mockGenerateAndUploadImage.mockRejectedValue(new Error("Image generation failed"));
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -156,7 +185,8 @@ describe("genimg_bfl.js Tests", () => {
       delete process.env.NFT_WALLET_PRIVATE_KEY;
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       await expect(handle(event, {}, () => {})).rejects.toThrow(
@@ -170,7 +200,8 @@ describe("genimg_bfl.js Tests", () => {
       mockFetchError("Network error");
 
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -181,11 +212,12 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Fehler zurückgeben wenn ungültige size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
           tokenId: "1",
           size: "invalid_size",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -196,7 +228,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -209,16 +242,19 @@ describe("genimg_bfl.js Tests", () => {
         "1",
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
     });
 
     test("sollte custom size verwenden wenn gültige size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
           tokenId: "1",
           size: "1792x1024",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -231,14 +267,247 @@ describe("genimg_bfl.js Tests", () => {
         "1",
         "bfl",
         "1792x1024",
+        "generate",
+        null,
       );
+    });
+
+    test("sollte edit mode korrekt handhaben", async () => {
+      const referenceImageBase64 =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color to red",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage: referenceImageBase64,
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "change color to red",
+        "1",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImageBase64,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet und Token aktualisiert (BFL)");
+    });
+
+    test("sollte Fehler zurückgeben wenn edit mode ohne referenceImage verwendet wird", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color to red",
+          tokenId: "1",
+          mode: "edit",
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Edit mode requires referenceImage parameter");
+    });
+  });
+
+  describe("Image Editing Tests", () => {
+    test("sollte edit mode erfolgreich ausführen mit minimalen Base64-Image", async () => {
+      // Verwende eine sehr kleine, gültige Base64-Image für Tests
+      const minimalBase64Image =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "make it blue",
+          tokenId: "5",
+          mode: "edit",
+          referenceImage: minimalBase64Image,
+          size: "1792x1024",
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      expect(result.statusCode).toBe(200);
+
+      // Verifikation dass generateAndUploadImage mit edit-Parametern aufgerufen wurde
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "make it blue",
+        "5",
+        "bfl",
+        "1792x1024",
+        "edit",
+        minimalBase64Image,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet und Token aktualisiert (BFL)");
+      expect(responseBody.metadata_url).toBeDefined();
+      expect(responseBody.transaction_hash).toBeDefined();
+    });
+
+    test("sollte edit mode auch funktionieren wenn Token bereits aktualisiert wurde", async () => {
+      // Mock dass Token bereits aktualisiert wurde
+      mockContract.read.isImageUpdated.mockResolvedValue(true);
+
+      const referenceImage =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "add flowers",
+          tokenId: "10",
+          mode: "edit",
+          referenceImage,
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      // Sollte erfolgreich sein, da edit mode die "bereits aktualisiert" Prüfung umgeht
+      expect(result.statusCode).toBe(200);
+
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "add flowers",
+        "10",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImage,
+      );
+    });
+
+    test("sollte verschiedene Edit-Prompts korrekt verarbeiten", async () => {
+      const testCases = [
+        { prompt: "change background to sunset", tokenId: "100" },
+        { prompt: "add more details", tokenId: "200" },
+        { prompt: "make it more vibrant", tokenId: "300" },
+      ];
+
+      const referenceImage =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      for (const testCase of testCases) {
+        mockGenerateAndUploadImage.mockClear();
+
+        const event = {
+          httpMethod: "POST",
+          body: JSON.stringify({
+            prompt: testCase.prompt,
+            tokenId: testCase.tokenId,
+            mode: "edit",
+            referenceImage,
+          }),
+        };
+
+        const result = await handle(event, {}, () => {});
+
+        expect(result.statusCode).toBe(200);
+
+        expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+          testCase.prompt,
+          testCase.tokenId,
+          "bfl",
+          "1024x1024",
+          "edit",
+          referenceImage,
+        );
+      }
+    });
+
+    test("sollte edit mode mit verschiedenen Bildgrößen handhaben", async () => {
+      const sizes = ["1024x1024", "1792x1024"];
+      const referenceImage =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+      for (const size of sizes) {
+        mockGenerateAndUploadImage.mockClear();
+
+        const event = {
+          httpMethod: "POST",
+          body: JSON.stringify({
+            prompt: "enhance quality",
+            tokenId: "50",
+            mode: "edit",
+            referenceImage,
+            size,
+          }),
+        };
+
+        const result = await handle(event, {}, () => {});
+
+        expect(result.statusCode).toBe(200);
+
+        expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+          "enhance quality",
+          "50",
+          "bfl",
+          size,
+          "edit",
+          referenceImage,
+        );
+      }
+    });
+
+    test("sollte Fehler zurückgeben wenn referenceImage kein gültiges Base64-Format hat", async () => {
+      const invalidBase64 = "not-a-valid-base64-image";
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage: invalidBase64,
+        }),
+      };
+
+      const result = await handle(event, {}, () => {});
+
+      // Die Funktion sollte trotzdem versuchen zu verarbeiten, da sie keine Base64-Validierung macht
+      // Sie verlässt sich auf den image_service für die Validierung
+      expect(result.statusCode).toBe(200);
+    });
+
+    test("sollte edit mode Parameter-Validierung ohne externe Aufrufe testen", async () => {
+      // Teste nur die Parameter-Validierung ohne Contract-Interaktion
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "test edit",
+          tokenId: "1",
+          mode: "edit",
+          referenceImage: "data:image/png;base64,test",
+        }),
+      };
+
+      // Mocke alle externen Aufrufe um nur die Logik zu testen
+      mockContract.read.ownerOf.mockRejectedValue(new Error("Token does not exist"));
+
+      const result = await handle(event, {}, () => {});
+
+      // Sollte bei Token-Existenz-Prüfung fehlschlagen, nicht bei Parameter-Validierung
+      expect(result.statusCode).toBe(404);
+      expect(JSON.parse(result.body).error).toBe("Token does not exist");
     });
   });
 
   describe("Contract Interaction Tests", () => {
     test("sollte mintPrice korrekt abrufen", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       await handle(event, {}, () => {});
@@ -248,7 +517,8 @@ describe("genimg_bfl.js Tests", () => {
 
     test("sollte Contract mit korrekten Parametern initialisieren", async () => {
       const event = {
-        queryStringParameters: { prompt: "test prompt", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "test prompt", tokenId: "1" }),
       };
 
       await handle(event, {}, () => {});
@@ -269,10 +539,11 @@ describe("genimg_bfl.js Tests", () => {
       const largeTokenId = "999999999999999999";
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
           tokenId: largeTokenId,
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -285,12 +556,15 @@ describe("genimg_bfl.js Tests", () => {
         largeTokenId,
         "bfl",
         "1024x1024",
+        "generate",
+        null,
       );
     });
 
     test("sollte leere Prompts ablehnen", async () => {
       const event = {
-        queryStringParameters: { prompt: "", tokenId: "1" },
+        httpMethod: "POST",
+        body: JSON.stringify({ prompt: "", tokenId: "1" }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -303,10 +577,11 @@ describe("genimg_bfl.js Tests", () => {
       const longPrompt = "a".repeat(1000);
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: longPrompt,
           tokenId: "1",
-        },
+        }),
       };
 
       const result = await handle(event, {}, () => {});
@@ -314,7 +589,14 @@ describe("genimg_bfl.js Tests", () => {
       expect(result.statusCode).toBe(200);
 
       // Verifikation dass langer Prompt korrekt verarbeitet wurde
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(longPrompt, "1", "bfl", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        longPrompt,
+        "1",
+        "bfl",
+        "1024x1024",
+        "generate",
+        null,
+      );
     });
   });
 });

@@ -11,6 +11,71 @@ import { useLocale } from "../hooks/useLocale";
 
 const defaultImageUrl = "https://mypersonaljscloudivnad9dy-genimgbfl.functions.fnc.fr-par.scw.cloud";
 
+// Image compression helpers
+const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
+  const aspectRatio = originalWidth / originalHeight;
+  
+  if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
+    return { width: originalWidth, height: originalHeight };
+  }
+  
+  if (originalWidth > originalHeight) {
+    return {
+      width: maxDimension,
+      height: Math.round(maxDimension / aspectRatio),
+    };
+  } else {
+    return {
+      width: Math.round(maxDimension * aspectRatio),
+      height: maxDimension,
+    };
+  }
+};
+
+const compressImage = (file: File, maxSizeKB: number = 1024): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    
+    img.onload = () => {
+      const { width, height } = calculateOptimalDimensions(img.width, img.height);
+      canvas.width = width;
+      canvas.height = height;
+      
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+      
+      // Weißer Hintergrund für PNG → JPEG Konvertierung (Transparenz)
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, width, height);
+      
+      // Zeichne das Bild auf den Canvas
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Progressive Qualitätsreduzierung bis Zielgröße erreicht
+      let quality = 0.9;
+      const attemptCompression = () => {
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+        const sizeKB = (compressedDataUrl.length * 0.75) / 1024; // Base64 Overhead
+        
+        if (sizeKB <= maxSizeKB || quality <= 0.1) {
+          resolve(compressedDataUrl.split(",")[1]); // Return base64 without prefix
+        } else {
+          quality -= 0.1;
+          setTimeout(attemptCompression, 0); // Non-blocking iteration
+        }
+      };
+      attemptCompression();
+    };
+    
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 // Helper function to wait for transaction confirmation
 export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
   return new Promise<TransactionReceipt>((resolve, reject) => {
@@ -380,21 +445,29 @@ export function ImageGenerator({
     return true;
   };
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     if (!validateImageFile(file)) return;
 
-    // Convert file to base64 immediately
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64String = e.target?.result as string;
-      // Remove the data:image/jpeg;base64, prefix to get just the base64 data
-      const base64Data = base64String.split(",")[1];
-      setReferenceImageBase64(base64Data);
-      setPreviewState("reference");
-    };
-    reader.readAsDataURL(file);
-
     setError(null);
+    setIsLoading(true);
+
+    try {
+      // Komprimiere das Bild auf unter 1MB (PNG → JPEG Konvertierung)
+      const compressedBase64 = await compressImage(file, 1024);
+      setReferenceImageBase64(compressedBase64);
+      setPreviewState("reference");
+      
+      // Zeige Erfolg-Feedback
+      const originalSizeKB = Math.round(file.size / 1024);
+      const compressedSizeKB = Math.round((compressedBase64.length * 0.75) / 1024);
+      console.log(`Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB`);
+    } catch (err) {
+      console.error("Image compression failed:", err);
+      const errorMsg = err instanceof Error ? err.message : "Failed to process image";
+      setError(`Image compression failed: ${errorMsg}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {

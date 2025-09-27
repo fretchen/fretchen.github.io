@@ -169,7 +169,7 @@ async function generateImageBFL(prompt, size, mode = "generate", referenceImageB
   const requestBody = {
     prompt,
     aspect_ratio: size === "1792x1024" ? "16:9" : "1:1", // Use aspect_ratio instead of width/height
-    output_format: "png", // Ensure consistent PNG format
+    output_format: "jpeg", // Ensure consistent JPEG format
   };
 
   // Add reference image for edit mode
@@ -322,10 +322,10 @@ export async function generateAndUploadImage(
   );
   console.log("Image received from", provider, "in", mode, "mode");
 
-  // Upload the image as PNG in the images subfolder
-  const imageFileName = `images/image_${tokenId}_${getRandomString()}.png`;
+  // Upload the image as JPEG in the images subfolder
+  const imageFileName = `images/image_${tokenId}_${getRandomString()}.jpg`;
   const imageBuffer = base64ToBuffer(imageBase64);
-  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/png");
+  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/jpeg");
 
   // Create and upload ERC-721 compliant metadata in the metadata subfolder
   const metadataFileName = `metadata/metadata_${tokenId}_${getRandomString()}.json`;
@@ -334,7 +334,7 @@ export async function generateAndUploadImage(
   const metadata = {
     name: `AI Generated Art #${tokenId}`,
     description: `AI generated artwork based on the prompt: "${prompt}"`,
-    image: imageUrl, // Reference to the PNG image
+    image: imageUrl, // Reference to the JPEG image
     attributes: [
       {
         trait_type: "Prompt",

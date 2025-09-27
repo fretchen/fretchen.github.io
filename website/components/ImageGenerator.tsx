@@ -155,7 +155,7 @@ export function ImageGenerator({
 
       // Timeout after 10 seconds
       setTimeout(() => {
-        reject(new Error("Chain switch timeout - please try again"));
+        reject(new Error(chainSwitchTimeoutText));
       }, 10000);
 
       checkChain();
@@ -180,6 +180,45 @@ export function ImageGenerator({
   const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
   const promptPlaceholderText = useLocale({ label: "imagegen.promptPlaceholder" });
   const editImageText = useLocale({ label: "imagegen.editImage" });
+
+  // Error messages
+  const connectAccountFirstText = useLocale({ label: "imagegen.connectAccountFirst" });
+  const switchToOptimismText = useLocale({ label: "imagegen.switchToOptimism" });
+  const enterPromptErrorText = useLocale({ label: "imagegen.enterPromptError" });
+  const loadMintPriceText = useLocale({ label: "imagegen.loadMintPrice" });
+  const chainSwitchTimeoutText = useLocale({ label: "imagegen.chainSwitchTimeout" });
+  const extractTokenIdText = useLocale({ label: "imagegen.extractTokenId" });
+  const unknownErrorText = useLocale({ label: "imagegen.unknownError" });
+
+  // File upload
+  const uploadReferenceImageText = useLocale({ label: "imagegen.uploadReferenceImage" });
+  const dragDropHereText = useLocale({ label: "imagegen.dragDropHere" });
+  const supportedFormatsText = useLocale({ label: "imagegen.supportedFormats" });
+  const referenceImageTitleText = useLocale({ label: "imagegen.referenceImageTitle" });
+  const generatedArtworkTitleText = useLocale({ label: "imagegen.generatedArtworkTitle" });
+  const removeText = useLocale({ label: "imagegen.remove" });
+  const referenceImageAltText = useLocale({ label: "imagegen.referenceImageAlt" });
+  const generatedArtworkAltText = useLocale({ label: "imagegen.generatedArtworkAlt" });
+  const referenceImageHintText = useLocale({ label: "imagegen.referenceImageHint" });
+
+  // File validation
+  const invalidFileTypeText = useLocale({ label: "imagegen.invalidFileType" });
+  const fileTooLargeText = useLocale({ label: "imagegen.fileTooLarge" });
+  const compressionFailedText = useLocale({ label: "imagegen.compressionFailed" });
+  const failedToProcessImageText = useLocale({ label: "imagegen.failedToProcessImage" });
+
+  // Status messages
+  const creatingArtworkText = useLocale({ label: "imagegen.creatingArtwork" });
+  const generatingImageText = useLocale({ label: "imagegen.generatingImage" });
+  const artworkCreatedText = useLocale({ label: "imagegen.artworkCreated" });
+  const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
+  const switchingToOptimismText = useLocale({ label: "imagegen.switchingToOptimism" });
+
+  // Links
+  const poweredByText = useLocale({ label: "imagegen.poweredBy" });
+  const viewContractText = useLocale({ label: "imagegen.viewContract" });
+  const learnMoreOptimismText = useLocale({ label: "imagegen.learnMoreOptimism" });
+  const viewContractEtherscanText = useLocale({ label: "imagegen.viewContractEtherscan" });
 
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
@@ -249,7 +288,7 @@ export function ImageGenerator({
 
   const handleMintAndGenerate = async () => {
     if (!isConnected || !address) {
-      const errorMsg = "Please connect your account first";
+      const errorMsg = connectAccountFirstText;
       setError(errorMsg);
       onError?.(errorMsg);
       return;
@@ -259,7 +298,7 @@ export function ImageGenerator({
     const expectedChainId = chain?.id;
     if (expectedChainId && currentChainId !== expectedChainId) {
       try {
-        setError("Switching to Optimism network...");
+        setError(switchingToOptimismText);
         await switchChain({ chainId: expectedChainId });
 
         // Wait for the chain switch to complete using polling
@@ -268,8 +307,7 @@ export function ImageGenerator({
         setError(null);
       } catch (switchError) {
         console.error("Failed to switch chain:", switchError);
-        const errorMsg =
-          switchError instanceof Error ? switchError.message : "Please switch to Optimism network to create artworks";
+        const errorMsg = switchError instanceof Error ? switchError.message : switchToOptimismText;
         setError(errorMsg);
         onError?.(errorMsg);
         return;
@@ -277,13 +315,13 @@ export function ImageGenerator({
     }
 
     if (!prompt.trim()) {
-      const errorMsg = "Please enter a prompt";
+      const errorMsg = enterPromptErrorText;
       setError(errorMsg);
       onError?.(errorMsg);
       return;
     }
     if (!mintPrice) {
-      const errorMsg = "Could not load creation fee from system";
+      const errorMsg = loadMintPriceText;
       setError(errorMsg);
       onError?.(errorMsg);
       return;
@@ -313,7 +351,7 @@ export function ImageGenerator({
       );
 
       if (!transferEvent || transferEvent.topics.length < 4) {
-        throw new Error("Could not extract artwork ID from transaction");
+        throw new Error(extractTokenIdText);
       }
 
       const tokenIdHex = transferEvent.topics[3];
@@ -417,7 +455,7 @@ export function ImageGenerator({
       }, 3000);
     } catch (err) {
       console.error("Error:", err);
-      const errorMsg = err instanceof Error ? err.message : "An unknown error occurred";
+      const errorMsg = err instanceof Error ? err.message : unknownErrorText;
       setError(errorMsg);
       setMintingStatus("error");
       onError?.(errorMsg);
@@ -433,12 +471,12 @@ export function ImageGenerator({
     const maxSize = 10 * 1024 * 1024; // 10MB
 
     if (!validTypes.includes(file.type)) {
-      setError("Please upload a valid image file (JPEG, PNG, WebP, or GIF)");
+      setError(invalidFileTypeText);
       return false;
     }
 
     if (file.size > maxSize) {
-      setError("Image file size must be less than 10MB");
+      setError(fileTooLargeText);
       return false;
     }
 
@@ -463,8 +501,8 @@ export function ImageGenerator({
       console.log(`Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB`);
     } catch (err) {
       console.error("Image compression failed:", err);
-      const errorMsg = err instanceof Error ? err.message : "Failed to process image";
-      setError(`Image compression failed: ${errorMsg}`);
+      const errorMsg = err instanceof Error ? err.message : failedToProcessImageText;
+      setError(`${compressionFailedText}: ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -583,7 +621,7 @@ export function ImageGenerator({
                     mb: "2",
                   })}
                 >
-                  Upload Reference Image (Optional)
+                  {uploadReferenceImageText}
                 </h4>
                 <p
                   className={css({
@@ -592,7 +630,7 @@ export function ImageGenerator({
                     mb: "4",
                   })}
                 >
-                  Drag & drop an image here, or click to browse
+                  {dragDropHereText}
                 </p>
                 <p
                   className={css({
@@ -600,7 +638,7 @@ export function ImageGenerator({
                     color: "gray.500",
                   })}
                 >
-                  Supports JPEG, PNG, WebP, GIF • Max 10MB
+                  {supportedFormatsText}
                 </p>
               </div>
             )}
@@ -623,7 +661,7 @@ export function ImageGenerator({
                       m: 0,
                     })}
                   >
-                    📸 Reference Image
+                    {referenceImageTitleText}
                   </h4>
                   <button
                     onClick={(e) => {
@@ -644,7 +682,7 @@ export function ImageGenerator({
                       },
                     })}
                   >
-                    ✕ Remove
+                    ✕ {removeText}
                   </button>
                 </div>
                 <div
@@ -658,7 +696,7 @@ export function ImageGenerator({
                 >
                   <img
                     src={`data:image/jpeg;base64,${referenceImageBase64}`}
-                    alt="Reference image"
+                    alt={referenceImageAltText}
                     className={css({
                       maxWidth: "100%",
                       maxHeight: "100%",
@@ -676,7 +714,7 @@ export function ImageGenerator({
                     mt: "2",
                   })}
                 >
-                  💡 This image will be used as reference for generation
+                  {referenceImageHintText}
                 </p>
               </div>
             )}
@@ -699,7 +737,7 @@ export function ImageGenerator({
                       m: 0,
                     })}
                   >
-                    🎨 Generated Artwork
+                    {generatedArtworkTitleText}
                   </h4>
                   <div className={css({ display: "flex", gap: "2" })}>
                     <button
@@ -719,7 +757,7 @@ export function ImageGenerator({
                       })}
                       disabled={isLoading || mintingStatus !== "idle"}
                     >
-                      ✕ Remove
+                      ✕ {removeText}
                     </button>
                   </div>
                 </div>
@@ -734,7 +772,7 @@ export function ImageGenerator({
                 >
                   <img
                     src={currentPreviewImage}
-                    alt="Generated artwork"
+                    alt={generatedArtworkAltText}
                     className={css({
                       maxWidth: "100%",
                       maxHeight: "100%",
@@ -746,8 +784,6 @@ export function ImageGenerator({
                 </div>
               </div>
             )}
-
-            {/* Hidden file input */}
           </div>
 
           <textarea
@@ -797,12 +833,12 @@ export function ImageGenerator({
 
         {/* Contract details under Create Artwork button */}
         <div className={css({ mt: "2", fontSize: "xs", color: "gray.600", textAlign: "center" })}>
-          Powered by{" "}
+          {poweredByText}{" "}
           <a
             href="https://optimism.io"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Learn more about Optimism (opens in new tab)"
+            aria-label={learnMoreOptimismText}
             className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
           >
             Optimism
@@ -812,10 +848,10 @@ export function ImageGenerator({
             href={`https://optimistic.etherscan.io/address/${genAiNFTContractConfig.address}`}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="View smart contract on Optimism Etherscan (opens in new tab)"
+            aria-label={viewContractEtherscanText}
             className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
           >
-            View Contract ↗
+            {viewContractText} ↗
           </a>
         </div>
 
@@ -852,7 +888,7 @@ export function ImageGenerator({
         {mintingStatus !== "idle" && (
           <div className={styles.imageGen.compactStatus}>
             <div className={styles.spinner}></div>
-            <span>{mintingStatus === "minting" ? "Creating your artwork..." : "Generating image..."}</span>
+            <span>{mintingStatus === "minting" ? creatingArtworkText : generatingImageText}</span>
           </div>
         )}
 
@@ -861,9 +897,9 @@ export function ImageGenerator({
         {/* Erfolgreiche Erstellung */}
         {tokenId && generatedImageUrl && (
           <div className={styles.successMessage}>
-            <h4 className={css({ margin: 0, fontSize: "sm" })}>✅ Artwork created successfully!</h4>
+            <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
             <p className={css({ margin: "xs 0", fontSize: "sm" })}>
-              ID: {tokenId.toString()} - Check your gallery below
+              ID: {tokenId.toString()} - {checkGalleryText}
             </p>
           </div>
         )}

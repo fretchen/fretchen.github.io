@@ -1,292 +1,156 @@
+/**
+ * ImageGenerator Reference Image Integration Tests
+ *
+ * Tests für die echte ImageGenerator Komponente:
+ * - File Upload Functionality
+ * - UI State Management
+ * - Reference Image Processing
+ *
+ * Priorität: HOCH - Core File Upload Features
+ * Nutzt setup.ts Mocks für wagmi, useLocale etc.
+ */
+
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import "@testing-library/jest-dom";
+import { ImageGenerator } from "../components/ImageGenerator";
 
-// Mock Component für Tests (vereinfacht)
-const MockImageGenerator = ({
-  onFileSelect,
-  hasReferenceImage = false,
-}: {
-  onFileSelect?: (file: File) => void;
-  hasReferenceImage?: boolean;
-}) => {
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && onFileSelect) {
-      onFileSelect(file);
-    }
-  };
+describe("ImageGenerator Reference Image Integration", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
 
-  const handleDrop = (event: React.DragEvent) => {
-    event.preventDefault();
-    const file = (event as any).dataTransfer?.files?.[0];
-    if (file && onFileSelect) {
-      onFileSelect(file);
-    }
-  };
+    // Einfache URL Mocks (nutzt setup.ts für den Rest)
+    global.URL = global.URL || {};
+    global.URL.createObjectURL = global.URL.createObjectURL || vi.fn(() => "blob:mock-url");
+    global.URL.revokeObjectURL = global.URL.revokeObjectURL || vi.fn();
+  });
 
-  return (
-    <div>
-      <div
-        data-testid="drop-zone"
-        onDrop={handleDrop}
-        className={hasReferenceImage ? "has-image" : "empty"}
-      >
-        {!hasReferenceImage && <p>Drag & Drop here</p>}
-      </div>
-      
-      <input
-        data-testid="reference-image-input"
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-      />
-      
-      {hasReferenceImage && (
-        <div data-testid="preview-area">
-          <img src="mock-image.jpg" alt="Reference" />
-          <button data-testid="clear-button">✕ Remove</button>
-        </div>
-      )}
-      
-      <button data-testid="action-button">
-        {hasReferenceImage ? "Edit Image" : "Create Artwork"}
-      </button>
-    </div>
-  );
-};
+  describe("🔴 HOCH: Basic Component Integration", () => {
+    it("sollte ImageGenerator Component rendern können", () => {
+      render(<ImageGenerator />);
 
-describe("ImageGenerator Reference Image Tests", () => {
-  describe("🔴 HOCH: File Upload Tests", () => {
-    it("sollte JPEG-Datei hochladen und verarbeiten", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
+      // Prüfe dass wichtige Elemente vorhanden sind
+      expect(screen.getByText("Create Collectible AI Art • 10¢")).toBeInTheDocument();
+      expect(screen.getByTestId("reference-image-input")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Describe your image in detail...")).toBeInTheDocument();
+    });
 
-      const jpegFile = new File(
-        [new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
-        "test.jpg",
-        { type: "image/jpeg" }
-      );
+    it("sollte File Input korrekt konfiguriert haben", () => {
+      render(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input");
-      
+      expect(fileInput).toBeInTheDocument();
+      expect(fileInput).toHaveAttribute("accept", "image/*");
+      expect(fileInput).toHaveAttribute("type", "file");
+    });
+
+    it("sollte Drop Zone haben", () => {
+      render(<ImageGenerator />);
+
+      const dropZone = screen.getByTestId("drop-zone");
+      expect(dropZone).toBeInTheDocument();
+      expect(screen.getByText("Drag & drop an image here, or click to browse")).toBeInTheDocument();
+    });
+
+    it("sollte verschiedene Image Sizes unterstützen", () => {
+      render(<ImageGenerator />);
+
+      const sizeSelect = screen.getByLabelText("Select image format for your artwork");
+      expect(sizeSelect).toBeInTheDocument();
+      expect(screen.getByText("◼ Square")).toBeInTheDocument();
+      expect(screen.getByText("▬ Wide")).toBeInTheDocument();
+    });
+  });
+
+  describe("🔴 HOCH: File Upload Functionality", () => {
+    it("sollte JPEG Dateien akzeptieren", () => {
+      render(<ImageGenerator />);
+
+      const jpegFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "test.jpg", { 
+        type: "image/jpeg" 
+      });
+
+      const fileInput = screen.getByTestId("reference-image-input");
+
       Object.defineProperty(fileInput, "files", {
         value: [jpegFile],
         configurable: true,
       });
 
       fireEvent.change(fileInput);
-      expect(onFileSelect).toHaveBeenCalledWith(jpegFile);
+
+      // File wurde akzeptiert (keine Fehlermeldung)
+      expect(screen.queryByText(/invalid file type/i)).not.toBeInTheDocument();
     });
 
-    it("sollte PNG-Datei hochladen", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
+    it("sollte PNG Dateien akzeptieren", () => {
+      render(<ImageGenerator />);
 
-      const pngFile = new File(
-        [new Uint8Array([0x89, 0x50, 0x4e, 0x47])],
-        "test.png",
-        { type: "image/png" }
-      );
+      const pngFile = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "test.png", { 
+        type: "image/png" 
+      });
 
       const fileInput = screen.getByTestId("reference-image-input");
-      
+
       Object.defineProperty(fileInput, "files", {
         value: [pngFile],
         configurable: true,
       });
 
       fireEvent.change(fileInput);
-      expect(onFileSelect).toHaveBeenCalledWith(pngFile);
+
+      // File wurde akzeptiert
+      expect(screen.queryByText(/invalid file type/i)).not.toBeInTheDocument();
     });
 
-    it("sollte große Bilder handhaben", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
-
-      const largeFile = new File(
-        [new Uint8Array(2 * 1024 * 1024)], // 2MB
-        "large.jpg",
-        { type: "image/jpeg" }
-      );
-
-      const fileInput = screen.getByTestId("reference-image-input");
-      
-      Object.defineProperty(fileInput, "files", {
-        value: [largeFile],
-        configurable: true,
-      });
-
-      fireEvent.change(fileInput);
-      expect(onFileSelect).toHaveBeenCalledWith(largeFile);
-    });
-
-    it("sollte Drag & Drop Funktionalität testen", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
-
-      const jpegFile = new File(
-        [new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
-        "dropped.jpg",
-        { type: "image/jpeg" }
-      );
+    it("sollte Drag & Drop Zone haben", () => {
+      render(<ImageGenerator />);
 
       const dropZone = screen.getByTestId("drop-zone");
-
-      // Mock das drop Event
-      const mockDropEvent = {
-        preventDefault: vi.fn(),
-        dataTransfer: {
-          files: [jpegFile],
-        },
-      };
-
-      fireEvent.drop(dropZone, mockDropEvent);
-      expect(onFileSelect).toHaveBeenCalledWith(jpegFile);
-    });
-
-    it("sollte File Input onChange behandeln", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
-
-      const jpegFile = new File(
-        [new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
-        "onchange.jpg",
-        { type: "image/jpeg" }
-      );
-
-      const fileInput = screen.getByTestId("reference-image-input");
       
-      Object.defineProperty(fileInput, "files", {
-        value: [jpegFile],
-        configurable: true,
-      });
-
-      fireEvent.change(fileInput);
-      expect(onFileSelect).toHaveBeenCalledWith(jpegFile);
+      // Drop Zone ist da und hat richtige Hints
+      expect(dropZone).toBeInTheDocument();
+      expect(screen.getByText("Upload Reference Image (Optional)")).toBeInTheDocument();
+      expect(screen.getByText(/Supports JPEG, PNG/)).toBeInTheDocument();
     });
   });
 
-  describe("🔴 HOCH: Edit Mode UI State Tests", () => {
-    it("sollte Edit-Button anzeigen wenn Referenzbild geladen", () => {
-      render(<MockImageGenerator hasReferenceImage={true} />);
+  describe("🔴 HOCH: UI State Management", () => {
+    it("sollte initial Create Artwork Button zeigen", () => {
+      render(<ImageGenerator />);
 
-      const actionButton = screen.getByTestId("action-button");
-      expect(actionButton).toHaveTextContent("Edit Image");
+      const createButton = screen.getByText(/Connect your account to create artwork/);
+      expect(createButton).toBeInTheDocument();
     });
 
-    it("sollte Create Button anzeigen wenn kein Referenzbild", () => {
-      render(<MockImageGenerator hasReferenceImage={false} />);
+    it("sollte Textarea für Prompt haben", () => {
+      render(<ImageGenerator />);
 
-      const actionButton = screen.getByTestId("action-button");
-      expect(actionButton).toHaveTextContent("Create Artwork");
-    });
-
-    it("sollte Preview-Bild anzeigen nach Upload", () => {
-      render(<MockImageGenerator hasReferenceImage={true} />);
-
-      const previewArea = screen.getByTestId("preview-area");
-      expect(previewArea).toBeInTheDocument();
+      const textarea = screen.getByPlaceholderText("Describe your image in detail...");
+      expect(textarea).toBeInTheDocument();
       
-      const previewImage = screen.getByAltText("Reference");
-      expect(previewImage).toBeInTheDocument();
+      // Textarea sollte funktionieren
+      fireEvent.change(textarea, { target: { value: "Test prompt" } });
+      expect(textarea).toHaveValue("Test prompt");
     });
 
-    it("sollte Clear Image Button funktionieren", () => {
-      render(<MockImageGenerator hasReferenceImage={true} />);
+    it("sollte Listed Checkbox haben", () => {
+      render(<ImageGenerator />);
 
-      const clearButton = screen.getByTestId("clear-button");
-      expect(clearButton).toBeInTheDocument();
-      expect(clearButton).toHaveTextContent("✕ Remove");
-
-      fireEvent.click(clearButton);
-      // In einem echten Test würde hier der State geändert
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).toBeInTheDocument();
+      expect(screen.getByText("Listed")).toBeInTheDocument();
     });
 
-    it("sollte Upload-Area Styling ändern (leer vs. geladen)", () => {
-      const { rerender } = render(<MockImageGenerator hasReferenceImage={false} />);
+    it("sollte Image Size Select haben", () => {
+      render(<ImageGenerator />);
+
+      const sizeSelect = screen.getByLabelText("Select image format for your artwork");
+      expect(sizeSelect).toBeInTheDocument();
       
-      const dropZone = screen.getByTestId("drop-zone");
-      expect(dropZone).toHaveClass("empty");
-
-      rerender(<MockImageGenerator hasReferenceImage={true} />);
-      expect(dropZone).toHaveClass("has-image");
-    });
-  });
-
-  describe("🔴 HOCH: Image Processing Validation Tests", () => {
-    it("sollte MIME-Type Validation simulieren", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
-
-      // Test verschiedene MIME-Types
-      const testFiles = [
-        new File([new Uint8Array()], "test.jpg", { type: "image/jpeg" }),
-        new File([new Uint8Array()], "test.png", { type: "image/png" }),
-        new File([new Uint8Array()], "test.webp", { type: "image/webp" }),
-      ];
-
-      const fileInput = screen.getByTestId("reference-image-input");
-
-      testFiles.forEach((file) => {
-        Object.defineProperty(fileInput, "files", {
-          value: [file],
-          configurable: true,
-        });
-
-        fireEvent.change(fileInput);
-        expect(onFileSelect).toHaveBeenCalledWith(file);
-      });
-
-      expect(onFileSelect).toHaveBeenCalledTimes(3);
-    });
-
-    it("sollte Dateigrößen-Validation simulieren", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
-
-      // Test verschiedene Dateigrößen
-      const smallFile = new File([new Uint8Array(1024)], "small.jpg", { type: "image/jpeg" });
-      const largeFile = new File([new Uint8Array(10 * 1024 * 1024)], "large.jpg", { type: "image/jpeg" });
-
-      const fileInput = screen.getByTestId("reference-image-input");
-
-      [smallFile, largeFile].forEach((file) => {
-        Object.defineProperty(fileInput, "files", {
-          value: [file],
-          configurable: true,
-        });
-
-        fireEvent.change(fileInput);
-        expect(onFileSelect).toHaveBeenCalledWith(file);
-      });
-
-      expect(onFileSelect).toHaveBeenCalledTimes(2);
-    });
-
-    it("sollte Base64-Format Simulation testen", () => {
-      const onFileSelect = vi.fn();
-      render(<MockImageGenerator onFileSelect={onFileSelect} />);
-
-      const jpegFile = new File(
-        [new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
-        "base64test.jpg",
-        { type: "image/jpeg" }
-      );
-
-      const fileInput = screen.getByTestId("reference-image-input");
-      
-      Object.defineProperty(fileInput, "files", {
-        value: [jpegFile],
-        configurable: true,
-      });
-
-      fireEvent.change(fileInput);
-      
-      // Simuliere dass die Datei verarbeitet wurde
-      expect(onFileSelect).toHaveBeenCalledWith(jpegFile);
-      expect(jpegFile.type).toBe("image/jpeg");
+      // Select sollte funktionieren
+      fireEvent.change(sizeSelect, { target: { value: "1792x1024" } });
+      expect(sizeSelect).toHaveValue("1792x1024");
     });
   });
 });

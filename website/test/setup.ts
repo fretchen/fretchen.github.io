@@ -86,6 +86,37 @@ vi.mock("./hooks/useLocale", () => ({
   useLocale: vi.fn(({ label }: { label: string }) => label),
 }));
 
+// Import wagmi at top level for mock utilities
+import { useAccount } from "wagmi";
+
+// Reusable mock data for tests
+export const MOCK_CONNECTED_ACCOUNT = {
+  address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+  isConnected: true,
+  status: "connected" as const,
+  isConnecting: false,
+  isDisconnected: false,
+  isReconnecting: false,
+} as ReturnType<typeof useAccount>;
+
+export const MOCK_DISCONNECTED_ACCOUNT = {
+  address: undefined,
+  isConnected: false,
+  status: "disconnected" as const,
+  isConnecting: false,
+  isDisconnected: true,
+  isReconnecting: false,
+} as ReturnType<typeof useAccount>;
+
+// Reusable mock utilities for tests
+export const mockConnectedWallet = () => {
+  vi.mocked(useAccount).mockReturnValue(MOCK_CONNECTED_ACCOUNT);
+};
+
+export const mockDisconnectedWallet = () => {
+  vi.mocked(useAccount).mockReturnValue(MOCK_DISCONNECTED_ACCOUNT);
+};
+
 // Clean up after each test
 afterEach(() => {
   cleanup();

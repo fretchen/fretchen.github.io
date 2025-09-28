@@ -2,7 +2,11 @@
 export default {
   imagegen: {
     title: "Create Collectible AI Art • 10¢",
+    collapsedTitle: "Create • Collect • Share",
+    collapsedDescription:
+      "Generate AI art as NFTs. Refine your artwork until perfect, then publish. Support creators by collecting. Earn when your collected works gain popularity.",
     promptPlaceholder: "Describe your image in detail...",
+    editPromptPlaceholder: "Describe changes you want to make to the image...",
     square: "◼ Square",
     wide: "▬ Wide",
     listed: "Listed",

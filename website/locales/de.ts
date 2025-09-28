@@ -1,8 +1,12 @@
 // locales/de.ts
 export default {
   imagegen: {
-    title: "Erstelle einzigartige KI Kunstwerke • 10¢",
+    title: "KI-Kunst erstellen • 10¢",
+    collapsedTitle: "Erstellen • Sammeln • Teilen",
+    collapsedDescription:
+      "Generiere KI-Kunst als NFTs. Verfeinere dein Artwork bis zur Perfektion, dann veröffentliche es. Unterstütze Künstler durch Sammeln. Verdiene, wenn deine gesammelten Werke an Popularität gewinnen.",
     promptPlaceholder: "Beschreibe dein Bild im Detail...",
+    editPromptPlaceholder: "Beschreibe Änderungen, die du am Bild vornehmen möchtest...",
     square: "◼ quadratisch",
     wide: "▬ breit",
     listed: "Gelistet",

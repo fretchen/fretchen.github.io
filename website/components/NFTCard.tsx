@@ -38,10 +38,9 @@ export function NFTCard({
   const { showToast, ToastComponent } = useToast();
 
   // Locale labels - moved to component level to fix hook order
-  const artworkLabel = useLocale({ label: "imagegen.artwork" });
   const listedLabel = useLocale({ label: "imagegen.listed" });
   const downloadLabel = useLocale({ label: "imagegen.download" });
-  const shareLabel = useLocale({ label: "imagegen.share" });
+
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
   // Use the custom hook for a stable public client reference
@@ -294,7 +293,10 @@ export function NFTCard({
   };
 
   return (
-    <div className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""}`}>
+    <div
+      className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""} group`}
+      onClick={handleImageClick}
+    >
       {nft.isLoading ? (
         <div className={styles.nftCard.loadingContainer}>
           <div className={styles.spinner}></div>
@@ -309,14 +311,13 @@ export function NFTCard({
         </div>
       ) : (
         <>
+          {/* Vollbild Image/Placeholder */}
           {nft.imageUrl ? (
             <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
-                alt={nft.metadata?.name || `${artworkLabel} #${nft.tokenId}`}
+                alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
                 className={styles.nftCard.image}
-                onClick={handleImageClick}
-                style={{ cursor: "pointer" }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = "none";
@@ -324,76 +325,107 @@ export function NFTCard({
                 }}
               />
               <div className={styles.nftCard.imageError} style={{ display: "none" }}>
-                Image not available
+                📷 Image not available
               </div>
             </div>
           ) : (
-            <div className={styles.nftCard.imagePlaceholder}>No image available</div>
+            <div className={styles.nftCard.imagePlaceholder}>📷 No image available</div>
           )}
 
-          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `Artwork #${nft.tokenId}`}</h3>
+          {/* Corner Badge - Token ID */}
+          <div className={styles.nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
 
-          {nft.metadata?.description && <p className={styles.nftCard.description}>{nft.metadata.description}</p>}
+          {/* Listed Badge (nur wenn listed) */}
+          {!isPublicView && nft.isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
 
-          <div className={styles.nftCard.footer}>
-            <span>ID: {nft.tokenId.toString()}</span>
-            {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
-              <label
-                className={styles.nftCard.checkboxLabel}
-                title={`${nft.isListed ? "NFT is publicly listed" : "NFT is private"}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={nft.isListed}
-                  onChange={handleToggleListing}
-                  disabled={isToggling || isListingConfirming}
-                  className={styles.nftCard.checkbox}
-                />
-                {listedLabel}
-              </label>
-            )}
-            {isPublicView && owner && (
-              <span title={`Owned by ${owner}`}>
-                Owner: {owner.slice(0, 6)}...{owner.slice(-4)}
-              </span>
-            )}
-          </div>
+          {/* Owner Badge (nur in Public View) */}
+          {isPublicView && owner && (
+            <div className={styles.nftCard.listedBadge}>
+              👤 {owner.slice(0, 6)}...{owner.slice(-4)}
+            </div>
+          )}
 
-          {/* Aktions-Buttons */}
-          <div className={styles.nftCard.actions}>
-            {nft.imageUrl && (
+          {/* Actions Overlay (nur bei Hover sichtbar) */}
+          <div className={styles.nftCard.actionsOverlay}>
+            {/* Alle Actions als einheitliche Icon-Buttons in einer Zeile */}
+            <div className={styles.nftCard.actions}>
+              {/* Download */}
+              {nft.imageUrl && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload();
+                  }}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title={`${downloadLabel} image`}
+                >
+                  ⬇️
+                </button>
+              )}
+
+              {/* Zoom */}
+              {nft.imageUrl && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleImageClick();
+                  }}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title="View full size"
+                >
+                  🔍
+                </button>
+              )}
+
+              {/* Share */}
               <button
-                onClick={handleImageClick}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShare();
+                }}
                 className={styles.nftCard.compactSecondaryButton}
-                title="View full size"
+                title="Share artwork"
               >
-                🔍 Zoom
+                📤
               </button>
-            )}
-            {nft.imageUrl && (
-              <button onClick={handleDownload} className={styles.nftCard.compactPrimaryButton} title="Download image">
-                ⬇️ {downloadLabel}
-              </button>
-            )}
-            <button
-              onClick={handleShare}
-              className={styles.nftCard.compactSecondaryButton}
-              title="Share your artwork on the marketplace"
-            >
-              📤 {shareLabel}
-            </button>
-            {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
-            {!isPublicView && (
-              <button
-                onClick={handleBurn}
-                disabled={isBurning || isConfirming}
-                className={`${styles.nftCard.compactSecondaryButton} ${isBurning || isConfirming ? "" : styles.errorStatus}`}
-                title="Delete artwork (permanent)"
-                style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
-              >
-                {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : `🗑️ ${deleteLabel}`}
-              </button>
-            )}
+
+              {/* Listed Toggle (nur private view) */}
+              {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleListing();
+                  }}
+                  disabled={isToggling || isListingConfirming}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title={`${nft.isListed ? "Make private" : "Make public"}`}
+                >
+                  {nft.isListed ? "🔓" : "🔒"}
+                </button>
+              )}
+
+              {/* Collect Button (nur public view) */}
+              {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
+
+              {/* Delete (nur private view) */}
+              {!isPublicView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBurn();
+                  }}
+                  disabled={isBurning || isConfirming}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title={`${deleteLabel} artwork (permanent)`}
+                  style={{
+                    backgroundColor: isBurning || isConfirming ? "rgba(0,0,0,0.3)" : "rgba(220, 38, 38, 0.8)",
+                    opacity: isBurning || isConfirming ? 0.6 : 1,
+                  }}
+                >
+                  {isBurning ? "⏳" : isConfirming ? "⏳" : "🗑️"}
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}

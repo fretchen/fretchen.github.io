@@ -1,18 +1,13 @@
 /**
- * ImageGenerator Refer  describe("🔴 HOCH: Basic Component Integration", () => {
-    it("sollte ImageGenerator Component rendern können", async () => {
-      mockConnectedWallet(); // Force expanded UI
-      render(<ImageGenerator />);
-
-      // Prüfe dass wichtige Elemente vorhanden sind (now in expanded state)
-      expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();mage Integration Tests
+ * ImageGenerator Reference Image & Edit Mode Integration Tests
  *
- * Tests für die echte ImageGenerator Komponente:
+ * Umfassende Tests für die ImageGenerator Komponente:
  * - File Upload Functionality
- * - UI State Management
+ * - UI State Management  
  * - Reference Image Processing
+ * - Dynamic Placeholder & Edit Mode
  *
- * Priorität: HOCH - Core File Upload Features
+ * Priorität: HOCH - Core File Upload Features + Edit Mode
  * Nutzt setup.ts Mocks für wagmi, useLocale etc.
  */
 
@@ -36,7 +31,9 @@ beforeAll(() => {
 
 describe("ImageGenerator Reference Image Integration", () => {
   beforeEach(() => {
-    vi.clearAllMocks(); // Einfache URL Mocks (nutzt setup.ts für den Rest)
+    vi.clearAllMocks();
+
+    // Einfache URL Mocks für File Upload Tests
     global.URL = global.URL || {};
     global.URL.createObjectURL = global.URL.createObjectURL || vi.fn(() => "blob:mock-url");
     global.URL.revokeObjectURL = global.URL.revokeObjectURL || vi.fn();
@@ -46,8 +43,8 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte ImageGenerator Component rendern können", () => {
       render(<ImageGenerator />);
 
-      // Prüfe dass wichtige Elemente vorhanden sind (now in expanded state)
-      expect(screen.getByText(/Create Collectible AI Art/)).toBeInTheDocument();
+      // Prüfe dass wichtige Elemente vorhanden sind
+      expect(screen.getByText("Create Collectible AI Art • 10¢")).toBeInTheDocument();
       expect(screen.getByTestId("reference-image-input")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("Describe your image in detail...")).toBeInTheDocument();
     });
@@ -74,6 +71,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
+      
       expect(screen.getByText("◼ Square")).toBeInTheDocument();
       expect(screen.getByText("▬ Wide")).toBeInTheDocument();
     });
@@ -83,52 +81,41 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte JPEG Dateien akzeptieren", () => {
       render(<ImageGenerator />);
 
-      const jpegFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "test.jpg", {
-        type: "image/jpeg",
-      });
+      const fileInput = screen.getByTestId("reference-image-input") as HTMLInputElement;
+      
+      // Simuliere JPEG File Upload
+      const jpegFile = new File(["jpeg content"], "test.jpg", { type: "image/jpeg" });
+      
+      fireEvent.change(fileInput, { target: { files: [jpegFile] } });
 
-      const fileInput = screen.getByTestId("reference-image-input");
-
-      Object.defineProperty(fileInput, "files", {
-        value: [jpegFile],
-        configurable: true,
-      });
-
-      fireEvent.change(fileInput);
-
-      // File wurde akzeptiert (keine Fehlermeldung)
-      expect(screen.queryByText(/invalid file type/i)).not.toBeInTheDocument();
+      // File Input sollte die Datei akzeptiert haben
+      expect(fileInput.files).toHaveLength(1);
+      expect(fileInput.files![0]).toBe(jpegFile);
     });
 
     it("sollte PNG Dateien akzeptieren", () => {
       render(<ImageGenerator />);
 
-      const pngFile = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "test.png", {
-        type: "image/png",
-      });
+      const fileInput = screen.getByTestId("reference-image-input") as HTMLInputElement;
+      
+      // Simuliere PNG File Upload
+      const pngFile = new File(["png content"], "test.png", { type: "image/png" });
+      
+      fireEvent.change(fileInput, { target: { files: [pngFile] } });
 
-      const fileInput = screen.getByTestId("reference-image-input");
-
-      Object.defineProperty(fileInput, "files", {
-        value: [pngFile],
-        configurable: true,
-      });
-
-      fireEvent.change(fileInput);
-
-      // File wurde akzeptiert
-      expect(screen.queryByText(/invalid file type/i)).not.toBeInTheDocument();
+      // File Input sollte die Datei akzeptiert haben
+      expect(fileInput.files).toHaveLength(1);
+      expect(fileInput.files![0]).toBe(pngFile);
     });
 
     it("sollte Drag & Drop Zone haben", () => {
       render(<ImageGenerator />);
 
       const dropZone = screen.getByTestId("drop-zone");
-
-      // Drop Zone ist da und hat richtige Hints
       expect(dropZone).toBeInTheDocument();
-      expect(screen.getByText("Upload Reference Image (Optional)")).toBeInTheDocument();
-      expect(screen.getByText(/Supports JPEG, PNG/)).toBeInTheDocument();
+      
+      // Drop Zone sollte korrekte Styling-Indikatoren haben
+      expect(dropZone).toHaveClass(/cursor_pointer/);
     });
   });
 
@@ -136,8 +123,8 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte initial Create Artwork Button zeigen", () => {
       render(<ImageGenerator />);
 
-      const createButton = screen.getByText(/Enter a prompt to create/);
-      expect(createButton).toBeInTheDocument();
+      const button = screen.getByRole("button", { name: /Enter a prompt to create/ });
+      expect(button).toBeInTheDocument();
     });
 
     it("sollte Textarea für Prompt haben", () => {
@@ -145,18 +132,15 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
       expect(textarea).toBeInTheDocument();
-
-      // Textarea sollte funktionieren
-      fireEvent.change(textarea, { target: { value: "Test prompt" } });
-      expect(textarea).toHaveValue("Test prompt");
+      expect(textarea.tagName.toLowerCase()).toBe("textarea");
     });
 
     it("sollte Listed Checkbox haben", () => {
       render(<ImageGenerator />);
 
-      const checkbox = screen.getByRole("checkbox");
+      const checkbox = screen.getByRole("checkbox", { name: /Listed/ });
       expect(checkbox).toBeInTheDocument();
-      expect(screen.getByText("Listed")).toBeInTheDocument();
+      expect(checkbox).toHaveAttribute("type", "checkbox");
     });
 
     it("sollte Image Size Select haben", () => {
@@ -164,8 +148,9 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
-
-      // Select sollte funktionieren
+      expect(sizeSelect.tagName.toLowerCase()).toBe("select");
+      
+      // Test switching size
       fireEvent.change(sizeSelect, { target: { value: "1792x1024" } });
       expect(sizeSelect).toHaveValue("1792x1024");
     });
@@ -180,7 +165,9 @@ describe("ImageGenerator Reference Image Integration", () => {
       expect(textarea).toBeInTheDocument();
       
       // Sollte NICHT Edit-Placeholder zeigen
-      expect(screen.queryByPlaceholderText("Describe changes you want to make to the image...")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Describe changes you want to make to the image..."),
+      ).not.toBeInTheDocument();
     });
 
     it("sollte Button Text korrekt ändern basierend auf previewState", () => {

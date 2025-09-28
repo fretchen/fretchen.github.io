@@ -572,7 +572,7 @@ export function ImageGenerator({
             data-testid="drop-zone"
             className={css({
               mb: "4",
-              p: "6",
+              p: "4",
               border: "2px dashed",
               borderColor: previewState === "empty" ? "gray.300" : "blue.400",
               borderRadius: "lg",
@@ -614,12 +614,12 @@ export function ImageGenerator({
               <div
                 className={css({
                   textAlign: "center",
-                  py: "8",
+                  py: "4",
                 })}
               >
                 <div
                   className={css({
-                    fontSize: "3xl",
+                    fontSize: "2xl",
                     mb: "2",
                   })}
                 >
@@ -630,7 +630,7 @@ export function ImageGenerator({
                     fontSize: "lg",
                     fontWeight: "semibold",
                     color: "gray.700",
-                    mb: "2",
+                    mb: "1",
                   })}
                 >
                   {uploadReferenceImageText}
@@ -639,7 +639,7 @@ export function ImageGenerator({
                   className={css({
                     fontSize: "sm",
                     color: "gray.600",
-                    mb: "4",
+                    mb: "2",
                   })}
                 >
                   {dragDropHereText}

@@ -1,7 +1,22 @@
 /**
- * ImageGenerator Edit Mode Integration Tests
+ * ImageGenerator Edit Mode Integratio  describe("🟡 MITTEL: Ba    it("sollte File Upload Input haben", () => {
+      render(<ImageGenerator />); Integration Tests", () => {
+    it("sollte Component rendern können", async () => {
+      mockConnectedWallet(); // Force expanded UI
+      render(<ImageGenerator />);
+
+      // Prüfe dass wichtige Elemente vorhanden sind (now in expanded state)
+      expect(screen.getByText(/Create Collectible AI Art/)).toBeInTheDocument();s
  *
- * Tests für die ImageGenerator Komponente im Edit-Modus:
+ * Tests für die I    it("sollte Component ohne Fehler rendern", async () => {
+      mockConnectedWallet(); // Force expanded UI
+      const onError = vi.fn();
+      render(<ImageGenerator onError={onError} />);
+
+      // Prüfe dass Komponente korrekt rendert ohne onError aufzurufen
+      expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();ner    it("sollte Textarea Eingabe handhaben können", async () => {
+      mockConnectedWallet(); // Force expanded UI
+      render(<ImageGenerator />);or Komponente im Edit-Modus:
  * - File Upload → API Integration
  * - Edit Mode vs Generate Mode
  * - UI State Management
@@ -11,9 +26,22 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
+import { useAccount } from "wagmi";
+
+// Override wagmi mock for this file to force connected state for all tests
+beforeAll(() => {
+  vi.mocked(useAccount).mockReturnValue({
+    address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+    isConnected: true,
+    status: "connected",
+    isConnecting: false,
+    isDisconnected: false,
+    isReconnecting: false,
+  } as ReturnType<typeof useAccount>);
+});
 
 describe("ImageGenerator Edit Mode Integration", () => {
   const mockApiResponse = {
@@ -50,7 +78,7 @@ describe("ImageGenerator Edit Mode Integration", () => {
       expect(screen.getByPlaceholderText("Describe your image in detail...")).toBeInTheDocument();
     });
 
-    it("sollte File Upload Input haben", () => {
+    it("sollte File Upload Input haben", async () => {
       render(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input");
@@ -62,7 +90,7 @@ describe("ImageGenerator Edit Mode Integration", () => {
     it("sollte Button zum Erstellen haben", () => {
       render(<ImageGenerator />);
 
-      const createButton = screen.getByText(/Connect your account to create artwork/);
+      const createButton = screen.getByText(/Enter a prompt to create/);
       expect(createButton).toBeInTheDocument();
       expect(createButton.tagName.toLowerCase()).toBe("button");
     });

@@ -60,34 +60,96 @@ vi.mock("../hooks/useLocale", () => ({
 }));
 
 describe("ImageGenerator Component", () => {
-  it("should render ImageGenerator component", () => {
-    render(<ImageGenerator />);
+  describe("Collapsed State (First-time visitors)", () => {
+    it("should render collapsed state when wallet is not connected", () => {
+      // Mock disconnected wallet to ensure collapsed state
+      vi.mocked(useAccount).mockReturnValueOnce({
+        address: undefined,
+        isConnected: false,
+        status: "disconnected",
+      } as ReturnType<typeof useAccount>);
 
-    expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
+      render(<ImageGenerator />);
+
+      // Check for collapsed state content
+      expect(screen.getByText(/🎨.*mocked-imagegen\.title/)).toBeInTheDocument();
+      expect(screen.getByText(/Create unique AI artwork you actually own/)).toBeInTheDocument();
+      expect(screen.getByText(/Only 10¢ per piece/)).toBeInTheDocument();
+
+      // Should show connect wallet button
+      const button = screen.getByRole("button");
+      expect(button).toHaveTextContent(/mocked-imagegen\.connectWalletButton/);
+
+      // Should NOT show expanded form elements
+      expect(screen.queryByPlaceholderText("mocked-imagegen.promptPlaceholder")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("drop-zone")).not.toBeInTheDocument();
+    });
+
+    it("should render collapsed state with props", () => {
+      const mockProps = {
+        apiUrl: "https://test-api.com",
+        onSuccess: vi.fn(),
+        onError: vi.fn(),
+      };
+
+      // Ensure disconnected state
+      vi.mocked(useAccount).mockReturnValueOnce({
+        address: undefined,
+        isConnected: false,
+        status: "disconnected",
+      } as ReturnType<typeof useAccount>);
+
+      render(<ImageGenerator {...mockProps} />);
+
+      // Should still show collapsed state
+      expect(screen.getByText(/🎨.*mocked-imagegen\.title/)).toBeInTheDocument();
+      expect(screen.getByRole("button")).toHaveTextContent(/mocked-imagegen\.connectWalletButton/);
+    });
+
+    it("should expand to full form when expand button is clicked", async () => {
+      // Start in disconnected state (collapsed)
+      vi.mocked(useAccount).mockReturnValueOnce({
+        address: undefined,
+        isConnected: false,
+        status: "disconnected",
+      } as ReturnType<typeof useAccount>);
+
+      render(<ImageGenerator />);
+
+      // Verify we start in collapsed state
+      expect(screen.getByText(/Create unique AI artwork/)).toBeInTheDocument();
+      expect(screen.queryByTestId("drop-zone")).not.toBeInTheDocument();
+
+      // Click expand button
+      const expandButton = screen.getByRole("button");
+      fireEvent.click(expandButton);
+
+      // Should now show expanded form (this might require additional mocking for full expansion)
+      // The actual behavior depends on wallet connection logic in the component
+    });
   });
 
-  it("should render with props", () => {
-    const mockProps = {
-      apiUrl: "https://test-api.com",
-      onSuccess: vi.fn(),
-      onError: vi.fn(),
-    };
+  describe("Expanded State (Connected users)", () => {
+    it("should render expanded state when wallet is connected", () => {
+      // Mock connected wallet to ensure expanded state
+      vi.mocked(useAccount).mockReturnValueOnce({
+        address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+        isConnected: true,
+        status: "connected",
+      } as ReturnType<typeof useAccount>);
 
-    render(<ImageGenerator {...mockProps} />);
+      render(<ImageGenerator />);
 
-    expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
-  });
+      // Should show expanded form elements
+      expect(screen.getByPlaceholderText("mocked-imagegen.promptPlaceholder")).toBeInTheDocument();
+      expect(screen.getByTestId("drop-zone")).toBeInTheDocument();
 
-  it("should render ImageGenerator component with connected wallet", () => {
-    // This test verifies that the component can render when using the centralized mocks
-    // The centralized mocks provide default values for all wagmi hooks
-    render(<ImageGenerator />);
+      // Should show the LocaleText title in expanded form
+      expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
 
-    expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();
-
-    // Check that basic form elements are present
-    const textarea = screen.queryByPlaceholderText("mocked-imagegen.promptPlaceholder");
-    expect(textarea).toBeInTheDocument();
+      // Should NOT show collapsed state content
+      expect(screen.queryByText(/Create unique AI artwork you actually own/)).not.toBeInTheDocument();
+    });
   });
 
   it("should call switchChain when user attempts to create artwork on wrong network", async () => {

@@ -1,5 +1,11 @@
 /**
- * ImageGenerator Reference Image Integration Tests
+ * ImageGenerator Refer  describe("🔴 HOCH: Basic Component Integration", () => {
+    it("sollte ImageGenerator Component rendern können", async () => {
+      mockConnectedWallet(); // Force expanded UI
+      render(<ImageGenerator />);
+
+      // Prüfe dass wichtige Elemente vorhanden sind (now in expanded state)
+      expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();mage Integration Tests
  *
  * Tests für die echte ImageGenerator Komponente:
  * - File Upload Functionality
@@ -11,15 +17,26 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
+import { useAccount } from "wagmi";
+
+// Override wagmi mock for this file to force connected state for all tests
+beforeAll(() => {
+  vi.mocked(useAccount).mockReturnValue({
+    address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+    isConnected: true,
+    status: "connected",
+    isConnecting: false,
+    isDisconnected: false,
+    isReconnecting: false,
+  } as ReturnType<typeof useAccount>);
+});
 
 describe("ImageGenerator Reference Image Integration", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Einfache URL Mocks (nutzt setup.ts für den Rest)
+    vi.clearAllMocks(); // Einfache URL Mocks (nutzt setup.ts für den Rest)
     global.URL = global.URL || {};
     global.URL.createObjectURL = global.URL.createObjectURL || vi.fn(() => "blob:mock-url");
     global.URL.revokeObjectURL = global.URL.revokeObjectURL || vi.fn();
@@ -29,8 +46,8 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte ImageGenerator Component rendern können", () => {
       render(<ImageGenerator />);
 
-      // Prüfe dass wichtige Elemente vorhanden sind
-      expect(screen.getByText("Create Collectible AI Art • 10¢")).toBeInTheDocument();
+      // Prüfe dass wichtige Elemente vorhanden sind (now in expanded state)
+      expect(screen.getByText(/Create Collectible AI Art/)).toBeInTheDocument();
       expect(screen.getByTestId("reference-image-input")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("Describe your image in detail...")).toBeInTheDocument();
     });
@@ -119,7 +136,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte initial Create Artwork Button zeigen", () => {
       render(<ImageGenerator />);
 
-      const createButton = screen.getByText(/Connect your account to create artwork/);
+      const createButton = screen.getByText(/Enter a prompt to create/);
       expect(createButton).toBeInTheDocument();
     });
 

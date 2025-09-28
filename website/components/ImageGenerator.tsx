@@ -543,16 +543,27 @@ export function ImageGenerator({
   };
 
   const clearReferenceImage = () => {
-    setReferenceImageBase64(null);
-    setReferenceImageMimeType("image/jpeg"); // Reset to default
-    setPreviewState("empty");
-
-    // Clear the file input so it can accept the same file again
+    setReferenceImageBase64("");
+    setReferenceImageMimeType("");
+    
+    // Clear the file input
     const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
+
+    // Intelligent state management:
+    // If we have a generated image, switch to "generated" state
+    // If no generated image, switch back to "empty" state
+    if (currentPreviewImage) {
+      setPreviewState("generated");
+    } else {
+      setPreviewState("empty");
+    }
   };
+
+  // Simple format detection based on user selection
+  const formatSelected = size === "1792x1024" ? "wide" : "square";
 
   // Handle expansion trigger for collapsed state
   const handleExpand = () => {
@@ -624,18 +635,23 @@ export function ImageGenerator({
                 data-testid="drop-zone"
                 className={css({
                   mb: "4",
-                  p: "4",
-                  border: "2px dashed",
-                  borderColor: previewState === "empty" ? "gray.300" : "blue.400",
-                  borderRadius: "lg",
-                  bg: previewState === "empty" ? "gray.50" : "blue.50",
+                  border: "1px solid",
+                  borderColor: previewState === "empty" ? "gray.300" : "gray.400",
+                  borderRadius: "md",
+                  bg: previewState === "empty" ? "gray.50" : "white",
                   position: "relative",
-                  transition: "all 0.2s ease",
                   cursor: previewState === "empty" ? "pointer" : "default",
-                  _hover: {
-                    borderColor: previewState === "empty" ? "blue.400" : undefined,
-                    bg: previewState === "empty" ? "blue.50" : undefined,
-                  },
+                  overflow: "hidden",
+                  // Full width layout to match textarea
+                  width: "100%",
+                  // Subtle hover for empty state only
+                  _hover:
+                    previewState === "empty"
+                      ? {
+                          borderColor: "gray.400",
+                          bg: "gray.100",
+                        }
+                      : {},
                 })}
                 onDragOver={handleDragOver}
                 onDragEnter={handleDragEnter}
@@ -665,50 +681,48 @@ export function ImageGenerator({
                 {previewState === "empty" && (
                   <div
                     className={css({
-                      textAlign: "center",
-                      py: "4",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      py: "6",
+                      px: "4",
+                      gap: "3",
                     })}
                   >
                     <div
                       className={css({
-                        fontSize: "2xl",
-                        mb: "2",
+                        fontSize: "xl",
+                        color: "gray.500",
                       })}
                     >
                       📸
                     </div>
-                    <h4
-                      className={css({
-                        fontSize: "lg",
-                        fontWeight: "semibold",
-                        color: "gray.700",
-                        mb: "1",
-                      })}
-                    >
-                      {uploadReferenceImageText}
-                    </h4>
-                    <p
-                      className={css({
-                        fontSize: "sm",
-                        color: "gray.600",
-                        mb: "2",
-                      })}
-                    >
-                      {dragDropHereText}
-                    </p>
-                    <p
-                      className={css({
-                        fontSize: "xs",
-                        color: "gray.500",
-                      })}
-                    >
-                      {supportedFormatsText}
-                    </p>
+                    <div className={css({ textAlign: "left" })}>
+                      <h4
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                          color: "gray.700",
+                          mb: "1",
+                        })}
+                      >
+                        {uploadReferenceImageText}
+                      </h4>
+                      <p
+                        className={css({
+                          fontSize: "xs",
+                          color: "gray.500",
+                          mb: "0",
+                        })}
+                      >
+                        {dragDropHereText} • {supportedFormatsText}
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {previewState === "reference" && referenceImageBase64 && (
-                  <div>
+                  <div className={css({ p: "3" })}>
                     <div
                       className={css({
                         display: "flex",
@@ -720,7 +734,7 @@ export function ImageGenerator({
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "semibold",
+                          fontWeight: "medium",
                           color: "gray.700",
                           m: 0,
                         })}
@@ -736,13 +750,13 @@ export function ImageGenerator({
                           px: "2",
                           py: "1",
                           fontSize: "xs",
-                          bg: "red.500",
+                          bg: "gray.600",
                           color: "white",
                           border: "none",
                           borderRadius: "sm",
                           cursor: "pointer",
                           _hover: {
-                            bg: "red.600",
+                            bg: "gray.700",
                           },
                         })}
                       >
@@ -751,31 +765,33 @@ export function ImageGenerator({
                     </div>
                     <div
                       className={css({
-                        display: "flex",
-                        justifyContent: "center",
-                        maxHeight: "250px",
+                        position: "relative",
+                        width: "100%",
+                        // Intelligent height: larger for wide images, smaller for square
+                        height: formatSelected === "wide" ? "250px" : "200px",
                         overflow: "hidden",
-                        borderRadius: "md",
+                        borderRadius: "sm",
+                        bg: "gray.100",
                       })}
                     >
                       <img
                         src={`data:${referenceImageMimeType};base64,${referenceImageBase64}`}
                         alt={referenceImageAltText}
                         className={css({
-                          maxWidth: "100%",
-                          maxHeight: "100%",
+                          width: "100%",
+                          height: "100%",
                           objectFit: "contain",
-                          borderRadius: "md",
-                          boxShadow: "sm",
+                          borderRadius: "sm",
                         })}
                       />
                     </div>
                     <p
                       className={css({
                         fontSize: "xs",
-                        color: "blue.600",
+                        color: "gray.500",
                         textAlign: "center",
                         mt: "2",
+                        mb: "0",
                       })}
                     >
                       {referenceImageHintText}
@@ -784,7 +800,7 @@ export function ImageGenerator({
                 )}
 
                 {previewState === "generated" && currentPreviewImage && (
-                  <div>
+                  <div className={css({ p: "3" })}>
                     <div
                       className={css({
                         display: "flex",
@@ -796,7 +812,7 @@ export function ImageGenerator({
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "semibold",
+                          fontWeight: "medium",
                           color: "gray.700",
                           m: 0,
                         })}
@@ -805,18 +821,30 @@ export function ImageGenerator({
                       </h4>
                       <div className={css({ display: "flex", gap: "2" })}>
                         <button
-                          onClick={clearReferenceImage}
+                          onClick={() => {
+                            // Clear both reference and generated images when in generated state
+                            setReferenceImageBase64("");
+                            setReferenceImageMimeType("");
+                            setCurrentPreviewImage(undefined);
+                            setPreviewState("empty");
+                            
+                            // Clear the file input
+                            const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
+                            if (fileInput) {
+                              fileInput.value = "";
+                            }
+                          }}
                           className={css({
                             px: "2",
                             py: "1",
                             fontSize: "xs",
-                            bg: "red.500",
+                            bg: "gray.600",
                             color: "white",
                             border: "none",
                             borderRadius: "sm",
                             cursor: "pointer",
                             _hover: {
-                              bg: "red.600",
+                              bg: "gray.700",
                             },
                           })}
                           disabled={isLoading || mintingStatus !== "idle"}
@@ -827,22 +855,23 @@ export function ImageGenerator({
                     </div>
                     <div
                       className={css({
-                        display: "flex",
-                        justifyContent: "center",
-                        maxHeight: "250px",
+                        position: "relative",
+                        width: "100%",
+                        // Intelligent height based on format selection
+                        height: formatSelected === "wide" ? "250px" : "200px",
                         overflow: "hidden",
-                        borderRadius: "md",
+                        borderRadius: "sm",
+                        bg: "gray.100",
                       })}
                     >
                       <img
                         src={currentPreviewImage}
                         alt={generatedArtworkAltText}
                         className={css({
-                          maxWidth: "100%",
-                          maxHeight: "100%",
+                          width: "100%",
+                          height: "100%",
                           objectFit: "contain",
-                          borderRadius: "md",
-                          boxShadow: "sm",
+                          borderRadius: "sm",
                         })}
                       />
                     </div>

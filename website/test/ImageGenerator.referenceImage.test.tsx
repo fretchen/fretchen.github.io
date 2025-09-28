@@ -66,7 +66,9 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
-      expect(screen.getByText("Drag & drop an image here, or click to browse")).toBeInTheDocument();
+      // Text is now split across elements, so check for parts
+      expect(screen.getByText(/Drag & drop an image here/)).toBeInTheDocument();
+      expect(screen.getByText(/click to browse/)).toBeInTheDocument();
     });
 
     it("sollte verschiedene Image Sizes unterstützen", () => {
@@ -180,7 +182,9 @@ describe("ImageGenerator Reference Image Integration", () => {
       expect(textarea).toBeInTheDocument();
       
       // Sollte NICHT Edit-Placeholder zeigen
-      expect(screen.queryByPlaceholderText("Describe changes you want to make to the image...")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Describe changes you want to make to the image..."),
+      ).not.toBeInTheDocument();
     });
 
     it("sollte Button Text korrekt ändern basierend auf previewState", () => {

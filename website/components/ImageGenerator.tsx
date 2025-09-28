@@ -121,9 +121,6 @@ export function ImageGenerator({
   // Blockchain interaction
   const { address, isConnected } = useAccount();
 
-  // Expansion state - pure derivation from wallet connection status
-  const isExpanded = isConnected;
-
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
   const [previewState, setPreviewState] = useState<PreviewState>("empty");
@@ -180,7 +177,6 @@ export function ImageGenerator({
   // Helper functions for button state
   // Localized button texts
   const connectWalletButtonText = useLocale({ label: "imagegen.connectWalletButton" });
-  const connectWalletTitleText = useLocale({ label: "imagegen.connectWalletTitle" });
   const enterPromptText = useLocale({ label: "imagegen.enterPrompt" });
   const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
   const creatingText = useLocale({ label: "imagegen.creating" });
@@ -240,7 +236,7 @@ export function ImageGenerator({
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
     if (isLoading) return "loading";
-    if (!isConnected) return "connect";
+    // Note: !isConnected check removed - only reachable in connected state
     if (!prompt.trim()) return "needsPrompt";
     return "ready";
   };
@@ -265,17 +261,6 @@ export function ImageGenerator({
   const buttonState = getButtonState();
 
   // Button Components
-  const ConnectWalletButton = () => (
-    <button
-      onClick={handleWalletConnection}
-      className={`${styles.primaryButton}`}
-      title={connectWalletTitleText}
-      aria-describedby="create-artwork-info"
-    >
-      🔗 {connectWalletButtonText}
-    </button>
-  );
-
   const CreateArtworkButton = () => {
     const isDisabled = buttonState === "needsPrompt";
     const isLoadingState = buttonState === "loading" || buttonState === "switching";
@@ -581,7 +566,7 @@ export function ImageGenerator({
         overflow: "hidden",
       })}
     >
-      {!isExpanded ? (
+      {!isConnected ? (
         // Collapsed State - Clean & Simple
         <div
           className={css({
@@ -617,7 +602,7 @@ export function ImageGenerator({
           {/* CTA Button - centered with website style */}
           <div className={css({ display: "flex", justifyContent: "center" })}>
             <button onClick={handleExpand} className={styles.primaryButton}>
-              {!isConnected ? connectWalletButtonText : "Start Creating"}
+              {connectWalletButtonText}
             </button>
           </div>
         </div>
@@ -905,7 +890,7 @@ export function ImageGenerator({
                   </label>
                 </div>
 
-                {buttonState === "connect" ? <ConnectWalletButton /> : <CreateArtworkButton />}
+                <CreateArtworkButton />
               </div>
             </div>
 

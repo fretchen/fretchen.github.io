@@ -218,6 +218,7 @@ export function ImageGenerator({
 
   // Collapsed state texts
   const titleText = useLocale({ label: "imagegen.title" });
+  const collapsedTitleText = useLocale({ label: "imagegen.collapsedTitle" });
   const collapsedDescriptionText = useLocale({ label: "imagegen.collapsedDescription" });
 
   // Options texts
@@ -598,6 +599,19 @@ export function ImageGenerator({
           >
             🎨 {titleText}
           </h3>
+
+          {/* Action-oriented title */}
+          <div
+            className={css({
+              fontSize: "md",
+              fontWeight: "medium",
+              color: "gray.800",
+              mb: "3",
+              textAlign: "center",
+            })}
+          >
+            {collapsedTitleText}
+          </div>
 
           {/* Single clear message + CTA */}
           <p

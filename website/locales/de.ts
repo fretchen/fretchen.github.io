@@ -2,7 +2,9 @@
 export default {
   imagegen: {
     title: "KI-Kunst erstellen • 10¢",
-    collapsedDescription: "Beschreibe deine Idee mit Text. KI generiert das Bild. Du erhältst Eigentumsrechte als NFT.",
+    collapsedTitle: "Erstellen • Sammeln • Teilen",
+    collapsedDescription:
+      "Generiere KI-Kunst als NFTs. Verfeinere dein Artwork bis zur Perfektion, dann veröffentliche es. Unterstütze Künstler durch Sammeln. Verdiene, wenn deine gesammelten Werke an Popularität gewinnen.",
     promptPlaceholder: "Beschreibe dein Bild im Detail...",
     editPromptPlaceholder: "Beschreibe Änderungen, die du am Bild vornehmen möchtest...",
     square: "◼ quadratisch",

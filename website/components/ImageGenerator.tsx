@@ -544,8 +544,8 @@ export function ImageGenerator({
   };
 
   const clearReferenceImage = () => {
-    setReferenceImageBase64("");
-    setReferenceImageMimeType("");
+    setReferenceImageBase64(null);
+    setReferenceImageMimeType("image/jpeg");
 
     // Clear the file input
     const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
@@ -837,8 +837,8 @@ export function ImageGenerator({
                         <button
                           onClick={() => {
                             // Clear both reference and generated images when in generated state
-                            setReferenceImageBase64("");
-                            setReferenceImageMimeType("");
+                            setReferenceImageBase64(null);
+                            setReferenceImageMimeType("image/jpeg");
                             setCurrentPreviewImage(undefined);
                             setPreviewState("empty");
 

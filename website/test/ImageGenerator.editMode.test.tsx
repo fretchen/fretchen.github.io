@@ -110,9 +110,11 @@ describe("ImageGenerator Edit Mode Integration", () => {
       // Sollte Standard-Placeholder zeigen (tatsächlicher Text aus Locale)
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
       expect(textarea).toBeInTheDocument();
-      
+
       // Sollte NICHT Edit-Placeholder zeigen
-      expect(screen.queryByPlaceholderText("Describe changes you want to make to the image...")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Describe changes you want to make to the image..."),
+      ).not.toBeInTheDocument();
     });
 
     it("sollte Button Text korrekt ändern basierend auf previewState", () => {
@@ -126,11 +128,11 @@ describe("ImageGenerator Edit Mode Integration", () => {
     it("sollte Edit-Mode Locale Keys korrekt geladen haben", () => {
       // Test dass die Locale Keys verfügbar sind durch tatsächliche Werte
       render(<ImageGenerator />);
-      
+
       // Verifiziere dass Standard-Placeholder korrekt geladen ist
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
       expect(textarea).toHaveAttribute("placeholder", "Describe your image in detail...");
-      
+
       // Die dynamische Placeholder-Logik ist implementiert (wird bei previewState === "reference" aktiv)
       expect(textarea).toBeInTheDocument();
     });
@@ -142,7 +144,7 @@ describe("ImageGenerator Edit Mode Integration", () => {
       // Drop Zone sollte sichtbar sein im "empty" state
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
-      
+
       // Referenz Image Upload Bereich sollte vorhanden sein
       const uploadSection = screen.getByText("Upload Reference Image (Optional)");
       expect(uploadSection).toBeInTheDocument();

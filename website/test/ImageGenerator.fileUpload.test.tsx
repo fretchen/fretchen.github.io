@@ -3,7 +3,7 @@
  *
  * Umfassende Tests für die ImageGenerator Komponente:
  * - File Upload Functionality
- * - UI State Management  
+ * - UI State Management
  * - Reference Image Processing
  * - Dynamic Placeholder & Edit Mode
  *
@@ -73,7 +73,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
-      
+
       expect(screen.getByText("◼ Square")).toBeInTheDocument();
       expect(screen.getByText("▬ Wide")).toBeInTheDocument();
     });
@@ -84,10 +84,10 @@ describe("ImageGenerator Reference Image Integration", () => {
       render(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input") as HTMLInputElement;
-      
+
       // Simuliere JPEG File Upload
       const jpegFile = new File(["jpeg content"], "test.jpg", { type: "image/jpeg" });
-      
+
       fireEvent.change(fileInput, { target: { files: [jpegFile] } });
 
       // File Input sollte die Datei akzeptiert haben
@@ -99,10 +99,10 @@ describe("ImageGenerator Reference Image Integration", () => {
       render(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input") as HTMLInputElement;
-      
+
       // Simuliere PNG File Upload
       const pngFile = new File(["png content"], "test.png", { type: "image/png" });
-      
+
       fireEvent.change(fileInput, { target: { files: [pngFile] } });
 
       // File Input sollte die Datei akzeptiert haben
@@ -115,7 +115,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
-      
+
       // Drop Zone sollte korrekte Styling-Indikatoren haben
       expect(dropZone).toHaveClass(/cursor_pointer/);
     });
@@ -151,7 +151,7 @@ describe("ImageGenerator Reference Image Integration", () => {
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
       expect(sizeSelect.tagName.toLowerCase()).toBe("select");
-      
+
       // Test switching size
       fireEvent.change(sizeSelect, { target: { value: "1792x1024" } });
       expect(sizeSelect).toHaveValue("1792x1024");
@@ -165,7 +165,7 @@ describe("ImageGenerator Reference Image Integration", () => {
       // Sollte Standard-Placeholder zeigen (tatsächlicher Text aus Locale)
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
       expect(textarea).toBeInTheDocument();
-      
+
       // Sollte NICHT Edit-Placeholder zeigen
       expect(
         screen.queryByPlaceholderText("Describe changes you want to make to the image..."),
@@ -183,11 +183,11 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte Edit-Mode Locale Keys korrekt geladen haben", () => {
       // Test dass die Locale Keys verfügbar sind durch tatsächliche Werte
       render(<ImageGenerator />);
-      
+
       // Verifiziere dass Standard-Placeholder korrekt geladen ist
       const textarea = screen.getByPlaceholderText("Describe your image in detail...");
       expect(textarea).toHaveAttribute("placeholder", "Describe your image in detail...");
-      
+
       // Die dynamische Placeholder-Logik ist implementiert (wird bei previewState === "reference" aktiv)
       expect(textarea).toBeInTheDocument();
     });
@@ -199,7 +199,7 @@ describe("ImageGenerator Reference Image Integration", () => {
       // Drop Zone sollte sichtbar sein im "empty" state
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
-      
+
       // Referenz Image Upload Bereich sollte vorhanden sein
       const uploadSection = screen.getByText("Upload Reference Image (Optional)");
       expect(uploadSection).toBeInTheDocument();

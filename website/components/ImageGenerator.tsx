@@ -546,7 +546,7 @@ export function ImageGenerator({
   const clearReferenceImage = () => {
     setReferenceImageBase64("");
     setReferenceImageMimeType("");
-    
+
     // Clear the file input
     const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
     if (fileInput) {
@@ -841,7 +841,7 @@ export function ImageGenerator({
                             setReferenceImageMimeType("");
                             setCurrentPreviewImage(undefined);
                             setPreviewState("empty");
-                            
+
                             // Clear the file input
                             const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
                             if (fileInput) {

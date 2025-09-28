@@ -112,7 +112,7 @@ describe("ImageGenerator Component", () => {
         connect: mockConnect,
         connectors: [{ id: "mockConnector", name: "Mock Wallet" }],
       } as unknown as ReturnType<typeof useConnect>);
-      
+
       vi.mocked(useAccount).mockReturnValueOnce({
         address: undefined,
         isConnected: false,

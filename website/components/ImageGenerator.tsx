@@ -121,8 +121,8 @@ export function ImageGenerator({
   // Blockchain interaction
   const { address, isConnected } = useAccount();
 
-  // Expansion state for collapsed/expanded view
-  const [isExpanded, setIsExpanded] = useState(isConnected);
+  // Expansion state - pure derivation from wallet connection status
+  const isExpanded = isConnected;
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -570,11 +570,8 @@ export function ImageGenerator({
 
   // Handle expansion trigger for collapsed state
   const handleExpand = () => {
-    if (!isConnected) {
-      handleWalletConnection();
-    } else {
-      setIsExpanded(true);
-    }
+    // Always trigger wallet connection when in collapsed state
+    handleWalletConnection();
   };
 
   return (

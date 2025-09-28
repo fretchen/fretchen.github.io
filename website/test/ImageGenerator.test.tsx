@@ -33,7 +33,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
-import { useAccount, useSwitchChain, useChainId } from "wagmi";
+import { useAccount, useSwitchChain, useChainId, useConnect } from "wagmi";
 
 // No need to mock getChain - it's just reading env vars and returning constants
 // The real implementation works fine in tests
@@ -105,8 +105,14 @@ describe("ImageGenerator Component", () => {
       expect(screen.getByRole("button")).toHaveTextContent(/mocked-imagegen\.connectWalletButton/);
     });
 
-    it("should expand to full form when expand button is clicked", async () => {
+    it("should trigger wallet connection when expand button is clicked", async () => {
       // Start in disconnected state (collapsed)
+      const mockConnect = vi.fn();
+      vi.mocked(useConnect).mockReturnValueOnce({
+        connect: mockConnect,
+        connectors: [{ id: "mockConnector", name: "Mock Wallet" }],
+      } as unknown as ReturnType<typeof useConnect>);
+      
       vi.mocked(useAccount).mockReturnValueOnce({
         address: undefined,
         isConnected: false,
@@ -119,12 +125,12 @@ describe("ImageGenerator Component", () => {
       expect(screen.getByText(/mocked-imagegen\.collapsedDescription/)).toBeInTheDocument();
       expect(screen.queryByTestId("drop-zone")).not.toBeInTheDocument();
 
-      // Click expand button
+      // Click expand button - should trigger wallet connection
       const expandButton = screen.getByRole("button");
       fireEvent.click(expandButton);
 
-      // Should now show expanded form (this might require additional mocking for full expansion)
-      // The actual behavior depends on wallet connection logic in the component
+      // Verify wallet connection was attempted
+      expect(mockConnect).toHaveBeenCalled();
     });
   });
 

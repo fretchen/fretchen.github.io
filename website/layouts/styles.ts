@@ -1011,26 +1011,44 @@ export const nftCard = {
     position: "absolute",
     top: "sm",
     right: "sm",
-    background: "rgba(0,0,0,0.7)",
+    background: "rgba(0,0,0,0.8)",
     color: "white",
     fontSize: "xs",
-    fontWeight: "bold",
+    fontWeight: "500",
     padding: "xs sm",
     borderRadius: "full",
     backdropFilter: "blur(4px)",
+    border: "1px solid rgba(255,255,255,0.1)",
   }),
 
-  listedBadge: css({
+  // Neutraler Badge für Owner Info
+  ownerBadge: css({
     position: "absolute",
     top: "sm",
+    left: "sm",
+    background: "rgba(0,0,0,0.8)",
+    color: "white",
+    fontSize: "xs",
+    fontWeight: "500",
+    padding: "xs sm",
+    borderRadius: "full",
+    backdropFilter: "blur(4px)",
+    border: "1px solid rgba(255,255,255,0.1)",
+  }),
+
+  // Grüner Badge nur für "Listed" Status
+  listedBadge: css({
+    position: "absolute",
+    top: "2.5rem", // Unter dem Owner Badge positioniert
     left: "sm",
     background: "rgba(34, 197, 94, 0.9)",
     color: "white",
     fontSize: "xs",
-    fontWeight: "bold",
+    fontWeight: "500",
     padding: "xs sm",
     borderRadius: "full",
     backdropFilter: "blur(4px)",
+    border: "1px solid rgba(255,255,255,0.2)",
   }),
   imageError: css({
     display: "flex",

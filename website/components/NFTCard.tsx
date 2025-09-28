@@ -340,7 +340,7 @@ export function NFTCard({
 
           {/* Owner Badge (nur in Public View) */}
           {isPublicView && owner && (
-            <div className={styles.nftCard.listedBadge}>
+            <div className={styles.nftCard.ownerBadge}>
               👤 {owner.slice(0, 6)}...{owner.slice(-4)}
             </div>
           )}

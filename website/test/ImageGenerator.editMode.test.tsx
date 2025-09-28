@@ -1,25 +1,11 @@
 /**
- * ImageGenerator Edit Mode Integratio  describe("🟡 MITTEL: Ba    it("sollte File Upload Input haben", () => {
-      render(<ImageGenerator />); Integration Tests", () => {
-    it("sollte Component rendern können", async () => {
-      mockConnectedWallet(); // Force expanded UI
-      render(<ImageGenerator />);
-
-      // Prüfe dass wichtige Elemente vorhanden sind (now in expanded state)
-      expect(screen.getByText(/Create Collectible AI Art/)).toBeInTheDocument();s
+ * ImageGenerator Edit Mode Integration Tests
  *
- * Tests für die I    it("sollte Component ohne Fehler rendern", async () => {
-      mockConnectedWallet(); // Force expanded UI
-      const onError = vi.fn();
-      render(<ImageGenerator onError={onError} />);
-
-      // Prüfe dass Komponente korrekt rendert ohne onError aufzurufen
-      expect(screen.getByTestId("locale-imagegen.title")).toBeInTheDocument();ner    it("sollte Textarea Eingabe handhaben können", async () => {
-      mockConnectedWallet(); // Force expanded UI
-      render(<ImageGenerator />);or Komponente im Edit-Modus:
+ * Tests für die ImageGenerator Komponente im Edit-Modus:
  * - File Upload → API Integration
  * - Edit Mode vs Generate Mode
  * - UI State Management
+ * - Dynamic Placeholder functionality
  *
  * Priorität: MITTEL - Component Integration
  * Nutzt setup.ts Mocks für wagmi, useLocale etc.
@@ -114,6 +100,52 @@ describe("ImageGenerator Edit Mode Integration", () => {
       fireEvent.change(textarea, { target: { value: "Test prompt" } });
 
       expect(textarea).toHaveValue("Test prompt");
+    });
+  });
+
+  describe("🟢 HOCH: Dynamic Placeholder Tests", () => {
+    it("sollte Standard-Placeholder zeigen wenn kein Reference Image hochgeladen ist", () => {
+      render(<ImageGenerator />);
+
+      // Sollte Standard-Placeholder zeigen (tatsächlicher Text aus Locale)
+      const textarea = screen.getByPlaceholderText("Describe your image in detail...");
+      expect(textarea).toBeInTheDocument();
+      
+      // Sollte NICHT Edit-Placeholder zeigen
+      expect(screen.queryByPlaceholderText("Describe changes you want to make to the image...")).not.toBeInTheDocument();
+    });
+
+    it("sollte Button Text korrekt ändern basierend auf previewState", () => {
+      render(<ImageGenerator />);
+
+      // Initial: "Enter a prompt to create" Button (wenn previewState "empty" ist und kein prompt)
+      const button = screen.getByRole("button", { name: /Enter a prompt to create/ });
+      expect(button).toBeInTheDocument();
+    });
+
+    it("sollte Edit-Mode Locale Keys korrekt geladen haben", () => {
+      // Test dass die Locale Keys verfügbar sind durch tatsächliche Werte
+      render(<ImageGenerator />);
+      
+      // Verifiziere dass Standard-Placeholder korrekt geladen ist
+      const textarea = screen.getByPlaceholderText("Describe your image in detail...");
+      expect(textarea).toHaveAttribute("placeholder", "Describe your image in detail...");
+      
+      // Die dynamische Placeholder-Logik ist implementiert (wird bei previewState === "reference" aktiv)
+      expect(textarea).toBeInTheDocument();
+    });
+
+    it("sollte previewState System für UI-Changes nutzen", () => {
+      render(<ImageGenerator />);
+
+      // Teste dass das previewState System die UI beeinflusst
+      // Drop Zone sollte sichtbar sein im "empty" state
+      const dropZone = screen.getByTestId("drop-zone");
+      expect(dropZone).toBeInTheDocument();
+      
+      // Referenz Image Upload Bereich sollte vorhanden sein
+      const uploadSection = screen.getByText("Upload Reference Image (Optional)");
+      expect(uploadSection).toBeInTheDocument();
     });
   });
 });

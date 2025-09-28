@@ -183,6 +183,7 @@ export function ImageGenerator({
   const generatingText = useLocale({ label: "imagegen.generating" });
   const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
   const promptPlaceholderText = useLocale({ label: "imagegen.promptPlaceholder" });
+  const editPromptPlaceholderText = useLocale({ label: "imagegen.editPromptPlaceholder" });
   const editImageText = useLocale({ label: "imagegen.editImage" });
 
   // Error messages
@@ -852,7 +853,7 @@ export function ImageGenerator({
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={promptPlaceholderText}
+                placeholder={previewState === "reference" ? editPromptPlaceholderText : promptPlaceholderText}
                 disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
                 className={styles.imageGen.compactTextarea}
               />

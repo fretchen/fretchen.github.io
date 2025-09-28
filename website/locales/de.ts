@@ -4,6 +4,7 @@ export default {
     title: "KI-Kunst erstellen • 10¢",
     collapsedDescription: "Beschreibe deine Idee mit Text. KI generiert das Bild. Du erhältst Eigentumsrechte als NFT.",
     promptPlaceholder: "Beschreibe dein Bild im Detail...",
+    editPromptPlaceholder: "Beschreibe Änderungen, die du am Bild vornehmen möchtest...",
     square: "◼ quadratisch",
     wide: "▬ breit",
     listed: "Gelistet",

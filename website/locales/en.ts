@@ -4,6 +4,7 @@ export default {
     title: "Create Collectible AI Art • 10¢",
     collapsedDescription: "Describe your idea in text. AI generates the image. You receive ownership as an NFT.",
     promptPlaceholder: "Describe your image in detail...",
+    editPromptPlaceholder: "Describe changes you want to make to the image...",
     square: "◼ Square",
     wide: "▬ Wide",
     listed: "Listed",

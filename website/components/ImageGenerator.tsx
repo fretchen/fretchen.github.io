@@ -118,6 +118,9 @@ export function ImageGenerator({
   const [referenceImageBase64, setReferenceImageBase64] = useState<string | null>(null);
   const [referenceImageMimeType, setReferenceImageMimeType] = useState<string>("image/jpeg");
 
+  // Blockchain interaction
+  const { address, isConnected } = useAccount();
+
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
   const [previewState, setPreviewState] = useState<PreviewState>("empty");
@@ -128,9 +131,6 @@ export function ImageGenerator({
   const [isLoading, setIsLoading] = useState(false);
   const [mintingStatus, setMintingStatus] = useState<MintingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-
-  // Blockchain interaction
-  const { address, isConnected } = useAccount();
   const chain = getChain();
   const currentChainId = useChainId();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
@@ -177,13 +177,13 @@ export function ImageGenerator({
   // Helper functions for button state
   // Localized button texts
   const connectWalletButtonText = useLocale({ label: "imagegen.connectWalletButton" });
-  const connectWalletTitleText = useLocale({ label: "imagegen.connectWalletTitle" });
   const enterPromptText = useLocale({ label: "imagegen.enterPrompt" });
   const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
   const creatingText = useLocale({ label: "imagegen.creating" });
   const generatingText = useLocale({ label: "imagegen.generating" });
   const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
   const promptPlaceholderText = useLocale({ label: "imagegen.promptPlaceholder" });
+  const editPromptPlaceholderText = useLocale({ label: "imagegen.editPromptPlaceholder" });
   const editImageText = useLocale({ label: "imagegen.editImage" });
 
   // Error messages
@@ -215,6 +215,16 @@ export function ImageGenerator({
   // Status messages
   const creatingArtworkText = useLocale({ label: "imagegen.creatingArtwork" });
   const generatingImageText = useLocale({ label: "imagegen.generatingImage" });
+
+  // Collapsed state texts
+  const titleText = useLocale({ label: "imagegen.title" });
+  const collapsedTitleText = useLocale({ label: "imagegen.collapsedTitle" });
+  const collapsedDescriptionText = useLocale({ label: "imagegen.collapsedDescription" });
+
+  // Options texts
+  const squareText = useLocale({ label: "imagegen.square" });
+  const wideText = useLocale({ label: "imagegen.wide" });
+  const mintingInfoText = useLocale({ label: "imagegen.mintingInfo" });
   const artworkCreatedText = useLocale({ label: "imagegen.artworkCreated" });
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
   const switchingToOptimismText = useLocale({ label: "imagegen.switchingToOptimism" });
@@ -228,7 +238,7 @@ export function ImageGenerator({
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
     if (isLoading) return "loading";
-    if (!isConnected) return "connect";
+    // Note: !isConnected check removed - only reachable in connected state
     if (!prompt.trim()) return "needsPrompt";
     return "ready";
   };
@@ -253,17 +263,6 @@ export function ImageGenerator({
   const buttonState = getButtonState();
 
   // Button Components
-  const ConnectWalletButton = () => (
-    <button
-      onClick={handleWalletConnection}
-      className={`${styles.primaryButton}`}
-      title={connectWalletTitleText}
-      aria-describedby="create-artwork-info"
-    >
-      🔗 {connectWalletButtonText}
-    </button>
-  );
-
   const CreateArtworkButton = () => {
     const isDisabled = buttonState === "needsPrompt";
     const isLoadingState = buttonState === "loading" || buttonState === "switching";
@@ -546,376 +545,474 @@ export function ImageGenerator({
 
   const clearReferenceImage = () => {
     setReferenceImageBase64(null);
-    setReferenceImageMimeType("image/jpeg"); // Reset to default
-    setPreviewState("empty");
+    setReferenceImageMimeType("image/jpeg");
 
-    // Clear the file input so it can accept the same file again
+    // Clear the file input
     const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
+
+    // Intelligent state management:
+    // If we have a generated image, switch to "generated" state
+    // If no generated image, switch back to "empty" state
+    if (currentPreviewImage) {
+      setPreviewState("generated");
+    } else {
+      setPreviewState("empty");
+    }
+  };
+
+  // Simple format detection based on user selection
+  const formatSelected = size === "1792x1024" ? "wide" : "square";
+
+  // Handle expansion trigger for collapsed state
+  const handleExpand = () => {
+    // Always trigger wallet connection when in collapsed state
+    handleWalletConnection();
   };
 
   return (
-    <div className={styles.imageGen.compactLayout}>
-      <div className={styles.imageGen.compactContainer}>
-        <div className={styles.imageGen.compactHeader}>
-          <h3 className={styles.imageGen.compactTitle}>
-            🎨
-            <LocaleText label="imagegen.title" />
-          </h3>
-        </div>
-
-        <div className={styles.imageGen.compactForm}>
-          {/* Unified Preview/Upload Area */}
-          <div
-            data-testid="drop-zone"
-            className={css({
-              mb: "4",
-              p: "6",
-              border: "2px dashed",
-              borderColor: previewState === "empty" ? "gray.300" : "blue.400",
-              borderRadius: "lg",
-              bg: previewState === "empty" ? "gray.50" : "blue.50",
-              position: "relative",
-              transition: "all 0.2s ease",
-              cursor: previewState === "empty" ? "pointer" : "default",
-              _hover: {
-                borderColor: previewState === "empty" ? "blue.400" : undefined,
-                bg: previewState === "empty" ? "blue.50" : undefined,
-              },
-            })}
-            onDragOver={handleDragOver}
-            onDragEnter={handleDragEnter}
-            onDrop={handleDrop}
-            onClick={() => {
-              if (previewState === "empty") {
-                document.getElementById("reference-image-input")?.click();
-              }
-            }}
-          >
-            {/* Hidden file input */}
-            <input
-              id="reference-image-input"
-              data-testid="reference-image-input"
-              type="file"
-              accept="image/*"
-              onChange={handleFileInputChange}
-              className={css({
-                position: "absolute",
-                opacity: 0,
-                width: 0,
-                height: 0,
-                pointerEvents: "none",
-              })}
-            />
-
-            {previewState === "empty" && (
-              <div
-                className={css({
-                  textAlign: "center",
-                  py: "8",
-                })}
-              >
-                <div
-                  className={css({
-                    fontSize: "3xl",
-                    mb: "2",
-                  })}
-                >
-                  📸
-                </div>
-                <h4
-                  className={css({
-                    fontSize: "lg",
-                    fontWeight: "semibold",
-                    color: "gray.700",
-                    mb: "2",
-                  })}
-                >
-                  {uploadReferenceImageText}
-                </h4>
-                <p
-                  className={css({
-                    fontSize: "sm",
-                    color: "gray.600",
-                    mb: "4",
-                  })}
-                >
-                  {dragDropHereText}
-                </p>
-                <p
-                  className={css({
-                    fontSize: "xs",
-                    color: "gray.500",
-                  })}
-                >
-                  {supportedFormatsText}
-                </p>
-              </div>
-            )}
-
-            {previewState === "reference" && referenceImageBase64 && (
-              <div>
-                <div
-                  className={css({
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: "3",
-                  })}
-                >
-                  <h4
-                    className={css({
-                      fontSize: "sm",
-                      fontWeight: "semibold",
-                      color: "gray.700",
-                      m: 0,
-                    })}
-                  >
-                    {referenceImageTitleText}
-                  </h4>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clearReferenceImage();
-                    }}
-                    className={css({
-                      px: "2",
-                      py: "1",
-                      fontSize: "xs",
-                      bg: "red.500",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "sm",
-                      cursor: "pointer",
-                      _hover: {
-                        bg: "red.600",
-                      },
-                    })}
-                  >
-                    ✕ {removeText}
-                  </button>
-                </div>
-                <div
-                  className={css({
-                    display: "flex",
-                    justifyContent: "center",
-                    maxHeight: "250px",
-                    overflow: "hidden",
-                    borderRadius: "md",
-                  })}
-                >
-                  <img
-                    src={`data:${referenceImageMimeType};base64,${referenceImageBase64}`}
-                    alt={referenceImageAltText}
-                    className={css({
-                      maxWidth: "100%",
-                      maxHeight: "100%",
-                      objectFit: "contain",
-                      borderRadius: "md",
-                      boxShadow: "sm",
-                    })}
-                  />
-                </div>
-                <p
-                  className={css({
-                    fontSize: "xs",
-                    color: "blue.600",
-                    textAlign: "center",
-                    mt: "2",
-                  })}
-                >
-                  {referenceImageHintText}
-                </p>
-              </div>
-            )}
-
-            {previewState === "generated" && currentPreviewImage && (
-              <div>
-                <div
-                  className={css({
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: "3",
-                  })}
-                >
-                  <h4
-                    className={css({
-                      fontSize: "sm",
-                      fontWeight: "semibold",
-                      color: "gray.700",
-                      m: 0,
-                    })}
-                  >
-                    {generatedArtworkTitleText}
-                  </h4>
-                  <div className={css({ display: "flex", gap: "2" })}>
-                    <button
-                      onClick={clearReferenceImage}
-                      className={css({
-                        px: "2",
-                        py: "1",
-                        fontSize: "xs",
-                        bg: "red.500",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "sm",
-                        cursor: "pointer",
-                        _hover: {
-                          bg: "red.600",
-                        },
-                      })}
-                      disabled={isLoading || mintingStatus !== "idle"}
-                    >
-                      ✕ {removeText}
-                    </button>
-                  </div>
-                </div>
-                <div
-                  className={css({
-                    display: "flex",
-                    justifyContent: "center",
-                    maxHeight: "250px",
-                    overflow: "hidden",
-                    borderRadius: "md",
-                  })}
-                >
-                  <img
-                    src={currentPreviewImage}
-                    alt={generatedArtworkAltText}
-                    className={css({
-                      maxWidth: "100%",
-                      maxHeight: "100%",
-                      objectFit: "contain",
-                      borderRadius: "md",
-                      boxShadow: "sm",
-                    })}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={promptPlaceholderText}
-            disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
-            className={styles.imageGen.compactTextarea}
-          />
-
-          <div className={styles.imageGen.controlBar}>
-            <div className={styles.imageGen.optionsGroup}>
-              <select
-                id="imageSizeSelect"
-                value={size}
-                onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
-                disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
-                className={styles.imageGen.compactSelect}
-                aria-label="Select image format for your artwork"
-              >
-                <option value="1024x1024">{useLocale({ label: "imagegen.square" })}</option>
-                <option value="1792x1024">{useLocale({ label: "imagegen.wide" })}</option>
-              </select>
-
-              <label
-                className={styles.nftCard.checkboxLabel}
-                title={
-                  isListed
-                    ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
-                    : "NFT will remain unlisted from the 'All Public Artworks' gallery"
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={isListed}
-                  onChange={(e) => setIsListed(e.target.checked)}
-                  disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
-                  className={styles.nftCard.checkbox}
-                />
-                <LocaleText label="imagegen.listed" />
-              </label>
-            </div>
-
-            {buttonState === "connect" ? <ConnectWalletButton /> : <CreateArtworkButton />}
-          </div>
-        </div>
-
-        {/* Contract details under Create Artwork button */}
-        <div className={css({ mt: "2", fontSize: "xs", color: "gray.600", textAlign: "center" })}>
-          {poweredByText}{" "}
-          <a
-            href="https://optimism.io"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={learnMoreOptimismText}
-            className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
-          >
-            Optimism
-          </a>{" "}
-          •{" "}
-          <a
-            href={`https://optimistic.etherscan.io/address/${genAiNFTContractConfig.address}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={viewContractEtherscanText}
-            className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
-          >
-            {viewContractText} ↗
-          </a>
-        </div>
-
-        {/* Hidden accessible description used by aria-describedby for the Create Artwork button */}
-        <span
-          id="create-artwork-info"
-          className={css({
-            position: "absolute",
-            left: "-9999px",
-            top: "auto",
-            width: "1px",
-            height: "1px",
-            overflow: "hidden",
-          })}
-        >
-          {useLocale({ label: "imagegen.mintingInfo" })}
-        </span>
-
-        {/* Mobile Info Text - only visible on small screens */}
+    <div
+      className={css({
+        transition: "all 0.5s ease-in-out",
+        overflow: "hidden",
+      })}
+    >
+      {!isConnected ? (
+        // Collapsed State - Clean & Simple
         <div
           className={css({
-            display: { base: "block", md: "none" },
-            mt: "2",
-            fontSize: "xs",
-            color: "gray.600",
+            maxWidth: "500px",
+            margin: "0 auto",
             textAlign: "center",
           })}
         >
-          <InfoIcon size="xs" className={css({ mr: "1" })} />
-          {mintingInfoLabel}
+          {/* Simple Title - centered, no border */}
+          <h3
+            className={css({
+              fontSize: "2xl",
+              fontWeight: "semibold",
+              marginBottom: "4",
+              color: "gray.800",
+            })}
+          >
+            🎨 {titleText}
+          </h3>
+
+          {/* Action-oriented title */}
+          <div
+            className={css({
+              fontSize: "md",
+              fontWeight: "medium",
+              color: "gray.800",
+              mb: "3",
+              textAlign: "center",
+            })}
+          >
+            {collapsedTitleText}
+          </div>
+
+          {/* Single clear message + CTA */}
+          <p
+            className={css({
+              fontSize: "sm",
+              color: "gray.600",
+              mb: "lg",
+              lineHeight: "1.5",
+            })}
+          >
+            {collapsedDescriptionText}
+          </p>
+
+          {/* CTA Button - centered with website style */}
+          <div className={css({ display: "flex", justifyContent: "center" })}>
+            <button onClick={handleExpand} className={styles.primaryButton}>
+              {connectWalletButtonText}
+            </button>
+          </div>
         </div>
+      ) : (
+        // Expanded State - Current Full Design
+        <div className={styles.imageGen.compactLayout}>
+          <div className={styles.imageGen.compactContainer}>
+            <div className={styles.imageGen.compactHeader}>
+              <h3 className={styles.imageGen.compactTitle}>
+                🎨
+                <LocaleText label="imagegen.title" />
+              </h3>
+            </div>
 
-        {/* Status-Anzeige */}
-        {mintingStatus !== "idle" && (
-          <div className={styles.imageGen.compactStatus}>
-            <div className={styles.spinner}></div>
-            <span>{mintingStatus === "minting" ? creatingArtworkText : generatingImageText}</span>
+            <div className={styles.imageGen.compactForm}>
+              {/* Unified Preview/Upload Area */}
+              <div
+                data-testid="drop-zone"
+                className={css({
+                  mb: "4",
+                  border: "1px solid",
+                  borderColor: previewState === "empty" ? "gray.300" : "gray.400",
+                  borderRadius: "md",
+                  bg: previewState === "empty" ? "gray.50" : "white",
+                  position: "relative",
+                  cursor: previewState === "empty" ? "pointer" : "default",
+                  overflow: "hidden",
+                  // Full width layout to match textarea
+                  width: "100%",
+                  // Subtle hover for empty state only
+                  _hover:
+                    previewState === "empty"
+                      ? {
+                          borderColor: "gray.400",
+                          bg: "gray.100",
+                        }
+                      : {},
+                })}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDrop={handleDrop}
+                onClick={() => {
+                  if (previewState === "empty") {
+                    document.getElementById("reference-image-input")?.click();
+                  }
+                }}
+              >
+                {/* Hidden file input */}
+                <input
+                  id="reference-image-input"
+                  data-testid="reference-image-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileInputChange}
+                  className={css({
+                    position: "absolute",
+                    opacity: 0,
+                    width: 0,
+                    height: 0,
+                    pointerEvents: "none",
+                  })}
+                />
+
+                {previewState === "empty" && (
+                  <div
+                    className={css({
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      py: "6",
+                      px: "4",
+                      gap: "3",
+                    })}
+                  >
+                    <div
+                      className={css({
+                        fontSize: "xl",
+                        color: "gray.500",
+                      })}
+                    >
+                      📸
+                    </div>
+                    <div className={css({ textAlign: "left" })}>
+                      <h4
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                          color: "gray.700",
+                          mb: "1",
+                        })}
+                      >
+                        {uploadReferenceImageText}
+                      </h4>
+                      <p
+                        className={css({
+                          fontSize: "xs",
+                          color: "gray.500",
+                          mb: "0",
+                        })}
+                      >
+                        {dragDropHereText} • {supportedFormatsText}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {previewState === "reference" && referenceImageBase64 && (
+                  <div className={css({ p: "3" })}>
+                    <div
+                      className={css({
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: "3",
+                      })}
+                    >
+                      <h4
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                          color: "gray.700",
+                          m: 0,
+                        })}
+                      >
+                        {referenceImageTitleText}
+                      </h4>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          clearReferenceImage();
+                        }}
+                        className={css({
+                          px: "2",
+                          py: "1",
+                          fontSize: "xs",
+                          bg: "gray.600",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "sm",
+                          cursor: "pointer",
+                          _hover: {
+                            bg: "gray.700",
+                          },
+                        })}
+                      >
+                        ✕ {removeText}
+                      </button>
+                    </div>
+                    <div
+                      className={css({
+                        position: "relative",
+                        width: "100%",
+                        // Intelligent height: larger for wide images, smaller for square
+                        height: formatSelected === "wide" ? "250px" : "200px",
+                        overflow: "hidden",
+                        borderRadius: "sm",
+                        bg: "gray.100",
+                      })}
+                    >
+                      <img
+                        src={`data:${referenceImageMimeType};base64,${referenceImageBase64}`}
+                        alt={referenceImageAltText}
+                        className={css({
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          borderRadius: "sm",
+                        })}
+                      />
+                    </div>
+                    <p
+                      className={css({
+                        fontSize: "xs",
+                        color: "gray.500",
+                        textAlign: "center",
+                        mt: "2",
+                        mb: "0",
+                      })}
+                    >
+                      {referenceImageHintText}
+                    </p>
+                  </div>
+                )}
+
+                {previewState === "generated" && currentPreviewImage && (
+                  <div className={css({ p: "3" })}>
+                    <div
+                      className={css({
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: "3",
+                      })}
+                    >
+                      <h4
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                          color: "gray.700",
+                          m: 0,
+                        })}
+                      >
+                        {generatedArtworkTitleText}
+                      </h4>
+                      <div className={css({ display: "flex", gap: "2" })}>
+                        <button
+                          onClick={() => {
+                            // Clear both reference and generated images when in generated state
+                            setReferenceImageBase64(null);
+                            setReferenceImageMimeType("image/jpeg");
+                            setCurrentPreviewImage(undefined);
+                            setPreviewState("empty");
+
+                            // Clear the file input
+                            const fileInput = document.getElementById("reference-image-input") as HTMLInputElement;
+                            if (fileInput) {
+                              fileInput.value = "";
+                            }
+                          }}
+                          className={css({
+                            px: "2",
+                            py: "1",
+                            fontSize: "xs",
+                            bg: "gray.600",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "sm",
+                            cursor: "pointer",
+                            _hover: {
+                              bg: "gray.700",
+                            },
+                          })}
+                          disabled={isLoading || mintingStatus !== "idle"}
+                        >
+                          ✕ {removeText}
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      className={css({
+                        position: "relative",
+                        width: "100%",
+                        // Intelligent height based on format selection
+                        height: formatSelected === "wide" ? "250px" : "200px",
+                        overflow: "hidden",
+                        borderRadius: "sm",
+                        bg: "gray.100",
+                      })}
+                    >
+                      <img
+                        src={currentPreviewImage}
+                        alt={generatedArtworkAltText}
+                        className={css({
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          borderRadius: "sm",
+                        })}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={previewState === "reference" ? editPromptPlaceholderText : promptPlaceholderText}
+                disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
+                className={styles.imageGen.compactTextarea}
+              />
+
+              <div className={styles.imageGen.controlBar}>
+                <div className={styles.imageGen.optionsGroup}>
+                  <select
+                    id="imageSizeSelect"
+                    value={size}
+                    onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
+                    disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
+                    className={styles.imageGen.compactSelect}
+                    aria-label="Select image format for your artwork"
+                  >
+                    <option value="1024x1024">{squareText}</option>
+                    <option value="1792x1024">{wideText}</option>
+                  </select>
+
+                  <label
+                    className={styles.nftCard.checkboxLabel}
+                    title={
+                      isListed
+                        ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
+                        : "NFT will remain unlisted from the 'All Public Artworks' gallery"
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isListed}
+                      onChange={(e) => setIsListed(e.target.checked)}
+                      disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
+                      className={styles.nftCard.checkbox}
+                    />
+                    <LocaleText label="imagegen.listed" />
+                  </label>
+                </div>
+
+                <CreateArtworkButton />
+              </div>
+            </div>
+
+            {/* Contract details under Create Artwork button */}
+            <div className={css({ mt: "2", fontSize: "xs", color: "gray.600", textAlign: "center" })}>
+              {poweredByText}{" "}
+              <a
+                href="https://optimism.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={learnMoreOptimismText}
+                className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
+              >
+                Optimism
+              </a>{" "}
+              •{" "}
+              <a
+                href={`https://optimistic.etherscan.io/address/${genAiNFTContractConfig.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={viewContractEtherscanText}
+                className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
+              >
+                {viewContractText} ↗
+              </a>
+            </div>
+
+            {/* Hidden accessible description used by aria-describedby for the Create Artwork button */}
+            <span
+              id="create-artwork-info"
+              className={css({
+                position: "absolute",
+                left: "-9999px",
+                top: "auto",
+                width: "1px",
+                height: "1px",
+                overflow: "hidden",
+              })}
+            >
+              {mintingInfoText}
+            </span>
+
+            {/* Mobile Info Text - only visible on small screens */}
+            <div
+              className={css({
+                display: { base: "block", md: "none" },
+                mt: "2",
+                fontSize: "xs",
+                color: "gray.600",
+                textAlign: "center",
+              })}
+            >
+              <InfoIcon size="xs" className={css({ mr: "1" })} />
+              {mintingInfoLabel}
+            </div>
+
+            {/* Status-Anzeige */}
+            {mintingStatus !== "idle" && (
+              <div className={styles.imageGen.compactStatus}>
+                <div className={styles.spinner}></div>
+                <span>{mintingStatus === "minting" ? creatingArtworkText : generatingImageText}</span>
+              </div>
+            )}
+
+            {error && <div className={styles.imageGen.compactError}>{error}</div>}
+
+            {/* Erfolgreiche Erstellung */}
+            {tokenId && generatedImageUrl && (
+              <div className={styles.successMessage}>
+                <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
+                <p className={css({ margin: "xs 0", fontSize: "sm" })}>
+                  ID: {tokenId.toString()} - {checkGalleryText}
+                </p>
+              </div>
+            )}
           </div>
-        )}
-
-        {error && <div className={styles.imageGen.compactError}>{error}</div>}
-
-        {/* Erfolgreiche Erstellung */}
-        {tokenId && generatedImageUrl && (
-          <div className={styles.successMessage}>
-            <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
-            <p className={css({ margin: "xs 0", fontSize: "sm" })}>
-              ID: {tokenId.toString()} - {checkGalleryText}
-            </p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

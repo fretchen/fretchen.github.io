@@ -872,15 +872,17 @@ export const nftList = {
   }),
   grid: css({
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "lg",
+    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+    gap: "md", // Kleinere Gaps für dichtere Packung
     marginTop: "lg",
-    // Mobile: Adjust gap for better mobile layout
+    // Mobile: Optimiert für Image-First
     "@media (max-width: 768px)": {
-      gap: "md",
+      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+      gap: "sm",
     },
     "@media (max-width: 480px)": {
-      gap: "sm",
+      gridTemplateColumns: "repeat(2, 1fr)", // Genau 2 Spalten auf mobil
+      gap: "xs",
       marginTop: "md",
     },
   }),
@@ -891,26 +893,26 @@ export const nftList = {
   }),
 };
 
-// Vereinfachte NFT Card styles
+// Image-First NFT Card styles
 export const nftCard = {
   container: css({
-    border: "1px solid token(colors.border)",
-    borderRadius: "md",
-    padding: "md",
-    background: "background",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    position: "relative",
+    aspectRatio: "1", // Quadratisches Format
+    borderRadius: "lg",
+    overflow: "hidden",
+    cursor: "pointer",
+    boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+    transition: "all 0.3s ease",
+    background: "gray.100",
     _hover: {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+      transform: "scale(1.02)",
+      boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
     },
-    // Mobile: Reduce padding for more content space
+    // Mobile: Slightly smaller scale effect
     "@media (max-width: 768px)": {
-      padding: "sm",
-    },
-    "@media (max-width: 480px)": {
-      padding: "xs",
-      borderRadius: "sm",
+      _hover: {
+        transform: "scale(1.01)",
+      },
     },
   }),
   highlighted: css({
@@ -947,49 +949,106 @@ export const nftCard = {
     color: "gray.600",
   }),
   imageContainer: css({
+    position: "absolute",
+    top: 0,
+    left: 0,
     width: "100%",
-    height: "200px",
-    background: "rgba(245, 245, 245, 1)",
-    borderRadius: "sm",
-    marginBottom: "sm",
+    height: "100%",
     overflow: "hidden",
-    // Mobile: Slightly smaller height for better proportion
-    "@media (max-width: 768px)": {
-      height: "180px",
-      marginBottom: "xs",
-    },
-    "@media (max-width: 480px)": {
-      height: "160px",
-      marginBottom: "2xs",
-    },
+    background: "gray.100",
   }),
   image: css({
     width: "100%",
     height: "100%",
     objectFit: "cover",
+    transition: "transform 0.3s ease",
+    _groupHover: {
+      transform: "scale(1.05)",
+    },
   }),
   imagePlaceholder: css({
+    position: "absolute",
+    top: 0,
+    left: 0,
     width: "100%",
-    height: "200px",
-    background: "rgba(245, 245, 245, 1)",
-    borderRadius: "sm",
-    marginBottom: "sm",
+    height: "100%",
+    background: "gray.200",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "gray.600",
-    fontSize: "sm",
-    // Mobile: Match image container height adjustments
+    color: "gray.500",
+    fontSize: "lg",
+    fontWeight: "medium",
+  }),
+
+  // Actions Overlay (nur bei Hover sichtbar)
+  actionsOverlay: css({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.4)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "md",
+    opacity: 0,
+    transition: "opacity 0.3s ease",
+    _groupHover: {
+      opacity: 1,
+    },
+    // Mobile: Always show actions with lower opacity
     "@media (max-width: 768px)": {
-      height: "180px",
-      marginBottom: "xs",
-      fontSize: "xs",
+      opacity: 0.9,
+      background: "rgba(0,0,0,0.3)",
     },
-    "@media (max-width: 480px)": {
-      height: "160px",
-      marginBottom: "2xs",
-      fontSize: "2xs",
-    },
+  }),
+
+  // Corner Badges für Status Info
+  cornerBadge: css({
+    position: "absolute",
+    top: "sm",
+    right: "sm",
+    background: "rgba(0,0,0,0.8)",
+    color: "white",
+    fontSize: "xs",
+    fontWeight: "500",
+    padding: "xs sm",
+    borderRadius: "full",
+    backdropFilter: "blur(4px)",
+    border: "1px solid rgba(255,255,255,0.1)",
+  }),
+
+  // Neutraler Badge für Owner Info
+  ownerBadge: css({
+    position: "absolute",
+    top: "sm",
+    left: "sm",
+    background: "rgba(0,0,0,0.8)",
+    color: "white",
+    fontSize: "xs",
+    fontWeight: "500",
+    padding: "xs sm",
+    borderRadius: "full",
+    backdropFilter: "blur(4px)",
+    border: "1px solid rgba(255,255,255,0.1)",
+  }),
+
+  // Grüner Badge nur für "Listed" Status
+  listedBadge: css({
+    position: "absolute",
+    top: "2.5rem", // Unter dem Owner Badge positioniert
+    left: "sm",
+    background: "rgba(34, 197, 94, 0.9)",
+    color: "white",
+    fontSize: "xs",
+    fontWeight: "500",
+    padding: "xs sm",
+    borderRadius: "full",
+    backdropFilter: "blur(4px)",
+    border: "1px solid rgba(255,255,255,0.2)",
   }),
   imageError: css({
     display: "flex",
@@ -1003,22 +1062,7 @@ export const nftCard = {
       fontSize: "2xs",
     },
   }),
-  title: css({
-    fontSize: "md",
-    fontWeight: "bold",
-    marginBottom: "xs",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    // Mobile: Smaller font size for better fit
-    "@media (max-width: 768px)": {
-      fontSize: "sm",
-    },
-    "@media (max-width: 480px)": {
-      fontSize: "xs",
-      marginBottom: "2xs",
-    },
-  }),
+
   description: css({
     fontSize: "sm",
     color: "gray.600",
@@ -1087,133 +1131,56 @@ export const nftCard = {
     },
   }),
 
-  // Vereinfachte Action-Buttons
+  // Overlay Action-Buttons
   actions: css({
     display: "flex",
-    gap: "xs",
-    marginTop: "sm",
+    gap: "sm",
     justifyContent: "center",
-    flexWrap: "wrap", // Allow wrapping if needed
-    width: "100%",
-    // Mobile: Stack vertically and adjust spacing
-    "@media (max-width: 768px)": {
-      flexDirection: "column",
-      gap: "sm",
-      marginTop: "xs",
-    },
-    "@media (max-width: 480px)": {
-      gap: "xs",
-      marginTop: "2xs",
-    },
-  }),
-
-  // Self-contained compact primary button - combines structure and primary colors
-  compactPrimaryButton: css({
-    paddingY: "sm",
-    paddingX: "sm",
-    fontSize: "sm",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
-    borderRadius: "md",
-    cursor: "pointer",
-    fontWeight: "bold",
-    whiteSpace: "nowrap",
-    display: "flex",
     alignItems: "center",
-    gap: "xs",
-    transition: "all 0.2s ease",
-    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-    textDecoration: "none",
-    textAlign: "center",
-    minWidth: "auto",
-    maxWidth: "100%",
-    flexShrink: 1,
-    overflow: "hidden",
-    _hover: {
-      backgroundColor: "#0052a3",
-      transform: "translateY(-1px)",
-      boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
-    },
-    _active: {
-      transform: "translateY(0)",
-      boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-    },
-    _disabled: {
-      backgroundColor: "gray.300",
-      color: "gray.500",
-      cursor: "not-allowed",
-      boxShadow: "none",
-      _hover: {
-        backgroundColor: "gray.300",
-        transform: "none",
-        boxShadow: "none",
-      },
-    },
-    // Mobile: Maintain compact but readable sizing
+    flexWrap: "wrap",
+    // Mobile: Larger gaps for better touch targets
     "@media (max-width: 768px)": {
-      paddingY: "xs",
-      paddingX: "sm",
-      fontSize: "sm",
-    },
-    "@media (max-width: 480px)": {
-      paddingY: "xs",
-      paddingX: "xs",
-      fontSize: "xs",
-      minHeight: "36px",
+      gap: "md",
     },
   }),
 
-  // Self-contained compact secondary button - combines structure and secondary colors
+  // Einheitliche Icon-Buttons für alle Actions
   compactSecondaryButton: css({
-    paddingY: "sm",
-    paddingX: "sm",
-    fontSize: "sm",
-    backgroundColor: "gray.200",
-    color: "gray.800",
-    border: "1px solid",
-    borderColor: "gray.300",
-    borderRadius: "md",
+    padding: "sm",
+    fontSize: "lg", // Für Emojis
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    color: "white",
+    border: "none",
+    borderRadius: "full",
     cursor: "pointer",
-    whiteSpace: "nowrap",
+    width: "44px",
+    height: "44px",
     display: "flex",
     alignItems: "center",
-    gap: "xs",
+    justifyContent: "center",
     transition: "all 0.2s ease",
-    textDecoration: "none",
-    textAlign: "center",
-    minWidth: "auto",
-    maxWidth: "100%",
-    flexShrink: 1,
-    overflow: "hidden",
+    backdropFilter: "blur(4px)",
     _hover: {
-      backgroundColor: "gray.300",
-      borderColor: "gray.400",
+      backgroundColor: "rgba(0, 0, 0, 0.7)",
+      transform: "scale(1.1)",
     },
     _active: {
-      transform: "translateY(0)",
+      transform: "scale(0.95)",
     },
     _disabled: {
-      backgroundColor: "gray.100",
-      color: "gray.500",
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      color: "rgba(255, 255, 255, 0.5)",
       cursor: "not-allowed",
-      borderColor: "gray.200",
       _hover: {
-        backgroundColor: "gray.100",
-        borderColor: "gray.200",
+        backgroundColor: "rgba(0, 0, 0, 0.3)",
+        transform: "none",
       },
     },
-    // Mobile: Maintain compact but readable sizing
+    // Mobile: Slightly larger for better touch targets
     "@media (max-width: 768px)": {
-      paddingY: "xs",
-      paddingX: "sm",
-      fontSize: "sm",
-    },
-    "@media (max-width: 480px)": {
-      paddingY: "xs",
-      paddingX: "xs",
-      fontSize: "xs",
-      minHeight: "36px",
+      width: "48px",
+      height: "48px",
+      fontSize: "xl",
     },
   }),
 

@@ -219,8 +219,9 @@ export function ImageGenerator({
   const creatingArtworkText = useLocale({ label: "imagegen.creatingArtwork" });
   const generatingImageText = useLocale({ label: "imagegen.generatingImage" });
 
-  // Collapsed state - minimal text
+  // Collapsed state texts
   const titleText = useLocale({ label: "imagegen.title" });
+  const collapsedDescriptionText = useLocale({ label: "imagegen.collapsedDescription" });
 
   // Options texts
   const squareText = useLocale({ label: "imagegen.square" });
@@ -613,7 +614,7 @@ export function ImageGenerator({
               lineHeight: "1.5",
             })}
           >
-            Create unique AI artwork you actually own. Only 10¢ per piece.
+            {collapsedDescriptionText}
           </p>
 
           {/* CTA Button - centered with website style */}

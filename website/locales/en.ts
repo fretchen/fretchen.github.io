@@ -2,6 +2,7 @@
 export default {
   imagegen: {
     title: "Create Collectible AI Art • 10¢",
+    collapsedDescription: "Describe your idea in text. AI generates the image. You receive ownership as an NFT.",
     promptPlaceholder: "Describe your image in detail...",
     square: "◼ Square",
     wide: "▬ Wide",

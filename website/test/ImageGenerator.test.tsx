@@ -73,8 +73,7 @@ describe("ImageGenerator Component", () => {
 
       // Check for collapsed state content
       expect(screen.getByText(/🎨.*mocked-imagegen\.title/)).toBeInTheDocument();
-      expect(screen.getByText(/Create unique AI artwork you actually own/)).toBeInTheDocument();
-      expect(screen.getByText(/Only 10¢ per piece/)).toBeInTheDocument();
+      expect(screen.getByText(/mocked-imagegen\.collapsedDescription/)).toBeInTheDocument();
 
       // Should show connect wallet button
       const button = screen.getByRole("button");
@@ -117,7 +116,7 @@ describe("ImageGenerator Component", () => {
       render(<ImageGenerator />);
 
       // Verify we start in collapsed state
-      expect(screen.getByText(/Create unique AI artwork/)).toBeInTheDocument();
+      expect(screen.getByText(/mocked-imagegen\.collapsedDescription/)).toBeInTheDocument();
       expect(screen.queryByTestId("drop-zone")).not.toBeInTheDocument();
 
       // Click expand button

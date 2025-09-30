@@ -19,7 +19,7 @@ export default function LanguageToggle() {
   }
 
   const dePath = cleanPath === "/" ? "/de" : `/de${cleanPath}`;
-  const enPath = cleanPath === "/" ? "/en" : `/en${cleanPath}`;
+  const enPath = cleanPath; // English uses root path (no /en/ prefix)
 
   const containerStyles = css({
     display: "flex",

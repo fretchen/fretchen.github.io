@@ -25,7 +25,10 @@ export function Link({
     locale = defaultLocale;
   }
 
-  href = "/" + locale + href;
+  // Only add locale prefix for non-default locale
+  if (locale !== defaultLocale) {
+    href = "/" + locale + href;
+  }
   const isActive = href === "/" ? urlPathname === href : urlPathname.startsWith(href);
 
   return (

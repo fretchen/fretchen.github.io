@@ -53,7 +53,7 @@ describe("LanguageToggle URL Generation", () => {
 
       // English should use root path (matches build structure)
       expect(enLink).toHaveAttribute("href", "/imagegen");
-      
+
       // German should use prefixed path (matches build structure)
       expect(deLink).toHaveAttribute("href", "/de/imagegen");
     });
@@ -85,7 +85,7 @@ describe("LanguageToggle URL Generation", () => {
 
       // Switch from German to English: remove /de/ prefix
       expect(enLink).toHaveAttribute("href", "/assistent");
-      
+
       // Stay on German: keep /de/ prefix
       expect(deLink).toHaveAttribute("href", "/de/assistent");
     });
@@ -102,7 +102,7 @@ describe("LanguageToggle URL Generation", () => {
 
       // English: root path (no prefix)
       expect(enLink).toHaveAttribute("href", "/blog/5");
-      
+
       // German: prefixed path
       expect(deLink).toHaveAttribute("href", "/de/blog/5");
     });
@@ -144,7 +144,7 @@ describe("LanguageToggle URL Generation", () => {
     it("should generate URLs that match static build structure", () => {
       // This test documents the expected URL structure that matches
       // the static files generated during build
-      
+
       const testCases = [
         {
           current: "/imagegen",

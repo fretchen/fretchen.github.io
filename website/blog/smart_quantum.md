@@ -1,7 +1,7 @@
 ---
-publishing_date: 2025-09-21
+publishing_date: 2025-10-02
 title: Can we decentralize access to quantum computing with smart contracts ?
-tokenID: 24
+tokenID: 123
 ---
 
 In this blog post, I want to dive into some ideas that have been going through my mind for a while now. I kept wondering, if it is possible to democratize access to quantum computing resources with the help of decentralized technologies, i.e. the blockchain. This question actually motivated a substantial amount of my work on the blockchain in the last few months and I will try to lay out my thoughts and learnings here. 
@@ -12,11 +12,11 @@ But now let's get started on this topic.
 
 ## The bold vision
 
-Quantum computing is an upcoming computing technology with the potential to reshape the software and hardware industry. And due to the complexity of the machines it is a cloud first technology at this stage. Within this collaboration we would like to unlock this power to as many stakeholders as possible with decentralized technologies.
+Quantum computing is an upcoming computing technology with the potential to reshape the software and hardware industry. And due to the complexity of building the machines it is a cloud first technology at this stage. Within this context, it would be great to unlock this power to as many stakeholders as possible with decentralized technologies.
 
 ## The point of this document
 
-It is fun to work on tough problems. But it is only really fun once you come together with other collaborators and try to see how to solve it together … in a possibly decentral manner. So this document is meant as a first piece that allows everyone that cares to shape some basic concepts and ideas and get this beyond the currently fuzzy ideas (maybe kill it, maybe make it a working reality).
+It is fun to work on tough problems. But it is only really fun once you get to share and think about them together with other collaborators and try to see how to solve it together. So these blog posts aremeant as a first piece that allows everyone that cares to shape some basic concepts and ideas and get this beyond the currently fuzzy ideas (maybe kill it, maybe make it a working reality).
 
 Accidentally [this blog post](https://www.wearedevelopers.com/magazine/how-to-create-dao-guide) also recommends to start out with a clear intent document etc before you get into more technical details.
 
@@ -34,10 +34,12 @@ Taken together it might not take too much fantasy to think that it could be quit
 
 ## The fuzzy “smart contracts for quantum computing” idea
 
-Beware, the following ideas are based on an embarrassingly poor understanding of blockchain technologies but they are too tempting to not be scribbled down.
+Beware, the following ideas are based on an embarrassingly poor understanding of blockchain technologies but they are too tempting to not be scribbled down. The main questions that I have been asking myself are:
 
 - Wouldn’t it be cool if the payment could be based on smart contracts ?
 - Wouldn’t it be possible to just send the instructions out to some “reliable” node and get back the result ?
 - Could the result be an encrypted NFT or something like that ?
 
-Taken together it would seem that smart contracts could provide a really needed technological solution to a problem that is decentral and involves payments. So how to solve it ? I worked through some of the technicalities in a web2 world and did not see any real roadblocks for the moment. However, transitioning towards the block-chain is a very different beast. So feel free to write down ideas here, exchange and get active. The more people that care are, the closer we get to the idea of a functioning smart contract for quantum computing.
+Taken together it would seem that smart contracts could provide a really needed technological solution to a problem that is decentral and involves payments. So how to solve it ? I worked through some of the technicalities in a web2 world and did not see any real roadblocks for the moment. However, transitioning towards the block-chain is a very different beast. If you look through the website you will see that a lot of the blockchain + ai work actually implements solutions that are not too far away from this idea. This is what I will talk about in the next blog post.
+
+If you have experiences, ideas or suggestions, feel free to write down ideas here, exchange and get active. The more people that care are, the more real gets the idea of a functioning smart contract for quantum computing.

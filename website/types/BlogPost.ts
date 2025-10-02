@@ -5,7 +5,7 @@ export interface NFTMetadata {
   description: string;
 }
 
-export type PostType = "markdown" | "react";
+export type PostType = "markdown" | "react" | "typescript";
 
 export interface BlogPost {
   title: string;

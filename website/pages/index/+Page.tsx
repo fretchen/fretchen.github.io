@@ -1,10 +1,12 @@
 import React from "react";
 import { Card } from "../../components/Card";
 import EntryList from "../../components/EntryList";
-import blogs from "../../blog/blogs.json";
+import { useBlogData } from "../../hooks/useBlogData";
 import * as styles from "../../layouts/styles";
 
 export default function Page() {
+  // Use dynamic blog loading for latest posts
+  const { blogs, loading } = useBlogData("blog", "publishing_date");
   return (
     <div className={styles.container}>
       {/* Hero section */}
@@ -34,14 +36,18 @@ export default function Page() {
       <section className={styles.blogSection}>
         <h2 className={styles.sectionHeading}>Latest Blog Posts</h2>
 
-        <EntryList
-          blogs={blogs}
-          basePath="/blog"
-          showDate={true}
-          reverseOrder={true}
-          limit={3}
-          showViewAllLink={true}
-        />
+        {loading ? (
+          <p>Loading latest blog posts...</p>
+        ) : (
+          <EntryList
+            blogs={blogs}
+            basePath="/blog"
+            showDate={true}
+            reverseOrder={true}
+            limit={3}
+            showViewAllLink={true}
+          />
+        )}
       </section>
     </div>
   );

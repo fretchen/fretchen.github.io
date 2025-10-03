@@ -33,36 +33,125 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
 
         if (directory === "blog") {
           // Load from blog directory using Vite's glob import
-          const modules = import.meta.glob<{ default: React.ComponentType }>([
-            "../blog/*.tsx",
-            "../blog/*.md",
-            "../blog/*.mdx",
-          ]);
-
-          const modulePath = `../${directory}/${filename}`;
-          const loader = modules[modulePath];
-
-          if (!loader) {
-            throw new Error(`Module not found in glob: ${modulePath}`);
+          // Environment-based loading: eager in production, lazy in development
+          if (import.meta.env.PROD) {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../blog/*.tsx", "../blog/*.md", "../blog/*.mdx"],
+              { eager: true },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            module = modules[modulePath];
+            if (!module) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+          } else {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../blog/*.tsx", "../blog/*.md", "../blog/*.mdx"],
+              { eager: false },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            const loader = modules[modulePath];
+            if (!loader) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+            module = await loader();
           }
-
-          module = await loader();
-        } else if (directory.startsWith("quantum/")) {
-          // Load from quantum directories
-          const modules = import.meta.glob<{ default: React.ComponentType }>([
-            "../quantum/**/*.tsx",
-            "../quantum/**/*.md",
-            "../quantum/**/*.mdx",
-          ]);
-
-          const modulePath = `../${directory}/${filename}`;
-          const loader = modules[modulePath];
-
-          if (!loader) {
-            throw new Error(`Module not found in glob: ${modulePath}`);
+        } else if (directory === "quantum/amo") {
+          // Load from quantum/amo directory - specific pattern to avoid memory issues
+          if (import.meta.env.PROD) {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/amo/*.tsx", "../quantum/amo/*.md", "../quantum/amo/*.mdx"],
+              { eager: true },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            module = modules[modulePath];
+            if (!module) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+          } else {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/amo/*.tsx", "../quantum/amo/*.md", "../quantum/amo/*.mdx"],
+              { eager: false },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            const loader = modules[modulePath];
+            if (!loader) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+            module = await loader();
           }
-
-          module = await loader();
+        } else if (directory === "quantum/basics") {
+          // Load from quantum/basics directory
+          if (import.meta.env.PROD) {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/basics/*.tsx", "../quantum/basics/*.md", "../quantum/basics/*.mdx"],
+              { eager: true },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            module = modules[modulePath];
+            if (!module) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+          } else {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/basics/*.tsx", "../quantum/basics/*.md", "../quantum/basics/*.mdx"],
+              { eager: false },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            const loader = modules[modulePath];
+            if (!loader) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+            module = await loader();
+          }
+        } else if (directory === "quantum/hardware") {
+          // Load from quantum/hardware directory
+          if (import.meta.env.PROD) {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/hardware/*.tsx", "../quantum/hardware/*.md", "../quantum/hardware/*.mdx"],
+              { eager: true },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            module = modules[modulePath];
+            if (!module) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+          } else {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/hardware/*.tsx", "../quantum/hardware/*.md", "../quantum/hardware/*.mdx"],
+              { eager: false },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            const loader = modules[modulePath];
+            if (!loader) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+            module = await loader();
+          }
+        } else if (directory === "quantum/qml") {
+          // Load from quantum/qml directory
+          if (import.meta.env.PROD) {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/qml/*.tsx", "../quantum/qml/*.md", "../quantum/qml/*.mdx"],
+              { eager: true },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            module = modules[modulePath];
+            if (!module) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+          } else {
+            const modules = import.meta.glob<{ default: React.ComponentType }>(
+              ["../quantum/qml/*.tsx", "../quantum/qml/*.md", "../quantum/qml/*.mdx"],
+              { eager: false },
+            );
+            const modulePath = `../${directory}/${filename}`;
+            const loader = modules[modulePath];
+            if (!loader) {
+              throw new Error(`Module not found in glob: ${modulePath}`);
+            }
+            module = await loader();
+          }
         } else {
           throw new Error(`Unsupported directory: ${directory}`);
         }
@@ -159,6 +248,8 @@ export function Post({
   type = "markdown",
   componentPath,
 }: PostProps) {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
   console.log("Post component rendering with props:", { title, tokenID, publishing_date, type });
 
   if (tokenID) {
@@ -166,6 +257,25 @@ export function Post({
   } else {
     console.log("No tokenID provided, skipping NFTHeroCard");
   }
+
+  // Auto-render LaTeX in the browser after content is loaded
+  React.useEffect(() => {
+    if (contentRef.current && type !== "react") {
+      // Dynamically import renderMathInElement only in the browser
+      import("katex/dist/contrib/auto-render").then((module) => {
+        const renderMathInElement = module.default;
+        if (contentRef.current) {
+          renderMathInElement(contentRef.current, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "$", right: "$", display: false },
+            ],
+            throwOnError: false,
+          });
+        }
+      });
+    }
+  }, [content, type]);
 
   return (
     <>
@@ -176,7 +286,7 @@ export function Post({
       {type === "react" && componentPath ? (
         <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
       ) : (
-        <div className={post.contentContainer}>
+        <div className={post.contentContainer} ref={contentRef}>
           {tokenID && <NFTFloatImage tokenId={tokenID} />}
           <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
             {content}

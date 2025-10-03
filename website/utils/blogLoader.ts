@@ -5,6 +5,9 @@
 
 import { BlogPost } from "../types/BlogPost";
 
+// Global cache for build-time to prevent multiple loads during pre-rendering
+const buildTimeCache = new Map<string, BlogPost[]>();
+
 /**
  * Sorts an array of blog posts according to specified criteria.
  *
@@ -70,6 +73,13 @@ export async function loadBlogs(
   sortBy: "order" | "publishing_date" = "publishing_date",
 ): Promise<BlogPost[]> {
   const normalizedDir = directory.replace(/^\//, "").replace(/\/$/, "");
+
+  // Check cache during build-time to prevent multiple loads
+  const cacheKey = `${normalizedDir}-${sortBy}`;
+  if (import.meta.env.SSR && buildTimeCache.has(cacheKey)) {
+    console.log(`[BlogLoader] Using cached data for ${cacheKey}`);
+    return buildTimeCache.get(cacheKey)!;
+  }
 
   // MVP: Only support blog directory to avoid memory issues
   if (normalizedDir !== "blog") {
@@ -177,5 +187,12 @@ export async function loadBlogs(
   }
 
   const sortedBlogs = sortBlogs(blogs, sortBy);
+
+  // Cache for build-time to prevent reloading
+  if (import.meta.env.SSR) {
+    buildTimeCache.set(cacheKey, sortedBlogs);
+    console.log(`[BlogLoader] Cached ${sortedBlogs.length} blogs for ${cacheKey}`);
+  }
+
   return sortedBlogs;
 }

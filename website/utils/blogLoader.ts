@@ -98,11 +98,9 @@ export async function loadBlogs(
 
     // Convert eager imports to loader functions for consistent interface
     allMarkdownModules = Object.fromEntries(
-      Object.entries(markdownEager).map(([path, module]) => [path, async () => module])
+      Object.entries(markdownEager).map(([path, module]) => [path, async () => module]),
     );
-    allTsxModules = Object.fromEntries(
-      Object.entries(tsxEager).map(([path, module]) => [path, async () => module])
-    );
+    allTsxModules = Object.fromEntries(Object.entries(tsxEager).map(([path, module]) => [path, async () => module]));
   } else {
     // Development: lazy loading for HMR support
     allMarkdownModules = import.meta.glob("../blog/*.{md,mdx}", { eager: false });

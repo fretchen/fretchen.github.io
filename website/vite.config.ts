@@ -12,11 +12,7 @@ export default defineConfig({
     // Configure MDX to export frontmatter as named exports
     // LaTeX is rendered client-side only (no server-side processing)
     mdx({
-      remarkPlugins: [
-        remarkFrontmatter,
-        [remarkMdxFrontmatter, { name: "frontmatter" }],
-        remarkGfm,
-      ],
+      remarkPlugins: [remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }], remarkGfm],
     }),
     react({}),
   ],

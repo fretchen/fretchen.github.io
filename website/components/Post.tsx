@@ -22,32 +22,58 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   React.useEffect(() => {
     const loadComponent = async () => {
       try {
-        console.log("ReactPostRenderer: Starting to load component from", componentPath);
+        // Extract directory and filename from componentPath
+        const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
+        const directory = pathParts.slice(0, -1).join("/");
+        const filename = pathParts[pathParts.length - 1];
 
-        // Extract the component name from the path
-        const componentName = componentPath.split("/").pop()?.replace(".tsx", "");
+        // Use dynamic import to load the component
+        // Both MDX and TSX files are React components with a default export
+        let module;
 
-        if (!componentName) {
-          throw new Error("Could not extract component name from path");
+        if (directory === "blog") {
+          // Load from blog directory using Vite's glob import
+          const modules = import.meta.glob<{ default: React.ComponentType }>([
+            "../blog/*.tsx",
+            "../blog/*.md",
+            "../blog/*.mdx",
+          ]);
+
+          const modulePath = `../${directory}/${filename}`;
+          const loader = modules[modulePath];
+
+          if (!loader) {
+            throw new Error(`Module not found in glob: ${modulePath}`);
+          }
+
+          module = await loader();
+        } else if (directory.startsWith("quantum/")) {
+          // Load from quantum directories
+          const modules = import.meta.glob<{ default: React.ComponentType }>([
+            "../quantum/**/*.tsx",
+            "../quantum/**/*.md",
+            "../quantum/**/*.mdx",
+          ]);
+
+          const modulePath = `../${directory}/${filename}`;
+          const loader = modules[modulePath];
+
+          if (!loader) {
+            throw new Error(`Module not found in glob: ${modulePath}`);
+          }
+
+          module = await loader();
+        } else {
+          throw new Error(`Unsupported directory: ${directory}`);
         }
 
-        console.log("ReactPostRenderer: Component name extracted:", componentName);
-
-        // Use dynamic import to load the actual TSX component
-        // This will work with Vite's dynamic import system
-        console.log("ReactPostRenderer: Attempting dynamic import...");
-        const module = await import(`../blog/${componentName}.tsx`);
-
-        console.log("ReactPostRenderer: Module loaded:", module);
-
-        // The component should be the default export
+        // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;
 
         if (!LoadedComponent) {
-          throw new Error(`No default export found in ${componentName}.tsx`);
+          throw new Error(`No default export found in ${filename}`);
         }
 
-        console.log("ReactPostRenderer: Component successfully loaded!");
         setComponent(() => LoadedComponent);
         setLoading(false);
       } catch (err) {
@@ -57,7 +83,6 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
       }
     };
 
-    console.log("ReactPostRenderer: useEffect triggered with componentPath:", componentPath);
     loadComponent();
   }, [componentPath]);
 

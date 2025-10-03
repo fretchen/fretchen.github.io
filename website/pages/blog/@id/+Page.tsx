@@ -1,5 +1,5 @@
 import * as React from "react";
-import blogs from "../../../blog/blogs.json";
+import { useBlogData } from "../../../hooks/useBlogData";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../components/Post";
 import { pageContainer } from "../../../layouts/styles";
@@ -8,8 +8,31 @@ const App: React.FC = function () {
   const pageContext = usePageContext();
   const id = Number(pageContext.routeParams.id);
 
+  // Use dynamic blog loading with hot reload support
+  const { blogs, loading, error } = useBlogData("blog", "publishing_date");
+
   if (isNaN(id)) {
     throw new Error("Invalid blog post ID");
+  }
+
+  if (loading) {
+    return (
+      <div className={pageContainer}>
+        <p>Loading blog post...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={pageContainer}>
+        <p>Error loading blog post: {error}</p>
+      </div>
+    );
+  }
+
+  if (!blogs[id]) {
+    throw new Error(`Blog post with ID ${id} not found`);
   }
 
   // Blog-Einträge und Navigation
@@ -20,9 +43,6 @@ const App: React.FC = function () {
   // Navigations-Objekte für erweiterte Post-Komponente
   const prevPost = prevBlog ? { title: prevBlog.title, id: id - 1 } : null;
   const nextPost = nextBlog ? { title: nextBlog.title, id: id + 1 } : null;
-
-  console.log("Blog page rendering blog:", blog);
-  console.log("Blog tokenID:", blog.tokenID);
 
   return (
     <div className={pageContainer}>

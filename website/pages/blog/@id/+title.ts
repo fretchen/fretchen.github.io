@@ -1,7 +1,7 @@
 import type { PageContext } from "vike/types";
+import type { BlogPost } from "../../../types/BlogPost";
 
 export function title(pageContext: PageContext) {
-  // Use blog data from pageContext.data (loaded via +data.ts)
-  const blog = pageContext.data.blog;
-  return blog?.title || "Blog Post";
+  const { blog } = pageContext.data as { blog: BlogPost; prevBlog: BlogPost | null; nextBlog: BlogPost | null };
+  return blog.title;
 }

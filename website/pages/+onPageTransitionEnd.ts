@@ -1,6 +1,5 @@
-import type { OnPageTransitionEndAsync } from "vike/types";
+import type { PageContext } from "vike/types";
 
-export const onPageTransitionEnd: OnPageTransitionEndAsync = async () => {
-  console.log("Page transition end");
+export async function onPageTransitionEnd(_pageContext: PageContext) {
   document.querySelector("body")?.classList.remove("page-is-transitioning");
-};
+}

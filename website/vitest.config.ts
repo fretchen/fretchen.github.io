@@ -13,15 +13,8 @@ export default defineConfig({
   plugins: [
     // Use the same MDX plugin configuration as vite.config.ts
     mdx({
-      remarkPlugins: [
-        remarkFrontmatter,
-        [remarkMdxFrontmatter, { name: "frontmatter" }],
-        remarkMath,
-        remarkGfm,
-      ],
-      rehypePlugins: [
-        rehypeKatex,
-      ],
+      remarkPlugins: [remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }], remarkMath, remarkGfm],
+      rehypePlugins: [rehypeKatex],
     }),
     react(),
   ],

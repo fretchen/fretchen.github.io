@@ -17,18 +17,18 @@ export function useBlogData(
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   useEffect(() => {
     let cancelled = false;
-    
+
     async function fetchBlogs() {
       try {
         setLoading(true);
         setError(null);
-        
+
         console.log(`[useBlogData] Loading blogs from: ${directory}`);
         const blogData = await loadBlogs(directory, sortBy);
-        
+
         if (!cancelled) {
           setBlogs(blogData);
           console.log(`[useBlogData] Successfully loaded ${blogData.length} blogs`);
@@ -45,14 +45,14 @@ export function useBlogData(
         }
       }
     }
-    
+
     fetchBlogs();
-    
+
     // Cleanup function to prevent state updates on unmounted component
     return () => {
       cancelled = true;
     };
   }, [directory, sortBy]);
-  
+
   return { blogs, loading, error };
 }

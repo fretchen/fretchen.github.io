@@ -8,8 +8,14 @@ describe("blogLoader - Integration Test", () => {
     const blogs = await loadBlogs("blog", "publishing_date");
 
     console.log(`[Integration Test] Loaded ${blogs.length} blogs`);
-    console.log("[Integration Test] Blog titles:", blogs.map((b) => b.title));
-    console.log("[Integration Test] Blog types:", blogs.map((b) => b.type));
+    console.log(
+      "[Integration Test] Blog titles:",
+      blogs.map((b) => b.title),
+    );
+    console.log(
+      "[Integration Test] Blog types:",
+      blogs.map((b) => b.type),
+    );
 
     // We should have at least some blogs
     expect(blogs.length).toBeGreaterThan(0);
@@ -40,7 +46,7 @@ describe("blogLoader - Integration Test", () => {
     const blogs = await loadBlogs("quantum/amo", "order");
 
     console.log(`[Integration Test] Loaded ${blogs.length} AMO blogs`);
-    
+
     if (blogs.length > 0) {
       // Check sorting by order
       for (let i = 0; i < blogs.length - 1; i++) {

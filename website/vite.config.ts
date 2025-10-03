@@ -13,15 +13,8 @@ export default defineConfig({
     vike(),
     // Configure MDX to export frontmatter as named exports and support LaTeX math
     mdx({
-      remarkPlugins: [
-        remarkFrontmatter,
-        [remarkMdxFrontmatter, { name: "frontmatter" }],
-        remarkMath,
-        remarkGfm,
-      ],
-      rehypePlugins: [
-        rehypeKatex,
-      ],
+      remarkPlugins: [remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }], remarkMath, remarkGfm],
+      rehypePlugins: [rehypeKatex],
     }),
     react({}),
   ],

@@ -7,7 +7,7 @@ import { pageContainer } from "../../../layouts/styles";
 const App: React.FC = function () {
   const pageContext = usePageContext();
   const id = Number(pageContext.routeParams.id);
-  
+
   // Use dynamic blog loading
   const { blogs, loading, error } = useBlogData("blog", "publishing_date");
 

@@ -83,11 +83,7 @@ This is the blog content.`;
     ];
 
     testCases.forEach(({ meta, expected }) => {
-      const patterns = [
-        /title:\s*"([^"]*)"/i,
-        /title:\s*'([^']*)'/i,
-        /title:\s*([^\s\n]+)/i,
-      ];
+      const patterns = [/title:\s*"([^"]*)"/i, /title:\s*'([^']*)'/i, /title:\s*([^\s\n]+)/i];
 
       let match = null;
       for (const pattern of patterns) {
@@ -140,9 +136,7 @@ describe("blogLoader - File filtering", () => {
     ];
 
     // Test blog directory filtering
-    const blogFiles = allPaths.filter(
-      (path) => path.includes("../blog/") && !path.includes("/quantum/"),
-    );
+    const blogFiles = allPaths.filter((path) => path.includes("../blog/") && !path.includes("/quantum/"));
     expect(blogFiles).toHaveLength(2);
     expect(blogFiles).toContain("../blog/post1.md");
 

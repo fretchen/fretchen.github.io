@@ -5,79 +5,10 @@
 
 import { BlogPost } from "../types/BlogPost";
 
-// Utility function to extract frontmatter metadata
-function extractMeta(metaString: string, key: string): string | undefined {
-  const patterns = [
-    new RegExp(`${key}:\\s*"([^"]*)"`, "i"), // Double quotes
-    new RegExp(`${key}:\\s*'([^']*)'`, "i"), // Single quotes
-    new RegExp(`${key}:\\s*(.+?)(?:\\n|$)`, "i"), // Rest of line until newline or end
-  ];
-
-  for (const pattern of patterns) {
-    const match = metaString.match(pattern);
-    if (match) {
-      return match[1].trim();
-    }
-  }
-  return undefined;
-}
-
-// Parse markdown content with frontmatter
-function parseMarkdownWithFrontmatter(content: string, filePath: string): BlogPost {
-  console.log(`[Parser] Parsing file: ${filePath}`);
-  console.log(`[Parser] Content preview: ${content.substring(0, 200)}...`);
-  
-  const frontMatter = content.match(/---([\s\S]*?)---/);
-  
-  if (frontMatter) {
-    console.log(`[Parser] Found frontmatter in ${filePath}`);
-    const blogContent = content.replace(frontMatter[0], "").trim();
-    const meta = frontMatter[1];
-    
-    console.log(`[Parser] Frontmatter content: ${meta}`);
-    
-    const title = extractMeta(meta, "title");
-    const publishingDate = extractMeta(meta, "publishing_date");
-    const order = extractMeta(meta, "order");
-    const tokenID = extractMeta(meta, "tokenID");
-    
-    console.log(`[Parser] Extracted metadata - Title: "${title}", Date: "${publishingDate}", Order: "${order}", TokenID: "${tokenID}"`);
-    
-    const blogPost = {
-      title: title || "",
-      content: blogContent,
-      type: "markdown" as const,
-      publishing_date: publishingDate,
-      order: order ? parseInt(order) : undefined,
-      tokenID: tokenID ? parseInt(tokenID) : undefined,
-    };
-    
-    console.log(`[Parser] Created blog post object:`, blogPost);
-    return blogPost;
-  }
-  
-  // Fallback without frontmatter
-  console.log(`[Parser] No frontmatter found in ${filePath}, using filename as title`);
-  const fileName =
-    filePath
-      .split("/")
-      .pop()
-      ?.replace(/\.(md|mdx)$/, "") || "";
-      
-  const blogPost = {
-    title: fileName,
-    content: content,
-    type: "markdown" as const,
-  };
-  
-  console.log(`[Parser] Created fallback blog post:`, blogPost);
-  return blogPost;
-}
-
 // Sort blogs according to criteria
 function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "publishing_date"): BlogPost[] {
   const sortedBlogs = [...blogs];
-  
+
   if (sortBy === "order") {
     sortedBlogs.sort((a, b) => {
       if (a.order && b.order) {
@@ -94,7 +25,7 @@ function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "pub
       return 0;
     });
   }
-  
+
   return sortedBlogs;
 }
 
@@ -165,8 +96,12 @@ export async function loadBlogs(
     }
   }
 
-  console.log(`[BlogLoader] Filtered to ${Object.keys(relevantMarkdownModules).length} markdown files for directory: ${normalizedDir}`);
-  console.log(`[BlogLoader] Filtered to ${Object.keys(relevantTsxModules).length} TypeScript files for directory: ${normalizedDir}`);
+  console.log(
+    `[BlogLoader] Filtered to ${Object.keys(relevantMarkdownModules).length} markdown files for directory: ${normalizedDir}`,
+  );
+  console.log(
+    `[BlogLoader] Filtered to ${Object.keys(relevantTsxModules).length} TypeScript files for directory: ${normalizedDir}`,
+  );
   console.log(`[BlogLoader] Relevant markdown files:`, Object.keys(relevantMarkdownModules));
   console.log(`[BlogLoader] Relevant TypeScript files:`, Object.keys(relevantTsxModules));
 
@@ -177,27 +112,33 @@ export async function loadBlogs(
     try {
       const cleanPath = path.replace(/\?.*$/, "");
       console.log(`[BlogLoader] Processing markdown file: ${cleanPath}`);
-      
+
       // Load the MDX module - it will be a React component with exported frontmatter
       const module = await relevantMarkdownModules[path]();
       console.log(`[BlogLoader] Module type:`, typeof module);
       console.log(`[BlogLoader] Module keys:`, module ? Object.keys(module) : "null");
-      
+
       // MDX modules export: default (component), frontmatter (metadata)
       if (module && typeof module === "object") {
         const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
         console.log(`[BlogLoader] Frontmatter:`, frontmatter);
-        
+
         if (frontmatter && typeof frontmatter === "object") {
           // Extract metadata from frontmatter
           const title = frontmatter.title as string | undefined;
           const publishingDate = frontmatter.publishing_date as string | undefined;
           const order = frontmatter.order as number | undefined;
           const tokenID = frontmatter.tokenID as number | undefined;
-          
+
           // Create blog post with MDX component
           const blog: BlogPost = {
-            title: title || cleanPath.split("/").pop()?.replace(/\.(md|mdx)$/, "") || "",
+            title:
+              title ||
+              cleanPath
+                .split("/")
+                .pop()
+                ?.replace(/\.(md|mdx)$/, "") ||
+              "",
             content: "", // MDX content is rendered as component
             type: "react", // MDX files are now React components
             publishing_date: publishingDate,
@@ -205,7 +146,7 @@ export async function loadBlogs(
             tokenID: tokenID,
             componentPath: path, // Store path for rendering
           };
-          
+
           blogs.push(blog);
           console.log(`[BlogLoader] Successfully loaded MDX: ${cleanPath} - Title: "${blog.title}"`);
         } else {
@@ -223,11 +164,11 @@ export async function loadBlogs(
   for (const [path, module] of Object.entries(relevantTsxModules)) {
     try {
       console.log(`[BlogLoader] Processing TypeScript file: ${path}`);
-      
+
       // Import the module to get meta export
       const mod = await module();
       const meta = (mod as { meta?: { title?: string; publishing_date?: string; tokenID?: number } })?.meta || {};
-      
+
       const fileName = path.split("/").pop()?.replace(".tsx", "") || "";
 
       // Create blog entry for TypeScript files

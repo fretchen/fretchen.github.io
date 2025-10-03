@@ -44,7 +44,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
         // We use static glob patterns that Vite can analyze at build time
         console.log("ReactPostRenderer: Attempting dynamic import...");
         let module;
-        
+
         if (directory === "blog") {
           // Load from blog directory using Vite's glob import
           const modules = import.meta.glob<{ default: React.ComponentType }>([
@@ -52,14 +52,14 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
             "../blog/*.md",
             "../blog/*.mdx",
           ]);
-          
+
           const modulePath = `../${directory}/${filename}`;
           const loader = modules[modulePath];
-          
+
           if (!loader) {
             throw new Error(`Module not found in glob: ${modulePath}`);
           }
-          
+
           module = await loader();
         } else if (directory.startsWith("quantum/")) {
           // Load from quantum directories
@@ -68,14 +68,14 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
             "../quantum/**/*.md",
             "../quantum/**/*.mdx",
           ]);
-          
+
           const modulePath = `../${directory}/${filename}`;
           const loader = modules[modulePath];
-          
+
           if (!loader) {
             throw new Error(`Module not found in glob: ${modulePath}`);
           }
-          
+
           module = await loader();
         } else {
           throw new Error(`Unsupported directory: ${directory}`);

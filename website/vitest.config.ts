@@ -24,6 +24,7 @@ export default defineConfig({
     css: true,
     reporters: ["verbose"],
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    testTimeout: 10000, // Increase timeout to 10 seconds for async module loading
     coverage: {
       reporter: ["text", "json", "html"],
       exclude: ["node_modules/", "test/", "**/*.d.ts", "styled-system/", "build/", "dist/"],

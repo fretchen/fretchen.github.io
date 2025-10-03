@@ -220,16 +220,23 @@ export async function loadBlogs(
   }
 
   // Process TypeScript blog files
-  for (const [path] of Object.entries(relevantTsxModules)) {
+  for (const [path, module] of Object.entries(relevantTsxModules)) {
     try {
       console.log(`[BlogLoader] Processing TypeScript file: ${path}`);
+      
+      // Import the module to get meta export
+      const mod = await module();
+      const meta = (mod as { meta?: { title?: string; publishing_date?: string; tokenID?: number } })?.meta || {};
+      
       const fileName = path.split("/").pop()?.replace(".tsx", "") || "";
 
       // Create blog entry for TypeScript files
       const blog: BlogPost = {
-        title: fileName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+        title: meta.title || fileName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+        publishing_date: meta.publishing_date,
+        tokenID: meta.tokenID,
         content: "", // TypeScript blogs have their own rendering
-        type: "typescript",
+        type: "react", // Changed from "typescript" to "react" to use ReactPostRenderer
         componentPath: path,
       };
 

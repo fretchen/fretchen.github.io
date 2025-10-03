@@ -80,7 +80,8 @@ describe("EntryList with Real Blog Data", () => {
     const markdownBlogs = blogs.filter(
       (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
     );
-    const typescriptBlogs = blogs.filter((b) => b.type === "typescript");
+    // TypeScript blogs now also have type "react" but with .tsx componentPath
+    const typescriptBlogs = blogs.filter((b) => b.componentPath && b.componentPath.endsWith(".tsx"));
 
     console.log(`[EntryList Test] Markdown blogs: ${markdownBlogs.length}`);
     console.log(`[EntryList Test] TypeScript blogs: ${typescriptBlogs.length}`);

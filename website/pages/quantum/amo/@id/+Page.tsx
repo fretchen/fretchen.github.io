@@ -45,6 +45,8 @@ const App: React.FC = function () {
       <Post
         title={blog.title}
         content={blog.content}
+        type={blog.type}
+        componentPath={blog.componentPath}
         prevPost={prevPost}
         nextPost={nextPost}
         basePath="/quantum/amo" // Korrekter Pfad für AMO-Blog

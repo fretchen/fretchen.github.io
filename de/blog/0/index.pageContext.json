@@ -1,1 +1,1 @@
-{"_urlRewrite":null,"pageId":"/pages/blog/@id","routeParams":{"id":"0"}}
+{"_urlRewrite":null,"pageId":"/pages/blog/@id","routeParams":{"id":"0"},"data":{"blog":{"title":"Hello World","content":"","type":"react","publishing_date":"2024-12-02","order":"!undefined","tokenID":2,"componentPath":"../blog/hello_world.mdx"},"prevBlog":null,"nextBlog":{"title":"Ideas behind the blog stack","content":"","type":"react","publishing_date":"2025-01-03","order":"!undefined","tokenID":"!undefined","componentPath":"../blog/blog_stack.md"}}}

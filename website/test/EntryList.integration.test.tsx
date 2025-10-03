@@ -113,7 +113,13 @@ describe("EntryList with Real Blog Data", () => {
 
   it("should handle blogs with different frontmatter formats", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
-    const markdownBlogs = blogs.filter((b) => b.type === "markdown");
+    // After MDX migration, markdown blogs have type "react" with .md/.mdx componentPath
+    const markdownBlogs = blogs.filter(
+      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
+    );
+
+    // Ensure we actually have markdown blogs to test
+    expect(markdownBlogs.length).toBeGreaterThan(0);
 
     // Check various frontmatter fields
     const blogsWithDates = markdownBlogs.filter((b) => b.publishing_date);

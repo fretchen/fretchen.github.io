@@ -113,15 +113,17 @@ This is the blog content.`;
   });
 
   it("should handle TypeScript blog files", () => {
+    // After MDX migration, TypeScript blogs now have type "react" to use ReactPostRenderer
     const mockTsxBlogPost: BlogPost = {
       title: "React Blog Post",
       content: "",
-      type: "typescript",
+      type: "react",
       componentPath: "../blog/test_post.tsx",
     };
 
-    expect(mockTsxBlogPost.type).toBe("typescript");
+    expect(mockTsxBlogPost.type).toBe("react");
     expect(mockTsxBlogPost.componentPath).toBeDefined();
+    expect(mockTsxBlogPost.componentPath).toMatch(/\.tsx$/);
     expect(mockTsxBlogPost.content).toBe("");
   });
 });

@@ -20,25 +20,35 @@ describe("blogLoader - Integration Test", () => {
     // We should have at least some blogs
     expect(blogs.length).toBeGreaterThan(0);
 
-    // Check if we have both markdown and typescript blogs
-    const markdownBlogs = blogs.filter((b) => b.type === "markdown");
-    const typescriptBlogs = blogs.filter((b) => b.type === "typescript");
+    // After MDX migration, all blogs have type "react"
+    // Distinguish by componentPath extension
+    const markdownBlogs = blogs.filter(
+      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
+    );
+    const typescriptBlogs = blogs.filter((b) => b.componentPath && b.componentPath.endsWith(".tsx"));
 
     console.log(`[Integration Test] Markdown blogs: ${markdownBlogs.length}`);
     console.log(`[Integration Test] TypeScript blogs: ${typescriptBlogs.length}`);
 
-    // Verify that markdown blogs have content
+    // Verify that we have both types
+    expect(markdownBlogs.length).toBeGreaterThan(0);
+    expect(typescriptBlogs.length).toBeGreaterThan(0);
+
+    // Verify that markdown blogs have required metadata
     markdownBlogs.forEach((blog) => {
-      expect(blog.content).toBeDefined();
-      expect(blog.content.length).toBeGreaterThan(0);
       expect(blog.title).toBeDefined();
       expect(blog.title.length).toBeGreaterThan(0);
+      expect(blog.componentPath).toBeDefined();
+      // MDX blogs don't have content in the BlogPost object - it's in the component
+      expect(blog.content).toBe("");
     });
 
     // Verify that typescript blogs have componentPath
     typescriptBlogs.forEach((blog) => {
       expect(blog.componentPath).toBeDefined();
-      expect(blog.type).toBe("typescript");
+      expect(blog.componentPath).toMatch(/\.tsx$/);
+      expect(blog.type).toBe("react");
+      expect(blog.content).toBe("");
     });
   });
 
@@ -61,7 +71,12 @@ describe("blogLoader - Integration Test", () => {
 
   it("should parse frontmatter from real markdown files", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
-    const markdownBlogs = blogs.filter((b) => b.type === "markdown");
+    // After MDX migration, markdown blogs have componentPath ending in .md/.mdx
+    const markdownBlogs = blogs.filter(
+      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
+    );
+
+    expect(markdownBlogs.length).toBeGreaterThan(0);
 
     if (markdownBlogs.length > 0) {
       const firstBlog = markdownBlogs[0];

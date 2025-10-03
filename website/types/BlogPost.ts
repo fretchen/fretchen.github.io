@@ -5,7 +5,12 @@ export interface NFTMetadata {
   description: string;
 }
 
-export type PostType = "markdown" | "react" | "typescript";
+/**
+ * Type of blog post content
+ * - "markdown": Plain markdown content (legacy, rarely used)
+ * - "react": React component (MDX or TSX files)
+ */
+export type PostType = "markdown" | "react";
 
 export interface BlogPost {
   title: string;

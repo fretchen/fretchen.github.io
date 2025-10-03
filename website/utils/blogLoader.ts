@@ -126,76 +126,77 @@ export async function loadBlogs(
 
   const blogs: BlogPost[] = [];
 
-  // Process markdown files
-  for (const [path] of Object.entries(relevantMarkdownModules)) {
+  // Process all blog files (MDX and TSX) - they're all React components now
+  const allModules = {
+    ...relevantMarkdownModules,
+    ...relevantTsxModules,
+  };
+
+  for (const [path, moduleLoader] of Object.entries(allModules)) {
     try {
       const cleanPath = path.replace(/\?.*$/, "");
+      const isTsx = path.endsWith(".tsx");
+      const isMdx = path.endsWith(".md") || path.endsWith(".mdx");
 
-      // Load the MDX module - it will be a React component with exported frontmatter
-      const module = await relevantMarkdownModules[path]();
+      // Load the module
+      const module = await moduleLoader();
 
-      // MDX modules export: default (component), frontmatter (metadata)
-      if (module && typeof module === "object") {
+      if (!module || typeof module !== "object") {
+        console.error(`[BlogLoader] Invalid module structure for ${cleanPath}`);
+        continue;
+      }
+
+      // Extract metadata (different sources for MDX vs TSX)
+      let title: string | undefined;
+      let publishingDate: string | undefined;
+      let order: number | undefined;
+      let tokenID: number | undefined;
+
+      if (isMdx) {
+        // MDX files export frontmatter
         const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
 
-        if (frontmatter && typeof frontmatter === "object") {
-          // Extract metadata from frontmatter
-          const title = frontmatter.title as string | undefined;
-          const publishingDate = frontmatter.publishing_date as string | undefined;
-          const order = frontmatter.order as number | undefined;
-          const tokenID = frontmatter.tokenID as number | undefined;
-
-          // Create blog post with MDX component
-          const blog: BlogPost = {
-            title:
-              title ||
-              cleanPath
-                .split("/")
-                .pop()
-                ?.replace(/\.(md|mdx)$/, "") ||
-              "",
-            content: "", // MDX content is rendered as component
-            type: "react", // MDX files are now React components
-            publishing_date: publishingDate,
-            order: order,
-            tokenID: tokenID,
-            componentPath: path, // Store path for rendering
-          };
-
-          blogs.push(blog);
-        } else {
+        if (!frontmatter || typeof frontmatter !== "object") {
           console.warn(`[BlogLoader] No frontmatter found in ${cleanPath}, skipping`);
+          continue;
         }
-      } else {
-        console.error(`[BlogLoader] Invalid module structure for ${cleanPath}`);
+
+        title = frontmatter.title as string | undefined;
+        publishingDate = frontmatter.publishing_date as string | undefined;
+        order = frontmatter.order as number | undefined;
+        tokenID = frontmatter.tokenID as number | undefined;
+      } else if (isTsx) {
+        // TSX files export meta object
+        const meta = (module as { meta?: { title?: string; publishing_date?: string; tokenID?: number } })?.meta || {};
+
+        title = meta.title;
+        publishingDate = meta.publishing_date;
+        tokenID = meta.tokenID;
       }
-    } catch (error) {
-      console.warn(`[BlogLoader] Failed to process ${path}:`, error);
-    }
-  }
 
-  // Process TypeScript blog files
-  for (const [path, module] of Object.entries(relevantTsxModules)) {
-    try {
-      // Import the module to get meta export
-      const mod = await module();
-      const meta = (mod as { meta?: { title?: string; publishing_date?: string; tokenID?: number } })?.meta || {};
+      // Generate fallback title from filename if needed
+      const fileName = cleanPath.split("/").pop() || "";
+      const fallbackTitle = isTsx
+        ? fileName
+            .replace(".tsx", "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase())
+        : fileName.replace(/\.(md|mdx)$/, "");
 
-      const fileName = path.split("/").pop()?.replace(".tsx", "") || "";
-
-      // Create blog entry for TypeScript files
+      // Create blog post object
       const blog: BlogPost = {
-        title: meta.title || fileName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-        publishing_date: meta.publishing_date,
-        tokenID: meta.tokenID,
-        content: "", // TypeScript blogs have their own rendering
-        type: "react", // Changed from "typescript" to "react" to use ReactPostRenderer
+        title: title || fallbackTitle,
+        content: "", // Content is rendered as React component
+        type: "react",
+        publishing_date: publishingDate,
+        order: order,
+        tokenID: tokenID,
         componentPath: path,
       };
 
       blogs.push(blog);
     } catch (error) {
-      console.warn(`[BlogLoader] Failed to process TypeScript blog ${path}:`, error);
+      console.warn(`[BlogLoader] Failed to process ${path}:`, error);
     }
   }
 

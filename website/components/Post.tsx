@@ -22,27 +22,13 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   React.useEffect(() => {
     const loadComponent = async () => {
       try {
-        console.log("ReactPostRenderer: Starting to load component from", componentPath);
-
-        // Determine if it's a markdown file or TypeScript file
-        const isMDX = componentPath.endsWith(".md") || componentPath.endsWith(".mdx");
-        const isTSX = componentPath.endsWith(".tsx");
-
-        if (!isMDX && !isTSX) {
-          throw new Error("Unsupported file type: " + componentPath);
-        }
-
-        // Extract directory and filename
+        // Extract directory and filename from componentPath
         const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
         const directory = pathParts.slice(0, -1).join("/");
         const filename = pathParts[pathParts.length - 1];
-        const componentName = filename.replace(/\.(tsx|mdx?|md)$/, "");
-
-        console.log("ReactPostRenderer: Directory:", directory, "Filename:", filename, "Name:", componentName);
 
         // Use dynamic import to load the component
-        // We use static glob patterns that Vite can analyze at build time
-        console.log("ReactPostRenderer: Attempting dynamic import...");
+        // Both MDX and TSX files are React components with a default export
         let module;
 
         if (directory === "blog") {
@@ -81,16 +67,13 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
           throw new Error(`Unsupported directory: ${directory}`);
         }
 
-        console.log("ReactPostRenderer: Module loaded:", module);
-
-        // The component should be the default export
+        // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;
 
         if (!LoadedComponent) {
           throw new Error(`No default export found in ${filename}`);
         }
 
-        console.log("ReactPostRenderer: Component successfully loaded!");
         setComponent(() => LoadedComponent);
         setLoading(false);
       } catch (err) {
@@ -100,7 +83,6 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
       }
     };
 
-    console.log("ReactPostRenderer: useEffect triggered with componentPath:", componentPath);
     loadComponent();
   }, [componentPath]);
 

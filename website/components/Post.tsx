@@ -10,6 +10,7 @@ import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
+import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 
 import Giscus from "@giscus/react";
 
@@ -22,32 +23,28 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   React.useEffect(() => {
     const loadComponent = async () => {
       try {
-        console.log("ReactPostRenderer: Starting to load component from", componentPath);
+        // Extract directory and filename from componentPath
+        const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
+        const directory = pathParts.slice(0, -1).join("/");
+        const filename = pathParts[pathParts.length - 1];
 
-        // Extract the component name from the path
-        const componentName = componentPath.split("/").pop()?.replace(".tsx", "");
-
-        if (!componentName) {
-          throw new Error("Could not extract component name from path");
+        // Validate directory is supported
+        if (!isSupportedDirectory(directory)) {
+          throw new Error(
+            `Unsupported directory: ${directory}. Supported directories: blog, quantum/amo, quantum/basics, quantum/hardware, quantum/qml`,
+          );
         }
 
-        console.log("ReactPostRenderer: Component name extracted:", componentName);
+        // Use centralized glob registry - automatically handles production vs development
+        const module = await loadModuleFromDirectory(directory, filename, import.meta.env.PROD);
 
-        // Use dynamic import to load the actual TSX component
-        // This will work with Vite's dynamic import system
-        console.log("ReactPostRenderer: Attempting dynamic import...");
-        const module = await import(`../blog/${componentName}.tsx`);
-
-        console.log("ReactPostRenderer: Module loaded:", module);
-
-        // The component should be the default export
+        // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;
 
         if (!LoadedComponent) {
-          throw new Error(`No default export found in ${componentName}.tsx`);
+          throw new Error(`No default export found in ${filename}`);
         }
 
-        console.log("ReactPostRenderer: Component successfully loaded!");
         setComponent(() => LoadedComponent);
         setLoading(false);
       } catch (err) {
@@ -57,7 +54,6 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
       }
     };
 
-    console.log("ReactPostRenderer: useEffect triggered with componentPath:", componentPath);
     loadComponent();
   }, [componentPath]);
 
@@ -134,6 +130,8 @@ export function Post({
   type = "markdown",
   componentPath,
 }: PostProps) {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
   console.log("Post component rendering with props:", { title, tokenID, publishing_date, type });
 
   if (tokenID) {
@@ -141,6 +139,25 @@ export function Post({
   } else {
     console.log("No tokenID provided, skipping NFTHeroCard");
   }
+
+  // Auto-render LaTeX in the browser after content is loaded
+  React.useEffect(() => {
+    if (contentRef.current && type !== "react") {
+      // Dynamically import renderMathInElement only in the browser
+      import("katex/dist/contrib/auto-render").then((module) => {
+        const renderMathInElement = module.default;
+        if (contentRef.current) {
+          renderMathInElement(contentRef.current, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "$", right: "$", display: false },
+            ],
+            throwOnError: false,
+          });
+        }
+      });
+    }
+  }, [content, type]);
 
   return (
     <>
@@ -151,7 +168,7 @@ export function Post({
       {type === "react" && componentPath ? (
         <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
       ) : (
-        <div className={post.contentContainer}>
+        <div className={post.contentContainer} ref={contentRef}>
           {tokenID && <NFTFloatImage tokenId={tokenID} />}
           <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
             {content}

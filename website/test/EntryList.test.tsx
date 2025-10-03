@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import EntryList from "../components/EntryList";
 import { BlogEntry } from "../types/components";
+import "@testing-library/jest-dom";
 
 // Mock der Link-Komponente
 vi.mock("../components/Link", () => ({

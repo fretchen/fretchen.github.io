@@ -41,15 +41,44 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
         console.log("ReactPostRenderer: Directory:", directory, "Filename:", filename, "Name:", componentName);
 
         // Use dynamic import to load the component
+        // We use static glob patterns that Vite can analyze at build time
         console.log("ReactPostRenderer: Attempting dynamic import...");
         let module;
         
-        if (isMDX) {
-          // Import markdown file (now compiled as MDX component)
-          module = await import(`../${directory}/${filename}`);
+        if (directory === "blog") {
+          // Load from blog directory using Vite's glob import
+          const modules = import.meta.glob<{ default: React.ComponentType }>([
+            "../blog/*.tsx",
+            "../blog/*.md",
+            "../blog/*.mdx",
+          ]);
+          
+          const modulePath = `../${directory}/${filename}`;
+          const loader = modules[modulePath];
+          
+          if (!loader) {
+            throw new Error(`Module not found in glob: ${modulePath}`);
+          }
+          
+          module = await loader();
+        } else if (directory.startsWith("quantum/")) {
+          // Load from quantum directories
+          const modules = import.meta.glob<{ default: React.ComponentType }>([
+            "../quantum/**/*.tsx",
+            "../quantum/**/*.md",
+            "../quantum/**/*.mdx",
+          ]);
+          
+          const modulePath = `../${directory}/${filename}`;
+          const loader = modules[modulePath];
+          
+          if (!loader) {
+            throw new Error(`Module not found in glob: ${modulePath}`);
+          }
+          
+          module = await loader();
         } else {
-          // Import TypeScript component
-          module = await import(`../blog/${componentName}.tsx`);
+          throw new Error(`Unsupported directory: ${directory}`);
         }
 
         console.log("ReactPostRenderer: Module loaded:", module);

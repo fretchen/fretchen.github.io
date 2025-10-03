@@ -24,8 +24,10 @@ describe("EntryList with Real Blog Data", () => {
       blogs.map((b) => b.title),
     );
 
-    // Filter to only markdown blogs for this test
-    const markdownBlogs = blogs.filter((b) => b.type === "markdown");
+    // After MDX migration, markdown blogs have type "react" with .md/.mdx componentPath
+    const markdownBlogs = blogs.filter(
+      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
+    );
 
     expect(markdownBlogs.length).toBeGreaterThan(0);
 
@@ -74,7 +76,10 @@ describe("EntryList with Real Blog Data", () => {
   it("should render both markdown and typescript blogs", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    const markdownBlogs = blogs.filter((b) => b.type === "markdown");
+    // After MDX migration, markdown blogs have type "react" with .md/.mdx componentPath
+    const markdownBlogs = blogs.filter(
+      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
+    );
     const typescriptBlogs = blogs.filter((b) => b.type === "typescript");
 
     console.log(`[EntryList Test] Markdown blogs: ${markdownBlogs.length}`);
@@ -128,7 +133,8 @@ describe("EntryList with Real Blog Data", () => {
 
   it("should display full multi-word titles, not just first word", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
-    const markdownBlogs = blogs.filter((b) => b.type === "markdown");
+    // Markdown blogs now have type "react" because they're MDX components
+    const markdownBlogs = blogs.filter((b) => b.type === "react" && b.componentPath?.match(/\.(md|mdx)$/));
 
     // Find blogs that should have multi-word titles
     const multiWordBlogs = markdownBlogs.filter((b) => {

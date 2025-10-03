@@ -10,6 +10,7 @@ import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
+import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 
 import Giscus from "@giscus/react";
 
@@ -27,134 +28,15 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
         const directory = pathParts.slice(0, -1).join("/");
         const filename = pathParts[pathParts.length - 1];
 
-        // Use dynamic import to load the component
-        // Both MDX and TSX files are React components with a default export
-        let module;
-
-        if (directory === "blog") {
-          // Load from blog directory using Vite's glob import
-          // Environment-based loading: eager in production, lazy in development
-          if (import.meta.env.PROD) {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../blog/*.tsx", "../blog/*.md", "../blog/*.mdx"],
-              { eager: true },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            module = modules[modulePath];
-            if (!module) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-          } else {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../blog/*.tsx", "../blog/*.md", "../blog/*.mdx"],
-              { eager: false },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            const loader = modules[modulePath];
-            if (!loader) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-            module = await loader();
-          }
-        } else if (directory === "quantum/amo") {
-          // Load from quantum/amo directory - specific pattern to avoid memory issues
-          if (import.meta.env.PROD) {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/amo/*.tsx", "../quantum/amo/*.md", "../quantum/amo/*.mdx"],
-              { eager: true },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            module = modules[modulePath];
-            if (!module) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-          } else {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/amo/*.tsx", "../quantum/amo/*.md", "../quantum/amo/*.mdx"],
-              { eager: false },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            const loader = modules[modulePath];
-            if (!loader) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-            module = await loader();
-          }
-        } else if (directory === "quantum/basics") {
-          // Load from quantum/basics directory
-          if (import.meta.env.PROD) {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/basics/*.tsx", "../quantum/basics/*.md", "../quantum/basics/*.mdx"],
-              { eager: true },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            module = modules[modulePath];
-            if (!module) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-          } else {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/basics/*.tsx", "../quantum/basics/*.md", "../quantum/basics/*.mdx"],
-              { eager: false },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            const loader = modules[modulePath];
-            if (!loader) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-            module = await loader();
-          }
-        } else if (directory === "quantum/hardware") {
-          // Load from quantum/hardware directory
-          if (import.meta.env.PROD) {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/hardware/*.tsx", "../quantum/hardware/*.md", "../quantum/hardware/*.mdx"],
-              { eager: true },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            module = modules[modulePath];
-            if (!module) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-          } else {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/hardware/*.tsx", "../quantum/hardware/*.md", "../quantum/hardware/*.mdx"],
-              { eager: false },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            const loader = modules[modulePath];
-            if (!loader) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-            module = await loader();
-          }
-        } else if (directory === "quantum/qml") {
-          // Load from quantum/qml directory
-          if (import.meta.env.PROD) {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/qml/*.tsx", "../quantum/qml/*.md", "../quantum/qml/*.mdx"],
-              { eager: true },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            module = modules[modulePath];
-            if (!module) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-          } else {
-            const modules = import.meta.glob<{ default: React.ComponentType }>(
-              ["../quantum/qml/*.tsx", "../quantum/qml/*.md", "../quantum/qml/*.mdx"],
-              { eager: false },
-            );
-            const modulePath = `../${directory}/${filename}`;
-            const loader = modules[modulePath];
-            if (!loader) {
-              throw new Error(`Module not found in glob: ${modulePath}`);
-            }
-            module = await loader();
-          }
-        } else {
-          throw new Error(`Unsupported directory: ${directory}`);
+        // Validate directory is supported
+        if (!isSupportedDirectory(directory)) {
+          throw new Error(
+            `Unsupported directory: ${directory}. Supported directories: blog, quantum/amo, quantum/basics, quantum/hardware, quantum/qml`,
+          );
         }
+
+        // Use centralized glob registry - automatically handles production vs development
+        const module = await loadModuleFromDirectory(directory, filename, import.meta.env.PROD);
 
         // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;

@@ -4,6 +4,7 @@
  */
 
 import { BlogPost } from "../types/BlogPost";
+import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
 // Global cache for build-time to prevent multiple loads during pre-rendering
 const buildTimeCache = new Map<string, BlogPost[]>();
@@ -81,49 +82,29 @@ export async function loadBlogs(
     return buildTimeCache.get(cacheKey)!;
   }
 
-  // MVP: Only support blog directory to avoid memory issues
-  if (normalizedDir !== "blog") {
-    console.warn(`[BlogLoader] Only "blog" directory is supported in MVP. Requested: ${normalizedDir}`);
+  // Check if directory is supported by glob registry
+  const registry = GLOB_REGISTRY[normalizedDir as SupportedDirectory];
+  if (!registry) {
+    console.warn(
+      `[BlogLoader] Directory "${normalizedDir}" not found in glob registry. Supported: ${Object.keys(GLOB_REGISTRY).join(", ")}`,
+    );
     return [];
   }
 
-  // Environment-based loading: eager in production, lazy in development
-  let allMarkdownModules: Record<string, () => Promise<unknown>>;
-  let allTsxModules: Record<string, () => Promise<unknown>>;
+  // Use centralized glob registry - automatically handles production vs development
+  const modules = import.meta.env.PROD ? registry.eager : registry.lazy;
 
-  if (import.meta.env.PROD) {
-    // Production: eager loading to prevent memory issues during build
-    const markdownEager = import.meta.glob("../blog/*.{md,mdx}", { eager: true }) as Record<string, unknown>;
-    const tsxEager = import.meta.glob("../blog/*.tsx", { eager: true }) as Record<string, unknown>;
-
-    // Convert eager imports to loader functions for consistent interface
-    allMarkdownModules = Object.fromEntries(
-      Object.entries(markdownEager).map(([path, module]) => [path, async () => module]),
-    );
-    allTsxModules = Object.fromEntries(Object.entries(tsxEager).map(([path, module]) => [path, async () => module]));
-  } else {
-    // Development: lazy loading for HMR support
-    allMarkdownModules = import.meta.glob("../blog/*.{md,mdx}", { eager: false });
-    allTsxModules = import.meta.glob("../blog/*.tsx", { eager: false });
-  }
-
-  // No filtering needed since we only load blog files
+  // Process all files (MDX and TSX) - they're all React components now
   const blogs: BlogPost[] = [];
 
-  // Process all blog files (MDX and TSX) - they're all React components now
-  const allModules = {
-    ...allMarkdownModules,
-    ...allTsxModules,
-  };
-
-  for (const [path, moduleLoader] of Object.entries(allModules)) {
+  for (const [path, moduleOrLoader] of Object.entries(modules)) {
     try {
       const cleanPath = path.replace(/\?.*$/, "");
       const isTsx = path.endsWith(".tsx");
       const isMdx = path.endsWith(".md") || path.endsWith(".mdx");
 
-      // Load the module
-      const module = await moduleLoader();
+      // Load the module (in production it's already loaded, in dev we need to await)
+      const module = import.meta.env.PROD ? moduleOrLoader : await moduleOrLoader();
 
       if (!module || typeof module !== "object") {
         console.error(`[BlogLoader] Invalid module structure for ${cleanPath}`);

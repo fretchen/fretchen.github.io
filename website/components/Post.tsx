@@ -1,9 +1,4 @@
 import React from "react";
-import Markdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
@@ -148,41 +143,14 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   );
 };
 
-export function Post({
-  title,
-  content,
-  publishing_date,
-  prevPost,
-  nextPost,
-  basePath = "",
-  tokenID,
-  type = "markdown",
-  componentPath,
-}: PostProps) {
-  console.log("Post component rendering with props:", { title, tokenID, publishing_date, type });
-
-  if (tokenID) {
-    console.log("Rendering NFTHeroCard with tokenID:", tokenID);
-  } else {
-    console.log("No tokenID provided, skipping NFTHeroCard");
-  }
-
+export function Post({ title, publishing_date, prevPost, nextPost, basePath = "", tokenID, componentPath }: PostProps) {
   return (
     <>
       <h1 className={titleBar.title}>{title}</h1>
       <MetadataLine publishingDate={publishing_date} showSupport={true} />
 
-      {/* Render based on post type */}
-      {type === "react" && componentPath ? (
-        <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
-      ) : (
-        <div className={post.contentContainer}>
-          {tokenID && <NFTFloatImage tokenId={tokenID} />}
-          <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-            {content}
-          </Markdown>
-        </div>
-      )}
+      {/* Render React component (MDX or TSX) */}
+      {componentPath && <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />}
 
       {/* Navigation zwischen Posts, nur angezeigt wenn vorhanden */}
       {(prevPost || nextPost) && (

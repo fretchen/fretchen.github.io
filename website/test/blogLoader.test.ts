@@ -98,8 +98,9 @@ This is the blog content.`;
   it("should create correct BlogPost structure", () => {
     const mockBlogPost: BlogPost = {
       title: "Test Post",
-      content: "# Test\n\nContent here",
-      type: "markdown",
+      content: "",
+      type: "react",
+      componentPath: "../blog/test.mdx",
       publishing_date: "2024-12-02",
       tokenID: 123,
     };
@@ -107,7 +108,8 @@ This is the blog content.`;
     expect(mockBlogPost).toHaveProperty("title");
     expect(mockBlogPost).toHaveProperty("content");
     expect(mockBlogPost).toHaveProperty("type");
-    expect(mockBlogPost.type).toBe("markdown");
+    expect(mockBlogPost.type).toBe("react");
+    expect(mockBlogPost.componentPath).toBeDefined();
     expect(mockBlogPost.publishing_date).toBe("2024-12-02");
     expect(mockBlogPost.tokenID).toBe(123);
   });

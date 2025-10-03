@@ -87,33 +87,14 @@ describe("Post Component Integration Tests", () => {
     });
   });
 
-  describe("Plain Markdown Rendering", () => {
-    it("should render plain markdown content (legacy type)", () => {
-      // Arrange: Plain markdown content
-      const postProps = {
-        title: "Plain Markdown Post",
-        content: "This is **bold** and this is *italic*.",
-        type: "markdown" as const,
-        publishing_date: "2024-01-01",
-      };
-
-      // Act
-      render(<Post {...postProps} />);
-
-      // Assert: Title and content
-      expect(screen.getByText("Plain Markdown Post")).toBeInTheDocument();
-      expect(screen.getByText(/This is/)).toBeInTheDocument();
-      expect(screen.getByText("bold")).toBeInTheDocument();
-    });
-  });
-
   describe("Navigation Links", () => {
     it("should render previous and next post links", () => {
       // Arrange
       const postProps = {
         title: "Current Post",
-        content: "Some content",
-        type: "markdown" as const,
+        content: "",
+        type: "react" as const,
+        componentPath: "../blog/test.mdx",
         prevPost: { title: "Previous Post", id: 0 },
         nextPost: { title: "Next Post", id: 2 },
       };
@@ -132,8 +113,9 @@ describe("Post Component Integration Tests", () => {
       // Arrange: No prev/next posts
       const postProps = {
         title: "Standalone Post",
-        content: "Content",
-        type: "markdown" as const,
+        content: "",
+        type: "react" as const,
+        componentPath: "../blog/test.mdx",
       };
 
       // Act
@@ -151,8 +133,9 @@ describe("Post Component Integration Tests", () => {
       // Arrange
       const postProps = {
         title: "Test Post",
-        content: "Content",
-        type: "markdown" as const,
+        content: "",
+        type: "react" as const,
+        componentPath: "../blog/test.mdx",
         publishing_date: "2024-01-01",
       };
 

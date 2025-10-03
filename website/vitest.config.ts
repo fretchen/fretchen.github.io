@@ -5,6 +5,9 @@ import mdx from "@mdx-js/rollup";
 import { resolve } from "path";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
 
 export default defineConfig({
   plugins: [
@@ -13,6 +16,11 @@ export default defineConfig({
       remarkPlugins: [
         remarkFrontmatter,
         [remarkMdxFrontmatter, { name: "frontmatter" }],
+        remarkMath,
+        remarkGfm,
+      ],
+      rehypePlugins: [
+        rehypeKatex,
       ],
     }),
     react(),

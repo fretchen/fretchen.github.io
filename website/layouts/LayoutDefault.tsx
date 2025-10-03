@@ -1,5 +1,6 @@
 import "./style.css";
 import "./panda.css";
+import "katex/dist/katex.min.css";
 import React, { useEffect, useRef } from "react";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";

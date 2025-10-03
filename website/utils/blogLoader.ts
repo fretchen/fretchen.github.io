@@ -5,7 +5,18 @@
 
 import { BlogPost } from "../types/BlogPost";
 
-// Sort blogs according to criteria
+/**
+ * Sorts an array of blog posts according to specified criteria.
+ *
+ * @param blogs - Array of blog posts to sort
+ * @param sortBy - Sort criteria: "order" for manual ordering (e.g., tutorials) or "publishing_date" for chronological order
+ * @returns Sorted array of blog posts (oldest first for publishing_date to maintain stable URLs)
+ *
+ * @remarks
+ * - When sorting by "order", posts without order values remain in their original positions
+ * - When sorting by "publishing_date", older posts appear first to ensure URL stability
+ * - Posts without the specified sort field remain in their original order
+ */
 function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "publishing_date"): BlogPost[] {
   const sortedBlogs = [...blogs];
 
@@ -29,13 +40,35 @@ function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "pub
   return sortedBlogs;
 }
 
-// Runtime blog loader using Vite's import.meta.glob
+/**
+ * Dynamically loads blog posts from a specified directory with hot reload support.
+ *
+ * @param directory - Target directory path (e.g., "blog", "quantum/basics", "quantum/amo")
+ * @param sortBy - Sort criteria: "order" for manual ordering or "publishing_date" for chronological
+ * @returns Promise resolving to array of loaded and sorted blog posts
+ *
+ * @remarks
+ * This function replaces the old static JSON generation system with dynamic loading:
+ * - Uses Vite's `import.meta.glob` for automatic dependency tracking and HMR
+ * - Processes both Markdown/MDX files (.md, .mdx) and TypeScript files (.tsx)
+ * - Extracts frontmatter metadata automatically via remark plugins
+ * - Supports hot reload: changes to blog files trigger instant updates without page refresh
+ *
+ * @example
+ * ```typescript
+ * // Load blog posts sorted by publishing date
+ * const blogs = await loadBlogs("blog", "publishing_date");
+ *
+ * // Load tutorial posts sorted by manual order
+ * const tutorials = await loadBlogs("quantum/basics", "order");
+ * ```
+ *
+ * @throws Will log warnings for files that fail to load but continues processing other files
+ */
 export async function loadBlogs(
   directory: string,
   sortBy: "order" | "publishing_date" = "publishing_date",
 ): Promise<BlogPost[]> {
-  console.log(`[BlogLoader] Loading blogs from directory: ${directory}`);
-
   // Vite's import.meta.glob requires static patterns, so we define all possible patterns
   // Load markdown files - they will be processed by MDX plugin
   const allMarkdownModules = import.meta.glob(
@@ -51,8 +84,6 @@ export async function loadBlogs(
     },
   );
 
-  console.log(`[BlogLoader] All markdown module paths:`, Object.keys(allMarkdownModules));
-
   const allTsxModules = import.meta.glob(
     [
       "../blog/*.tsx",
@@ -65,9 +96,6 @@ export async function loadBlogs(
       eager: false,
     },
   );
-
-  console.log(`[BlogLoader] Total markdown files found:`, Object.keys(allMarkdownModules).length);
-  console.log(`[BlogLoader] Total TypeScript files found:`, Object.keys(allTsxModules).length);
 
   // Filter modules by target directory
   const normalizedDir = directory.replace(/^\//, "").replace(/\/$/, "");
@@ -96,32 +124,19 @@ export async function loadBlogs(
     }
   }
 
-  console.log(
-    `[BlogLoader] Filtered to ${Object.keys(relevantMarkdownModules).length} markdown files for directory: ${normalizedDir}`,
-  );
-  console.log(
-    `[BlogLoader] Filtered to ${Object.keys(relevantTsxModules).length} TypeScript files for directory: ${normalizedDir}`,
-  );
-  console.log(`[BlogLoader] Relevant markdown files:`, Object.keys(relevantMarkdownModules));
-  console.log(`[BlogLoader] Relevant TypeScript files:`, Object.keys(relevantTsxModules));
-
   const blogs: BlogPost[] = [];
 
   // Process markdown files
   for (const [path] of Object.entries(relevantMarkdownModules)) {
     try {
       const cleanPath = path.replace(/\?.*$/, "");
-      console.log(`[BlogLoader] Processing markdown file: ${cleanPath}`);
 
       // Load the MDX module - it will be a React component with exported frontmatter
       const module = await relevantMarkdownModules[path]();
-      console.log(`[BlogLoader] Module type:`, typeof module);
-      console.log(`[BlogLoader] Module keys:`, module ? Object.keys(module) : "null");
 
       // MDX modules export: default (component), frontmatter (metadata)
       if (module && typeof module === "object") {
         const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
-        console.log(`[BlogLoader] Frontmatter:`, frontmatter);
 
         if (frontmatter && typeof frontmatter === "object") {
           // Extract metadata from frontmatter
@@ -148,7 +163,6 @@ export async function loadBlogs(
           };
 
           blogs.push(blog);
-          console.log(`[BlogLoader] Successfully loaded MDX: ${cleanPath} - Title: "${blog.title}"`);
         } else {
           console.warn(`[BlogLoader] No frontmatter found in ${cleanPath}, skipping`);
         }
@@ -163,8 +177,6 @@ export async function loadBlogs(
   // Process TypeScript blog files
   for (const [path, module] of Object.entries(relevantTsxModules)) {
     try {
-      console.log(`[BlogLoader] Processing TypeScript file: ${path}`);
-
       // Import the module to get meta export
       const mod = await module();
       const meta = (mod as { meta?: { title?: string; publishing_date?: string; tokenID?: number } })?.meta || {};
@@ -182,14 +194,11 @@ export async function loadBlogs(
       };
 
       blogs.push(blog);
-      console.log(`[BlogLoader] Successfully loaded TypeScript blog: ${path} - Title: "${blog.title}"`);
     } catch (error) {
       console.warn(`[BlogLoader] Failed to process TypeScript blog ${path}:`, error);
     }
   }
 
   const sortedBlogs = sortBlogs(blogs, sortBy);
-  console.log(`[BlogLoader] Loaded ${sortedBlogs.length} blogs from ${directory}`);
-
   return sortedBlogs;
 }

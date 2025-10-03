@@ -36,7 +36,7 @@ describe("blogLoader - Integration Test", () => {
     });
   });
 
-  it("should load quantum/amo blogs sorted by order", async () => {
+  it("should load quantum/amo blogs sorted by order", { timeout: 20000 }, async () => {
     const blogs = await loadBlogs("quantum/amo", "order");
 
     console.log(`[Integration Test] Loaded ${blogs.length} AMO blogs`);

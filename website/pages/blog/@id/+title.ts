@@ -1,9 +1,7 @@
-import blogs from "../../../blog/blogs.json";
-
 import type { PageContext } from "vike/types";
 
 export function title(pageContext: PageContext) {
-  const id = Number(pageContext.routeParams.id);
-  const blog = blogs[id];
-  return blog.title;
+  // Use blog data from pageContext.data (loaded via +data.ts)
+  const blog = pageContext.data.blog;
+  return blog?.title || "Blog Post";
 }

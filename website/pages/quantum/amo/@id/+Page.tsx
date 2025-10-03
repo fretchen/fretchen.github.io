@@ -1,5 +1,5 @@
 import * as React from "react";
-import blogs from "../../../../quantum/amo/blogs.json";
+import { useBlogData } from "../../../../hooks/useBlogData";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../../components/Post";
 import { pageContainer } from "../../../../layouts/styles";
@@ -7,9 +7,30 @@ import { pageContainer } from "../../../../layouts/styles";
 const App: React.FC = function () {
   const pageContext = usePageContext();
   const id = Number(pageContext.routeParams.id);
+  const { blogs, loading, error } = useBlogData("quantum/amo", "order");
 
   if (isNaN(id)) {
     throw new Error("Invalid blog post ID");
+  }
+
+  if (loading) {
+    return (
+      <div className={pageContainer}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={pageContainer}>
+        <p>Error loading blog post: {error}</p>
+      </div>
+    );
+  }
+
+  if (!blogs[id]) {
+    throw new Error(`Blog post with ID ${id} not found`);
   }
 
   const blog = blogs[id];

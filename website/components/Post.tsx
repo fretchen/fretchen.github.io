@@ -24,19 +24,33 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
       try {
         console.log("ReactPostRenderer: Starting to load component from", componentPath);
 
-        // Extract the component name from the path
-        const componentName = componentPath.split("/").pop()?.replace(".tsx", "");
+        // Determine if it's a markdown file or TypeScript file
+        const isMDX = componentPath.endsWith(".md") || componentPath.endsWith(".mdx");
+        const isTSX = componentPath.endsWith(".tsx");
 
-        if (!componentName) {
-          throw new Error("Could not extract component name from path");
+        if (!isMDX && !isTSX) {
+          throw new Error("Unsupported file type: " + componentPath);
         }
 
-        console.log("ReactPostRenderer: Component name extracted:", componentName);
+        // Extract directory and filename
+        const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
+        const directory = pathParts.slice(0, -1).join("/");
+        const filename = pathParts[pathParts.length - 1];
+        const componentName = filename.replace(/\.(tsx|mdx?|md)$/, "");
 
-        // Use dynamic import to load the actual TSX component
-        // This will work with Vite's dynamic import system
+        console.log("ReactPostRenderer: Directory:", directory, "Filename:", filename, "Name:", componentName);
+
+        // Use dynamic import to load the component
         console.log("ReactPostRenderer: Attempting dynamic import...");
-        const module = await import(`../blog/${componentName}.tsx`);
+        let module;
+        
+        if (isMDX) {
+          // Import markdown file (now compiled as MDX component)
+          module = await import(`../${directory}/${filename}`);
+        } else {
+          // Import TypeScript component
+          module = await import(`../blog/${componentName}.tsx`);
+        }
 
         console.log("ReactPostRenderer: Module loaded:", module);
 
@@ -44,7 +58,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
         const LoadedComponent = module.default;
 
         if (!LoadedComponent) {
-          throw new Error(`No default export found in ${componentName}.tsx`);
+          throw new Error(`No default export found in ${filename}`);
         }
 
         console.log("ReactPostRenderer: Component successfully loaded!");

@@ -1,12 +1,32 @@
 import * as React from "react";
 
-// Direkte Imports der benötigten Komponenten und Daten
+// Dynamic blog loading with hot reload support
 import EntryList from "../../../components/EntryList";
-import blogs from "../../../quantum/qml/blogs.json";
+import { useBlogData } from "../../../hooks/useBlogData";
 import { titleBar } from "../../../layouts/styles";
 import { css } from "../../../styled-system/css";
 
 const App: React.FC = function () {
+  const { blogs, loading, error } = useBlogData("quantum/qml", "order");
+
+  if (loading) {
+    return (
+      <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+        <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>
+        <p>Loading tutorials...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+        <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>
+        <p>Error loading tutorials: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>

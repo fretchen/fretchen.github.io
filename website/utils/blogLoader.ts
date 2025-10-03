@@ -8,15 +8,15 @@ import { BlogPost } from "../types/BlogPost";
 // Utility function to extract frontmatter metadata
 function extractMeta(metaString: string, key: string): string | undefined {
   const patterns = [
-    new RegExp(`${key}:\\s*"([^"]*)"`, "i"),
-    new RegExp(`${key}:\\s*'([^']*)'`, "i"),
-    new RegExp(`${key}:\\s*([^\\s\\n]+)`, "i"),
+    new RegExp(`${key}:\\s*"([^"]*)"`, "i"), // Double quotes
+    new RegExp(`${key}:\\s*'([^']*)'`, "i"), // Single quotes
+    new RegExp(`${key}:\\s*(.+?)(?:\\n|$)`, "i"), // Rest of line until newline or end
   ];
-  
+
   for (const pattern of patterns) {
     const match = metaString.match(pattern);
     if (match) {
-      return match[1];
+      return match[1].trim();
     }
   }
   return undefined;
@@ -99,91 +99,132 @@ function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "pub
 }
 
 // Runtime blog loader using Vite's import.meta.glob
-export async function loadBlogsRuntime(
+export async function loadBlogs(
   directory: string,
   sortBy: "order" | "publishing_date" = "publishing_date",
 ): Promise<BlogPost[]> {
   console.log(`[BlogLoader] Loading blogs from directory: ${directory}`);
-  
+
   // Vite's import.meta.glob requires static patterns, so we define all possible patterns
-  const allMarkdownModules = import.meta.glob([
-    "../blog/*.{md,mdx}",
-    "../quantum/amo/*.{md,mdx}",
-    "../quantum/basics/*.{md,mdx}",
-    "../quantum/hardware/*.{md,mdx}",
-    "../quantum/qml/*.{md,mdx}",
-  ], {
-    as: "raw",
-    eager: false,
-  });
-  
-  const allTsxModules = import.meta.glob([
-    "../blog/*.tsx",
-    "../quantum/amo/*.tsx",
-    "../quantum/basics/*.tsx",
-    "../quantum/hardware/*.tsx",
-    "../quantum/qml/*.tsx",
-  ], {
-    eager: false,
-  });
-  
+  // Load markdown files - they will be processed by MDX plugin
+  const allMarkdownModules = import.meta.glob(
+    [
+      "../blog/*.{md,mdx}",
+      "../quantum/amo/*.{md,mdx}",
+      "../quantum/basics/*.{md,mdx}",
+      "../quantum/hardware/*.{md,mdx}",
+      "../quantum/qml/*.{md,mdx}",
+    ],
+    {
+      eager: false,
+    },
+  );
+
+  console.log(`[BlogLoader] All markdown module paths:`, Object.keys(allMarkdownModules));
+
+  const allTsxModules = import.meta.glob(
+    [
+      "../blog/*.tsx",
+      "../quantum/amo/*.tsx",
+      "../quantum/basics/*.tsx",
+      "../quantum/hardware/*.tsx",
+      "../quantum/qml/*.tsx",
+    ],
+    {
+      eager: false,
+    },
+  );
+
   console.log(`[BlogLoader] Total markdown files found:`, Object.keys(allMarkdownModules).length);
   console.log(`[BlogLoader] Total TypeScript files found:`, Object.keys(allTsxModules).length);
-  
+
   // Filter modules by target directory
   const normalizedDir = directory.replace(/^\//, "").replace(/\/$/, "");
-  
+
   // Filter markdown modules
-  const relevantMarkdownModules: Record<string, () => Promise<string>> = {};
+  const relevantMarkdownModules: Record<string, () => Promise<unknown>> = {};
   const relevantTsxModules: Record<string, () => Promise<unknown>> = {};
-  
+
   for (const [path, loader] of Object.entries(allMarkdownModules)) {
-    const isTargetFile = 
+    const isTargetFile =
       (normalizedDir === "blog" && path.includes("../blog/") && !path.includes("/quantum/")) ||
       path.includes(`../${normalizedDir}/`);
-      
+
     if (isTargetFile) {
       relevantMarkdownModules[path] = loader;
     }
   }
-  
+
   for (const [path, loader] of Object.entries(allTsxModules)) {
-    const isTargetFile = 
+    const isTargetFile =
       (normalizedDir === "blog" && path.includes("../blog/") && !path.includes("/quantum/")) ||
       path.includes(`../${normalizedDir}/`);
-      
+
     if (isTargetFile) {
       relevantTsxModules[path] = loader;
     }
   }
-  
+
   console.log(`[BlogLoader] Filtered to ${Object.keys(relevantMarkdownModules).length} markdown files for directory: ${normalizedDir}`);
   console.log(`[BlogLoader] Filtered to ${Object.keys(relevantTsxModules).length} TypeScript files for directory: ${normalizedDir}`);
   console.log(`[BlogLoader] Relevant markdown files:`, Object.keys(relevantMarkdownModules));
   console.log(`[BlogLoader] Relevant TypeScript files:`, Object.keys(relevantTsxModules));
-  
+
   const blogs: BlogPost[] = [];
-  
+
   // Process markdown files
-  for (const [path, loader] of Object.entries(relevantMarkdownModules)) {
+  for (const [path] of Object.entries(relevantMarkdownModules)) {
     try {
-      console.log(`[BlogLoader] Processing markdown file: ${path}`);
-      const content = (await loader()) as string;
-      console.log(`[BlogLoader] Loaded content length: ${content.length} characters`);
-      const blog = parseMarkdownWithFrontmatter(content, path);
-      blogs.push(blog);
-      console.log(`[BlogLoader] Successfully parsed markdown: ${path} - Title: "${blog.title}"`);
+      const cleanPath = path.replace(/\?.*$/, "");
+      console.log(`[BlogLoader] Processing markdown file: ${cleanPath}`);
+      
+      // Load the MDX module - it will be a React component with exported frontmatter
+      const module = await relevantMarkdownModules[path]();
+      console.log(`[BlogLoader] Module type:`, typeof module);
+      console.log(`[BlogLoader] Module keys:`, module ? Object.keys(module) : "null");
+      
+      // MDX modules export: default (component), frontmatter (metadata)
+      if (module && typeof module === "object") {
+        const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
+        console.log(`[BlogLoader] Frontmatter:`, frontmatter);
+        
+        if (frontmatter && typeof frontmatter === "object") {
+          // Extract metadata from frontmatter
+          const title = frontmatter.title as string | undefined;
+          const publishingDate = frontmatter.publishing_date as string | undefined;
+          const order = frontmatter.order as number | undefined;
+          const tokenID = frontmatter.tokenID as number | undefined;
+          
+          // Create blog post with MDX component
+          const blog: BlogPost = {
+            title: title || cleanPath.split("/").pop()?.replace(/\.(md|mdx)$/, "") || "",
+            content: "", // MDX content is rendered as component
+            type: "react", // MDX files are now React components
+            publishing_date: publishingDate,
+            order: order,
+            tokenID: tokenID,
+            componentPath: path, // Store path for rendering
+          };
+          
+          blogs.push(blog);
+          console.log(`[BlogLoader] Successfully loaded MDX: ${cleanPath} - Title: "${blog.title}"`);
+        } else {
+          console.warn(`[BlogLoader] No frontmatter found in ${cleanPath}, skipping`);
+        }
+      } else {
+        console.error(`[BlogLoader] Invalid module structure for ${cleanPath}`);
+      }
     } catch (error) {
-      console.warn(`[BlogLoader] Failed to load ${path}:`, error);
+      console.warn(`[BlogLoader] Failed to process ${path}:`, error);
     }
   }
-  
+
   // Process TypeScript blog files
   for (const [path] of Object.entries(relevantTsxModules)) {
     try {
       console.log(`[BlogLoader] Processing TypeScript file: ${path}`);
       const fileName = path.split("/").pop()?.replace(".tsx", "") || "";
-      
+
       // Create blog entry for TypeScript files
       const blog: BlogPost = {
         title: fileName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
@@ -191,43 +232,16 @@ export async function loadBlogsRuntime(
         type: "typescript",
         componentPath: path,
       };
-      
+
       blogs.push(blog);
       console.log(`[BlogLoader] Successfully loaded TypeScript blog: ${path} - Title: "${blog.title}"`);
     } catch (error) {
       console.warn(`[BlogLoader] Failed to process TypeScript blog ${path}:`, error);
     }
   }
-  
+
   const sortedBlogs = sortBlogs(blogs, sortBy);
   console.log(`[BlogLoader] Loaded ${sortedBlogs.length} blogs from ${directory}`);
-  
-  return sortedBlogs;
-}
 
-// Load blogs with fallback to static JSON (for production compatibility)
-export async function loadBlogsWithFallback(
-  directory: string,
-  sortBy: "order" | "publishing_date" = "publishing_date",
-): Promise<BlogPost[]> {
-  if (import.meta.env.DEV) {
-    // Development: Use dynamic loading
-    return loadBlogsRuntime(directory, sortBy);
-  } else {
-    // Production: Fallback to static JSON for now
-    try {
-      const jsonPath = directory.startsWith("/") ? directory.substring(1) : directory;
-      const response = await fetch(`/${jsonPath}/blogs.json`);
-      if (response.ok) {
-        const blogs = await response.json();
-        console.log(`[BlogLoader] Loaded ${blogs.length} blogs from static JSON: ${jsonPath}/blogs.json`);
-        return blogs;
-      }
-    } catch (error) {
-      console.warn(`[BlogLoader] Failed to load static JSON for ${directory}, falling back to dynamic loading:`, error);
-    }
-    
-    // Fallback to dynamic loading even in production
-    return loadBlogsRuntime(directory, sortBy);
-  }
+  return sortedBlogs;
 }

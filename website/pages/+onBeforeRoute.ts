@@ -8,8 +8,6 @@ import { extractLocale } from "../locales/extractLocale";
 export function onBeforeRoute(pageContext: PageContext) {
   const url = pageContext.urlParsed;
   const { locale, urlPathnameWithoutLocale } = extractLocale(url.pathname);
-  console.log("Locale detected:", locale);
-  console.log("URL without locale:", urlPathnameWithoutLocale);
   const urlLogical = modifyUrl(url.href, { pathname: urlPathnameWithoutLocale });
   return {
     pageContext: {

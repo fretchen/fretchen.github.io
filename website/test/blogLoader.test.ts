@@ -14,6 +14,7 @@ describe("blogLoader - Markdown file loading", () => {
     // Test frontmatter parsing function
     const content = `---
 title: "Test Blog Post"
+description: "This is a test blog post description"
 publishing_date: 2024-12-02
 tokenID: 123
 ---
@@ -26,6 +27,7 @@ This is a test blog post.`;
     const frontMatter = content.match(/---([\s\S]*?)---/);
     expect(frontMatter).toBeDefined();
     expect(frontMatter![1]).toContain("title:");
+    expect(frontMatter![1]).toContain("description:");
     expect(frontMatter![1]).toContain("publishing_date:");
     expect(frontMatter![1]).toContain("tokenID:");
   });
@@ -33,6 +35,7 @@ This is a test blog post.`;
   it("should extract metadata from frontmatter", () => {
     const metaString = `
 title: "Test Blog Post"
+description: "This is a test blog post description"
 publishing_date: 2024-12-02
 tokenID: 123
 order: 5
@@ -40,11 +43,13 @@ order: 5
 
     // Test different pattern formats
     const titlePattern = /title:\s*"([^"]*)"/i;
+    const descriptionPattern = /description:\s*"([^"]*)"/i;
     const datePattern = /publishing_date:\s*([^\s\n]+)/i;
     const tokenPattern = /tokenID:\s*([^\s\n]+)/i;
     const orderPattern = /order:\s*([^\s\n]+)/i;
 
     expect(metaString.match(titlePattern)?.[1]).toBe("Test Blog Post");
+    expect(metaString.match(descriptionPattern)?.[1]).toBe("This is a test blog post description");
     expect(metaString.match(datePattern)?.[1]).toBe("2024-12-02");
     expect(metaString.match(tokenPattern)?.[1]).toBe("123");
     expect(metaString.match(orderPattern)?.[1]).toBe("5");

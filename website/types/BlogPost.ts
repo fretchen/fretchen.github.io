@@ -16,4 +16,5 @@ export interface BlogPost {
   nftMetadata?: NFTMetadata;
   type?: PostType;
   componentPath?: string; // Pfad zur React-Komponente für interaktive Posts
+  description?: string; // SEO description for the blog post
 }

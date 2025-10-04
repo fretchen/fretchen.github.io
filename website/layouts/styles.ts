@@ -434,16 +434,28 @@ export const baseContentCard = {
     display: "flex",
     flexDirection: "column",
     minWidth: 0, // Verhindert Überläufe von Flex-Elementen
-    gap: "1", // Konsistente interne Abstände
+    gap: "1", // Konsistente interne Abstände (normal spacing)
     // Mobile: Interne Abstände für engeres Layout entfernen
     "@media (max-width: 480px)": {
       gap: "0.5",
     },
   }),
+  // Compact text container for when description is present
+  textCompact: css({
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    gap: "0", // No gap - tight spacing when description is present
+    // Mobile: Interne Abstände für engeres Layout entfernen
+    "@media (max-width: 480px)": {
+      gap: "0",
+    },
+  }),
   title: css({
     fontSize: "xl",
     fontWeight: "semibold",
-    margin: 0,
+    margin: "0", // Override browser default h3 margins
     lineHeight: "1.3",
     // Mobile: Größerer Titel
     "@media (max-width: 768px)": {
@@ -458,7 +470,7 @@ export const baseContentCard = {
     },
   }),
   description: css({
-    margin: "0.5 0 0 0",
+    marginTop: "xs", // Small top margin for spacing from title (5px)
     fontSize: "sm",
     color: "gray.600",
     lineHeight: "1.5",
@@ -466,7 +478,7 @@ export const baseContentCard = {
     "@media (max-width: 768px)": {
       fontSize: "xs",
       lineHeight: "1.5",
-      margin: "0.25 0 0 0",
+      marginTop: "xs",
       // Beschreibung auf Tablet abschneiden
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -500,18 +512,29 @@ export const baseContentCard = {
   }),
   // Zusätzliche Styles für Datum
   date: css({
-    margin: "0",
+    marginBottom: "md", // Normal spacing without description (20px)
     fontSize: "sm",
     color: "gray.600",
-    marginBottom: "0.5", // Reduzierte Abstände
     // Mobile: Kleiner und subtiler
     "@media (max-width: 768px)": {
       fontSize: "xs",
-      marginBottom: "0.25",
+      marginBottom: "sm",
     },
     "@media (max-width: 480px)": {
       fontSize: "2xs", // Sehr klein auf mobile
-      marginBottom: "0",
+      marginBottom: "xs",
+    },
+  }),
+  // Date style when description is present (substantially tighter spacing)
+  dateWithDescription: css({
+    fontSize: "sm",
+    color: "gray.600",
+    // Mobile: Kleiner und subtiler
+    "@media (max-width: 768px)": {
+      fontSize: "xs",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "2xs",
     },
   }),
 };
@@ -659,9 +682,11 @@ export const entryList = {
   entry: baseContentCard.container,
   entryContent: baseContentCard.content,
   entryText: baseContentCard.text,
+  entryTextCompact: baseContentCard.textCompact,
   entryTitle: baseContentCard.title,
   entryDescription: baseContentCard.description,
   entryDate: baseContentCard.date,
+  entryDateWithDescription: baseContentCard.dateWithDescription,
   entryNftImage: baseContentCard.image,
 
   // Spezifische EntryList-Styles

@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-03-09
 title: Is mirror.xyz a thing ?
+description: "I discover Mirror.xyz - a decentralized publishing platform combining Medium-like writing with Ethereum monetization. ENS domains and crypto wallets enable seamless creator support."
 ---
 
 _The original post on mirror can be found [here](https://mirror.xyz/fretchen.eth/2rSj34fa8cyhADVEI0p_fVO25d-hCQ6AqC38QGBsik4?referrerAddress=0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20)._

@@ -1,3 +1,3 @@
 export function title() {
-  return "fretchens Blog";
+  return "My Blog | fretchen.eu";
 }

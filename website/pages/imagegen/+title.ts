@@ -1,3 +1,3 @@
 export function title() {
-  return "AI Image Generator";
+  return "AI Image Generator | fretchen.eu";
 }

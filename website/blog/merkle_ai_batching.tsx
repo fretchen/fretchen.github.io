@@ -33,6 +33,7 @@ export const meta = {
   title: "My AI Assistant That Takes ETH Instead of Subscriptions",
   publishing_date: "2025-08-28",
   tokenID: 41,
+  description: "I build an AI assistant that accepts Ethereum payments instead of subscriptions. I learn how Merkle batching enables efficient, prepaid AI services with instant responses and periodic settlements.",
 };
 
 // Main Blog Post Component

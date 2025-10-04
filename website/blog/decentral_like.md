@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-04-21
 title: A decentral support button
+description: "I build a decentralized support button using smart contracts for direct content monetization. I learn how blockchain enables simple, transparent micro-payments for creators without platform intermediaries."
 ---
 
 I recently came across the `mirror` platfrom and was really impressed by the possibilities of such a dentralized [social platform](4). What intrigued me most is that it might give content creators a very simple and direct way to get paid for the content. But after some more digging I must admit that it is not clear to me if [mirror.xyz](https://mirror.xyz/) is still really actively maintained. So I decided to give it a try and see if I might be able to build something similar. As you can see on the top right of this site I succeeded and will explain how I did it. I am not sure yet how long this post will be, so buckle up.

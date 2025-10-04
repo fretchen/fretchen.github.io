@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-01-06
 title: Moving old lectures
+description: "I migrate academic lectures from LaTeX to modern web formats. Discover solutions for handling equations, references, and static site generation in JavaScript environments."
 ---
 
 In my time in academia, I gave a few lectures on various topics. They are saved as latex, markdown, jupyter notebook, whatever you want. But to get started, I decided to move over a number of lectures on AMO that I gave for several years.

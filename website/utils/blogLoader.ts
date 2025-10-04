@@ -3,7 +3,7 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
-import { BlogPost } from "../types/BlogPost";
+import { BlogPost, BlogPostMeta } from "../types/BlogPost";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
 // Global cache for build-time to prevent multiple loads during pre-rendering
@@ -116,6 +116,7 @@ export async function loadBlogs(
       let publishingDate: string | undefined;
       let order: number | undefined;
       let tokenID: number | undefined;
+      let description: string | undefined;
 
       if (isMdx) {
         // MDX files export frontmatter
@@ -130,13 +131,15 @@ export async function loadBlogs(
         publishingDate = frontmatter.publishing_date as string | undefined;
         order = frontmatter.order as number | undefined;
         tokenID = frontmatter.tokenID as number | undefined;
+        description = frontmatter.description as string | undefined;
       } else if (isTsx) {
         // TSX files export meta object
-        const meta = (module as { meta?: { title?: string; publishing_date?: string; tokenID?: number } })?.meta || {};
+        const meta = (module as { meta?: BlogPostMeta })?.meta || {};
 
         title = meta.title;
         publishingDate = meta.publishing_date;
         tokenID = meta.tokenID;
+        description = meta.description;
       }
 
       // Generate fallback title from filename if needed
@@ -156,6 +159,7 @@ export async function loadBlogs(
         publishing_date: publishingDate,
         order: order,
         tokenID: tokenID,
+        description: description,
         componentPath: path,
       };
 

@@ -1,7 +1,7 @@
 ---
 publishing_date: 2025-03-11
 title: Can I have interactive python pages ?
-description: "I explore the future of interactive content with Python running directly in browsers. I discover how tools like Pyodide and JupyterLite enable portable, installation-free data science and visualizations."
+description: "I explore the future of interactive content with Python running directly in browsers. Tools like Pyodide and JupyterLite enable portable, installation-free data science."
 ---
 
 _The original post on mirror can be found [here](https://mirror.xyz/fretchen.eth/iglgKZeAeHcUc_-Ya9cjQQ1vUNqhJTRUswredn-53e8?referrerAddress=0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20).\_

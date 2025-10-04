@@ -1599,7 +1599,8 @@ export const meta = {
   title: "The Prisoner's Dilemma",
   publishing_date: "2025-06-25",
   tokenID: 30,
-  description: "I experience the Prisoner's Dilemma through interactive game theory simulations. I learn strategic decision-making, Nash equilibrium, and how cooperation emerges in competitive scenarios.",
+  description:
+    "I explore the Prisoner's Dilemma through interactive game theory simulations. Discover strategic decision-making, Nash equilibrium, and how cooperation emerges in competition.",
 };
 
 export default PrisonersDilemmaPost;

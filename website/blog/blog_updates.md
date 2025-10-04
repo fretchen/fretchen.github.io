@@ -2,7 +2,7 @@
 publishing_date: 2025-05-26
 title: Updates to the website
 tokenID: 26
-description: "I explore the evolution of my website over 6 months, from minimal CSS to Panda CSS styling and Copilot-powered refactoring. I discover how modern tools enhance development productivity."
+description: "I explore my website's evolution over 6 months, from minimal CSS to Panda CSS and Copilot refactoring. See how modern tools dramatically boost development productivity."
 ---
 
 It has been roughly 6 months since I started this website. All in all, it is a enjoyable experience to have this super flexible stack on which I can simply play around in the way I want. So it is time to summarize the most important changes and updates on the stack over the last few months.

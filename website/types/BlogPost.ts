@@ -7,6 +7,18 @@ export interface NFTMetadata {
 
 export type PostType = "markdown" | "react";
 
+/**
+ * Metadata interface for blog post TSX files
+ * TSX blog posts export a `meta` object with this structure
+ */
+export interface BlogPostMeta {
+  title?: string;
+  publishing_date?: string;
+  tokenID?: number;
+  description?: string;
+  order?: number;
+}
+
 export interface BlogPost {
   title: string;
   content: string;

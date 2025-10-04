@@ -455,7 +455,7 @@ export const baseContentCard = {
   title: css({
     fontSize: "xl",
     fontWeight: "semibold",
-    margin: "0", // Override browser default h3 margins
+    margin: 0, // Override browser default h3 margins
     lineHeight: "1.3",
     // Mobile: Größerer Titel
     "@media (max-width: 768px)": {
@@ -470,7 +470,7 @@ export const baseContentCard = {
     },
   }),
   description: css({
-    marginTop: "xs", // Small top margin for spacing from title (5px)
+    marginTop: "xs", // Small top margin for spacing from title
     fontSize: "sm",
     color: "gray.600",
     lineHeight: "1.5",
@@ -848,7 +848,7 @@ export const layout = {
     padding: "token(spacing.md) 0",
     textAlign: "center",
     borderTop: "token(borders.light)",
-    marginTop: "0", // Removed top margin
+    marginTop: 0, // Removed top margin
     color: "gray.600",
     backgroundColor: "white", // Changed from gray.50 to white
   }),

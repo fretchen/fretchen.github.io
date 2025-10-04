@@ -3,7 +3,7 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
-import { BlogPost } from "../types/BlogPost";
+import { BlogPost, BlogPostMeta } from "../types/BlogPost";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
 // Global cache for build-time to prevent multiple loads during pre-rendering
@@ -134,12 +134,7 @@ export async function loadBlogs(
         description = frontmatter.description as string | undefined;
       } else if (isTsx) {
         // TSX files export meta object
-        const meta =
-          (
-            module as {
-              meta?: { title?: string; publishing_date?: string; tokenID?: number; description?: string };
-            }
-          )?.meta || {};
+        const meta = (module as { meta?: BlogPostMeta })?.meta || {};
 
         title = meta.title;
         publishingDate = meta.publishing_date;

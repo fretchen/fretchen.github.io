@@ -1,3 +1,3 @@
 export function title() {
-  return "AI Assistant with ETH Payments";
+  return "AI Assistant with ETH Payments | fretchen.eu";
 }

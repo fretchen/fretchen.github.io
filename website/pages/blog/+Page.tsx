@@ -39,20 +39,7 @@ const App: React.FC = function () {
       >
         <button
           onClick={() => setSelectedCategory(null)}
-          className={css({
-            padding: "sm md",
-            borderRadius: "md",
-            border: "1px solid",
-            borderColor: selectedCategory === null ? "blue.500" : "gray.300",
-            backgroundColor: selectedCategory === null ? "blue.50" : "transparent",
-            cursor: "pointer",
-            fontSize: "sm",
-            fontWeight: "medium",
-            transition: "all 0.2s",
-            "&:hover": {
-              backgroundColor: "blue.50",
-            },
-          })}
+          className={selectedCategory === null ? styles.categoryFilterButtonActive : styles.categoryFilterButton}
         >
           All Categories
         </button>
@@ -65,25 +52,8 @@ const App: React.FC = function () {
             <button
               key={categoryId}
               onClick={() => setSelectedCategory(categoryId)}
-              className={css({
-                padding: "sm md",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: isSelected ? "blue.500" : "gray.300",
-                backgroundColor: isSelected ? "blue.50" : "transparent",
-                cursor: "pointer",
-                fontSize: "sm",
-                fontWeight: "medium",
-                transition: "all 0.2s",
-                display: "flex",
-                alignItems: "center",
-                gap: "xs",
-                "&:hover": {
-                  backgroundColor: "blue.50",
-                },
-              })}
+              className={isSelected ? styles.categoryFilterButtonActive : styles.categoryFilterButton}
             >
-              <span>{category.icon}</span>
               <span>{category.label}</span>
             </button>
           );

@@ -3,9 +3,6 @@ import { Link } from "./Link";
 import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
 import { entryList } from "../layouts/styles";
-import { CategoryPill } from "./CategoryPill";
-import type { CategoryId } from "../types/Categories";
-import { css } from "../styled-system/css";
 
 /**
  * Component that renders a list of blog entries with NFT images and links
@@ -50,23 +47,6 @@ const EntryList: React.FC<EntryListProps> = ({
               {/* Text content */}
               <div className={blog.description ? entryList.entryTextCompact : entryList.entryText}>
                 <div className={entryList.entryTextContent}>
-                  {/* Category Pills */}
-                  {(blog.category || blog.secondaryCategory) && (
-                    <div
-                      className={css({
-                        display: "flex",
-                        gap: "xs",
-                        marginBottom: "sm",
-                        flexWrap: "wrap",
-                      })}
-                    >
-                      {blog.category && <CategoryPill categoryId={blog.category as CategoryId} small />}
-                      {blog.secondaryCategory && (
-                        <CategoryPill categoryId={blog.secondaryCategory as CategoryId} small />
-                      )}
-                    </div>
-                  )}
-
                   {/* Date - use substantially tighter spacing when description is present */}
                   {showDate && blog.publishing_date && (
                     <div className={blog.description ? entryList.entryDateWithDescription : entryList.entryDate}>

@@ -10,7 +10,6 @@ interface CategoryPillProps {
 const pillStyles = css({
   display: "inline-flex",
   alignItems: "center",
-  gap: "xs",
   padding: "xs sm",
   borderRadius: "md",
   fontSize: "sm",
@@ -26,7 +25,6 @@ const pillStyles = css({
 const smallPillStyles = css({
   padding: "2xs xs",
   fontSize: "xs",
-  gap: "2xs",
 });
 
 export const CategoryPill: React.FC<CategoryPillProps> = ({ categoryId, small = false }) => {
@@ -34,7 +32,6 @@ export const CategoryPill: React.FC<CategoryPillProps> = ({ categoryId, small = 
 
   return (
     <span className={small ? `${pillStyles} ${smallPillStyles}` : pillStyles}>
-      <span>{category.icon}</span>
       <span>{category.label}</span>
     </span>
   );

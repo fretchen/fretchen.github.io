@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-04-06
 title: Running an image generator
+category: "ai"
 description: "I build my own AI image generator using open-source models and European hosting. See how to integrate Stable Diffusion into static websites with full privacy and cost control."
 ---
 

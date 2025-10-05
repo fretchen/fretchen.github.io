@@ -1,6 +1,8 @@
 ---
 publishing_date: 2025-01-06
 title: Moving old lectures
+category: "webdev"
+secondaryCategory: "quantum"
 description: "I migrate academic lectures from LaTeX to modern web formats. Discover solutions for handling equations, references, and static site generation in JavaScript environments."
 ---
 

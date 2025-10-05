@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-01-18
 title: Are decentral websites a thing for me ?
+category: "blockchain"
 description: "I explore decentralized web hosting using ENS domains and IPFS storage. Discover how blockchain enables censorship-resistant websites without traditional hosting companies."
 ---
 

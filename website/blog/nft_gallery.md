@@ -3,6 +3,8 @@ publishing_date: 2025-06-03
 title: A gallery of AI images
 tags: [blog, ai, blockchain]
 tokenID: 24
+category: "blockchain"
+secondaryCategory: "ai"
 description: "I build an NFT gallery for AI-generated images using ERC-721 Enumerable contracts. Learn how to upgrade smart contracts and create integrated user experiences for collectibles."
 ---
 

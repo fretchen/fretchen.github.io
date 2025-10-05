@@ -1,6 +1,8 @@
 ---
 publishing_date: 2025-03-11
 title: Can I have interactive python pages ?
+category: "quantum"
+secondaryCategory: "webdev"
 description: "I explore the future of interactive content with Python running directly in browsers. Tools like Pyodide and JupyterLite enable portable, installation-free data science."
 ---
 

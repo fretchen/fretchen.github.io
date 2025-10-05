@@ -2,6 +2,7 @@
 publishing_date: 2025-04-21
 title: A decentral support button
 category: "blockchain"
+secondaryCategory: "webdev"
 description: "I build a decentralized support button using smart contracts for direct content monetization. Learn how blockchain enables transparent micro-payments without platform intermediaries."
 ---
 

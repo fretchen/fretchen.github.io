@@ -1,7 +1,7 @@
 ---
 publishing_date: 2025-05-14
 title: My short lived contact with the world of VCs in Germany
-category: "economics"
+category: "others"
 secondaryCategory: "quantum"
 description: "I explore the challenges of transitioning from quantum research to startup entrepreneurship. Valuable lessons about VC funding, deep tech development, and German startup realities."
 ---

@@ -3,43 +3,37 @@
  * Defines 5 main categories with metadata for display and filtering
  */
 
-export type CategoryId = "blockchain" | "ai" | "quantum" | "webdev" | "economics" | "others";
+export type CategoryId = "blockchain" | "ai" | "quantum" | "webdev" | "others";
 
 export interface Category {
   label: string;
   description: string;
-  color: string; // For future styling (category pills, badges)
 }
 
 export const CATEGORIES: Record<CategoryId, Category> = {
   blockchain: {
     label: "Blockchain",
     description: "Smart Contracts, NFTs, Decentralization, Ethereum",
-    color: "blue",
   },
 
   ai: {
     label: "AI",
     description: "Image Generation, LLMs, AI Applications, Neural Networks",
-    color: "purple",
   },
 
   quantum: {
     label: "Quantum",
     description: "Quantum Physics, AMO, Quantum Machine Learning, Hardware",
-    color: "cyan",
   },
 
   webdev: {
     label: "Web Development",
     description: "React, Vike, TypeScript, Static Site Generators, Tools",
-    color: "green",
   },
 
   others: {
     label: "Others",
     description: "Game Theory, Governance, Economics, Political Systems, Others",
-    color: "orange",
   },
 } as const;
 

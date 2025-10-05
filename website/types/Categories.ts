@@ -36,16 +36,10 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     color: "green",
   },
 
-  economics: {
-    label: "Economics",
-    description: "Game Theory, Governance, Economics, Political Systems",
-    color: "orange",
-  },
-
   others: {
     label: "Others",
-    description: "Miscellaneous topics, experiments, and general notes",
-    color: "gray",
+    description: "Game Theory, Governance, Economics, Political Systems, Others",
+    color: "orange",
   },
 } as const;
 

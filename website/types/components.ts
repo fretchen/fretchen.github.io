@@ -79,6 +79,8 @@ export interface BlogEntry {
   content?: string;
   tokenID?: number;
   nftMetadata?: NFTMetadata;
+  category?: string; // Primary category
+  secondaryCategory?: string; // Optional secondary category
 }
 
 /**

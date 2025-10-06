@@ -92,6 +92,40 @@ export const secondaryButton = css({
   _hover: { backgroundColor: "gray.300" },
 });
 
+// Category filter button styles
+export const categoryFilterButton = css({
+  padding: "sm md",
+  border: "1px solid",
+  borderColor: "gray.300",
+  borderRadius: "sm",
+  backgroundColor: "transparent",
+  cursor: "pointer",
+  fontSize: "sm",
+  fontWeight: "medium",
+  transition: "all 0.2s",
+  color: "gray.700",
+  _hover: {
+    backgroundColor: "gray.100",
+    borderColor: "gray.400",
+  },
+});
+
+export const categoryFilterButtonActive = css({
+  padding: "sm md",
+  border: "1px solid",
+  borderColor: "gray.600",
+  borderRadius: "sm",
+  backgroundColor: "gray.200",
+  cursor: "pointer",
+  fontSize: "sm",
+  fontWeight: "medium",
+  transition: "all 0.2s",
+  color: "gray.900",
+  _hover: {
+    backgroundColor: "gray.300",
+  },
+});
+
 // Universeller Spinner
 export const spinner = css({
   width: "20px",

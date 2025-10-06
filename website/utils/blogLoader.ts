@@ -117,6 +117,8 @@ export async function loadBlogs(
       let order: number | undefined;
       let tokenID: number | undefined;
       let description: string | undefined;
+      let category: string | undefined;
+      let secondaryCategory: string | undefined;
 
       if (isMdx) {
         // MDX files export frontmatter
@@ -132,6 +134,8 @@ export async function loadBlogs(
         order = frontmatter.order as number | undefined;
         tokenID = frontmatter.tokenID as number | undefined;
         description = frontmatter.description as string | undefined;
+        category = frontmatter.category as string | undefined;
+        secondaryCategory = frontmatter.secondaryCategory as string | undefined;
       } else if (isTsx) {
         // TSX files export meta object
         const meta = (module as { meta?: BlogPostMeta })?.meta || {};
@@ -140,6 +144,8 @@ export async function loadBlogs(
         publishingDate = meta.publishing_date;
         tokenID = meta.tokenID;
         description = meta.description;
+        category = meta.category;
+        secondaryCategory = meta.secondaryCategory;
       }
 
       // Generate fallback title from filename if needed
@@ -161,6 +167,8 @@ export async function loadBlogs(
         tokenID: tokenID,
         description: description,
         componentPath: path,
+        category: category,
+        secondaryCategory: secondaryCategory,
       };
 
       blogs.push(blog);

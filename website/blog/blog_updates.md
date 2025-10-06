@@ -2,6 +2,7 @@
 publishing_date: 2025-05-26
 title: Updates to the website
 tokenID: 26
+category: "webdev"
 description: "I explore my website's evolution over 6 months, from minimal CSS to Panda CSS and Copilot refactoring. See how modern tools dramatically boost development productivity."
 ---
 

@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-01-03
 title: Ideas behind the blog stack
+category: "webdev"
 description: "I share my journey from scattered notes to a unified blog using React and Vike. Modern web tech offers speed, simplicity, and full version control over traditional solutions."
 ---
 

@@ -2,6 +2,8 @@
 publishing_date: 2025-06-18
 title: A public gallery of AI generated images
 tokenID: 23
+category: "ai"
+secondaryCategory: "blockchain"
 description: "I create a privacy-focused AI image gallery where creators share work and collectors mint NFTs. Discover the technical details combining open-source generation with blockchain incentives."
 ---
 

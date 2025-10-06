@@ -1,6 +1,7 @@
 ---
 publishing_date: 2025-05-20
 title: Generating AI images, paying anonymously and little
+category: "blockchain"
 description: "I implement anonymous micro-payments for AI image generation using Ethereum Layer-2. See how to connect blockchain payments with serverless AI for sustainable, privacy-focused services."
 ---
 

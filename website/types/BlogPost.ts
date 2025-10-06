@@ -17,6 +17,8 @@ export interface BlogPostMeta {
   tokenID?: number;
   description?: string;
   order?: number;
+  category?: string; // Primary category
+  secondaryCategory?: string; // Optional secondary category
 }
 
 export interface BlogPost {
@@ -29,4 +31,6 @@ export interface BlogPost {
   type?: PostType;
   componentPath?: string; // Pfad zur React-Komponente für interaktive Posts
   description?: string; // SEO description for the blog post
+  category?: string; // Primary category
+  secondaryCategory?: string; // Optional secondary category
 }

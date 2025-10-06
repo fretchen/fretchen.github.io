@@ -1,23 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAccount, useReadContract } from "wagmi";
-import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { getChain, genAiNFTContractConfig } from "../utils/getChain";
 import { NFTListProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import { Tab } from "./Tab";
 import { MyNFTList } from "./MyNFTList";
 import { PublicNFTList } from "./PublicNFTList";
-
-export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {}) {
+import { useLocale } from "../hooks/useLocale";
+export function NFTList({
+  newlyCreatedNFT,
+  onNewNFTDisplayed,
+  activeTab: controlledActiveTab,
+  onTabChange,
+}: NFTListProps = {}) {
   const { address, isConnected } = useAccount();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
-  // Tab state - start with "public" if wallet not connected, otherwise "my"
-  const [activeTab, setActiveTab] = useState<"my" | "public">(() => {
+  // Use controlled tab state if provided, otherwise use local state
+  const [localActiveTab, setLocalActiveTab] = useState<"my" | "public">(() => {
     return isConnected ? "my" : "public";
   });
 
+  const activeTab = controlledActiveTab ?? localActiveTab;
+  const setActiveTab = onTabChange ?? setLocalActiveTab;
+
   // Get user's NFT balance for display in tab
-  const { data: userBalance } = useReadContract({
+  const userBalanceQuery = useReadContract({
     ...genAiNFTContractConfig,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
@@ -27,17 +34,34 @@ export function NFTList({ newlyCreatedNFT, onNewNFTDisplayed }: NFTListProps = {
     },
   });
 
+  const { data: userBalance, refetch: refetchUserBalance } = userBalanceQuery;
+
+  // Refetch balance when a new NFT is created to update the tab count
+  useEffect(() => {
+    if (newlyCreatedNFT && refetchUserBalance) {
+      refetchUserBalance();
+    }
+  }, [newlyCreatedNFT, refetchUserBalance]);
+
+  // Move useLocale calls to top level to avoid conditional hook calls
+  const myArtworksLabel = useLocale({ label: "imagegen.myArtworks" });
+  const allPublicArtworksLabel = useLocale({ label: "imagegen.allPublicArtworks" });
+
   return (
     <div className={styles.nftList.container}>
       {/* Tab Navigation */}
       <div className={styles.tabs.container}>
         <div className={styles.tabs.tabList}>
           <Tab
-            label={isConnected ? `My Artworks (${userBalance?.toString() || "0"})` : "My Artworks"}
+            label={isConnected ? `${myArtworksLabel} (${userBalance?.toString() || "0"})` : myArtworksLabel}
             isActive={activeTab === "my"}
             onClick={() => setActiveTab("my")}
           />
-          <Tab label="All Public Artworks" isActive={activeTab === "public"} onClick={() => setActiveTab("public")} />
+          <Tab
+            label={allPublicArtworksLabel}
+            isActive={activeTab === "public"}
+            onClick={() => setActiveTab("public")}
+          />
         </div>
       </div>
 

@@ -1,6 +1,9 @@
 ---
 publishing_date: 2025-01-18
 title: Are decentral websites a thing for me ?
+category: "webdev"
+secondaryCategory: "blockchain"
+description: "I explore decentralized web hosting using ENS domains and IPFS storage. Discover how blockchain enables censorship-resistant websites without traditional hosting companies."
 ---
 
 Over the last few years, I kept wondering what it might mean to host a "decentral" website very much like it is possible to decentralize certain financial services through smart contracts [^2]. What would be needed ?

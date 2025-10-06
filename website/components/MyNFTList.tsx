@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
-import { getChain, getGenAiNFTContractConfig } from "../utils/getChain";
+import { getChain, genAiNFTContractConfig } from "../utils/getChain";
 import { NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
@@ -20,7 +20,6 @@ interface MyNFTListProps {
 export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps) {
   const { address, isConnected } = useAccount();
   const chain = getChain();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
 
   // My NFTs state - now just store token IDs
   const [tokenIds, setTokenIds] = useState<bigint[]>([]);
@@ -110,28 +109,31 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     } finally {
       setIsLoadingTokenIds(false);
     }
-  }, [isConnected, address]); // Entfernt: genAiNFTContractConfig
+  }, [isConnected, address]); // Removed genAiNFTContractConfig as it's now stable
 
   // Handle newly created NFT - just add to token list
-  const handleNewlyCreatedNFT = (newTokenId: bigint) => {
-    // Set highlighting for the new NFT
-    setHighlightedNFT(newTokenId);
+  const handleNewlyCreatedNFT = useCallback(
+    (newTokenId: bigint) => {
+      // Set highlighting for the new NFT
+      setHighlightedNFT(newTokenId);
 
-    // Add to top of token list if not already present
-    setTokenIds((prevTokenIds) => {
-      const exists = prevTokenIds.includes(newTokenId);
-      if (exists) {
-        return prevTokenIds;
-      }
-      return [newTokenId, ...prevTokenIds];
-    });
+      // Add to top of token list if not already present
+      setTokenIds((prevTokenIds) => {
+        const exists = prevTokenIds.includes(newTokenId);
+        if (exists) {
+          return prevTokenIds;
+        }
+        return [newTokenId, ...prevTokenIds];
+      });
 
-    // Remove highlighting after 5 seconds
-    setTimeout(() => {
-      setHighlightedNFT(null);
-      onNewNFTDisplayed?.();
-    }, 5000);
-  };
+      // Remove highlighting after 5 seconds
+      setTimeout(() => {
+        setHighlightedNFT(null);
+        onNewNFTDisplayed?.();
+      }, 5000);
+    },
+    [onNewNFTDisplayed],
+  );
 
   // Handle listing status changes
   const handleListedStatusChanged = useCallback((tokenId: bigint, isListed: boolean) => {
@@ -145,14 +147,14 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     if (isConnected && address) {
       loadUserTokenIds();
     }
-  }, [address, isConnected]); // Entfernt: userBalance to prevent too frequent reloads
+  }, [address, isConnected, loadUserTokenIds]);
 
   // Handle newly created NFT
   useEffect(() => {
     if (newlyCreatedNFT) {
       handleNewlyCreatedNFT(newlyCreatedNFT.tokenId);
     }
-  }, [newlyCreatedNFT]); // Entfernt: onNewNFTDisplayed
+  }, [newlyCreatedNFT, handleNewlyCreatedNFT]);
 
   const isLoading = isLoadingBalance || isLoadingTokenIds;
 
@@ -192,17 +194,26 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   return (
     <>
       <div className={styles.nftList.grid}>
-        {tokenIds.map((tokenId, index) => (
-          <NFTCard
-            key={`my-${tokenId}-${index}`}
-            tokenId={tokenId}
-            onImageClick={setSelectedImage}
-            onNftBurned={() => loadUserTokenIds()}
-            onListedStatusChanged={handleListedStatusChanged}
-            isHighlighted={highlightedNFT === tokenId}
-            isPublicView={false}
-          />
-        ))}
+        {tokenIds.map((tokenId, index) => {
+          // Check if this is the newly created NFT with preloaded data
+          const isNewlyCreated = newlyCreatedNFT?.tokenId === tokenId;
+          const preloadedImageUrl = isNewlyCreated ? newlyCreatedNFT.imageUrl : undefined;
+          const preloadedMetadata = isNewlyCreated ? newlyCreatedNFT.metadata : undefined;
+
+          return (
+            <NFTCard
+              key={`my-${tokenId}-${index}`}
+              tokenId={tokenId}
+              onImageClick={setSelectedImage}
+              onNftBurned={() => loadUserTokenIds()}
+              onListedStatusChanged={handleListedStatusChanged}
+              isHighlighted={highlightedNFT === tokenId}
+              isPublicView={false}
+              preloadedImageUrl={preloadedImageUrl}
+              preloadedMetadata={preloadedMetadata}
+            />
+          );
+        })}
       </div>
 
       {/* Bildvergrößerungs-Modal */}

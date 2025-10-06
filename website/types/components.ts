@@ -79,6 +79,8 @@ export interface BlogEntry {
   content?: string;
   tokenID?: number;
   nftMetadata?: NFTMetadata;
+  category?: string; // Primary category
+  secondaryCategory?: string; // Optional secondary category
 }
 
 /**
@@ -182,6 +184,10 @@ export interface NFTCardProps extends BaseComponentProps {
   isPublicView?: boolean;
   /** Callback when the listed status changes (only for private NFTs) */
   onListedStatusChanged?: (tokenId: bigint, isListed: boolean) => void;
+  /** Preloaded image URL for immediate display (bypasses contract fetching initially) */
+  preloadedImageUrl?: string;
+  /** Preloaded metadata for immediate display (bypasses contract fetching initially) */
+  preloadedMetadata?: NFTMetadata;
 }
 
 /**
@@ -204,6 +210,10 @@ export interface NFTListProps extends BaseComponentProps {
   };
   /** Callback fired when the newly created NFT has been displayed and highlighting is removed */
   onNewNFTDisplayed?: () => void;
+  /** Current active tab state (controlled from parent component) */
+  activeTab?: "my" | "public";
+  /** Callback to change the active tab */
+  onTabChange?: (tab: "my" | "public") => void;
 }
 
 /**

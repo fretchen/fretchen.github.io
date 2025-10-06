@@ -33,6 +33,10 @@ export const meta = {
   title: "My AI Assistant That Takes ETH Instead of Subscriptions",
   publishing_date: "2025-08-28",
   tokenID: 41,
+  category: "blockchain",
+  secondaryCategory: "ai",
+  description:
+    "I build an AI assistant that accepts Ethereum payments instead of subscriptions. Discover how Merkle batching enables efficient prepaid AI with instant responses.",
 };
 
 // Main Blog Post Component
@@ -41,14 +45,14 @@ export default function MerkleAIBatching() {
     <article>
       <section>
         <p>
-          While working on some DeFi projects, I noticed something odd: I kept paying Copilot with my credit card while
-          having ETH sitting in my wallet. We can swap tokens instantly without KYC, but AI services still require email
-          verification and monthly subscriptions. So I started wondering - what would an AI that accepts crypto payments
-          actually look like?
+          While working on some DeFi projects, something felt strange: I kept paying Copilot with my credit card while
+          having ETH sitting in my wallet. I could instantly swap tokens without an creepy KYC, but AI services still
+          require an email verification and monthly subscriptions. So I started wondering - what would an AI that
+          accepts crypto payments actually look like?
         </p>
 
         <p>
-          <strong>The answer is live:</strong>{" "}
+          <strong>My initial answer is now live:</strong>{" "}
           <a
             href="/assistent"
             className={css({
@@ -57,15 +61,15 @@ export default function MerkleAIBatching() {
               _hover: { color: "indigo.700" },
             })}
           >
-            Try my AI assistant
+            Feel free to try my AI assistant
           </a>{" "}
-          - connect your wallet, deposit ETH, and chat with an LLM. No subscriptions, no accounts, no data harvesting.
-          Just pay for exactly what you use.
+          - you connect your wallet, deposit ETH, and chat with an LLM. No subscriptions, no accounts, no data weird
+          harvesting. And you just pay for exactly what you use.
         </p>
 
         <p>
-          In this post, I&apos;ll walk you through the complete technical implementation - from smart contract
-          architecture to serverless functions - showing my approach to the crypto-native AI problem.
+          In this post, I&apos;ll walk you through the technical implementation - from smart contract architecture to
+          serverless functions - showing my approach to the crypto-native AI problem.
         </p>
 
         <div

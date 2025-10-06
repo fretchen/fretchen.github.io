@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useConnect, useAccount, useDisconnect, useEnsName } from "wagmi";
 import { walletOptions } from "../layouts/styles";
-
+import { useLocale } from "../hooks/useLocale";
 /**
  * WalletOptions Component
  *
@@ -74,17 +74,20 @@ export default function WalletOptions() {
   };
 
   // Display address or connect message
+  const connectLabel = useLocale({ label: "walletoptions.connect" });
+  const connectAccountLabel = useLocale({ label: "walletoptions.connectAccount" });
   const displayText =
     isMounted && isConnected
       ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
       : isMobile
-        ? "Connect"
-        : "Connect Account";
+        ? connectLabel
+        : connectAccountLabel;
 
   // Get menu items based on connection status
+  const disconnectLabel = useLocale({ label: "walletoptions.disconnect" });
   const getMenuItems = () => {
     if (isMounted && isConnected) {
-      return [{ id: "disconnect", label: "Disconnect", action: () => disconnect() }];
+      return [{ id: "disconnect", label: disconnectLabel, action: () => disconnect() }];
     } else {
       return connectors.map((connector) => ({
         id: connector.uid,

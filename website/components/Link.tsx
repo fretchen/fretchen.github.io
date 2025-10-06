@@ -2,9 +2,33 @@ import React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { css } from "../styled-system/css";
 
-export function Link({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
+import { defaultLocale } from "../locales/locales";
+
+export function Link({
+  href,
+  children,
+  locale,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  locale?: string;
+  className?: string;
+}) {
   const pageContext = usePageContext();
   const { urlPathname } = pageContext;
+
+  if (!locale && pageContext.locale) {
+    locale = pageContext.locale;
+  }
+  if (!locale && !pageContext.locale) {
+    locale = defaultLocale;
+  }
+
+  // Only add locale prefix for non-default locale
+  if (locale !== defaultLocale) {
+    href = "/" + locale + href;
+  }
   const isActive = href === "/" ? urlPathname === href : urlPathname.startsWith(href);
 
   return (

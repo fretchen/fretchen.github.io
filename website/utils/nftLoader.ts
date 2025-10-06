@@ -1,7 +1,6 @@
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
-import { getGenAiNFTContractConfig } from "./getChain";
+import { genAiNFTContractConfig } from "./getChain";
 import { NFTMetadata } from "../types/BlogPost";
+import type { PublicClient } from "viem";
 
 interface NFTMetadataJSON {
   name?: string;
@@ -12,14 +11,9 @@ interface NFTMetadataJSON {
 /**
  * Simple NFT loader that fetches metadata for a single token
  */
-export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | null> {
+export async function loadNFTMetadata(tokenID: number, publicClient: PublicClient): Promise<NFTMetadata | null> {
   try {
-    const publicClient = createPublicClient({
-      chain: optimism,
-      transport: http(),
-    });
-
-    const genAiNFTContractConfig = getGenAiNFTContractConfig();
+    // Verwende die stabile genAiNFTContractConfig Konstante
 
     // Get token URI from contract
     const tokenURIResult = await publicClient.readContract({
@@ -63,10 +57,12 @@ export async function loadNFTMetadata(tokenID: number): Promise<NFTMetadata | nu
 /**
  * Load multiple NFT metadata entries with controlled concurrency
  * @param tokenIDs Array of token IDs to load
+ * @param publicClient The public client to use for contract calls
  * @param concurrency Maximum number of concurrent requests (default: 3)
  */
 export async function loadMultipleNFTMetadata(
   tokenIDs: number[],
+  publicClient: PublicClient,
   concurrency = 3,
 ): Promise<Record<number, NFTMetadata>> {
   const results: Record<number, NFTMetadata> = {};
@@ -75,7 +71,7 @@ export async function loadMultipleNFTMetadata(
   const processBatch = async (batch: number[]): Promise<void> => {
     const promises = batch.map(async (tokenID) => {
       console.log(`Loading NFT metadata for token ${tokenID}...`);
-      const metadata = await loadNFTMetadata(tokenID);
+      const metadata = await loadNFTMetadata(tokenID, publicClient);
       if (metadata) {
         results[tokenID] = metadata;
       }

@@ -1,15 +1,14 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
-import { getGenAiNFTContractConfig } from "../utils/getChain";
-import { extractPromptFromDescription } from "../utils/nftLoader";
+import React, { useEffect, useState } from "react";
+import { genAiNFTContractConfig } from "../utils/getChain";
+import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
+import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
 import * as styles from "../layouts/styles";
 
 interface NFTFloatImageProps {
   tokenId: number;
 }
 
-import { NFTMetadata } from "../types/NFTMetadata";
+import { NFTMetadata } from "../types/components";
 
 export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -19,7 +18,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the contract config to prevent infinite re-renders
-  const genAiNFTContractConfig = useMemo(() => getGenAiNFTContractConfig(), []);
+  // The stable genAiNFTContractConfig constant is used directly
 
   // Extract prompt from description for display (reusing utility function)
   const getPromptPreview = (description: string | null): string => {
@@ -36,15 +35,8 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     return nftTitle ? `Article Illustration: ${nftTitle}` : `Article Illustration: NFT #${tokenId}`;
   };
 
-  // Memoize the public client
-  const publicClient = useMemo(
-    () =>
-      createPublicClient({
-        chain: optimism,
-        transport: http(),
-      }),
-    [],
-  );
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient();
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -101,7 +93,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     };
 
     loadNFTData();
-  }, [tokenId, publicClient, genAiNFTContractConfig]);
+  }, [tokenId, publicClient]);
 
   if (isLoading) {
     return (

@@ -1,6 +1,8 @@
 ---
 publishing_date: 2025-05-20
 title: Generating AI images, paying anonymously and little
+category: "blockchain"
+description: "I implement anonymous micro-payments for AI image generation using Ethereum Layer-2. See how to connect blockchain payments with serverless AI for sustainable, privacy-focused services."
 ---
 
 As I wrote already in one of my [previous posts](6), I have set up a small image generator on my website. The whole thing is hosted in Europe and I am using open source models. The system is running on a serverless setup, which is also hosted in Europe. The costs are low and I am happy with the setup. But to make it sustainable, I need to charge the users for the images at least as much as I get charged.

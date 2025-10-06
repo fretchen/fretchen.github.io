@@ -132,7 +132,7 @@ async function handle(event, context, cb) {
   try {
     // Generiere ein Bild basierend auf dem Prompt und lade es hoch
     // Übergebe jetzt auch die tokenId und size an die Funktion
-    const metadataUrl = await generateAndUploadImage(prompt, tokenId, size);
+    const metadataUrl = await generateAndUploadImage(prompt, tokenId, "ionos", size);
 
     // Metadaten laden, um die Bild-URL zu extrahieren
     // Validate the metadataUrl against a trusted allow-list

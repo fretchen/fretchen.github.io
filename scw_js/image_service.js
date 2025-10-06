@@ -17,9 +17,20 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 
-// Configuration constants
-const MODEL_NAME = "black-forest-labs/FLUX.1-schnell";
-const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/images/generations";
+// Provider configurations
+const PROVIDER_CONFIGS = {
+  ionos: {
+    endpoint: "https://openai.inference.de-txl.ionos.com/v1/images/generations",
+    model: "black-forest-labs/FLUX.1-schnell",
+    tokenEnvVar: "IONOS_API_TOKEN",
+  },
+  bfl: {
+    endpoint: "https://api.bfl.ai/v1/flux-kontext-pro",
+    model: "flux-kontext-pro",
+    tokenEnvVar: "BFL_API_TOKEN",
+  },
+};
+
 export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const BUCKET_NAME = "my-imagestore";
 
@@ -93,44 +104,34 @@ export async function uploadToS3(data, fileName, contentType = "application/json
 }
 
 /**
- * Generates an image based on the prompt and uploads it to S3 along with ERC-721 metadata
+ * Generates an image using IONOS API
  * @param {string} prompt - The prompt for image generation
- * @param {string|number} tokenId - The NFT token ID to include in metadata
- * @param {string} size - Image size, either "1024x1024" or "1792x1024"
- * @returns {Promise<string>} - Path to the generated metadata file
+ * @param {string} size - Image size
+ * @returns {Promise<string>} - Base64 encoded image
  */
-export async function generateAndUploadImage(prompt, tokenId = "unknown", size = "1024x1024") {
-  const ionosApiToken = process.env.IONOS_API_TOKEN;
+async function generateImageIONOS(prompt, size) {
+  const config = PROVIDER_CONFIGS.ionos;
+  const apiToken = process.env[config.tokenEnvVar];
 
-  if (!ionosApiToken) {
+  if (!apiToken) {
     throw new Error(
-      "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
+      `API token not found. Please configure the ${config.tokenEnvVar} environment variable.`,
     );
   }
 
-  if (!prompt) {
-    throw new Error("No prompt provided.");
-  }
-
-  // Validate size parameter
-  const validSizes = ["1024x1024", "1792x1024"];
-  if (!validSizes.includes(size)) {
-    throw new Error(`Invalid size parameter. Must be one of: ${validSizes.join(", ")}`);
-  }
-
   const headers = {
-    Authorization: `Bearer ${ionosApiToken}`,
+    Authorization: `Bearer ${apiToken}`,
     "Content-Type": "application/json",
   };
 
   const body = {
-    model: MODEL_NAME,
+    model: config.model,
     prompt,
     size,
   };
 
-  console.log("Sending image generation request...");
-  const response = await fetch(ENDPOINT, {
+  console.log("Sending IONOS image generation request...");
+  const response = await fetch(config.endpoint, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -143,13 +144,188 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown", size =
   }
 
   const responseData = await response.json();
-  const imageBase64 = responseData.data[0].b64_json;
-  console.log("Image received");
+  return responseData.data[0].b64_json;
+}
 
-  // Upload the image as PNG in the images subfolder
-  const imageFileName = `images/image_${tokenId}_${getRandomString()}.png`;
+/**
+ * Generates an image using BFL API with proper polling
+ * @param {string} prompt - The prompt for image generation
+ * @param {string} size - Image size
+ * @returns {Promise<string>} - Base64 encoded image
+ */
+async function generateImageBFL(prompt, size, mode = "generate", referenceImageBase64 = null) {
+  const config = PROVIDER_CONFIGS.bfl;
+  const apiToken = process.env[config.tokenEnvVar];
+
+  if (!apiToken) {
+    throw new Error(
+      `API token not found. Please configure the ${config.tokenEnvVar} environment variable.`,
+    );
+  }
+
+  console.log(`Sending BFL image generation request in ${mode} mode...`);
+
+  // Prepare request body based on mode
+  const requestBody = {
+    prompt,
+    aspect_ratio: size === "1792x1024" ? "16:9" : "1:1", // Use aspect_ratio instead of width/height
+    output_format: "jpeg", // Ensure consistent JPEG format
+  };
+
+  // Add reference image for edit mode
+  if (mode === "edit" && referenceImageBase64) {
+    requestBody.input_image = referenceImageBase64;
+    console.log("Reference image added for editing");
+  }
+
+  // Step 1: Start image generation
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "x-key": apiToken, // BFL API requires authentication via the non-standard 'x-key' header instead of the standard 'Authorization' header. See BFL API docs for details.
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    console.error(`BFL API Error: ${response.status} ${response.statusText}`);
+    throw new Error(`Could not reach BFL: ${response.status} ${response.statusText}`);
+  }
+
+  const initData = await response.json();
+  const { id: requestId, polling_url } = initData;
+
+  console.log(`BFL request started with ID: ${requestId}`);
+
+  // Step 2: Poll for completion
+  const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
+  const pollInterval = 5000; // 5 seconds
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Polling attempt ${attempt + 1}/${maxAttempts}...`);
+
+    // Wait before polling (except first attempt)
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+
+    try {
+      const pollResponse = await fetch(polling_url, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          "x-key": apiToken,
+        },
+      });
+
+      if (!pollResponse.ok) {
+        console.warn(`Poll request failed: ${pollResponse.status}`);
+        continue; // Retry on next attempt
+      }
+
+      const pollData = await pollResponse.json();
+      console.log(`Poll status: ${pollData.status}`);
+
+      if (pollData.status === "Ready") {
+        console.log("BFL image generation completed!");
+        const imageUrl = pollData.result.sample;
+
+        // Step 3: Download the actual image
+        console.log("Downloading image from:", imageUrl);
+        const imageResponse = await fetch(imageUrl);
+
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to download image: ${imageResponse.status}`);
+        }
+
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString("base64");
+
+        console.log("BFL image successfully downloaded and encoded");
+        return base64Image;
+      } else if (pollData.status === "Error" || pollData.status === "Failed") {
+        console.error("BFL generation failed:", pollData);
+        throw new Error(`BFL generation failed: ${JSON.stringify(pollData)}`);
+      }
+
+      // Status is still "processing" or similar, continue polling
+    } catch (error) {
+      console.warn(`Polling error (attempt ${attempt + 1}):`, error.message);
+      // Continue to next attempt
+    }
+  }
+
+  throw new Error(
+    `BFL polling timed out after ${maxAttempts} attempts (${(maxAttempts * pollInterval) / 1000} seconds)`,
+  );
+}
+
+/**
+ * Generates an image from the specified provider
+ * @param {string} prompt - The prompt for image generation
+ * @param {string} provider - The provider to use ('ionos' or 'bfl')
+ * @param {string} size - Image size
+ * @returns {Promise<string>} - Base64 encoded image
+ */
+async function generateImageFromProvider(
+  prompt,
+  provider,
+  size,
+  mode = "generate",
+  referenceImageBase64 = null,
+) {
+  switch (provider) {
+    case "ionos":
+      return generateImageIONOS(prompt, size);
+    case "bfl":
+      return generateImageBFL(prompt, size, mode, referenceImageBase64);
+    default:
+      throw new Error(`Unknown provider: ${provider}`);
+  }
+}
+
+/**
+ * Generates an image based on the prompt and uploads it to S3 along with ERC-721 metadata
+ * @param {string} prompt - The prompt for image generation
+ * @param {string|number} tokenId - The NFT token ID to include in metadata
+ * @param {string} provider - The image generation provider ('ionos' or 'bfl')
+ * @param {string} size - Image size, either "1024x1024" or "1792x1024"
+ * @returns {Promise<string>} - Path to the generated metadata file
+ */
+export async function generateAndUploadImage(
+  prompt,
+  tokenId = "unknown",
+  provider,
+  size = "1024x1024",
+  mode = "generate",
+  referenceImageBase64 = null,
+) {
+  if (!prompt) {
+    throw new Error("No prompt provided.");
+  }
+
+  // Validate size parameter
+  const validSizes = ["1024x1024", "1792x1024"];
+  if (!validSizes.includes(size)) {
+    throw new Error(`Invalid size parameter. Must be one of: ${validSizes.join(", ")}`);
+  }
+
+  // Generate image using the specified provider
+  const imageBase64 = await generateImageFromProvider(
+    prompt,
+    provider,
+    size,
+    mode,
+    referenceImageBase64,
+  );
+  console.log("Image received from", provider, "in", mode, "mode");
+
+  // Upload the image as JPEG in the images subfolder
+  const imageFileName = `images/image_${tokenId}_${getRandomString()}.jpg`;
   const imageBuffer = base64ToBuffer(imageBase64);
-  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/png");
+  const imageUrl = await uploadToS3(imageBuffer, imageFileName, "image/jpeg");
 
   // Create and upload ERC-721 compliant metadata in the metadata subfolder
   const metadataFileName = `metadata/metadata_${tokenId}_${getRandomString()}.json`;
@@ -158,7 +334,7 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown", size =
   const metadata = {
     name: `AI Generated Art #${tokenId}`,
     description: `AI generated artwork based on the prompt: "${prompt}"`,
-    image: imageUrl, // Reference to the PNG image
+    image: imageUrl, // Reference to the JPEG image
     attributes: [
       {
         trait_type: "Prompt",
@@ -166,7 +342,7 @@ export async function generateAndUploadImage(prompt, tokenId = "unknown", size =
       },
       {
         trait_type: "Model",
-        value: MODEL_NAME,
+        value: PROVIDER_CONFIGS[provider].model,
       },
       {
         trait_type: "Image Size",

@@ -3,6 +3,7 @@ import "./panda.css";
 import React, { useEffect, useRef } from "react";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";
+import LanguageToggle from "../components/LanguageToggle";
 import Footer from "../components/Footer";
 
 import { WagmiProvider } from "wagmi";
@@ -43,7 +44,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   }, []);
 
   return (
-    <div className={layout.main}>
+    <div>
       <WagmiProvider config={config}>
         <Appbar>
           <div className={layout.navigationContainer}>
@@ -63,14 +64,17 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
               <div className={layout.navigationLink}>
                 <Link href="/assistent">AI Assistent</Link>
               </div>
-              <div className={layout.navigationLink}>
-                <WalletOptions />
-              </div>
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
+            <div className={layout.headerControls}>
+              <LanguageToggle />
+              <WalletOptions />
+            </div>
           </div>
         </Appbar>
-        <Content>{children}</Content>
+        <div className={layout.main}>
+          <Content>{children}</Content>
+        </div>
         <Footer />
       </WagmiProvider>
     </div>

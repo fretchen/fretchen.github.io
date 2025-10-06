@@ -61,6 +61,10 @@ export const meta = {
   title: " Merkle Trees for LLM Batching - The fundamentals",
   publishing_date: "2025-07-29",
   tokenID: 38,
+  category: "blockchain",
+  secondaryCategory: "ai",
+  description:
+    "I explore the fundamentals of Merkle trees for efficient LLM batching. Learn cryptographic proofs, batch verification, and AI service settlement optimization.",
 };
 
 // Mock types and interfaces
@@ -735,7 +739,7 @@ const BatchCreator: React.FC = () => {
     };
 
     createMerkleTree();
-  }, [requests.length, batchRegistered]);
+  }, [requests, batchRegistered]);
 
   const handleSendRequest = async () => {
     if (!currentPrompt.trim()) return;
@@ -1099,9 +1103,8 @@ export default function MerkleAIBatching() {
 
         <p>
           But when I started thinking about LLM text generation, I run into trouble. If someone wants to analyze 10
-          documents or generate multiple pieces of content, they&apos;d need 10 separate blockchain transactions.
-          That&apos;s roughly stubstantial gas fees alone, plus the hassle of confirming each transaction in their
-          wallet.
+          documents or generate multiple pieces of content, they&apos;d need 10 separate blockchain transactions. These
+          are substantial gas fees, plus the hassle of confirming each transaction in their wallet.
         </p>
 
         <p>
@@ -1136,14 +1139,12 @@ export default function MerkleAIBatching() {
         </p>
 
         <p>The mapping is straightforward:</p>
-        <p>
-          <ul>
-            <li>individual receipts become Merkle leaves (each LLM request gets its own cryptographic fingerprint)</li>
-            <li>summary pages become internal nodes (groups of receipts get combined into summary fingerprints)</li>
-            <li>the master receipt becomes the Merkle root (one final fingerprint represents the entire batch)</li>
-            <li>proof of purchase becomes a Merkle proof (you can prove any receipt belongs without showing others)</li>
-          </ul>
-        </p>
+        <ul>
+          <li>individual receipts become Merkle leaves (each LLM request gets its own cryptographic fingerprint)</li>
+          <li>summary pages become internal nodes (groups of receipts get combined into summary fingerprints)</li>
+          <li>the master receipt becomes the Merkle root (one final fingerprint represents the entire batch)</li>
+          <li>proof of purchase becomes a Merkle proof (you can prove any receipt belongs without showing others)</li>
+        </ul>
 
         <p>
           But what exactly is a &quot;cryptographic fingerprint&quot;? When we say each LLM request gets processed
@@ -1154,28 +1155,26 @@ export default function MerkleAIBatching() {
         </p>
 
         <p>This process has four key properties that make it perfect for our use case:</p>
-        <p>
-          <ul>
-            <li>it&apos;s deterministic (same input always produces the same hash)</li>
-            <li>collision resistant (nearly impossible for two different inputs to produce the same hash)</li>
-            <li>fixed length (always 64 characters regardless of input size)</li>
-            <li>irreversible (you cannot recreate the original data from the hash alone)</li>
-          </ul>
-        </p>
+        <ul>
+          <li>it&apos;s deterministic (same input always produces the same hash)</li>
+          <li>collision resistant (nearly impossible for two different inputs to produce the same hash)</li>
+          <li>fixed length (always 64 characters regardless of input size)</li>
+          <li>irreversible (you cannot recreate the original data from the hash alone)</li>
+        </ul>
         <h3>Building up the Merkle Tree</h3>
 
         <p>
           A Merkle tree is then built up step by step. Let&apos;s say we have 4 LLM requests from our batching example.
           We now build the tree in three steps:
-          <ol>
-            <li>First, each request gets its own hash (H₁, H₂, H₃, H₄). </li>
-            <li>Then we pair them up - combine H₁+H₂ into H₁₂, and H₃+H₄ into H₃₄.</li>
-            <li>
-              Finally, we create the root by combining H₁₂+H₃₄ into the final ROOT hash. This ROOT hash is like the
-              master receipt number that represents all 4 requests.
-            </li>
-          </ol>
         </p>
+        <ol>
+          <li>First, each request gets its own hash (H₁, H₂, H₃, H₄). </li>
+          <li>Then we pair them up - combine H₁+H₂ into H₁₂, and H₃+H₄ into H₃₄.</li>
+          <li>
+            Finally, we create the root by combining H₁₂+H₃₄ into the final ROOT hash. This ROOT hash is like the master
+            receipt number that represents all 4 requests.
+          </li>
+        </ol>
 
         <p>Here&apos;s what this tree-building process looks like visually:</p>
 

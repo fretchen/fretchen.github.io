@@ -1,6 +1,8 @@
 ---
 publishing_date: 2025-04-06
 title: Running an image generator
+category: "ai"
+description: "I build my own AI image generator using open-source models and European hosting. See how to integrate Stable Diffusion into static websites with full privacy and cost control."
 ---
 
 Just as about every other person on the planet, I have been playing around with [stable diffusion](https://stability.ai/) and other image generators. But I personally do not care too much about the exact details, which model is best etc. I wanted to have my own personal system. I made some good progress on it and I felt that it could be time to share some of my findings.

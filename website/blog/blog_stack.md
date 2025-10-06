@@ -1,6 +1,8 @@
 ---
 publishing_date: 2025-01-03
 title: Ideas behind the blog stack
+category: "webdev"
+description: "I share my journey from scattered notes to a unified blog using React and Vike. Modern web tech offers speed, simplicity, and full version control over traditional solutions."
 ---
 
 Over the last few years I kept writing notes and code in all kind of different ways. Sometimes I would use Wordpress, personal notes, markdown or Jupyter notebooks. They get saved in some repo and there you go. But these days I would like to bring them slowly together into some more common structure, i.e. on one common website.

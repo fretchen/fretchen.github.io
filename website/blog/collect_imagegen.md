@@ -2,6 +2,9 @@
 publishing_date: 2025-06-18
 title: A public gallery of AI generated images
 tokenID: 23
+category: "ai"
+secondaryCategory: "blockchain"
+description: "I create a privacy-focused AI image gallery where creators share work and collectors mint NFTs. Discover the technical details combining open-source generation with blockchain incentives."
 ---
 
 In the [previous blog post](./11), I described how I set up an image generator that quite nicely fulfills my needs: The generator in the background is open-source, I have full cost control, I made the system easily usable to others and it is really privacy-conserving. However, I could not resist the temptation to make it easier for others to see some of the images and to try to set up small incentive systems in the form of collector NFTs. The main changes are:
@@ -12,7 +15,7 @@ In the [previous blog post](./11), I described how I set up an image generator t
 They are all nicely visible in the screen shot below.
 
 <figure id="screenshot">
-<img src="./ScreenShot_PublicGallery.png" width="100%" />
+<img src="/blog/ScreenShot_PublicGallery.png" width="100%" />
 <figcaption>Screen shot of the new public gallery with a collect feature.</figcaption>
 </figure>
 

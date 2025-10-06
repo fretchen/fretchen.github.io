@@ -17,6 +17,7 @@ pydantic = "^2.11.7"
 dotenv = "^0.9.9"
 web3 = "^7.12.1"
 eth-account = "^0.13.7"
+requests = "^2.32.5"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"

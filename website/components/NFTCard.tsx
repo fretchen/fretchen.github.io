@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "wagmi/actions";
-import { createPublicClient, http } from "viem";
-import { optimism } from "viem/chains";
 import { config } from "../wagmi.config";
-import { getGenAiNFTContractConfig } from "../utils/getChain";
+import { genAiNFTContractConfig } from "../utils/getChain";
+import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
 import * as styles from "../layouts/styles";
-
+import { useLocale } from "../hooks/useLocale";
 // NFT Card Component
 export function NFTCard({
   tokenId,
@@ -18,32 +17,34 @@ export function NFTCard({
   onListedStatusChanged,
   isHighlighted = false,
   isPublicView = false,
+  preloadedImageUrl,
+  preloadedMetadata,
 }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
-  const genAiNFTContractConfig = getGenAiNFTContractConfig();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
-  // NFT state - always load from blockchain
+  // NFT state - initialize with preloaded data if available
   const [nft, setNft] = useState<NFT>({
     tokenId,
     tokenURI: "",
-    isLoading: true,
+    imageUrl: preloadedImageUrl,
+    metadata: preloadedMetadata,
+    isLoading: !preloadedImageUrl, // Not loading if we have preloaded data
   });
   const [owner, setOwner] = useState<string>("");
 
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
 
-  // Memoize the public client to prevent recreation on every render
-  const publicClient = useMemo(
-    () =>
-      createPublicClient({
-        chain: optimism,
-        transport: http(),
-      }),
-    [],
-  );
+  // Locale labels - moved to component level to fix hook order
+  const listedLabel = useLocale({ label: "imagegen.listed" });
+  const downloadLabel = useLocale({ label: "imagegen.download" });
+
+  const deleteLabel = useLocale({ label: "imagegen.delete" });
+
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient();
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -83,6 +84,16 @@ export function NFTCard({
 
         const tokenURI = tokenURIResult as string;
 
+        // Skip fetching if tokenURI is empty and we have preloaded data
+        if (!tokenURI && (preloadedImageUrl || preloadedMetadata)) {
+          setNft((prev) => ({
+            ...prev,
+            tokenURI: "",
+            isLoading: false,
+          }));
+          return;
+        }
+
         // Get owner if in public view
         let nftOwner = "";
         if (isPublicView) {
@@ -111,14 +122,23 @@ export function NFTCard({
           }
         }
 
-        // Fetch metadata
-        const metadata = await fetchNFTMetadata(tokenURI);
+        // Fetch metadata only if tokenURI is available
+        let metadata = preloadedMetadata; // Keep preloaded metadata as fallback
+        let finalImageUrl = preloadedImageUrl; // Keep preloaded image as fallback
+
+        if (tokenURI) {
+          const contractMetadata = await fetchNFTMetadata(tokenURI);
+          if (contractMetadata) {
+            metadata = contractMetadata;
+            finalImageUrl = contractMetadata.image;
+          }
+        }
 
         setNft({
           tokenId,
           tokenURI,
-          metadata: metadata || undefined,
-          imageUrl: metadata?.image,
+          metadata,
+          imageUrl: finalImageUrl,
           isLoading: false,
           isListed,
         });
@@ -127,6 +147,8 @@ export function NFTCard({
         setNft({
           tokenId,
           tokenURI: "",
+          imageUrl: preloadedImageUrl, // Keep preloaded image on error
+          metadata: preloadedMetadata, // Keep preloaded metadata on error
           isLoading: false,
           error: `Failed to load NFT #${tokenId}: ${error instanceof Error ? error.message : "Unknown error"}`,
         });
@@ -134,7 +156,7 @@ export function NFTCard({
     };
 
     loadNFTData();
-  }, [tokenId, isPublicView]);
+  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, publicClient]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -154,7 +176,7 @@ export function NFTCard({
         onNftBurned();
       }, 1000);
     }
-  }, [isConfirmed]); // Entfernt: onNftBurned aus Dependencies
+  }, [isConfirmed, onNftBurned]);
 
   // Handle successful listing status change
   useEffect(() => {
@@ -162,7 +184,7 @@ export function NFTCard({
       // The UI is already updated optimistically, just show success toast
       showToast("Listing status updated successfully!", "success");
     }
-  }, [isListingConfirmed]); // Entfernt: onListedStatusChanged, showToast aus Dependencies
+  }, [isListingConfirmed, onListedStatusChanged, showToast]);
 
   const handleImageClick = () => {
     if (nft.imageUrl) {
@@ -271,7 +293,10 @@ export function NFTCard({
   };
 
   return (
-    <div className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""}`}>
+    <div
+      className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""} group`}
+      onClick={handleImageClick}
+    >
       {nft.isLoading ? (
         <div className={styles.nftCard.loadingContainer}>
           <div className={styles.spinner}></div>
@@ -286,14 +311,13 @@ export function NFTCard({
         </div>
       ) : (
         <>
+          {/* Vollbild Image/Placeholder */}
           {nft.imageUrl ? (
             <div className={styles.nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
                 alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
                 className={styles.nftCard.image}
-                onClick={handleImageClick}
-                style={{ cursor: "pointer" }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = "none";
@@ -301,80 +325,107 @@ export function NFTCard({
                 }}
               />
               <div className={styles.nftCard.imageError} style={{ display: "none" }}>
-                Image not available
+                📷 Image not available
               </div>
             </div>
           ) : (
-            <div className={styles.nftCard.imagePlaceholder}>No image available</div>
+            <div className={styles.nftCard.imagePlaceholder}>📷 No image available</div>
           )}
 
-          <h3 className={styles.nftCard.title}>{nft.metadata?.name || `Artwork #${nft.tokenId}`}</h3>
+          {/* Corner Badge - Token ID */}
+          <div className={styles.nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
 
-          {nft.metadata?.description && <p className={styles.nftCard.description}>{nft.metadata.description}</p>}
+          {/* Listed Badge (nur wenn listed) */}
+          {!isPublicView && nft.isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
 
-          <div className={styles.nftCard.footer}>
-            <span>ID: {nft.tokenId.toString()}</span>
-            {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
-              <label
-                className={styles.nftCard.checkboxLabel}
-                title={`${nft.isListed ? "NFT is publicly listed" : "NFT is private"}`}
+          {/* Owner Badge (nur in Public View) */}
+          {isPublicView && owner && (
+            <div className={styles.nftCard.ownerBadge}>
+              👤 {owner.slice(0, 6)}...{owner.slice(-4)}
+            </div>
+          )}
+
+          {/* Actions Overlay (nur bei Hover sichtbar) */}
+          <div className={styles.nftCard.actionsOverlay}>
+            {/* Alle Actions als einheitliche Icon-Buttons in einer Zeile */}
+            <div className={styles.nftCard.actions}>
+              {/* Download */}
+              {nft.imageUrl && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload();
+                  }}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title={`${downloadLabel} image`}
+                >
+                  ⬇️
+                </button>
+              )}
+
+              {/* Zoom */}
+              {nft.imageUrl && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleImageClick();
+                  }}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title="View full size"
+                >
+                  🔍
+                </button>
+              )}
+
+              {/* Share */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShare();
+                }}
+                className={styles.nftCard.compactSecondaryButton}
+                title="Share artwork"
               >
-                <input
-                  type="checkbox"
-                  checked={nft.isListed}
-                  onChange={handleToggleListing}
+                📤
+              </button>
+
+              {/* Listed Toggle (nur private view) */}
+              {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleListing();
+                  }}
                   disabled={isToggling || isListingConfirming}
-                  className={styles.nftCard.checkbox}
-                />
-                Listed
-              </label>
-            )}
-            {isPublicView && owner && (
-              <span title={`Owned by ${owner}`}>
-                Owner: {owner.slice(0, 6)}...{owner.slice(-4)}
-              </span>
-            )}
-          </div>
+                  className={styles.nftCard.compactSecondaryButton}
+                  title={`${nft.isListed ? "Make private" : "Make public"}`}
+                >
+                  {nft.isListed ? "🔓" : "🔒"}
+                </button>
+              )}
 
-          {/* Aktions-Buttons */}
-          <div className={styles.nftCard.actions}>
-            {nft.imageUrl && (
-              <button
-                onClick={handleImageClick}
-                className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
-                title="View full size"
-              >
-                🔍 Zoom
-              </button>
-            )}
-            {nft.imageUrl && (
-              <button
-                onClick={handleDownload}
-                className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
-                title="Download image"
-              >
-                ⬇️ Download
-              </button>
-            )}
-            <button
-              onClick={handleShare}
-              className={`${styles.nftCard.actionButton} ${styles.secondaryButton}`}
-              title="Share your artwork on the marketplace"
-            >
-              📤 Share
-            </button>
-            {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
-            {!isPublicView && (
-              <button
-                onClick={handleBurn}
-                disabled={isBurning || isConfirming}
-                className={`${styles.nftCard.actionButton} ${isBurning || isConfirming ? styles.secondaryButton : styles.errorStatus}`}
-                title="Delete artwork (permanent)"
-                style={{ opacity: isBurning || isConfirming ? 0.6 : 1 }}
-              >
-                {isBurning ? "🗑️ Deleting..." : isConfirming ? "⏳ Confirming..." : "🗑️ Delete"}
-              </button>
-            )}
+              {/* Collect Button (nur public view) */}
+              {isPublicView && <SimpleCollectButton genImTokenId={nft.tokenId} />}
+
+              {/* Delete (nur private view) */}
+              {!isPublicView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBurn();
+                  }}
+                  disabled={isBurning || isConfirming}
+                  className={styles.nftCard.compactSecondaryButton}
+                  title={`${deleteLabel} artwork (permanent)`}
+                  style={{
+                    backgroundColor: isBurning || isConfirming ? "rgba(0,0,0,0.3)" : "rgba(220, 38, 38, 0.8)",
+                    opacity: isBurning || isConfirming ? 0.6 : 1,
+                  }}
+                >
+                  {isBurning ? "⏳" : isConfirming ? "⏳" : "🗑️"}
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}

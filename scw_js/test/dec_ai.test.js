@@ -34,7 +34,8 @@ describe("dec_ai.js Tests", () => {
   describe("handle() - Hauptfunktion Tests", () => {
     test("sollte Fehler zurückgeben wenn kein Prompt bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {},
+        httpMethod: "POST",
+        body: JSON.stringify({}),
       };
 
       const result = await handle(event, {});
@@ -43,12 +44,38 @@ describe("dec_ai.js Tests", () => {
       expect(JSON.parse(result.body).error).toBe("Kein Prompt angegeben.");
     });
 
-    test("sollte Fehler zurückgeben wenn ungültige size bereitgestellt wird", async () => {
+    test("sollte Fehler zurückgeben für GET requests", async () => {
       const event = {
+        httpMethod: "GET",
         queryStringParameters: {
           prompt: "test prompt",
-          size: "invalid_size",
         },
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Only POST requests are supported");
+    });
+
+    test("sollte CORS preflight requests handhaben", async () => {
+      const event = {
+        httpMethod: "OPTIONS",
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toBe("");
+    });
+
+    test("sollte Fehler zurückgeben wenn ungültige size bereitgestellt wird", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "test prompt",
+          size: "invalid_size",
+        }),
       };
 
       const result = await handle(event, {});
@@ -61,15 +88,23 @@ describe("dec_ai.js Tests", () => {
 
     test("sollte standard size verwenden wenn keine size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
-        },
+        }),
       };
 
       const result = await handle(event, {});
 
       expect(result.statusCode).toBe(200);
-      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith("test prompt", "0", "1024x1024");
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        "0",
+        "ionos",
+        "1024x1024",
+        "generate",
+        null,
+      );
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.metadata_url).toBe(
@@ -77,14 +112,16 @@ describe("dec_ai.js Tests", () => {
       );
       expect(responseBody.token_id).toBe("0");
       expect(responseBody.size).toBe("1024x1024");
+      expect(responseBody.provider).toBe("ionos");
     });
 
     test("sollte custom size verwenden wenn gültige size bereitgestellt wird", async () => {
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "beautiful landscape",
           size: "1792x1024",
-        },
+        }),
       };
 
       const result = await handle(event, {});
@@ -93,7 +130,10 @@ describe("dec_ai.js Tests", () => {
       expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
         "beautiful landscape",
         "0",
+        "ionos",
         "1792x1024",
+        "generate",
+        null,
       );
 
       const responseBody = JSON.parse(result.body);
@@ -102,22 +142,232 @@ describe("dec_ai.js Tests", () => {
       );
       expect(responseBody.token_id).toBe("0");
       expect(responseBody.size).toBe("1792x1024");
+      expect(responseBody.provider).toBe("ionos");
     });
 
-    test("sollte Fehler behandeln wenn Bildgenerierung fehlschlägt", async () => {
-      // Mock dass Bildgenerierung fehlschlägt
-      mockGenerateAndUploadImage.mockRejectedValue(new Error("Image generation failed"));
+    test("sollte BFL Provider verwenden wenn provider=bfl angegeben wird", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "beautiful landscape",
+          provider: "bfl",
+          size: "1024x1024",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "bfl",
+        "1024x1024",
+        "generate",
+        null,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.metadata_url).toBe(
+        "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_test_0.json",
+      );
+      expect(responseBody.token_id).toBe("0");
+      expect(responseBody.size).toBe("1024x1024");
+      expect(responseBody.provider).toBe("bfl");
+    });
+
+    test("sollte IONOS als Standard-Provider verwenden wenn kein provider angegeben", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "beautiful landscape",
+          size: "1024x1024",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "ionos",
+        "1024x1024",
+        "generate",
+        null,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.provider).toBe("ionos");
+    });
+
+    test("sollte Fehler zurückgeben wenn ungültiger provider angegeben wird", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "test prompt",
+          provider: "invalid_provider",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Ungültiger Provider. Erlaubt sind: ionos, bfl");
+    });
+
+    test("sollte BFL Provider mit custom size verwenden", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "beautiful landscape",
+          provider: "bfl",
+          size: "1792x1024",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "bfl",
+        "1792x1024",
+        "generate",
+        null,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.size).toBe("1792x1024");
+      expect(responseBody.provider).toBe("bfl");
+    });
+
+    test("sollte edit mode korrekt handhaben", async () => {
+      const referenceImageBase64 =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
 
       const event = {
-        queryStringParameters: {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color to red",
+          mode: "edit",
+          referenceImage: referenceImageBase64,
+          provider: "bfl",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "change color to red",
+        "0",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImageBase64,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.mode).toBe("edit");
+      expect(responseBody.message).toBe("Bild erfolgreich bearbeitet");
+    });
+
+    test("sollte generate mode als default verwenden", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "beautiful landscape",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "beautiful landscape",
+        "0",
+        "ionos",
+        "1024x1024",
+        "generate",
+        null,
+      );
+
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.mode).toBe("generate");
+      expect(responseBody.message).toBe("Bild erfolgreich generiert");
+    });
+
+    test("sollte Fehler zurückgeben wenn edit mode ohne referenceImage verwendet wird", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          prompt: "change color to red",
+          mode: "edit",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Edit mode requires referenceImage parameter");
+    });
+
+    test("sollte Fehler zurückgeben wenn ungültiger mode angegeben wird", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
           prompt: "test prompt",
+          mode: "invalid_mode",
+        }),
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(JSON.parse(result.body).error).toBe("Ungültiger Mode. Erlaubt sind: generate, edit");
+    });
+
+    test("sollte JSON parsing für string body handhaben", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: '{"prompt": "test prompt", "provider": "bfl"}',
+      };
+
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        "0",
+        "bfl",
+        "1024x1024",
+        "generate",
+        null,
+      );
+    });
+
+    test("sollte bereits geparsetes JSON body handhaben", async () => {
+      const event = {
+        httpMethod: "POST",
+        body: {
+          prompt: "test prompt",
+          provider: "ionos",
         },
       };
 
       const result = await handle(event, {});
 
-      expect(result.statusCode).toBe(500);
-      expect(JSON.parse(result.body).error).toBe("Image generation failed");
+      expect(result.statusCode).toBe(200);
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        "test prompt",
+        "0",
+        "ionos",
+        "1024x1024",
+        "generate",
+        null,
+      );
     });
   });
 });

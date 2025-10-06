@@ -1,6 +1,9 @@
 ---
 publishing_date: 2025-05-14
 title: My short lived contact with the world of VCs in Germany
+category: "others"
+secondaryCategory: "quantum"
+description: "I explore the challenges of transitioning from quantum research to startup entrepreneurship. Valuable lessons about VC funding, deep tech development, and German startup realities."
 ---
 
 For a number of years, I worked in academia on the topic of quantum hardware. You can find the traces of these activities sprinkled over this blog. But over time it became increasingly clear to me that I would like to venture outside of this well-trodden path. As this was the time when names like [IonQ](https://ionq.com/), [IBM](https://quantum.ibm.com/) or [Pasqal](https://www.pasqal.com/) really were exciting developments, I obviously also investigated the possibility of a startup. If these (senior) peers could do it, why not me ?

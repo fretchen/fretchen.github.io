@@ -45,16 +45,20 @@ const EntryList: React.FC<EntryListProps> = ({
               )}
 
               {/* Text content */}
-              <div className={entryList.entryText}>
+              <div className={blog.description ? entryList.entryTextCompact : entryList.entryText}>
                 <div className={entryList.entryTextContent}>
-                  {/* Date */}
-                  {showDate && blog.publishing_date && <p className={entryList.entryDate}>{blog.publishing_date}</p>}
+                  {/* Date - use substantially tighter spacing when description is present */}
+                  {showDate && blog.publishing_date && (
+                    <div className={blog.description ? entryList.entryDateWithDescription : entryList.entryDate}>
+                      {blog.publishing_date}
+                    </div>
+                  )}
 
                   {/* Title */}
                   <h3 className={`${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
 
                   {/* Description */}
-                  {blog.description && <p className={entryList.entryDescription}>{blog.description}</p>}
+                  {blog.description && <div className={entryList.entryDescription}>{blog.description}</div>}
                 </div>
               </div>
             </div>

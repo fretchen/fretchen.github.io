@@ -1,15 +1,13 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render } from "@testing-library/react";
+import { useReadContract } from "wagmi";
 import { NFTList } from "../components/NFTList";
 import { NFTListProps } from "../types/components";
 
 /**
  * Mock complex dependencies to focus on component logic
  */
-vi.mock("wagmi", () => ({
-  useAccount: vi.fn(() => ({ address: "0x123" })),
-  useReadContract: vi.fn(() => ({ data: [], isLoading: false })),
-}));
 
 vi.mock("../components/MyNFTList", () => ({
   MyNFTList: vi.fn(() => <div data-testid="my-nft-list">My NFTs</div>),
@@ -29,6 +27,12 @@ vi.mock("../layouts/styles", () => ({
     tabList: "tab-list",
     tab: "tab",
     activeTab: "active-tab",
+  },
+  tabs: {
+    container: "tabs-container",
+    tabList: "tab-list",
+    tabPanel: "tab-panel",
+    hiddenPanel: "hidden-panel",
   },
 }));
 
@@ -247,5 +251,44 @@ describe("NFTList Component", () => {
     // to its NFTCard children in private view
     expect(mockMyNFTList).toBeDefined();
     expect(typeof mockMyNFTList).toBe("function");
+  });
+
+  /**
+   * Balance Update Bug Documentation and Validation
+   */
+  describe("Balance Update Bug", () => {
+    it("validates that refetch is called when newlyCreatedNFT prop changes", () => {
+      const mockRefetch = vi.fn();
+
+      // Override the global mock for this specific test
+      const mockUseReadContract = vi.mocked(useReadContract);
+      mockUseReadContract.mockReturnValue({
+        data: 2n,
+        isLoading: false,
+        refetch: mockRefetch,
+      } as unknown as ReturnType<typeof useReadContract>);
+
+      const TestComponent = ({ newlyCreatedNFT }: { newlyCreatedNFT?: NFTListProps["newlyCreatedNFT"] }) => (
+        <NFTList newlyCreatedNFT={newlyCreatedNFT} />
+      );
+
+      // Initial render without newlyCreatedNFT
+      const { rerender } = render(<TestComponent />);
+
+      // refetch should not be called initially
+      expect(mockRefetch).not.toHaveBeenCalled();
+
+      // Now provide a newlyCreatedNFT
+      const newNFT = {
+        tokenId: 123n,
+        imageUrl: "test.png",
+        metadata: { name: "Test NFT", description: "Test", image: "test.png" },
+      };
+
+      rerender(<TestComponent newlyCreatedNFT={newNFT} />);
+
+      // Now refetch should have been called because of our useEffect
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
+    });
   });
 });

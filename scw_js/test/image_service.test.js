@@ -158,7 +158,7 @@ describe("image_service.js Tests", () => {
       const prompt = "beautiful landscape";
       const tokenId = "123";
 
-      const result = await generateAndUploadImage(prompt, tokenId);
+      const result = await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Verify IONOS API call
       expect(global.fetch).toHaveBeenCalledWith(
@@ -187,15 +187,21 @@ describe("image_service.js Tests", () => {
     });
 
     test("sollte Fehler werfen wenn kein Prompt bereitgestellt wird", async () => {
-      await expect(generateAndUploadImage("", "123")).rejects.toThrow("No prompt provided.");
-      await expect(generateAndUploadImage(null, "123")).rejects.toThrow("No prompt provided.");
-      await expect(generateAndUploadImage(undefined, "123")).rejects.toThrow("No prompt provided.");
+      await expect(generateAndUploadImage("", "123", "ionos")).rejects.toThrow(
+        "No prompt provided.",
+      );
+      await expect(generateAndUploadImage(null, "123", "ionos")).rejects.toThrow(
+        "No prompt provided.",
+      );
+      await expect(generateAndUploadImage(undefined, "123", "ionos")).rejects.toThrow(
+        "No prompt provided.",
+      );
     });
 
     test("sollte Fehler werfen wenn IONOS API Token fehlt", async () => {
       delete process.env.IONOS_API_TOKEN;
 
-      await expect(generateAndUploadImage("test prompt", "123")).rejects.toThrow(
+      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
         "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
       );
     });
@@ -207,7 +213,7 @@ describe("image_service.js Tests", () => {
         statusText: "Unauthorized",
       });
 
-      await expect(generateAndUploadImage("test prompt", "123")).rejects.toThrow(
+      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
         "Could not reach IONOS: 401 Unauthorized",
       );
     });
@@ -216,7 +222,7 @@ describe("image_service.js Tests", () => {
       const prompt = "beautiful sunset";
       const tokenId = "456";
 
-      await generateAndUploadImage(prompt, tokenId);
+      await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Überprüfe, dass die Metadaten-Upload mit korrektem Format aufgerufen wurde
       const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
@@ -230,7 +236,7 @@ describe("image_service.js Tests", () => {
         name: `AI Generated Art #${tokenId}`,
         description: `AI generated artwork based on the prompt: "${prompt}"`,
         image: expect.stringMatching(
-          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.png$/,
+          /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.jpg$/,
         ),
         attributes: [
           {
@@ -258,8 +264,8 @@ describe("image_service.js Tests", () => {
       const tokenId = "789";
 
       // Führe die Funktion zweimal aus
-      await generateAndUploadImage(prompt, tokenId);
-      await generateAndUploadImage(prompt, tokenId);
+      await generateAndUploadImage(prompt, tokenId, "ionos");
+      await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Überprüfe, dass verschiedene Dateinamen verwendet wurden
       const imageCalls = mockPutObjectCommand.mock.calls.filter((call) =>
@@ -281,11 +287,11 @@ describe("image_service.js Tests", () => {
       const prompt = "test prompt";
       const tokenId = "999";
 
-      await generateAndUploadImage(prompt, tokenId);
+      await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Finde den Bild-Upload-Aufruf
       const imageCall = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/png",
+        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/jpeg",
       );
 
       expect(imageCall).toBeDefined();
@@ -295,7 +301,7 @@ describe("image_service.js Tests", () => {
     test("sollte mit default tokenId umgehen", async () => {
       const prompt = "test without tokenId";
 
-      const result = await generateAndUploadImage(prompt);
+      const result = await generateAndUploadImage(prompt, "unknown", "ionos");
 
       expect(result).toMatch(/metadata_unknown_[a-f0-9]{12}\.json$/);
 
@@ -310,7 +316,9 @@ describe("image_service.js Tests", () => {
     test("sollte Netzwerk-Timeouts handhaben", async () => {
       global.fetch.mockRejectedValue(new Error("Network timeout"));
 
-      await expect(generateAndUploadImage("test prompt", "123")).rejects.toThrow("Network timeout");
+      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
+        "Network timeout",
+      );
     });
 
     test("sollte custom size Parameter verwenden", async () => {
@@ -318,7 +326,7 @@ describe("image_service.js Tests", () => {
       const tokenId = "123";
       const size = "1792x1024";
 
-      const result = await generateAndUploadImage(prompt, tokenId, size);
+      const result = await generateAndUploadImage(prompt, tokenId, "ionos", size);
 
       // Verify IONOS API call with custom size
       expect(global.fetch).toHaveBeenCalledWith(
@@ -346,7 +354,7 @@ describe("image_service.js Tests", () => {
       const prompt = "beautiful landscape";
       const tokenId = "123";
 
-      await generateAndUploadImage(prompt, tokenId);
+      await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Verify IONOS API call with default size
       expect(global.fetch).toHaveBeenCalledWith(
@@ -366,7 +374,7 @@ describe("image_service.js Tests", () => {
       const tokenId = "123";
       const invalidSize = "invalid_size";
 
-      await expect(generateAndUploadImage(prompt, tokenId, invalidSize)).rejects.toThrow(
+      await expect(generateAndUploadImage(prompt, tokenId, "ionos", invalidSize)).rejects.toThrow(
         "Invalid size parameter. Must be one of: 1024x1024, 1792x1024",
       );
     });
@@ -376,7 +384,7 @@ describe("image_service.js Tests", () => {
       const tokenId = "123";
 
       // Test 1024x1024
-      await generateAndUploadImage(prompt, tokenId, "1024x1024");
+      await generateAndUploadImage(prompt, tokenId, "ionos", "1024x1024");
       expect(global.fetch).toHaveBeenLastCalledWith(
         expect.any(String),
         expect.objectContaining({
@@ -389,7 +397,7 @@ describe("image_service.js Tests", () => {
       );
 
       // Test 1792x1024
-      await generateAndUploadImage(prompt, tokenId, "1792x1024");
+      await generateAndUploadImage(prompt, tokenId, "ionos", "1792x1024");
       expect(global.fetch).toHaveBeenLastCalledWith(
         expect.any(String),
         expect.objectContaining({
@@ -404,7 +412,7 @@ describe("image_service.js Tests", () => {
 
     test("sollte size Parameter in Metadaten-Attributen einschließen", async () => {
       // Test mit 1024x1024 size
-      await generateAndUploadImage("test prompt", "123", "1024x1024");
+      await generateAndUploadImage("test prompt", "123", "ionos", "1024x1024");
 
       // Überprüfe den Metadaten-Upload Call
       const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
@@ -439,7 +447,7 @@ describe("image_service.js Tests", () => {
           }),
       });
 
-      await generateAndUploadImage("test prompt", "456", "1792x1024");
+      await generateAndUploadImage("test prompt", "456", "ionos", "1792x1024");
 
       const metadataCall2 = mockPutObjectCommand.mock.calls.find((call) =>
         call[0].Key.startsWith("metadata/"),

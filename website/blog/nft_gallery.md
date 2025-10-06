@@ -3,6 +3,9 @@ publishing_date: 2025-06-03
 title: A gallery of AI images
 tags: [blog, ai, blockchain]
 tokenID: 24
+category: "blockchain"
+secondaryCategory: "ai"
+description: "I build an NFT gallery for AI-generated images using ERC-721 Enumerable contracts. Learn how to upgrade smart contracts and create integrated user experiences for collectibles."
 ---
 
 In one of my [previous posts](9), I described how I set up a system to generate AI images and set up the payment system with ethereum. I liked the set-up, but it was very minimalistic and only focused on the generation process. However, with NFTs, you can do so much more and I started to work through the process. In a first step, I set up a gallery of the images that associated with the connected wallet. And in this post, I will describe how I set up the gallery and what I learned in the process.

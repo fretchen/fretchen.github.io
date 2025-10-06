@@ -278,6 +278,1036 @@ const leaderRedistribution = (leader: number): { redistributionRate: number; pol
   return { redistributionRate: currentRedistributionRate, policy: redistributionPolicy };
 };
 
+// Fishing Game Simulator Sub-Components
+const FishingScenarioSelector: React.FC<{
+  scenario: ScenarioType;
+  setScenario: (scenario: ScenarioType) => void;
+  history: RoundHistory[];
+}> = ({ scenario, setScenario, history }) => {
+  const scenarios = {
+    random: {
+      name: "🏝️ Mixed Islands",
+      description: `Some chiefs sustainable (~${OPTIMAL_BOATS.low_fishing} boats), others competitive (~${OPTIMAL_BOATS.intensive_fishing} boats)`,
+    },
+    sustainable: {
+      name: "🌊 Harmony Islands",
+      description: `Chiefs here value long-term thinking (~${OPTIMAL_BOATS.low_fishing} boats each)`,
+    },
+    aggressive: {
+      name: "⚔️ Competition Islands",
+      description: `Every chief fights for maximum catch (~${OPTIMAL_BOATS.intensive_fishing} boats each)`,
+    },
+  };
+
+  // Check if any round has started (any boat choice has been made)
+  const gameStarted = history.some((h) => h.moanaBoats !== null);
+
+  return (
+    <div
+      className={css({
+        marginBottom: "20px",
+        textAlign: "center",
+        border: "1px solid #e5e7eb",
+        borderRadius: "8px",
+        padding: "16px",
+        background: "#fafafa",
+      })}
+    >
+      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+        🌏 Neighboring Islands Culture
+      </div>
+      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+        {Object.entries(scenarios).map(([key, info]) => {
+          const isSelected = scenario === key;
+          const isDisabled = gameStarted;
+
+          return (
+            <button
+              key={key}
+              onClick={() => {
+                if (!isDisabled) {
+                  setScenario(key as ScenarioType);
+                }
+              }}
+              disabled={isDisabled}
+              className={css({
+                padding: "12px 16px",
+                border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                borderRadius: "8px",
+                background: isDisabled ? "#f3f4f6" : isSelected ? "#eff6ff" : "#fff",
+                cursor: isDisabled ? "not-allowed" : "pointer",
+                textAlign: "left",
+                maxWidth: "200px",
+                fontSize: "14px",
+                opacity: isDisabled ? 0.6 : 1,
+                position: "relative",
+              })}
+              title={isDisabled ? "Scenario locked during active game" : ""}
+            >
+              {isDisabled && isSelected && (
+                <div
+                  className={css({
+                    position: "absolute",
+                    top: "4px",
+                    right: "6px",
+                    fontSize: "12px",
+                    color: "#6b7280",
+                  })}
+                >
+                  🔒
+                </div>
+              )}
+              <div
+                className={css({
+                  fontWeight: "600",
+                  marginBottom: "4px",
+                  color: isDisabled ? "#9ca3af" : "#111827",
+                })}
+              >
+                {info.name}
+              </div>
+              <div
+                className={css({
+                  color: isDisabled ? "#9ca3af" : "#64748b",
+                  fontSize: "12px",
+                  lineHeight: "1.3",
+                })}
+              >
+                {info.description}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className={css({ marginTop: "16px" })}>
+        <div
+          className={css({
+            fontSize: "14px",
+            color: "#64748b",
+            marginBottom: "8px",
+            fontWeight: "500",
+          })}
+        >
+          Active Scenario: {scenarios[scenario].name}
+        </div>
+        {gameStarted ? (
+          <div
+            className={css({
+              fontSize: "13px",
+              color: "#9ca3af",
+              fontStyle: "italic",
+            })}
+          >
+            Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
+          </div>
+        ) : (
+          <div className={css({ fontSize: "14px", color: "#64748b" })}>
+            As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
+            {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
+            {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Action-Bereich mit Boats-basierten Entscheidungen:
+const FishingActionBar: React.FC<{
+  round: number;
+  gameOver: boolean;
+  history: RoundHistory[];
+  onBoatChoice: (boats: number) => void;
+}> = ({ round, gameOver, history, onBoatChoice }) => {
+  const currentRoundHistory = history[round - 1];
+  const hasChosenBoats = currentRoundHistory.moanaBoats !== null;
+
+  return (
+    <div
+      className={css({
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "12px",
+        marginBottom: "16px",
+      })}
+    >
+      {/* Progress Indicator */}
+      <div className={css({ display: "flex", gap: "8px", marginBottom: "8px" })}>
+        {[1, 2, 3].map((roundNum) => (
+          <div
+            key={roundNum}
+            className={css({
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "14px",
+              fontWeight: "600",
+              background: roundNum < round ? "#10b981" : roundNum === round ? "#3b82f6" : "#e5e7eb",
+              color: roundNum < round || roundNum === round ? "#fff" : "#9ca3af",
+            })}
+          >
+            {roundNum < round ? "✓" : roundNum}
+          </div>
+        ))}
+      </div>
+
+      {/* Status */}
+      <div className={css({ fontSize: "16px", textAlign: "center", marginBottom: "8px" })}>
+        <div className={css({ fontWeight: "600", marginBottom: "4px" })}>
+          Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
+        </div>
+        <div className={css({ color: "#64748b", fontSize: "14px" })}>How many boats should Moana send out today?</div>
+      </div>
+
+      {/* Boat Choice Buttons */}
+      {!gameOver && !hasChosenBoats && (
+        <div className={css({ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" })}>
+          <button
+            onClick={() => onBoatChoice(OPTIMAL_BOATS.low_fishing)}
+            className={css({
+              padding: "10px 16px",
+              border: "1px solid #10b981",
+              borderRadius: "6px",
+              background: "#fff",
+              color: "#222",
+              cursor: "pointer",
+              fontWeight: "500",
+              fontSize: "14px",
+            })}
+          >
+            🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
+          </button>
+          <button
+            onClick={() => onBoatChoice(Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2))}
+            className={css({
+              padding: "10px 16px",
+              border: "1px solid #f59e0b",
+              borderRadius: "6px",
+              background: "#fff",
+              color: "#222",
+              cursor: "pointer",
+              fontWeight: "500",
+              fontSize: "14px",
+            })}
+          >
+            ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
+          </button>
+          <button
+            onClick={() => onBoatChoice(OPTIMAL_BOATS.intensive_fishing)}
+            className={css({
+              padding: "10px 16px",
+              border: "1px solid #ef4444",
+              borderRadius: "6px",
+              background: "#fff",
+              color: "#222",
+              cursor: "pointer",
+              fontWeight: "500",
+              fontSize: "14px",
+            })}
+          >
+            ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
+          </button>
+        </div>
+      )}
+
+      {/* Round Feedback */}
+      {!gameOver && hasChosenBoats && (
+        <div
+          className={css({
+            fontSize: "14px",
+            color: "#64748b",
+            textAlign: "center",
+            marginTop: "4px",
+          })}
+        >
+          <div className={css({ marginBottom: "4px" })}>
+            <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
+          </div>
+          <div className={css({ marginBottom: "4px" })}>
+            <strong>Other Chiefs:</strong>{" "}
+            {currentRoundHistory.otherBoats
+              ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
+              .join(", ")}
+          </div>
+          <div className={css({ marginBottom: "4px" })}>
+            <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch} fish
+          </div>
+          {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
+            <div className={css({ color: "#10b981" })}>
+              🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Results table showing boats and fish caught
+const FishingResultsTable: React.FC<{ history: RoundHistory[] }> = ({ history }) => {
+  // Calculate totals
+  const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
+  const chiefsSums = otherChiefs.map((_, i) =>
+    history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
+  );
+
+  // Helper function for boat display
+  function boatCell(boats: number | null, fish: number | null) {
+    if (boats === null || fish === null) return <span>-</span>;
+    const isConservative = boats <= OPTIMAL_BOATS.low_fishing + 1; // Around sustainable level
+    const isAggressive = boats >= OPTIMAL_BOATS.intensive_fishing - 2; // Around competitive level
+
+    return (
+      <span
+        style={{
+          background: isConservative ? "#d1fae5" : isAggressive ? "#fef2f2" : "#fef9c3",
+          color: isConservative ? "#047857" : isAggressive ? "#dc2626" : "#b45309",
+          borderRadius: 4,
+          padding: "2px 6px",
+          fontWeight: 500,
+          display: "inline-block",
+          minWidth: 40,
+        }}
+        title={`${boats} boats → ${fish} fish`}
+      >
+        {boats}🛥️ → {fish}🐟
+      </span>
+    );
+  }
+
+  return (
+    <div className={css({ margin: "18px 0" })}>
+      {/* Scenario indicator above table */}
+
+      <div className={css({ display: "flex", justifyContent: "center" })}>
+        <table
+          className={css({
+            borderCollapse: "collapse",
+            fontSize: "14px",
+            minWidth: "480px",
+          })}
+        >
+          <thead>
+            <tr className={css({ background: "#bae6fd" })}>
+              <th className={css({ padding: "6px 8px" })}>Round</th>
+              <th className={css({ padding: "6px 8px" })}>Moana</th>
+              {otherChiefs.map((chief) => (
+                <th key={chief} className={css({ padding: "6px 8px", fontSize: "12px" })}>
+                  {chief.replace("Chief ", "")}
+                </th>
+              ))}
+              <th style={{ padding: "6px 8px" }}>Stock After</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((h, idx) => (
+              <tr
+                key={idx}
+                style={{
+                  background: idx % 2 === 0 ? "#f8fafc" : "#fff",
+                }}
+              >
+                <td
+                  style={{
+                    padding: "4px 8px",
+                    textAlign: "center",
+                    fontWeight: 400,
+                  }}
+                >
+                  {h.round}
+                </td>
+                {/* Moana */}
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>{boatCell(h.moanaBoats, h.moanaFish)}</td>
+                {/* Other Chiefs */}
+                {otherChiefs.map((_, i) => (
+                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
+                      ? boatCell(h.otherBoats[i], h.otherFish[i])
+                      : "-"}
+                  </td>
+                ))}
+                {/* Fish Stock */}
+                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                  {h.fishAfter !== null ? `${h.fishAfter}🐟` : "-"}
+                </td>
+              </tr>
+            ))}
+            {/* Summary Row */}
+            <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
+              {chiefsSums.map((sum, i) => (
+                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {sum}🐟
+                </td>
+              ))}
+              <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// Nach 3 Runden: Zusammenfassung
+const FishingEndSummary: React.FC<{
+  scenario: ScenarioType;
+  fishStock: number;
+  moanaTotal: number;
+  onReset: () => void;
+}> = ({ scenario, fishStock, moanaTotal, onReset }) => {
+  const scenarios = {
+    random: { name: "🏝️ Mixed Islands", color: "#f59e0b" },
+    sustainable: { name: "🌊 Harmony Islands", color: "#10b981" },
+    aggressive: { name: "⚔️ Competition Islands", color: "#ef4444" },
+  };
+
+  const getSustainabilityMessage = () => {
+    if (fishStock >= 80) return { text: "Excellent! The ocean thrives.", color: "#10b981" };
+    if (fishStock >= 60) return { text: "Good sustainability achieved.", color: "#f59e0b" };
+    if (fishStock >= 40) return { text: "The ocean is stressed but surviving.", color: "#f59e0b" };
+    return { text: "Critical! The ocean ecosystem is collapsing.", color: "#ef4444" };
+  };
+
+  const sustainabilityMessage = getSustainabilityMessage();
+
+  return (
+    <div style={{ textAlign: "center", margin: "18px 0" }}>
+      <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 12 }}>Game Complete!</div>
+
+      <div
+        style={{
+          background: "#f0f9ff",
+          border: "1px solid #c7d2fe",
+          borderRadius: 8,
+          padding: 16,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ fontSize: 14, marginBottom: 8 }}>
+          <strong>Scenario:</strong>{" "}
+          <span style={{ color: scenarios[scenario].color }}>{scenarios[scenario].name}</span>
+        </div>
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          🐟 <strong>{fishStock}</strong> fish remaining in the ocean
+        </div>
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          🌺 <strong>{moanaTotal}</strong> fish caught by Moana
+        </div>
+        <div
+          style={{
+            fontSize: 14,
+            color: sustainabilityMessage.color,
+            fontWeight: 500,
+            marginTop: 8,
+          }}
+        >
+          {sustainabilityMessage.text}
+        </div>
+      </div>
+
+      <button
+        onClick={onReset}
+        style={{
+          padding: "12px 24px",
+          border: "none",
+          borderRadius: 8,
+          background: "#0891b2",
+          color: "#fff",
+          fontWeight: 600,
+          fontSize: 15,
+          cursor: "pointer",
+        }}
+      >
+        🔄 Try Different Scenario
+      </button>
+    </div>
+  );
+};
+
+const CommunityScenarioSelector: React.FC<{
+  scenario: CommunityScenarioType;
+  setScenario: (scenario: CommunityScenarioType) => void;
+}> = ({ scenario, setScenario }) => {
+  const scenarios = {
+    democratic: {
+      name: "🤝 Democratic Fishing Council",
+      description: "Rotating leadership, graduated quotas, wealth redistribution based on Ostrom's principles",
+    },
+    hierarchical: {
+      name: "👑 Moana-Led Governance",
+      description: "Fixed leadership by Moana, efficiency focus, minimal redistribution",
+    },
+  };
+
+  return (
+    <div
+      className={css({
+        marginBottom: "20px",
+        textAlign: "center",
+        border: "1px solid #e5e7eb",
+        borderRadius: "8px",
+        padding: "16px",
+        background: "#fafafa",
+      })}
+    >
+      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+        🏛️ Community Governance System
+      </div>
+      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+        {Object.entries(scenarios).map(([key, info]) => {
+          const isSelected = scenario === key;
+
+          return (
+            <button
+              key={key}
+              onClick={() => {
+                setScenario(key as CommunityScenarioType);
+              }}
+              style={{
+                padding: "12px 16px",
+                border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                borderRadius: 8,
+                background: isSelected ? "#eff6ff" : "#fff",
+                cursor: "pointer",
+                textAlign: "left",
+                maxWidth: 220,
+                fontSize: 14,
+                position: "relative",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
+              <div
+                style={{
+                  color: "#64748b",
+                  fontSize: 12,
+                  lineHeight: "1.3",
+                }}
+              >
+                {info.description}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const IslandEfficiencyScenarioSelector: React.FC<{
+  scenario: ScenarioType;
+  setScenario: (scenario: ScenarioType) => void;
+}> = ({ scenario, setScenario }) => {
+  const scenarios = {
+    sustainable: {
+      name: "🌍 Equal Responsibility Policy",
+      description: "All islands fish at the same sustainable level regardless of their individual costs",
+    },
+    aggressive: {
+      name: "💰 Market-Driven Approach",
+      description: "Each island fishes at their cost-optimal level (islands with lower costs fish more)",
+    },
+  };
+
+  return (
+    <div
+      className={css({
+        marginBottom: "20px",
+        textAlign: "center",
+        border: "1px solid #e5e7eb",
+        borderRadius: "8px",
+        padding: "16px",
+        background: "#fafafa",
+      })}
+    >
+      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+        🌏 Fishing Management System
+      </div>
+      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+        {Object.entries(scenarios).map(([key, info]) => {
+          const isSelected = scenario === key;
+
+          return (
+            <button
+              key={key}
+              onClick={() => {
+                setScenario(key as ScenarioType);
+              }}
+              style={{
+                padding: "12px 16px",
+                border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                borderRadius: 8,
+                background: isSelected ? "#eff6ff" : "#fff",
+                cursor: "pointer",
+                textAlign: "left",
+                maxWidth: 200,
+                fontSize: 14,
+                position: "relative",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
+              <div
+                style={{
+                  color: "#64748b",
+                  fontSize: 12,
+                  lineHeight: "1.3",
+                }}
+              >
+                {info.description}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const IslandEfficiencyResultsTable: React.FC<{ history: IslandRoundHistory[] }> = ({ history }) => {
+  // Calculate totals
+  const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
+  const chiefsSums = otherChiefs.map((_, i) =>
+    history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
+  );
+  const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+  const chiefsCostSums = otherChiefs.map((_, i) =>
+    history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+  );
+
+  // Helper function for cost display
+  function costCell(fish: number | null, cost: number | null, costPerFish: number | null, roundAvgCost: number | null) {
+    if (fish === null || cost === null || costPerFish === null || roundAvgCost === null) return <span>-</span>;
+
+    return (
+      <span title={`${Math.round(fish)} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(2)} per fish`}>
+        {Math.round(fish)}🐟
+        <br />${cost.toFixed(2)}
+      </span>
+    );
+  }
+
+  return (
+    <div style={{ margin: "18px 0" }}>
+      {/* Scenario indicator above table */}
+
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
+          <thead>
+            <tr style={{ background: "#bae6fd" }}>
+              <th style={{ padding: "6px 8px" }}>Round</th>
+              <th style={{ padding: "6px 8px" }}>
+                Moana
+                <br />
+                (${MODEL_PARAMS.c_islands[0]}/boat)
+              </th>
+              {otherChiefs.map((chief, i) => (
+                <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                  {chief.replace("Chief ", "")}
+                  <br />
+                  (${MODEL_PARAMS.c_islands[i + 1]}/boat)
+                </th>
+              ))}
+              <th style={{ padding: "6px 8px" }}>Stock After</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((h, idx) => (
+              <tr
+                key={idx}
+                style={{
+                  background: idx % 2 === 0 ? "#f8fafc" : "#fff",
+                }}
+              >
+                <td
+                  style={{
+                    padding: "4px 8px",
+                    textAlign: "center",
+                    fontWeight: 400,
+                  }}
+                >
+                  {h.round}
+                </td>
+                {/* Moana */}
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {costCell(h.moanaFish, h.moanaCost, h.moanaCostPerFish, h.avgCostPerFish)}
+                </td>
+                {/* Other Chiefs */}
+                {otherChiefs.map((_, i) => (
+                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                    {h.otherFish &&
+                    h.otherCosts &&
+                    h.otherCostPerFish &&
+                    h.otherFish[i] !== undefined &&
+                    h.otherCosts[i] !== undefined
+                      ? costCell(h.otherFish[i], h.otherCosts[i], h.otherCostPerFish[i], h.avgCostPerFish)
+                      : "-"}
+                  </td>
+                ))}
+                {/* Fish Stock */}
+                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                  {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
+                </td>
+              </tr>
+            ))}
+            {/* Summary Row */}
+            <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                {Math.round(moanaSum)}🐟
+                <br />${moanaCostSum.toFixed(2)}
+              </td>
+              {chiefsSums.map((sum, i) => (
+                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {Math.round(sum)}🐟
+                  <br />${chiefsCostSums[i].toFixed(2)}
+                </td>
+              ))}
+              <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const CommunityResultsTable: React.FC<{ history: CommunityRoundHistory[] }> = ({ history }) => {
+  // Calculate totals
+  const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
+  const chiefsSums = otherChiefs.map((_, i) =>
+    history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
+  );
+  const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
+  // Calculate cost totals (Option 1: minimal cost extension)
+  const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+  const chiefsCostSums = otherChiefs.map((_, i) =>
+    history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+  );
+
+  // Helper function for redistribution display with costs
+  function redistributionCell(
+    originalCatch: number | null,
+    finalCatch: number | null,
+    netTransfer: number | null,
+    cost: number | null,
+  ) {
+    if (originalCatch === null || finalCatch === null || netTransfer === null || cost === null) {
+      return <span>-</span>;
+    }
+
+    return (
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 12 }}>
+          {originalCatch.toFixed(1)}🐟 → {finalCatch.toFixed(1)}🐟
+        </div>
+        <div style={{ fontSize: 10, color: "#64748b" }}>${cost.toFixed(2)}</div>
+      </div>
+    );
+  }
+
+  // Helper function for leader display
+  function leaderCell(leader: number, strategy: string, distributionMethod?: string, redistributionPolicy?: string) {
+    const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
+
+    // Icon mappings for each decision type
+    const conservationIcons = {
+      conservative: "🛡️",
+      moderate: "⚖️",
+      aggressive: "⚔️",
+    };
+
+    const distributionIcons = {
+      equal: "🟰",
+      hybrid: "🔄",
+      efficiency: "📈",
+    };
+
+    const redistributionIcons = {
+      conservative: "🔐",
+      moderate: "🔄",
+      progressive: "🔓",
+    };
+
+    return (
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontWeight: 600, fontSize: 12, marginBottom: "2px" }}>{leaderNames[leader]}</div>
+
+        {/* Decision Icons Row */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "2px", fontSize: "10px", marginBottom: "2px" }}>
+          <span title={`Conservation Strategy: ${strategy}`}>
+            {conservationIcons[strategy as keyof typeof conservationIcons] || "❓"}
+          </span>
+          <span title={`Distribution Method: ${distributionMethod || "unknown"}`}>
+            {distributionMethod
+              ? distributionIcons[distributionMethod as keyof typeof distributionIcons] || "❓"
+              : "❓"}
+          </span>
+          <span title={`Redistribution Policy: ${redistributionPolicy || "unknown"}`}>
+            {redistributionPolicy
+              ? redistributionIcons[redistributionPolicy as keyof typeof redistributionIcons] || "❓"
+              : "❓"}
+          </span>
+        </div>
+
+        {/* Strategy text for reference */}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ margin: "18px 0" }}>
+      {/* Legend for Leadership Decision Icons */}
+      <div
+        style={{
+          marginBottom: "12px",
+          padding: "8px 12px",
+          backgroundColor: "#f8fafc",
+          borderRadius: "6px",
+          fontSize: "12px",
+          border: "1px solid #e2e8f0",
+        }}
+      >
+        <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leadership Decision Icons Guide:</div>
+
+        {/* Conservation Strategy Icons */}
+        <div style={{ marginBottom: "4px" }}>
+          <strong>Conservation Strategy:</strong>
+          <span style={{ marginLeft: "8px" }}>🛡️ conservative (protect stocks)</span>
+          <span style={{ marginLeft: "8px" }}>⚖️ moderate (balanced approach)</span>
+          <span style={{ marginLeft: "8px" }}>⚔️ aggressive (maximize current catch)</span>
+        </div>
+
+        {/* Distribution Method Icons */}
+        <div style={{ marginBottom: "4px" }}>
+          <strong>Distribution Method:</strong>
+          <span style={{ marginLeft: "8px" }}>🟰 equal (same quotas for all)</span>
+          <span style={{ marginLeft: "8px" }}>🔄 hybrid (balanced allocation)</span>
+          <span style={{ marginLeft: "8px" }}>📈 efficiency (quota based on capability)</span>
+        </div>
+
+        {/* Redistribution Policy Icons */}
+        <div>
+          <strong>Redistribution Policy:</strong>
+          <span style={{ marginLeft: "8px" }}>🔐 conservative (minimal sharing)</span>
+          <span style={{ marginLeft: "8px" }}>🔄 moderate (balanced redistribution)</span>
+          <span style={{ marginLeft: "8px" }}>🔓 progressive (significant wealth sharing)</span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 600 }}>
+          <thead>
+            <tr style={{ background: "#bae6fd" }}>
+              <th style={{ padding: "6px 8px" }}>Round</th>
+              <th style={{ padding: "6px 8px" }}>Leader</th>
+              <th style={{ padding: "6px 8px" }}>
+                Moana
+                <br />
+                Original → Final • Cost
+              </th>
+              {otherChiefs.map((chief) => (
+                <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                  {chief.replace("Chief ", "")}
+                  <br />
+                  Original → Final • Cost
+                </th>
+              ))}
+              <th style={{ padding: "6px 8px" }}>Stock After</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((h, idx) => (
+              <tr
+                key={idx}
+                style={{
+                  background: idx % 2 === 0 ? "#f8fafc" : "#fff",
+                }}
+              >
+                <td
+                  style={{
+                    padding: "4px 8px",
+                    textAlign: "center",
+                    fontWeight: 400,
+                  }}
+                >
+                  {h.round}
+                </td>
+                {/* Leader */}
+                <td style={{ padding: "4px 8px" }}>
+                  {leaderCell(h.leader, h.leaderStrategy, h.leaderDistributionMethod, h.leaderRedistributionPolicy)}
+                </td>
+                {/* Moana */}
+                <td style={{ padding: "4px 8px" }}>
+                  {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer, h.moanaCost)}
+                </td>
+                {/* Other Chiefs */}
+                {otherChiefs.map((_, i) => (
+                  <td key={i} style={{ padding: "4px 8px" }}>
+                    {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined && h.otherCosts
+                      ? redistributionCell(
+                          h.otherOriginalCatch[i],
+                          h.otherFish[i],
+                          h.otherFish[i] - h.otherOriginalCatch[i],
+                          h.otherCosts[i],
+                        )
+                      : "-"}
+                  </td>
+                ))}
+                {/* Fish Stock */}
+                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                  {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
+                </td>
+              </tr>
+            ))}
+            {/* Summary Row */}
+            <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
+              <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>
+                Total
+              </td>
+              <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                {Math.round(moanaSum)}🐟
+                <br />
+                <span style={{ fontSize: 10, color: "#64748b" }}>${moanaCostSum.toFixed(2)}</span>
+              </td>
+              {chiefsSums.map((sum, i) => (
+                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {Math.round(sum)}🐟
+                  <br />
+                  <span style={{ fontSize: 10, color: "#64748b" }}>${chiefsCostSums[i].toFixed(2)}</span>
+                </td>
+              ))}
+              <td style={{ padding: "4px 8px", textAlign: "center", fontSize: 11 }}>
+                Redistributed: {totalRedistribution.toFixed(1)}🐟
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const CommunityEndSummary: React.FC<{
+  scenario: CommunityScenarioType;
+  fishStock: number;
+  history: CommunityRoundHistory[];
+}> = ({ scenario, fishStock, history }) => {
+  const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
+  const allPrinciples = [...new Set(history.flatMap((h) => h.activeOstromPrinciples))];
+
+  // Calculate economic metrics
+  const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
+  const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
+  const chiefsCostSums = otherChiefs.map((_, i) =>
+    history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
+  );
+  const totalCost = moanaCostSum + chiefsCostSums.reduce((sum, cost) => sum + cost, 0);
+  const avgCostPerFish = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
+
+  return (
+    <div style={{ textAlign: "center", margin: "18px 0" }}>
+      <div
+        style={{
+          background: "#f0f9ff",
+          border: "1px solid #c7d2fe",
+          borderRadius: 8,
+          padding: 16,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          🏛️ <strong>{scenario === "democratic" ? "Democratic Council" : "Moana-Led Governance"}</strong> Results
+        </div>
+        <div style={{ fontSize: 14, marginBottom: 8 }}>
+          🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught {"·"} 💰{" "}
+          <strong>${avgCostPerFish.toFixed(2)}</strong> average cost per fish
+        </div>
+        {scenario === "democratic" && (
+          <div style={{ fontSize: 12, marginBottom: 8, color: "#10b981", fontStyle: "italic" }}>
+            ✨ Community Benefit: Lower costs through coordinated fishing
+          </div>
+        )}
+        <div style={{ fontSize: 14, marginBottom: 8 }}>
+          ↔️ Fish Redistributed: <strong>{totalRedistribution.toFixed(1)}🐟</strong>
+        </div>
+        <div style={{ fontSize: 14, marginBottom: 8 }}>
+          🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in ocean
+        </div>
+      </div>
+
+      {/* Ostrom Principles Active */}
+      <div
+        style={{
+          background: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 16,
+          fontSize: 13,
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>🎯 Active Ostrom Principles:</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+          {allPrinciples.map((principle, i) => (
+            <span
+              key={i}
+              style={{
+                background: "#dcfce7",
+                color: "#166534",
+                padding: "2px 8px",
+                borderRadius: 12,
+                fontSize: 11,
+              }}
+            >
+              {principle}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const IslandEfficiencyEndSummary: React.FC<{
+  fishStock: number;
+  history: IslandRoundHistory[];
+}> = ({ fishStock, history }) => {
+  // Calculate totals for cost efficiency display
+  const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
+  const totalCost = history.reduce((sum, h) => sum + (h.totalCost ?? 0), 0);
+  const averagePrice = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
+
+  return (
+    <div style={{ textAlign: "center", margin: "18px 0" }}>
+      <div
+        style={{
+          background: "#f0f9ff",
+          border: "1px solid #c7d2fe",
+          borderRadius: 8,
+          padding: 16,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong>{" "}
+          total cost
+        </div>
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          📊 Average cost: <strong>${averagePrice.toFixed(2)}</strong> per fish
+        </div>
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in the ocean
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FishingGameSimulator: React.FC = () => {
   const [round, setRound] = useState(1); // 1, 2, 3
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init); // Start with notebook value
@@ -436,447 +1466,6 @@ const FishingGameSimulator: React.FC = () => {
     setScenario("random");
   }
 
-  // Scenario Selector Component
-  function ScenarioSelector() {
-    const scenarios = {
-      random: {
-        name: "🏝️ Mixed Islands",
-        description: `Some chiefs sustainable (~${OPTIMAL_BOATS.low_fishing} boats), others competitive (~${OPTIMAL_BOATS.intensive_fishing} boats)`,
-      },
-      sustainable: {
-        name: "🌊 Harmony Islands",
-        description: `Chiefs here value long-term thinking (~${OPTIMAL_BOATS.low_fishing} boats each)`,
-      },
-      aggressive: {
-        name: "⚔️ Competition Islands",
-        description: `Every chief fights for maximum catch (~${OPTIMAL_BOATS.intensive_fishing} boats each)`,
-      },
-    };
-
-    // Check if any round has started (any boat choice has been made)
-    const gameStarted = history.some((h) => h.moanaBoats !== null);
-
-    return (
-      <div
-        className={css({
-          marginBottom: "20px",
-          textAlign: "center",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          padding: "16px",
-          background: "#fafafa",
-        })}
-      >
-        <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
-          🌏 Neighboring Islands Culture
-        </div>
-        <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
-          {Object.entries(scenarios).map(([key, info]) => {
-            const isSelected = scenario === key;
-            const isDisabled = gameStarted;
-
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  if (!isDisabled) {
-                    setScenario(key as ScenarioType);
-                  }
-                }}
-                disabled={isDisabled}
-                className={css({
-                  padding: "12px 16px",
-                  border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  background: isDisabled ? "#f3f4f6" : isSelected ? "#eff6ff" : "#fff",
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                  textAlign: "left",
-                  maxWidth: "200px",
-                  fontSize: "14px",
-                  opacity: isDisabled ? 0.6 : 1,
-                  position: "relative",
-                })}
-                title={isDisabled ? "Scenario locked during active game" : ""}
-              >
-                {isDisabled && isSelected && (
-                  <div
-                    className={css({
-                      position: "absolute",
-                      top: "4px",
-                      right: "6px",
-                      fontSize: "12px",
-                      color: "#6b7280",
-                    })}
-                  >
-                    🔒
-                  </div>
-                )}
-                <div
-                  className={css({
-                    fontWeight: "600",
-                    marginBottom: "4px",
-                    color: isDisabled ? "#9ca3af" : "#111827",
-                  })}
-                >
-                  {info.name}
-                </div>
-                <div
-                  className={css({
-                    color: isDisabled ? "#9ca3af" : "#64748b",
-                    fontSize: "12px",
-                    lineHeight: "1.3",
-                  })}
-                >
-                  {info.description}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <div className={css({ marginTop: "16px" })}>
-          <div
-            className={css({
-              fontSize: "14px",
-              color: "#64748b",
-              marginBottom: "8px",
-              fontWeight: "500",
-            })}
-          >
-            Active Scenario: {scenarios[scenario].name}
-          </div>
-          {gameStarted ? (
-            <div
-              className={css({
-                fontSize: "13px",
-                color: "#9ca3af",
-                fontStyle: "italic",
-              })}
-            >
-              Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
-            </div>
-          ) : (
-            <div className={css({ fontSize: "14px", color: "#64748b" })}>
-              As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
-              {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
-              {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Action-Bereich mit Boats-basierten Entscheidungen
-  function ActionBar() {
-    const currentRoundHistory = history[round - 1];
-    const hasChosenBoats = currentRoundHistory.moanaBoats !== null;
-
-    return (
-      <div
-        className={css({
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "12px",
-          marginBottom: "16px",
-        })}
-      >
-        {/* Progress Indicator */}
-        <div className={css({ display: "flex", gap: "8px", marginBottom: "8px" })}>
-          {[1, 2, 3].map((roundNum) => (
-            <div
-              key={roundNum}
-              className={css({
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "14px",
-                fontWeight: "600",
-                background: roundNum < round ? "#10b981" : roundNum === round ? "#3b82f6" : "#e5e7eb",
-                color: roundNum < round || roundNum === round ? "#fff" : "#9ca3af",
-              })}
-            >
-              {roundNum < round ? "✓" : roundNum}
-            </div>
-          ))}
-        </div>
-
-        {/* Status */}
-        <div className={css({ fontSize: "16px", textAlign: "center", marginBottom: "8px" })}>
-          <div className={css({ fontWeight: "600", marginBottom: "4px" })}>
-            Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
-          </div>
-          <div className={css({ color: "#64748b", fontSize: "14px" })}>How many boats should Moana send out today?</div>
-        </div>
-
-        {/* Boat Choice Buttons */}
-        {!gameOver && !hasChosenBoats && (
-          <div className={css({ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" })}>
-            <button
-              onClick={() => handleBoatChoice(OPTIMAL_BOATS.low_fishing)}
-              className={css({
-                padding: "10px 16px",
-                border: "1px solid #10b981",
-                borderRadius: "6px",
-                background: "#fff",
-                color: "#222",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "14px",
-              })}
-            >
-              🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
-            </button>
-            <button
-              onClick={() =>
-                handleBoatChoice(Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2))
-              }
-              className={css({
-                padding: "10px 16px",
-                border: "1px solid #f59e0b",
-                borderRadius: "6px",
-                background: "#fff",
-                color: "#222",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "14px",
-              })}
-            >
-              ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
-            </button>
-            <button
-              onClick={() => handleBoatChoice(OPTIMAL_BOATS.intensive_fishing)}
-              className={css({
-                padding: "10px 16px",
-                border: "1px solid #ef4444",
-                borderRadius: "6px",
-                background: "#fff",
-                color: "#222",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "14px",
-              })}
-            >
-              ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
-            </button>
-          </div>
-        )}
-
-        {/* Round Feedback */}
-        {!gameOver && hasChosenBoats && (
-          <div
-            className={css({
-              fontSize: "14px",
-              color: "#64748b",
-              textAlign: "center",
-              marginTop: "4px",
-            })}
-          >
-            <div className={css({ marginBottom: "4px" })}>
-              <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
-            </div>
-            <div className={css({ marginBottom: "4px" })}>
-              <strong>Other Chiefs:</strong>{" "}
-              {currentRoundHistory.otherBoats
-                ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
-                .join(", ")}
-            </div>
-            <div className={css({ marginBottom: "4px" })}>
-              <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch}{" "}
-              fish
-            </div>
-            {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
-              <div className={css({ color: "#10b981" })}>
-                🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Results table showing boats and fish caught
-  function ResultsTable() {
-    // Calculate totals
-    const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
-    const chiefsSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
-    );
-
-    // Helper function for boat display
-    function boatCell(boats: number | null, fish: number | null) {
-      if (boats === null || fish === null) return <span>-</span>;
-      const isConservative = boats <= OPTIMAL_BOATS.low_fishing + 1; // Around sustainable level
-      const isAggressive = boats >= OPTIMAL_BOATS.intensive_fishing - 2; // Around competitive level
-
-      return (
-        <span
-          style={{
-            background: isConservative ? "#d1fae5" : isAggressive ? "#fef2f2" : "#fef9c3",
-            color: isConservative ? "#047857" : isAggressive ? "#dc2626" : "#b45309",
-            borderRadius: 4,
-            padding: "2px 6px",
-            fontWeight: 500,
-            display: "inline-block",
-            minWidth: 40,
-          }}
-          title={`${boats} boats → ${fish} fish`}
-        >
-          {boats}🛥️ → {fish}🐟
-        </span>
-      );
-    }
-
-    return (
-      <div className={css({ margin: "18px 0" })}>
-        {/* Scenario indicator above table */}
-
-        <div className={css({ display: "flex", justifyContent: "center" })}>
-          <table
-            className={css({
-              borderCollapse: "collapse",
-              fontSize: "14px",
-              minWidth: "480px",
-            })}
-          >
-            <thead>
-              <tr className={css({ background: "#bae6fd" })}>
-                <th className={css({ padding: "6px 8px" })}>Round</th>
-                <th className={css({ padding: "6px 8px" })}>Moana</th>
-                {otherChiefs.map((chief) => (
-                  <th key={chief} className={css({ padding: "6px 8px", fontSize: "12px" })}>
-                    {chief.replace("Chief ", "")}
-                  </th>
-                ))}
-                <th style={{ padding: "6px 8px" }}>Stock After</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h, idx) => (
-                <tr
-                  key={idx}
-                  style={{
-                    background: idx % 2 === 0 ? "#f8fafc" : "#fff",
-                  }}
-                >
-                  <td
-                    style={{
-                      padding: "4px 8px",
-                      textAlign: "center",
-                      fontWeight: 400,
-                    }}
-                  >
-                    {h.round}
-                  </td>
-                  {/* Moana */}
-                  <td style={{ padding: "4px 8px", textAlign: "center" }}>{boatCell(h.moanaBoats, h.moanaFish)}</td>
-                  {/* Other Chiefs */}
-                  {otherChiefs.map((_, i) => (
-                    <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                      {h.otherBoats && h.otherFish && h.otherBoats[i] !== undefined && h.otherFish[i] !== undefined
-                        ? boatCell(h.otherBoats[i], h.otherFish[i])
-                        : "-"}
-                    </td>
-                  ))}
-                  {/* Fish Stock */}
-                  <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
-                    {h.fishAfter !== null ? `${h.fishAfter}🐟` : "-"}
-                  </td>
-                </tr>
-              ))}
-              {/* Summary Row */}
-              <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>{moanaSum}🐟</td>
-                {chiefsSums.map((sum, i) => (
-                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {sum}🐟
-                  </td>
-                ))}
-                <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  // Nach 3 Runden: Zusammenfassung
-  function EndSummary() {
-    const scenarios = {
-      random: { name: "🏝️ Mixed Islands", color: "#f59e0b" },
-      sustainable: { name: "🌊 Harmony Islands", color: "#10b981" },
-      aggressive: { name: "⚔️ Competition Islands", color: "#ef4444" },
-    };
-
-    const getSustainabilityMessage = () => {
-      if (fishStock >= 80) return { text: "Excellent! The ocean thrives.", color: "#10b981" };
-      if (fishStock >= 60) return { text: "Good sustainability achieved.", color: "#f59e0b" };
-      if (fishStock >= 40) return { text: "The ocean is stressed but surviving.", color: "#f59e0b" };
-      return { text: "Critical! The ocean ecosystem is collapsing.", color: "#ef4444" };
-    };
-
-    const sustainabilityMessage = getSustainabilityMessage();
-
-    return (
-      <div style={{ textAlign: "center", margin: "18px 0" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 12 }}>Game Complete!</div>
-
-        <div
-          style={{
-            background: "#f0f9ff",
-            border: "1px solid #c7d2fe",
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
-            <strong>Scenario:</strong>{" "}
-            <span style={{ color: scenarios[scenario].color }}>{scenarios[scenario].name}</span>
-          </div>
-          <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🐟 <strong>{fishStock}</strong> fish remaining in the ocean
-          </div>
-          <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🌺 <strong>{moanaTotal}</strong> fish caught by Moana
-          </div>
-          <div
-            style={{
-              fontSize: 14,
-              color: sustainabilityMessage.color,
-              fontWeight: 500,
-              marginTop: 8,
-            }}
-          >
-            {sustainabilityMessage.text}
-          </div>
-        </div>
-
-        <button
-          onClick={reset}
-          style={{
-            padding: "12px 24px",
-            border: "none",
-            borderRadius: 8,
-            background: "#0891b2",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: 15,
-            cursor: "pointer",
-          }}
-        >
-          🔄 Try Different Scenario
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div
       className={css({
@@ -887,10 +1476,12 @@ const FishingGameSimulator: React.FC = () => {
         background: "#f8fafc",
       })}
     >
-      <ScenarioSelector />
-      <ActionBar />
-      <ResultsTable />
-      {gameOver && <EndSummary />}
+      <FishingScenarioSelector scenario={scenario} setScenario={setScenario} history={history} />
+      <FishingActionBar round={round} gameOver={gameOver} history={history} onBoatChoice={handleBoatChoice} />
+      <FishingResultsTable history={history} />
+      {gameOver && (
+        <FishingEndSummary scenario={scenario} fishStock={fishStock} moanaTotal={moanaTotal} onReset={reset} />
+      )}
     </div>
   );
 };
@@ -984,223 +1575,12 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       currentStock = Math.max(0, nextStock);
     }
 
-    setHistory(newHistory);
-    setFishStock(currentStock);
+    // Use setTimeout to avoid synchronous setState in effect
+    setTimeout(() => {
+      setHistory(newHistory);
+      setFishStock(currentStock);
+    }, 0);
   }, [scenario]);
-
-  // Scenario Selector Component
-  function ScenarioSelector() {
-    const scenarios = {
-      sustainable: {
-        name: "🌍 Equal Responsibility Policy",
-        description: "All islands fish at the same sustainable level regardless of their individual costs",
-      },
-      aggressive: {
-        name: "💰 Market-Driven Approach",
-        description: "Each island fishes at their cost-optimal level (islands with lower costs fish more)",
-      },
-    };
-
-    return (
-      <div
-        className={css({
-          marginBottom: "20px",
-          textAlign: "center",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          padding: "16px",
-          background: "#fafafa",
-        })}
-      >
-        <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
-          🌏 Fishing Management System
-        </div>
-        <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
-          {Object.entries(scenarios).map(([key, info]) => {
-            const isSelected = scenario === key;
-
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  setScenario(key as ScenarioType);
-                }}
-                style={{
-                  padding: "12px 16px",
-                  border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                  borderRadius: 8,
-                  background: isSelected ? "#eff6ff" : "#fff",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  maxWidth: 200,
-                  fontSize: 14,
-                  position: "relative",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
-                <div
-                  style={{
-                    color: "#64748b",
-                    fontSize: 12,
-                    lineHeight: "1.3",
-                  }}
-                >
-                  {info.description}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // Results table showing costs and fish caught
-  function ResultsTable() {
-    // Calculate totals
-    const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
-    const chiefsSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
-    );
-    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
-    const chiefsCostSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
-    );
-
-    // Helper function for cost display
-    function costCell(
-      fish: number | null,
-      cost: number | null,
-      costPerFish: number | null,
-      roundAvgCost: number | null,
-    ) {
-      if (fish === null || cost === null || costPerFish === null || roundAvgCost === null) return <span>-</span>;
-
-      return (
-        <span title={`${Math.round(fish)} fish • $${cost.toFixed(2)} total cost • $${costPerFish.toFixed(2)} per fish`}>
-          {Math.round(fish)}🐟
-          <br />${cost.toFixed(2)}
-        </span>
-      );
-    }
-
-    return (
-      <div style={{ margin: "18px 0" }}>
-        {/* Scenario indicator above table */}
-
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 480 }}>
-            <thead>
-              <tr style={{ background: "#bae6fd" }}>
-                <th style={{ padding: "6px 8px" }}>Round</th>
-                <th style={{ padding: "6px 8px" }}>
-                  Moana
-                  <br />
-                  (${MODEL_PARAMS.c_islands[0]}/boat)
-                </th>
-                {otherChiefs.map((chief, i) => (
-                  <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
-                    {chief.replace("Chief ", "")}
-                    <br />
-                    (${MODEL_PARAMS.c_islands[i + 1]}/boat)
-                  </th>
-                ))}
-                <th style={{ padding: "6px 8px" }}>Stock After</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h, idx) => (
-                <tr
-                  key={idx}
-                  style={{
-                    background: idx % 2 === 0 ? "#f8fafc" : "#fff",
-                  }}
-                >
-                  <td
-                    style={{
-                      padding: "4px 8px",
-                      textAlign: "center",
-                      fontWeight: 400,
-                    }}
-                  >
-                    {h.round}
-                  </td>
-                  {/* Moana */}
-                  <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {costCell(h.moanaFish, h.moanaCost, h.moanaCostPerFish, h.avgCostPerFish)}
-                  </td>
-                  {/* Other Chiefs */}
-                  {otherChiefs.map((_, i) => (
-                    <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                      {h.otherFish &&
-                      h.otherCosts &&
-                      h.otherCostPerFish &&
-                      h.otherFish[i] !== undefined &&
-                      h.otherCosts[i] !== undefined
-                        ? costCell(h.otherFish[i], h.otherCosts[i], h.otherCostPerFish[i], h.avgCostPerFish)
-                        : "-"}
-                    </td>
-                  ))}
-                  {/* Fish Stock */}
-                  <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
-                    {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
-                  </td>
-                </tr>
-              ))}
-              {/* Summary Row */}
-              <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>Total</td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {Math.round(moanaSum)}🐟
-                  <br />${moanaCostSum.toFixed(2)}
-                </td>
-                {chiefsSums.map((sum, i) => (
-                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {Math.round(sum)}🐟
-                    <br />${chiefsCostSums[i].toFixed(2)}
-                  </td>
-                ))}
-                <td style={{ padding: "4px 8px", textAlign: "center", color: "#64748b" }}>–</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  // Nach 3 Runden: Zusammenfassung
-  function EndSummary() {
-    // Calculate totals for cost efficiency display
-    const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
-    const totalCost = history.reduce((sum, h) => sum + (h.totalCost ?? 0), 0);
-    const averagePrice = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
-
-    return (
-      <div style={{ textAlign: "center", margin: "18px 0" }}>
-        <div
-          style={{
-            background: "#f0f9ff",
-            border: "1px solid #c7d2fe",
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught • 💰 <strong>${totalCost.toFixed(2)}</strong>{" "}
-            total cost
-          </div>
-          <div style={{ fontSize: 15, marginBottom: 8 }}>
-            📊 Average cost: <strong>${averagePrice.toFixed(2)}</strong> per fish
-          </div>
-          <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in the ocean
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1212,9 +1592,9 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
         background: "#f8fafc",
       })}
     >
-      <ScenarioSelector />
-      <ResultsTable />
-      <EndSummary />
+      <IslandEfficiencyScenarioSelector scenario={scenario} setScenario={setScenario} />
+      <IslandEfficiencyResultsTable history={history} />
+      <IslandEfficiencyEndSummary fishStock={fishStock} history={history} />
     </div>
   );
 };
@@ -1223,6 +1603,29 @@ const CommunityGovernanceSimulator: React.FC = () => {
   const [scenario, setScenario] = useState<CommunityScenarioType>("democratic");
   const [history, setHistory] = useState<CommunityRoundHistory[]>([]);
   const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
+
+  const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
+    const principles = [];
+
+    if (scenario === "democratic") {
+      // Democratic governance implements most of Ostrom's principles
+      principles.push("1. Clearly defined boundaries");
+      principles.push("2. Collective choice arrangements");
+      principles.push("3. Community monitoring");
+      principles.push("4. Graduated sanctions");
+      principles.push("5. Conflict resolution mechanisms");
+      principles.push("7. Nested enterprises");
+      if (leader !== 0) principles.push("6. Recognition of rights to organize"); // When others lead, shows external respect
+      // Principle 8 (Local congruence) is inherently present as rules adapt to local conditions
+    } else {
+      // Hierarchical governance implements fewer principles
+      principles.push("1. Clearly defined boundaries");
+      principles.push("8. Congruence with local conditions");
+      if (leader === 0) principles.push("3. Monitoring by authorities"); // Moana-led monitoring
+    }
+
+    return principles;
+  };
 
   // Auto-simulate all rounds when scenario changes
   useEffect(() => {
@@ -1427,394 +1830,12 @@ const CommunityGovernanceSimulator: React.FC = () => {
       previousStock = currentStock; // Store for trend calculation in next round
     }
 
-    setHistory(newHistory);
-    setFishStock(currentStock);
+    // Use setTimeout to avoid synchronous setState in effect
+    setTimeout(() => {
+      setHistory(newHistory);
+      setFishStock(currentStock);
+    }, 0);
   }, [scenario]);
-
-  const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
-    const principles = [];
-
-    if (scenario === "democratic") {
-      // Democratic governance implements most of Ostrom's principles
-      principles.push("1. Clearly defined boundaries");
-      principles.push("2. Collective choice arrangements");
-      principles.push("3. Community monitoring");
-      principles.push("4. Graduated sanctions");
-      principles.push("5. Conflict resolution mechanisms");
-      principles.push("7. Nested enterprises");
-      if (leader !== 0) principles.push("6. Recognition of rights to organize"); // When others lead, shows external respect
-      // Principle 8 (Local congruence) is inherently present as rules adapt to local conditions
-    } else {
-      // Hierarchical governance implements fewer principles
-      principles.push("1. Clearly defined boundaries");
-      principles.push("8. Congruence with local conditions");
-      if (leader === 0) principles.push("3. Monitoring by authorities"); // Moana-led monitoring
-    }
-
-    return principles;
-  };
-
-  // Scenario Selector Component
-  function ScenarioSelector() {
-    const scenarios = {
-      democratic: {
-        name: "🤝 Democratic Fishing Council",
-        description: "Rotating leadership, graduated quotas, wealth redistribution based on Ostrom's principles",
-      },
-      hierarchical: {
-        name: "👑 Moana-Led Governance",
-        description: "Fixed leadership by Moana, efficiency focus, minimal redistribution",
-      },
-    };
-
-    return (
-      <div
-        className={css({
-          marginBottom: "20px",
-          textAlign: "center",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          padding: "16px",
-          background: "#fafafa",
-        })}
-      >
-        <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
-          🏛️ Community Governance System
-        </div>
-        <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
-          {Object.entries(scenarios).map(([key, info]) => {
-            const isSelected = scenario === key;
-
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  setScenario(key as CommunityScenarioType);
-                }}
-                style={{
-                  padding: "12px 16px",
-                  border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                  borderRadius: 8,
-                  background: isSelected ? "#eff6ff" : "#fff",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  maxWidth: 220,
-                  fontSize: 14,
-                  position: "relative",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
-                <div
-                  style={{
-                    color: "#64748b",
-                    fontSize: 12,
-                    lineHeight: "1.3",
-                  }}
-                >
-                  {info.description}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // Results table showing community governance in action
-  function ResultsTable() {
-    // Calculate totals
-    const moanaSum = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
-    const chiefsSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.otherFish && h.otherFish[i] !== undefined ? h.otherFish[i] : 0), 0),
-    );
-    const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
-    // Calculate cost totals (Option 1: minimal cost extension)
-    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
-    const chiefsCostSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
-    );
-
-    // Helper function for redistribution display with costs
-    function redistributionCell(
-      originalCatch: number | null,
-      finalCatch: number | null,
-      netTransfer: number | null,
-      cost: number | null,
-    ) {
-      if (originalCatch === null || finalCatch === null || netTransfer === null || cost === null) {
-        return <span>-</span>;
-      }
-
-      return (
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 12 }}>
-            {originalCatch.toFixed(1)}🐟 → {finalCatch.toFixed(1)}🐟
-          </div>
-          <div style={{ fontSize: 10, color: "#64748b" }}>${cost.toFixed(2)}</div>
-        </div>
-      );
-    }
-
-    // Helper function for leader display
-    function leaderCell(leader: number, strategy: string, distributionMethod?: string, redistributionPolicy?: string) {
-      const leaderNames = ["Moana", "Kai", "Tala", "Sina"];
-
-      // Icon mappings for each decision type
-      const conservationIcons = {
-        conservative: "🛡️",
-        moderate: "⚖️",
-        aggressive: "⚔️",
-      };
-
-      const distributionIcons = {
-        equal: "🟰",
-        hybrid: "🔄",
-        efficiency: "📈",
-      };
-
-      const redistributionIcons = {
-        conservative: "🔐",
-        moderate: "🔄",
-        progressive: "🔓",
-      };
-
-      return (
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontWeight: 600, fontSize: 12, marginBottom: "2px" }}>{leaderNames[leader]}</div>
-
-          {/* Decision Icons Row */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "2px", fontSize: "10px", marginBottom: "2px" }}>
-            <span title={`Conservation Strategy: ${strategy}`}>
-              {conservationIcons[strategy as keyof typeof conservationIcons] || "❓"}
-            </span>
-            <span title={`Distribution Method: ${distributionMethod || "unknown"}`}>
-              {distributionMethod
-                ? distributionIcons[distributionMethod as keyof typeof distributionIcons] || "❓"
-                : "❓"}
-            </span>
-            <span title={`Redistribution Policy: ${redistributionPolicy || "unknown"}`}>
-              {redistributionPolicy
-                ? redistributionIcons[redistributionPolicy as keyof typeof redistributionIcons] || "❓"
-                : "❓"}
-            </span>
-          </div>
-
-          {/* Strategy text for reference */}
-        </div>
-      );
-    }
-
-    return (
-      <div style={{ margin: "18px 0" }}>
-        {/* Legend for Leadership Decision Icons */}
-        <div
-          style={{
-            marginBottom: "12px",
-            padding: "8px 12px",
-            backgroundColor: "#f8fafc",
-            borderRadius: "6px",
-            fontSize: "12px",
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leadership Decision Icons Guide:</div>
-
-          {/* Conservation Strategy Icons */}
-          <div style={{ marginBottom: "4px" }}>
-            <strong>Conservation Strategy:</strong>
-            <span style={{ marginLeft: "8px" }}>🛡️ conservative (protect stocks)</span>
-            <span style={{ marginLeft: "8px" }}>⚖️ moderate (balanced approach)</span>
-            <span style={{ marginLeft: "8px" }}>⚔️ aggressive (maximize current catch)</span>
-          </div>
-
-          {/* Distribution Method Icons */}
-          <div style={{ marginBottom: "4px" }}>
-            <strong>Distribution Method:</strong>
-            <span style={{ marginLeft: "8px" }}>🟰 equal (same quotas for all)</span>
-            <span style={{ marginLeft: "8px" }}>🔄 hybrid (balanced allocation)</span>
-            <span style={{ marginLeft: "8px" }}>📈 efficiency (quota based on capability)</span>
-          </div>
-
-          {/* Redistribution Policy Icons */}
-          <div>
-            <strong>Redistribution Policy:</strong>
-            <span style={{ marginLeft: "8px" }}>🔐 conservative (minimal sharing)</span>
-            <span style={{ marginLeft: "8px" }}>🔄 moderate (balanced redistribution)</span>
-            <span style={{ marginLeft: "8px" }}>🔓 progressive (significant wealth sharing)</span>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 600 }}>
-            <thead>
-              <tr style={{ background: "#bae6fd" }}>
-                <th style={{ padding: "6px 8px" }}>Round</th>
-                <th style={{ padding: "6px 8px" }}>Leader</th>
-                <th style={{ padding: "6px 8px" }}>
-                  Moana
-                  <br />
-                  Original → Final • Cost
-                </th>
-                {otherChiefs.map((chief) => (
-                  <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
-                    {chief.replace("Chief ", "")}
-                    <br />
-                    Original → Final • Cost
-                  </th>
-                ))}
-                <th style={{ padding: "6px 8px" }}>Stock After</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h, idx) => (
-                <tr
-                  key={idx}
-                  style={{
-                    background: idx % 2 === 0 ? "#f8fafc" : "#fff",
-                  }}
-                >
-                  <td
-                    style={{
-                      padding: "4px 8px",
-                      textAlign: "center",
-                      fontWeight: 400,
-                    }}
-                  >
-                    {h.round}
-                  </td>
-                  {/* Leader */}
-                  <td style={{ padding: "4px 8px" }}>
-                    {leaderCell(h.leader, h.leaderStrategy, h.leaderDistributionMethod, h.leaderRedistributionPolicy)}
-                  </td>
-                  {/* Moana */}
-                  <td style={{ padding: "4px 8px" }}>
-                    {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer, h.moanaCost)}
-                  </td>
-                  {/* Other Chiefs */}
-                  {otherChiefs.map((_, i) => (
-                    <td key={i} style={{ padding: "4px 8px" }}>
-                      {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined && h.otherCosts
-                        ? redistributionCell(
-                            h.otherOriginalCatch[i],
-                            h.otherFish[i],
-                            h.otherFish[i] - h.otherOriginalCatch[i],
-                            h.otherCosts[i],
-                          )
-                        : "-"}
-                    </td>
-                  ))}
-                  {/* Fish Stock */}
-                  <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
-                    {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
-                  </td>
-                </tr>
-              ))}
-              {/* Summary Row */}
-              <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-                <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>
-                  Total
-                </td>
-                <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                  {Math.round(moanaSum)}🐟
-                  <br />
-                  <span style={{ fontSize: 10, color: "#64748b" }}>${moanaCostSum.toFixed(2)}</span>
-                </td>
-                {chiefsSums.map((sum, i) => (
-                  <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
-                    {Math.round(sum)}🐟
-                    <br />
-                    <span style={{ fontSize: 10, color: "#64748b" }}>${chiefsCostSums[i].toFixed(2)}</span>
-                  </td>
-                ))}
-                <td style={{ padding: "4px 8px", textAlign: "center", fontSize: 11 }}>
-                  Redistributed: {totalRedistribution.toFixed(1)}🐟
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  // Summary showing community governance effectiveness
-  function EndSummary() {
-    const totalRedistribution = history.reduce((sum, h) => sum + h.redistributionAmount, 0);
-    const allPrinciples = [...new Set(history.flatMap((h) => h.activeOstromPrinciples))];
-
-    // Calculate economic metrics
-    const totalFishCaught = history.reduce((sum, h) => sum + (h.totalCatch ?? 0), 0);
-    const moanaCostSum = history.reduce((sum, h) => sum + (h.moanaCost ?? 0), 0);
-    const chiefsCostSums = otherChiefs.map((_, i) =>
-      history.reduce((sum, h) => sum + (h.otherCosts && h.otherCosts[i] !== undefined ? h.otherCosts[i] : 0), 0),
-    );
-    const totalCost = moanaCostSum + chiefsCostSums.reduce((sum, cost) => sum + cost, 0);
-    const avgCostPerFish = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
-
-    return (
-      <div style={{ textAlign: "center", margin: "18px 0" }}>
-        <div
-          style={{
-            background: "#f0f9ff",
-            border: "1px solid #c7d2fe",
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ fontSize: 15, marginBottom: 8 }}>
-            🏛️ <strong>{scenario === "democratic" ? "Democratic Council" : "Moana-Led Governance"}</strong> Results
-          </div>
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
-            🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught {"·"} 💰{" "}
-            <strong>${avgCostPerFish.toFixed(2)}</strong> average cost per fish
-          </div>
-          {scenario === "democratic" && (
-            <div style={{ fontSize: 12, marginBottom: 8, color: "#10b981", fontStyle: "italic" }}>
-              ✨ Community Benefit: Lower costs through coordinated fishing
-            </div>
-          )}
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
-            ↔️ Fish Redistributed: <strong>{totalRedistribution.toFixed(1)}🐟</strong>
-          </div>
-          <div style={{ fontSize: 14, marginBottom: 8 }}>
-            🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in ocean
-          </div>
-        </div>
-
-        {/* Ostrom Principles Active */}
-        <div
-          style={{
-            background: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>🎯 Active Ostrom Principles:</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
-            {allPrinciples.map((principle, i) => (
-              <span
-                key={i}
-                style={{
-                  background: "#dcfce7",
-                  color: "#166534",
-                  padding: "2px 8px",
-                  borderRadius: 12,
-                  fontSize: 11,
-                }}
-              >
-                {principle}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1826,9 +1847,9 @@ const CommunityGovernanceSimulator: React.FC = () => {
         background: "#f8fafc",
       })}
     >
-      <ScenarioSelector />
-      <ResultsTable />
-      <EndSummary />
+      <CommunityScenarioSelector scenario={scenario} setScenario={setScenario} />
+      <CommunityResultsTable history={history} />
+      <CommunityEndSummary scenario={scenario} fishStock={fishStock} history={history} />
     </div>
   );
 };

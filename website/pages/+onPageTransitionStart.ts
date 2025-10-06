@@ -1,6 +1,4 @@
-import type { OnPageTransitionStartAsync } from "vike/types";
-
-export const onPageTransitionStart: OnPageTransitionStartAsync = async () => {
-  console.log("Page transition start");
+import type { PageContext } from "vike/types";
+export async function onPageTransitionStart(_pageContext: PageContext) {
   document.querySelector("body")?.classList.add("page-is-transitioning");
-};
+}

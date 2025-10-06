@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from "wagmi";
 import { formatEther } from "viem";
 import { collectorNFTContractConfig, getChain } from "../utils/getChain";
@@ -15,12 +15,10 @@ interface SimpleCollectButtonProps {
  * Shows mint count and allows collecting NFTs.
  */
 export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
   // Wagmi hooks
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
+  const { writeContract, isPending, data: hash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   // Chain and contract configuration
@@ -48,8 +46,6 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     if (!isCorrectNetwork) return;
     if (!mintStats || !Array.isArray(mintStats)) return;
 
-    setIsLoading(true);
-
     const [, currentPrice] = mintStats as [bigint, bigint, bigint];
 
     writeContract({
@@ -63,15 +59,11 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   // Update state after transaction
   useEffect(() => {
     if (isSuccess) {
-      setIsLoading(false);
       setTimeout(() => {
         refetch();
       }, 2000);
     }
-    if (writeError) {
-      setIsLoading(false);
-    }
-  }, [isSuccess, writeError, refetch]);
+  }, [isSuccess, refetch]);
 
   // Get mint count
   const getMintCount = () => {
@@ -116,15 +108,11 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   return (
     <button
       onClick={handleCollect}
-      disabled={!isConnected || isLoading || isPending || isConfirming || !isCorrectNetwork}
+      disabled={!isConnected || isPending || isConfirming || !isCorrectNetwork}
       className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
-      {isLoading || isPending
-        ? "📦 Collecting..."
-        : isSuccess
-          ? "✅ Collected!"
-          : `📦 ${collectLabel} (${getMintCount()})`}
+      {isPending ? "📦 Collecting..." : isSuccess ? "✅ Collected!" : `📦 ${collectLabel} (${getMintCount()})`}
     </button>
   );
 }

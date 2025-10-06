@@ -78,7 +78,6 @@ export async function loadBlogs(
   // Check cache during build-time to prevent multiple loads
   const cacheKey = `${normalizedDir}-${sortBy}`;
   if (import.meta.env.SSR && buildTimeCache.has(cacheKey)) {
-    console.log(`[BlogLoader] Using cached data for ${cacheKey}`);
     return buildTimeCache.get(cacheKey)!;
   }
 
@@ -182,7 +181,6 @@ export async function loadBlogs(
   // Cache for build-time to prevent reloading
   if (import.meta.env.SSR) {
     buildTimeCache.set(cacheKey, sortedBlogs);
-    console.log(`[BlogLoader] Cached ${sortedBlogs.length} blogs for ${cacheKey}`);
   }
 
   return sortedBlogs;

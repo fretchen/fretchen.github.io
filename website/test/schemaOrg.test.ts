@@ -31,9 +31,9 @@ describe("Schema.org utilities", () => {
       expect(schema.datePublished).toBe("2025-10-06");
       expect(schema.url).toBe(url);
       expect(schema.author["@type"]).toBe("Person");
-      expect(schema.author.name).toBe("Frederik Jendrzejewski");
+      expect(schema.author.name).toBe("fretchen");
       expect(schema.publisher["@type"]).toBe("Person");
-      expect(schema.publisher.name).toBe("Frederik Jendrzejewski");
+      expect(schema.publisher.name).toBe("fretchen");
       expect(schema.mainEntityOfPage["@type"]).toBe("WebPage");
       expect(schema.mainEntityOfPage["@id"]).toBe(url);
       expect(schema.image?.["@type"]).toBe("ImageObject");

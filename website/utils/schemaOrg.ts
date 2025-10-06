@@ -55,3 +55,79 @@ export function generateBreadcrumbSchema(items: Array<{ name: string; url: strin
     })),
   };
 }
+
+/**
+ * Generates Schema.org WebSite structured data for the homepage
+ * @param url - Base URL of the website
+ * @param name - Name of the website
+ * @param description - Description of the website
+ * @returns Schema.org WebSite object
+ */
+export function generateWebSiteSchema(url: string, name: string, description: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: name,
+    description: description,
+    url: url,
+    author: {
+      "@type": "Person",
+      name: "fretchen",
+      url: url,
+    },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${url}/blog?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+/**
+ * Generates Schema.org Person structured data for the site owner
+ * @param url - Base URL of the website
+ * @param name - Person's name
+ * @param description - Description of the person
+ * @returns Schema.org Person object
+ */
+export function generatePersonSchema(url: string, name: string, description: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: name,
+    url: url,
+    description: description,
+  };
+}
+
+/**
+ * Generates Schema.org CollectionPage structured data for blog list page
+ * @param url - URL of the blog list page
+ * @param blogs - Array of blog posts to include in the collection
+ * @returns Schema.org CollectionPage object
+ */
+export function generateBlogCollectionSchema(url: string, blogs: BlogPost[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Blog Posts",
+    description: "A collection of blog posts about various topics, ideas, and notes.",
+    url: url,
+    author: {
+      "@type": "Person",
+      name: "fretchen",
+      url: "https://www.fretchen.eu",
+    },
+    hasPart: blogs.slice(0, 10).map((blog, index) => ({
+      "@type": "BlogPosting",
+      position: index + 1,
+      headline: blog.title,
+      description: blog.description || "",
+      datePublished: blog.publishing_date,
+      url: `https://www.fretchen.eu/blog/${index}`,
+    })),
+  };
+}

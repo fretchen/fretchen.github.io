@@ -1999,6 +1999,7 @@ export const meta = {
   title: "Tale of Four Islands: Solutions to the Tragedy of the Commons",
   publishing_date: "2025-07-21",
   tokenID: 35,
+  category: "others",
   description:
     "I explore solutions to the Tragedy of the Commons through interactive island simulations. See how governance models affect resource sustainability and community outcomes.",
 };

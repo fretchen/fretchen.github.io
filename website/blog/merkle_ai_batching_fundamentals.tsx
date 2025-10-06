@@ -61,6 +61,8 @@ export const meta = {
   title: " Merkle Trees for LLM Batching - The fundamentals",
   publishing_date: "2025-07-29",
   tokenID: 38,
+  category: "blockchain",
+  secondaryCategory: "ai",
   description:
     "I explore the fundamentals of Merkle trees for efficient LLM batching. Learn cryptographic proofs, batch verification, and AI service settlement optimization.",
 };

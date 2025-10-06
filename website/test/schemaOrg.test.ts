@@ -119,9 +119,7 @@ describe("Schema.org utilities", () => {
       expect(schema.url).toBe(url);
       expect(schema.author["@type"]).toBe("Person");
       expect(schema.author.name).toBe("fretchen");
-      expect(schema.potentialAction["@type"]).toBe("SearchAction");
-      expect(schema.potentialAction.target["@type"]).toBe("EntryPoint");
-      expect(schema.potentialAction.target.urlTemplate).toBe(`${url}/blog?q={search_term_string}`);
+      // Note: SearchAction not included as search functionality is not implemented
     });
   });
 
@@ -171,8 +169,10 @@ describe("Schema.org utilities", () => {
       expect(schema.hasPart[0]["@type"]).toBe("BlogPosting");
       expect(schema.hasPart[0].headline).toBe("First Post");
       expect(schema.hasPart[0].position).toBe(1);
+      expect(schema.hasPart[0].url).toBe("https://www.fretchen.eu/blog/0");
       expect(schema.hasPart[1].headline).toBe("Second Post");
       expect(schema.hasPart[1].position).toBe(2);
+      expect(schema.hasPart[1].url).toBe("https://www.fretchen.eu/blog/1");
     });
 
     it("should limit to 10 blog posts in schema", () => {
@@ -187,6 +187,9 @@ describe("Schema.org utilities", () => {
       const schema = generateBlogCollectionSchema(url, blogs);
 
       expect(schema.hasPart).toHaveLength(10);
+      // Verify URLs use original indices, not sliced indices
+      expect(schema.hasPart[0].url).toBe("https://www.fretchen.eu/blog/0");
+      expect(schema.hasPart[9].url).toBe("https://www.fretchen.eu/blog/9");
     });
 
     it("should handle empty blog array", () => {

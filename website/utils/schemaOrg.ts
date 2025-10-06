@@ -75,14 +75,8 @@ export function generateWebSiteSchema(url: string, name: string, description: st
       name: "fretchen",
       url: url,
     },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${url}/blog?q={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
-    },
+    // Note: potentialAction (SearchAction) removed as search functionality is not yet implemented
+    // Can be added back when site search is available
   };
 }
 
@@ -121,13 +115,19 @@ export function generateBlogCollectionSchema(url: string, blogs: BlogPost[]) {
       name: "fretchen",
       url: "https://www.fretchen.eu",
     },
-    hasPart: blogs.slice(0, 10).map((blog, index) => ({
-      "@type": "BlogPosting",
-      position: index + 1,
-      headline: blog.title,
-      description: blog.description || "",
-      datePublished: blog.publishing_date,
-      url: `https://www.fretchen.eu/blog/${index}`,
-    })),
+    hasPart: blogs
+      .map((blog, originalIndex) => ({
+        blog,
+        originalIndex, // Preserve the original index which is the blog ID
+      }))
+      .slice(0, 10)
+      .map((item, position) => ({
+        "@type": "BlogPosting",
+        position: position + 1,
+        headline: item.blog.title,
+        description: item.blog.description || "",
+        datePublished: item.blog.publishing_date,
+        url: `https://www.fretchen.eu/blog/${item.originalIndex}`,
+      })),
   };
 }

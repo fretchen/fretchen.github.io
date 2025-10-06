@@ -22,23 +22,23 @@
     "@fastify/cors": "^11.1.0",
     "@fastify/url-data": "^6.0.3",
     "@scaleway/serverless-functions": "^1.1.2",
-    "@types/node": "^24.3.1",
+    "@types/node": "^24.7.0",
     "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.34.0",
+    "eslint": "^9.37.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-vitest": "^0.5.4",
     "fastify": "^5.6.1",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.4.16",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.879.0",
+    "@aws-sdk/client-s3": "^3.901.0",
     "@openzeppelin/merkle-tree": "^1.0.8",
-    "dotenv": "^17.2.2",
-    "pino": "^9.9.2",
-    "tsx": "^4.20.5",
-    "viem": "^2.37.3"
+    "dotenv": "^17.2.3",
+    "pino": "^10.0.0",
+    "tsx": "^4.20.6",
+    "viem": "^2.37.13"
   }
 }

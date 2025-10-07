@@ -1,10 +1,13 @@
 import React from "react";
-import type { PageContext } from "vike/types";
+import { usePageContext } from "vike-react/usePageContext";
 import type { BlogPost } from "../../types/BlogPost";
 import { generateBlogCollectionSchema } from "../../utils/schemaOrg";
 
-export default function Head({ data }: PageContext) {
-  // Guard: Return nothing if data is not available (e.g., during build/prerender phase)
+export default function Head() {
+  const pageContext = usePageContext();
+  const data = pageContext.data;
+
+  // Guard: Return nothing if data is not available
   if (!data || typeof data !== "object" || !("blogs" in data) || !data.blogs) {
     return null;
   }

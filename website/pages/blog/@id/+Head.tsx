@@ -4,6 +4,11 @@ import type { BlogPost } from "../../../types/BlogPost";
 import { generateBlogPostingSchema, generateBreadcrumbSchema } from "../../../utils/schemaOrg";
 
 export default function Head({ data, urlPathname }: PageContext) {
+  // Guard: Return nothing if data is not available (e.g., during build/prerender phase)
+  if (!data || typeof data !== "object" || !("blog" in data) || !data.blog) {
+    return null;
+  }
+
   const { blog } = data as {
     blog: BlogPost;
     prevBlog: BlogPost | null;

@@ -22,7 +22,7 @@
     "@fastify/cors": "^11.1.0",
     "@fastify/url-data": "^6.0.3",
     "@scaleway/serverless-functions": "^1.1.2",
-    "@types/node": "^24.6.2",
+    "@types/node": "^24.7.2",
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.37.0",
     "eslint-plugin-node": "^11.1.0",
@@ -34,11 +34,11 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.901.0",
+    "@aws-sdk/client-s3": "^3.908.0",
     "@openzeppelin/merkle-tree": "^1.0.8",
     "dotenv": "^17.2.3",
     "pino": "^10.0.0",
     "tsx": "^4.20.6",
-    "viem": "^2.37.12"
+    "viem": "^2.38.1"
   }
 }

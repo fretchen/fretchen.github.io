@@ -138,7 +138,7 @@ Costs range from 5-10¢ depending on:
 *(Prices as of October 2025)*
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Anders | [ ] Skip
+**Entscheidung:** [ ] Option A | [x] Option B | [ ] Anders | [ ] Skip
 
 ---
 
@@ -199,7 +199,7 @@ QUANTUM COMPUTING:           AI IMAGE GENERATION:
 └─────────────────┘         └─────────────────┘
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Option C | [ ] Skip
+**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Option C | [x] Anders | [ ] Skip
 
 ---
 

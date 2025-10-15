@@ -71,13 +71,21 @@ However, for the moment, I could not find a better solution than whitelisting "r
 
 ## Conclusion and outlook
 
-This brings me to the end of this learning journey. Taken everything together, I do not see anything that would prevent the implement of a system which enables:
+This brings me to the end of this learning journey. Taken everything together, I do not see anything that would prevent the implementation of a system which enables smart contract-based quantum computing. Here's where we stand:
 
-- Anonymous users to send instructions to quantum computers
-- Have the payment done via smart contracts on a layer 2 solution like Optimism
-- Get back the results as encrypted NFTs
-- Have some "reliable" nodes that provide the service*
+| Aspect | Today (Centralized Cloud) | Proven with AI NFTs ✅ | Future Quantum Goal 🔮 |
+|--------|-------------------------|----------------------|---------------------|
+| **Payment** | Accounts, subscriptions | Smart contract (10¢) | Smart contract (competitive) |
+| **Ownership** | Provider database | NFT on blockchain | NFT on blockchain |
+| **Privacy** | Trust required | Open | Encrypted on IPFS 🔮 |
+| **User Access** | Registration needed | Permissionless | Permissionless |
+| **Verification** | Trust provider | Trust oracle ⚠️ | Decentralized oracles |
+| **Provider choice** | Few vendors | Single (prototype) ⚠️ | Open marketplace |
 
-*Note: "Reliable" nodes are currently the weak point—users must trust the node operator. The only valid option for the moment that I could think of is  economic staking (operators lose money if caught cheating) to reduce this trust requirement. But clearly, some research would be beneficial here.
+The key insights were:
 
-So in the next blog post, I will try to lay out some of the technical details of how this could be implemented. If you have experiences, ideas or suggestions, feel free to write down ideas here, exchange and get active. The more people that care are, the more real gets the idea of a functioning smart contract for quantum computing.
+- ✅ **Payment, ownership, privacy are solved** - my AI implementation proves it works on Layer-2 for <1¢ transaction costs
+- ⚠️ **Verification remains the challenge** - both AI and quantum results are hard to verify trustlessly; for now, whitelisting and economic staking are the pragmatic approaches
+- 🔮 **Path forward** - transition from centralized oracle (my server) to decentralized oracle network (multiple quantum providers)
+
+So in the next blog post, I will lay out the technical details of how the smart contract architecture could be implemented for quantum computing. If you have experiences, ideas or suggestions—especially on trustless verification or oracle networks—feel free to write down ideas here, exchange and get active. The more people that care, the more real this becomes.

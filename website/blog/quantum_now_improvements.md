@@ -51,7 +51,7 @@ Umstrukturiere "Learning 3" als:
 - ⚠️ Introduces centralization (my server listens to blockchain)
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Anders | [ ] Skip
+**Entscheidung:** [x] Option A | [ ] Option B | [ ] Anders | [ ] Skip
 
 ---
 
@@ -105,7 +105,7 @@ having some "reliable" node[^1] that just listens to the blockchain
 See detailed explanation in the appendix.
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Option C | [ ] Anders | [ ] Skip
+**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Option C | [x] Anders | [ ] Skip
 
 ---
 

@@ -32,28 +32,52 @@ NFTs are really a great way to implement this kind of ideas. They provide clear 
 
 ## Learning 2: Blockchain payments are really cheap by now
 
-When I started to work on this topic, I was a bit worried about the costs of using the blockchain with transactions on ETH itself that could easily cost several dollars. However, after working through some of the details, I realized that the costs are actually really low by now if you use layer 2 solutions like [Optimism](https://www.optimism.io). The costs were actually so low that I could implement small support buttons of the style "buy me a coffee" on my website or generate images. Together with some merke tree techniques, I could even push it further to make it viable for calls that cost less than a cent. So all in all, it is straightforward to have payment costs of less than 1 cent per transaction and this feels pretty much like a solved problem.
+When I started to work on this topic, I was a bit worried about the costs of using the blockchain with transactions on ETH itself that could easily cost several dollars. However, after working through some of the details, I realized that the costs are actually really low by now if you use layer 2 solutions like [Optimism](https://www.optimism.io). The costs were actually so low that I could implement small support buttons of the style "buy me a coffee" on my website or generate images. Together with [some merke tree techniques](/blog/16/), I could even push it further to make it viable for calls that cost less than a cent. As of October 2025, I would estimate the costs as follows:
 
-## Learning 3: Connections to normal APIs are possible, but tricky
+- AI model provider (BFL: 6¢, Ionos: 7¢, DeepInfra: 5¢)
+- Blockchain (Optimism: 1¢, Base: 1¢, Ethereum: $2+)
+- Service margin (0-3¢)
 
-I think that one of the strangest thing with the block chain is the connection to traditional APIs. It became really clear to me that it is really straight forward to make transactions there, this is what it meant for. However, the blockchain does not really have concepts of time or "calling somewhere else". So you have to play quite some games to make this work. Initially (as mentioned in [blog post 6](/blog/6)), I thought [Chainlink Functions](https://docs.chain.link/chainlink-functions) looked promising. However, after testing, I discovered two dealbreakers:
+ So all in all, it is straightforward to have payment costs of less than 1 cent per transaction and this feels pretty much like a solved problem.
+
+## Learning 3: Connections to normal APIs requires custom oracles
+
+I think that one of the strangest thing with the block chain is the connection to traditional APIs. It became really clear to me that it is really straight forward to make transactions there, this is what it meant for. However, the blockchain does not really have concepts of time or "calling somewhere else". So you use "oracles" to make this work. Think of them as the translator between two worlds:
+
+ - **Blockchain:** Can handle payments and store data, but can't call external APIs or wait for responses
+ - **Traditional APIs:** Can run AI models or quantum computers, but don't understand blockchain
+
+An oracle is a server that:
+ 1. Watches the blockchain for events (e.g., "user just paid for an image")
+ 2. Calls the external API (e.g., Stable Diffusion takes 30 seconds)
+ 3. Brings the result back to update the blockchain (e.g., stores image URL in NFT)
+
+Initially (as mentioned in [blog post 6](/blog/6)), I thought [Chainlink Functions](https://docs.chain.link/chainlink-functions) looked promising. However, after testing, I discovered two dealbreakers:
 
 1. The 3¢/request overhead is substantial when AI generation itself costs only 7¢
 2. Chainlink Functions require APIs to respond within 9 seconds, but AI image generation takes 30+ seconds
 
-This led me to implement a custom listener node instead. The challenge is here, that I need to make sure that only "reliable" nodes can listen to the blockchain and call the API. This is not perfect, but it works for the moment. You can read more about my experiences [here](/blog/6).
+This led me to implement a custom oracle instead. The challenge is ensuring only "reliable" oracles can perform these operations as I do not want the users to be tricked.
 
 ## Learning 4: Make random systems fully trustless is hard
 
-If we want to democratize access to quantum computing resources, we would like to make the system as trustless as possible. So anyone, who claims to have a quantum computer can be onboarded and provide the service. However, this is actually quite hard to do in practice. The main problem is that you need to have some way to verify that the results are actually correct. And this is a shared problem with the generation of AI images. How do you verify that the provider is not just tricking you ? I genuinely do not know the answer and think that this could be a fun research problem. However, for the moment, I have to work with some "reliable" nodes that provide the service and see how far what the future holds.
+This led to my forth learning, which is that it is really hard to have a fully trustless system. Let me explain what I mean with that.
+
+If we want to democratize access to quantum computing resources, we would like to make it as simple as possible for anyone to participate. Anyone who is interested can use the service through the blockchain. And anyone who claims to have a quantum computer can be onboarded and provide the service. 
+
+Why is this so tough in practice? You need to have some way to verify that the results are actually correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem. 
+
+However, for the moment, I could not find a better solution than whitelisting "reliable" oracles that provide the service. This is clearly the centralization bottleneck, as new providers have to be whitelisted and I have no automated algorithm to detect cheating yet.
 
 ## Conclusion and outlook
 
-Taken everything together, I do not see anything that would prevent the implement of a system which enables:
+This brings me to the end of this learning journey. Taken everything together, I do not see anything that would prevent the implement of a system which enables:
 
 - Anonymous users to send instructions to quantum computers
 - Have the payment done via smart contracts on a layer 2 solution like Optimism
 - Get back the results as encrypted NFTs
-- Have some "reliable" nodes that provide the service
+- Have some "reliable" nodes that provide the service*
+
+*Note: "Reliable" nodes are currently the weak point—users must trust the node operator. The only valid option for the moment that I could think of is  economic staking (operators lose money if caught cheating) to reduce this trust requirement. But clearly, some research would be beneficial here.
 
 So in the next blog post, I will try to lay out some of the technical details of how this could be implemented. If you have experiences, ideas or suggestions, feel free to write down ideas here, exchange and get active. The more people that care are, the more real gets the idea of a functioning smart contract for quantum computing.

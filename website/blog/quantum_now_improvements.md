@@ -1,11 +1,21 @@
 # Verbesserungsvorschläge für "quantum_now.md"
 
-## Zusammenfassung
+## Status Update (15. Oktober 2025)
 
-Dieser Guide enthält priorisierte Empfehlungen zur Verbesserung des Blog-Posts "What can we learn from NFTs for quantum computing with smart contracts?". Die Vorschläge zielen auf:
-- **Konsistenz** mit vorherigen Posts
-- **Zugänglichkeit** für verschiedene Zielgruppen
-- **Instruktivität** durch konkrete Beispiele
+✅ **Implementiert:** Reliable nodes/oracles erklärt, 3-Spalten-Tabelle in Conclusion, Call-to-Action erweitert
+
+🔴 **Aktuelle Hauptprobleme:** Grammar, Flow, logische Übergänge (wie vermutet!)
+
+---
+
+## 🚀 SCHRITT-FÜR-SCHRITT ANLEITUNG
+
+Diese Anleitung zeigt die konkreten Änderungen, die jetzt noch gemacht werden sollten. Gehe die Schritte in dieser Reihenfolge durch.
+
+**Geschätzte Zeit:** 
+- Must-Fix (Schritte 1-5): ~20 Minuten
+- Should-Fix (Schritte 6-9): ~30 Minuten  
+- Nice-to-Have (Schritte 10-12): ~15 Minuten
 
 ---
 
@@ -254,12 +264,16 @@ For quantum computing, this means:
 - Truly permissionless
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Option C | [ ] Kombination | [ ] Skip
+**Entscheidung:** [x] Option A | [ ] Option B | [ ] Option C | [ ] Kombination | [ ] Skip
 
 ---
 
 ### 6. Spezifische Call-to-Action
 
+```markdown
+## I need your input
+
+This approach is only valuable if it solves real problems. I need feedback from:
 **Problem:** "Feel free to write down ideas" ist vage und passiv.
 
 **Lösungsoptionen:**
@@ -326,7 +340,7 @@ If this resonates with you:
 If you're working on zero-knowledge proofs, TEEs, or similar - let's talk!
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Option C | [ ] Kombination | [ ] Skip
+**Entscheidung:** [x] Option A | [ ] Option B | [ ] Option C | [ ] Kombination | [ ] Skip
 
 ---
 
@@ -400,7 +414,7 @@ Some ideas (none perfect):
 For now, I'd start with reputation + staking and research ZKPs in parallel.
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Skip (too technical) | [ ] Separate post
+**Entscheidung:** [ ] Option A | [ ] Option B | [x] Skip (too technical) | [ ] Separate post
 
 ---
 
@@ -439,7 +453,7 @@ Over the past 10 months, I've been experimenting with blockchain-enabled AI serv
 This post connects the dots: What did I learn from AI that applies to quantum computing?
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Skip
+**Entscheidung:** [ ] Option A | [x] Option B | [ ] Skip
 
 ---
 
@@ -551,7 +565,7 @@ Plus: Integration with [Cirq](https://quantumai.google/cirq), IPFS storage, and 
 Expected: Mid-November 2025
 ```
 
-**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Kombination | [ ] Keep vague
+**Entscheidung:** [ ] Option A | [ ] Option B | [ ] Kombination | [x] Keep vague
 
 ---
 

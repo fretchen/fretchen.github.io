@@ -23,12 +23,32 @@ This workflow is actually not too far away from the workflow of generating NFTs 
 2. Send the instructions to some super fancy machine you do not really understand, i.e. an AI model.
 3. Get back the result that you also do not really understand in a lot of cases.
 
-So you might see that the workflows are quite similar in that they send instructions to some remote machine, you need to pay for the service, and you get back a result that you do not really understand, i.e. that is hard (impossible?) to verify.
+So you might see that the workflows are quite similar in that they send instructions to some remote machine, you need to pay for the service, and you get back a result that you do not really understand, i.e. that is hard (impossible?) to verify. To understand this better, I've been experimenting with blockchain-enabled AI services over the last 10 months:
+
+- **January:** Built AI image generator ([blog 6](/blog/6))
+- **April:** Added crypto payments + NFT minting ([blog 9](/blog/9))
+- **October:** Realized this architecture could democratize quantum computing ([blog 17](/blog/17))
+
+This post connects the dots: What did I learn from AI that applies to quantum computing?
 
 ## Learning 1: NFTs are great for this use case
 
-NFTs are really a great way to implement this kind of ideas. They provide clear ownership for the instructions. They are standardized and easy to implement. They are super flexible and based on json files. The tech stack behind them is super well developed. You can store the NFTs on S3 or IPFS and you can encrypt them if you really want to. Feel free to read more about my experiences [here](/blog/9).
+NFTs are really a great way to implement this kind of ideas. What does this mean in this specific case of generative AI and quantum computing ? Let us start with the AI images (see [this blog post](/blog/9) on my experiences). When Alice generates an AI image with the prompt "quantum computer in a forest":
 
+1. She pays 10¢ and receives an NFT with a unique identifier
+2. The NFT contains: prompt, timestamp, model version, image URL link
+3. Alice can prove she owns this specific generation (unlike with Midjourney)
+4. She can sell/transfer the NFT on OpenSea
+5. All metadata is permanent and verifiable on-chain
+
+Translated to the world of quantum computing, this would mean:
+
+- Bob submits a quantum circuit and pays via smart contract
+- He gets an NFT with unique identifier and reference to the encrypted results
+- The NFT proves Bob ran this computation at this time
+- No centralized database needed, no account registration
+
+So in summary NFTs provide clear ownership for the instructions. They are standardized and easy to implement. They are super flexible and based on json files. The tech stack behind them is super well developed. And you can store the NFTs on S3 or IPFS and you can encrypt them if you really want to. All in all, this makes them a really great fit for this use case.
 
 ## Learning 2: Blockchain payments are really cheap by now
 
@@ -65,9 +85,11 @@ This led to my forth learning, which is that it is really hard to have a fully t
 
 If we want to democratize access to quantum computing resources, we would like to make it as simple as possible for anyone to participate. Anyone who is interested can use the service through the blockchain. And anyone who claims to have a quantum computer can be onboarded and provide the service. 
 
-Why is this so tough in practice? You need to have some way to verify that the results are actually correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem. 
+Why is this so tough in practice? You need to have some way to verify that the results are actually correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem.
 
 However, for the moment, I could not find a better solution than whitelisting "reliable" oracles that provide the service. This is clearly the centralization bottleneck, as new providers have to be whitelisted and I have no automated algorithm to detect cheating yet.
+
+
 
 ## Conclusion and outlook
 
@@ -88,4 +110,30 @@ The key insights were:
 - ⚠️ **Verification remains the challenge** - both AI and quantum results are hard to verify trustlessly; for now, whitelisting and economic staking are the pragmatic approaches
 - 🔮 **Path forward** - transition from centralized oracle (my server) to decentralized oracle network (multiple quantum providers)
 
-So in the next blog post, I will lay out the technical details of how the smart contract architecture could be implemented for quantum computing. If you have experiences, ideas or suggestions—especially on trustless verification or oracle networks—feel free to write down ideas here, exchange and get active. The more people that care, the more real this becomes.
+### Call-to-action: Where I would be grateful for input
+
+If you have experiences, ideas or suggestions—especially on trustless verification or oracle networks—feel free to write down ideas here, exchange and get active. The more people that care, the more real this becomes. Most urgently, I need feedback on the following topics:
+
+**From quantum computing providers/researchers:**
+
+- Would you run an oracle to offer your quantum computer via smart contracts?
+- What verification methods could prove computation correctness?
+- How important is privacy (encrypted results) for your use cases?
+
+**From blockchain developers:**
+
+- Are there other  known oracle solutions than Chainlink for 30+ second operations?
+- Any ideas on trustless verification of AI/quantum results?
+- What are your experiences with similar "blockchain meets external API" projects?
+
+**From potential users:**
+
+- Would you pay via crypto to access quantum computing anonymously?
+- Is NFT-based result storage valuable, or just gimmicky?
+- What would make you choose this over AWS Braket?
+
+**How to contribute:**
+- Comment on this post
+- Open GitHub issues at [this repo](https://github.com/fretchen/fretchen.github.io)
+
+So in the next blog post, I will lay out the technical details of how the smart contract architecture could be implemented for quantum computing. 

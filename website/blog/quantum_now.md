@@ -1,6 +1,6 @@
 ---
 publishing_date: 2025-10-16
-title: "Quantum Smart Contracts II: What can we learn from NFTs for quantum computing with smart contracts ?"
+title: Quantum Smart Contracts II - What can we learn from NFTs for quantum computing with smart contracts ?
 category: "quantum"
 secondaryCategory: "blockchain"
 description: Can blockchain solve quantum computing's access problem? I tested the architecture with AI NFTs—here's what worked, what didn't, and what's still unsolved.

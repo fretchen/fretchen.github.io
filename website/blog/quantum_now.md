@@ -14,18 +14,18 @@ In a [recent blog post](/blog/17), I laid out some basic ideas on how smart cont
 In this first section, I want to discuss why I decided that NFT generation is a good training ground for the more complex problem of smart contracts for quantum computing. The quantum computing workflow can be summarized as follows:
 
 1. Write some instructions, i.e. some json.
-2. Send the instructions to some super fancy machine you do not really understand, i.e. a quantum computer.
-3. Get back the result that you really do not want to share with anyone but that you also do not really understand in a lot of cases.
+2. Send the instructions to some super fancy machine you do not understand, i.e. a quantum computer.
+3. Get back the result that you do not want to share with anyone but that you also do not understand in a lot of cases.
 
 This workflow is actually not too far away from the workflow of generating NFTs with the help of AI models. The NFT generation workflow can be summarized as follows:
 
 1. Write some instructions, i.e. some text prompt into some json.
-2. Send the instructions to some super fancy machine you do not really understand, i.e. an AI model.
-3. Get back the result that you also do not really understand in a lot of cases.
+2. Send the instructions to some super fancy machine you do not understand, i.e. an AI model.
+3. Get back the result that you also do not understand in a lot of cases.
 
 So you might see that the workflows are quite similar in that they send instructions
 to some remote machine, you need to pay for the service, and you get back a result
-that you do not really understand, i.e. that is hard (impossible?) to verify.
+that you do not understand, i.e. that is hard (impossible?) to verify.
 
 Given this similarity isn't just theoretical—I've been testing it in practice over the last 10 months:
 
@@ -37,7 +37,7 @@ This post connects the dots: What did I learn from AI that applies to quantum co
 
 ## Learning 1: NFTs are great for this use case
 
-NFTs are really a great way to implement this kind of ideas. What does this mean for generative AI and quantum computing? Let me illustrate with
+NFTs are an excellent way to implement this kind of ideas. What does this mean for generative AI and quantum computing? Let me illustrate with
 a concrete example from my AI image work ([blog 9](/blog/9)).
 
 **Example scenario - AI image generation:**
@@ -64,9 +64,10 @@ NFTs provide clear ownership for the instructions. They are standardized (ERC-72
 easy to implement, and super flexible based on JSON files. The tech stack behind them
 is well-developed. You can store them on S3 or IPFS and encrypt them if needed. All
 of this makes them an ideal fit for both AI and quantum computing results.
-## Learning 2: Blockchain payments are really cheap by now
 
-When I started to work on this topic, I was a bit worried about the costs of using the blockchain with transactions on ETH itself that could easily cost several dollars. However, after working through some of the details, I realized that the costs are actually really low by now if you use layer 2 solutions like [Optimism](https://www.optimism.io). The costs were so low that I could implement small support buttons of the style "buy me a coffee" on my website or generate images. Together with [some merkle tree techniques](/blog/16/), I could even push it further to make it viable for calls that cost less than a cent.
+## Learning 2: Blockchain payments are remarkably cheap by now
+
+When I started to work on this topic, I was a bit worried about the costs of using the blockchain with transactions on ETH itself that could easily cost several dollars. However, after working through some of the details, I realized that the costs are remarkably low by now if you use layer 2 solutions like [Optimism](https://www.optimism.io). The costs were so low that I could implement small support buttons of the style "buy me a coffee" on my website or generate images. Together with [some merkle tree techniques](/blog/16/), I could even push it further to make it viable for calls that cost less than a cent.
 
 As of October 2025, here's what a typical image generation costs:
 
@@ -79,7 +80,7 @@ same Layer-2 infrastructure means payment costs are essentially a solved problem
 
 ## Learning 3: Connections to normal APIs require custom oracles
 
-I think that one of the strangest thing with the block chain is the connection to traditional APIs. It became really clear to me that it is really straight forward to make transactions there, this is what it meant for. However, the blockchain does not really have concepts of time or "calling somewhere else". So you use "oracles" to make this work. Think of them as the translator between two worlds:
+I think that one of the strangest thing with the block chain is the connection to traditional APIs. It became clear to me that it is really straight forward to make transactions there, this is what it meant for. However, the blockchain lacks concepts of time or "calling somewhere else". So you use "oracles" to make this work. Think of oracles as the translator between two worlds:
 
 - **Blockchain:** Can handle payments and store data, but can't call external APIs or wait for responses
 - **Traditional APIs:** Can run AI models or quantum computers, but don't understand blockchain
@@ -95,7 +96,7 @@ Initially (as mentioned in [blog post 6](/blog/6)), I thought [Chainlink Functio
 1. The 3¢/request overhead is substantial when AI generation itself costs only 7¢
 2. Chainlink Functions require APIs to respond within 9 seconds, but AI image generation takes 30+ seconds
 
-This led me to implement a custom oracle instead. While blockchain transactions are trustless, my oracle is centralized—I control it. Users must trust that I'll execute requests honestly. This is a pragmatic solution for now, but it's the weakest link in the system. It actually raises a deeper question: how do we verify the oracles actually doing the work honestly?
+This led me to implement a custom oracle instead. While blockchain transactions are trustless, my oracle is centralized—I control it. Users must trust that I'll execute requests honestly. This is a pragmatic solution for now, but it's the weakest link in the system. It actually raises a deeper question: how do we verify that the oracles are doing the work honestly?
 
 ## Learning 4: Make random systems fully trustless is hard
 
@@ -106,13 +107,16 @@ Ideally, democratizing quantum computing means:
 - **For users:** Anyone can access the service (just needs a wallet)
 - **For providers:** Anyone can offer quantum computing resources (just runs an oracle)
 
-But here's the problem: You need to have some way to verify that the results are actually correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem.
+But here's the problem: You need to have some way to verify that the results are correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem.
 
 However, for the moment, I could not find a better solution than whitelisting "reliable" oracles that provide the service. This is clearly the centralization bottleneck, as new providers have to be whitelisted and I have no automated algorithm to detect cheating yet.
 
 ## Conclusion and outlook
 
-This brings me to the end of this learning journey. Taken everything together, I do not see anything that would prevent the implementation of a system which enables smart contract-based quantum computing. Here's where we stand:
+This brings me to the end of this learning journey. Taken everything together, I do not see anything that would prevent the implementation of a system which enables smart contract-based quantum computing.
+
+Here's where I stand — comparing traditional cloud, my working AI prototype, and the
+quantum computing goal:
 
 | Aspect              | Today (Centralized Cloud) | Proven with AI NFTs ✅ | Future Quantum Goal 🔮       |
 | ------------------- | ------------------------- | ---------------------- | ---------------------------- |

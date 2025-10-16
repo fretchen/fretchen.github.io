@@ -23,7 +23,11 @@ This workflow is actually not too far away from the workflow of generating NFTs 
 2. Send the instructions to some super fancy machine you do not really understand, i.e. an AI model.
 3. Get back the result that you also do not really understand in a lot of cases.
 
-So you might see that the workflows are quite similar in that they send instructions to some remote machine, you need to pay for the service, and you get back a result that you do not really understand, i.e. that is hard (impossible?) to verify. To understand this better, I've been experimenting with blockchain-enabled AI services over the last 10 months:
+So you might see that the workflows are quite similar in that they send instructions
+to some remote machine, you need to pay for the service, and you get back a result
+that you do not really understand, i.e. that is hard (impossible?) to verify.
+
+Given this similarity isn't just theoretical—I've been testing it in practice over the last 10 months:
 
 - **January:** Built AI image generator ([blog 6](/blog/6))
 - **April:** Added crypto payments + NFT minting ([blog 9](/blog/9))
@@ -78,7 +82,7 @@ Initially (as mentioned in [blog post 6](/blog/6)), I thought [Chainlink Functio
 1. The 3¢/request overhead is substantial when AI generation itself costs only 7¢
 2. Chainlink Functions require APIs to respond within 9 seconds, but AI image generation takes 30+ seconds
 
-This led me to implement a custom oracle instead. The challenge is ensuring only "reliable" oracles can perform these operations as I do not want the users to be tricked.
+This led me to implement a custom oracle instead. While blockchain transactions are trustless, my oracle is centralized—I control it. Users must trust that I'll execute requests honestly. This is a pragmatic solution for now, but it's the weakest link in the system. It actually raises a deeper question: how do we verify the oracles actually doing the work honestly?
 
 ## Learning 4: Make random systems fully trustless is hard
 
@@ -103,7 +107,7 @@ This brings me to the end of this learning journey. Taken everything together, I
 | **Verification**    | Trust provider            | Trust oracle ⚠️        | Decentralized oracles        |
 | **Provider choice** | Few vendors               | Single (prototype) ⚠️  | Open marketplace             |
 
-The key insights were:
+My key takeaways are:
 
 - ✅ **Payment, ownership, privacy are solved** - my AI implementation proves it works on Layer-2 for <1¢ transaction costs
 - ⚠️ **Verification remains the challenge** - both AI and quantum results are hard to verify trustlessly; for now, whitelisting and economic staking are the pragmatic approaches
@@ -121,7 +125,7 @@ If you have experiences, ideas or suggestions—especially on trustless verifica
 
 **From blockchain developers:**
 
-- Are there other known oracle solutions than Chainlink for 30+ second operations?
+- Do you know oracle solutions besides Chainlink for 30+ second operations?
 - Any ideas on trustless verification of AI/quantum results?
 - What are your experiences with similar "blockchain meets external API" projects?
 

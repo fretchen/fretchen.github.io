@@ -1,10 +1,10 @@
 ---
-publishing_date: 2025-10-13
-title: What can we learn from NFTs for quantum computing with smart contracts ?
+publishing_date: 2025-10-16
+title: "Quantum Smart Contracts II: What can we learn from NFTs for quantum computing with smart contracts ?"
 category: "quantum"
 secondaryCategory: "blockchain"
-description: I discuss the connections between my recent work on blockchain projects and their connection to possible smart contracts for quantum computing.
-tokenID: 123
+description: Can blockchain solve quantum computing's access problem? I tested the architecture with AI NFTs—here's what worked, what didn't, and what's still unsolved.
+tokenID: 130
 ---
 
 In a [recent blog post](/blog/17), I laid out some basic ideas on how smart contracts could be used to democratize access to quantum computing resources. However, this previous post only laid out the basic ideas and did not go into too many details on the implementation. In this post, I will follow up on this topic and detail what I learned up to here, especially what works and what does not work for the moment. In the next post, I will then try to connect it all and lay out a realistic implementation plan of smart contracts in the context of quantum computing.
@@ -49,7 +49,6 @@ When Alice generates an AI image with the prompt "quantum computer in a forest":
 3. Alice can prove she owns this specific generation (unlike with Midjourney)
 4. She can sell/transfer the NFT on OpenSea
 5. All metadata is permanent and verifiable on-chain
-
 
 **Translated to quantum computing:**
 
@@ -118,14 +117,14 @@ This brings me to the end of this learning journey. Taken everything together, I
 Here's where I stand — comparing traditional cloud, my working AI prototype, and the
 quantum computing goal:
 
-| Aspect              | Today (Centralized Cloud) | Proven with AI NFTs ✅ | Future Quantum Goal 🔮       |
-| ------------------- | ------------------------- | ---------------------- | ---------------------------- |
-| **Payment**         | Accounts, subscriptions   | Smart contract (10¢)   | Smart contract (competitive) |
-| **Ownership**       | Provider database         | NFT on blockchain      | NFT on blockchain            |
-| **Privacy**         | Trust required            | Open                   | Encrypted on IPFS 🔮         |
-| **User Access**     | Registration needed       | Permissionless         | Permissionless               |
-| **Verification**    | Trust provider            | Trust oracle ⚠️        | Decentralized oracles        |
-| **Provider choice** | Few vendors               | Single (prototype) ⚠️  | Open marketplace             |
+| Aspect              | Todays centralized cloud | Proven with AI NFTs   | Future Quantum Goal          |
+| ------------------- | ------------------------ | --------------------- | ---------------------------- |
+| **Payment**         | Accounts, subscriptions  | Smart contract (10¢)  | Smart contract (competitive) |
+| **Ownership**       | Provider database        | NFT on blockchain     | NFT on blockchain            |
+| **Privacy**         | Trust required           | Open                  | Encrypted on IPFS 🔮         |
+| **User Access**     | Registration needed      | Permissionless        | Permissionless               |
+| **Verification**    | Trust provider           | Trust oracle ⚠️       | Decentralized oracles        |
+| **Provider choice** | Few vendors              | Single (prototype) ⚠️ | Open marketplace             |
 
 My key takeaways are:
 
@@ -133,7 +132,7 @@ My key takeaways are:
 - ⚠️ **Verification remains the challenge** - both AI and quantum results are hard to verify trustlessly; for now, whitelisting and economic staking are the pragmatic approaches
 - 🔮 **Path forward** - transition from centralized oracle (my server) to decentralized oracle network (multiple quantum providers)
 
-### Call-to-action: Where I would be grateful for input
+### Where I would be grateful for input
 
 If you have experiences, ideas or suggestions—especially on trustless verification or oracle networks—feel free to write down ideas here, exchange and get active. The more people that care, the more real this becomes. Most urgently, I need feedback on the following topics:
 

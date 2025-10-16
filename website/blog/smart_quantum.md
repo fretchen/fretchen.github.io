@@ -1,6 +1,6 @@
 ---
 publishing_date: 2025-10-02
-title: Can we decentralize access to quantum computing with smart contracts ?
+title: "Quantum Smart Contracts I: Can we decentralize access to quantum computing with smart contracts ?"
 category: "quantum"
 secondaryCategory: "blockchain"
 description: I explore how smart contracts can democratize access to quantum computing resources, enabling privacy-preserving decentralized payments and encrypted NFT results.

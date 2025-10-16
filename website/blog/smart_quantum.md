@@ -7,9 +7,9 @@ description: I explore how smart contracts can democratize access to quantum com
 tokenID: 123
 ---
 
-In this blog post, I want to dive into some ideas that have been going through my mind for a while now. I kept wondering, if it is possible to democratize access to quantum computing resources with the help of decentralized technologies, i.e. the blockchain. This question actually motivated a substantial amount of my work on the blockchain in the last few months and I will try to lay out my thoughts and learnings here. 
+In this blog post, I want to dive into some ideas that have been going through my mind for a while now. I kept wondering, if it is possible to democratize access to quantum computing resources with the help of decentralized technologies, i.e. the blockchain. This question actually motivated a substantial amount of my work on the blockchain in the last few months and I will try to lay out my thoughts and learnings here.
 
-I think that this blog post will be the first one of roughly three posts. In this first one, I will lay out the context and the motivation. In the second one, I will try to connect the ideas to the learning that I have had so far with this website. In the third and last one, I will try to lay out some of the technical details of how the implementation could look like. 
+I think that this blog post will be the first one of roughly three posts. In this first one, I will lay out the context and the motivation. In the second one, I will try to connect the ideas to the learning that I have had so far with this website. In the third and last one, I will try to lay out some of the technical details of how the implementation could look like.
 
 But now let's get started on this topic.
 

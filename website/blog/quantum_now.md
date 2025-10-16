@@ -37,7 +37,12 @@ This post connects the dots: What did I learn from AI that applies to quantum co
 
 ## Learning 1: NFTs are great for this use case
 
-NFTs are really a great way to implement this kind of ideas. What does this mean in this specific case of generative AI and quantum computing ? Let us start with the AI images (see [this blog post](/blog/9) on my experiences). When Alice generates an AI image with the prompt "quantum computer in a forest":
+NFTs are really a great way to implement this kind of ideas. What does this mean for generative AI and quantum computing? Let me illustrate with
+a concrete example from my AI image work ([blog 9](/blog/9)).
+
+**Example scenario - AI image generation:**
+
+When Alice generates an AI image with the prompt "quantum computer in a forest":
 
 1. She pays 10¢ and receives an NFT with a unique identifier
 2. The NFT contains: prompt, timestamp, model version, image URL link
@@ -45,24 +50,32 @@ NFTs are really a great way to implement this kind of ideas. What does this mean
 4. She can sell/transfer the NFT on OpenSea
 5. All metadata is permanent and verifiable on-chain
 
-Translated to the world of quantum computing, this would mean:
+
+**Translated to quantum computing:**
 
 - Bob submits a quantum circuit and pays via smart contract
 - He gets an NFT with unique identifier and reference to the encrypted results
 - The NFT proves Bob ran this computation at this time
 - No centralized database needed, no account registration
 
-So in summary NFTs provide clear ownership for the instructions. They are standardized and easy to implement. They are super flexible and based on json files. The tech stack behind them is super well developed. And you can store the NFTs on S3 or IPFS and you can encrypt them if you really want to. All in all, this makes them a really great fit for this use case.
+**Why NFTs work well:**
 
+NFTs provide clear ownership for the instructions. They are standardized (ERC-721),
+easy to implement, and super flexible based on JSON files. The tech stack behind them
+is well-developed. You can store them on S3 or IPFS and encrypt them if needed. All
+of this makes them an ideal fit for both AI and quantum computing results.
 ## Learning 2: Blockchain payments are really cheap by now
 
-When I started to work on this topic, I was a bit worried about the costs of using the blockchain with transactions on ETH itself that could easily cost several dollars. However, after working through some of the details, I realized that the costs are actually really low by now if you use layer 2 solutions like [Optimism](https://www.optimism.io). The costs were actually so low that I could implement small support buttons of the style "buy me a coffee" on my website or generate images. Together with [some merke tree techniques](/blog/16/), I could even push it further to make it viable for calls that cost less than a cent. As of October 2025, I would estimate the costs as follows:
+When I started to work on this topic, I was a bit worried about the costs of using the blockchain with transactions on ETH itself that could easily cost several dollars. However, after working through some of the details, I realized that the costs are actually really low by now if you use layer 2 solutions like [Optimism](https://www.optimism.io). The costs were so low that I could implement small support buttons of the style "buy me a coffee" on my website or generate images. Together with [some merkle tree techniques](/blog/16/), I could even push it further to make it viable for calls that cost less than a cent.
 
-- AI model provider (BFL: 6¢, Ionos: 7¢, DeepInfra: 5¢)
-- Blockchain (Optimism: 1¢, Base: 1¢, Ethereum: $2+)
-- Service margin (0-3¢)
+As of October 2025, here's what a typical image generation costs:
 
-So all in all, it is straightforward to have payment costs of less than 1 cent per transaction and this feels pretty much like a solved problem.
+- **AI computation:** 5-7¢ depending on provider (BFL: 6¢, Ionos: 7¢, DeepInfra: 5¢)
+- **Blockchain transaction:** ~1¢ (Optimism, Base) vs $2+ (Ethereum mainnet)
+- **Service margin:** 0-3¢
+
+**Total:** ~10¢ per image with <1¢ in blockchain costs. For quantum computing, the
+same Layer-2 infrastructure means payment costs are essentially a solved problem.
 
 ## Learning 3: Connections to normal APIs require custom oracles
 
@@ -86,11 +99,14 @@ This led me to implement a custom oracle instead. While blockchain transactions 
 
 ## Learning 4: Make random systems fully trustless is hard
 
-This led to my fourth learning, which is that it is really hard to have a fully trustless system. Let me explain what I mean by that.
+Achieving true trustlessness is the toughest challenge I encountered.
 
-If we want to democratize access to quantum computing resources, we would like to make it as simple as possible for anyone to participate. Anyone who is interested can use the service through the blockchain. And anyone who claims to have a quantum computer can be onboarded and provide the service.
+Ideally, democratizing quantum computing means:
 
-Why is this so tough in practice? You need to have some way to verify that the results are actually correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem.
+- **For users:** Anyone can access the service (just needs a wallet)
+- **For providers:** Anyone can offer quantum computing resources (just runs an oracle)
+
+But here's the problem: You need to have some way to verify that the results are actually correct. But in quantum and in generative AI the results are probabilistic. So how do you verify that the provider is not just tricking you? I genuinely do not know the answer and think that this could be a fun research problem.
 
 However, for the moment, I could not find a better solution than whitelisting "reliable" oracles that provide the service. This is clearly the centralization bottleneck, as new providers have to be whitelisted and I have no automated algorithm to detect cheating yet.
 

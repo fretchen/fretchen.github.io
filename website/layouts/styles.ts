@@ -1685,6 +1685,11 @@ export const metadataLine = {
     opacity: 0.5,
     userSelect: "none",
   }),
+  reactions: css({
+    fontSize: "inherit",
+    color: "inherit",
+    userSelect: "none",
+  }),
   supportButton: css({
     background: "none",
     border: "none",
@@ -1703,6 +1708,255 @@ export const metadataLine = {
       cursor: "default",
       opacity: 0.6,
     },
+  }),
+};
+
+// ===== WEBMENTIONS STYLES =====
+
+// Webmentions component styles - social reactions from the web
+export const webmentions = {
+  container: css({
+    marginTop: "xl",
+    paddingTop: "md",
+    borderTop: "token(borders.light)",
+  }),
+  sectionTitle: css({
+    fontSize: "xl",
+    fontWeight: "semibold",
+    color: "text",
+    marginBottom: "md",
+    margin: 0,
+  }),
+  subsectionTitle: css({
+    fontSize: "md",
+    fontWeight: "medium",
+    color: "text",
+    marginTop: "md",
+    marginBottom: "sm",
+  }),
+  avatarGrid: css({
+    display: "flex",
+    gap: "sm",
+    flexWrap: "wrap",
+    marginTop: "sm",
+  }),
+  avatarLink: css({
+    display: "block",
+    transition: "all 0.2s ease",
+    _hover: {
+      transform: "scale(1.1)",
+      opacity: 0.8,
+    },
+  }),
+  avatar: css({
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    border: "2px solid token(colors.border)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "gray.100",
+    fontSize: "lg",
+    "@media (max-width: 768px)": {
+      width: "36px",
+      height: "36px",
+    },
+    "@media (max-width: 480px)": {
+      width: "32px",
+      height: "32px",
+      fontSize: "md",
+    },
+  }),
+  replyList: css({
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+    marginTop: "sm",
+  }),
+  replyCard: css({
+    marginTop: "md",
+    padding: "md",
+    backgroundColor: "white",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    boxShadow: "sm",
+    transition: "all 0.2s ease",
+    _hover: {
+      boxShadow: "md",
+    },
+    "@media (max-width: 768px)": {
+      padding: "sm",
+      marginTop: "sm",
+    },
+  }),
+  replyHeader: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "center",
+    marginBottom: "sm",
+  }),
+  replyAvatar: css({
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    border: "2px solid token(colors.border)",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "gray.100",
+    fontSize: "lg",
+    "@media (max-width: 480px)": {
+      width: "32px",
+      height: "32px",
+      fontSize: "md",
+    },
+  }),
+  replyAuthor: css({
+    flex: 1,
+  }),
+  authorName: css({
+    fontWeight: "medium",
+    color: "brand",
+    textDecoration: "none",
+    transition: "all 0.2s ease",
+    _hover: {
+      textDecoration: "underline",
+    },
+  }),
+  replyDate: css({
+    marginLeft: "xs",
+    color: "gray.600",
+    fontSize: "sm",
+  }),
+  replyContent: css({
+    marginTop: "sm",
+    lineHeight: "1.6",
+    color: "text",
+  }),
+  replyLink: css({
+    display: "inline-block",
+    marginTop: "sm",
+    fontSize: "sm",
+    color: "brand",
+    textDecoration: "none",
+    transition: "all 0.2s ease",
+    _hover: {
+      textDecoration: "underline",
+    },
+  }),
+  cta: css({
+    marginTop: "md",
+    padding: "md",
+    backgroundColor: "gray.50",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    "@media (max-width: 480px)": {
+      padding: "sm",
+    },
+  }),
+  ctaText: css({
+    fontSize: "md",
+    color: "text",
+    lineHeight: "1.6",
+    margin: 0,
+  }),
+  copyButtonInline: css({
+    display: "inline",
+    padding: "2px 8px",
+    margin: "0 4px",
+    backgroundColor: "brand",
+    color: "white",
+    border: "none",
+    borderRadius: "sm",
+    fontSize: "sm",
+    fontWeight: "medium",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    verticalAlign: "baseline",
+    whiteSpace: "nowrap",
+    _hover: {
+      backgroundColor: "gray.700",
+      transform: "translateY(-1px)",
+      boxShadow: "sm",
+    },
+    _active: {
+      transform: "translateY(0)",
+    },
+    "@media (max-width: 480px)": {
+      padding: "2px 6px",
+      fontSize: "xs",
+    },
+  }),
+  copyButton: css({
+    display: "inline-block",
+    padding: "sm md",
+    marginBottom: "sm",
+    backgroundColor: "brand",
+    color: "white",
+    border: "none",
+    borderRadius: "sm",
+    fontSize: "sm",
+    fontWeight: "medium",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    _hover: {
+      backgroundColor: "gray.700",
+      transform: "translateY(-1px)",
+      boxShadow: "md",
+    },
+    _active: {
+      transform: "translateY(0)",
+    },
+    "@media (max-width: 480px)": {
+      padding: "xs sm",
+      fontSize: "xs",
+    },
+  }),
+  ctaSubtext: css({
+    fontSize: "sm",
+    color: "gray.600",
+    lineHeight: "1.6",
+  }),
+  ctaLink: css({
+    color: "brand",
+    textDecoration: "none",
+    fontWeight: "medium",
+    transition: "all 0.2s ease",
+    _hover: {
+      textDecoration: "underline",
+    },
+  }),
+  loadingState: css({
+    marginTop: "xl",
+    paddingTop: "md",
+    borderTop: "token(borders.light)",
+    textAlign: "center",
+    color: "gray.600",
+    fontSize: "sm",
+  }),
+  emptyState: css({
+    marginTop: "xl",
+    paddingTop: "md",
+    borderTop: "token(borders.light)",
+    textAlign: "center",
+    padding: "lg",
+  }),
+  emptyIcon: css({
+    fontSize: "3xl",
+    display: "block",
+    marginBottom: "sm",
+  }),
+  emptyTitle: css({
+    fontSize: "lg",
+    fontWeight: "medium",
+    color: "text",
+    marginBottom: "xs",
+  }),
+  emptyText: css({
+    fontSize: "sm",
+    color: "gray.600",
   }),
 };
 

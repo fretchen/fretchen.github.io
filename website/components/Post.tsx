@@ -11,8 +11,9 @@ import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
+import { usePageContext } from "vike-react/usePageContext";
 
-import Giscus from "@giscus/react";
+import { Webmentions } from "./Webmentions";
 
 // Dynamic React component renderer
 const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> = ({ componentPath, tokenID }) => {
@@ -131,14 +132,20 @@ export function Post({
   componentPath,
 }: PostProps) {
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const pageContext = usePageContext();
+  const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
+  const [reactionCount, setReactionCount] = React.useState<number>(0);
 
-  console.log("Post component rendering with props:", { title, tokenID, publishing_date, type });
-
-  if (tokenID) {
-    console.log("Rendering NFTHeroCard with tokenID:", tokenID);
-  } else {
-    console.log("No tokenID provided, skipping NFTHeroCard");
-  }
+  // Fetch webmention counts for metadata line
+  React.useEffect(() => {
+    fetch(`https://webmention.io/api/mentions.jf2?target=${fullUrl}`)
+      .then((response) => response.json())
+      .then((data) => {
+        const count = data.children?.length || 0;
+        setReactionCount(count);
+      })
+      .catch(() => setReactionCount(0));
+  }, [fullUrl]);
 
   // Auto-render LaTeX in the browser after content is loaded
   React.useEffect(() => {
@@ -162,7 +169,7 @@ export function Post({
   return (
     <>
       <h1 className={titleBar.title}>{title}</h1>
-      <MetadataLine publishingDate={publishing_date} showSupport={true} />
+      <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
       {/* Render based on post type */}
       {type === "react" && componentPath ? (
@@ -203,21 +210,7 @@ export function Post({
         </div>
       )}
 
-      <Giscus
-        id="comments"
-        repo="fretchen/fretchen.github.io"
-        repoId="MDEwOlJlcG9zaXRvcnkzMzkyNzQ5OA="
-        category="General"
-        categoryId="DIC_kwDOAgWxSs4ClveO"
-        mapping="pathname"
-        term="Welcome to @giscus/react component!"
-        reactionsEnabled="1"
-        emitMetadata="0"
-        inputPosition="top"
-        theme="light"
-        lang="en"
-        loading="lazy"
-      />
+      <Webmentions postUrl={fullUrl} />
     </>
   );
 }

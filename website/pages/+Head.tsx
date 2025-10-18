@@ -9,6 +9,7 @@ export default function HeadDefault() {
       {/* rel="me" link for identity verification (IndieWeb, Mastodon, etc.) */}
       <link href="https://github.com/fretchen" rel="me" />
       <link href="https://fretchen.bsky.social" rel="me atproto" />
+      <link rel="webmention" href="https://webmention.io/www.fretchen.eu/webmention" />
 
       {/* umami analytics script - disabled when DISABLE_ANALYTICS is set */}
       {!import.meta.env.VITE_DISABLE_ANALYTICS && (

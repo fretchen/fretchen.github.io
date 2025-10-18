@@ -14,7 +14,6 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@giscus/react": "^3.1.0",
     "@mdx-js/mdx": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "@mdx-js/rollup": "^3.1.1",

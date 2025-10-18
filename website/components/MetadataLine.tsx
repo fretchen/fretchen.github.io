@@ -18,7 +18,12 @@ interface MetadataLineProps {
  *
  * Integrates support functionality seamlessly with other metadata.
  */
-export default function MetadataLine({ publishingDate, showSupport = false, reactionCount, className }: MetadataLineProps) {
+export default function MetadataLine({
+  publishingDate,
+  showSupport = false,
+  reactionCount,
+  className,
+}: MetadataLineProps) {
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
 
@@ -80,7 +85,7 @@ export default function MetadataLine({ publishingDate, showSupport = false, reac
   // Render reaction count
   const renderReactionCount = () => {
     if (reactionCount === undefined || reactionCount === 0) return null;
-    
+
     const reactionText = reactionCount === 1 ? "reaction" : "reactions";
     return (
       <span className={metadataLine.reactions} title="Likes, reposts, and replies from the web">
@@ -93,7 +98,7 @@ export default function MetadataLine({ publishingDate, showSupport = false, reac
   const metadataItems = [
     publishingDate && formatDate(publishingDate),
     renderReactionCount(),
-    renderSupportSection()
+    renderSupportSection(),
   ].filter(Boolean);
 
   if (metadataItems.length === 0) {

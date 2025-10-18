@@ -1,1 +1,0 @@
-import{i as e,I as t}from"./chunk-kOh39j1J.js";function i(s,r){if(!e(s,{strict:!1}))throw new t({address:s});if(!e(r,{strict:!1}))throw new t({address:r});return s.toLowerCase()===r.toLowerCase()}export{i};

@@ -134,8 +134,20 @@ export function Post({
   const contentRef = React.useRef<HTMLDivElement>(null);
   const pageContext = usePageContext();
   const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
+  const [reactionCount, setReactionCount] = React.useState<number>(0);
 
   console.log(fullUrl);
+
+  // Fetch webmention counts for metadata line
+  React.useEffect(() => {
+    fetch(`https://webmention.io/api/mentions.jf2?target=${fullUrl}`)
+      .then((response) => response.json())
+      .then((data) => {
+        const count = data.children?.length || 0;
+        setReactionCount(count);
+      })
+      .catch(() => setReactionCount(0));
+  }, [fullUrl]);
 
   // Auto-render LaTeX in the browser after content is loaded
   React.useEffect(() => {
@@ -159,7 +171,7 @@ export function Post({
   return (
     <>
       <h1 className={titleBar.title}>{title}</h1>
-      <MetadataLine publishingDate={publishing_date} showSupport={true} />
+      <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
       {/* Render based on post type */}
       {type === "react" && componentPath ? (

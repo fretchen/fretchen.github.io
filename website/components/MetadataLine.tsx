@@ -6,6 +6,7 @@ import { metadataLine } from "../layouts/styles";
 interface MetadataLineProps {
   publishingDate?: string;
   showSupport?: boolean;
+  reactionCount?: number;
   className?: string;
 }
 
@@ -13,11 +14,11 @@ interface MetadataLineProps {
  * MetadataLine Component
  *
  * Displays content metadata in a discrete, natural way:
- * "January 15, 2025  •  ⭐ 12 supporters"
+ * "January 15, 2025  •  💬 8 reactions  •  ☕ 12 supporters"
  *
  * Integrates support functionality seamlessly with other metadata.
  */
-export default function MetadataLine({ publishingDate, showSupport = false, className }: MetadataLineProps) {
+export default function MetadataLine({ publishingDate, showSupport = false, reactionCount, className }: MetadataLineProps) {
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
 
@@ -54,11 +55,11 @@ export default function MetadataLine({ publishingDate, showSupport = false, clas
     if (!showSupport) return null;
 
     if (isReadPending) {
-      return "⭐ Loading...";
+      return "☕ Loading...";
     }
 
     if (readError) {
-      return "⭐ Error";
+      return "☕ Error";
     }
 
     const count = parseInt(supportCount) || 0;
@@ -71,13 +72,29 @@ export default function MetadataLine({ publishingDate, showSupport = false, clas
         className={metadataLine.supportButton}
         title={errorMessage || (isConnected ? "Support this content" : "Connect wallet to support")}
       >
-        {isLoading ? "⭐ Supporting..." : isSuccess ? `★ ${count} ${supportText}` : `⭐ ${count} ${supportText}`}
+        {isLoading ? "☕ Supporting..." : isSuccess ? `★ ${count} ${supportText}` : `☕ ${count} ${supportText}`}
       </button>
     );
   };
 
+  // Render reaction count
+  const renderReactionCount = () => {
+    if (reactionCount === undefined || reactionCount === 0) return null;
+    
+    const reactionText = reactionCount === 1 ? "reaction" : "reactions";
+    return (
+      <span className={metadataLine.reactions} title="Likes, reposts, and replies from the web">
+        💬 {reactionCount} {reactionText}
+      </span>
+    );
+  };
+
   // Build metadata items
-  const metadataItems = [publishingDate && formatDate(publishingDate), renderSupportSection()].filter(Boolean);
+  const metadataItems = [
+    publishingDate && formatDate(publishingDate),
+    renderReactionCount(),
+    renderSupportSection()
+  ].filter(Boolean);
 
   if (metadataItems.length === 0) {
     return null;

@@ -1685,6 +1685,11 @@ export const metadataLine = {
     opacity: 0.5,
     userSelect: "none",
   }),
+  reactions: css({
+    fontSize: "inherit",
+    color: "inherit",
+    userSelect: "none",
+  }),
   supportButton: css({
     background: "none",
     border: "none",

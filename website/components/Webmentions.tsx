@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { css } from "../styled-system/css";
+import { webmentions } from "../layouts/styles";
 
 interface WebmentionAuthor {
   name: string;
@@ -28,7 +28,9 @@ interface WebmentionsProps {
 export function Webmentions({ postUrl }: WebmentionsProps) {
   const [mentions, setMentions] = useState<Webmention[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
+  // Fetch webmentions
   useEffect(() => {
     fetch(`https://webmention.io/api/mentions.jf2?target=${postUrl}`)
       .then((response) => response.json())
@@ -39,35 +41,49 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
       .catch(() => setLoading(false));
   }, [postUrl]);
 
+  // Copy link to clipboard
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   if (loading) {
-    return <div>Loading mentions...</div>;
+    return (
+      <div className={webmentions.loadingState}>
+        <span>⏳</span> Loading reactions...
+      </div>
+    );
   }
 
   if (!mentions || mentions.length === 0) {
     return (
-      <div className={css({ marginTop: "2rem", padding: "1rem", borderTop: "1px solid #e5e5e5" })}>
-        <h3>Reactions</h3>
-        <p>No reactions yet. Be the first to share this post!</p>
+      <div className={webmentions.emptyState}>
+        <span className={webmentions.emptyIcon}>💬</span>
+        <h3 className={webmentions.emptyTitle}>No reactions yet</h3>
+        <p className={webmentions.emptyText}>Be the first to share this post on social media!</p>
       </div>
     );
   }
 
   // Group by type
-  const replies = mentions.filter((m) =>
-    ["in-reply-to", "mention-of"].includes(m["wm-property"])
-  );
+  const replies = mentions.filter((m) => ["in-reply-to", "mention-of"].includes(m["wm-property"]));
   const likes = mentions.filter((m) => m["wm-property"] === "like-of");
   const reposts = mentions.filter((m) => m["wm-property"] === "repost-of");
 
   return (
-    <div className={css({ marginTop: "2rem", padding: "1rem", borderTop: "1px solid #e5e5e5" })}>
-      <h3>Reactions from the Web</h3>
+    <div className={webmentions.container}>
+      <h3 className={webmentions.sectionTitle}>Reactions from the Web</h3>
 
       {/* Likes */}
       {likes.length > 0 && (
-        <div className={css({ marginTop: "1rem" })}>
-          <h4>❤️ {likes.length} Likes</h4>
-          <div className={css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })}>
+        <div>
+          <h4 className={webmentions.subsectionTitle}>❤️ {likes.length} Likes</h4>
+          <div className={webmentions.avatarGrid}>
             {likes.map((like) => (
               <a
                 key={like["wm-id"]}
@@ -75,16 +91,13 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
                 title={like.author.name}
                 target="_blank"
                 rel="noopener noreferrer"
+                className={webmentions.avatarLink}
               >
                 {like.author.photo && (
                   <img
                     src={like.author.photo}
                     alt={like.author.name}
-                    className={css({
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                    })}
+                    className={webmentions.avatar}
                   />
                 )}
               </a>
@@ -95,9 +108,9 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
 
       {/* Reposts */}
       {reposts.length > 0 && (
-        <div className={css({ marginTop: "1rem" })}>
-          <h4>🔁 {reposts.length} Reposts</h4>
-          <div className={css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })}>
+        <div>
+          <h4 className={webmentions.subsectionTitle}>🔁 {reposts.length} Reposts</h4>
+          <div className={webmentions.avatarGrid}>
             {reposts.map((repost) => (
               <a
                 key={repost["wm-id"]}
@@ -105,16 +118,13 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
                 title={repost.author.name}
                 target="_blank"
                 rel="noopener noreferrer"
+                className={webmentions.avatarLink}
               >
                 {repost.author.photo && (
                   <img
                     src={repost.author.photo}
                     alt={repost.author.name}
-                    className={css({
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                    })}
+                    className={webmentions.avatar}
                   />
                 )}
               </a>
@@ -125,58 +135,41 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
 
       {/* Replies & Mentions */}
       {replies.length > 0 && (
-        <div className={css({ marginTop: "1rem" })}>
-          <h4>💬 {replies.length} Replies</h4>
-          <ul className={css({ listStyle: "none", padding: 0 })}>
+        <div>
+          <h4 className={webmentions.subsectionTitle}>💬 {replies.length} Replies</h4>
+          <ul className={webmentions.replyList}>
             {replies.map((mention) => (
-              <li
-                key={mention["wm-id"]}
-                className={css({
-                  marginTop: "1rem",
-                  padding: "1rem",
-                  backgroundColor: "#f9f9f9",
-                  borderRadius: "8px",
-                })}
-              >
-                <div className={css({ display: "flex", gap: "0.5rem", alignItems: "center" })}>
+              <li key={mention["wm-id"]} className={webmentions.replyCard}>
+                <div className={webmentions.replyHeader}>
                   {mention.author.photo && (
                     <img
                       src={mention.author.photo}
                       alt={mention.author.name}
-                      className={css({
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                      })}
+                      className={webmentions.replyAvatar}
                     />
                   )}
-                  <div>
-                    <strong>
-                      <a
-                        href={mention.author.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {mention.author.name}
-                      </a>
-                    </strong>
+                  <div className={webmentions.replyAuthor}>
+                    <a
+                      href={mention.author.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={webmentions.authorName}
+                    >
+                      <strong>{mention.author.name}</strong>
+                    </a>
                     {mention.published && (
-                      <small className={css({ marginLeft: "0.5rem", color: "#666" })}>
+                      <span className={webmentions.replyDate}>
                         {new Date(mention.published).toLocaleDateString()}
-                      </small>
+                      </span>
                     )}
                   </div>
                 </div>
-                {mention.content?.text && (
-                  <p className={css({ marginTop: "0.5rem" })}>
-                    {mention.content.text}
-                  </p>
-                )}
+                {mention.content?.text && <p className={webmentions.replyContent}>{mention.content.text}</p>}
                 <a
                   href={mention.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={css({ fontSize: "0.9rem", color: "#666" })}
+                  className={webmentions.replyLink}
                 >
                   View original →
                 </a>
@@ -186,17 +179,28 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
         </div>
       )}
 
-      <p className={css({ marginTop: "1rem", fontSize: "0.9rem", color: "#666" })}>
-        Interact with this post on{" "}
-        <a href="https://bsky.app" target="_blank" rel="noopener">
-          Bluesky
-        </a>
-        ,{" "}
-        <a href="https://mastodon.social" target="_blank" rel="noopener">
-          Mastodon
-        </a>
-        , or your blog and it will show up here!
-      </p>
+      <div className={webmentions.cta}>
+        <p className={webmentions.ctaText}>
+          💬 <strong>Share this post on social media!</strong>{" "}
+          <button onClick={handleCopyLink} className={webmentions.copyButtonInline} title="Copy link to clipboard">
+            {copied ? "✓ Copied!" : "📋 Copy Link"}
+          </button>{" "}
+          Post on{" "}
+          <a href="https://bsky.app" target="_blank" rel="noopener noreferrer" className={webmentions.ctaLink}>
+            Bluesky
+          </a>{" "}
+          or{" "}
+          <a
+            href="https://mastodon.social"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={webmentions.ctaLink}
+          >
+            Mastodon
+          </a>{" "}
+          and your reaction appears above within 5-10 minutes.
+        </p>
+      </div>
     </div>
   );
 }

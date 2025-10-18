@@ -136,7 +136,6 @@ export function Post({
   const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
   const [reactionCount, setReactionCount] = React.useState<number>(0);
 
-
   // Fetch webmention counts for metadata line
   React.useEffect(() => {
     fetch(`https://webmention.io/api/mentions.jf2?target=${fullUrl}`)

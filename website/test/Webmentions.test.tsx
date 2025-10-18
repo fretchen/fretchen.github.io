@@ -173,7 +173,7 @@ describe("Webmentions Component", () => {
       // Should render fallback icon instead of img
       const fallback = screen.getByText("👤");
       expect(fallback).toBeInTheDocument();
-      
+
       // Verify no img tag is rendered for this user
       const images = screen.queryAllByRole("img");
       expect(images).toHaveLength(0);

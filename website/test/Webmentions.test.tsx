@@ -147,6 +147,38 @@ describe("Webmentions Component", () => {
       expect(images[1]).toHaveAttribute("alt", "Bob");
     });
 
+    it("should render fallback avatar when photo is missing", async () => {
+      const mockData = {
+        children: [
+          {
+            "wm-id": 1,
+            "wm-property": "like-of",
+            author: { name: "NoPhoto User", url: "https://example.com/nophoto" },
+            url: "https://example.com/nophoto/1",
+          },
+        ],
+      };
+
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+      });
+
+      render(<Webmentions postUrl={mockPostUrl} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("❤️ 1 Like", { exact: false })).toBeInTheDocument();
+      });
+
+      // Should render fallback icon instead of img
+      const fallback = screen.getByText("👤");
+      expect(fallback).toBeInTheDocument();
+      
+      // Verify no img tag is rendered for this user
+      const images = screen.queryAllByRole("img");
+      expect(images).toHaveLength(0);
+    });
+
     it("should not show likes section when no likes", async () => {
       (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,

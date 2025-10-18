@@ -114,8 +114,12 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
                 rel="noopener noreferrer"
                 className={webmentions.avatarLink}
               >
-                {like.author.photo && (
+                {like.author.photo ? (
                   <img src={like.author.photo} alt={like.author.name} className={webmentions.avatar} />
+                ) : (
+                  <div className={webmentions.avatar} title={like.author.name}>
+                    👤
+                  </div>
                 )}
               </a>
             ))}
@@ -139,8 +143,12 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
                 rel="noopener noreferrer"
                 className={webmentions.avatarLink}
               >
-                {repost.author.photo && (
+                {repost.author.photo ? (
                   <img src={repost.author.photo} alt={repost.author.name} className={webmentions.avatar} />
+                ) : (
+                  <div className={webmentions.avatar} title={repost.author.name}>
+                    👤
+                  </div>
                 )}
               </a>
             ))}
@@ -158,8 +166,12 @@ export function Webmentions({ postUrl }: WebmentionsProps) {
             {replies.map((mention) => (
               <li key={mention["wm-id"]} className={webmentions.replyCard}>
                 <div className={webmentions.replyHeader}>
-                  {mention.author.photo && (
+                  {mention.author.photo ? (
                     <img src={mention.author.photo} alt={mention.author.name} className={webmentions.replyAvatar} />
+                  ) : (
+                    <div className={webmentions.replyAvatar} title={mention.author.name}>
+                      👤
+                    </div>
                   )}
                   <div className={webmentions.replyAuthor}>
                     <a

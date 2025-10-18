@@ -1753,6 +1753,11 @@ export const webmentions = {
     height: "40px",
     borderRadius: "50%",
     border: "2px solid token(colors.border)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "gray.100",
+    fontSize: "lg",
     "@media (max-width: 768px)": {
       width: "36px",
       height: "36px",
@@ -1760,6 +1765,7 @@ export const webmentions = {
     "@media (max-width: 480px)": {
       width: "32px",
       height: "32px",
+      fontSize: "md",
     },
   }),
   replyList: css({
@@ -1796,9 +1802,15 @@ export const webmentions = {
     borderRadius: "50%",
     border: "2px solid token(colors.border)",
     flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "gray.100",
+    fontSize: "lg",
     "@media (max-width: 480px)": {
       width: "32px",
       height: "32px",
+      fontSize: "md",
     },
   }),
   replyAuthor: css({

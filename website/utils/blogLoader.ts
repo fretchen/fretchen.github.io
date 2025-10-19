@@ -178,8 +178,32 @@ export async function loadBlogs(
 
   const sortedBlogs = sortBlogs(blogs, sortBy);
 
-  // Cache for build-time to prevent reloading
+  // Load NFT metadata for blogs with tokenIDs (only during SSR/build)
   if (import.meta.env.SSR) {
+    const tokenIDs = sortedBlogs.filter((blog) => blog.tokenID).map((blog) => blog.tokenID!);
+
+    if (tokenIDs.length > 0) {
+      try {
+        console.log(`[BlogLoader] Loading NFT metadata for ${tokenIDs.length} tokens: ${tokenIDs.join(", ")}`);
+
+        // Dynamically import the Node.js-specific NFT loader
+        const { loadMultipleNFTMetadataNode } = await import("./nodeNftLoader");
+        const nftMetadataMap = await loadMultipleNFTMetadataNode(tokenIDs);
+
+        // Add NFT metadata to blogs
+        sortedBlogs.forEach((blog) => {
+          if (blog.tokenID && nftMetadataMap[blog.tokenID]) {
+            blog.nftMetadata = nftMetadataMap[blog.tokenID];
+          }
+        });
+
+        console.log(`[BlogLoader] Successfully loaded metadata for ${Object.keys(nftMetadataMap).length} NFTs`);
+      } catch (error) {
+        console.warn("[BlogLoader] Failed to load NFT metadata:", error);
+      }
+    }
+
+    // Cache for build-time to prevent reloading
     buildTimeCache.set(cacheKey, sortedBlogs);
   }
 

@@ -180,7 +180,7 @@ export async function loadBlogs(
 
   // Load NFT metadata for blogs with tokenIDs (only during SSR/build)
   if (import.meta.env.SSR) {
-    const tokenIDs = sortedBlogs.filter((blog) => blog.tokenID).map((blog) => blog.tokenID!);
+    const tokenIDs = Array.from(new Set(sortedBlogs.flatMap((b) => (b.tokenID ? [b.tokenID] : []))));
 
     if (tokenIDs.length > 0) {
       try {

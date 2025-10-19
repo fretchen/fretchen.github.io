@@ -1,11 +1,7 @@
 import { getBlogs } from "./getBlogs";
-import { removeMath } from "./cleanMd";
 import { copyImg } from "./copyImg";
 
-// prepare the amo part of the website
-removeMath("./quantum/amo");
-getBlogs({ blogDirectory: "./quantum/amo", sortBy: "order" });
-copyImg("quantum/amo");
+// Note: quantum/amo now uses blogLoader.ts - no prebuild needed!
 
 // prepare the quantum part of the website
 getBlogs({ blogDirectory: "./quantum/basics", sortBy: "order" });

@@ -20,6 +20,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
+  const componentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const loadComponent = async () => {
@@ -57,6 +58,29 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
 
     loadComponent();
   }, [componentPath]);
+
+  // Auto-render LaTeX in the browser after React component is loaded
+  React.useEffect(() => {
+    if (componentRef.current && Component) {
+      // Dynamically import renderMathInElement only in the browser
+      import("katex/dist/contrib/auto-render")
+        .then((module) => {
+          const renderMathInElement = module.default;
+          if (componentRef.current) {
+            renderMathInElement(componentRef.current, {
+              delimiters: [
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false },
+              ],
+              throwOnError: false,
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Failed to load KaTeX auto-render:", err);
+        });
+    }
+  }, [Component]);
 
   if (loading) {
     return (
@@ -105,7 +129,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   }
 
   return (
-    <div className={post.contentContainer}>
+    <div className={post.contentContainer} ref={componentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
       <React.Suspense
         fallback={

@@ -2,11 +2,16 @@ import * as React from "react";
 
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
-import blogs from "../../../quantum/basics/blogs.json";
+import { usePageContext } from "vike-react/usePageContext";
 import { titleBar } from "../../../layouts/styles";
 import { css } from "../../../styled-system/css";
+import type { BlogPost } from "../../../types/BlogPost";
 
 const App: React.FC = function () {
+  // Get pre-loaded data from +data.ts
+  const pageContext = usePageContext();
+  const { blogs } = pageContext.data as { blogs: BlogPost[] };
+
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Quantum Basics</h1>

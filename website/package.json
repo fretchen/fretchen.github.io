@@ -2,7 +2,6 @@
   "scripts": {
     "dev": "vike dev",
     "prepare": "panda codegen",
-    "prebuild": "tsx ./utils/preBuild.ts",
     "build": "vike build",
     "postbuild": "tsx ./utils/cleanVike.ts",
     "preview": "vike preview",

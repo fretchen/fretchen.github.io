@@ -1,7 +1,5 @@
 import React from "react";
 import Markdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
@@ -62,25 +60,64 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   // Auto-render LaTeX in the browser after React component is loaded
   React.useEffect(() => {
     if (componentRef.current && Component) {
-      // Dynamically import renderMathInElement only in the browser
-      import("katex/dist/contrib/auto-render")
-        .then((module) => {
-          const renderMathInElement = module.default;
-          if (componentRef.current) {
-            renderMathInElement(componentRef.current, {
-              delimiters: [
-                { left: "$$", right: "$$", display: true },
-                { left: "$", right: "$", display: false },
-              ],
-              throwOnError: false,
-            });
-          }
-        })
-        .catch((err) => {
-          console.warn("Failed to load KaTeX auto-render:", err);
-        });
+      // Delay to ensure React component has fully rendered
+      const timer = setTimeout(() => {
+        // Dynamically import KaTeX only in the browser
+        Promise.all([import("katex"), import("katex/dist/contrib/auto-render")])
+          .then(([katexModule, autoRenderModule]) => {
+            const katex = katexModule.default;
+            const renderMathInElement = autoRenderModule.default;
+
+            if (componentRef.current) {
+              // STEP 1: Handle remark-math output (code.language-math elements)
+              // remark-math creates <code class="language-math math-display"> without $$ delimiters
+              const mathElements = componentRef.current.querySelectorAll("code.language-math");
+
+              mathElements.forEach((element) => {
+                try {
+                  const mathContent = element.textContent || "";
+                  const isDisplay = element.classList.contains("math-display");
+
+                  // Create a span to hold the rendered math
+                  const span = document.createElement("span");
+
+                  // Render with KaTeX directly
+                  katex.render(mathContent, span, {
+                    displayMode: isDisplay,
+                    throwOnError: false,
+                    strict: false,
+                    trust: true,
+                  });
+
+                  // Replace the code element with rendered math
+                  element.parentNode?.replaceChild(span, element);
+                } catch (err) {
+                  console.error("KaTeX error rendering math element:", err);
+                }
+              });
+
+              // STEP 2: Also run auto-render for any remaining $$ syntax (fallback)
+              renderMathInElement(componentRef.current, {
+                delimiters: [
+                  { left: "$$", right: "$$", display: true },
+                  { left: "$", right: "$", display: false },
+                ],
+                throwOnError: false,
+                strict: false,
+                trust: true,
+                ignoredTags: [],
+                ignoredClasses: [],
+              });
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load KaTeX:", err);
+          });
+      }, 300);
+
+      return () => clearTimeout(timer);
     }
-  }, [Component]);
+  }, [Component, componentPath]);
 
   if (loading) {
     return (
@@ -155,7 +192,6 @@ export function Post({
   type = "markdown",
   componentPath,
 }: PostProps) {
-  const contentRef = React.useRef<HTMLDivElement>(null);
   const pageContext = usePageContext();
   const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
   const [reactionCount, setReactionCount] = React.useState<number>(0);
@@ -171,25 +207,6 @@ export function Post({
       .catch(() => setReactionCount(0));
   }, [fullUrl]);
 
-  // Auto-render LaTeX in the browser after content is loaded
-  React.useEffect(() => {
-    if (contentRef.current && type !== "react") {
-      // Dynamically import renderMathInElement only in the browser
-      import("katex/dist/contrib/auto-render").then((module) => {
-        const renderMathInElement = module.default;
-        if (contentRef.current) {
-          renderMathInElement(contentRef.current, {
-            delimiters: [
-              { left: "$$", right: "$$", display: true },
-              { left: "$", right: "$", display: false },
-            ],
-            throwOnError: false,
-          });
-        }
-      });
-    }
-  }, [content, type]);
-
   return (
     <>
       <h1 className={titleBar.title}>{title}</h1>
@@ -199,9 +216,9 @@ export function Post({
       {type === "react" && componentPath ? (
         <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
       ) : (
-        <div className={post.contentContainer} ref={contentRef}>
+        <div className={post.contentContainer}>
           {tokenID && <NFTFloatImage tokenId={tokenID} />}
-          <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {content}
           </Markdown>
         </div>

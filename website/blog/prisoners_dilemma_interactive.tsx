@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
+import { MarkdownWithLatex } from "../components/MarkdownWithLatex";
 import "katex/dist/katex.min.css";
 import { Line } from "react-chartjs-2";
 import {
@@ -1386,7 +1384,7 @@ const PrisonersDilemmaPost: React.FC = () => {
         the logic like this: &quot;Let me figure out what Jesse might do, then decide accordingly.&quot;
       </p>
 
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 Suppose Walter estimates there's a probability *p* that Jesse will betray him. That means there's a probability *(1-p)* that Jesse cooperates.
 
@@ -1456,11 +1454,11 @@ But notice what happens if we change the payoffs. We know that $p<1$, which dire
 tells us exactly when cooperation becomes rational, and the interactive plot below lets you explore how different scenarios affect this critical threshold. 
 Try adjusting the payoff values to see how they change the probability at which cooperation becomes individually rational.
 
-`}</ReactMarkdown>
+`}</MarkdownWithLatex>
 
       <ExpectedUtilityPlot />
 
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 As you can see from experimenting with the plot, the condition for rational cooperation depends critically on the relationship between the payoffs. When the punishment for mutual defection becomes severe enough relative to being betrayed, cooperation can emerge as the individually rational choice.
 
@@ -1480,8 +1478,8 @@ The general mathematical framework confirms this isn't unique to Walter's situat
 
 But Walter and Jesse don't just interact once—they're partners in a long-running operation. What happens when the same dilemma repeats over multiple "episodes"? This is where the mathematics becomes more hopeful, and where we can explore whether reputation, trust, and reciprocity can overcome the pull of individual rationality.
 
-`}</ReactMarkdown>
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+`}</MarkdownWithLatex>
+      <MarkdownWithLatex>{`
 ## When Breaking Bad Becomes a Series: Repeated Interactions
 
 Walter's rational analysis came to a depressing conclusion: in a single encounter, defection dominates. But this raises an important question: if everyone follows this logic, how does cooperation ever emerge in the real world?
@@ -1521,11 +1519,11 @@ In repeated prisoner's dilemmas, players typically adopt consistent behavioral r
 ### Interactive Strategy Exploration
 
 These strategies aren't just theoretical—they reflect real behavioral patterns we see in ongoing relationships. Let's explore how they perform when Walter and Jesse face repeated crises:
-      `}</ReactMarkdown>
+      `}</MarkdownWithLatex>
 
       <GameSimulation />
 
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 
 The simulation reveals key insights about repeated interactions:
@@ -1544,11 +1542,11 @@ To move beyond individual simulations, let's examine how these strategies perfor
 Axelrod's key finding was that "nice" strategies (those that never defect first) often outperformed "nasty" strategies, but only when the population included enough other cooperative players. The winning strategy in his tournament was tit-for-tat—exactly the reciprocal approach we've been examining.
 
 Let's run our own tournament to see how the Breaking Bad strategies fare against each other:
-      `}</ReactMarkdown>
+      `}</MarkdownWithLatex>
 
       <StrategyAnalysis />
 
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 ### Interpreting the Tournament Results
 
@@ -1589,7 +1587,7 @@ However, our analysis also reveals why cooperation remains fragile. Always-defec
 The mathematical insight is that **cooperation can emerge from purely self-interested behavior when interactions repeat and players value future outcomes**. We don't need to change human nature—we need to create institutional structures that make cooperation rational for self-interested individuals.
 
 This brings us full circle to the Nobel Prize research that started our exploration. When institutions create repeated-game dynamics with clear rules, predictable enforcement, and expectations of ongoing interaction, even selfish individuals find cooperation profitable. When institutions fail to create these conditions, societies can become trapped in cycles of mistrust and mutual defection—exactly what we see in countries with weak governance and extractive institutions.
-      `}</ReactMarkdown>
+      `}</MarkdownWithLatex>
     </article>
   );
 };

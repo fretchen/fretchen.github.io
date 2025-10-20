@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { MarkdownWithLatex } from "../components/MarkdownWithLatex";
-import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
 import { css } from "../styled-system/css";

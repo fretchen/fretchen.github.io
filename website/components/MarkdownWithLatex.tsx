@@ -15,11 +15,7 @@ interface MarkdownWithLatexProps {
  * Note: This uses auto-render for $$..$$ detection, which works for inline
  * Markdown strings. For .md/.mdx files, use remark-math in vite.config.ts instead.
  */
-export const MarkdownWithLatex: React.FC<MarkdownWithLatexProps> = ({
-  children,
-  remarkPlugins = [],
-  components,
-}) => {
+export const MarkdownWithLatex: React.FC<MarkdownWithLatexProps> = ({ children, remarkPlugins = [], components }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Client-side LaTeX rendering after content is mounted

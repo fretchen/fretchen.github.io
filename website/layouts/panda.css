@@ -121,6 +121,12 @@
     margin-bottom: 1em;
   }
 
+  /* KaTeX Math Rendering - transparent background */
+  .katex,
+  .katex-display {
+    background-color: transparent !important;
+  }
+
   /* Figure captions - minimal typography differentiation, stays connected to image */
   figure {
     margin: 1.5em 0; /* consistent spacing around figures */

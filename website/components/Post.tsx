@@ -1,7 +1,5 @@
 import React from "react";
 import Markdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
@@ -12,6 +10,7 @@ import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 import { usePageContext } from "vike-react/usePageContext";
+import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 
 import { Webmentions } from "./Webmentions";
 
@@ -20,6 +19,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
+  const componentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const loadComponent = async () => {
@@ -57,6 +57,9 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
 
     loadComponent();
   }, [componentPath]);
+
+  // Use custom hook for KaTeX rendering
+  useKaTeXRenderer(componentRef, !!Component);
 
   if (loading) {
     return (
@@ -105,7 +108,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   }
 
   return (
-    <div className={post.contentContainer}>
+    <div className={post.contentContainer} ref={componentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
       <React.Suspense
         fallback={
@@ -131,7 +134,6 @@ export function Post({
   type = "markdown",
   componentPath,
 }: PostProps) {
-  const contentRef = React.useRef<HTMLDivElement>(null);
   const pageContext = usePageContext();
   const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
   const [reactionCount, setReactionCount] = React.useState<number>(0);
@@ -147,25 +149,6 @@ export function Post({
       .catch(() => setReactionCount(0));
   }, [fullUrl]);
 
-  // Auto-render LaTeX in the browser after content is loaded
-  React.useEffect(() => {
-    if (contentRef.current && type !== "react") {
-      // Dynamically import renderMathInElement only in the browser
-      import("katex/dist/contrib/auto-render").then((module) => {
-        const renderMathInElement = module.default;
-        if (contentRef.current) {
-          renderMathInElement(contentRef.current, {
-            delimiters: [
-              { left: "$$", right: "$$", display: true },
-              { left: "$", right: "$", display: false },
-            ],
-            throwOnError: false,
-          });
-        }
-      });
-    }
-  }, [content, type]);
-
   return (
     <>
       <h1 className={titleBar.title}>{title}</h1>
@@ -175,9 +158,9 @@ export function Post({
       {type === "react" && componentPath ? (
         <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
       ) : (
-        <div className={post.contentContainer} ref={contentRef}>
+        <div className={post.contentContainer}>
           {tokenID && <NFTFloatImage tokenId={tokenID} />}
-          <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {content}
           </Markdown>
         </div>

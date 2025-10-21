@@ -83,9 +83,9 @@ For a classical problem, we would simply list all the different possible
 outcomes in a list $$(p_1, \cdots, p_N)$$ of _real_ numbers. As one of the
 outcomes has to happen, we obtain the normalization condition:
 
-```math
+$$
  \sum_i p_i = 1
-```
+$$
 
 In quantum mechanics, we follow a similar approach of first identifying
 the possible outcomes. But instead of describing the outcomes with real
@@ -324,9 +324,9 @@ operator (N.B.: $\hat{H}_S = \hat{H}_H$). The time evolution of
 $\hat{A}_H$ is:
 
 $$
-    \frac{d}{dt} \hat{A}_H = \frac{i}{\hbar}\hat{H}\mathrm{e}^{i{\hat{H}t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}\\
-    -\frac{i}{\hbar} \mathrm{e}^{i{\hat{H} t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H}t}/{\hbar}}\hat{H}+\partial_t \hat{A}_H\\
-    = \frac{i}{\hbar}\left[\hat{H},\hat{A}_H\right] + \mathrm{e}^{i{\hat{H}t}/{\hbar}}\partial_t\hat{A}_S\mathrm{e}^{-i{\hat{H}t}/{\hbar}}
+\frac{d}{dt} \hat{A}_H = \frac{i}{\hbar}\hat{H}\mathrm{e}^{i{\hat{H}t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H} t}/{\hbar}}\\
+-\frac{i}{\hbar} \mathrm{e}^{i{\hat{H} t}/{\hbar}}\hat{A}_S \mathrm{e}^{-i{\hat{H}t}/{\hbar}}\hat{H}+\partial_t \hat{A}_H\\
+= \frac{i}{\hbar}\left[\hat{H},\hat{A}_H\right] + \mathrm{e}^{i{\hat{H}t}/{\hbar}}\partial_t\hat{A}_S\mathrm{e}^{-i{\hat{H}t}/{\hbar}}
 $$
 
 **Note.** In the Heisenberg picture the state vectors

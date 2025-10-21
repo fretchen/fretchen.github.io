@@ -1,10 +1,13 @@
 import React from "react";
 import { Card } from "../../components/Card";
 import EntryList from "../../components/EntryList";
-import blogs from "../../blog/blogs.json";
+import { useData } from "vike-react/useData";
+import type { BlogPost } from "../../types/BlogPost";
 import * as styles from "../../layouts/styles";
 
 export default function Page() {
+  const { blogs } = useData<{ blogs: BlogPost[] }>();
+
   return (
     <div className={styles.container}>
       {/* Hero section */}

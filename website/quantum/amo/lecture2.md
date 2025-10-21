@@ -165,7 +165,7 @@ $$
 For the simple qubit we then have:
 
 $$
-  \hat{\rho}= \left(\alpha_\uparrow\left|\uparrow\right\rangle+\alpha_\downarrow\left|\downarrow\right\rangle\right)\left(\alpha_\uparrow^*\left\langle\uparrow\right|+\alpha_\downarrow^*\left\langle\downarrow\right|\right)\\
+\hat{\rho}= \left(\alpha_\uparrow\left|\uparrow\right\rangle+\alpha_\downarrow\left|\downarrow\right\rangle\right)\left(\alpha_\uparrow^*\left\langle\uparrow\right|+\alpha_\downarrow^*\left\langle\downarrow\right|\right)\\
   = |\alpha_\uparrow|^2\left|\uparrow\right\rangle\left\langle\uparrow\right|+|\alpha_\downarrow|^2\left|\downarrow\right\rangle\left\langle\downarrow\right|+\alpha_\downarrow\alpha_\uparrow^*\left|\downarrow\right\rangle\left\langle\uparrow\right|+\alpha_\uparrow\alpha_\downarrow^*\left|\uparrow\right\rangle\left\langle\downarrow\right|
 $$
 

@@ -11,7 +11,7 @@ export default {
   Layout,
 
   // https://vike.dev/head-tags
-  title: "Notes by fretchen",
+  title: "Notes and Thoughts | fretchen.eu",
   description: "Blog, notepad, whatever you want to call it.",
   prerender: true,
   extends: [vikeReact, vikeReactQuery],

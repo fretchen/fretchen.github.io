@@ -10,6 +10,7 @@ import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 import { usePageContext } from "vike-react/usePageContext";
+import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 
 import { Webmentions } from "./Webmentions";
 
@@ -57,67 +58,8 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
     loadComponent();
   }, [componentPath]);
 
-  // Auto-render LaTeX in the browser after React component is loaded
-  React.useEffect(() => {
-    if (componentRef.current && Component) {
-      // Delay to ensure React component has fully rendered
-      const timer = setTimeout(() => {
-        // Dynamically import KaTeX only in the browser
-        Promise.all([import("katex"), import("katex/dist/contrib/auto-render")])
-          .then(([katexModule, autoRenderModule]) => {
-            const katex = katexModule.default;
-            const renderMathInElement = autoRenderModule.default;
-
-            if (componentRef.current) {
-              // STEP 1: Handle remark-math output (code.language-math elements)
-              // remark-math creates <code class="language-math math-display"> without $$ delimiters
-              const mathElements = componentRef.current.querySelectorAll("code.language-math");
-
-              mathElements.forEach((element) => {
-                try {
-                  const mathContent = element.textContent || "";
-                  const isDisplay = element.classList.contains("math-display");
-
-                  // Create a span to hold the rendered math
-                  const span = document.createElement("span");
-
-                  // Render with KaTeX directly
-                  katex.render(mathContent, span, {
-                    displayMode: isDisplay,
-                    throwOnError: false,
-                    strict: false,
-                    trust: true,
-                  });
-
-                  // Replace the code element with rendered math
-                  element.parentNode?.replaceChild(span, element);
-                } catch (err) {
-                  console.error("KaTeX error rendering math element:", err);
-                }
-              });
-
-              // STEP 2: Also run auto-render for any remaining $$ syntax (fallback)
-              renderMathInElement(componentRef.current, {
-                delimiters: [
-                  { left: "$$", right: "$$", display: true },
-                  { left: "$", right: "$", display: false },
-                ],
-                throwOnError: false,
-                strict: false,
-                trust: true,
-                ignoredTags: [],
-                ignoredClasses: [],
-              });
-            }
-          })
-          .catch((err) => {
-            console.error("Failed to load KaTeX:", err);
-          });
-      }, 300);
-
-      return () => clearTimeout(timer);
-    }
-  }, [Component, componentPath]);
+  // Use custom hook for KaTeX rendering
+  useKaTeXRenderer(componentRef, !!Component);
 
   if (loading) {
     return (

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
+import { MarkdownWithLatex } from "../components/MarkdownWithLatex";
 import "katex/dist/katex.min.css";
 
 import { css } from "../styled-system/css";
@@ -1859,7 +1857,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
 const TragedyOfCommonsFishing: React.FC = () => {
   return (
     <article>
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 Every day, we make seemingly rational decisions that, collectively, destroy the very resources we depend on. From not buying electric cars because they might be inconvenient to depleting groundwater aquifers, we face a paradox that has puzzled scientists for a long time.
 
@@ -1901,10 +1899,10 @@ The situation Moana faces demonstrates the core elements present in all common p
 To understand how these dynamics play out, let&rsquo;s experience Moana&rsquo;s dilemma firsthand. As she sits 
 with the other three chiefs overlooking the shared fishing grounds, each faces identical incentives, but their
 collective choices will determine everyone&rsquo;s fate:
-            `}</ReactMarkdown>
+            `}</MarkdownWithLatex>
 
       <FishingGameSimulator />
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 How did the simulation go? Most likely, you found it challenging to maintain fish stock stability.
 It's difficult to resist the temptation to fish intensively, especially when other chiefs do the same.
 
@@ -1927,9 +1925,9 @@ Within days, they contact the Regional Maritime Authority. The solution feels na
 
 This creates the central policy dilemma: equal quotas or economic efficiency? Try both approaches below:
 
-      `}</ReactMarkdown>
+      `}</MarkdownWithLatex>
       <IslandEfficiencyDemonstratorWithRounds />
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 **What the Results Show:**
 
@@ -1979,11 +1977,11 @@ After months of failed cooperation and bureaucratic frustration, Moana realizes 
 
 Each decision activates different Ostrom principles and creates different community outcomes. Experience how these institutional elements play out in practice:
 
-            `}</ReactMarkdown>
+            `}</MarkdownWithLatex>
 
       <CommunityGovernanceSimulator />
 
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`
+      <MarkdownWithLatex>{`
 
 **Understanding Multi-Dimensional Leadership:** The simulation demonstrates that effective community governance requires leaders to simultaneously balance:
 
@@ -2008,7 +2006,7 @@ The tragedy of the commons isn't just an abstract economic concept. It's the dai
 - **Graduated sanctions:** How do we handle free-riders without creating surveillance culture?
 
 Writing this has convinced me that there is a lot to learn in the context of innovation management. It depends less on perfecting market mechanisms and more on learning to govern knowledge commons well. TBC.
-            `}</ReactMarkdown>
+            `}</MarkdownWithLatex>
     </article>
   );
 };

@@ -47,7 +47,6 @@ export default function Head() {
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
 
-
       {/* Schema.org JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />

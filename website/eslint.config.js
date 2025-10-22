@@ -3,6 +3,7 @@
 import eslint from "@eslint/js";
 import prettier from "eslint-plugin-prettier/recommended";
 import react from "eslint-plugin-react/configs/recommended.js";
+import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -56,14 +57,15 @@ export default tseslint.config(
         ...globals.browser,
       },
     },
-
+    plugins: {
+      react: reactPlugin,
+      prettier,
+      "react-hooks": reactHooks,
+    },
     settings: {
       react: {
         version: "detect",
       },
     },
   },
-
-  prettier,
-  reactHooks.configs["recommended-latest"],
 );

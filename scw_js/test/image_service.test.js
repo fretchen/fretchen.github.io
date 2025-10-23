@@ -302,7 +302,8 @@ describe("image_service.js Tests", () => {
 
       // Finde den Bild-Upload-Aufruf
       const imageCall = mockS3Send.mock.calls.find(
-        (call) => call[0].params.Key.startsWith("images/") && call[0].params.ContentType === "image/jpeg",
+        (call) =>
+          call[0].params.Key.startsWith("images/") && call[0].params.ContentType === "image/jpeg",
       );
 
       expect(imageCall).toBeDefined();
@@ -485,8 +486,7 @@ describe("image_service.js Tests", () => {
       for (const testCase of testCases) {
         await uploadToS3(testCase.data, "test-file", testCase.contentType);
 
-        const lastCall =
-          mockS3Send.mock.calls[mockS3Send.mock.calls.length - 1];
+        const lastCall = mockS3Send.mock.calls[mockS3Send.mock.calls.length - 1];
         expect(lastCall[0].params.ContentType).toBe(testCase.contentType);
       }
     });

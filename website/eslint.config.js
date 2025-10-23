@@ -25,6 +25,7 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  prettier,
 
   {
     languageOptions: {
@@ -59,7 +60,6 @@ export default tseslint.config(
     },
     plugins: {
       react: reactPlugin,
-      prettier,
       "react-hooks": reactHooks,
     },
     settings: {

@@ -6,14 +6,21 @@ import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vi
 
 // Mock für AWS SDK
 const mockS3Send = vi.fn();
-const mockPutObjectCommand = vi.fn();
 
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: vi.fn().mockImplementation(() => ({
-    send: mockS3Send,
-  })),
-  PutObjectCommand: mockPutObjectCommand,
-}));
+vi.mock("@aws-sdk/client-s3", () => {
+  return {
+    S3Client: class {
+      constructor() {
+        this.send = mockS3Send;
+      }
+    },
+    PutObjectCommand: class {
+      constructor(params) {
+        this.params = params;
+      }
+    },
+  };
+});
 
 // Mock für fetch (global)
 global.fetch = vi.fn();
@@ -39,7 +46,6 @@ describe("image_service.js Tests", () => {
 
     // Standard-Mock-Rückgabewerte
     mockS3Send.mockResolvedValue({});
-    mockPutObjectCommand.mockImplementation((params) => params);
   });
 
   afterEach(() => {
@@ -56,14 +62,15 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(testData, fileName);
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/test.json");
-      expect(mockPutObjectCommand).toHaveBeenCalledWith({
+      expect(mockS3Send).toHaveBeenCalled();
+      const putCommand = mockS3Send.mock.calls[0][0];
+      expect(putCommand.params).toMatchObject({
         Bucket: "my-imagestore",
         Key: fileName,
         Body: JSON.stringify(testData),
         ContentType: "application/json",
         ACL: "public-read",
       });
-      expect(mockS3Send).toHaveBeenCalled();
     });
 
     test("sollte Buffer-Daten erfolgreich hochladen", async () => {
@@ -73,7 +80,9 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(testBuffer, fileName, "image/png");
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/test.png");
-      expect(mockPutObjectCommand).toHaveBeenCalledWith({
+      expect(mockS3Send).toHaveBeenCalled();
+      const putCommand = mockS3Send.mock.calls[0][0];
+      expect(putCommand.params).toMatchObject({
         Bucket: "my-imagestore",
         Key: fileName,
         Body: testBuffer,
@@ -89,7 +98,9 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(testString, fileName, "text/plain");
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/test.txt");
-      expect(mockPutObjectCommand).toHaveBeenCalledWith({
+      expect(mockS3Send).toHaveBeenCalled();
+      const putCommand = mockS3Send.mock.calls[0][0];
+      expect(putCommand.params).toMatchObject({
         Bucket: "my-imagestore",
         Key: fileName,
         Body: testString,
@@ -225,13 +236,13 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Überprüfe, dass die Metadaten-Upload mit korrektem Format aufgerufen wurde
-      const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
-        call[0].Key.startsWith("metadata/"),
+      const metadataCall = mockS3Send.mock.calls.find((call) =>
+        call[0].params.Key.startsWith("metadata/"),
       );
 
       expect(metadataCall).toBeDefined();
 
-      const metadata = JSON.parse(metadataCall[0].Body);
+      const metadata = JSON.parse(metadataCall[0].params.Body);
       expect(metadata).toEqual({
         name: `AI Generated Art #${tokenId}`,
         description: `AI generated artwork based on the prompt: "${prompt}"`,
@@ -268,19 +279,19 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Überprüfe, dass verschiedene Dateinamen verwendet wurden
-      const imageCalls = mockPutObjectCommand.mock.calls.filter((call) =>
-        call[0].Key.startsWith("images/"),
+      const imageCalls = mockS3Send.mock.calls.filter((call) =>
+        call[0].params.Key.startsWith("images/"),
       );
-      const metadataCalls = mockPutObjectCommand.mock.calls.filter((call) =>
-        call[0].Key.startsWith("metadata/"),
+      const metadataCalls = mockS3Send.mock.calls.filter((call) =>
+        call[0].params.Key.startsWith("metadata/"),
       );
 
       expect(imageCalls).toHaveLength(2);
       expect(metadataCalls).toHaveLength(2);
 
       // Dateinamen sollten unterschiedlich sein (wegen zufälligem String)
-      expect(imageCalls[0][0].Key).not.toBe(imageCalls[1][0].Key);
-      expect(metadataCalls[0][0].Key).not.toBe(metadataCalls[1][0].Key);
+      expect(imageCalls[0][0].params.Key).not.toBe(imageCalls[1][0].params.Key);
+      expect(metadataCalls[0][0].params.Key).not.toBe(metadataCalls[1][0].params.Key);
     });
 
     test("sollte Base64-zu-Buffer-Konvertierung korrekt handhaben", async () => {
@@ -290,12 +301,12 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Finde den Bild-Upload-Aufruf
-      const imageCall = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].Key.startsWith("images/") && call[0].ContentType === "image/jpeg",
+      const imageCall = mockS3Send.mock.calls.find(
+        (call) => call[0].params.Key.startsWith("images/") && call[0].params.ContentType === "image/jpeg",
       );
 
       expect(imageCall).toBeDefined();
-      expect(Buffer.isBuffer(imageCall[0].Body)).toBe(true);
+      expect(Buffer.isBuffer(imageCall[0].params.Body)).toBe(true);
     });
 
     test("sollte mit default tokenId umgehen", async () => {
@@ -306,10 +317,10 @@ describe("image_service.js Tests", () => {
       expect(result).toMatch(/metadata_unknown_[a-f0-9]{12}\.json$/);
 
       // Überprüfe Metadaten
-      const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
-        call[0].Key.startsWith("metadata/"),
+      const metadataCall = mockS3Send.mock.calls.find((call) =>
+        call[0].params.Key.startsWith("metadata/"),
       );
-      const metadata = JSON.parse(metadataCall[0].Body);
+      const metadata = JSON.parse(metadataCall[0].params.Body);
       expect(metadata.name).toBe("AI Generated Art #unknown");
     });
 
@@ -415,12 +426,12 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage("test prompt", "123", "ionos", "1024x1024");
 
       // Überprüfe den Metadaten-Upload Call
-      const metadataCall = mockPutObjectCommand.mock.calls.find((call) =>
-        call[0].Key.startsWith("metadata/"),
+      const metadataCall = mockS3Send.mock.calls.find((call) =>
+        call[0].params.Key.startsWith("metadata/"),
       );
 
       expect(metadataCall).toBeDefined();
-      const metadataJson = JSON.parse(metadataCall[0].Body);
+      const metadataJson = JSON.parse(metadataCall[0].params.Body);
 
       // Überprüfe dass size Attribut vorhanden ist
       const sizeAttribute = metadataJson.attributes.find(
@@ -433,7 +444,6 @@ describe("image_service.js Tests", () => {
       // Test mit 1792x1024 size
       vi.clearAllMocks();
       mockS3Send.mockResolvedValue({});
-      mockPutObjectCommand.mockImplementation((params) => params);
       global.fetch.mockResolvedValue({
         ok: true,
         json: () =>
@@ -449,11 +459,11 @@ describe("image_service.js Tests", () => {
 
       await generateAndUploadImage("test prompt", "456", "ionos", "1792x1024");
 
-      const metadataCall2 = mockPutObjectCommand.mock.calls.find((call) =>
-        call[0].Key.startsWith("metadata/"),
+      const metadataCall2 = mockS3Send.mock.calls.find((call) =>
+        call[0].params.Key.startsWith("metadata/"),
       );
 
-      const metadataJson2 = JSON.parse(metadataCall2[0].Body);
+      const metadataJson2 = JSON.parse(metadataCall2[0].params.Body);
       const sizeAttribute2 = metadataJson2.attributes.find(
         (attr) => attr.trait_type === "Image Size",
       );
@@ -476,8 +486,8 @@ describe("image_service.js Tests", () => {
         await uploadToS3(testCase.data, "test-file", testCase.contentType);
 
         const lastCall =
-          mockPutObjectCommand.mock.calls[mockPutObjectCommand.mock.calls.length - 1];
-        expect(lastCall[0].ContentType).toBe(testCase.contentType);
+          mockS3Send.mock.calls[mockS3Send.mock.calls.length - 1];
+        expect(lastCall[0].params.ContentType).toBe(testCase.contentType);
       }
     });
 

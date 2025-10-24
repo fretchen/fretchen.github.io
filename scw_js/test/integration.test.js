@@ -15,7 +15,6 @@ const mockViemFunctions = {
 };
 
 const mockS3Send = vi.fn();
-const mockPutObjectCommand = vi.fn();
 
 // Setup Mocks
 vi.mock("viem", () => mockViemFunctions);
@@ -26,12 +25,20 @@ vi.mock("viem/chains", () => ({
 vi.mock("viem/accounts", () => ({
   privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
 }));
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: vi.fn().mockImplementation(() => ({
-    send: mockS3Send,
-  })),
-  PutObjectCommand: mockPutObjectCommand,
-}));
+vi.mock("@aws-sdk/client-s3", () => {
+  return {
+    S3Client: class {
+      constructor() {
+        this.send = mockS3Send;
+      }
+    },
+    PutObjectCommand: class {
+      constructor(params) {
+        this.params = params;
+      }
+    },
+  };
+});
 
 describe("Integration Tests - readhandler_v2 + image_service", () => {
   let handle;
@@ -80,7 +87,6 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
     );
 
     mockS3Send.mockResolvedValue({});
-    mockPutObjectCommand.mockImplementation((params) => params);
 
     // Mock IONOS API Response
     global.fetch = vi
@@ -162,18 +168,18 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(mockS3Send).toHaveBeenCalledTimes(2);
 
       // Überprüfe Bild-Upload
-      const imageUpload = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].ContentType === "image/jpeg",
+      const imageUpload = mockS3Send.mock.calls.find(
+        (call) => call[0].params.ContentType === "image/jpeg",
       );
       expect(imageUpload).toBeDefined();
-      expect(imageUpload[0].Key).toMatch(/^images\/image_42_[a-f0-9]{12}\.jpg$/);
+      expect(imageUpload[0].params.Key).toMatch(/^images\/image_42_[a-f0-9]{12}\.jpg$/);
 
       // Überprüfe Metadaten-Upload
-      const metadataUpload = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].ContentType === "application/json",
+      const metadataUpload = mockS3Send.mock.calls.find(
+        (call) => call[0].params.ContentType === "application/json",
       );
       expect(metadataUpload).toBeDefined();
-      expect(metadataUpload[0].Key).toMatch(/^metadata\/metadata_42_[a-f0-9]{12}\.json$/);
+      expect(metadataUpload[0].params.Key).toMatch(/^metadata\/metadata_42_[a-f0-9]{12}\.json$/);
 
       // Überprüfe Smart Contract Update
       expect(mockContract.write.requestImageUpdate).toHaveBeenCalledWith([
@@ -287,11 +293,11 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(result.statusCode).toBe(200);
 
       // Hole die hochgeladenen Metadaten
-      const metadataUpload = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].ContentType === "application/json",
+      const metadataUpload = mockS3Send.mock.calls.find(
+        (call) => call[0].params.ContentType === "application/json",
       );
 
-      const uploadedMetadata = JSON.parse(metadataUpload[0].Body);
+      const uploadedMetadata = JSON.parse(metadataUpload[0].params.Body);
 
       // Überprüfe ERC-721-Konformität
       expect(uploadedMetadata).toHaveProperty("name");
@@ -401,11 +407,11 @@ describe("Integration Tests - readhandler_v2 + image_service", () => {
       expect(result.statusCode).toBe(200);
 
       // Überprüfe dass große Datei korrekt verarbeitet wurde
-      const imageUpload = mockPutObjectCommand.mock.calls.find(
-        (call) => call[0].ContentType === "image/jpeg",
+      const imageUpload = mockS3Send.mock.calls.find(
+        (call) => call[0].params.ContentType === "image/jpeg",
       );
-      expect(Buffer.isBuffer(imageUpload[0].Body)).toBe(true);
-      expect(imageUpload[0].Body.length).toBeGreaterThan(40000);
+      expect(Buffer.isBuffer(imageUpload[0].params.Body)).toBe(true);
+      expect(imageUpload[0].params.Body.length).toBeGreaterThan(40000);
     });
   });
 });

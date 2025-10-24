@@ -35,7 +35,7 @@
     "remark-math": "^6.0.0",
     "remark-mdx-frontmatter": "^5.2.0",
     "tsx": "^4.20.6",
-    "viem": "^2.38.3",
+    "viem": "^2.38.4",
     "vike-react": "^0.6.10",
     "vike-react-query": "^0.1.10",
     "wagmi": "^2.18.2"
@@ -48,7 +48,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
-    "@vitest/coverage-v8": "^4.0.1",
+    "@vitest/coverage-v8": "^4.0.2",
     "@vitest/ui": "^4.0.1",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
@@ -62,7 +62,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vike": "^0.4.244",
-    "vite": "^7.1.11",
+    "vite": "^7.1.12",
     "vitest": "^4.0.1"
   },
   "type": "module"

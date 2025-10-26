@@ -6,48 +6,50 @@ secondaryCategory: "ai"
 description: "I overhauled my site's SEO with Schema.org markup and replaced Giscus comments with Webmentions. The timing coincided with a surprising 45% traffic increase. Here's what I learned about making content discoverable."
 ---
 
-Over the past month, I made significant changes to improve the discoverability of this website. The primary motivation was addressing a fundamental problem: despite having educational content on quantum physics and blog posts about AI and blockchain, the site was largely invisible to search engines and lacked meaningful engagement mechanisms.
+After a months of content creation, I had to do something painful, yet necessary: improve the discoverability of this website. The main motivation was addressing a fundamental problem: despite all the educational content on quantum physics and blog posts about AI and blockchain, the site did not really gain any traction. So, I had to do something about it. And as I started to look into the topic, I realized that my site was largely invisible to search engines and lacked meaningful engagement mechanisms.
 
-The timing of these changes coincided with a notable increase in visitor count from 103 in September to 150 by mid-October—a 45% increase. While establishing direct causation would require more controlled conditions, the correlation warrants discussion of what was implemented and why.
+Interestingly it would seem that these changes really changed something, as they  coincided with a notable increase in visitor count from 103 in September to more than 250 by the time of writing this post - a twofold increase. Certainly, a good sign of success for a modest content site as I will explain again later.
 
-## The Initial Problem Statement
+## The Initial Problem
 
-The site exhibited three critical discoverability issues:
+Before I started, the site had three major problems:
 
 1. **Absence of structured data** - Search engines received no semantic information about content types
-2. **GitHub-centric comment system** - Giscus required GitHub authentication, creating friction for general audiences
+2. **GitHub-centric comment system** - Giscus required GitHub authentication, something that proved to be a major hurdle for general audiences
 3. **Isolated discussion model** - Comments existed solely within GitHub's ecosystem, preventing federation with broader social platforms
 
-Search Console data confirmed these issues: quantum physics lectures were not categorized as educational content, and blog posts displayed no rich snippets in search results. The content existed but remained effectively invisible to discovery mechanisms.
+[Search Console data](https://search.google.com/test/rich-results) confirmed these issues as none of the content was properly indexed: quantum physics lectures were not categorized as educational content, and blog posts displayed no rich snippets in search results. The content existed but remained effectively invisible to discovery mechanisms.
 
 ## Implementation Step 1: Metadata Foundation - Descriptions and Categories
 
-The first phase focused on establishing a metadata foundation that would support all subsequent SEO improvements. This required manual intervention rather than automated solutions.
+In the first phase, I focused on establishing a metadata foundation that would support all subsequent SEO improvements. This required manual cleaning rather than automated solutions.
 
 ### Manual Description Generation
 
-Each of the 18 blog posts required a custom `description` field in its frontmatter metadata:
+Each of the 18 blog posts required a custom `description` field in its frontmatter metadata. Take this example from the [hello world blog post](/blog/0):
 
 ```yaml
 ---
-title: Making My Site Discoverable
-category: "webdev"
-description: "I overhauled my site's SEO with Schema.org markup and replaced Giscus comments with Webmentions. Here's what I learned about making content discoverable."
+publishing_date: 2024-12-02
+title: Hello World
+tokenID: 2
+category: "others"
+description: "I welcome you to my personal blog exploring technology, blockchain, and creative coding. Expect insights on modern web development, decentralized systems, and innovative digital experiences."
 ---
 ```
 
 These descriptions serve multiple purposes across the site architecture:
 
-- **Search engine result pages (SERPs)** - The preview text displayed beneath page titles
-- **Social media previews** - Open Graph description metadata for link sharing
+- **Search engine result pages** - The preview text displayed beneath page titles
+- **Social media previews** - [Open Graph](https://ogp.me/) description metadata for link sharing
 - **Schema.org structured data** - Feeds into BlogPosting markup
 - **Site navigation** - Displayed on blog index pages for content scanning
 
 The manual approach was necessary because automated content extraction (first paragraph or random excerpts) produces inconsistent and often non-representative summaries. Controlling the description ensures the intended message reaches potential visitors.
 
-### Taxonomy Implementation
+### Categorization
 
-Concurrently, I implemented a five-category taxonomy system to organize content thematically:
+I organized content into five categories to facilitate both user navigation and search engine understanding:
 
 - **blockchain**: Smart Contracts, NFTs, Decentralization, Ethereum
 - **ai**: Image Generation, LLMs, AI Applications, Neural Networks
@@ -55,12 +57,14 @@ Concurrently, I implemented a five-category taxonomy system to organize content 
 - **webdev**: React, Vike, TypeScript, Static Site Generators, Tools
 - **others**: Game Theory, Governance, Economics, Political Systems
 
-Each post receives a primary `category` field with optional `secondaryCategory` support. This taxonomy serves several functions:
+Each post specifies a primary category with optional secondary classification. This structure provides:
 
-- **User experience** - Category-based filtering on the blog index page
-- **Search engine signals** - Demonstrates topical authority through consistent content themes
-- **Content organization** - Enables systematic content management and navigation
-- **Visual hierarchy** - Category indicators displayed as colored labels per post
+- Filtering capabilities on the blog index
+- Signals to search engines about content specialization
+- Improved content organization and navigation
+- Visual categorization via colored labels
+
+Search algorithms reward consistent, focused coverage of specific topics. Clear categorization demonstrates this topical consistency and may improve ranking for related search queries.
 
 ### SEO Implications of Categorization
 
@@ -261,7 +265,3 @@ The implementation provides a foundation for ongoing optimization:
 The webmention integration demonstrates that federated, decentralized engagement systems can function effectively while reducing barriers to participation. This aligns with the broader philosophy of building on open protocols rather than proprietary platforms.
 
 For others implementing similar systems: manual metadata investment (descriptions, categories) appears to be a prerequisite for effective structured data implementation. Schema.org markup amplifies existing content quality but cannot compensate for absent foundational metadata.
-
----
-
-_This work represents ongoing experimentation in web infrastructure, quantum physics education, and AI-enabled content creation. Further updates will follow as long-term data becomes available._

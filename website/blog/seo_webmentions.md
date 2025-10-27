@@ -4,12 +4,12 @@ title: Making My Site Discoverable - SEO, Webmentions, and a Traffic Spike
 category: "webdev"
 secondaryCategory: "ai"
 tokenID: 131
-description: "I overhauled my site's SEO with Schema.org markup and replaced Giscus comments with Webmentions. The timing coincided with a surprising 45% traffic increase. Here's what I learned about making content discoverable."
+description: "I overhauled my site's SEO with Schema.org markup and replaced Giscus comments with Webmentions. The timing coincided with a surprising 200% traffic increase. Here's what I learned about making content discoverable."
 ---
 
-After a months of content creation, I had to do something painful, yet necessary: improve the discoverability of this website. The main motivation was addressing a fundamental problem: despite all the educational content on [quantum physics](/quantum) and blog posts about [AI](/blog/16/) and blockchain, the site did not really gain any traction. So, I had to do something about it. And as I started to look into the topic, I realized that my site was largely invisible to search engines and lacked meaningful engagement mechanisms.
+After a few months of content creation, I had to do something painful, yet necessary: improve the discoverability of this website. The main motivation was addressing a fundamental problem: despite all the educational content on [quantum physics](/quantum) and blog posts about [AI](/blog/16/) and blockchain, the site did not really gain any traction. So, I had to do something about it. And as I started to look into the topic, I realized that my site was largely invisible to search engines and lacked meaningful engagement mechanisms.
 
-Interestingly it would seem that these changes really changed something, as they  coincided with a notable increase in visitor count from 103 in September to more than 250 by the time of writing this post - a twofold increase. Certainly, a good sign of success for a modest content site as I will explain again later.
+Interestingly it would seem that these changes really changed something, as they coincided with a notable increase in visitor count from 103 in September to more than 300 by the time of writing this post - a threefold increase. Certainly, a good sign of success for a modest content site as I will explain again later.
 
 ## The Initial Problem
 

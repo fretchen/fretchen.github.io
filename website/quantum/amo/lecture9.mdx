@@ -6,6 +6,12 @@ order: 9
 title: Lecture 9 - More on the Helium atom
 ---
 
+import pic1 from "./lecture9_pic1.png";
+import pic2 from "./lecture9_pic2.png";
+import pic3 from "./lecture9_pic3.png";
+import pic4 from "./lecture9_pic4.png";
+import { MyFigure } from "../../components/MyFigure";
+
 We will finish our discussion of the Helium atom. Most importantly, we
 will dive into the strong separation between singlet and triplet states.
 
@@ -229,7 +235,7 @@ $$
 \frac{1}{\sqrt{2}} \left( \left|1s2s\right\rangle - \left|2s1s\right\rangle \right) \otimes \left|\uparrow \uparrow\right\rangle
 $$
 
-<img src="./lecture9_pic1.png" width="70%">
+<MyFigure id="fig-helium-energy-splitting" href={pic1} caption="Helium atom singlet-triplet splitting" />
 
 This splitting is in the order of 0.25eV and hence much larger than the
 typical spin-orbit coupling. This explains, why the coupling to the
@@ -282,19 +288,13 @@ $$
 
 where $2S+1$ denotes the multiplicity of the spin.
 
-<img src="lecture9_pic2.png" width="70%">
-
-Level scheme of singlet and triplet states of the helium atom from L=0
-up to L=3. The ground state 1^1^S~0~ is chosen to have the energy E=0.
-Taken from [Demtröder 2010](http://dx.doi.org/10.1007/978-3-642-10298-1).
+<MyFigure id="fig-helium-level-scheme" href={pic2} caption="Level scheme of singlet and triplet states of the helium atom" />
 
 - The fact that we can write the state down with a well-defined $S$
   and $L$ is called $LS$ or Russell-Saunders coupling. All $s_i$
   couple to $S = \sum_i s_i$ and all $l_j$ couple to $L=\sum_j l_j$.
   There is no coupling between the spin and the spatial degree of
   freedom!
-
-<!-- -->
 
 - We have introduced an effective spin interaction, but we have
   ignored the "real" interactions between the spins! What does it
@@ -326,19 +326,9 @@ is very strongly suppressed compared to the exchange interaction and the Coulomb
 
 # Dipole Selection Rules in Helium
 
-<img src="./lecture9_pic3.png" width="70%">
+<MyFigure id="fig-helium-emission-lines" href={pic3} caption="Helium emission lines in gas discharge" />
 
-If helium atoms are excited in a gas discharge, one can see
-characteristic emission lines as shown above (taken from [Wikipedia](https://en.wikipedia.org/wiki/Helium)).
-
-<img src="./lecture9_pic4.png" width="70%">
-
-Possible transitions within the singlet and triplet system of helium.
-Taken from [Demtröder 2010](http://dx.doi.org/10.1007/978-3-642-10298-1).
-The singlet and triplet levels are always plotted separately and there is no
-transition between a singlet and a triplet state. Because of this
-observation, people thought in the beginning that there were two
-different types of helium ("para" and "ortho").
+<MyFigure id="fig-helium-transitions" href={pic4} caption="Possible transitions within the singlet and triplet system of helium" />
 
 The rules for transitions to occur are determined by the dipole matrix
 element containing the initial state $i$ and the final state $f$:

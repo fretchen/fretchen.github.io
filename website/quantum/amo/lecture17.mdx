@@ -7,6 +7,13 @@ order: 17
 title: Lecture 17 - Rotation and Vibration of Molecules
 ---
 
+import pic1 from "./lecture17_pic1.png";
+import pic2 from "./lecture17_pic2.png";
+import pic3 from "./lecture17_pic3.png";
+import pic4 from "./lecture17_pic4.png";
+import pic5 from "./lecture17_pic5.png";
+import { MyFigure } from "../../components/MyFigure";
+
 We will study the existance of vibrational and rotational levels in
 molecules. It allows us investigate the transitions of molecules and
 introduce the Franck-Condon principle. Finally, we will study how such
@@ -50,11 +57,7 @@ We then calculated the molecular potential curves $E_e(R)$, which differ
 for each electronic configuration, discussed in the last lecture and sketched once more in Fig.
 [1](#fig-potential).
 
-<figure id="fig-potential">
-<img src="./lecture17_pic1.png" width="60%" />
-<figcaption>The molecular potential curves obtained from the Born-Oppenheimer
-Approximation.</figcaption>
-</figure>
+<MyFigure id="fig-potential" href={pic1} caption="The molecular potential curves obtained from the Born-Oppenheimer Approximation" />
 
 In the center of mass frame we can tranform and get:
 
@@ -121,11 +124,7 @@ $$
 
 For the example of H~2~, we get $\omega/2\pi \sim 10^{14}$ Hz.
 
-<figure id="fig-internuclear">
-<img src="./lecture17_pic2.png" width="60%" />
-<figcaption>Internuclear potential. In the limit of a harmonic expansion around
-the minimum, the vibrationally excited states are equidistant.</figcaption>
-</figure>
+<MyFigure id="fig-internuclear" href={pic2} caption="Internuclear potential with vibrational levels" />
 
 A better approximation of the vibrational level structure than the
 simple harmonic oscillator is the **Morse potential**.
@@ -233,10 +232,7 @@ $$
 \left\langle\epsilon', \nu'\right| \vec{D}\left|\epsilon, \nu\right\rangle\approx \vec{D}_{\epsilon, \epsilon'} \left\langle\nu'\right| \left|\nu\right\rangle
 $$
 
-<figure id="fig-franck-condon">
-<img src="./lecture17_pic3.png" width="60%" />
-<figcaption>The Franck-Condon principle for a simple toy model.</figcaption>
-</figure>
+<MyFigure id="fig-franck-condon" href={pic3} caption="The Franck-Condon principle for a simple toy model" />
 
 The factor
 $S(\nu, \nu')=|\left\langle\nu\right|\left|\nu'\right\rangle|^2$
@@ -258,10 +254,7 @@ in [Ni 2008](http://dx.doi.org/10.1126/science.1163861).
 
 The scheme is visualized in Fig. [4](#fig-ni2008).
 
-<figure id="fig-ni2008">
-<img src="./lecture17_pic4.png" width="60%" />
-<figcaption>TProduction of groundstate molecules of K + Rb. Figure is taken from <a href="http://dx.doi.org/10.1126/science.1163861">Ni 2008</a>  </figcaption>
-</figure>
+<MyFigure id="fig-ni2008" href={pic4} caption="Production of groundstate molecules of K + Rb" />
 
 In a first step the atoms are cooled and then associated to a highly
 excited molecule in the a^3^$\Sigma$ state. From there the atom has to
@@ -347,10 +340,7 @@ molecules.
 In these molecules the electron 'feels' enormous effective electric
 fields, which can reach the [several GV/cm regime](http://dx.doi.org/10.1103/physrevlett.119.153001).
 
-<figure id="fig-dipole">
-<img src="./lecture17_pic5.png" width="60%" />
-<figcaption>Search for the permanent electric dipole moment. Figure is taken from <a href="http://hdl.handle.net/10044/1/45291">here</a>  </figcaption>
-</figure>
+<MyFigure id="fig-dipole" href={pic5} caption="Search for the permanent electric dipole moment" />
 
 The search for the dipole moment is then testing the dependence of the
 electron energy:

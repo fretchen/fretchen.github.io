@@ -7,6 +7,14 @@ order: 12
 title: Lecture 12- Entanglement
 ---
 
+import pic1 from "./lecture12_pic1.png";
+import pic2 from "./lecture12_pic2.png";
+import pic3 from "./lecture12_pic3.png";
+import pic4 from "./lecture12_pic4.png";
+import pic5 from "./lecture12_pic5.png";
+import pic6 from "./lecture12_pic6.svg";
+import { MyFigure } from "../../components/MyFigure";
+
 We will discuss the creation of entangled photons and how they can be
 used for the test of Bell's inequalities.
 
@@ -17,18 +25,7 @@ of the Bell inequalities.
 
 # Parametric down-conversion
 
-<figure id="fig-downcon">
-<img src="./lecture12_pic1.png" width="70%" />
-<figcaption>a) The process of spontaneous parametric down-conversion (SPDC).
-Inside a nonlinear crystal, two outgoing photons are created from an
-incoming photon. Momentum and energy conservation apply, resulting in a
-characteristic emission cone. b) Two photons created by SPDC encounter
-polarizers. Depending on the polarization, the photons are either
-absorbed or transmitted. After passing the polarizers, the photons are
-collected with two optical fibers and detected with single photon
-counters. The detector indicates a coincidence when both photons arrive
-within roughly 30 ns.</figcaption>
-</figure>
+<MyFigure id="fig-downcon" href={pic1} caption="The process of spontaneous parametric down-conversion (SPDC) and photon detection setup" />
 
 Fig. [1](#fig-downcon) shows the
 schematic setup of an experiment where pairs of entangled photons are
@@ -146,10 +143,7 @@ $$
 We can now employ the two polarizers to investigate the
 two emitted photons as shown in Fig. [2](#fig-polar-anal).
 
-<figure id="fig-polar-anal">
-<img src="./lecture12_pic2.png" width="90%" />
-<figcaption>Polarization analysis of correlated photons</figcaption>
-</figure>
+<MyFigure id="fig-polar-anal" href={pic2} caption="Polarization analysis of correlated photons" />
 
 The possible outcome of our experiments are the four states
 $\{HH, HV, VH, VV\}$ and hence we could decompose our full wavefunction
@@ -179,11 +173,7 @@ The optics setup handles two independent photons, with two outcomes
 each. So we can also see the presented setup as a two qubit system. A
 circuit diagram would mostly look the following way.
 
-<figure id="fig-two-qubit">
-<img src="./lecture12_pic3.png" width="90%" />
-<figcaption>Realizing the two-photon experiment within a quantum circuit. What are
-the correlations the two photons have ?</figcaption>
-</figure>
+<MyFigure id="fig-two-qubit" href={pic3} caption="Realizing the two-photon experiment within a quantum circuit" />
 
 The two photons originate from an unknown source, which is here modelled
 by photons propagating through some unitary matrix $\hat{U}$. The
@@ -308,10 +298,7 @@ even perfectly well in the case of $45^\circ$ angles. So is there any
 measurable difference between our observations and the hidden variable
 models ?
 
-<figure id="fig-corr">
-<img src="./lecture12_pic4.png" width="70%" />
-<figcaption>Correlation coefficient as taken from  <a href="https://www.cambridge.org/core/books/introduction-to-quantum-optics/F45DCE785DC8226D4156EC15CAD5FA9A">Grynberg</a>.</figcaption>
-</figure>
+<MyFigure id="fig-corr" href={pic4} caption="Correlation coefficient" />
 
 # Bell's theorem
 
@@ -336,10 +323,7 @@ In the experiment we now have two polarizers $A$ for
 Alice and $B$ for Bob, which we will allow to be in some position
 $\theta$ as visualized in Fig. [5](#fig-bell).
 
-<figure id="fig-bell">
-<img src="./lecture12_pic5.png" width="70%" />
-<figcaption>A Bell experiment.</figcaption>
-</figure>
+<MyFigure id="fig-bell" href={pic5} caption="A Bell experiment" />
 
 We will now calculate the the expectation value for joint detection:
 
@@ -411,10 +395,7 @@ $$
 \theta_2 = \frac{\pi}{8} \text{ and }\theta_2' = \frac{3\pi}{8}\\
 $$
 
-<figure id="fig-measure">
-<img src="./lecture12_pic5.png" width="70%" />
-<figcaption>Correlation measurements.</figcaption>
-</figure>
+<MyFigure id="fig-measure" href={pic5} caption="Correlation measurements" />
 
 In the figure above we present correlation measurement between the two photons measured with the
 setup shown in the second figure. One of the rotatable polarizers stays at an angle

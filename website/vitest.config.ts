@@ -5,12 +5,13 @@ import mdx from "@mdx-js/rollup";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import { resolve } from "path";
 
 export default defineConfig({
   plugins: [
     mdx({
-      remarkPlugins: [remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }], remarkGfm],
+      remarkPlugins: [remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }], remarkGfm, remarkMath],
     }),
     react(),
   ],

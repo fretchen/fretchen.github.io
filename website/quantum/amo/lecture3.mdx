@@ -5,6 +5,11 @@ author:
 order: 3
 title: Lecture 3 - The two-level system
 ---
+import pic1 from "./lecture3_pic1.png";
+import pic2 from "./lecture3_pic2.png";
+import pic3 from "./lecture3_pic3.png";
+import pic4 from "./lecture3_pic4.png";
+import { MyFigure } from "../../components/MyFigure";
 
 We are going to discuss the two-level system, it's static properties
 like level splitting at avoided crossings and dynamical properties like
@@ -25,13 +30,12 @@ two-level system is at least three-fold:
     fundamental building block of the exploding field of quantum
     computing and quantum information science.
 
-<img src="./lecture3_pic1.png" width="90%">
-
-Examples for two-state systems. a) Benzene: In the ground state, the
-electrons are delocalized. b) Ammonia: The nitrogen atom is either found
-above or below the hydrogen triangle. The state changes when the
-nitrogen atom tunnels. c) Molecular ion : The electron is either
-localized near proton 1 or 2.
+<MyFigure 
+  id="fig-two-level-examples"
+  href={pic1}
+  alt="Examples for two-state systems: a) Benzene, b) Ammonia, c) Molecular ion"
+  caption="Examples for two-state systems. a) Benzene: In the ground state, the electrons are delocalized. b) Ammonia: The nitrogen atom is either found above or below the hydrogen triangle. The state changes when the nitrogen atom tunnels. c) Molecular ion: The electron is either localized near proton 1 or 2."
+/>
 
 Some of the many examples for two-level systems that can be found in
 nature:
@@ -179,7 +183,13 @@ $$
 
 The energies can be nicely summarized as in Fig.
 
-<img src="./lecture3_pic2.png" width="90%">
+<MyFigure 
+  id="fig-energy-levels"
+  href={pic2}
+  width="90%"
+  alt="Energy levels and eigenstates diagram for the two-level system"
+  caption="Energy levels and eigenstates of the two-level system showing the coupling Ω and detuning Δ."
+/>
 
 The Eigenstates then read:
 
@@ -207,7 +217,13 @@ function of well defined norm and two free parameters. So it seems quite
 natural to look for a good representation of it. And this is the Bloch
 sphere as drawn below
 
-<img src="./lecture3_pic3.png" width="90%">
+<MyFigure 
+  id="fig-bloch-sphere"
+  href={pic3}
+  width="90%"
+  alt="The Bloch sphere representation of quantum states"
+  caption="The Bloch sphere: A geometrical representation of quantum states in a two-level system, where any quantum state can be represented as a point on the unit sphere."
+/>
 
 We will see especially its usefulness especially as we discuss the
 dynamics of the two-state system.
@@ -277,7 +293,13 @@ $$
  P_1(t)=\frac{1}{1+\left(\frac{\Delta}{|\Omega|}\right)^2}\sin^2\left(\sqrt{|\Omega|^2+\Delta^2}\frac{t}{2}\right)
 $$
 
-<img src="./lecture3_pic4.png" width="90%">
+<MyFigure 
+  id="fig-rabi-oscillations"
+  href={pic4}
+  width="90%"
+  alt="Rabi oscillations and population dynamics"
+  caption="Rabi oscillations: The time evolution of the population in state 1 according to Rabi's formula, showing oscillatory behavior at the Rabi frequency √(|Ω|² + Δ²)."
+/>
 
 ### Visualization of the dynamics in the spin picture
 

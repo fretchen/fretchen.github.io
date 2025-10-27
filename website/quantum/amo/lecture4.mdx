@@ -6,6 +6,11 @@ order: 4
 title: Lecture 4 - Atoms in oscillating fields
 ---
 
+import pic1 from "./lecture4_pic1.png";
+import pic2 from "./lecture4_pic2.png";
+import pic3 from "./lecture4_pic3.png";
+import { MyFigure } from "../../components/MyFigure";
+
 In the lecture, we will see how a time dependent coupling allows us to
 engineer a new Hamiltonian. Most importantly, we will discuss the
 resonant coupling of two levels and the decay of a single level to a
@@ -179,7 +184,7 @@ Ashkin got the [nobel prize in the 2018](https://www.nobelprize.org/uploads/2018
 A neat example that ties the previous concepts together is [the recent
 paper](https://arxiv.org/abs/1908.05619v2). The experimental setup is visualized in the figure below.
 
-<img src="./lecture4_pic1.png" width="90%">
+<MyFigure id="fig-atomic-clocks-tweezers" href={pic1} caption="Experimental setup for atomic clocks in optical tweezers" />
 
 While nice examples these clocks are still far away from the best clocks
 out there, which are based on [optical lattice clocks and ions](http://dx.doi.org/10.1103/revmodphys.87.637).
@@ -260,9 +265,7 @@ this approximation to be valid!
 
 **Example 1: Constant Perturbation.**
 
-<img src="./lecture4_pic2.png" width="90%">
-
-Sketch of a constant perturbation.
+<MyFigure id="fig-constant-perturbation" href={pic2} caption="Sketch of a constant perturbation" />
 
 We apply a constant perturbation in the time interval
 $\left[0,T\right]$, as shown in above. If we use the expression for $\gamma_f^{(1)}$ and set $\hbar \omega_0 = E_f-E_i$, we get
@@ -279,9 +282,7 @@ $$
 
 A sketch of $\mathrm{y}(\omega_0,T)$ is shown below
 
-<img src="./lecture4_pic3.png" width="90%">
-
-A sketch of y
+<MyFigure id="fig-y-function-sketch" href={pic3} caption="A sketch of y" />
 
 We can push this calculation to the extreme case of
 $T\rightarrow \infty$. This results in a delta function, which is peaked

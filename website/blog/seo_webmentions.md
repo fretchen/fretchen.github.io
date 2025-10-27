@@ -3,10 +3,11 @@ publishing_date: 2025-10-24
 title: Making My Site Discoverable - SEO, Webmentions, and a Traffic Spike
 category: "webdev"
 secondaryCategory: "ai"
+tokenID: 131
 description: "I overhauled my site's SEO with Schema.org markup and replaced Giscus comments with Webmentions. The timing coincided with a surprising 45% traffic increase. Here's what I learned about making content discoverable."
 ---
 
-After a months of content creation, I had to do something painful, yet necessary: improve the discoverability of this website. The main motivation was addressing a fundamental problem: despite all the educational content on quantum physics and blog posts about AI and blockchain, the site did not really gain any traction. So, I had to do something about it. And as I started to look into the topic, I realized that my site was largely invisible to search engines and lacked meaningful engagement mechanisms.
+After a months of content creation, I had to do something painful, yet necessary: improve the discoverability of this website. The main motivation was addressing a fundamental problem: despite all the educational content on [quantum physics](/quantum) and blog posts about [AI](/blog/16/) and blockchain, the site did not really gain any traction. So, I had to do something about it. And as I started to look into the topic, I realized that my site was largely invisible to search engines and lacked meaningful engagement mechanisms.
 
 Interestingly it would seem that these changes really changed something, as they  coincided with a notable increase in visitor count from 103 in September to more than 250 by the time of writing this post - a twofold increase. Certainly, a good sign of success for a modest content site as I will explain again later.
 
@@ -26,7 +27,7 @@ In the first phase, I focused on establishing a metadata foundation that would s
 
 ### Manual Description Generation
 
-Each of the 18 blog posts required a custom `description` field in its frontmatter metadata. Take this example from the [hello world blog post](/blog/0):
+Each of the [18 blog posts](/blog/) required a custom `description` field in its frontmatter metadata. Take this example from the [hello world blog post](/blog/0):
 
 ```yaml
 ---
@@ -64,15 +65,11 @@ Each post specifies a primary category with optional secondary classification. T
 - Improved content organization and navigation
 - Visual categorization via colored labels
 
-Search algorithms reward consistent, focused coverage of specific topics. Clear categorization demonstrates this topical consistency and may improve ranking for related search queries.
-
-### SEO Implications of Categorization
-
-Search engine algorithms increasingly evaluate topical authority—the degree to which a site demonstrates expertise in specific subject areas. A well-structured category system signals consistent coverage of defined topics rather than random, disconnected content. This becomes particularly relevant for long-tail search queries where subject-matter expertise influences ranking.
+This helps search algorithms and users as they both reward consistent, focused coverage of specific topics.
 
 ## Implementation Step 2: Schema.org Structured Data
 
-With metadata foundations established, the next phase involved implementing Schema.org structured data markup. Schema.org provides a standardized vocabulary that enables search engines to parse semantic meaning from web content rather than relying on heuristic analysis.
+With metadata foundations established, the next phase involved implementing Schema.org structured data markup. [Schema.org](https://schema.org/) provides a standardized vocabulary that enables search engines to parse semantic meaning from web content rather than relying on heuristic analysis.
 
 The implementation utilized TypeScript utility functions to generate JSON-LD structured data:
 
@@ -111,7 +108,7 @@ I created utility functions for different schema types:
 - **WebSite** - Homepage identity and metadata
 - **Person** - Author attribution and identity
 
-Quantum physics lectures received analogous treatment with appropriate educational content markup. This enables search queries for specific topics (e.g., "Rabi oscillations lecture" or "quantum harmonic oscillator") to surface these pages with proper semantic context.
+Quantum physics lectures received analogous treatment with appropriate educational content markup. This enables search queries for specific topics (e.g., ["Rabi oscillations lecture"](/quantum/amo/2/) or ["quantum harmonic oscillator"](/quantum/amo/4/)) to surface these pages with proper semantic context.
 
 ### Complementary SEO Components
 
@@ -125,11 +122,11 @@ The architecture follows a "write once, use everywhere" principle: the `descript
 
 ## Implementation Step 3: Webmention Integration
 
-The third major change involved replacing the GitHub-based comment system (Giscus) with Webmention.io—a federated protocol for aggregating social interactions across decentralized platforms.
+The third major change involved replacing the GitHub-based comment system (Giscus) with [Webmention](https://www.w3.org/TR/webmention/) — a federated protocol for aggregating social interactions across decentralized platforms.
 
 ### The Webmention Protocol
 
-Webmentions operate on a fundamentally different model than centralized comment systems. The workflow functions as follows:
+Webmentions operate on a fundamentally different model than centralized comment systems as nicely explained in [this blogpost](https://janmonschke.com/adding-webmentions-to-your-static-blog/). The workflow functions as follows:
 
 1. A user shares a blog post URL on Bluesky, Mastodon, or Twitter
 2. Webmention.io detects the link mention via protocol-level monitoring
@@ -184,8 +181,8 @@ The implementation timeline coincided with a measurable traffic increase:
 
 **Metrics:**
 
-- Visitor count: 103 (September) → 150 (mid-October)
-- Percentage increase: +45%
+- Visitor count: 103 (September) → over 300 (by end of October)
+- Percentage increase: +200%
 - Build time: 20s → 8.5s
 - Code reduction: ~500 lines
 
@@ -196,38 +193,16 @@ The implementation timeline coincided with a measurable traffic increase:
 3. October 21: Build system optimization and client-side LaTeX migration
 4. Traffic increase observed throughout October
 
-### Causal Attribution Limitations
 
-Establishing direct causation between these changes and traffic increases requires acknowledging several confounding variables:
-
-**Alternative explanations:**
-
-- **New content publication**: Several blog posts (NFT galleries, AI image generation) were published during this period and may have attracted domain-specific audiences
-- **Existing content discoverability**: SEO improvements made existing content more accessible via search
-- **Synergistic effects**: New content combined with improved discoverability
-- **Natural growth**: Organic traffic increase independent of technical changes
-
-Search Console data indicates improved click-through rates for posts with manually-written descriptions, and quantum physics lectures demonstrate increased visibility. However, definitively attributing the 45% increase to Schema.org implementation or any single factor would exceed what the available data supports.
-
-### Data Requirements for Causal Claims
-
-Establishing causality would require:
-
-- Longer observation period (3-6 months minimum)
-- Controlled comparison (similar content without SEO changes)
-- Traffic source analysis (organic search vs. direct vs. referral)
-- Keyword ranking tracking over time
-- Multivariate analysis isolating individual factors
-
-Current assessment: The timing suggests correlation, but attribution remains uncertain. Further monitoring will be necessary to evaluate long-term effects.
+While these are certainly encouraging correlations, I also published a number of new [blog posts](/blog/18/) on quantum physics and blockchain, which may have contributed to the traffic increase. So I will have to see how things evolve over the next months.
 
 ## Key Findings and Recommendations
 
-The implementation of these changes yields several generalizable insights for content discoverability:
+I would summarize my main findings in the following way: 
 
 1. **Manual metadata investment yields compound returns**: Writing custom descriptions for each post required significant manual effort, but this metadata propagates across multiple systems (search results, social previews, structured data). The initial time investment creates ongoing value.
 
-2. **Categorical organization signals topical authority**: Systematic content categorization demonstrates subject-matter expertise to search algorithms. For sites covering multiple disciplines (quantum physics, blockchain, web development), clear taxonomy helps establish authority within each vertical.
+2. **Categorical organization signals knowledge**: Systematic content categorization demonstrates subject-matter expertise to search algorithms. For sites covering multiple disciplines (quantum physics, blockchain, web development), clear categorization helps establish authority within each vertical.
 
 3. **Schema.org implementation complexity remains manageable**: Despite appearing technically involved, Schema.org markup requires approximately 100 lines of TypeScript utility functions. The return on this modest investment appears substantial, though quantifying exact impact remains challenging.
 
@@ -236,22 +211,6 @@ The implementation of these changes yields several generalizable insights for co
 5. **Build system optimization enables sustainable development**: The 57.5% build time reduction (20s → 8.5s) restored hot module reloading functionality, making iterative development feasible. For content sites with hundreds of mathematical equations, client-side rendering may be preferable to server-side compilation.
 
 6. **Attribution requires longer observation periods**: The correlation between SEO improvements and traffic increases is suggestive but not conclusive. Multiple months of data collection with traffic source analysis will be necessary for meaningful causal assessment.
-
-## Technical Summary
-
-**Website metrics:**
-
-- Visitor increase: 103 → 150 (+45% over 3 weeks)
-- Build time reduction: 20s → 8.5s (-57.5%)
-- Dependencies removed: 12
-- Code reduction: ~500 lines
-
-**ImageGen project metrics** (primary focus):
-
-- Images generated: 120+
-- Cost per image: ~10¢
-- Revenue: Minimal
-- Monthly hosting: < $1
 
 ## Future Work
 

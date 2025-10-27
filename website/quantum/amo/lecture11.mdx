@@ -5,6 +5,13 @@ order: 11
 title: Lecture 11 - Laser fundamentals
 ---
 
+import pic1 from "./lecture11_pic1.png";
+import pic2 from "./lecture11_pic2.png";
+import pic3 from "./lecture11_pic3.png";
+import pic4 from "./lecture11_pic4.png";
+import { MyFigure } from "../../components/MyFigure";
+
+
 We will study some basic properties of the laser.
 
 In the last lecture we studied the interaction of atoms
@@ -16,10 +23,7 @@ importantly find a situation in which the light coming out of the
 dielectric medium is amplified as shown in Fig.
 [1](#fig-laser).
 
-<figure id="fig-laser">
-<img src="./lecture11_pic1.png" width="70%" />
-<figcaption>The Laser set-up.</figcaption>
-</figure>
+<MyFigure id="fig-laser" href={pic1} caption="The Laser set-up" />
 
 The crucial idea of the system is that it is possible to find a
 configuration for the medium in which it has a certain gain for the
@@ -130,10 +134,7 @@ We can then also look for maximum dephasing and find the it happens
 close to the resonance. A summary can be found in Fig.
 [2](#fig-susc).
 
-<figure id="fig-susc">
-<img src="./lecture11_pic2.png" width="70%" />
-<figcaption>Susceptibility of the two level system. Figure taken from <a href="https://www.cambridge.org/core/books/introduction-to-quantum-optics/F45DCE785DC8226D4156EC15CAD5FA9A">Grynberg</a>.</figcaption>
-</figure>
+<MyFigure id="fig-susc" href={pic2} caption="Susceptibility of the two level system" />
 
 ### Saturation
 
@@ -291,10 +292,7 @@ population which is higher than the population of the ground state. This
 is not possible in the two-level system and in practice realized mostly
 in four-level systems.
 
-<figure id="fig-4level">
-<img src="./lecture11_pic3.png" width="70%" />
-<figcaption>The 4 level system.</figcaption>
-</figure>
+<MyFigure id="fig-4level" href={pic3} caption="The 4 level system" />
 
 The idea of such a system is the following:
 
@@ -370,10 +368,7 @@ but actually for any wavelength fulfilling this condition. The laser has
 multiple **longitudinal modes**. Some tricks allow to suppress this
 multi-mode behavior, such that we obtain a very pure light source.
 
-<figure id="fig-freq-laser">
-<img src="./lecture11_pic4.png" width="70%" />
-<figcaption>Frequency distribution of the steady-state laser.</figcaption>
-</figure>
+<MyFigure id="fig-freq-laser" href={pic4} caption="Frequency distribution of the steady-state laser" />
 
 ## Mode-locked operation
 

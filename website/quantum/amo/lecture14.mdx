@@ -7,6 +7,11 @@ order: 14
 title: Lecture 14 - The spin in atoms with many electrons
 ---
 
+import pic1 from "./lecture14_pic1.png";
+import pic2 from "./lecture14_pic2.png";
+import pic3 from "./lecture14_pic3.png";
+import { MyFigure } from "../../components/MyFigure";
+
 In the last lecture we have seen that we can typically
 treat complex atomic systems within the central field approximation.
 
@@ -176,9 +181,7 @@ $$
 1s^22s^22p3s.
 $$
 
-<figure id="fig-ineff">
-<img src="./lecture14_pic1.png" width="70%" />
-</figure>
+<MyFigure id="fig-ineff" href={pic1} caption="The splitting of levels in the first excited P and triplet P terms of the carbon sequence" />
 
 In the figure above "The splitting of levels in the first excited $^1$ P and $^3$P terms of
 the carbon sequence. As $Z$ increases, the two electrons change their
@@ -287,12 +290,7 @@ of fundamental constants instead of some prototypes. So, now the
 fundamental constants will have no errorbars left, as shown in Fig.
 [2](#fig-si-units).
 
-<figure id="fig-si-units">
-<img src="./lecture14_pic2.png" width="95%" />
-<figcaption>This wallet card displays the fundamental constants and other physical values that will define a revised international system of units. Taken
-from <a href="http://https://www.nist.gov/si-redefinition/turning-point-humanity-redefining-worlds-measurement-system"> the Blog of
-NIST</a>.</figcaption>
-</figure>
+<MyFigure id="fig-si-units" href={pic2} caption="Fundamental constants for the revised international system of units" />
 
 ## Bosonic and fermionic isotopes
 
@@ -313,6 +311,4 @@ half fermion. One can nicely see these differences as one tries to put
 them onto each other for cold temperatures and tight traps as visualized
 in the Figure below and reproduced from [Truscott 2001](http://dx.doi.org/10.1126/science.1059318).
 
-<figure id="fig-fermi">
-<img src="./lecture14_pic3.png" width="95%" />
-</figure>
+<MyFigure id="fig-fermi" href={pic3} caption="Fermionic lithium atoms colliding" />

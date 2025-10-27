@@ -7,6 +7,14 @@ order: 16
 title: Lecture 16 - Molecular Orbitals of Diatomic Molecules
 ---
 
+import pic1 from "./lecture16_pic1.png";
+import pic2 from "./lecture16_pic2.svg";
+import pic3 from "./lecture16_pic3.svg";
+import pic4 from "./lecture16_pic4.png";
+import pic5 from "./lecture16_pic5.png";
+import pic6 from "./lecture16_pic6.png";
+import { MyFigure } from "../../components/MyFigure";
+
 In this lecture we will discuss a systematic approach to build up
 molecules from more complex atoms.
 
@@ -28,10 +36,7 @@ molecular bonding:
 Both are important for small distances. For large distance the van der
 Waals interaction can create weakly bound molecules.
 
-<figure id="fig-hydrogen-overview">
-<img src="./lecture16_pic1.png" width="60%" />
-<figcaption>Different binding mechanisms in diatomic molecules. Figure taken from <a href="http://dx.doi.org/10.1007/978-3-642-54313-5_3">Hertel 2015</a>.</figcaption>
-</figure>
+<MyFigure id="fig-hydrogen-overview" href={pic1} caption="Different binding mechanisms in diatomic molecules" />
 
 # Van-der Vaals interaction
 
@@ -55,10 +60,7 @@ terms of the operators $\hat{X}_{A,B}, \hat{Y}_{A,B}, \hat{Z}_{A,B}$.
 The orientation of the atom is sketched in the inset in Fig.
 [2](#fig-two-atoms).
 
-<figure id="fig-two-atoms">
-<img src="./lecture16_pic2.svg" width="60%" />
-<figcaption>Configuration of two dipoles.</figcaption>
-</figure>
+<MyFigure id="fig-two-atoms" href={pic2} caption="Configuration of two dipoles" />
 
 We can write then:
 
@@ -117,10 +119,7 @@ $$
 
 This prediction has been directly tested as shown in Fig. [3](#fig-beguin).
 
-<figure id="fig-beguin">
-<img src="./lecture16_pic3.svg" width="60%" />
-<figcaption>Direct measurement of the van-der-Waals force in <a href="http://dx.doi.org/10.1103/physrevlett.110.263201">Beguin 2013</a>.</figcaption>
-</figure>
+<MyFigure id="fig-beguin" href={pic3} caption="Direct measurement of the van-der-Waals force" />
 
 # Molecular orbit theory
 
@@ -209,9 +208,7 @@ configuration.
 At short distance the energy ordering is
 $E(\psi_1) < E(\psi_2) \sim E(\psi_3) < E(\psi_4)$.
 
-<figure >
-<img src="./lecture16_pic4.png" width="60%" />
-</figure>
+<MyFigure id="fig-orbital-repulsion" href={pic4} caption="Molecular orbital energy levels with repulsion" />
 
 In the figure above the faded lines indicate how the energy
 of $\psi_1$ and $\psi_4$ would naively. If the system is diagonalized in
@@ -258,11 +255,7 @@ homonuclear molecule. But if we now have two different molecules the
 orbital energy of (A) might be different from the orbital energy of (B).
 The larger the difference, the smaller is the shift.
 
-<figure id="fig-binding">
-<img src="./lecture16_pic5.png" width="90%" />
-<figcaption>Two atomic orbitals with resonant energy form a binding and
-anti-binding orbital. b) Molecular orbitals of heteronuclear molecules.</figcaption>
-</figure>
+<MyFigure id="fig-binding" href={pic5} caption="Molecular orbitals of homonuclear and heteronuclear molecules" />
 
 # Homo-nuclear shell structure
 
@@ -270,11 +263,7 @@ We can finally put all this together to build up the shell structure of
 homo-cuclear diatomic molecules as shown in Fig.
 [6](#fig-homo).
 
-<figure id="fig-homo">
-<img src="./lecture16_pic6.png" width="90%" />
-<figcaption>The shell structure of some homonuclear diatomic molecules. Taken
-from <a href="https://global.oup.com/academic/product/molecular-quantum-mechanics-9780199541423">here</a>.</figcaption>
-</figure>
+<MyFigure id="fig-homo" href={pic6} caption="The shell structure of homonuclear diatomic molecules" />
 
 The name of the molecule indicates the highest occupied molecular orbit
 (_HOMO_). The next empty shell is then called the lowest occupied

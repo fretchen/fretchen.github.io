@@ -14,15 +14,7 @@ import { MyFigureProps } from "../types/components";
  * @param className - Optional CSS classes for custom styling
  * @param title - Optional figure title (rendered above the image)
  */
-export function MyFigure({
-  href,
-  caption,
-  id,
-  width = "100%",
-  alt,
-  className,
-  title,
-}: MyFigureProps) {
+export function MyFigure({ href, caption, id, width = "100%", alt, className, title }: MyFigureProps) {
   return (
     <figure id={id} className={className} style={{ margin: "1.5em 0" }}>
       {title && <h3 style={{ marginTop: 0, marginBottom: "0.5em" }}>{title}</h3>}
@@ -37,9 +29,7 @@ export function MyFigure({
           margin: "0 auto",
         }}
       />
-      <figcaption style={{ marginTop: "0.75em", fontStyle: "italic", textAlign: "center" }}>
-        {caption}
-      </figcaption>
+      <figcaption style={{ marginTop: "0.75em", fontStyle: "italic", textAlign: "center" }}>{caption}</figcaption>
     </figure>
   );
 }

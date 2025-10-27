@@ -7,6 +7,13 @@ order: 19
 title: Lecture 19 - Atom-Light Interactions and Dressed States
 ---
 
+import pic1 from "./lecture19_pic1.png";
+import pic2 from "./lecture19_pic2.png";
+import pic3 from "./lecture19_pic3.png";
+import pic4 from "./lecture19_pic4.png";
+import pic5 from "./lecture19_pic5.png";
+import pic6 from "./lecture19_pic6.png";
+
 import { MyFigure } from "../../components/MyFigure";
 
 We have seen that we can understand matter with increasing complexity
@@ -21,12 +28,7 @@ light, which is in a particularly clean set-up, namely cavity quantum
 electrodynamics. The fundamental ingredients are sketched in Fig.
 [1](#fig-rydberg).
 
-<figure id="fig-rydberg">
-<img src="./lecture19_pic1.png" width="60%" />
-<figcaption>Rydberg atoms interacting with the photons confined in a high quality
-cavity. Picture taken from the Nobel prize announcement for Serge
-Haroche <a href="https://www.nobelprize.org/prizes/physics/2012/popular-information/">here</a>  </figcaption>
-</figure>
+<MyFigure id="fig-rydberg" href={pic1} caption="Rydberg atoms interacting with photons in a cavity" />
 
 They are:
 
@@ -247,14 +249,8 @@ $\left|e\right\rangle$ of the atom on an energy scale, as
 shown in below.
 
 <figure id="fig-rydberg">
-<img src="./lecture19_pic2.png" width="60%" />
-</figure>
-
-The ground and excited state $\left|g\right\rangle$
-and $\left|e\right\rangle$ of the atom on an energy scale. Here, the
-energy of the ground state is $E_g\ =\ 0$. The energy difference between
-the two states is $\hbar\omega_0$. A photon of the surrounding light
-field has an energy $\hbar\omega_L$. The Hamiltonian of the system then reads
+<MyFigure id="fig-rydberg" href={pic2} caption="The ground and excited state $\left|g\right\rangle$ and $\left|e\right\rangle$ of the atom on an energy scale. Here, the energy of the ground state is $E_g = 0$. The energy difference between the two states is $\hbar\omega_0$. A photon of the surrounding light field has an energy $\hbar\omega_L$." />
+</figure> The Hamiltonian of the system then reads
 
 $$
 \hat{H} = \hat{H}_\textrm{a} + \hat{H}_\textrm{f} = \hbar \omega_0 \left|e\right\rangle \left\langle e\right| + \hbar \omega_\textrm{L} \hat{a}^\dag \hat{a}
@@ -284,9 +280,7 @@ $$
 $$
 
 <figure id="fig-bare-diagram">
-<img src="./lecture19_pic3.png" width="60%" />
-<figcaption>An energy diagram of the bare states. Note that the interaction
-between atom and light field has not yet been introduced!</figcaption>
+<MyFigure id="fig-bare-diagram" href={pic3} caption="An energy diagram of the bare states. Note that the interaction between atom and light field has not yet been introduced!" />
 </figure>
 
 We can draw another energy diagram (see
@@ -346,17 +340,14 @@ $$
 with the effective Rabi frequency $\Omega$.
 
 <figure id="fig-dressed-diagram">
-<img src="./lecture19_pic4.png" width="60%" />
-<figcaption>An energy diagram showing the bare and the dressed states.</figcaption>
+<MyFigure id="fig-dressed-diagram" href={pic4} caption="An energy diagram showing the bare and the dressed states." />
 </figure>
 
 The corresponding eigenvectors are then a mixture of atom and light as
 visualized in the figure below.
 
 <figure id="fig-dressed-energies">
-<img src="./lecture19_pic5.png" width="60%" />
-<figcaption>Energies of the bare and dressed states as a function of
-the detuning.</figcaption>
+<MyFigure id="fig-dressed-energies" href={pic5} caption="Energies of the bare and dressed states as a function of the detuning." />
 </figure>
 
 # Quantum Rabi oscillations
@@ -381,8 +372,7 @@ This effect has been observed in Ref. [Brune 1996](http://dx.doi.org/10.1103/phy
 summarized in Fig. [6](#fig-coherence).
 
 <figure id="fig-coherence">
-<img src="./lecture19_pic6.png" width="60%" />
-<figcaption>Observation of quantum Rabi oscillations in <a href="http://dx.doi.org/10.1038/22275"> Brune 1996</a>.</figcaption>
+<MyFigure id="fig-coherence" href={pic6} caption="Observation of quantum Rabi oscillations in [Brune 1996](http://dx.doi.org/10.1038/22275)." />
 </figure>
 
 # Making Schrödingers kitten

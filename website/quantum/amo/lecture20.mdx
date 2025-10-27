@@ -7,6 +7,15 @@ title: Lecture 20 - A few words on quantum computing with trapped ions
 
 import { MyFigure } from "../../components/MyFigure";
 
+import pic1 from "./lecture20_pic1.png"
+import pic2 from "./lecture20_pic2.png"
+import pic3 from "./lecture20_pic3.png"
+import pic4 from "./lecture20_pic4.png"
+import pic5 from "./lecture20_pic5.png"
+import pic6 from "./lecture20_pic6.png"
+import pic7 from "./lecture20_pic7.png"
+import pic8 from "./lecture20_pic8.png"
+
 In this lecture we are going to discuss the fundamental ingredients for
 quantum computing with trapped ions. In a first step, we discuss
 trapping and cooling, then single qubit operations and finally two-qubit
@@ -57,9 +66,7 @@ diagrams as used them already for the study of Bell inequalities and
 visualized below.
 
 <figure id="fig-circuit">
-<img src="./lecture20_pic1.png" width="60%" />
-<figcaption>A simple circuit diagram. It show the initial state, an entanglement
-gate, a number of single qubit gates and the final readout.</figcaption>
+<MyFigure id="fig-circuit" href={pic1} caption="A simple circuit diagram. It show the initial state, an entanglement gate, a number of single qubit gates and the final readout." />
 </figure>
 
 As atomic physics is only a minor part of the QC field, we typically
@@ -132,15 +139,11 @@ the prize with Norman Ramsey, who developped extremely precise
 spectroscopic methods, now known as [Ramsey spectroscopy](http://dx.doi.org/10.1103/revmodphys.62.541).
 
 <figure id="fig-paul">
-<img src="./lecture20_pic2.png" width="60%" />
-<figcaption>The two phases of the oscillating electric field of a Paul trap. Taken
-from <a href="https://en.wikipedia.org/wiki/Quadrupole_ion_trap">wikipedia</a>.</figcaption>
+<MyFigure id="fig-paul" href={pic2} caption="The two phases of the oscillating electric field of a Paul trap. Taken from [wikipedia](https://en.wikipedia.org/wiki/Quadrupole_ion_trap)." />
 </figure>
 
 <figure id="fig-paul-exp">
-<img src="./lecture20_pic3.png" width="60%" />
-<figcaption>A linear ion (Paul) trap containing six calcium 40 ions. Taken
-from <a href="https://quantumoptics.at/en/research/lintrap.html">here</a>.</figcaption>
+<MyFigure id="fig-paul-exp" href={pic3} caption="A linear ion (Paul) trap containing six calcium 40 ions. Taken from [here](https://quantumoptics.at/en/research/lintrap.html)." />
 </figure>
 
 A Paul trap provides a harmonic oscillator confinement with trapping
@@ -230,12 +233,8 @@ all-important Laser cooling, which was pioneered for ions in the 1970s
 state to an excited state of finitie lifetime $\tau= \frac{1}{\Gamma}$.
 
 <figure id="fig-laser-cooling">
-<img src="./lecture20_pic2.png" width="60%" />
+<MyFigure id="fig-laser-cooling" href={pic2} caption="The basic idea of laser cooling. The incoming light gives the ion a momentum kick $\vec{k}_{in}$. The photon is reemitted in a random direction such that $<\vec{k}_{out}>=0$." />
 </figure>
-
-The basic idea of laser cooling. The incoming light gives the ion a
-momentum kick $\vec{k}_{in}$. The photon is reemitted in a random
-direction such that $<\vec{k}_{out}>=0$.
 
 This laser cooling had a tremendous impact on the field of atomic
 physics in general. Notably it gave rise to the field of cold atoms to
@@ -287,9 +286,7 @@ and internal states:
 The full energy diagram is summarized in the figure below.
 
 <figure id="fig-paul-exp">
-<img src="./lecture20_pic5.png" width="60%" />
-<figcaption>Level structure of an two-level system coupled to a laser field as
-discussed in the text.</figcaption>
+<MyFigure id="fig-paul-exp" href={pic5} caption="Level structure of an two-level system coupled to a laser field as discussed in the text." />
 </figure>
 
 This scheme is used to perform **Raman side-band cooling**. The laser is
@@ -380,8 +377,7 @@ coupling excited and the ground state of the ions:
 The resulting level diagram is depicted below.
 
 <figure>
-<img src="./lecture20_pic6.png" width="60%" />
-<figcaption>Level scheme of the Sorensen Moelmer gate as described in the text.</figcaption>
+<MyFigure href={pic6} caption="Level scheme of the Sorensen Moelmer gate as described in the text." />
 </figure>
 
 The gate is then operated in the regime of small coupling strength
@@ -422,8 +418,7 @@ chain much more than 100 gates before the some extremely iffy things
 start to happen.
 
 <figure>
-<img src="./lecture20_pic7.png" width="60%" />
-<figcaption>From the iSWAP to the CNOT gate.</figcaption>
+<MyFigure href={pic7} caption="From the iSWAP to the CNOT gate." />
 </figure>
 
 So we have experimentally the choice of entanglement tool in the way
@@ -443,11 +438,7 @@ transitions are used for different purposes:
   appropiate substates.
 
 <figure>
-<img src="./lecture20_pic8.png" width="60%" />
-<figcaption>The level scheme of the calcium atom. The arrows indicate transitions
-by absorption and emission of photons. A qubit can be realized by
-choosing the ground state and an excited state. Taken
-from <a href="http://dx.doi.org/10.1088/1367-2630/15/12/123012">here</a>.</figcaption>
+<MyFigure href={pic8} caption="The level scheme of the calcium atom. The arrows indicate transitions by absorption and emission of photons. A qubit can be realized by choosing the ground state and an excited state. Taken from [here](http://dx.doi.org/10.1088/1367-2630/15/12/123012)." />
 </figure>
 
 Several solutions for scaling up the quantum computing architecture are

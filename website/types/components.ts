@@ -107,10 +107,23 @@ export interface EntryListProps extends BaseComponentProps {
 
 /**
  * Props for the MyFigure component
+ * Used for rendering semantic HTML5 figure elements with captions
  */
 export interface MyFigureProps {
+  /** Image source URL (can be imported from Vite or external URL) */
   href: string;
+  /** Caption text displayed below the image */
   caption: string;
+  /** Optional ID for the figure element (used for referencing and styling) */
+  id?: string;
+  /** Image width (default: "100%", can be absolute like "90%" or pixels) */
+  width?: string;
+  /** Alternative text for the image (falls back to caption if not provided) */
+  alt?: string;
+  /** Optional CSS classes for custom styling */
+  className?: string;
+  /** Optional figure title rendered above the image */
+  title?: string;
 }
 
 /**

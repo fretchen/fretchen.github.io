@@ -6,6 +6,11 @@ order: 7
 title: Lecture 7 - Beyond the 'boring' hydrogen atom
 ---
 
+import pic1 from "./lecture7_pic1.png";
+import pic2 from "./lecture7_pic2.png";
+import { MyFigure } from "../../components/MyFigure";
+
+
 In this lecture we will use the hydrogen atom to study static
 perturbations in form of external magnetic fields and relativistic
 effects, leading to the fine structure splitting.
@@ -170,9 +175,7 @@ $$
 This is the Zeeman splitting of the different magnetic
 substates. It is visualized below
 
-<img src="./lecture7_pic1.png" width="70%">
-
-The Zeeman effect in the hydrogen atom.
+<MyFigure id="fig-zeeman-effect-hydrogen" href={pic1} caption="The Zeeman effect in the hydrogen atom" />
 
 ## Trapping with electric or magnetic fields
 
@@ -204,14 +207,7 @@ will not derive in detail how a resulting **Paul trap** works, but the
 [linked video](https://youtu.be/Xb-zpM0UOzk) gives a very nice
 impression of the idea behind it. A sketch is presented in Fig.
 
-<img src="./lecture7_pic2.png" width="70%">
-
-The upper stage shows the phases of The two phases of the oscillating
-electric field of a Paul trap. Taken
-from [wikipedia](https://en.wikipedia.org/wiki/Quadrupole_ion_trap).
-Below we can see a linear ion (Paul) trap containing six calcium 40
-ions. Taken
-from [here](https://quantumoptics.at/en/research/lintrap.html).
+<MyFigure id="fig-paul-trap-schematic" href={pic2} caption="Paul trap schematic and linear ion trap with calcium ions" />
 
 This work on trapping ions dates back to the middle of the last century
 (!!!) and was recognized by the[ Nobel prize in

@@ -6,6 +6,10 @@ order: 8
 title: Lecture 8 - The Helium atom
 ---
 
+import pic1 from "./lecture8_pic1.png";
+import pic2 from "./lecture8_pic2.svg";
+import { MyFigure } from "../../components/MyFigure";
+
 In this lecture we will discuss some basic properties of the Helium
 atom. We will introduce first some useful notations for the specific
 Hamiltonian at hand. Then we will focus on the important consequences
@@ -153,9 +157,7 @@ $$
 We can now proceed to a summary of the relativistic effects in the
 hydrogen atom as presented in Fig.
 
-<img src="./lecture8_pic1.png" width="70%"/>
-
-Fine structure of the Hydrogen atom. Adapted from [Demtröder 2010 Fig. 5.33](http://dx.doi.org/10.1007/978-3-642-10298-1)
+<MyFigure id="fig-hydrogen-fine-structure" href={pic1} caption="Fine structure of the Hydrogen atom" />
 
 - The states should be characterized by angular momentum anymore, but
   by the total angular momentum $J$ and the orbital angular momentum.
@@ -207,10 +209,7 @@ theories. An extensive discussion can be found in Chapter 7 of Bransden [^Bransd
 The Helium atom describes a two electron system as shown in the figure
 below.
 
-<img src="./lecture8_pic2.svg" width="70%"/>
-
-The helium atom describes two electrons coupled to the nucleus of
-charge Z=2.
+<MyFigure id="fig-helium-atom-schematic" href={pic2} caption="The helium atom with two electrons coupled to the nucleus" />
 
 In the reference frame of center-of-mass we obtain the following
 Hamiltonian:

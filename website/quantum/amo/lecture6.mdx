@@ -6,6 +6,15 @@ order: 6
 title: Lecture 6 - The dipole approximation in the hydrogen atom
 ---
 
+import pic1 from "./lecture6_pic1.png";
+import pic2 from "./lecture6_pic2.png";
+import pic3 from "./lecture6_pic3.png";
+import pic4 from "./lecture6_pic4.png";
+import pic5 from "./lecture6_pic5.png";
+import pic6 from "./lecture6_pic6.svg";
+import pic7 from "./lecture6_pic7.svg";
+import { MyFigure } from "../../components/MyFigure";
+
 We will continue with some properties of the hydrogen atom. First
 compare it to the harmonic oscillator, then look into dipole transitions
 and end with the coupling to static magnetic fields.
@@ -109,9 +118,7 @@ existing levels. But which ones ? And at which frequency ?
 
 At this stage we can have a look into the energy landscape:
 
-<img src="./lecture6_pic1.png" width="70%">
-
-Energy potential of the hydrogen atom
+<MyFigure id="fig-hydrogen-energy-potential" href={pic1} caption="Energy potential of the hydrogen atom" />
 
 The energies read then
 
@@ -134,13 +141,13 @@ vector reads: $$\mathbf{A} =\mathbf{p}\times\mathbf{L}-\mathbf{r}$$
 Finally, we can also visualize the radial wavefunctions for the hydrogen
 atom as shown below
 
-<img src="./lecture6_pic2.png" width="90%">
+<MyFigure id="fig-hydrogen-radial-wavefunctions" href={pic2} caption="Radial wavefunctions for the hydrogen atom" />
 
 Associated with these radial wavefunctions, we also have the angular
 profiles. Where $Y_{lm}(\theta, \phi)$ are the **spherical harmonics**
 as shown below
 
-<img src="./lecture6_pic3.png" width="90%">
+<MyFigure id="fig-spherical-harmonics" href={pic3} caption="Spherical harmonics" />
 
 Their shape is especially important for understanding the possibility of
 coupling different orbits through electromagnetic waves.
@@ -152,7 +159,7 @@ wave vector $\vec{k}$. The states $\text{|g>}$ and $\text{|e>}$ stand
 for the ground and excited state and $\hbar\omega_0$ is the energy of
 the resonant transition between the states.
 
-<img src="./lecture6_pic4.png" width="90%">
+<MyFigure id="fig-atom-em-wave-interaction" href={pic4} caption="Interaction between an atom and an electromagnetic wave" />
 
 We consider an atom which is located in a radiation field. By resonant
 coupling with the frequency $\omega_0$, it can go from the ground state
@@ -176,7 +183,7 @@ $$
 For the hydrogen atom, the distance corresponds to the
 Bohr radius.
 
-<img src="./lecture6_pic5.png" width="70%">
+<MyFigure id="fig-dipole-potential" href={pic5} caption="Dipole potential visualization" />
 
 **Note.** Apart from the monopole, the dipole potential is the lowest
 order term of the multipole expansion of the scalar potential $\phi$:
@@ -258,7 +265,7 @@ $$
 \left\langle 2|\hat{\vec{D}}\cdot \vec{\epsilon}\,|1\right\rangle =e \int \psi_2\left(\vec{r}\right) \cdot \vec{r} \cdot \vec{\epsilon} \cdot \psi_1\left(\vec{r}\right) \mathop{}\!\mathrm{d}\vec{r}.
 $$
 
-<img src="./lecture6_pic6.svg" width="70%">
+<MyFigure id="fig-dipole-matrix-element" href={pic6} caption="Dipole matrix element" />
 
 # Selection rules
 
@@ -339,9 +346,7 @@ $$
 This element is only non-zero if $m = m'$ (see [appendix
 C of Hertel 2015](http://dx.doi.org/10.1007/978-3-642-54322-7) for all the gorious details).
 
-<img src="./lecture6_pic7.svg" width="70%">
-
-Above are the dipole selection rules for different polarizations of light.
+<MyFigure id="fig-dipole-selection-rules" href={pic7} caption="Dipole selection rules for different polarizations of light" />
 
 ## Circularly polarized light
 

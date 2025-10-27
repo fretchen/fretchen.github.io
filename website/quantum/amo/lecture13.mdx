@@ -7,6 +7,15 @@ order: 13
 title: Lecture 13 - Atoms with many electrons
 ---
 
+import pic1 from "./lecture13_pic1.png";
+import pic2 from "./lecture13_pic2.png";
+import pic3 from "./lecture13_pic3.png";
+import pic4 from "./lecture13_pic4.png";
+import pic5 from "./lecture13_pic5.png";
+import pic6 from "./lecture13_pic6.png";
+import { MyFigure } from "../../components/MyFigure";
+
+
 After our discussion of extremely simple atoms like hydrogen and helium,
 we will now discuss the most important properties of more complex atoms.
 We will see, how we can categorize them and discuss some of the general
@@ -30,18 +39,12 @@ A particularly instructive discussion of the ineffeciency of brute force
 numerical methods was given by Kenneth Wilson, the father of the
 renormalization group, in Sec 3 of [Wilson 1975](<http://dx.doi.org/10.1016/0001-8708(75)90149-8>).
 
-<figure id="fig-toy">
-<img src="./lecture13_pic1.png" width="70%" />
-<figcaption>A toy model, exemplifying the problem of direct numerical analysis.</figcaption>
-</figure>
+<MyFigure id="fig-toy" href={pic1} caption="A toy model, exemplifying the problem of direct numerical analysis" />
 
 The main idea is plotted in Fig. [1](#fig-toy) and its description in the words of Kenny Wilson can
 be found in Fig. [2](#fig-ineff).
 
-<figure id="fig-ineff">
-<img src="./lecture13_pic2.png" width="95%" />
-<figcaption>On the inefficiency of brute force numerics.</figcaption>
-</figure>
+<MyFigure id="fig-ineff" href={pic2} caption="On the inefficiency of brute force numerics" />
 
 We will come back to different experimental approaches to solve problems
 for which we cannot devise effective theories at a later stage, when we
@@ -70,10 +73,7 @@ $$
 The system is visualized in Fig.
 [3](#fig-three-ele).
 
-<figure id="fig-three-ele">
-<img src="./lecture13_pic3.png" width="70%" />
-<figcaption>Charge distribution of three electrons bound to the nucleus.</figcaption>
-</figure>
+<MyFigure id="fig-three-ele" href={pic3} caption="Charge distribution of three electrons bound to the nucleus" />
 
 As before the Hamiltonian has two contributions:
 
@@ -125,10 +125,7 @@ $$
   charge of the nucleus and electron feels the $1/r$ potential of the
   hydrogen atom.
 
-<figure id="fig-screening">
-<img src="./lecture13_pic4.png" width="70%" />
-<figcaption>The screening as a function of distance.</figcaption>
-</figure>
+<MyFigure id="fig-screening" href={pic4} caption="The screening as a function of distance" />
 
 We can now focus on the study of the part with spherical symmetry
 $\hat{H}_s$. Given its symmetry, we can once again use the conservation
@@ -196,8 +193,7 @@ have the following quantum numbers:
 As the electrons are fermions we can fill up each of the $nl$ states
 with two of them. We then write down the configuration of the electron
 by writing down the numbers of electrons per $nl$ configuration. So we
-get the periodic table shown in Fig. [5](#783282){reference-type="ref"
-reference="783282"}. We will typically use the following notation:
+get the periodic table shown in Fig. [Periodic table](#fig-measure). We will typically use the following notation:
 
 - A _configuration_ is the distribution of the electrons over the
   different orbits.
@@ -211,10 +207,7 @@ reference="783282"}. We will typically use the following notation:
 
 - The outermost shell is typically named the _valence_ shell.
 
-<figure id="fig-measure">
-<img src="./lecture13_pic5.png" width="70%" />
-<figcaption>Periodic table as taken from <a href="https://commons.wikimedia.org/wiki/File:Detailiertes_Periodensystem_mit_Elektronenkonfiguration.png">wiki commons</a> </figcaption>
-</figure>
+<MyFigure id="fig-measure" href={pic5} caption="Periodic table" />
 
 # Alkali Atoms
 
@@ -274,10 +267,7 @@ where $\delta_l$ is the quantum defect for a certain
 value of $l$. Some examples are summarized in Fig.
 [6](#fig-quantum-defect).
 
-<figure id="fig-quantum-defect">
-<img src="./lecture13_pic6.png" width="70%" />
-<figcaption>The quantum defect for different alkali atoms. Table 3.4 from Hertel 2015. </figcaption>
-</figure>
+<MyFigure id="fig-quantum-defect" href={pic6} caption="The quantum defect for different alkali atoms" />
 
 The effect of the quantum defect is actually so substantial that it
 introduces optical transitions between the different subshells of Alkali

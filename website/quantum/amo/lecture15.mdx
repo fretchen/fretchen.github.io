@@ -7,6 +7,12 @@ order: 15
 title: Lecture 15 - Diatomic molecules
 ---
 
+import pic1 from "./lecture15_pic1.png";
+import pic2 from "./lecture15_pic2.png";
+import pic3 from "./lecture15_pic3.svg";
+import pic4 from "./lecture15_pic4.svg";
+import { MyFigure } from "../../components/MyFigure";
+
 In this lecture we will start to put atoms together to build simple
 molecules. We will first use the Born-Oppenheimer approximation, to
 eliminate slow processes from the study of the fast electron dynamics.
@@ -33,10 +39,7 @@ In molecular hydrogen we have only three ingredients. A single electron,
 which is bound to two nuclei as shown in Fig.
 [1](#fig-hydrogen-ion).
 
-<figure id="fig-hydrogen-ion">
-<img src="./lecture15_pic1.png" width="60%" />
-<figcaption>The molecular hydrogen ion as discussed in the main text.</figcaption>
-</figure>
+<MyFigure id="fig-hydrogen-ion" href={pic1} caption="The molecular hydrogen ion" />
 
 The full Hamiltonian of the system at study would read:
 
@@ -151,11 +154,7 @@ actually solve the ionic hydrogen molecule analytically (see [Chapter 9 of
 Demtröder](http://dx.doi.org/10.1007/978-3-642-10298-1)). The resulting **molecular potential curves** are
 shown in Fig. [2](#fig-potentials).
 
-<figure id="fig-potentials">
-<img src="./lecture15_pic2.png" width="60%" />
-<figcaption>Molecular potential curves for the molecular hydrogen ion. Figure is
-taken from <a href="https://global.oup.com/academic/product/molecular-quantum-mechanics-9780199541423">here</a>.</figcaption>
-</figure>
+<MyFigure id="fig-potentials" href={pic2} caption="Molecular potential curves for the molecular hydrogen ion" />
 
 ## Linear combination of atomic orbitals
 
@@ -190,10 +189,7 @@ The resulting energy surfaces are shown in Fig. [3](#fig-lcao). In the most
 simplistic interpretation the gerade state does not have a node in the
 middle and it is therefore of smaller kinetic energy.
 
-<figure id="fig-lcao">
-<img src="./lecture15_pic3.svg" width="70%" />
-<figcaption>The energy surface of the LCAO for the hydrogen molecule ion.</figcaption>
-</figure>
+<MyFigure id="fig-lcao" href={pic3} caption="The energy surface of the LCAO for the hydrogen molecule ion" />
 
 # The neutral hydrogen molecule
 
@@ -202,10 +198,7 @@ the nuclei through the exchange of a single shared electron. However, we
 should now move on to the case of two neutral particles binding
 together. What is here the relevant mechanism ?
 
-<figure id="fig-hydrogen">
-<img src="./lecture15_pic4.svg" width="60%" />
-<figcaption>The hydrogen molecule.</figcaption>
-</figure>
+<MyFigure id="fig-hydrogen" href={pic4} caption="The hydrogen molecule" />
 
 In the following we will only consider the electronic part, which adds
 up too:

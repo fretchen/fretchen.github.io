@@ -913,6 +913,13 @@ export const layout = {
       textDecoration: "underline",
     },
   }),
+  hcardPhoto: css({
+    width: "0",
+    height: "0",
+    opacity: 0,
+    position: "absolute",
+    pointerEvents: "none",
+  }),
   hcardNote: css({
     fontSize: "xs",
     color: "gray.600",

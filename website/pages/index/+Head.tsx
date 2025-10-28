@@ -1,22 +1,17 @@
 import React from "react";
 import { generateWebSiteSchema, generatePersonSchema } from "../../utils/schemaOrg";
+import { SITE } from "../../utils/siteData";
 
 export default function Head() {
-  const url = "https://www.fretchen.eu";
-
   // Generate WebSite schema
   const webSiteSchema = generateWebSiteSchema(
-    url,
-    "fretchen",
+    SITE.url,
+    SITE.name,
     "Welcome to my website with all kinds of notes etc. Nothing fancy, just me thinking out loudly.",
   );
 
   // Generate Person schema for personal branding
-  const personSchema = generatePersonSchema(
-    url,
-    "fretchen",
-    "Physicist, researcher, and developer sharing thoughts on quantum physics, AI, and technology.",
-  );
+  const personSchema = generatePersonSchema(SITE.url, SITE.name, SITE.description);
 
   return (
     <>

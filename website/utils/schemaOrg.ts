@@ -1,4 +1,5 @@
 import type { BlogPost } from "../types/BlogPost";
+import { SITE, getPersonSchema } from "./siteData";
 
 /**
  * Generates Schema.org BlogPosting structured data for SEO
@@ -8,22 +9,16 @@ import type { BlogPost } from "../types/BlogPost";
  * @returns Schema.org BlogPosting object
  */
 export function generateBlogPostingSchema(blog: BlogPost, url: string, imageUrl?: string) {
+  const person = getPersonSchema();
+
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: blog.title,
     description: blog.description || "",
     datePublished: blog.publishing_date,
-    author: {
-      "@type": "Person",
-      name: "fretchen",
-      url: "https://www.fretchen.eu",
-    },
-    publisher: {
-      "@type": "Person",
-      name: "fretchen",
-      url: "https://www.fretchen.eu",
-    },
+    author: person,
+    publisher: person,
     url: url,
     mainEntityOfPage: {
       "@type": "WebPage",
@@ -64,6 +59,8 @@ export function generateBreadcrumbSchema(items: Array<{ name: string; url: strin
  * @returns Schema.org WebSite object
  */
 export function generateWebSiteSchema(url: string, name: string, description: string) {
+  const person = getPersonSchema();
+
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -71,9 +68,8 @@ export function generateWebSiteSchema(url: string, name: string, description: st
     description: description,
     url: url,
     author: {
-      "@type": "Person",
-      name: "fretchen",
-      url: url,
+      ...person,
+      url: url, // Override with provided url
     },
     // Note: potentialAction (SearchAction) removed as search functionality is not yet implemented
     // Can be added back when site search is available
@@ -104,17 +100,15 @@ export function generatePersonSchema(url: string, name: string, description: str
  * @returns Schema.org CollectionPage object
  */
 export function generateBlogCollectionSchema(url: string, blogs: BlogPost[]) {
+  const person = getPersonSchema();
+
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Blog Posts",
     description: "A collection of blog posts about various topics, ideas, and notes.",
     url: url,
-    author: {
-      "@type": "Person",
-      name: "fretchen",
-      url: "https://www.fretchen.eu",
-    },
+    author: person,
     hasPart: blogs
       .map((blog, originalIndex) => ({
         blog,
@@ -127,7 +121,7 @@ export function generateBlogCollectionSchema(url: string, blogs: BlogPost[]) {
         headline: item.blog.title,
         description: item.blog.description || "",
         datePublished: item.blog.publishing_date,
-        url: `https://www.fretchen.eu/blog/${item.originalIndex}`,
+        url: `${SITE.url}/blog/${item.originalIndex}`,
       })),
   };
 }

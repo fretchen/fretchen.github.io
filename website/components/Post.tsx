@@ -173,7 +173,9 @@ export function Post({
       </a>
 
       {/* u-url - canonical URL for the entry */}
-      <a className="u-url" href={fullUrl} style={{ display: "none" }}>{fullUrl}</a>
+      <a className="u-url" href={fullUrl} style={{ display: "none" }}>
+        {fullUrl}
+      </a>
 
       {/* Hidden p-summary for h-entry microformat (used by Bridgy Fed & parsers) */}
       {description && (

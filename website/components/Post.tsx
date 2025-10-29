@@ -177,6 +177,9 @@ export function Post({
       {category && <data className="p-category" value={category} style={{ display: "none" }} />}
       {secondaryCategory && <data className="p-category" value={secondaryCategory} style={{ display: "none" }} />}
 
+      {/* Hidden Bridgy Fed link - triggers automatic post discovery and bridging */}
+      <a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />
+
       <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
       {/* Render based on post type */}

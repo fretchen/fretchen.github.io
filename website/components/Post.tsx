@@ -133,10 +133,16 @@ export function Post({
   tokenID,
   type = "markdown",
   componentPath,
+  description,
+  category,
+  secondaryCategory,
 }: PostProps) {
   const pageContext = usePageContext();
   const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
   const [reactionCount, setReactionCount] = React.useState<number>(0);
+
+  // Format publishing date as ISO8601 for dt-published if available
+  const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
 
   // Fetch webmention counts for metadata line
   React.useEffect(() => {
@@ -150,15 +156,39 @@ export function Post({
   }, [fullUrl]);
 
   return (
-    <>
-      <h1 className={titleBar.title}>{title}</h1>
+    <article className="h-entry">
+      <h1 className={`p-name ${titleBar.title}`}>{title}</h1>
+
+      {/* dt-published and p-author for h-entry microformat */}
+      {publishing_date && (
+        <time className="dt-published" dateTime={isoDatetime || undefined}>
+          {publishing_date}
+        </time>
+      )}
+
+      {/* Hidden p-summary for h-entry microformat (used by Bridgy Fed & parsers) */}
+      {description && (
+        <div className="p-summary" style={{ display: "none" }}>
+          {description}
+        </div>
+      )}
+
+      {/* Hidden p-category for h-entry microformat (tags/categories) */}
+      {category && <data className="p-category" value={category} style={{ display: "none" }} />}
+      {secondaryCategory && <data className="p-category" value={secondaryCategory} style={{ display: "none" }} />}
+
+      {/* Hidden Bridgy Fed link - triggers automatic post discovery and bridging */}
+      <a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />
+
       <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
       {/* Render based on post type */}
       {type === "react" && componentPath ? (
-        <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
+        <div className="e-content">
+          <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
+        </div>
       ) : (
-        <div className={post.contentContainer}>
+        <div className={`e-content ${post.contentContainer}`}>
           {tokenID && <NFTFloatImage tokenId={tokenID} />}
           <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {content}
@@ -194,6 +224,6 @@ export function Post({
       )}
 
       <Webmentions postUrl={fullUrl} />
-    </>
+    </article>
   );
 }

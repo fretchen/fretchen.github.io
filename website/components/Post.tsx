@@ -11,6 +11,7 @@ import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 import { usePageContext } from "vike-react/usePageContext";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
+import { SITE } from "../utils/siteData";
 
 import { Webmentions } from "./Webmentions";
 
@@ -159,12 +160,22 @@ export function Post({
     <article className="h-entry">
       <h1 className={`p-name ${titleBar.title}`}>{title}</h1>
 
-      {/* dt-published and p-author for h-entry microformat */}
+      {/* dt-published hidden - displayed in MetadataLine instead (visible date shown below) */}
       {publishing_date && (
-        <time className="dt-published" dateTime={isoDatetime || undefined}>
+        <time className="dt-published" dateTime={isoDatetime || undefined} style={{ display: "none" }}>
           {publishing_date}
         </time>
       )}
+
+      {/* p-author h-card - links to site's h-card for author identification */}
+      <a rel="author" className="p-author h-card" href="https://www.fretchen.eu/" style={{ display: "none" }}>
+        {SITE.name}
+      </a>
+
+      {/* u-url - canonical URL for the entry */}
+      <a className="u-url" href={fullUrl} style={{ display: "none" }}>
+        {fullUrl}
+      </a>
 
       {/* Hidden p-summary for h-entry microformat (used by Bridgy Fed & parsers) */}
       {description && (
@@ -174,8 +185,16 @@ export function Post({
       )}
 
       {/* Hidden p-category for h-entry microformat (tags/categories) */}
-      {category && <data className="p-category" value={category} style={{ display: "none" }} />}
-      {secondaryCategory && <data className="p-category" value={secondaryCategory} style={{ display: "none" }} />}
+      {category && (
+        <a href="" className="p-category" style={{ display: "none" }}>
+          {category}
+        </a>
+      )}
+      {secondaryCategory && (
+        <a href="" className="p-category" style={{ display: "none" }}>
+          {secondaryCategory}
+        </a>
+      )}
 
       {/* Hidden Bridgy Fed link - triggers automatic post discovery and bridging */}
       <a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />

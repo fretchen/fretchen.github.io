@@ -182,7 +182,7 @@ export function Post({
         </div>
       )}
 
-      {/* Visible p-category for h-entry microformat (tags/categories) */}
+      {/* Hidden p-category for h-entry microformat (tags/categories) */}
       {category && (
         <a href="#" className="p-category" style={{ display: "none" }}>
           {category}

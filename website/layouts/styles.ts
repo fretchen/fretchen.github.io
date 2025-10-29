@@ -879,16 +879,82 @@ export const layout = {
   }),
   footer: css({
     width: "100%",
-    padding: "token(spacing.md) 0",
-    textAlign: "center",
+    padding: "token(spacing.sm) 0",
     borderTop: "token(borders.light)",
-    marginTop: 0, // Removed top margin
+    marginTop: 0,
+    backgroundColor: "white",
+  }),
+  footerContent: css({
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "0 1rem",
+  }),
+  hcard: css({
+    display: "flex",
+    flexDirection: "row",
+    gap: "token(spacing.md)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    "@media (max-width: 768px)": {
+      flexDirection: "column",
+      gap: "token(spacing.sm)",
+    },
+  }),
+  hcardName: css({
+    fontSize: "sm",
+    fontWeight: "semibold",
+    color: "text",
+  }),
+  hcardNameLink: css({
+    color: "text",
+    textDecoration: "none",
+    _hover: {
+      textDecoration: "underline",
+    },
+  }),
+  hcardPhoto: css({
+    width: "0",
+    height: "0",
+    opacity: 0,
+    position: "absolute",
+    pointerEvents: "none",
+  }),
+  hcardNote: css({
+    fontSize: "xs",
     color: "gray.600",
-    backgroundColor: "white", // Changed from gray.50 to white
+    display: "none",
+    "@media (max-width: 768px)": {
+      display: "block",
+      textAlign: "center",
+      width: "100%",
+    },
+  }),
+  hcardLinks: css({
+    display: "flex",
+    gap: "token(spacing.md)",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    fontSize: "sm",
+  }),
+  hcardLink: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "2px",
+    color: "gray.600",
+    textDecoration: "none",
+    transition: "color 0.2s",
+    fontSize: "xs",
+    _hover: {
+      color: "text",
+    },
   }),
   footerAttribution: css({
-    fontSize: "sm",
+    fontSize: "xs",
     color: "gray.500",
+    margin: 0,
+    padding: 0,
+    border: "none",
   }),
   headerControls: css({
     display: "flex",

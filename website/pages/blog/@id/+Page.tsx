@@ -26,6 +26,9 @@ const App: React.FC = function () {
         prevPost={prevPost}
         nextPost={nextPost}
         basePath="/blog"
+        description={blog.description}
+        category={blog.category}
+        secondaryCategory={blog.secondaryCategory}
       />
     </div>
   );

@@ -173,7 +173,7 @@ export function Post({
       </a>
 
       {/* u-url - canonical URL for the entry */}
-      <a className="u-url" href={fullUrl} style={{ display: "none" }} />
+      <a className="u-url" href={fullUrl} style={{ display: "none" }}>{fullUrl}</a>
 
       {/* Hidden p-summary for h-entry microformat (used by Bridgy Fed & parsers) */}
       {description && (
@@ -182,7 +182,7 @@ export function Post({
         </div>
       )}
 
-      {/* Visible p-category for h-entry microformat (tags/categories) */}
+      {/* Hidden p-category for h-entry microformat (tags/categories) */}
       {category && (
         <a href="" className="p-category" style={{ display: "none" }}>
           {category}

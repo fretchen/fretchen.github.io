@@ -37,6 +37,9 @@ export default function Head() {
 
   return (
     <>
+      {/* Fediverse creator attribution for Mastodon discovery */}
+      <meta name="fediverse:creator" content="@fretchen@mastodon.social" />
+
       {/* Schema.org BlogPosting JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }} />
       {/* Schema.org BreadcrumbList JSON-LD */}

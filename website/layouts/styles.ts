@@ -879,7 +879,7 @@ export const layout = {
   }),
   footer: css({
     width: "100%",
-    padding: "sm 0",
+    padding: "token(spacing.sm) 0",
     borderTop: "token(borders.light)",
     marginTop: 0,
     backgroundColor: "white",
@@ -892,13 +892,13 @@ export const layout = {
   hcard: css({
     display: "flex",
     flexDirection: "row",
-    gap: "md",
+    gap: "token(spacing.md)",
     alignItems: "center",
     justifyContent: "center",
     flexWrap: "wrap",
     "@media (max-width: 768px)": {
       flexDirection: "column",
-      gap: "sm",
+      gap: "token(spacing.sm)",
     },
   }),
   hcardName: css({
@@ -932,7 +932,7 @@ export const layout = {
   }),
   hcardLinks: css({
     display: "flex",
-    gap: "md",
+    gap: "token(spacing.md)",
     justifyContent: "center",
     flexWrap: "wrap",
     fontSize: "sm",

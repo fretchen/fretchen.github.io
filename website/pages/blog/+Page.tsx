@@ -68,8 +68,10 @@ const App: React.FC = function () {
         </p>
       )}
 
-      {/* Dynamic blog loading with hot reload support */}
-      <EntryList blogs={filteredBlogs} basePath="/blog" showDate={true} reverseOrder={true} />
+      {/* h-feed Microformat Wrapper for blog list */}
+      <div className="h-feed">
+        <EntryList blogs={filteredBlogs} basePath="/blog" showDate={true} reverseOrder={true} />
+      </div>
     </div>
   );
 };

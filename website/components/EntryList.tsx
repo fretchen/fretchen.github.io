@@ -3,6 +3,7 @@ import { Link } from "./Link";
 import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
 import { entryList } from "../layouts/styles";
+import { SITE } from "../utils/siteData";
 
 /**
  * Component that renders a list of blog entries with NFT images and links
@@ -76,10 +77,41 @@ const EntryList: React.FC<EntryListProps> = ({
                     {blog.description && (
                       <div className={`p-summary ${entryList.entryDescription}`}>{blog.description}</div>
                     )}
+
+                    {/* Categories (p-category for h-entry) */}
+                    {blog.category && (
+                      <a
+                        href={`${basePath}?category=${encodeURIComponent(blog.category)}`}
+                        className="p-category"
+                        style={{ display: "none" }}
+                      >
+                        {blog.category}
+                      </a>
+                    )}
+                    {blog.secondaryCategory && (
+                      <a
+                        href={`${basePath}?category=${encodeURIComponent(blog.secondaryCategory)}`}
+                        className="p-category"
+                        style={{ display: "none" }}
+                      >
+                        {blog.secondaryCategory}
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
             </Link>
+
+            {/* p-author h-card - links to site's h-card for author identification */}
+            <a rel="author" className="p-author h-card" href={SITE.url} style={{ display: "none" }}>
+              {SITE.name}
+            </a>
+
+            {/* u-url - canonical URL for the entry */}
+            <a className="u-url" href={`${SITE.url}${entryUrl}`} style={{ display: "none" }} />
+
+            {/* Hidden Bridgy Fed link - triggers automatic post discovery for listing entries */}
+            <a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />
             {/* u-url is implicit from the link href, used for microformat parsing */}
           </article>
         );

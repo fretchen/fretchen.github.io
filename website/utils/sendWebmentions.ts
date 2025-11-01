@@ -153,7 +153,7 @@ async function sendWebmention(source: string, target: string): Promise<Webmentio
     const endpoint = target === BRIDGY_FED_TARGET ? BRIDGY_FED_ENDPOINT : BRIDGY_PUBLISH_ENDPOINT;
 
     // For Bridgy Fed, use URL without www (fretchen.eu is registered there)
-    const actualSource = target === BRIDGY_FED_TARGET ? source.replace("www.", "") : source;
+    const actualSource = target === BRIDGY_FED_TARGET ? source.replace("https://www.", "https://") : source;
 
     const body = new URLSearchParams({ source: actualSource, target });
 

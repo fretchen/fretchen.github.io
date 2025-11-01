@@ -1,27 +1,55 @@
 # Webmention Automation
 
-Dieses Projekt sendet automatisch Webmentions an Bridgy Publish, um Blog-Posts auf Mastodon, Bluesky und GitHub zu veröffentlichen.
+Dieses Projekt sendet automatisch Webmentions an:
+- **Bridgy Publish**: Cross-Posting auf Mastodon und Bluesky
+- **Bridgy Fed**: Federation in das Fediverse/Bluesky
+
+## Unterschied: Bridgy Publish vs. Bridgy Fed
+
+### Bridgy Publish
+- **Zweck**: Cross-Posting auf deine eigenen Social Media Accounts
+- **Targets**: `brid.gy/publish/mastodon`, `brid.gy/publish/bluesky`
+- **Endpoint**: `https://brid.gy/publish/webmention`
+- **Resultat**: Post erscheint auf deinen Mastodon/Bluesky Accounts
+
+### Bridgy Fed
+- **Zweck**: Federation - dein Blog wird selbst zu einem Fediverse/Bluesky Account
+- **Target**: `https://fed.brid.gy/`
+- **Endpoint**: `https://fed.brid.gy/`
+- **Resultat**: Posts werden an deine Follower im Fediverse/Bluesky gefederated
 
 ## Setup
 
-### 1. Bridgy Publish Links im HTML
+### 1. Links im HTML
 
-Die `Post.tsx` Komponente enthält versteckte Links zu Bridgy Publish:
+Die `Post.tsx` Komponente enthält versteckte Links:
 
 ```tsx
+{/* Bridgy Fed - für Federation */}
+<a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />
+
+{/* Bridgy Publish - für Cross-Posting */}
 <a className="u-bridgy-omit-link" href="https://brid.gy/publish/mastodon" style={{ display: "none" }} />
 <a className="u-bridgy-omit-link" href="https://brid.gy/publish/bluesky" style={{ display: "none" }} />
-<a className="u-bridgy-omit-link" href="https://brid.gy/publish/github" style={{ display: "none" }} />
 ```
 
-Diese Links sind im statischen HTML vorhanden und erfüllen Bridgys Anforderung, dass die Target-URLs auf der Seite vorhanden sein müssen.
+Diese Links sind im statischen HTML vorhanden und erfüllen die Anforderungen beider Services.
 
 ### 2. Webmention-Sender Script
 
-Das `utils/sendWebmentions.ts` Script:
-- Scannt das Build-Verzeichnis nach Blog-Posts
-- Extrahiert Publishing-Datum aus dem HTML
-- Sendet Webmentions an Bridgy Publish
+Das `utils/sendWebmentions.ts` Script kann aus **zwei Quellen** lesen:
+
+#### **Option A: Lokales Build-Directory** (Standard)
+- Schnell
+- Funktioniert offline
+- Ideal für lokale Tests
+
+#### **Option B: gh-pages Branch**
+- Liest deployed Content
+- Benötigt Git Worktree
+- Stellt sicher, dass tatsächlich deployed wurde
+
+Das Script erkennt automatisch die beste Quelle.
 
 ## Verwendung
 
@@ -40,16 +68,22 @@ POST_ID=19 npm run send-webmentions
 
 ### Tatsächlich Senden
 
+Sendet Webmentions an **beide Services** (Bridgy Publish + Bridgy Fed):
+
 ```bash
-# Alle Posts
+# Alle Posts (zu beiden Services)
 SEND_WEBMENTIONS=true npm run send-webmentions
 
-# Nur neueste Posts
+# Nur neueste Posts (zu beiden Services)
 SEND_WEBMENTIONS=true ONLY_RECENT=7 npm run send-webmentions
 
-# Nur einen Post
+# Nur einen Post (zu beiden Services)
 SEND_WEBMENTIONS=true POST_ID=19 npm run send-webmentions
 ```
+
+**Was passiert:**
+- Post wird an Bridgy Publish gesendet → Cross-Posting auf Mastodon/Bluesky
+- Post wird an Bridgy Fed gesendet → Federation an Follower im Fediverse/Bluesky
 
 ## Workflow
 

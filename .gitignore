@@ -163,3 +163,6 @@ styled-system-studio
 test/blog/blogs.json
 blog/blogs.json
 amo/blogs.json
+
+# Webmention temp directory
+website/.temp-gh-pages

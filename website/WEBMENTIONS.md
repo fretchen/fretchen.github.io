@@ -1,6 +1,6 @@
 # Webmention Automation
 
-Dieses Projekt sendet automatisch Webmentions an Bridgy Publish, um Blog-Posts auf Mastodon, Bluesky und GitHub zu veröffentlichen.
+Dieses Projekt sendet automatisch Webmentions an Bridgy Publish, um Blog-Posts auf Mastodon und Bluesky zu veröffentlichen.
 
 ## Setup
 
@@ -11,17 +11,25 @@ Die `Post.tsx` Komponente enthält versteckte Links zu Bridgy Publish:
 ```tsx
 <a className="u-bridgy-omit-link" href="https://brid.gy/publish/mastodon" style={{ display: "none" }} />
 <a className="u-bridgy-omit-link" href="https://brid.gy/publish/bluesky" style={{ display: "none" }} />
-<a className="u-bridgy-omit-link" href="https://brid.gy/publish/github" style={{ display: "none" }} />
 ```
 
 Diese Links sind im statischen HTML vorhanden und erfüllen Bridgys Anforderung, dass die Target-URLs auf der Seite vorhanden sein müssen.
 
 ### 2. Webmention-Sender Script
 
-Das `utils/sendWebmentions.ts` Script:
-- Scannt das Build-Verzeichnis nach Blog-Posts
-- Extrahiert Publishing-Datum aus dem HTML
-- Sendet Webmentions an Bridgy Publish
+Das `utils/sendWebmentions.ts` Script kann aus **zwei Quellen** lesen:
+
+#### **Option A: Lokales Build-Directory** (Standard)
+- Schnell
+- Funktioniert offline
+- Ideal für lokale Tests
+
+#### **Option B: gh-pages Branch**
+- Liest deployed Content
+- Benötigt Git Worktree
+- Stellt sicher, dass tatsächlich deployed wurde
+
+Das Script erkennt automatisch die beste Quelle.
 
 ## Verwendung
 

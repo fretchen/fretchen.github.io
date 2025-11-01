@@ -1,0 +1,56 @@
+name: Send Webmentions
+on:
+  schedule:
+    # Run daily at 8 AM CET (7 AM UTC in winter, 6 AM UTC in summer)
+    # Using 7 AM UTC as a compromise (8 AM CET in winter)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      only_recent:
+        description: 'Only send for posts from last N days'
+        required: false
+        default: '7'
+      post_id:
+        description: 'Send for specific post ID (optional)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  send-webmentions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for gh-pages branch
+
+      - name: Setup Node.js 🔧
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies 📦
+        run: |
+          cd website
+          npm ci
+
+      - name: Send Webmentions 🚀
+        env:
+          SEND_WEBMENTIONS: 'true'
+          SOURCE: 'gh-pages'
+          ONLY_RECENT: ${{ github.event.inputs.only_recent || '7' }}
+          POST_ID: ${{ github.event.inputs.post_id }}
+        run: |
+          cd website
+          npm run send-webmentions
+
+      - name: Cleanup 🧹
+        if: always()
+        run: |
+          cd website
+          git worktree remove .temp-gh-pages --force 2>/dev/null || true

@@ -199,6 +199,10 @@ export function Post({
       {/* Hidden Bridgy Fed link - triggers automatic post discovery and bridging */}
       <a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />
 
+      {/* Hidden Bridgy Publish links - webmention targets for social media publishing */}
+      <a className="u-bridgy-omit-link" href="https://brid.gy/publish/mastodon" style={{ display: "none" }} />
+      <a className="u-bridgy-omit-link" href="https://brid.gy/publish/bluesky" style={{ display: "none" }} />
+
       <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
       {/* Render based on post type */}

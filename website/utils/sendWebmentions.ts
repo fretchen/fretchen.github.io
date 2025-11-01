@@ -1,33 +1,41 @@
 #!/usr/bin/env tsx
 /**
- * Automated Webmention Sender for Bridgy Publish
+ * Automated Webmention Sender for Bridgy Publish and Bridgy Fed
  *
- * This script sends webmentions to Bridgy after a successful build.
- * It scans the build directory for blog posts and sends webmentions.
+ * This script sends webmentions to:
+ * - Bridgy Publish: Cross-post to Mastodon and Bluesky
+ * - Bridgy Fed: Federate posts into the fediverse/Bluesky
+ *
+ * It can scan either the local build directory or the gh-pages branch.
  *
  * Usage:
- *   npm run send-webmentions                    # Dry-run for all posts
+ *   npm run send-webmentions                        # Dry-run, auto-detect source
  *   SEND_WEBMENTIONS=true npm run send-webmentions  # Actually send
- *   ONLY_RECENT=7 npm run send-webmentions      # Only posts from last 7 days
- *   POST_ID=19 npm run send-webmentions         # Only specific post
+ *   ONLY_RECENT=7 npm run send-webmentions          # Only posts from last 7 days
+ *   POST_ID=19 npm run send-webmentions             # Only specific post
+ *   SOURCE=gh-pages npm run send-webmentions        # Use gh-pages branch
+ *   SOURCE=build npm run send-webmentions           # Use local build (default)
  */
 
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const SITE_URL = "https://www.fretchen.eu";
-const BRIDGY_ENDPOINT = "https://brid.gy/publish/webmention";
+const BRIDGY_PUBLISH_ENDPOINT = "https://brid.gy/publish/webmention";
+const BRIDGY_FED_ENDPOINT = "https://fed.brid.gy/webmention";
 const BUILD_DIR = path.join(__dirname, "../build/client/blog");
+const TEMP_PAGES_DIR = path.join(__dirname, "../.temp-gh-pages");
 
-const BRIDGY_TARGETS = [
-  "https://brid.gy/publish/mastodon",
-  "https://brid.gy/publish/bluesky",
-  "https://brid.gy/publish/github",
-] as const;
+// Bridgy Publish targets - for cross-posting to social media
+const BRIDGY_PUBLISH_TARGETS = ["https://brid.gy/publish/mastodon", "https://brid.gy/publish/bluesky"] as const;
+
+// Bridgy Fed target - for federation into fediverse/Bluesky
+const BRIDGY_FED_TARGET = "https://fed.brid.gy/";
 
 interface WebmentionResult {
   success: boolean;
@@ -50,17 +58,60 @@ function extractPublishingDate(html: string): string | undefined {
 }
 
 /**
- * Scan build directory for blog posts
+ * Setup gh-pages worktree for reading
  */
-function scanBlogPosts(): BlogPostInfo[] {
-  if (!fs.existsSync(BUILD_DIR)) {
-    console.error(`❌ Build directory not found: ${BUILD_DIR}`);
-    console.error("   Run 'npm run build' first");
+function setupGhPagesWorktree(): string {
+  console.log("🔧 Setting up gh-pages worktree...");
+
+  // Clean up if exists
+  if (fs.existsSync(TEMP_PAGES_DIR)) {
+    try {
+      execSync(`git worktree remove ${TEMP_PAGES_DIR} --force`, { stdio: "ignore" });
+    } catch {
+      // Worktree might not be registered, just remove directory
+      fs.rmSync(TEMP_PAGES_DIR, { recursive: true, force: true });
+    }
+  }
+
+  // Create worktree from remote to ensure it's up-to-date
+  try {
+    execSync(`git worktree add ${TEMP_PAGES_DIR} origin/gh-pages`, { stdio: "pipe" });
+    console.log("   ✅ gh-pages worktree ready\n");
+    // Blog files are directly in the root, not in client/ subdirectory
+    return path.join(TEMP_PAGES_DIR, "blog");
+  } catch (error) {
+    console.error("❌ Failed to create gh-pages worktree");
+    console.error("   Make sure you have a gh-pages branch");
+    console.error(`   Error: ${error instanceof Error ? error.message : error}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Cleanup gh-pages worktree
+ */
+function cleanupGhPagesWorktree(): void {
+  if (fs.existsSync(TEMP_PAGES_DIR)) {
+    try {
+      execSync(`git worktree remove ${TEMP_PAGES_DIR} --force`, { stdio: "ignore" });
+    } catch {
+      fs.rmSync(TEMP_PAGES_DIR, { recursive: true, force: true });
+    }
+  }
+}
+
+/**
+ * Scan directory for blog posts
+ */
+function scanBlogPosts(blogDir: string): BlogPostInfo[] {
+  if (!fs.existsSync(blogDir)) {
+    console.error(`❌ Blog directory not found: ${blogDir}`);
+    console.error("   Run 'npm run build' first or use SOURCE=gh-pages");
     process.exit(1);
   }
 
   const posts: BlogPostInfo[] = [];
-  const entries = fs.readdirSync(BUILD_DIR, { withFileTypes: true });
+  const entries = fs.readdirSync(blogDir, { withFileTypes: true });
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
@@ -68,7 +119,7 @@ function scanBlogPosts(): BlogPostInfo[] {
     const id = parseInt(entry.name, 10);
     if (isNaN(id)) continue;
 
-    const htmlPath = path.join(BUILD_DIR, entry.name, "index.html");
+    const htmlPath = path.join(blogDir, entry.name, "index.html");
     if (!fs.existsSync(htmlPath)) continue;
 
     const html = fs.readFileSync(htmlPath, "utf-8");
@@ -98,9 +149,15 @@ function isRecent(publishingDate: string | undefined, days: number): boolean {
  */
 async function sendWebmention(source: string, target: string): Promise<WebmentionResult> {
   try {
-    const body = new URLSearchParams({ source, target });
+    // Determine the correct endpoint based on the target
+    const endpoint = target === BRIDGY_FED_TARGET ? BRIDGY_FED_ENDPOINT : BRIDGY_PUBLISH_ENDPOINT;
 
-    const response = await fetch(BRIDGY_ENDPOINT, {
+    // For Bridgy Fed, use URL without www (fretchen.eu is registered there)
+    const actualSource = target === BRIDGY_FED_TARGET ? source.replace("https://www.", "https://") : source;
+
+    const body = new URLSearchParams({ source: actualSource, target });
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
@@ -131,6 +188,7 @@ async function main() {
   const isDryRun = process.env.SEND_WEBMENTIONS !== "true";
   const onlyRecentDays = process.env.ONLY_RECENT ? parseInt(process.env.ONLY_RECENT, 10) : undefined;
   const specificPostId = process.env.POST_ID ? parseInt(process.env.POST_ID, 10) : undefined;
+  const source = process.env.SOURCE || "auto";
 
   if (isDryRun) {
     console.log("🔍 DRY RUN MODE - No webmentions will be sent");
@@ -145,9 +203,32 @@ async function main() {
     console.log(`🎯 Only processing post ID: ${specificPostId}\n`);
   }
 
+  // Determine source
+  let blogDir: string;
+  let useGhPages = false;
+
+  if (source === "gh-pages") {
+    blogDir = setupGhPagesWorktree();
+    useGhPages = true;
+    console.log("📚 Using gh-pages branch as source");
+  } else if (source === "build") {
+    blogDir = BUILD_DIR;
+    console.log("📚 Using local build directory as source");
+  } else {
+    // Auto-detect: prefer build if exists, fallback to gh-pages
+    if (fs.existsSync(BUILD_DIR)) {
+      blogDir = BUILD_DIR;
+      console.log("📚 Auto-detected: Using local build directory");
+    } else {
+      blogDir = setupGhPagesWorktree();
+      useGhPages = true;
+      console.log("📚 Auto-detected: Using gh-pages branch (no local build found)");
+    }
+  }
+
   // Scan blog posts
-  console.log("📚 Scanning blog posts from build directory...");
-  let posts = scanBlogPosts();
+  console.log(`   Scanning: ${blogDir}\n`);
+  let posts = scanBlogPosts(blogDir);
   console.log(`   Found ${posts.length} blog posts\n`);
 
   // Filter posts
@@ -164,6 +245,9 @@ async function main() {
 
   console.log(`📤 Processing ${posts.length} posts...\n`);
 
+  // Combine all targets
+  const allTargets = [...BRIDGY_PUBLISH_TARGETS, BRIDGY_FED_TARGET];
+
   let totalSent = 0;
   let totalFailed = 0;
 
@@ -175,8 +259,9 @@ async function main() {
     console.log(`   URL: ${sourceUrl}`);
     console.log(`   Date: ${post.publishingDate || "N/A"}`);
 
-    for (const target of BRIDGY_TARGETS) {
-      const targetName = target.split("/").pop();
+    for (const target of allTargets) {
+      // Extract a readable name from the target URL
+      const targetName = target === BRIDGY_FED_TARGET ? "fed.brid.gy" : target.split("/").pop() || "unknown";
 
       if (isDryRun) {
         console.log(`   [DRY RUN] Would send to ${targetName}`);
@@ -208,18 +293,29 @@ async function main() {
   console.log("📊 Summary");
   console.log("=".repeat(60));
 
+  const totalTargets = BRIDGY_PUBLISH_TARGETS.length + 1; // +1 for Bridgy Fed
+
   if (isDryRun) {
-    console.log(`Would send ${posts.length * BRIDGY_TARGETS.length} webmentions`);
-    console.log(`for ${posts.length} posts to ${BRIDGY_TARGETS.length} targets`);
+    console.log(`Would send ${posts.length * totalTargets} webmentions`);
+    console.log(`for ${posts.length} posts to ${totalTargets} targets`);
+    console.log(`   - ${BRIDGY_PUBLISH_TARGETS.length} Bridgy Publish targets (mastodon, bluesky)`);
+    console.log(`   - 1 Bridgy Fed target (federation)`);
     console.log("\nRun with SEND_WEBMENTIONS=true to actually send");
   } else {
     console.log(`✅ Successfully sent: ${totalSent}`);
     console.log(`❌ Failed: ${totalFailed}`);
     console.log(`📝 Total posts: ${posts.length}`);
-    console.log(`🎯 Total targets: ${BRIDGY_TARGETS.length}`);
+    console.log(`🎯 Total targets: ${totalTargets}`);
+    console.log(`   - ${BRIDGY_PUBLISH_TARGETS.length} Bridgy Publish targets (mastodon, bluesky)`);
+    console.log(`   - 1 Bridgy Fed target (federation)`);
   }
 
   console.log("=".repeat(60) + "\n");
+
+  // Cleanup
+  if (useGhPages) {
+    cleanupGhPagesWorktree();
+  }
 
   if (totalFailed > 0 && !isDryRun) {
     process.exit(1);
@@ -228,5 +324,11 @@ async function main() {
 
 main().catch((error) => {
   console.error("❌ Fatal error:", error);
+  // Try to cleanup on error
+  try {
+    cleanupGhPagesWorktree();
+  } catch {
+    // Ignore cleanup errors
+  }
   process.exit(1);
 });

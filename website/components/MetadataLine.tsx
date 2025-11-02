@@ -2,6 +2,7 @@ import * as React from "react";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { usePageContext } from "vike-react/usePageContext";
 import { metadataLine } from "../layouts/styles";
+import { useUmami } from "../hooks/useUmami";
 
 interface MetadataLineProps {
   publishingDate?: string;
@@ -24,6 +25,9 @@ export default function MetadataLine({
   reactionCount,
   className,
 }: MetadataLineProps) {
+  // Analytics hook
+  const { trackEvent } = useUmami();
+
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
 
@@ -48,11 +52,31 @@ export default function MetadataLine({
   // Handle support click
   const handleSupportClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Track support click
+    trackEvent("blog-support-click", {
+      variant: "inline", // MetadataLine is inline variant
+      currentSupports: parseInt(supportCount, 10),
+      readingProgress: undefined, // No reading progress in metadata line
+      isConnected: isConnected,
+    });
+
     if (!isConnected) {
       // Could show a connect wallet message
       return;
     }
     handleSupport();
+  };
+
+  // Handle hover
+  const handleSupportHover = () => {
+    // Track button hover (for both connected and disconnected users)
+    trackEvent("blog-support-button-hover", {
+      variant: "inline",
+      currentSupports: parseInt(supportCount, 10),
+      readingProgress: undefined,
+      isConnected: isConnected,
+    });
   };
 
   // Render support section
@@ -71,14 +95,16 @@ export default function MetadataLine({
     const supportText = count === 1 ? "supporter" : "supporters";
 
     return (
-      <button
-        onClick={handleSupportClick}
-        disabled={isLoading || !isConnected}
-        className={metadataLine.supportButton}
-        title={errorMessage || (isConnected ? "Support this content" : "Connect wallet to support")}
-      >
-        {isLoading ? "☕ Supporting..." : isSuccess ? `★ ${count} ${supportText}` : `☕ ${count} ${supportText}`}
-      </button>
+      <div onMouseEnter={handleSupportHover} style={{ display: "inline-block" }}>
+        <button
+          onClick={handleSupportClick}
+          disabled={isLoading || !isConnected}
+          className={metadataLine.supportButton}
+          title={errorMessage || (isConnected ? "Support this content" : "Connect wallet to support")}
+        >
+          {isLoading ? "☕ Supporting..." : isSuccess ? `★ ${count} ${supportText}` : `☕ ${count} ${supportText}`}
+        </button>
+      </div>
     );
   };
 

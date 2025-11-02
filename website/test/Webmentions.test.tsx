@@ -8,6 +8,13 @@ import { Webmentions } from "../components/Webmentions";
  * Tests fetching, rendering, copy functionality, and user interactions
  */
 
+// Mock vike-react/usePageContext
+vi.mock("vike-react/usePageContext", () => ({
+  usePageContext: () => ({
+    urlPathname: "/quantum/amo/0",
+  }),
+}));
+
 // Mock fetch API
 global.fetch = vi.fn() as Mock;
 
@@ -19,10 +26,13 @@ Object.assign(navigator, {
 });
 
 describe("Webmentions Component", () => {
-  const mockPostUrl = "https://fretchen.eu/quantum/amo/0";
-
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock: return empty arrays for both URL variants
+    (global.fetch as Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ children: [] }),
+    });
   });
 
   afterEach(() => {
@@ -38,7 +48,7 @@ describe("Webmentions Component", () => {
           }),
       );
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       expect(screen.getByText(/Loading reactions/i)).toBeInTheDocument();
     });
@@ -51,7 +61,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/No reactions yet/i)).toBeInTheDocument();
@@ -66,7 +76,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/Share this post on social media!/i)).toBeInTheDocument();
@@ -77,62 +87,59 @@ describe("Webmentions Component", () => {
   });
 
   describe("Fetching Webmentions", () => {
-    it("should fetch webmentions from correct URL", async () => {
-      (global.fetch as Mock).mockResolvedValueOnce({
+    it("should fetch webmentions from both URL variants (with and without trailing slash)", async () => {
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(`https://webmention.io/api/mentions.jf2?target=${mockPostUrl}`);
+        // Should fetch from both URL variants
+        expect(global.fetch).toHaveBeenCalledWith(
+          `https://webmention.io/api/mentions.jf2?target=https://www.fretchen.eu/quantum/amo/0`,
+        );
+        expect(global.fetch).toHaveBeenCalledWith(
+          `https://webmention.io/api/mentions.jf2?target=https://www.fretchen.eu/quantum/amo/0/`,
+        );
+        expect(global.fetch).toHaveBeenCalledTimes(2);
       });
     });
 
-    it("should handle URLs with trailing slash correctly", async () => {
-      const urlWithTrailingSlash = "https://fretchen.eu/blog/1/";
+    it("should deduplicate webmentions when same mention appears in both API responses", async () => {
+      const duplicateMention = {
+        "wm-id": 123,
+        "wm-property": "like-of",
+        author: { name: "Test User", photo: "https://example.com/photo.jpg" },
+        url: "https://example.com/mention",
+      };
 
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ children: [] }),
-      });
+      // Mock both API calls to return the same mention
+      (global.fetch as Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ children: [duplicateMention] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ children: [duplicateMention] }),
+        });
 
-      render(<Webmentions postUrl={urlWithTrailingSlash} />);
-
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          `https://webmention.io/api/mentions.jf2?target=${urlWithTrailingSlash}`,
-        );
-      });
-
-      // Verify no double slashes in the fetch URL
-      const fetchCalls = (global.fetch as Mock).mock.calls;
-      expect(fetchCalls[0][0]).not.toContain("//api");
-      expect(fetchCalls[0][0]).not.toMatch(/blog\/1\/\//); // Should not have double trailing slashes
-    });
-
-    it("should handle URLs without trailing slash correctly", async () => {
-      const urlWithoutTrailingSlash = "https://fretchen.eu/blog/1";
-
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ children: [] }),
-      });
-
-      render(<Webmentions postUrl={urlWithoutTrailingSlash} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          `https://webmention.io/api/mentions.jf2?target=${urlWithoutTrailingSlash}`,
-        );
+        // Should only show one like, not two
+        const likeSection = screen.getByText(/Like/i).parentElement;
+        const avatars = likeSection?.parentElement?.querySelectorAll("img");
+        expect(avatars).toHaveLength(1); // Deduplicated, not 2
       });
     });
 
     it("should handle fetch errors gracefully", async () => {
       (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/No reactions yet/i)).toBeInTheDocument();
@@ -172,7 +179,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("2", { exact: false })).toBeInTheDocument();
@@ -203,7 +210,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("❤️ 1 Like", { exact: false })).toBeInTheDocument();
@@ -224,7 +231,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Likes/i)).not.toBeInTheDocument();
@@ -254,7 +261,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("🔁 1 Repost", { exact: false })).toBeInTheDocument();
@@ -290,7 +297,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/3 Reposts/i)).toBeInTheDocument();
@@ -324,7 +331,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("💬 1 Reply", { exact: false })).toBeInTheDocument();
@@ -358,7 +365,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("💬 1 Reply", { exact: false })).toBeInTheDocument();
@@ -388,7 +395,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("Frank")).toBeInTheDocument();
@@ -407,7 +414,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
@@ -416,7 +423,7 @@ describe("Webmentions Component", () => {
       const copyButton = screen.getByRole("button", { name: /Copy Link/i });
       fireEvent.click(copyButton);
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockPostUrl);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://www.fretchen.eu/quantum/amo/0");
     });
 
     it("should show 'Copied!' feedback after copying", async () => {
@@ -425,7 +432,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
@@ -448,7 +455,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
@@ -472,7 +479,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/Share this post on social media!/i)).toBeInTheDocument();
@@ -496,7 +503,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/appears above within 5-10 minutes/i)).toBeInTheDocument();
@@ -541,7 +548,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("Reactions from the Web")).toBeInTheDocument();
@@ -561,7 +568,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         const copyButton = screen.getByRole("button", { name: /Copy Link/i });
@@ -590,7 +597,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions postUrl={mockPostUrl} />);
+      render(<Webmentions />);
 
       await waitFor(() => {
         const avatar = screen.getByAltText("Alice");

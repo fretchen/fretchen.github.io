@@ -4,6 +4,13 @@ import { Post } from "../components/Post";
 import React from "react";
 import "@testing-library/jest-dom";
 
+// Mock vike-react/usePageContext
+vi.mock("vike-react/usePageContext", () => ({
+  usePageContext: () => ({
+    urlPathname: "/blog/1/",
+  }),
+}));
+
 // Mock fetch globally
 global.fetch = vi.fn();
 
@@ -160,7 +167,7 @@ describe("Post Component Integration Tests", () => {
   });
 
   describe("Webmentions URL Construction", () => {
-    it("should construct correct URL without double slashes when urlPathname ends with /", async () => {
+    it("should construct correct URL without trailing slash for webmention.io compatibility", async () => {
       // Arrange
       const postProps = {
         title: "Test Post",
@@ -183,15 +190,18 @@ describe("Post Component Integration Tests", () => {
       const fetchUrl = fetchCall[0] as string;
 
       // Assert: URL should not have double slashes in the path (after domain)
-      // Extract the path part after domain
       const urlObj = new URL(fetchUrl);
       const targetParam = urlObj.searchParams.get("target");
       expect(targetParam).toBeTruthy();
       expect(targetParam).not.toMatch(/[^:]\/\//); // No double slashes except after protocol
-      expect(fetchUrl).toMatch(/^https:\/\/webmention\.io\/api\/mentions\.jf2\?target=https:\/\/www\.fretchen\.eu\//);
+      // Should NOT have trailing slash (webmention.io compatibility)
+      expect(targetParam).not.toMatch(/\/$/);
+      expect(fetchUrl).toMatch(
+        /^https:\/\/webmention\.io\/api\/mentions\.jf2\?target=https:\/\/www\.fretchen\.eu\/blog/,
+      );
     });
 
-    it("should handle urlPathname without trailing slash correctly", async () => {
+    it("should remove trailing slash from urlPathname", async () => {
       // Arrange
       const postProps = {
         title: "Test Post",
@@ -201,10 +211,10 @@ describe("Post Component Integration Tests", () => {
         publishing_date: "2024-01-01",
       };
 
-      // Mock pageContext with URL without trailing slash
+      // Mock pageContext with URL with trailing slash
       vi.mock("vike-react/usePageContext", () => ({
         usePageContext: () => ({
-          urlPathname: "/blog/1",
+          urlPathname: "/blog/14/",
         }),
       }));
 
@@ -218,8 +228,9 @@ describe("Post Component Integration Tests", () => {
 
       const fetchUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
 
-      // Should add trailing slash
-      expect(fetchUrl).toContain("target=https://www.fretchen.eu/blog/1/");
+      // Should remove trailing slash for webmention.io compatibility
+      expect(fetchUrl).toContain("target=https://www.fretchen.eu/blog/14");
+      expect(fetchUrl).not.toContain("target=https://www.fretchen.eu/blog/14/");
     });
 
     it("should fetch webmentions for the correct post URL", async () => {

@@ -2,6 +2,8 @@ import * as React from "react";
 import { useConnect, useAccount, useDisconnect, useEnsName } from "wagmi";
 import { walletOptions } from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
+import { useUmami } from "../hooks/useUmami";
+import { WalletEvents } from "../utils/analytics";
 /**
  * WalletOptions Component
  *
@@ -12,10 +14,13 @@ import { useLocale } from "../hooks/useLocale";
  */
 export default function WalletOptions() {
   // Connection hooks
-  const { connectors, connect } = useConnect();
+  const { connectors, connect, error } = useConnect();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { data: ensName } = useEnsName({ address });
+
+  // Analytics
+  const { trackEvent } = useUmami();
 
   // UI state
   const [isOpen, setIsOpen] = React.useState(false);
@@ -25,6 +30,12 @@ export default function WalletOptions() {
   const [buttonRect, setButtonRect] = React.useState<DOMRect | null>(null);
   const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  // Analytics tracking refs
+  const connectAttemptTime = React.useRef<number | null>(null);
+  const attemptedConnector = React.useRef<string | null>(null);
+  const hadInteraction = React.useRef(false);
+  const wasConnected = React.useRef(isConnected);
 
   // Prevent hydration mismatch by only showing wallet data after client-side mount
   React.useEffect(() => {
@@ -50,6 +61,41 @@ export default function WalletOptions() {
     };
   }, []);
 
+  // Track connection success
+  React.useEffect(() => {
+    if (!wasConnected.current && isConnected && attemptedConnector.current) {
+      const timeToConnect = connectAttemptTime.current ? Date.now() - connectAttemptTime.current : null;
+
+      trackEvent(WalletEvents.CONNECT_SUCCESS, {
+        connector: attemptedConnector.current,
+        hasEnsName: !!ensName,
+        device: isMobile ? "mobile" : "desktop",
+        timeToConnect,
+      });
+
+      // Reset tracking refs
+      connectAttemptTime.current = null;
+      attemptedConnector.current = null;
+    }
+
+    wasConnected.current = isConnected;
+  }, [isConnected, ensName, isMobile, trackEvent]);
+
+  // Track connection errors
+  React.useEffect(() => {
+    if (error && attemptedConnector.current) {
+      trackEvent(WalletEvents.CONNECT_ERROR, {
+        connector: attemptedConnector.current,
+        error: error.message,
+        device: isMobile ? "mobile" : "desktop",
+      });
+
+      // Reset tracking refs
+      connectAttemptTime.current = null;
+      attemptedConnector.current = null;
+    }
+  }, [error, isMobile, trackEvent]);
+
   // Handle opening dropdown
   const handleMouseEnter = () => {
     if (closeTimeoutRef.current) {
@@ -62,14 +108,30 @@ export default function WalletOptions() {
       setButtonRect(buttonRef.current.getBoundingClientRect());
     }
 
+    // Track dropdown open (only when not connected)
+    if (!isConnected) {
+      trackEvent(WalletEvents.DROPDOWN_OPEN, {
+        device: isMobile ? "mobile" : "desktop",
+      });
+    }
+
     setIsOpen(true);
   };
 
   // Handle closing dropdown with delay
   const handleMouseLeave = () => {
     closeTimeoutRef.current = setTimeout(() => {
+      // Track dropdown close without interaction (only when not connected)
+      if (!isConnected && !hadInteraction.current) {
+        trackEvent(WalletEvents.DROPDOWN_CLOSE, {
+          hadInteraction: false,
+          device: isMobile ? "mobile" : "desktop",
+        });
+      }
+
       setIsOpen(false);
       setHoveredItem(null);
+      hadInteraction.current = false; // Reset for next open
     }, 200); // 200ms delay before closing
   };
 
@@ -92,7 +154,23 @@ export default function WalletOptions() {
       return connectors.map((connector) => ({
         id: connector.uid,
         label: connector.name,
-        action: () => connect({ connector }),
+        action: () => {
+          // Mark that user interacted with dropdown
+          hadInteraction.current = true;
+
+          // Track connect attempt
+          connectAttemptTime.current = Date.now();
+          attemptedConnector.current = connector.name;
+
+          trackEvent(WalletEvents.CONNECT_ATTEMPT, {
+            connector: connector.name,
+            connectorId: connector.uid,
+            device: isMobile ? "mobile" : "desktop",
+          });
+
+          // Attempt connection
+          connect({ connector });
+        },
       }));
     }
   };

@@ -3,6 +3,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId 
 import { parseEther } from "viem";
 import { useReadContract } from "wagmi";
 import { getChain, supportContractConfig } from "../utils/getChain";
+import { trackEvent } from "../utils/analytics";
 
 /**
  * Custom hook for handling support/like functionality
@@ -73,6 +74,11 @@ export function useSupportAction(url: string) {
   // Update state after transaction
   React.useEffect(() => {
     if (isSuccess) {
+      // Track successful support
+      trackEvent("blog-support-success", {
+        url: fullUrl,
+      });
+
       setIsLoading(false);
       setErrorMessage(null);
       setTimeout(() => {
@@ -83,7 +89,7 @@ export function useSupportAction(url: string) {
       setIsLoading(false);
       setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
     }
-  }, [isSuccess, writeError, refetch]);
+  }, [isSuccess, writeError, refetch, fullUrl]);
 
   // Warning message logic
   const warningMessage =

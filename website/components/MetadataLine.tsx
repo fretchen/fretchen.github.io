@@ -95,7 +95,7 @@ export default function MetadataLine({
     const supportText = count === 1 ? "supporter" : "supporters";
 
     return (
-      <div onMouseEnter={handleSupportHover} style={{ display: "inline-block" }}>
+      <div onMouseEnter={handleSupportHover} className={metadataLine.supportWrapper}>
         <button
           onClick={handleSupportClick}
           disabled={isLoading || !isConnected}

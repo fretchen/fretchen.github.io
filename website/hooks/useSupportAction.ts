@@ -77,7 +77,6 @@ export function useSupportAction(url: string) {
       // Track successful support
       trackEvent("blog-support-success", {
         url: fullUrl,
-        previousSupports: supportCount?.toString() || "0",
       });
 
       setIsLoading(false);
@@ -90,7 +89,7 @@ export function useSupportAction(url: string) {
       setIsLoading(false);
       setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
     }
-  }, [isSuccess, writeError, refetch, fullUrl, supportCount]);
+  }, [isSuccess, writeError, refetch, fullUrl]);
 
   // Warning message logic
   const warningMessage =

@@ -35,6 +35,9 @@ export default function WalletOptions() {
   const connectAttemptTime = React.useRef<number | null>(null);
   const attemptedConnector = React.useRef<string | null>(null);
   const hadInteraction = React.useRef(false);
+  // Initialize with current connection state to track state transitions.
+  // Success tracking is guarded by attemptedConnector check, preventing false positives
+  // when component mounts with an already connected wallet.
   const wasConnected = React.useRef(isConnected);
 
   // Prevent hydration mismatch by only showing wallet data after client-side mount

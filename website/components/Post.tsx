@@ -11,6 +11,7 @@ import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
+import { fetchWebmentions } from "../utils/webmentionUtils";
 import { SITE } from "../utils/siteData";
 
 import { Webmentions } from "./Webmentions";
@@ -144,17 +145,11 @@ export function Post({
   // Format publishing date as ISO8601 for dt-published if available
   const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
 
-  // Fetch webmention counts for metadata line - query both URL variants
+  // Fetch webmention counts for metadata line - query both URL variants and deduplicate
   React.useEffect(() => {
-    Promise.all([
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithoutSlash}`).then((r) => r.json()),
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithSlash}`).then((r) => r.json()),
-    ])
-      .then(([dataWithout, dataWith]) => {
-        const count = (dataWithout.children?.length || 0) + (dataWith.children?.length || 0);
-        setReactionCount(count);
-      })
-      .catch(() => setReactionCount(0));
+    fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ count }) => {
+      setReactionCount(count);
+    });
   }, [urlWithoutSlash, urlWithSlash]);
 
   return (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { webmentions } from "../layouts/styles";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
+import { fetchWebmentions } from "../utils/webmentionUtils";
 
 interface WebmentionAuthor {
   name: string;
@@ -31,25 +32,10 @@ export function Webmentions() {
   // Fetch webmentions from both URL variants (with and without trailing slash)
   // Different platforms share URLs differently, so we need to check both
   useEffect(() => {
-    Promise.all([
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithoutSlash}`).then((r) => r.json()),
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithSlash}`).then((r) => r.json()),
-    ])
-      .then(([dataWithout, dataWith]) => {
-        // Combine both results and deduplicate by wm-id
-        const allMentions = [...(dataWithout.children || []), ...(dataWith.children || [])];
-        const uniqueMentions = allMentions.reduce((acc, mention) => {
-          if (!acc.find((m: Webmention) => m["wm-id"] === mention["wm-id"])) {
-            acc.push(mention);
-          }
-          return acc;
-        }, [] as Webmention[]);
-        setMentions(uniqueMentions);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
+    fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ mentions }) => {
+      setMentions(mentions);
+      setLoading(false);
+    });
   }, [urlWithoutSlash, urlWithSlash]);
 
   // Copy link to clipboard - prefer URL without trailing slash for sharing

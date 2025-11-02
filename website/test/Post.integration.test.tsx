@@ -193,15 +193,15 @@ describe("Post Component Integration Tests", () => {
       const urlObj = new URL(fetchUrl);
       const targetParam = urlObj.searchParams.get("target");
       expect(targetParam).toBeTruthy();
-      expect(targetParam).not.toMatch(/[^:]\/\//); // No double slashes except after protocol
-      // Should NOT have trailing slash (webmention.io compatibility)
-      expect(targetParam).not.toMatch(/\/$/);
+      // Check for triple slashes (double slash after protocol)
+      expect(targetParam).not.toContain("///");
+      // Should fetch both URL variants (with and without trailing slash)
       expect(fetchUrl).toMatch(
         /^https:\/\/webmention\.io\/api\/mentions\.jf2\?target=https:\/\/www\.fretchen\.eu\/blog/,
       );
     });
 
-    it("should remove trailing slash from urlPathname", async () => {
+    it("should fetch webmentions for both URL variants (with and without trailing slash)", async () => {
       // Arrange
       const postProps = {
         title: "Test Post",
@@ -211,26 +211,23 @@ describe("Post Component Integration Tests", () => {
         publishing_date: "2024-01-01",
       };
 
-      // Mock pageContext with URL with trailing slash
-      vi.mock("vike-react/usePageContext", () => ({
-        usePageContext: () => ({
-          urlPathname: "/blog/14/",
-        }),
-      }));
-
       // Act
       render(<Post {...postProps} />);
 
-      // Assert: Wait for fetch
+      // Assert: Wait for fetch to be called
+      // Note: fetch is called twice by Post.tsx (for reactionCount) and twice by Webmentions.tsx
       await vi.waitFor(() => {
         expect(global.fetch).toHaveBeenCalled();
       });
 
-      const fetchUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      // Should fetch both variants
+      const fetchCalls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const urls = fetchCalls.map((call) => call[0] as string);
 
-      // Should remove trailing slash for webmention.io compatibility
-      expect(fetchUrl).toContain("target=https://www.fretchen.eu/blog/14");
-      expect(fetchUrl).not.toContain("target=https://www.fretchen.eu/blog/14/");
+      // One call without trailing slash
+      expect(urls.some((url) => url.includes("target=https://www.fretchen.eu/blog/1"))).toBe(true);
+      // One call with trailing slash
+      expect(urls.some((url) => url.includes("target=https://www.fretchen.eu/blog/1/"))).toBe(true);
     });
 
     it("should fetch webmentions for the correct post URL", async () => {

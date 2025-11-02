@@ -8,6 +8,7 @@ import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
+import { useUmami } from "../hooks/useUmami";
 
 const defaultImageUrl = "https://mypersonaljscloudivnad9dy-genimgbfl.functions.fnc.fr-par.scw.cloud";
 
@@ -107,6 +108,9 @@ export function ImageGenerator({
   onSuccess,
   onError,
 }: ImageGeneratorProps) {
+  // Analytics hook
+  const { trackEvent } = useUmami();
+
   // Verwende die stabile genAiNFTContractConfig Konstante
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
@@ -267,9 +271,21 @@ export function ImageGenerator({
     const isDisabled = buttonState === "needsPrompt";
     const isLoadingState = buttonState === "loading" || buttonState === "switching";
 
+    const handleClick = () => {
+      // Track create artwork attempt with context
+      trackEvent("imagegen-create-artwork-click", {
+        hasReferenceImage: previewState !== "empty",
+        promptLength: prompt.trim().length,
+        isConnected: isConnected,
+        imageSize: size,
+      });
+
+      handleMintAndGenerate();
+    };
+
     return (
       <button
-        onClick={handleMintAndGenerate}
+        onClick={handleClick}
         disabled={isDisabled}
         className={`${styles.primaryButton} ${isDisabled ? styles.primaryButtonDisabled : ""}`}
         title={useLocale({ label: "imagegen.mintingInfo" })}
@@ -568,6 +584,9 @@ export function ImageGenerator({
 
   // Handle expansion trigger for collapsed state
   const handleExpand = () => {
+    // Track user clicking the connect button
+    trackEvent("imagegen-connect-click");
+    
     // Always trigger wallet connection when in collapsed state
     handleWalletConnection();
   };
@@ -627,7 +646,11 @@ export function ImageGenerator({
 
           {/* CTA Button - centered with website style */}
           <div className={css({ display: "flex", justifyContent: "center" })}>
-            <button onClick={handleExpand} className={styles.primaryButton}>
+            <button
+              onClick={handleExpand}
+              onMouseEnter={() => trackEvent("imagegen-connect-hover")}
+              className={styles.primaryButton}
+            >
               {connectWalletButtonText}
             </button>
           </div>

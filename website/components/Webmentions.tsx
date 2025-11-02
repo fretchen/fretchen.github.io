@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { webmentions } from "../layouts/styles";
+import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
+import { fetchWebmentions } from "../utils/webmentionUtils";
 
 interface WebmentionAuthor {
   name: string;
@@ -21,30 +23,25 @@ interface Webmention {
   url: string;
 }
 
-interface WebmentionsProps {
-  postUrl: string;
-}
-
-export function Webmentions({ postUrl }: WebmentionsProps) {
+export function Webmentions() {
+  const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
   const [mentions, setMentions] = useState<Webmention[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  // Fetch webmentions
+  // Fetch webmentions from both URL variants (with and without trailing slash)
+  // Different platforms share URLs differently, so we need to check both
   useEffect(() => {
-    fetch(`https://webmention.io/api/mentions.jf2?target=${postUrl}`)
-      .then((response) => response.json())
-      .then((data) => {
-        setMentions(data.children || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [postUrl]);
+    fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ mentions }) => {
+      setMentions(mentions);
+      setLoading(false);
+    });
+  }, [urlWithoutSlash, urlWithSlash]);
 
-  // Copy link to clipboard
+  // Copy link to clipboard - prefer URL without trailing slash for sharing
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(postUrl);
+      await navigator.clipboard.writeText(urlWithoutSlash);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
     } catch (err) {

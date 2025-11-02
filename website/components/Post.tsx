@@ -9,8 +9,9 @@ import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
 import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
-import { usePageContext } from "vike-react/usePageContext";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
+import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
+import { fetchWebmentions } from "../utils/webmentionUtils";
 import { SITE } from "../utils/siteData";
 
 import { Webmentions } from "./Webmentions";
@@ -138,23 +139,18 @@ export function Post({
   category,
   secondaryCategory,
 }: PostProps) {
-  const pageContext = usePageContext();
-  const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
+  const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
   const [reactionCount, setReactionCount] = React.useState<number>(0);
 
   // Format publishing date as ISO8601 for dt-published if available
   const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
 
-  // Fetch webmention counts for metadata line
+  // Fetch webmention counts for metadata line - query both URL variants and deduplicate
   React.useEffect(() => {
-    fetch(`https://webmention.io/api/mentions.jf2?target=${fullUrl}`)
-      .then((response) => response.json())
-      .then((data) => {
-        const count = data.children?.length || 0;
-        setReactionCount(count);
-      })
-      .catch(() => setReactionCount(0));
-  }, [fullUrl]);
+    fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ count }) => {
+      setReactionCount(count);
+    });
+  }, [urlWithoutSlash, urlWithSlash]);
 
   return (
     <article className="h-entry">
@@ -173,8 +169,8 @@ export function Post({
       </a>
 
       {/* u-url - canonical URL for the entry */}
-      <a className="u-url" href={fullUrl} style={{ display: "none" }}>
-        {fullUrl}
+      <a className="u-url" href={urlWithoutSlash} style={{ display: "none" }}>
+        {urlWithoutSlash}
       </a>
 
       {/* Hidden p-summary for h-entry microformat (used by Bridgy Fed & parsers) */}
@@ -246,7 +242,7 @@ export function Post({
         </div>
       )}
 
-      <Webmentions postUrl={fullUrl} />
+      <Webmentions />
     </article>
   );
 }

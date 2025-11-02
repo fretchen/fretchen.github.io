@@ -1,10 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Post } from "../components/Post";
 import React from "react";
 import "@testing-library/jest-dom";
 
+// Mock fetch globally
+global.fetch = vi.fn();
+
 describe("Post Component Integration Tests", () => {
+  beforeEach(() => {
+    // Reset fetch mock before each test
+    vi.clearAllMocks();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      json: async () => ({ children: [] }),
+    } as Response);
+  });
+
   describe("Markdown Blog Rendering", () => {
     it("should render markdown blog title and metadata", () => {
       // Arrange: Use a real markdown blog from the blog directory
@@ -145,6 +156,91 @@ describe("Post Component Integration Tests", () => {
 
       // Assert: Support button should be present
       expect(screen.getByText(/supporters/)).toBeInTheDocument();
+    });
+  });
+
+  describe("Webmentions URL Construction", () => {
+    it("should construct correct URL without double slashes when urlPathname ends with /", async () => {
+      // Arrange
+      const postProps = {
+        title: "Test Post",
+        content: "",
+        type: "react" as const,
+        componentPath: "../blog/test.mdx",
+        publishing_date: "2024-01-01",
+      };
+
+      // Act
+      render(<Post {...postProps} />);
+
+      // Assert: Wait for fetch to be called
+      await vi.waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled();
+      });
+
+      // Get the fetch call URL
+      const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const fetchUrl = fetchCall[0] as string;
+
+      // Assert: URL should not have double slashes in the path (after domain)
+      // Extract the path part after domain
+      const urlObj = new URL(fetchUrl);
+      const targetParam = urlObj.searchParams.get("target");
+      expect(targetParam).toBeTruthy();
+      expect(targetParam).not.toMatch(/[^:]\/\//); // No double slashes except after protocol
+      expect(fetchUrl).toMatch(/^https:\/\/webmention\.io\/api\/mentions\.jf2\?target=https:\/\/www\.fretchen\.eu\//);
+    });
+
+    it("should handle urlPathname without trailing slash correctly", async () => {
+      // Arrange
+      const postProps = {
+        title: "Test Post",
+        content: "",
+        type: "react" as const,
+        componentPath: "../blog/test.mdx",
+        publishing_date: "2024-01-01",
+      };
+
+      // Mock pageContext with URL without trailing slash
+      vi.mock("vike-react/usePageContext", () => ({
+        usePageContext: () => ({
+          urlPathname: "/blog/1",
+        }),
+      }));
+
+      // Act
+      render(<Post {...postProps} />);
+
+      // Assert: Wait for fetch
+      await vi.waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled();
+      });
+
+      const fetchUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+
+      // Should add trailing slash
+      expect(fetchUrl).toContain("target=https://www.fretchen.eu/blog/1/");
+    });
+
+    it("should fetch webmentions for the correct post URL", async () => {
+      // Arrange
+      const postProps = {
+        title: "Test Post",
+        content: "",
+        type: "react" as const,
+        componentPath: "../blog/test.mdx",
+        publishing_date: "2024-01-01",
+      };
+
+      // Act
+      render(<Post {...postProps} />);
+
+      // Assert: Webmentions API should be called
+      await vi.waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining("https://webmention.io/api/mentions.jf2?target="),
+        );
+      });
     });
   });
 });

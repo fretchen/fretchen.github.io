@@ -139,7 +139,11 @@ export function Post({
   secondaryCategory,
 }: PostProps) {
   const pageContext = usePageContext();
-  const fullUrl = `https://www.fretchen.eu${pageContext.urlPathname}/`;
+  // Ensure URL ends with exactly one trailing slash
+  const pathname = pageContext.urlPathname.endsWith("/") 
+    ? pageContext.urlPathname 
+    : `${pageContext.urlPathname}/`;
+  const fullUrl = `https://www.fretchen.eu${pathname}`;
   const [reactionCount, setReactionCount] = React.useState<number>(0);
 
   // Format publishing date as ISO8601 for dt-published if available

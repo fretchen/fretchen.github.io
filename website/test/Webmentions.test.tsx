@@ -90,6 +90,45 @@ describe("Webmentions Component", () => {
       });
     });
 
+    it("should handle URLs with trailing slash correctly", async () => {
+      const urlWithTrailingSlash = "https://fretchen.eu/blog/1/";
+
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ children: [] }),
+      });
+
+      render(<Webmentions postUrl={urlWithTrailingSlash} />);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          `https://webmention.io/api/mentions.jf2?target=${urlWithTrailingSlash}`,
+        );
+      });
+
+      // Verify no double slashes in the fetch URL
+      const fetchCalls = (global.fetch as Mock).mock.calls;
+      expect(fetchCalls[0][0]).not.toContain("//api");
+      expect(fetchCalls[0][0]).not.toMatch(/blog\/1\/\//); // Should not have double trailing slashes
+    });
+
+    it("should handle URLs without trailing slash correctly", async () => {
+      const urlWithoutTrailingSlash = "https://fretchen.eu/blog/1";
+
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ children: [] }),
+      });
+
+      render(<Webmentions postUrl={urlWithoutTrailingSlash} />);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          `https://webmention.io/api/mentions.jf2?target=${urlWithoutTrailingSlash}`,
+        );
+      });
+    });
+
     it("should handle fetch errors gracefully", async () => {
       (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
 

@@ -586,7 +586,7 @@ export function ImageGenerator({
   const handleExpand = () => {
     // Track user clicking the connect button
     trackEvent("imagegen-connect-click");
-    
+
     // Always trigger wallet connection when in collapsed state
     handleWalletConnection();
   };

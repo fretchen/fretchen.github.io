@@ -52,7 +52,7 @@ export default function MetadataLine({
   // Handle support click
   const handleSupportClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     // Track support click
     trackEvent("blog-support-click", {
       variant: "inline", // MetadataLine is inline variant

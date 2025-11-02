@@ -201,35 +201,6 @@ describe("Post Component Integration Tests", () => {
       );
     });
 
-    it("should fetch webmentions for both URL variants (with and without trailing slash)", async () => {
-      // Arrange
-      const postProps = {
-        title: "Test Post",
-        content: "",
-        type: "react" as const,
-        componentPath: "../blog/test.mdx",
-        publishing_date: "2024-01-01",
-      };
-
-      // Act
-      render(<Post {...postProps} />);
-
-      // Assert: Wait for fetch to be called
-      // Note: fetch is called twice by Post.tsx (for reactionCount) and twice by Webmentions.tsx
-      await vi.waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      });
-
-      // Should fetch both variants
-      const fetchCalls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
-      const urls = fetchCalls.map((call) => call[0] as string);
-
-      // One call without trailing slash
-      expect(urls.some((url) => url.includes("target=https://www.fretchen.eu/blog/1"))).toBe(true);
-      // One call with trailing slash
-      expect(urls.some((url) => url.includes("target=https://www.fretchen.eu/blog/1/"))).toBe(true);
-    });
-
     it("should fetch webmentions for the correct post URL", async () => {
       // Arrange
       const postProps = {

@@ -31,14 +31,11 @@ export function Webmentions() {
   // Fetch webmentions from both URL variants (with and without trailing slash)
   // Different platforms share URLs differently, so we need to check both
   useEffect(() => {
-    console.log("[Webmentions] Fetching webmentions for:", urlWithoutSlash, urlWithSlash);
     Promise.all([
       fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithoutSlash}`).then((r) => r.json()),
       fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithSlash}`).then((r) => r.json()),
     ])
       .then(([dataWithout, dataWith]) => {
-        console.log("[Webmentions] Received data without slash:", dataWithout);
-        console.log("[Webmentions] Received data with slash:", dataWith);
         // Combine both results and deduplicate by wm-id
         const allMentions = [...(dataWithout.children || []), ...(dataWith.children || [])];
         const uniqueMentions = allMentions.reduce((acc, mention) => {
@@ -47,12 +44,10 @@ export function Webmentions() {
           }
           return acc;
         }, [] as Webmention[]);
-        console.log("[Webmentions] Total unique mentions:", uniqueMentions.length);
         setMentions(uniqueMentions);
         setLoading(false);
       })
-      .catch((error) => {
-        console.error("[Webmentions] Fetch error:", error);
+      .catch(() => {
         setLoading(false);
       });
   }, [urlWithoutSlash, urlWithSlash]);

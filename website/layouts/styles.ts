@@ -1756,6 +1756,9 @@ export const metadataLine = {
     color: "inherit",
     userSelect: "none",
   }),
+  supportWrapper: css({
+    display: "inline-block",
+  }),
   supportButton: css({
     background: "none",
     border: "none",

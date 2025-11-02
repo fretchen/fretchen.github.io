@@ -80,22 +80,14 @@ const EntryList: React.FC<EntryListProps> = ({
 
                     {/* Categories (p-category for h-entry) */}
                     {blog.category && (
-                      <a
-                        href={`${basePath}?category=${encodeURIComponent(blog.category)}`}
-                        className="p-category"
-                        style={{ display: "none" }}
-                      >
+                      <span className="p-category" style={{ display: "none" }}>
                         {blog.category}
-                      </a>
+                      </span>
                     )}
                     {blog.secondaryCategory && (
-                      <a
-                        href={`${basePath}?category=${encodeURIComponent(blog.secondaryCategory)}`}
-                        className="p-category"
-                        style={{ display: "none" }}
-                      >
+                      <span className="p-category" style={{ display: "none" }}>
                         {blog.secondaryCategory}
-                      </a>
+                      </span>
                     )}
                   </div>
                 </div>

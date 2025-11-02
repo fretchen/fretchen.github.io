@@ -6,6 +6,7 @@ import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import * as styles from "../../layouts/styles";
 import { useLocale } from "../../hooks/useLocale";
 import { useConnect } from "wagmi";
+import { useUmami } from "../../hooks/useUmami";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -187,6 +188,9 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 }
 
 export default function Page() {
+  // Analytics hook
+  const { trackEvent } = useUmami();
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -277,6 +281,14 @@ export default function Page() {
 
     setIsLoading(true);
 
+    // Track first message only
+    if (messages.length === 0) {
+      trackEvent("assistant-first-message-sent", {
+        messageLength: userMessage.trim().length,
+        isMobile: isMobile,
+      });
+    }
+
     // Add user message
     const userMsg: ChatMessage = {
       role: "user",
@@ -365,6 +377,10 @@ export default function Page() {
 
   const handleSendClick = () => {
     if (!isConnected) {
+      // Track connect button click
+      trackEvent("assistant-connect-button-click", {
+        hasInput: currentInput.trim().length > 0,
+      });
       handleWalletConnection();
       return;
     }
@@ -464,6 +480,11 @@ export default function Page() {
             />
             <button
               onClick={handleSendClick}
+              onMouseEnter={() => {
+                if (!isConnected) {
+                  trackEvent("assistant-connect-button-hover");
+                }
+              }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
               className={styles.primaryButton}
             >

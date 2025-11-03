@@ -15,7 +15,8 @@ export default function HeadDefault() {
   const { urlPathnameWithoutLocale } = extractLocale(pageContext.urlOriginal || pageContext.urlPathname || "");
 
   // Ensure clean path (avoid double slashes)
-  const cleanPath = urlPathnameWithoutLocale === "//" || urlPathnameWithoutLocale === "" ? "/" : urlPathnameWithoutLocale;
+  const cleanPath =
+    urlPathnameWithoutLocale === "//" || urlPathnameWithoutLocale === "" ? "/" : urlPathnameWithoutLocale;
 
   // Build URLs for both languages
   const enUrl = `${SITE.url}${cleanPath}`;

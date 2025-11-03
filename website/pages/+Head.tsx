@@ -25,6 +25,9 @@ export default function HeadDefault() {
     <>
       <link rel="icon" href={favicon} />
 
+      {/* Canonical URL - tells Google this is the authoritative version (with www) */}
+      <link rel="canonical" href={enUrl} />
+
       {/* Language variants for SEO (helps Google understand en is at root, not /en/) */}
       <link rel="alternate" hrefLang="en" href={enUrl} />
       <link rel="alternate" hrefLang="de" href={deUrl} />

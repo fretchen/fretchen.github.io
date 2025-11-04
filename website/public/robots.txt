@@ -1,2 +1,6 @@
 User-agent: *
 Allow: /
+
+# Block non-existent language paths
+Disallow: /en/
+Disallow: /pages/

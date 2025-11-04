@@ -2,24 +2,20 @@ import React from "react";
 import { css } from "../styled-system/css";
 import { usePageContext } from "vike-react/usePageContext";
 import { extractLocale } from "../locales/extractLocale";
+import { getPageUrl } from "../utils/pageContext";
 
 export default function LanguageToggle() {
   const pageContext = usePageContext();
 
-  // Use pageContext.urlOriginal - no window fallback needed for SSR compatibility
-  const currentPathname = pageContext.urlOriginal || "";
+  // Get current pathname in a consistent way
+  const currentPathname = getPageUrl(pageContext);
 
   // Use the robust extractLocale logic from locales/extractLocale
   const { locale: currentLocale, urlPathnameWithoutLocale } = extractLocale(currentPathname);
 
   // Build paths for both languages - ensure proper path formatting
-  let cleanPath = urlPathnameWithoutLocale;
-  if (cleanPath === "//" || cleanPath === "") {
-    cleanPath = "/";
-  }
-
-  const dePath = cleanPath === "/" ? "/de" : `/de${cleanPath}`;
-  const enPath = cleanPath; // English uses root path (no /en/ prefix)
+  const dePath = urlPathnameWithoutLocale === "/" ? "/de" : `/de${urlPathnameWithoutLocale}`;
+  const enPath = urlPathnameWithoutLocale; // English uses root path (no /en/ prefix)
 
   const containerStyles = css({
     display: "flex",

@@ -11,8 +11,8 @@ export default function HeadDefault() {
   const pageContext = usePageContext();
   const relMeLinks = getRelMeLinks();
 
-  // Extract locale and clean path for hreflang tags
-  const { urlPathnameWithoutLocale } = extractLocale(pageContext.urlOriginal || pageContext.urlPathname || "");
+  // Extract locale and clean path for hreflang and canonical tags
+  const { locale, urlPathnameWithoutLocale } = extractLocale(pageContext.urlOriginal || pageContext.urlPathname || "");
 
   // Ensure clean path (avoid double slashes)
   const cleanPath =
@@ -21,13 +21,17 @@ export default function HeadDefault() {
   // Build URLs for both languages
   const enUrl = `${SITE.url}${cleanPath}`;
   const deUrl = `${SITE.url}/de${cleanPath}`;
+  
+  // Canonical URL points to the CURRENT page's language version
+  // This tells search engines each language version is its own authoritative source
+  const canonicalUrl = locale === "de" ? deUrl : enUrl;
 
   return (
     <>
       <link rel="icon" href={favicon} />
 
-      {/* Canonical URL - tells Google this is the authoritative version (with www) */}
-      <link rel="canonical" href={enUrl} />
+      {/* Canonical URL - points to current page in its current language */}
+      <link rel="canonical" href={canonicalUrl} />
 
       {/* Language variants for SEO (helps Google understand en is at root, not /en/) */}
       <link rel="alternate" hrefLang="en" href={enUrl} />

@@ -2,7 +2,7 @@ export { extractLocale };
 
 import { locales, defaultLocale } from "./locales";
 
-function extractLocale(urlPathname) {
+function extractLocale(urlPathname: string) {
   const path = urlPathname.split("/");
 
   let locale;
@@ -19,6 +19,12 @@ function extractLocale(urlPathname) {
   } else {
     locale = defaultLocale;
     urlPathnameWithoutLocale = urlPathname;
+  }
+
+  // Normalize edge cases: convert "//" or "" to "/"
+  // This ensures consistent path handling across the application
+  if (urlPathnameWithoutLocale === "//" || urlPathnameWithoutLocale === "") {
+    urlPathnameWithoutLocale = "/";
   }
 
   return { locale, urlPathnameWithoutLocale };

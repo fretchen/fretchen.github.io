@@ -5,6 +5,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import { extractLocale } from "../locales/extractLocale";
 import { getRelMeLinks, SITE } from "../utils/siteData";
 import { analyticsConfig } from "../utils/analyticsConfig";
+import { getPageUrl } from "../utils/pageContext";
 import favicon from "./image_3_1fc7cfc7b9e9.jpg";
 
 export default function HeadDefault() {
@@ -12,16 +13,12 @@ export default function HeadDefault() {
   const relMeLinks = getRelMeLinks();
 
   // Extract locale and clean path for hreflang and canonical tags
-  const { locale, urlPathnameWithoutLocale } = extractLocale(pageContext.urlOriginal || pageContext.urlPathname || "");
-
-  // Ensure clean path (avoid double slashes)
-  const cleanPath =
-    urlPathnameWithoutLocale === "//" || urlPathnameWithoutLocale === "" ? "/" : urlPathnameWithoutLocale;
+  const { locale, urlPathnameWithoutLocale } = extractLocale(getPageUrl(pageContext));
 
   // Build URLs for both languages
-  const enUrl = `${SITE.url}${cleanPath}`;
-  const deUrl = `${SITE.url}/de${cleanPath}`;
-  
+  const enUrl = `${SITE.url}${urlPathnameWithoutLocale}`;
+  const deUrl = `${SITE.url}/de${urlPathnameWithoutLocale}`;
+
   // Canonical URL points to the CURRENT page's language version
   // This tells search engines each language version is its own authoritative source
   const canonicalUrl = locale === "de" ? deUrl : enUrl;

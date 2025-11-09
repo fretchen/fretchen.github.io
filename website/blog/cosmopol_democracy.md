@@ -12,11 +12,28 @@ But something that I found quite interesting is the the notion of cosmopolitan d
 
 One model is the federal model where each institution has guiding power over the "lower" institutions. Before we dive into the cosmopolitan democracy model, let us go back to two quite common models that we all experience on a common basis: the federal and confederal models.
 
+## Two issues at hand climate change and digital governance
+
+Before we dive into the models, let us first clarify why we even care about democracy beyond nation-states. Two key issues that come to my mind are climate change and digital governance. Both issues are inherently global and require governance models that transcend national borders. We will use these two examples to visualize the different governance models later on.
+
+
 ## The federal model
 
 In the [federal model](https://en.wikipedia.org/wiki/Federalism) we typically have several layers of governance with one federal government on top and several states or regions below. A famous example is the federal model at the example of Germany and the USA. Each of the layers has certain competences and rights that are typically laid out in a shared constitution and enforced by some share institutions like the parliament, the central executive and the courts. In Germany, we have clearly laid out that almost all basic education is within the competency of the regions, while the military monopole is clearly within the federal government. 
 
 The federal model is quite common within democratic states and it is perfectly normal to have a federal states where the citizens vote parliments and the different layer, e.g. for city hall, regional parliaments or the national state.
+
+### A federal solution for climate change
+
+A federal solution to climate change would mean creating a central authority with binding powers over all member units — for example, a global or regional federal government empowered to set and enforce emission limits, collect a unified carbon tax, and redistribute revenues for adaptation and green investment.
+Individual states or regions could still manage local policies, but ultimate climate goals, standards, and enforcement would be decided federally, much like a national government sets environmental law for its provinces.
+
+### A federal solution for digital governance
+
+A federal solution to digital governance would establish a central digital authority—for instance, a federal “Digital Commission” or “Data Ministry”—with binding power over all member units.
+It would set uniform rules for privacy, cybersecurity, AI safety, and platform accountability, ensuring that citizens everywhere enjoy the same digital rights and protections.
+Member states or regions could still handle local implementation (e.g., education, infrastructure), but core standards and enforcement—such as data protection laws, content regulation, or antitrust actions—would be decided and applied federally.
+In essence, the internet and digital economy would be governed as a single legal space, with one overarching framework rather than a patchwork of national laws.
 
 ## The confederal model
 
@@ -25,6 +42,14 @@ The [confederal model](https://en.wikipedia.org/wiki/Confederation) on the other
 It is an absolutely central distinction that the confederal model has fairly little to do with democracy etc. The states that might participate in the confederation might be democratic or not. But it is very rare to see some kind of democratic instition that is associated with confederations.
 
 Another instersting observation is that quite a number of federal states have been created from previously loosely connected confederations. So there is some common assumption or intuition that any improvement of the UN would mean that the confederation would have to become something like a federal "world state". And this is exactly where the whole idea of cosmopolitan democracy comes in. It is basically an idea for democratic processes that are not really coupled to nation-states as we know them. The whole thing was set up by David Held and others in the 1990s. 
+
+### Confederations and climate change
+
+In a confederal system, states remain fully sovereign and cooperate voluntarily through treaties and joint commitments, without any binding supranational authority. Climate policy is coordinated through intergovernmental forums—like the UNFCCC and the Paris Agreement—where each country sets its own targets and enforcement depends on political will, peer pressure, or reputational costs. This means progress relies on consensus and voluntary compliance rather than legal obligation. In practice, this is almost exactly how global climate governance currently works: a loose confederation of states negotiating collective goals but implementing them nationally.
+
+### Confederations and digital governance
+
+A confederal approach to digital governance would involve states negotiating common principles—for example, around data privacy, cybersecurity, or AI ethics—through voluntary international agreements. Implementation and enforcement would remain at the national level, with each government deciding how to apply shared guidelines. Existing frameworks such as the OECD AI Principles, Council of Europe’s Convention 108, or G7 digital charters embody this model: cooperation without a central regulator, relying on alignment and mutual trust rather than binding federal law. Like climate governance, today’s digital governance is largely confederal—fragmented, consensus-based, and state-led.
 
 ## Key features of cosmopolitan democracy
 
@@ -36,11 +61,30 @@ Definition according to the book:
 
 > The global order consists of multiple and overlapping networks of power involving the body, welfare, culture, civic associations, the economy, coercive relations and organized violence, and regulatory and legal relations. The case for cosmopolitan democracy arises from these diverse networks - the different power systems which constitute the interconnections of different peoples and nations.
 
+Here, cosmopolitan democracy basically says that a lot of politcal topics cut across states and their internal governance. We rather have different networks of issues and these networks should have a suitable governance structure.
+
 On this topic cosmopolitan democracy is a bit similar to a federation as it recognizes multiple networks of power. However, it goes further as it gives up on the hierachy that is so central to federal states. Compoared to confederations it is more coordinated and do not think that states have complete control of their internal dealings. Pushed to the extreme this feature does not really require the idea of states anymore. However, it remains unclear how the networks would coordinate, how it is decided who is within the networks etc.
 
-2. **Feature 2 - Cosmopolitan law:** All groups and associations are assumed to have a capacity for self-determination which can be specified by a commitment to the principle of autonomy and specific clusters of rights and obligations. These clusters cut across each network of power and are subsumed under the following categories: health, social, cultural, civic, economic, pacific and political. Together, they form the basis of an empowering legal order - a cosmopolitan democratic law.
+#### Feature 1 applied to climate change
 
-3. **Feature 3 - Universal constitutional principles:** Legal principles are adopted which delimit the form and scope of individual and collective action within the organizations and associations of state, economy and civil society. Certain standards are specified for the treatment of all, which no political regime or association can legitimately violate.
+Under cosmopolitan democracy, climate governance would be organized through interconnected layers of authority involving global, regional, national, and local actors. A global institution—perhaps a reformed UN Climate Council—could set binding planetary limits on emissions and recognize climate-related human rights. Regional bodies like the EU, AU, or ASEAN would coordinate implementation, while cities, NGOs, and corporations would take on direct obligations and reporting duties. Citizens could participate in transnational climate assemblies and bring cases before international courts if governments or firms violated environmental norms. Power would thus be diffused but coordinated, ensuring accountability and participation at every level, matching the truly global nature of the climate system.
+
+#### Feature 1 applied to digital governance
+
+In digital governance, cosmopolitan democracy would create a web of overlapping institutions and civic actors to manage global data flows, AI ethics, and online rights. A global “Digital Rights Charter” might articulate universal standards for privacy, transparency, and algorithmic fairness, enforced by regional data authorities and international courts. Platforms and tech companies would be subject to cosmopolitan law, accountable not just to states but to global citizens through participatory mechanisms such as digital assemblies or multi-stakeholder councils. Local communities could adapt global norms to cultural contexts, while transnational NGOs monitor compliance. The outcome would be a polycentric digital polity, where individuals, states, and non-state actors share both power and responsibility for governing the digital commons.
+
+
+### Feature 2 - Cosmopolitan law
+
+Definition according to the book:
+
+> All groups and associations are assumed to have a capacity for self-determination which can be specified by a commitment to the principle of autonomy and specific clusters of rights and obligations. These clusters cut across each network of power and are subsumed under the following categories: health, social, cultural, civic, economic, pacific and political. Together, they form the basis of an empowering legal order - a cosmopolitan democratic law.
+
+### Feature 3 - Universal constitutional principles
+
+Definition according to the book:
+
+> Legal principles are adopted which delimit the form and scope of individual and collective action within the organizations and associations of state, economy and civil society. Certain standards are specified for the treatment of all, which no political regime or association can legitimately violate.
 
 4. **Feature 4 - Multi-level democratic law-making:** Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
 

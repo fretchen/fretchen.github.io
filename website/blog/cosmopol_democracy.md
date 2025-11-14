@@ -73,12 +73,21 @@ Under cosmopolitan democracy, climate governance would be organized through inte
 
 In digital governance, cosmopolitan democracy would create a web of overlapping institutions and civic actors to manage global data flows, AI ethics, and online rights. A global “Digital Rights Charter” might articulate universal standards for privacy, transparency, and algorithmic fairness, enforced by regional data authorities and international courts. Platforms and tech companies would be subject to cosmopolitan law, accountable not just to states but to global citizens through participatory mechanisms such as digital assemblies or multi-stakeholder councils. Local communities could adapt global norms to cultural contexts, while transnational NGOs monitor compliance. The outcome would be a polycentric digital polity, where individuals, states, and non-state actors share both power and responsibility for governing the digital commons.
 
-
 ### Feature 2 - Cosmopolitan law
 
 Definition according to the book:
 
 > All groups and associations are assumed to have a capacity for self-determination which can be specified by a commitment to the principle of autonomy and specific clusters of rights and obligations. These clusters cut across each network of power and are subsumed under the following categories: health, social, cultural, civic, economic, pacific and political. Together, they form the basis of an empowering legal order - a cosmopolitan democratic law.
+
+This feature means that every community, group, or institution—from states to companies to local associations—has the right to make its own choices (self-determination), but only within a framework of shared global rights and responsibilities. These rights—covering health, social welfare, culture, civic participation, the economy, peace, and politics—apply to everyone, everywhere, regardless of nationality. Together, they make up a kind of cosmopolitan constitution: a legal order that empowers all people and groups to act freely, as long as they respect the autonomy and dignity of others across borders.
+
+#### Feature 2 applied to climate change
+
+Applied to climate change, this principle would mean that each community and actor—governments, cities, corporations, civil groups—can pursue their own climate strategies, but they must do so within a shared global legal framework that protects the environmental rights of all. That could include universal rights to a stable climate, clean air, and sustainable development, as well as corresponding duties not to harm others through pollution or ecological destruction. In practice, a cosmopolitan democratic law of climate change would treat emitting carbon or destroying ecosystems as violations of others’ rights, enforceable across borders and through transnational courts or citizen action.
+
+#### Feature 2 applied to digital governance
+
+In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
 
 ### Feature 3 - Universal constitutional principles
 
@@ -86,15 +95,61 @@ Definition according to the book:
 
 > Legal principles are adopted which delimit the form and scope of individual and collective action within the organizations and associations of state, economy and civil society. Certain standards are specified for the treatment of all, which no political regime or association can legitimately violate.
 
-4. **Feature 4 - Multi-level democratic law-making:** Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
 
-5. **Feature 5 - Global civic commitment:** The defence of self-determination, the creation of a common structure of political action and the preservation of the democratic good are the overall collective priorities; the commitment to democratic autonomy creates both an agenda of long-term change and a programme of urgent priorities, focused on transforming the conditions of those whose circumstances fall radically short of equal membership in the public realm.
+This feature means that everyone—governments, companies, organizations, and citizens—must follow a set of basic rules that protect people’s rights and dignity. These shared rules limit what any actor is allowed to do, no matter how powerful they are. No government or organization can cross certain red lines, such as harming people, violating rights, or acting in ways that undermine democratic participation. Think of it as a global minimum standard for fair treatment that nobody is allowed to violate.
 
-6. **Feature 6 - Cosmopolitan social justice:** Determinate principles of social justice follow: the modus operandi of the production, distribution and the exploitation of resources must be conducive to, and compatible with, the democratic process and a common structure of political action.
+QUESTION TO ME: HOW DO THESE PRINCIPLES APPEAR ? WHO DECIDES WHAT THEY ARE ? IS THIS SOME KIND OF CONSTITUTION ?
 
-7. **Feature 7 - Non-coercive global order:** The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the con-rol of particular peoples and agents (such as the disintegration of a state).
+#### Feature 3 applied to climate change
 
-8. **Feature 8 - Nested citizenship:** People can enjoy membership in the diverse communities which significantly affect them and, accordingly, access to a variety of form: of political participation. Citizenship would be extended, in principle to membership in all cross-cutting political communities, from the local to the global.
+Applied to climate change, this feature would establish binding global standards on what states and companies are allowed to do environmentally. For example, no actor could legitimately pollute in a way that harms the health, livelihoods, or climate stability of others. Activities like excessive emissions, ecosystem destruction, or exporting pollution to poorer countries would be prohibited because they violate shared rights to environmental safety and intergenerational justice. In short, climate action is no longer optional or voluntary—it becomes a global legal obligation embedded in universal standards.
+
+#### Feature 3 applied to digital governance
+
+In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
+
+
+### Feature 4 - Multi-level democratic law-making
+
+Definition according to the book:
+
+> Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
+
+This feature means that laws are not made and enforced only by national governments. Instead, rules and courts exist at many levels at the same time—local, national, regional, and global—and they work together. Different layers of authority can create and enforce laws, and higher-level courts can step in when lower levels violate rights or abuse power. In simple terms: power is shared across many levels, and multiple courts ensure everyone plays by the rules.
+
+QUESTION: IS THIS A DIRECT CONSEQUENCE OF FEATURE 1 OR IS THIS DESCRIBBING HOW FEATURE 2 AND 3 ARE IMPLEMENTED ?
+
+#### Feature 4 applied to climate change
+
+In climate governance, this feature would create a multi-layered legal system where climate rules are made and enforced simultaneously by cities, nations, regional alliances (e.g., EU), and global institutions. Local actors could set strong emissions standards, states could regulate industries, regional bodies could harmonize policies, and global courts could hold violators accountable—especially when pollution harms other countries or future generations. Enforcement would no longer depend on national willingness; instead, violations could be addressed by regional or international courts empowered to check abuses or inaction.
+
+#### Feature 4 applied to digital governance
+
+Applied to digital governance, this feature would build a stacked legal architecture where digital rules and oversight mechanisms operate across different levels. Local and national authorities could regulate infrastructure and education, regional bodies could set common cybersecurity or AI standards, and global courts could intervene when transnational companies or states violate digital rights. Tech companies would not be able to “jurisdiction shop” for the weakest laws; instead, strong multi-level courts would ensure that user rights and democratic norms are protected consistently across borders.
+
+### Feature 5 - Global civic commitment
+
+The definition from the book:
+
+> The defence of self-determination, the creation of a common structure of political action and the preservation of the democratic good are the overall collective priorities; the commitment to democratic autonomy creates both an agenda of long-term change and a programme of urgent priorities, focused on transforming the conditions of those whose circumstances fall radically short of equal membership in the public realm.
+
+### Feature 6 - Cosmopolitan social justice
+
+The definition from the book:
+
+> Determinate principles of social justice follow: the modus operandi of the production, distribution and the exploitation of resources must be conducive to, and compatible with, the democratic process and a common structure of political action.
+
+### Feature 7 - Non-coercive global order
+
+The definition from the book:
+
+> The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the con-rol of particular peoples and agents (such as the disintegration of a state).
+
+### Feature 8 - Nested citizenship
+
+The definition from the book:
+
+> People can enjoy membership in the diverse communities which significantly affect them and, accordingly, access to a variety of form: of political participation. Citizenship would be extended, in principle to membership in all cross-cutting political communities, from the local to the global.
 
 
 ## Comparison between the different models of democracy

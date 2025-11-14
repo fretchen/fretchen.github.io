@@ -8,13 +8,16 @@ tokenID: 123
 
 In the last few weeks I kept wondering quite a bit about the association between democratic governance and nation-states. Somehow it is quite intrinsically connected to the notion of states and nationality. If I have the passport, I have the right to vote for some governance body et voila. In Europe this has been softed on quite a bit, but the nation remains an integral part to democratic governance models.
 
-But something that I found quite interesting is the the notion of cosmopolitan democracy, which I did not know. So here we go for the moment. The theory has been built quite a bit by David Held in his book "Democracy and the Global Order" (2004) and further developed by Daniele Archibugi. In the initial book the notion of cosmopolitan democracy is laid in 8 points:
+But something that I found quite interesting is the the notion of cosmopolitan democracy, which I did not know. So here we go for the moment. The theory has been built quite a bit by David Held in his book "Democracy and the Global Order" (2004) and further developed by Daniele Archibugi.
 
-One model is the federal model where each institution has guiding power over the "lower" institutions. Before we dive into the cosmopolitan democracy model, let us go back to two quite common models that we all experience on a common basis: the federal and confederal models.
+The post will be structured as follows (for the moment):
+
+- We choose two key issues that require global governance models - climate change and digital governance
+- We briefly review two common governance models beyond nation-states - the federal and confederal models . This they allow us to make it easier to understand cosmopolitan democracy and where it differs from our common approaches.
 
 ## Two issues at hand climate change and digital governance
 
-Before we dive into the models, let us first clarify why we even care about democracy beyond nation-states. Two key issues that come to my mind are climate change and digital governance. Both issues are inherently global and require governance models that transcend national borders. We will use these two examples to visualize the different governance models later on.
+Before we dive into the different models, let us first clarify why we even care about democracy beyond nation-states. Two key issues that come to my mind are climate change and digital governance. Both issues are inherently global and require governance models that transcend national borders. We will use these two examples to visualize the different governance models later on.
 
 
 ## The federal model
@@ -41,7 +44,7 @@ The [confederal model](https://en.wikipedia.org/wiki/Confederation) on the other
 
 It is an absolutely central distinction that the confederal model has fairly little to do with democracy etc. The states that might participate in the confederation might be democratic or not. But it is very rare to see some kind of democratic instition that is associated with confederations.
 
-Another instersting observation is that quite a number of federal states have been created from previously loosely connected confederations. So there is some common assumption or intuition that any improvement of the UN would mean that the confederation would have to become something like a federal "world state". And this is exactly where the whole idea of cosmopolitan democracy comes in. It is basically an idea for democratic processes that are not really coupled to nation-states as we know them. The whole thing was set up by David Held and others in the 1990s. 
+Another instersting observation is that quite a number of federal states have been created from previously loosely connected confederations. So there is some common assumption or intuition that any improvement of the UN would mean that the confederation would have to become something like a federal "world state".
 
 ### Confederations and climate change
 
@@ -53,7 +56,7 @@ A confederal approach to digital governance would involve states negotiating com
 
 ## Key features of cosmopolitan democracy
 
-The following is an extract from the initial book, where he describes the features of of cosmopolitan democracy in table 12.1. For each of the points I will add some notes afterwards. The features are
+We are now ready to dive into the cosmopolitan democracy model. We will follow the initial definitions from the book by David Held. The following is an extract from the initial book, where he describes the features of of cosmopolitan democracy in table 12.1. For each of the points I will add some notes afterwards. The features are
 
 ### Feature 1 - Overlapping networks of governance
 
@@ -133,23 +136,73 @@ The definition from the book:
 
 > The defence of self-determination, the creation of a common structure of political action and the preservation of the democratic good are the overall collective priorities; the commitment to democratic autonomy creates both an agenda of long-term change and a programme of urgent priorities, focused on transforming the conditions of those whose circumstances fall radically short of equal membership in the public realm.
 
+This feature means that the whole political system is built around three shared goals: protecting everyone’s ability to shape their own lives (self-determination), enabling people and communities to act together across borders, and strengthening democracy everywhere. It also means that the system must actively help those who are treated unfairly or excluded from public life. In short: everyone should have an equal voice, shared tools for collective action, and support in overcoming barriers to real participation.
+
+In a federation, shared political action is strong, but its priority is usually unity and constitutional order, not global democratic equality; self-determination is constrained by federal sovereignty. In a confederation, member states keep more autonomy but shared action is weak and mainly voluntary, so protecting democratic equality across all members is not guaranteed and often inconsistent. By contrast, cosmopolitan democracy puts equal self-determination and transnational democratic participation at the center, explicitly requiring joint action to reduce inequalities between communities—something neither federations nor confederations systematically pursue across borders.
+
+#### Feature 5 applied to climate change
+
+Applied to climate change, this feature would mean prioritizing collective global action to protect the democratic rights of all people—especially those most harmed by climate impacts. It would treat access to a stable climate as a precondition for self-determination and democratic participation. Because vulnerable groups and countries lack equal power, cosmopolitan democracy would require urgent measures to support them: climate finance, adaptation aid, technology sharing, and guaranteed participation in global decision-making. The long-term goal would be a shared, democratic climate regime that ensures everyone can equally shape the ecological future they depend on.
+
+#### Feature 5 applied to digital governance
+
+In digital governance, this feature would prioritize universal digital self-determination—the ability of all individuals and communities to control how digital systems affect their lives. It would require building democratic institutions that let people participate in shaping global digital rules, rather than leaving decisions to powerful states or tech corporations. Immediate priorities would focus on groups currently excluded or exploited (e.g., those harmed by algorithmic bias, surveillance, or lack of connectivity). Long-term, the goal would be a shared democratic digital sphere where everyone has equal voice, fair access, and protection of digital rights, ensuring meaningful participation for all.
+
 ### Feature 6 - Cosmopolitan social justice
 
 The definition from the book:
 
 > Determinate principles of social justice follow: the modus operandi of the production, distribution and the exploitation of resources must be conducive to, and compatible with, the democratic process and a common structure of political action.
 
+This feature means that the way resources are produced, shared, and used must support democracy rather than undermine it. Economic activity—how wealth is created, how benefits and burdens are distributed, and how natural or digital resources are exploited—must be organized so that everyone can participate equally in political life. If certain economic practices concentrate power, create extreme inequality, or block people from democratic participation, they are not acceptable. In short: the economy must work in a way that strengthens democracy, not weakens it.
+
+In a federation, social justice is typically pursued within the borders of the federal state, with redistribution and regulation tied to national citizenship. However, federations seldom apply social justice principles across borders or beyond their own territory. In a confederation, economic coordination is looser and redistribution is minimal or absent, since member states guard their autonomy; ensuring shared social justice across all members is usually not an objective. Cosmopolitan democracy differs by establishing transnational principles of social justice that apply to all people, ensuring that economic practices anywhere do not undermine democratic equality globally. It links resource governance directly to democratic empowerment across borders—something neither federations nor confederations fully do.
+
+
+#### Feature 6 applied to climate change
+
+Applied to climate change, this feature would require that the world’s resource use—especially fossil fuels, land, and critical minerals—be organized in a way that supports global democratic equality. High-emission production methods that harm vulnerable populations would be considered violations of social justice because they undermine those groups’ ability to participate in public life. Climate finance, fair distribution of mitigation burdens, just transition policies, and equitable access to green technologies become democratic requirements, not optional acts of charity. The central idea: the global economy must not produce climate harms that silence or marginalize people politically.
+
+#### Feature 6 applied to digital governance
+
+In digital governance, this feature would mean that systems of data production, digital infrastructure, AI development, and platform economics must operate in ways that empower democratic participation rather than concentrate power in a few hands. Practices like exploitative data extraction, opaque algorithms, monopolistic platform dominance, or digital exclusion would be unacceptable because they obstruct equal political voice. Instead, access to digital infrastructure, fair data governance, transparent algorithms, and equitable control over digital resources (such as data and compute) would be treated as matters of global social justice, necessary for meaningful participation in a digital democracy.
+
 ### Feature 7 - Non-coercive global order
 
 The definition from the book:
 
-> The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the con-rol of particular peoples and agents (such as the disintegration of a state).
+> The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the control of particular peoples and agents (such as the disintegration of a state).
+
+This feature means that conflicts should be solved peacefully, through dialogue, negotiation, and legal procedures—not through threats or violence. However, if a group or regime tries to destroy basic democratic rights or harm people in a serious way, the international community may use collective force as a last resort to stop the abuse. It’s similar to how a democratic state uses policing only after all peaceful options fail: force is allowed, but only to protect democracy and human rights, and only when everything else has been tried first.
+
+In a federation, the central government typically has the authority to use force internally (e.g., federal police or military) to uphold the constitution, but this coercive power belongs to the federal level, not to a voluntary collective. In a confederation, member states retain almost all control over force; collective coercion is rare and usually requires unanimous consent, making enforcement weak. Cosmopolitan democracy differs by establishing collective, transnational authority over the legitimate use of force, tightly limited to defending democratic rights across borders. It rejects both unilateral interventions and the impotence typical of confederations, instead creating a legally constrained and democratically accountable mechanism for force as a truly last resort.
+
+#### Feature 7 applied to climate change
+
+Applied to climate change, this feature would emphasize non-coercive global conflict resolution—mediation, arbitration, climate courts, and graduated sanctions—to settle disputes over emissions, resources, or climate responsibilities. Force would almost never be relevant, because climate disputes are not typically violent. But, theoretically, if a regime engaged in destructive environmental actions that massively endangered human life and democratic rights (for example, intentionally causing ecological collapse or weaponizing environmental destruction), cosmopolitan democracy would allow collective intervention only after exhaustive peaceful measures. In practice, this would translate mostly into strong legal pressure, sanctions, and multilateral accountability rather than military force.
+
+#### Feature 7 applied to digital governance
+
+
+Applied to digital governance, this feature would prioritize peaceful, rules-based mechanisms to handle conflicts over cyberattacks, data theft, misinformation campaigns, or digital rights violations. Disputes would be settled through international digital courts, mediation panels, and coordinated sanctions, rather than unilateral retaliation or cyberwarfare. Collective force would only be considered in the extreme case where a regime or actor uses digital tools to systematically destroy democratic structures—for example, disabling critical infrastructure, mass-surveilling populations, or manipulating elections on a massive scale. Even then, coercive action would be allowed only as a last, collectively authorized step, ensuring that responses remain legitimate, limited, and democratically accountable.
 
 ### Feature 8 - Nested citizenship
 
 The definition from the book:
 
 > People can enjoy membership in the diverse communities which significantly affect them and, accordingly, access to a variety of form: of political participation. Citizenship would be extended, in principle to membership in all cross-cutting political communities, from the local to the global.
+
+This feature means that people are not limited to belonging politically to just one community (usually the nation-state). Instead, they can be citizens in many overlapping communities at once—their city, their region, their country, and also transnational or global bodies that affect their lives. Each level gives them political rights and ways to participate. In simple terms: your political voice follows the real-life sources of power that shape your world, no matter where they sit geographically.
+
+In a federation, people typically have dual citizenship (state + federal), but political participation is still bound to the territorial units of the federation; cross-border or global political membership is not recognized. In a confederation, citizenship remains almost entirely national, and political participation at the confederal level is usually indirect (through governments, not individuals). Cosmopolitan democracy goes further by giving individuals direct political membership in multiple overlapping communities, including global ones. This creates a model where political belonging follows functional interdependence—not just territorial borders—something federations and confederations do only partially or not at all.
+
+#### Feature 8 applied to climate change
+
+For climate governance, this feature would allow individuals to be direct members of climate-relevant political bodies at multiple levels: local climate assemblies, national climate institutions, regional climate authorities, and global climate bodies. People affected by decisions—such as coastal communities, youth, or groups harmed by emissions elsewhere—would have direct channels to participate. Instead of climate policy being negotiated only by states, individuals would gain multi-level democratic voice in shaping mitigation plans, adaptation strategies, and resource allocations. This acknowledges that climate change crosses borders, so political membership must do the same.
+
+#### Feature 8 applied to digital governance
+
+Applied to digital governance, this feature would grant individuals political membership in the various digital communities and institutions that shape their online lives. Beyond national digital regulators, people could participate directly in regional digital rights bodies, global AI oversight institutions, platform governance councils, or transnational data authorities. Users would not be passive subjects of platform rules or national digital laws; instead, they would hold multi-level citizenship in the digital sphere, with rights to participate wherever crucial decisions about algorithms, data, or online spaces are made. This ensures that digital communities reflect the democratic voices of those they affect, regardless of borders.
 
 
 ## Comparison between the different models of democracy

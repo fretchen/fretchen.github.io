@@ -66,17 +66,17 @@ Here, cosmopolitan democracy basically says that a lot of politcal topics cut ac
 
 On this topic cosmopolitan democracy is a bit similar to a federation as it recognizes multiple networks of power. However, it goes further as it gives up on the hierachy that is so central to federal states. Compoared to confederations it is more coordinated and do not think that states have complete control of their internal dealings. Pushed to the extreme this feature does not really require the idea of states anymore. However, it remains unclear how the networks would coordinate, how it is decided who is within the networks etc.
 
-### Feature 1 applied to climate change
+### Problem statement applied to climate change
 
-Under cosmopolitan democracy, climate governance would be organized through interconnected layers of authority involving global, regional, national, and local actors. A global institution—perhaps a reformed UN Climate Council—could set binding planetary limits on emissions and recognize climate-related human rights. Regional bodies like the EU, AU, or ASEAN would coordinate implementation, while cities, NGOs, and corporations would take on direct obligations and reporting duties. Citizens could participate in transnational climate assemblies and bring cases before international courts if governments or firms violated environmental norms. Power would thus be diffused but coordinated, ensuring accountability and participation at every level, matching the truly global nature of the climate system.
+Climate change is a beautiful example of overlapping governance networks. The drivers of emissions involve states, multinational corporations, global markets, and transnational supply chains. The impacts—droughts, heatwaves, floods—spread across borders regardless of political authority. Scientific bodies, NGOs, cities, and financial actors also shape outcomes. This dispersion of power mirrors Held’s argument: global problems are embedded in networks that intersect but do not map neatly onto sovereign states.
 
-### Feature 1 applied to digital governance
+### Problem statement applied to digital governance
 
-In digital governance, cosmopolitan democracy would create a web of overlapping institutions and civic actors to manage global data flows, AI ethics, and online rights. A global “Digital Rights Charter” might articulate universal standards for privacy, transparency, and algorithmic fairness, enforced by regional data authorities and international courts. Platforms and tech companies would be subject to cosmopolitan law, accountable not just to states but to global citizens through participatory mechanisms such as digital assemblies or multi-stakeholder councils. Local communities could adapt global norms to cultural contexts, while transnational NGOs monitor compliance. The outcome would be a polycentric digital polity, where individuals, states, and non-state actors share both power and responsibility for governing the digital commons.
+Digital governance similarly rests on dispersed networks of authority and influence. Tech companies write rules for billions of users; states regulate only part of this domain; NGOs, standards bodies, and open-source communities shape key infrastructures; and data flows connect regions instantly and invisibly. Digital power thus emerges from interactions between state and non-state actors operating across borders, demonstrating why a state-centric model of governance cannot capture the structure of digital life.
 
 ## The Institutional Design: How are these principles implemented?
 
-Once, you follow the argument that we need a flexible and overlapping governance structure, the next question is how to implement this in practice. The book actually proposes to key principles that should guide the institutional design of cosmopolitan democracy.
+Once, you follow the argument that we need a flexible and overlapping governance structure, the next question is how to implement this in practice. The book actually proposes two key principles that should guide the institutional design of cosmopolitan democracy.
 
 ### Institutional Principle 1 - Multi-level democratic law-making
 
@@ -85,19 +85,6 @@ Definition according to the book (feature 4 of CD in the book):
 > Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
 
 This feature means that laws are not made and enforced only by national governments. Instead, rules and courts exist at many levels at the same time—local, national, regional, and global—and they work together. Different layers of authority can create and enforce laws, and higher-level courts can step in when lower levels violate rights or abuse power. In simple terms: power is shared across many levels, and multiple courts ensure everyone plays by the rules.
-
-QUESTION: IS THIS A DIRECT CONSEQUENCE OF FEATURE 1 OR IS THIS DESCRIBBING HOW FEATURE 2 AND 3 ARE IMPLEMENTED ?
-
-#### Feature 4 applied to climate change
-
-In climate governance, this feature would create a multi-layered legal system where climate rules are made and enforced simultaneously by cities, nations, regional alliances (e.g., EU), and global institutions. Local actors could set strong emissions standards, states could regulate industries, regional bodies could harmonize policies, and global courts could hold violators accountable—especially when pollution harms other countries or future generations. Enforcement would no longer depend on national willingness; instead, violations could be addressed by regional or international courts empowered to check abuses or inaction.
-
-#### Feature 4 applied to digital governance
-
-Applied to digital governance, this feature would build a stacked legal architecture where digital rules and oversight mechanisms operate across different levels. Local and national authorities could regulate infrastructure and education, regional bodies could set common cybersecurity or AI standards, and global courts could intervene when transnational companies or states violate digital rights. Tech companies would not be able to “jurisdiction shop” for the weakest laws; instead, strong multi-level courts would ensure that user rights and democratic norms are protected consistently across borders.
-
-
-
 
 ### Institutional Principle 2 - Nested citizenship
 
@@ -109,43 +96,38 @@ This feature means that people are not limited to belonging politically to just 
 
 In a federation, people typically have dual citizenship (state + federal), but political participation is still bound to the territorial units of the federation; cross-border or global political membership is not recognized. In a confederation, citizenship remains almost entirely national, and political participation at the confederal level is usually indirect (through governments, not individuals). Cosmopolitan democracy goes further by giving individuals direct political membership in multiple overlapping communities, including global ones. This creates a model where political belonging follows functional interdependence—not just territorial borders—something federations and confederations do only partially or not at all.
 
-#### Feature 8 applied to climate change
+### Institutal design principles applied to climate change
 
-For climate governance, this feature would allow individuals to be direct members of climate-relevant political bodies at multiple levels: local climate assemblies, national climate institutions, regional climate authorities, and global climate bodies. People affected by decisions—such as coastal communities, youth, or groups harmed by emissions elsewhere—would have direct channels to participate. Instead of climate policy being negotiated only by states, individuals would gain multi-level democratic voice in shaping mitigation plans, adaptation strategies, and resource allocations. This acknowledges that climate change crosses borders, so political membership must do the same.
+Cosmopolitan democracy would redesign climate governance by combining multi-level law-making with nested citizenship. Binding climate rules would be legislated and enforced across local, national, regional, and global levels, supported by courts able to hold states and corporations accountable. At the same time, individuals would gain political membership in these overlapping institutions—from local climate assemblies to global climate authorities—ensuring that those affected have direct influence. Together, these principles create a governance system that matches the transboundary nature of the climate system while ensuring democratic legitimacy beyond the state.
 
-#### Feature 8 applied to digital governance
+### Institutal design principles applied to digital governance
 
-Applied to digital governance, this feature would grant individuals political membership in the various digital communities and institutions that shape their online lives. Beyond national digital regulators, people could participate directly in regional digital rights bodies, global AI oversight institutions, platform governance councils, or transnational data authorities. Users would not be passive subjects of platform rules or national digital laws; instead, they would hold multi-level citizenship in the digital sphere, with rights to participate wherever crucial decisions about algorithms, data, or online spaces are made. This ensures that digital communities reflect the democratic voices of those they affect, regardless of borders.
-
+Digital governance would be reshaped through the same two principles. Multi-level law-making would prevent regulatory gaps and jurisdiction shopping by tech companies: digital rights and AI rules would be enacted and enforced across local, regional, and global institutions. Nested citizenship would give individuals democratic membership in digital governance bodies, allowing users to participate in platform rule-making, regional data authorities, and global AI oversight institutions. Combined, these principles establish a democratic digital polity aligned with the cross-border nature of data flows and platform power.
 
 ## The Normative Foundation: What principles should govern the global order?
 
-### Feature 2 - Cosmopolitan law
+What is quite important to note is that the book and the theory is actually quite focused on the normative foundation of cosmopolitan democracy. There it is much more detailled in my view than the institutional design.
 
-Definition according to the book:
+QUESTION TO ME: HOW DO THESE PRINCIPLES APPEAR ? WHO DECIDES WHAT THEY ARE ? IS THIS SOME KIND OF CONSTITUTION ? ANSWER: THEY ARE NORMATIVE PRINCIPLES THAT SHOULD GUIDE THE INSTITUTIONAL DESIGN. SO THEY ARE NOT INSTITUTIONS THEMSELVES, BUT ASSUMPATIONS OF THE DESIGN.
+
+The normative foundations are as follows
+
+### Normative Principle 1 - Cosmopolitan law
+
+Definition according to the book (feature 2 of CD in the book):
 
 > All groups and associations are assumed to have a capacity for self-determination which can be specified by a commitment to the principle of autonomy and specific clusters of rights and obligations. These clusters cut across each network of power and are subsumed under the following categories: health, social, cultural, civic, economic, pacific and political. Together, they form the basis of an empowering legal order - a cosmopolitan democratic law.
 
 This feature means that every community, group, or institution—from states to companies to local associations—has the right to make its own choices (self-determination), but only within a framework of shared global rights and responsibilities. These rights—covering health, social welfare, culture, civic participation, the economy, peace, and politics—apply to everyone, everywhere, regardless of nationality. Together, they make up a kind of cosmopolitan constitution: a legal order that empowers all people and groups to act freely, as long as they respect the autonomy and dignity of others across borders.
 
-#### Feature 2 applied to climate change
 
-Applied to climate change, this principle would mean that each community and actor—governments, cities, corporations, civil groups—can pursue their own climate strategies, but they must do so within a shared global legal framework that protects the environmental rights of all. That could include universal rights to a stable climate, clean air, and sustainable development, as well as corresponding duties not to harm others through pollution or ecological destruction. In practice, a cosmopolitan democratic law of climate change would treat emitting carbon or destroying ecosystems as violations of others’ rights, enforceable across borders and through transnational courts or citizen action.
+### Normative Principle 2 - Universal constitutional principles
 
-#### Feature 2 applied to digital governance
-
-In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
-
-### Feature 3 - Universal constitutional principles
-
-Definition according to the book:
+Definition according to the book (feature 3 of CD in the book):
 
 > Legal principles are adopted which delimit the form and scope of individual and collective action within the organizations and associations of state, economy and civil society. Certain standards are specified for the treatment of all, which no political regime or association can legitimately violate.
 
-
 This feature means that everyone—governments, companies, organizations, and citizens—must follow a set of basic rules that protect people’s rights and dignity. These shared rules limit what any actor is allowed to do, no matter how powerful they are. No government or organization can cross certain red lines, such as harming people, violating rights, or acting in ways that undermine democratic participation. Think of it as a global minimum standard for fair treatment that nobody is allowed to violate.
-
-QUESTION TO ME: HOW DO THESE PRINCIPLES APPEAR ? WHO DECIDES WHAT THEY ARE ? IS THIS SOME KIND OF CONSTITUTION ?
 
 #### Feature 3 applied to climate change
 
@@ -155,15 +137,42 @@ Applied to climate change, this feature would establish binding global standards
 
 In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
 
-### Feature 5 - Global civic commitment
+### Normative Principle 3 - Global civic commitment
 
-The definition from the book:
+Definition according to the book (feature 5 of CD in the book):
 
 > The defence of self-determination, the creation of a common structure of political action and the preservation of the democratic good are the overall collective priorities; the commitment to democratic autonomy creates both an agenda of long-term change and a programme of urgent priorities, focused on transforming the conditions of those whose circumstances fall radically short of equal membership in the public realm.
 
 This feature means that the whole political system is built around three shared goals: protecting everyone’s ability to shape their own lives (self-determination), enabling people and communities to act together across borders, and strengthening democracy everywhere. It also means that the system must actively help those who are treated unfairly or excluded from public life. In short: everyone should have an equal voice, shared tools for collective action, and support in overcoming barriers to real participation.
 
 In a federation, shared political action is strong, but its priority is usually unity and constitutional order, not global democratic equality; self-determination is constrained by federal sovereignty. In a confederation, member states keep more autonomy but shared action is weak and mainly voluntary, so protecting democratic equality across all members is not guaranteed and often inconsistent. By contrast, cosmopolitan democracy puts equal self-determination and transnational democratic participation at the center, explicitly requiring joint action to reduce inequalities between communities—something neither federations nor confederations systematically pursue across borders.
+
+
+### Normative Principle 4 - Cosmopolitan social justice
+
+Definition according to the book (feature 6 of CD in the book):
+
+> Determinate principles of social justice follow: the modus operandi of the production, distribution and the exploitation of resources must be conducive to, and compatible with, the democratic process and a common structure of political action.
+
+This feature means that the way resources are produced, shared, and used must support democracy rather than undermine it. Economic activity—how wealth is created, how benefits and burdens are distributed, and how natural or digital resources are exploited—must be organized so that everyone can participate equally in political life. If certain economic practices concentrate power, create extreme inequality, or block people from democratic participation, they are not acceptable. In short: the economy must work in a way that strengthens democracy, not weakens it.
+
+In a federation, social justice is typically pursued within the borders of the federal state, with redistribution and regulation tied to national citizenship. However, federations seldom apply social justice principles across borders or beyond their own territory. In a confederation, economic coordination is looser and redistribution is minimal or absent, since member states guard their autonomy; ensuring shared social justice across all members is usually not an objective. Cosmopolitan democracy differs by establishing transnational principles of social justice that apply to all people, ensuring that economic practices anywhere do not undermine democratic equality globally. It links resource governance directly to democratic empowerment across borders—something neither federations nor confederations fully do.
+
+### Normative Principle 5 - Non-coercive global order
+
+Definition according to the book (feature 7 of CD in the book):
+
+> The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the control of particular peoples and agents (such as the disintegration of a state).
+
+This feature means that conflicts should be solved peacefully, through dialogue, negotiation, and legal procedures—not through threats or violence. However, if a group or regime tries to destroy basic democratic rights or harm people in a serious way, the international community may use collective force as a last resort to stop the abuse. It’s similar to how a democratic state uses policing only after all peaceful options fail: force is allowed, but only to protect democracy and human rights, and only when everything else has been tried first.
+
+In a federation, the central government typically has the authority to use force internally (e.g., federal police or military) to uphold the constitution, but this coercive power belongs to the federal level, not to a voluntary collective. In a confederation, member states retain almost all control over force; collective coercion is rare and usually requires unanimous consent, making enforcement weak. Cosmopolitan democracy differs by establishing collective, transnational authority over the legitimate use of force, tightly limited to defending democratic rights across borders. It rejects both unilateral interventions and the impotence typical of confederations, instead creating a legally constrained and democratically accountable mechanism for force as a truly last resort.
+
+
+### Normative principles applied to climate change
+
+
+### Normative principles applied to digital governance
 
 #### Feature 5 applied to climate change
 
@@ -173,17 +182,6 @@ Applied to climate change, this feature would mean prioritizing collective globa
 
 In digital governance, this feature would prioritize universal digital self-determination—the ability of all individuals and communities to control how digital systems affect their lives. It would require building democratic institutions that let people participate in shaping global digital rules, rather than leaving decisions to powerful states or tech corporations. Immediate priorities would focus on groups currently excluded or exploited (e.g., those harmed by algorithmic bias, surveillance, or lack of connectivity). Long-term, the goal would be a shared democratic digital sphere where everyone has equal voice, fair access, and protection of digital rights, ensuring meaningful participation for all.
 
-### Feature 6 - Cosmopolitan social justice
-
-The definition from the book:
-
-> Determinate principles of social justice follow: the modus operandi of the production, distribution and the exploitation of resources must be conducive to, and compatible with, the democratic process and a common structure of political action.
-
-This feature means that the way resources are produced, shared, and used must support democracy rather than undermine it. Economic activity—how wealth is created, how benefits and burdens are distributed, and how natural or digital resources are exploited—must be organized so that everyone can participate equally in political life. If certain economic practices concentrate power, create extreme inequality, or block people from democratic participation, they are not acceptable. In short: the economy must work in a way that strengthens democracy, not weakens it.
-
-In a federation, social justice is typically pursued within the borders of the federal state, with redistribution and regulation tied to national citizenship. However, federations seldom apply social justice principles across borders or beyond their own territory. In a confederation, economic coordination is looser and redistribution is minimal or absent, since member states guard their autonomy; ensuring shared social justice across all members is usually not an objective. Cosmopolitan democracy differs by establishing transnational principles of social justice that apply to all people, ensuring that economic practices anywhere do not undermine democratic equality globally. It links resource governance directly to democratic empowerment across borders—something neither federations nor confederations fully do.
-
-
 #### Feature 6 applied to climate change
 
 Applied to climate change, this feature would require that the world’s resource use—especially fossil fuels, land, and critical minerals—be organized in a way that supports global democratic equality. High-emission production methods that harm vulnerable populations would be considered violations of social justice because they undermine those groups’ ability to participate in public life. Climate finance, fair distribution of mitigation burdens, just transition policies, and equitable access to green technologies become democratic requirements, not optional acts of charity. The central idea: the global economy must not produce climate harms that silence or marginalize people politically.
@@ -191,16 +189,6 @@ Applied to climate change, this feature would require that the world’s resourc
 #### Feature 6 applied to digital governance
 
 In digital governance, this feature would mean that systems of data production, digital infrastructure, AI development, and platform economics must operate in ways that empower democratic participation rather than concentrate power in a few hands. Practices like exploitative data extraction, opaque algorithms, monopolistic platform dominance, or digital exclusion would be unacceptable because they obstruct equal political voice. Instead, access to digital infrastructure, fair data governance, transparent algorithms, and equitable control over digital resources (such as data and compute) would be treated as matters of global social justice, necessary for meaningful participation in a digital democracy.
-
-### Feature 7 - Non-coercive global order
-
-The definition from the book:
-
-> The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the control of particular peoples and agents (such as the disintegration of a state).
-
-This feature means that conflicts should be solved peacefully, through dialogue, negotiation, and legal procedures—not through threats or violence. However, if a group or regime tries to destroy basic democratic rights or harm people in a serious way, the international community may use collective force as a last resort to stop the abuse. It’s similar to how a democratic state uses policing only after all peaceful options fail: force is allowed, but only to protect democracy and human rights, and only when everything else has been tried first.
-
-In a federation, the central government typically has the authority to use force internally (e.g., federal police or military) to uphold the constitution, but this coercive power belongs to the federal level, not to a voluntary collective. In a confederation, member states retain almost all control over force; collective coercion is rare and usually requires unanimous consent, making enforcement weak. Cosmopolitan democracy differs by establishing collective, transnational authority over the legitimate use of force, tightly limited to defending democratic rights across borders. It rejects both unilateral interventions and the impotence typical of confederations, instead creating a legally constrained and democratically accountable mechanism for force as a truly last resort.
 
 #### Feature 7 applied to climate change
 
@@ -210,6 +198,21 @@ Applied to climate change, this feature would emphasize non-coercive global conf
 
 
 Applied to digital governance, this feature would prioritize peaceful, rules-based mechanisms to handle conflicts over cyberattacks, data theft, misinformation campaigns, or digital rights violations. Disputes would be settled through international digital courts, mediation panels, and coordinated sanctions, rather than unilateral retaliation or cyberwarfare. Collective force would only be considered in the extreme case where a regime or actor uses digital tools to systematically destroy democratic structures—for example, disabling critical infrastructure, mass-surveilling populations, or manipulating elections on a massive scale. Even then, coercive action would be allowed only as a last, collectively authorized step, ensuring that responses remain legitimate, limited, and democratically accountable.
+
+
+
+
+
+#### Feature 2 applied to climate change
+
+Applied to climate change, this principle would mean that each community and actor—governments, cities, corporations, civil groups—can pursue their own climate strategies, but they must do so within a shared global legal framework that protects the environmental rights of all. That could include universal rights to a stable climate, clean air, and sustainable development, as well as corresponding duties not to harm others through pollution or ecological destruction. In practice, a cosmopolitan democratic law of climate change would treat emitting carbon or destroying ecosystems as violations of others’ rights, enforceable across borders and through transnational courts or citizen action.
+
+#### Feature 2 applied to digital governance
+
+In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
+
+
+
 
 
 

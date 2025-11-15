@@ -6,7 +6,31 @@ description: I explore how democratic governence models can be extend beyond nat
 tokenID: 123
 ---
 
-In the last few weeks I kept wondering quite a bit about the association between democratic governance and nation-states. Somehow it is quite intrinsically connected to the notion of states and nationality. If I have the passport, I have the right to vote for some governance body et voila. In Europe this has been softed on quite a bit, but the nation remains an integral part to democratic governance models.
+In the last few weeks I kept wondering quite a bit about the association between democratic governance and nation-states. In the current environment your passport tells you where you can vote. But what if the decisions that shape your life—your climate, your data, your economic future—are made by governments you can't vote for? This is the paradox of modern democracy and in this blog post I decide to dive into different models, federations, conferations and cosmopolitan democracy that attempt to solve it.
+
+And as for other economic or political topics, I really like to explore it from the personal perspective of some fictional characters. So here they are:
+
+## The characters: Three People, One common problem
+
+**Malé, Maldives**
+Amara watches the ocean from her balcony. In 50 years, this view will be 
+underwater. The carbon emissions drowning her country come from Beijing, 
+Houston, and Frankfurt—places where she has no vote, no voice, no say.
+
+**Shanghai, China**
+Chen deploys his latest AI model. European regulators want to audit his code. 
+American platforms host it. Chinese authorities monitor it. He's built something 
+that exists everywhere and nowhere—governed by everyone and no one.
+
+**Brussels, Belgium**
+Sofia closes her laptop after another failed climate negotiation. Twenty-seven 
+countries, twenty-seven veto points. "We need unanimous consent," her colleague 
+sighs. "Which means we need a miracle."
+
+Three people. Three continents. One problem: **They have the deeply seeded feeling that democracy wasn't built for their current problems.**
+
+
+
 
 But something that I found quite interesting is the the notion of cosmopolitan democracy, which I did not know. So here we go for the moment. The theory has been built quite a bit by David Held in his book "Democracy and the Global Order" (2004) and further developed by Daniele Archibugi.
 

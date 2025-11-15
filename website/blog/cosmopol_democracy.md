@@ -96,11 +96,11 @@ This feature means that people are not limited to belonging politically to just 
 
 In a federation, people typically have dual citizenship (state + federal), but political participation is still bound to the territorial units of the federation; cross-border or global political membership is not recognized. In a confederation, citizenship remains almost entirely national, and political participation at the confederal level is usually indirect (through governments, not individuals). Cosmopolitan democracy goes further by giving individuals direct political membership in multiple overlapping communities, including global ones. This creates a model where political belonging follows functional interdependence—not just territorial borders—something federations and confederations do only partially or not at all.
 
-### Institutal design principles applied to climate change
+### Institutional design principles applied to climate change
 
 Cosmopolitan democracy would redesign climate governance by combining multi-level law-making with nested citizenship. Binding climate rules would be legislated and enforced across local, national, regional, and global levels, supported by courts able to hold states and corporations accountable. At the same time, individuals would gain political membership in these overlapping institutions—from local climate assemblies to global climate authorities—ensuring that those affected have direct influence. Together, these principles create a governance system that matches the transboundary nature of the climate system while ensuring democratic legitimacy beyond the state.
 
-### Institutal design principles applied to digital governance
+### Institutional design principles applied to digital governance
 
 Digital governance would be reshaped through the same two principles. Multi-level law-making would prevent regulatory gaps and jurisdiction shopping by tech companies: digital rights and AI rules would be enacted and enforced across local, regional, and global institutions. Nested citizenship would give individuals democratic membership in digital governance bodies, allowing users to participate in platform rule-making, regional data authorities, and global AI oversight institutions. Combined, these principles establish a democratic digital polity aligned with the cross-border nature of data flows and platform power.
 
@@ -129,14 +129,6 @@ Definition according to the book (feature 3 of CD in the book):
 
 This feature means that everyone—governments, companies, organizations, and citizens—must follow a set of basic rules that protect people’s rights and dignity. These shared rules limit what any actor is allowed to do, no matter how powerful they are. No government or organization can cross certain red lines, such as harming people, violating rights, or acting in ways that undermine democratic participation. Think of it as a global minimum standard for fair treatment that nobody is allowed to violate.
 
-#### Feature 3 applied to climate change
-
-Applied to climate change, this feature would establish binding global standards on what states and companies are allowed to do environmentally. For example, no actor could legitimately pollute in a way that harms the health, livelihoods, or climate stability of others. Activities like excessive emissions, ecosystem destruction, or exporting pollution to poorer countries would be prohibited because they violate shared rights to environmental safety and intergenerational justice. In short, climate action is no longer optional or voluntary—it becomes a global legal obligation embedded in universal standards.
-
-#### Feature 3 applied to digital governance
-
-In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
-
 ### Normative Principle 3 - Global civic commitment
 
 Definition according to the book (feature 5 of CD in the book):
@@ -146,7 +138,6 @@ Definition according to the book (feature 5 of CD in the book):
 This feature means that the whole political system is built around three shared goals: protecting everyone’s ability to shape their own lives (self-determination), enabling people and communities to act together across borders, and strengthening democracy everywhere. It also means that the system must actively help those who are treated unfairly or excluded from public life. In short: everyone should have an equal voice, shared tools for collective action, and support in overcoming barriers to real participation.
 
 In a federation, shared political action is strong, but its priority is usually unity and constitutional order, not global democratic equality; self-determination is constrained by federal sovereignty. In a confederation, member states keep more autonomy but shared action is weak and mainly voluntary, so protecting democratic equality across all members is not guaranteed and often inconsistent. By contrast, cosmopolitan democracy puts equal self-determination and transnational democratic participation at the center, explicitly requiring joint action to reduce inequalities between communities—something neither federations nor confederations systematically pursue across borders.
-
 
 ### Normative Principle 4 - Cosmopolitan social justice
 
@@ -173,6 +164,16 @@ In a federation, the central government typically has the authority to use force
 
 
 ### Normative principles applied to digital governance
+
+
+
+#### Feature 3 applied to climate change
+
+Applied to climate change, this feature would establish binding global standards on what states and companies are allowed to do environmentally. For example, no actor could legitimately pollute in a way that harms the health, livelihoods, or climate stability of others. Activities like excessive emissions, ecosystem destruction, or exporting pollution to poorer countries would be prohibited because they violate shared rights to environmental safety and intergenerational justice. In short, climate action is no longer optional or voluntary—it becomes a global legal obligation embedded in universal standards.
+
+#### Feature 3 applied to digital governance
+
+In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
 
 #### Feature 5 applied to climate change
 

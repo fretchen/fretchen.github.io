@@ -19,12 +19,29 @@ The post will be structured as follows (for the moment):
 
 Before we dive into the different models, let us first clarify why we even care about democracy beyond nation-states. Two key issues that come to my mind are climate change and digital governance. Both issues are inherently global and require governance models that transcend national borders. We will use these two examples to visualize the different governance models later on.
 
-
 ## The federal model
 
 In the [federal model](https://en.wikipedia.org/wiki/Federalism) we typically have several layers of governance with one federal government on top and several states or regions below. A famous example is the federal model at the example of Germany and the USA. Each of the layers has certain competences and rights that are typically laid out in a shared constitution and enforced by some share institutions like the parliament, the central executive and the courts. In Germany, we have clearly laid out that almost all basic education is within the competency of the regions, while the military monopole is clearly within the federal government. 
 
 The federal model is quite common within democratic states and it is perfectly normal to have a federal states where the citizens vote parliments and the different layer, e.g. for city hall, regional parliaments or the national state.
+
+### Institutuional design principles of federations
+
+Federations rest on four core institutional design principles. 
+
+- First, hierarchical division of competences establishes clear vertical authority where federal law supersedes state law in case of conflict, with constitutional enumeration preventing jurisdictional disputes. 
+- Second, territorial subsidiarity ensures decisions are made at the lowest effective territorial level, but always within nested, exclusive territorial units—each level governs its own bounded space without overlap. 
+- Third, dual legitimacy balances popular sovereignty with state representation, typically through bicameral legislatures where one chamber represents citizens directly and another represents constituent states. 
+- Fourth, constitutional unity maintains a single constitutional order with one primary citizenship, ensuring federal courts have final authority and preventing fragmentation.
+
+Together, these principles create stable multi-level governance within clearly bounded federal territory, but they limit participation to nested territorial units and maintain sharp hierarchies between levels.
+
+### Normative foundations of federalism
+
+Federal systems rest on several implicit normative principles. First, they establish universal rights within federal boundaries - constitutional guarantees that apply equally to all citizens regardless of which state or region they inhabit. The German Basic Law's protection of human dignity or the US Bill of Rights exemplify this: certain standards cannot be violated by any level of government within the federation.
+Second, federations embrace a principle of internal subsidiarity and self-determination - the idea that decisions should be made at the most appropriate level, with regions maintaining autonomy in their spheres of competence. However, this self-determination is always constrained by federal constitutional principles and the primacy of federal unity.
+Third, most modern federations incorporate commitments to internal social justice - redistribution mechanisms (like Germany's Länderfinanzausgleich) that transfer resources from wealthier to poorer regions to ensure roughly equal living conditions across the federation. This reflects a normative commitment that citizenship in the federation entitles one to certain minimum standards regardless of local economic circumstances.
+Crucially, these normative principles apply only within federal boundaries. Federations distinguish sharply between insiders (citizens) and outsiders, with no normative obligations to ensure that external actors enjoy the same rights, self-determination, or social justice. The federal government may treat non-citizens differently, engage in exploitative economic practices externally, or use force abroad under very different principles than those governing internal disputes.
 
 ### A federal solution for climate change
 
@@ -45,6 +62,24 @@ The [confederal model](https://en.wikipedia.org/wiki/Confederation) on the other
 It is an absolutely central distinction that the confederal model has fairly little to do with democracy etc. The states that might participate in the confederation might be democratic or not. But it is very rare to see some kind of democratic instition that is associated with confederations.
 
 Another instersting observation is that quite a number of federal states have been created from previously loosely connected confederations. So there is some common assumption or intuition that any improvement of the UN would mean that the confederation would have to become something like a federal "world state".
+
+### Institutional design principles of confederations
+
+Confederations are built on radically different institutional principles prioritizing state sovereignty.
+
+- First, sovereignty preservation ensures member states retain full independence through unanimous voting, explicit withdrawal rights, and treaty-based rather than constitutional arrangements.
+- Second, functional minimalism restricts confederal institutions to only what states explicitly authorize, with no implied powers or expansion of authority beyond the original treaty mandate.
+- Third, interstate coordination without hierarchy positions the confederation as a forum for negotiation between equal sovereigns rather than a higher governing authority, with secretariats providing administrative support but holding no independent power.
+- Fourth, indirect representation only ensures citizens participate solely through their national governments—there are no direct elections to confederal bodies, no confederal citizenship, and no direct enforcement against individuals. 
+
+These principles maintain state equality and prevent confederal institutions from threatening member sovereignty, but result in weak enforcement, minimal democratic participation, and fragmented governance incapable of addressing problems that transcend state boundaries.
+
+### Normative foundations of confederations
+
+Unlike federations, confederations typically lack robust shared normative principles. The treaty establishing a confederation usually defines narrow functional goals (mutual defense, trade coordination, diplomatic cooperation) without establishing universal rights or justice principles that bind member states.
+Member states in a confederation retain the right to maintain radically different internal normative orders. The United Nations, for instance, includes liberal democracies, authoritarian states, and theocracies - there is no requirement that members share commitments to human rights, social justice, or democratic governance (though the UN Charter articulates aspirational principles that are weakly enforced).
+Where normative principles appear in confederal arrangements - such as the UN Universal Declaration of Human Rights or NATO's democratic governance requirements - they are either non-binding (purely aspirational) or weakly enforced (states can violate them with minimal consequences). The confederal model prioritizes sovereignty over shared principles: if a normative principle conflicts with state sovereignty, sovereignty wins.
+This creates what might be called normative minimalism: confederations function with the bare minimum shared principles necessary for coordination, avoiding deeper commitments that might constrain member autonomy. There is typically no commitment to social justice between members, no binding constraints on how states treat their own citizens, and no obligation to resolve disputes non-coercively (beyond non-binding preferences for peaceful resolution).
 
 ### Confederations and climate change
 
@@ -106,9 +141,7 @@ Digital governance would be reshaped through the same two principles. Multi-leve
 
 ## The Normative Foundation: What principles should govern the global order?
 
-What is quite important to note is that the book and the theory is actually quite focused on the normative foundation of cosmopolitan democracy. There it is much more detailled in my view than the institutional design.
-
-QUESTION TO ME: HOW DO THESE PRINCIPLES APPEAR ? WHO DECIDES WHAT THEY ARE ? IS THIS SOME KIND OF CONSTITUTION ? ANSWER: THEY ARE NORMATIVE PRINCIPLES THAT SHOULD GUIDE THE INSTITUTIONAL DESIGN. SO THEY ARE NOT INSTITUTIONS THEMSELVES, BUT ASSUMPATIONS OF THE DESIGN.
+What is quite important to note is that the book and the theory is actually quite focused on the normative foundation of cosmopolitan democracy. There it is much more detailled in my view than the institutional design. The fact that the design principles are so explicitly spelled out make cosmopolitan democracy quite similiar to federations and dramatically different to confederations, which have basically no normative foundation.
 
 The normative foundations are as follows
 
@@ -162,267 +195,52 @@ In a federation, the central government typically has the authority to use force
 
 ### Normative principles applied to climate change
 
+Cosmopolitan Law → Climate
+
+Cosmopolitan law would treat climate stability as a universal right and excessive emissions as violations of others’ autonomy and well-being. States, corporations, and communities would hold cross-border duties not to cause climate harm. Emissions, deforestation, and ecological degradation become legally actionable because they infringe shared rights in health, environmental safety, and intergenerational security.
+
+Universal Constitutional Principles → Climate
+
+Universal constitutional principles would establish global minimum environmental standards that no actor may violate—such as limits on pollution, protection of vulnerable populations, and obligations toward future generations. Climate harm becomes a breach of constitutional-level norms, not merely a policy problem.
+
+Global Civic Commitment → Climate
+
+Global civic commitment prioritizes collective action to secure a stable climate as a precondition for democratic autonomy. Because climate impacts silence vulnerable groups and distort equality, the principle demands urgent support for those most affected—through climate finance, adaptation measures, and guaranteed participation of marginalized communities in global decision-making.
+
+Cosmopolitan Social Justice → Climate
+
+Cosmopolitan social justice requires that the distribution of climate burdens and resources support democratic equality. High emitters bear greater responsibilities; vulnerable communities receive greater protections. Just transition, equitable access to clean technology, and fair resource use are not charity—they are democratic obligations to preserve equal political agency.
+
+Non-Coercive Global Order → Climate
+
+In climate governance, disputes over responsibility, compliance, or resource use should be resolved through peaceful, legal, and institutional means: mediation, arbitration, climate courts, and graduated sanctions. Force is almost never relevant, but in an extreme case—if a regime weaponized environmental destruction to undermine democratic rights—collective action could be authorized only as a last, legally constrained resort.
 
 ### Normative principles applied to digital governance
 
+Cosmopolitan Law → Digital
 
+Cosmopolitan law would treat digital rights—privacy, data protection, transparency, freedom from algorithmic bias, and access to digital infrastructure—as universal and enforceable across borders. Companies and states would have legally binding obligations not to violate these rights, regardless of jurisdiction.
 
-#### Feature 3 applied to climate change
+Universal Constitutional Principles → Digital
 
-Applied to climate change, this feature would establish binding global standards on what states and companies are allowed to do environmentally. For example, no actor could legitimately pollute in a way that harms the health, livelihoods, or climate stability of others. Activities like excessive emissions, ecosystem destruction, or exporting pollution to poorer countries would be prohibited because they violate shared rights to environmental safety and intergenerational justice. In short, climate action is no longer optional or voluntary—it becomes a global legal obligation embedded in universal standards.
+Universal constitutional principles would create binding limits on how digital actors may treat individuals: no mass surveillance, no opaque algorithmic manipulation, no discrimination encoded in digital systems. Platform governance and state digital policies must respect constitutional-level digital rights.
 
-#### Feature 3 applied to digital governance
+Global Civic Commitment → Digital
 
-In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
+Global civic commitment requires empowering individuals and communities to participate in shaping global digital rules. It prioritizes efforts to include those currently excluded—those harmed by algorithmic bias, lacking connectivity, or subject to unilateral corporate control. The long-term aim is a democratic digital public sphere where people collectively shape the technologies that govern them.
 
-#### Feature 5 applied to climate change
+Cosmopolitan Social Justice → Digital
 
-Applied to climate change, this feature would mean prioritizing collective global action to protect the democratic rights of all people—especially those most harmed by climate impacts. It would treat access to a stable climate as a precondition for self-determination and democratic participation. Because vulnerable groups and countries lack equal power, cosmopolitan democracy would require urgent measures to support them: climate finance, adaptation aid, technology sharing, and guaranteed participation in global decision-making. The long-term goal would be a shared, democratic climate regime that ensures everyone can equally shape the ecological future they depend on.
+Cosmopolitan social justice demands that the digital economy be structured to support equal democratic participation. Concentration of digital power, exploitative data extraction, opaque AI, and digital monopolies undermine political equality and therefore violate this principle. Data, compute, and digital infrastructure must be governed in ways that empower—not marginalize—users.
 
-#### Feature 5 applied to digital governance
+Non-Coercive Global Order → Digital
 
-In digital governance, this feature would prioritize universal digital self-determination—the ability of all individuals and communities to control how digital systems affect their lives. It would require building democratic institutions that let people participate in shaping global digital rules, rather than leaving decisions to powerful states or tech corporations. Immediate priorities would focus on groups currently excluded or exploited (e.g., those harmed by algorithmic bias, surveillance, or lack of connectivity). Long-term, the goal would be a shared democratic digital sphere where everyone has equal voice, fair access, and protection of digital rights, ensuring meaningful participation for all.
+Digital disputes—cyberattacks, data theft, election interference, platform harms—must be resolved through legal and institutional mechanisms rather than digital retaliation or cyberwarfare. International digital courts and coordinated sanctions replace unilateral responses. Coercive action is legitimate only in extreme cases where digital tools are used to systematically destroy democratic rights.
 
-#### Feature 6 applied to climate change
-
-Applied to climate change, this feature would require that the world’s resource use—especially fossil fuels, land, and critical minerals—be organized in a way that supports global democratic equality. High-emission production methods that harm vulnerable populations would be considered violations of social justice because they undermine those groups’ ability to participate in public life. Climate finance, fair distribution of mitigation burdens, just transition policies, and equitable access to green technologies become democratic requirements, not optional acts of charity. The central idea: the global economy must not produce climate harms that silence or marginalize people politically.
-
-#### Feature 6 applied to digital governance
-
-In digital governance, this feature would mean that systems of data production, digital infrastructure, AI development, and platform economics must operate in ways that empower democratic participation rather than concentrate power in a few hands. Practices like exploitative data extraction, opaque algorithms, monopolistic platform dominance, or digital exclusion would be unacceptable because they obstruct equal political voice. Instead, access to digital infrastructure, fair data governance, transparent algorithms, and equitable control over digital resources (such as data and compute) would be treated as matters of global social justice, necessary for meaningful participation in a digital democracy.
-
-#### Feature 7 applied to climate change
-
-Applied to climate change, this feature would emphasize non-coercive global conflict resolution—mediation, arbitration, climate courts, and graduated sanctions—to settle disputes over emissions, resources, or climate responsibilities. Force would almost never be relevant, because climate disputes are not typically violent. But, theoretically, if a regime engaged in destructive environmental actions that massively endangered human life and democratic rights (for example, intentionally causing ecological collapse or weaponizing environmental destruction), cosmopolitan democracy would allow collective intervention only after exhaustive peaceful measures. In practice, this would translate mostly into strong legal pressure, sanctions, and multilateral accountability rather than military force.
-
-#### Feature 7 applied to digital governance
-
-
-Applied to digital governance, this feature would prioritize peaceful, rules-based mechanisms to handle conflicts over cyberattacks, data theft, misinformation campaigns, or digital rights violations. Disputes would be settled through international digital courts, mediation panels, and coordinated sanctions, rather than unilateral retaliation or cyberwarfare. Collective force would only be considered in the extreme case where a regime or actor uses digital tools to systematically destroy democratic structures—for example, disabling critical infrastructure, mass-surveilling populations, or manipulating elections on a massive scale. Even then, coercive action would be allowed only as a last, collectively authorized step, ensuring that responses remain legitimate, limited, and democratically accountable.
-
-
-
-
-
-#### Feature 2 applied to climate change
-
-Applied to climate change, this principle would mean that each community and actor—governments, cities, corporations, civil groups—can pursue their own climate strategies, but they must do so within a shared global legal framework that protects the environmental rights of all. That could include universal rights to a stable climate, clean air, and sustainable development, as well as corresponding duties not to harm others through pollution or ecological destruction. In practice, a cosmopolitan democratic law of climate change would treat emitting carbon or destroying ecosystems as violations of others’ rights, enforceable across borders and through transnational courts or citizen action.
-
-#### Feature 2 applied to digital governance
-
-In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
-
-
-
-
-
-
-
-## Comparison between the different models of democracy
-
-Excellent — that’s one of the most fruitful analytical comparisons in global governance theory.
-Comparing **cosmopolitan democracy** with **confederations** and **federations** clarifies both its *institutional radicalism* and its *continuities with familiar constitutional models*.
-
-Below is a systematic comparison across the **seven key features** (condensing your eight into seven thematic clusters). For each feature I indicate:
-
-* ✅ **Resemblance / overlap**
-* ⚖️ **Partial overlap or tension**
-* ❌ **Mutually exclusive or conceptually incompatible**
-
----
-
-### **1. Power structure: overlapping networks of governance**
-
-|                         | Cosmopolitan Democracy                                                                                                                | Confederation                                                                           | Federation                                                                          |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Nature of authority** | Overlapping, multi-level, non-hierarchical networks of power; sovereignty diffused.                                                   | Loose association of sovereign states; authority remains with members.                  | Dual sovereignty: shared between federal and constituent units, legally entrenched. |
-| **Relation**            | ✅ Shares the *multi-level* character of a federation.                                                                                 | ⚖️ More overlapping and less clearly delimited than either confederation or federation. | ❌ Rejects the single constitutional center typical of a federation.                 |
-| **Summary**             | Cosmopolitan democracy is *polycentric*, not just multi-level; it dissolves clear sovereignty boundaries rather than allocating them. |                                                                                         |                                                                                     |
-
----
-
-### **2. Legal order and rights framework**
-
-|                   | Cosmopolitan Democracy                                                                                           | Confederation                                                                    | Federation                                                                       |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| **Source of law** | Universal rights binding across jurisdictions (“cosmopolitan law”).                                              | Intergovernmental treaties or compacts; no direct legal authority over citizens. | Constitution with direct effect; citizens subject to both federal and state law. |
-| **Relation**      | ✅ Resembles federal direct effect of law on individuals.                                                         | ❌ Incompatible with the weak legal authority of confederations.                  |                                                                                  |
-| **Summary**       | Cosmopolitan law is *federal-like* in reach but *cosmopolitan* in moral source (humanity, not state membership). |                                                                                  |                                                                                  |
-
----
-
-### **3. Constitutional principles and rule of law**
-
-|                   | Cosmopolitan Democracy                                                                   | Confederation                                       | Federation                                            |
-| ----------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| **Binding norms** | Universal democratic principles constrain all associations.                              | Minimal norms; members retain discretion.           | Federal constitution constrains sub-units and center. |
-| **Relation**      | ✅ Closer to federalism’s constitutional binding.                                         | ❌ Conflicts with the voluntarism of confederations. |                                                       |
-| **Summary**       | Cosmopolitan democracy implies a *global constitutionalism*, not voluntary coordination. |                                                     |                                                       |
-
----
-
-### **4. Law-making and institutional hierarchy**
-
-|                           | Cosmopolitan Democracy                                                                                                | Confederation                                                     | Federation                                    |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
-| **Legislative authority** | Multi-level, overlapping (local, regional, global).                                                                   | No independent legislature; decisions by unanimous state consent. | Federal legislature with defined competences. |
-| **Relation**              | ⚖️ Similar to federation in needing transnational legislation, but more flexible and overlapping.                     | ❌ Rejects unanimity and strict intergovernmentalism.              |                                               |
-| **Summary**               | Cosmopolitan democracy combines the *legislative directness* of a federation with the *pluralism* of a confederation. |                                                                   |                                               |
-
----
-
-### **5. Self-determination and collective priorities**
-
-|                             | Cosmopolitan Democracy                                                                                                    | Confederation                                                                            | Federation                                        |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| **Principle of membership** | Multiple, overlapping political communities; autonomy through participation.                                              | State-based self-determination only.                                                     | Shared citizenship but defined territorial demos. |
-| **Relation**                | ⚖️ Shares the federative commitment to joint self-rule, but without exclusive territorial citizenship.                    | ❌ Incompatible with the state-centric membership of both confederations and federations. |                                                   |
-| **Summary**                 | Cosmopolitan democracy replaces *territorial self-determination* with *relational self-determination* across communities. |                                                                                          |                                                   |
-
----
-
-### **6. Social justice and economic order**
-
-|                              | Cosmopolitan Democracy                                                     | Confederation                                                 | Federation                                  |
-| ---------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------- |
-| **Redistribution principle** | Global distributive justice; equality across borders.                      | Minimal or no redistribution; fiscal independence of members. | Federal fiscal transfers within the polity. |
-| **Relation**                 | ✅ Resembles federation’s redistributive mechanisms, but globally extended. | ❌ Incompatible with confederate autonomy in fiscal matters.   |                                             |
-| **Summary**                  | Normatively *federal* in solidarity, but *global* in scope.                |                                                               |                                             |
-
----
-
-### **7. Security and coercion**
-
-|                  | Cosmopolitan Democracy                                                                                       | Confederation                                                  | Federation                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- | ----------------------------------------------- |
-| **Use of force** | Collective and last-resort defense of democratic law (non-coercive default).                                 | Each state retains monopoly of force; weak collective defense. | Centralized armed forces under federal command. |
-| **Relation**     | ⚖️ Shares the *collective security* idea with federations but insists on voluntary, law-based justification. | ❌ Conflicts with confederate autonomy in military matters.     |                                                 |
-| **Summary**      | A *normatively pacific federation*: authority to use force exists, but under global legal–moral constraint.  |                                                                |                                                 |
-
----
-
-### **8. Citizenship (Held’s Feature 8)**
-
-|                      | Cosmopolitan Democracy                                                                           | Confederation                                                 | Federation                          |
-| -------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ----------------------------------- |
-| **Membership model** | Multiple, nested citizenships at all levels.                                                     | No supranational citizenship; citizens belong to states only. | Dual citizenship (state + federal). |
-| **Relation**         | ✅ Resembles federal dual citizenship.                                                            | ❌ Contradicts confederal individual-level non-membership.     |                                     |
-| **Summary**          | Cosmopolitan democracy extends federal dual citizenship into *plural transnational citizenship*. |                                                               |                                     |
-
----
-
-### **Overall synthesis**
-
-| Dimension                           | Closer to                     | Why                                                             |
-| ----------------------------------- | ----------------------------- | --------------------------------------------------------------- |
-| Legal reach, constitutional binding | **Federation**                | Both apply law directly to individuals.                         |
-| Political pluralism, flexibility    | **Confederation**             | Both preserve autonomy of constituent units.                    |
-| Sovereignty conception              | **Neither**                   | Cosmopolitan democracy dissolves sovereignty as a single locus. |
-| Citizenship and rights              | **Federation**                | Individuals hold rights beyond state mediation.                 |
-| Economic and social justice         | **Federation (extended)**     | Redistribution mechanisms at higher level.                      |
-| Security                            | **Intermediate**              | Collective authority, but non-coercive norm.                    |
-| Foundational principle              | **Unique to cosmopolitanism** | Rooted in humanity and universal autonomy, not a bounded demos. |
-
----
-
-### **In short**
+## Conclusion
 
 * **Cosmopolitan democracy = normatively federal, structurally confederal, but ontologically post-sovereign.**
 * It borrows from **federalism** the *constitutionalism*, *rights framework*, and *direct citizenship*.
 * It borrows from **confederalism** the *plurality*, *voluntary coordination*, and *respect for local autonomy*.
 * But it ultimately **transcends both** by grounding authority in *universal personhood* rather than *member units*.
 
----
-
-Would you like me to make a **visual comparison matrix or diagram** (e.g., triangular chart placing each system by degree of hierarchy vs autonomy vs universality)? It helps a lot when you present this in a policy or academic setting.
-
-
-
-
-
-
-
-
-
-
-Here, I follow the paper / notes by Daniele Archibugi on cosmopolitan democracy [here](https://www.danielearchibugi.org/downloads/papers/2017/11/Principles.pdf).
-
-
-First thing is that he analyses different levels of democracy:
-
-- **Democracy inside nations**: When he was writing it he had the optimistic point of view that democracy inside a nation is a universal aspiration. In 2026 we might be hesitant to see this a universal goal by governments and citizens in all countries.
-
-- **Democracy among states**: He describes it as respect for reciprocal sovereignty and shared norms. He mentions also the criterion of "one state one vote" as a possible democratic principle. 
-
-- **Global democracy**: This is for global problems like climate change, migration, pandemics etc. that require global governance models. This one is especially complex as global problems easily stand in conflict with self-interests of nations. An example given there is nuclear wast. "It may, for example, be in the interest of the French public to obtain cheap nuclear energy if they manage to dispose of radioactive waste in a Pacific isle under their control, but this will obviously
-be against the interests of the public living there."
-
-
-## Confederal model
-
-Archibugi defines the confederation as "an association of sovereign states which, through an appropriate treaty, reach an agreement on given issues." Big examples are NATO or the UN.
-
-### Confederations and democracy inside nations
-
-Confederation rely on the principle of mutual recognition and respect for sovereignty. This means that they do not envisage a channel of direct intervention to promote democracy within nations. Not even in blatant cases of violation of fundamental human rights - genocide, for example - is the confederation entitled to intervene in a state's domestic affairs. What happens within the nation remains its own business.
-
-### Confederations and democracy among states
-
-Democracy amongst nations might be very possible within confederations. However, he points out that there is very little connection to the democracy inside nations. You might have completely authoritarian regimes that are part of democratic confederations. The only requirement is that the representatives of the states are entitled to sign treaties and agreements. So you might have a democratic confederation of states that is even used to enforce tyranny within the individual nations. A historically cited examples which went into this direction is the Congress of Vienna in 1815.
-
-### Confederations and global democracy
-
-Within the confederal model global democracy is quite limited. Quite importantly the governments are mostly obliged to represent the interest of their individual states. This means that global problems that are not in the interest of the individual states are quite hard to solve. We all know how the discussions around global warming and environmental issues are currently going...
-
-## The federal model
-
-The federal model is described a substantially more rigid set of institutional rules that applies to each member state. Cited examples are Switzerland, Germany or the United States. All of them started out as confederations and increasingly centralized power to the point that they had a joint constitution with a federal government. Quite interestingly, this experience leads to a common assumption that that world peace and democracy can only be achieved through federalism and some kind of a "world government".
-
-### Federalism and democracy inside nations
-
-Here, Archibugi ist really skeptical if a federal model can enforce democracy within the nations. The main argument is that the world culturally just too diverse to find sufficient common ground for one joint constitution.
-
-### Federalism and democracy among states
-
-Here, the situation is again quite strange. Because once you have a federal model, the states have been disolved and have become part of the federal state. So there are constant struggles of competence given to the central or the federal governments. So the system of voting that existed in the confederal model is not really applicable anymore.
-
-### Federalism and global democracy
-
-Interestingly, a central federal power would have the authority and competence to address global problems on the basis of democratic principles. But quite interestingly it would have a fairly homogenous view on the world and be likely tempted to ignore local interests. It would be a very technocratic and top-down approach to global democracy. He cites the government of guardians dear to Plato (What is this ?).
-
-## Cosmopolitan model
-
-It is described as midway between confederation and federalism. Interestingly the EU is described as having elements of this. Not quite federal but certainly more than a confederation. The ambition is to have institutions that can tackle global problems and problems of massive human rights violation.
-
-In the cosmopolitan model, the idea of sovereignty typical of the confederal and federal models is also profoundly changed. States, in fact, preserve their internal sovereignty vis-a-vis other states, but their sovereignty is eroded - including legally - by the transfer of functions to intergovernmental and non-governmental bodies. External sovereignty may also be eroded or, paraphrasing the young Kelsen, may become less 'dogmatic'
-
-
-## Cosmopolitan democracy inside nations
-
-The idea of the cosmopolitan model is that the supranational institutions have the competence to intervene in the domestic affairs of states in order to promote democracy and protect human rights.
-
-
-Since one state's intervention in the domestic affairs of another has no legal foundation and may be instrumental, the cosmopolitan model entrusts civil society as opposed to national governments with the task of 'interfering' in the domestic affairs of another state.
-
-## Cosmopolitan democracy among states
-
-Basically it all runs through multilateralism.
-
-## Cosmopolitan democracy and global democracy
-
-Global issues are here transferred to global institutions, which are directly elected.
-
-# The twelve hypothoses by David Held
-
-
-
-the federal model at the example of Germany and the EU. This will help us later to understand the cosmopolitan democracy model better.
-
-## Federal model - Germany
-
-Germany is a federal republic consisting of 16 states (Bundesländer), each with its own constitution and government. The Basic Law (Grundgesetz) serves as the constitution for the entire country, establishing a division of powers between the federal government and the states. This model allows for a degree of autonomy and self-determination for each state while maintaining a unified national framework.
-
-
-## Federal model - European Union
-
-The European Union (EU) presents a unique example of a federal-like structure on a supranational level. Member states retain their sovereignty but delegate certain powers to EU institutions, creating a complex web of governance that transcends national borders. This interplay between national and supranational authority is a key feature of the federal model.

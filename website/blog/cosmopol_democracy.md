@@ -54,27 +54,71 @@ In a confederal system, states remain fully sovereign and cooperate voluntarily 
 
 A confederal approach to digital governance would involve states negotiating common principles—for example, around data privacy, cybersecurity, or AI ethics—through voluntary international agreements. Implementation and enforcement would remain at the national level, with each government deciding how to apply shared guidelines. Existing frameworks such as the OECD AI Principles, Council of Europe’s Convention 108, or G7 digital charters embody this model: cooperation without a central regulator, relying on alignment and mutual trust rather than binding federal law. Like climate governance, today’s digital governance is largely confederal—fragmented, consensus-based, and state-led.
 
-## Key features of cosmopolitan democracy
+## The problem - The existence of overlapping networks of governance
 
 We are now ready to dive into the cosmopolitan democracy model. We will follow the initial definitions from the book by David Held. The following is an extract from the initial book, where he describes the features of of cosmopolitan democracy in table 12.1. For each of the points I will add some notes afterwards. The features are
 
-### Feature 1 - Overlapping networks of governance
-
-Definition according to the book:
+We can start the discussion with the following essential observation, according to the book (feature 1 in the book):
 
 > The global order consists of multiple and overlapping networks of power involving the body, welfare, culture, civic associations, the economy, coercive relations and organized violence, and regulatory and legal relations. The case for cosmopolitan democracy arises from these diverse networks - the different power systems which constitute the interconnections of different peoples and nations.
 
-Here, cosmopolitan democracy basically says that a lot of politcal topics cut across states and their internal governance. We rather have different networks of issues and these networks should have a suitable governance structure.
+Here, cosmopolitan democracy basically says that a lot of politcal topics cut across states and their internal governance. We rather have different networks of issues and these networks should have a suitable governance structure. 
 
 On this topic cosmopolitan democracy is a bit similar to a federation as it recognizes multiple networks of power. However, it goes further as it gives up on the hierachy that is so central to federal states. Compoared to confederations it is more coordinated and do not think that states have complete control of their internal dealings. Pushed to the extreme this feature does not really require the idea of states anymore. However, it remains unclear how the networks would coordinate, how it is decided who is within the networks etc.
 
-#### Feature 1 applied to climate change
+### Feature 1 applied to climate change
 
 Under cosmopolitan democracy, climate governance would be organized through interconnected layers of authority involving global, regional, national, and local actors. A global institution—perhaps a reformed UN Climate Council—could set binding planetary limits on emissions and recognize climate-related human rights. Regional bodies like the EU, AU, or ASEAN would coordinate implementation, while cities, NGOs, and corporations would take on direct obligations and reporting duties. Citizens could participate in transnational climate assemblies and bring cases before international courts if governments or firms violated environmental norms. Power would thus be diffused but coordinated, ensuring accountability and participation at every level, matching the truly global nature of the climate system.
 
-#### Feature 1 applied to digital governance
+### Feature 1 applied to digital governance
 
 In digital governance, cosmopolitan democracy would create a web of overlapping institutions and civic actors to manage global data flows, AI ethics, and online rights. A global “Digital Rights Charter” might articulate universal standards for privacy, transparency, and algorithmic fairness, enforced by regional data authorities and international courts. Platforms and tech companies would be subject to cosmopolitan law, accountable not just to states but to global citizens through participatory mechanisms such as digital assemblies or multi-stakeholder councils. Local communities could adapt global norms to cultural contexts, while transnational NGOs monitor compliance. The outcome would be a polycentric digital polity, where individuals, states, and non-state actors share both power and responsibility for governing the digital commons.
+
+## The Institutional Design: How are these principles implemented?
+
+Once, you follow the argument that we need a flexible and overlapping governance structure, the next question is how to implement this in practice. The book actually proposes to key principles that should guide the institutional design of cosmopolitan democracy.
+
+### Institutional Principle 1 - Multi-level democratic law-making
+
+Definition according to the book (feature 4 of CD in the book):
+
+> Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
+
+This feature means that laws are not made and enforced only by national governments. Instead, rules and courts exist at many levels at the same time—local, national, regional, and global—and they work together. Different layers of authority can create and enforce laws, and higher-level courts can step in when lower levels violate rights or abuse power. In simple terms: power is shared across many levels, and multiple courts ensure everyone plays by the rules.
+
+QUESTION: IS THIS A DIRECT CONSEQUENCE OF FEATURE 1 OR IS THIS DESCRIBBING HOW FEATURE 2 AND 3 ARE IMPLEMENTED ?
+
+#### Feature 4 applied to climate change
+
+In climate governance, this feature would create a multi-layered legal system where climate rules are made and enforced simultaneously by cities, nations, regional alliances (e.g., EU), and global institutions. Local actors could set strong emissions standards, states could regulate industries, regional bodies could harmonize policies, and global courts could hold violators accountable—especially when pollution harms other countries or future generations. Enforcement would no longer depend on national willingness; instead, violations could be addressed by regional or international courts empowered to check abuses or inaction.
+
+#### Feature 4 applied to digital governance
+
+Applied to digital governance, this feature would build a stacked legal architecture where digital rules and oversight mechanisms operate across different levels. Local and national authorities could regulate infrastructure and education, regional bodies could set common cybersecurity or AI standards, and global courts could intervene when transnational companies or states violate digital rights. Tech companies would not be able to “jurisdiction shop” for the weakest laws; instead, strong multi-level courts would ensure that user rights and democratic norms are protected consistently across borders.
+
+
+
+
+### Institutional Principle 2 - Nested citizenship
+
+The definition from the book:
+
+> People can enjoy membership in the diverse communities which significantly affect them and, accordingly, access to a variety of form: of political participation. Citizenship would be extended, in principle to membership in all cross-cutting political communities, from the local to the global.
+
+This feature means that people are not limited to belonging politically to just one community (usually the nation-state). Instead, they can be citizens in many overlapping communities at once—their city, their region, their country, and also transnational or global bodies that affect their lives. Each level gives them political rights and ways to participate. In simple terms: your political voice follows the real-life sources of power that shape your world, no matter where they sit geographically.
+
+In a federation, people typically have dual citizenship (state + federal), but political participation is still bound to the territorial units of the federation; cross-border or global political membership is not recognized. In a confederation, citizenship remains almost entirely national, and political participation at the confederal level is usually indirect (through governments, not individuals). Cosmopolitan democracy goes further by giving individuals direct political membership in multiple overlapping communities, including global ones. This creates a model where political belonging follows functional interdependence—not just territorial borders—something federations and confederations do only partially or not at all.
+
+#### Feature 8 applied to climate change
+
+For climate governance, this feature would allow individuals to be direct members of climate-relevant political bodies at multiple levels: local climate assemblies, national climate institutions, regional climate authorities, and global climate bodies. People affected by decisions—such as coastal communities, youth, or groups harmed by emissions elsewhere—would have direct channels to participate. Instead of climate policy being negotiated only by states, individuals would gain multi-level democratic voice in shaping mitigation plans, adaptation strategies, and resource allocations. This acknowledges that climate change crosses borders, so political membership must do the same.
+
+#### Feature 8 applied to digital governance
+
+Applied to digital governance, this feature would grant individuals political membership in the various digital communities and institutions that shape their online lives. Beyond national digital regulators, people could participate directly in regional digital rights bodies, global AI oversight institutions, platform governance councils, or transnational data authorities. Users would not be passive subjects of platform rules or national digital laws; instead, they would hold multi-level citizenship in the digital sphere, with rights to participate wherever crucial decisions about algorithms, data, or online spaces are made. This ensures that digital communities reflect the democratic voices of those they affect, regardless of borders.
+
+
+## The Normative Foundation: What principles should govern the global order?
 
 ### Feature 2 - Cosmopolitan law
 
@@ -110,25 +154,6 @@ Applied to climate change, this feature would establish binding global standards
 #### Feature 3 applied to digital governance
 
 In digital governance, this principle would mean that all digital actors—states, tech companies, civil societies, and users—have autonomy in shaping digital life, but within a global framework of digital rights and duties. Individuals everywhere would have enforceable rights to privacy, transparency, data ownership, and free expression, while organizations would bear obligations to respect those rights, regardless of where they operate. Cosmopolitan democratic law would thus guarantee that the digital sphere is governed not just by national laws or corporate policies, but by a universal legal standard protecting human autonomy and participation in the digital world.
-
-
-### Feature 4 - Multi-level democratic law-making
-
-Definition according to the book:
-
-> Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
-
-This feature means that laws are not made and enforced only by national governments. Instead, rules and courts exist at many levels at the same time—local, national, regional, and global—and they work together. Different layers of authority can create and enforce laws, and higher-level courts can step in when lower levels violate rights or abuse power. In simple terms: power is shared across many levels, and multiple courts ensure everyone plays by the rules.
-
-QUESTION: IS THIS A DIRECT CONSEQUENCE OF FEATURE 1 OR IS THIS DESCRIBBING HOW FEATURE 2 AND 3 ARE IMPLEMENTED ?
-
-#### Feature 4 applied to climate change
-
-In climate governance, this feature would create a multi-layered legal system where climate rules are made and enforced simultaneously by cities, nations, regional alliances (e.g., EU), and global institutions. Local actors could set strong emissions standards, states could regulate industries, regional bodies could harmonize policies, and global courts could hold violators accountable—especially when pollution harms other countries or future generations. Enforcement would no longer depend on national willingness; instead, violations could be addressed by regional or international courts empowered to check abuses or inaction.
-
-#### Feature 4 applied to digital governance
-
-Applied to digital governance, this feature would build a stacked legal architecture where digital rules and oversight mechanisms operate across different levels. Local and national authorities could regulate infrastructure and education, regional bodies could set common cybersecurity or AI standards, and global courts could intervene when transnational companies or states violate digital rights. Tech companies would not be able to “jurisdiction shop” for the weakest laws; instead, strong multi-level courts would ensure that user rights and democratic norms are protected consistently across borders.
 
 ### Feature 5 - Global civic commitment
 
@@ -186,23 +211,7 @@ Applied to climate change, this feature would emphasize non-coercive global conf
 
 Applied to digital governance, this feature would prioritize peaceful, rules-based mechanisms to handle conflicts over cyberattacks, data theft, misinformation campaigns, or digital rights violations. Disputes would be settled through international digital courts, mediation panels, and coordinated sanctions, rather than unilateral retaliation or cyberwarfare. Collective force would only be considered in the extreme case where a regime or actor uses digital tools to systematically destroy democratic structures—for example, disabling critical infrastructure, mass-surveilling populations, or manipulating elections on a massive scale. Even then, coercive action would be allowed only as a last, collectively authorized step, ensuring that responses remain legitimate, limited, and democratically accountable.
 
-### Feature 8 - Nested citizenship
 
-The definition from the book:
-
-> People can enjoy membership in the diverse communities which significantly affect them and, accordingly, access to a variety of form: of political participation. Citizenship would be extended, in principle to membership in all cross-cutting political communities, from the local to the global.
-
-This feature means that people are not limited to belonging politically to just one community (usually the nation-state). Instead, they can be citizens in many overlapping communities at once—their city, their region, their country, and also transnational or global bodies that affect their lives. Each level gives them political rights and ways to participate. In simple terms: your political voice follows the real-life sources of power that shape your world, no matter where they sit geographically.
-
-In a federation, people typically have dual citizenship (state + federal), but political participation is still bound to the territorial units of the federation; cross-border or global political membership is not recognized. In a confederation, citizenship remains almost entirely national, and political participation at the confederal level is usually indirect (through governments, not individuals). Cosmopolitan democracy goes further by giving individuals direct political membership in multiple overlapping communities, including global ones. This creates a model where political belonging follows functional interdependence—not just territorial borders—something federations and confederations do only partially or not at all.
-
-#### Feature 8 applied to climate change
-
-For climate governance, this feature would allow individuals to be direct members of climate-relevant political bodies at multiple levels: local climate assemblies, national climate institutions, regional climate authorities, and global climate bodies. People affected by decisions—such as coastal communities, youth, or groups harmed by emissions elsewhere—would have direct channels to participate. Instead of climate policy being negotiated only by states, individuals would gain multi-level democratic voice in shaping mitigation plans, adaptation strategies, and resource allocations. This acknowledges that climate change crosses borders, so political membership must do the same.
-
-#### Feature 8 applied to digital governance
-
-Applied to digital governance, this feature would grant individuals political membership in the various digital communities and institutions that shape their online lives. Beyond national digital regulators, people could participate directly in regional digital rights bodies, global AI oversight institutions, platform governance councils, or transnational data authorities. Users would not be passive subjects of platform rules or national digital laws; instead, they would hold multi-level citizenship in the digital sphere, with rights to participate wherever crucial decisions about algorithms, data, or online spaces are made. This ensures that digital communities reflect the democratic voices of those they affect, regardless of borders.
 
 
 ## Comparison between the different models of democracy

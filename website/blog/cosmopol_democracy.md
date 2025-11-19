@@ -153,103 +153,61 @@ Nested citizenship would give Adam—and the millions his systems affect—democ
 
 Sofia sees how this differs from the EU's federal model: instead of trying to create a single territorial authority over digital systems that inherently transcend borders, cosmopolitan democracy creates democratic membership in the overlapping functional networks where digital power actually operates. The governance structure matches the technology's actual architecture.
 
-## The Normative Foundation: What principles should govern the global order?
+## The Normative Foundation: Rights, not just rules
 
-What is quite important to note is that the book and the theory is actually quite focused on the normative foundation of cosmopolitan democracy. There it is much more detailled in my view than the institutional design. The fact that the design principles are so explicitly spelled out make cosmopolitan democracy quite similiar to federations and dramatically different to confederations, which have basically no normative foundation.
+"The institutional design tells us *how* to govern," Sofia observes. "But what 
+principles should guide these institutions?"
 
-The normative foundations are as follows
+Held's framework rests on five normative principles that distinguish cosmopolitan 
+democracy from both the voluntarism of confederations and the territorial limits 
+of federations.
 
-### Normative Principle 1 - Cosmopolitan law
+### Core Rights Framework
 
-Definition according to the book (feature 2 of CD in the book):
+**Cosmopolitan law** establishes universal rights—health, social welfare, culture, 
+civic participation, economy, peace, politics—that apply everywhere, regardless of 
+nationality. For Amara, this means climate stability becomes a legally enforceable 
+right, not a diplomatic aspiration. For Adam, digital rights—privacy, data protection, 
+algorithmic transparency—gain enforceable status across all jurisdictions.
 
-> All groups and associations are assumed to have a capacity for self-determination which can be specified by a commitment to the principle of autonomy and specific clusters of rights and obligations. These clusters cut across each network of power and are subsumed under the following categories: health, social, cultural, civic, economic, pacific and political. Together, they form the basis of an empowering legal order - a cosmopolitan democratic law.
+**Universal constitutional principles** create red lines no actor may cross: no mass 
+surveillance, no environmental destruction that violates others' survival, no 
+concentration of power that undermines democratic participation. These are 
+constitutional-level constraints, not voluntary guidelines.
 
-This feature means that every community, group, or institution—from states to companies to local associations—has the right to make its own choices (self-determination), but only within a framework of shared global rights and responsibilities. These rights—covering health, social welfare, culture, civic participation, the economy, peace, and politics—apply to everyone, everywhere, regardless of nationality. Together, they make up a kind of cosmopolitan constitution: a legal order that empowers all people and groups to act freely, as long as they respect the autonomy and dignity of others across borders.
+### Democratic Imperatives
 
+**Global civic commitment** requires actively supporting those excluded from democratic 
+participation. Climate finance for vulnerable populations isn't charity—it's a 
+democratic obligation ensuring equal political agency. Digital inclusion for those 
+harmed by algorithmic bias follows the same logic.
 
-### Normative Principle 2 - Universal constitutional principles
+**Cosmopolitan social justice** demands that economic activity—whether carbon emissions 
+or data extraction—support rather than undermine democratic equality. High emitters 
+bear greater climate responsibilities; digital monopolies that concentrate power 
+violate this principle directly.
 
-Definition according to the book (feature 3 of CD in the book):
+**Non-coercive relations** govern dispute resolution through courts and mediation, with 
+collective force permitted only as last resort to defend democratic rights.
 
-> Legal principles are adopted which delimit the form and scope of individual and collective action within the organizations and associations of state, economy and civil society. Certain standards are specified for the treatment of all, which no political regime or association can legitimately violate.
+Together, these principles create normative foundations that confederations lack and 
+federations apply only within borders—cosmopolitan democracy extends them globally.
 
-This feature means that everyone—governments, companies, organizations, and citizens—must follow a set of basic rules that protect people’s rights and dignity. These shared rules limit what any actor is allowed to do, no matter how powerful they are. No government or organization can cross certain red lines, such as harming people, violating rights, or acting in ways that undermine democratic participation. Think of it as a global minimum standard for fair treatment that nobody is allowed to violate.
+### What this means for Amara's climate challenge
 
-### Normative Principle 3 - Global civic commitment
+For Amara, these principles transform her democratic powerlessness into actionable rights. Climate stability becomes legally enforceable—not diplomatic aspiration. Excessive emissions from Shanghai, Houston, or Frankfurt violate her autonomy and trigger legal accountability. Constitutional minimums establish that climate harm isn't a policy preference but a rights violation.
 
-Definition according to the book (feature 5 of CD in the book):
+The civic commitment principle demands urgent support for vulnerable populations: climate finance, adaptation measures, guaranteed participation in decision-making. Not charity—democratic obligation. High emitters bear greater responsibilities; the Maldives receives protections tied to equal political agency.
 
-> The defence of self-determination, the creation of a common structure of political action and the preservation of the democratic good are the overall collective priorities; the commitment to democratic autonomy creates both an agenda of long-term change and a programme of urgent priorities, focused on transforming the conditions of those whose circumstances fall radically short of equal membership in the public realm.
+Disputes go to climate courts and mediation, not power politics. Amara gains standing in institutions governing the emissions drowning her homeland.
 
-This feature means that the whole political system is built around three shared goals: protecting everyone’s ability to shape their own lives (self-determination), enabling people and communities to act together across borders, and strengthening democracy everywhere. It also means that the system must actively help those who are treated unfairly or excluded from public life. In short: everyone should have an equal voice, shared tools for collective action, and support in overcoming barriers to real participation.
+### What this means for Adam's digital governance problem
 
-In a federation, shared political action is strong, but its priority is usually unity and constitutional order, not global democratic equality; self-determination is constrained by federal sovereignty. In a confederation, member states keep more autonomy but shared action is weak and mainly voluntary, so protecting democratic equality across all members is not guaranteed and often inconsistent. By contrast, cosmopolitan democracy puts equal self-determination and transnational democratic participation at the center, explicitly requiring joint action to reduce inequalities between communities—something neither federations nor confederations systematically pursue across borders.
+For Adam, cosmopolitan law makes digital rights—privacy, data protection, algorithmic transparency—enforceable across all jurisdictions where his AI operates. No more regulatory arbitrage. Constitutional principles create binding limits: no mass surveillance, no opaque manipulation, no discrimination encoded in systems.
 
-### Normative Principle 4 - Cosmopolitan social justice
+The civic commitment requires including those currently excluded: users harmed by algorithmic bias, populations lacking connectivity, communities subject to unilateral corporate control. Digital monopolies that concentrate power violate social justice principles directly—data and compute infrastructure must be governed to empower, not marginalize.
 
-Definition according to the book (feature 6 of CD in the book):
-
-> Determinate principles of social justice follow: the modus operandi of the production, distribution and the exploitation of resources must be conducive to, and compatible with, the democratic process and a common structure of political action.
-
-This feature means that the way resources are produced, shared, and used must support democracy rather than undermine it. Economic activity—how wealth is created, how benefits and burdens are distributed, and how natural or digital resources are exploited—must be organized so that everyone can participate equally in political life. If certain economic practices concentrate power, create extreme inequality, or block people from democratic participation, they are not acceptable. In short: the economy must work in a way that strengthens democracy, not weakens it.
-
-In a federation, social justice is typically pursued within the borders of the federal state, with redistribution and regulation tied to national citizenship. However, federations seldom apply social justice principles across borders or beyond their own territory. In a confederation, economic coordination is looser and redistribution is minimal or absent, since member states guard their autonomy; ensuring shared social justice across all members is usually not an objective. Cosmopolitan democracy differs by establishing transnational principles of social justice that apply to all people, ensuring that economic practices anywhere do not undermine democratic equality globally. It links resource governance directly to democratic empowerment across borders—something neither federations nor confederations fully do.
-
-### Normative Principle 5 - Non-coercive global order
-
-Definition according to the book (feature 7 of CD in the book):
-
-> The principle of non-coercive relations governs the settlement of disputes, though the use of force must remain a collective option of last resort in the face of clear attacks to eradicate cosmopolitan democratic law. Cosmopolitan democracy might justify the deployment of force, after all other forms of negotiation and sanction have been exhausted, in the context of a threat to international democracy and a denial of democratic rights and obligations by tyrannical regimes, or by circumstances which spiral beyond the control of particular peoples and agents (such as the disintegration of a state).
-
-This feature means that conflicts should be solved peacefully, through dialogue, negotiation, and legal procedures—not through threats or violence. However, if a group or regime tries to destroy basic democratic rights or harm people in a serious way, the international community may use collective force as a last resort to stop the abuse. It’s similar to how a democratic state uses policing only after all peaceful options fail: force is allowed, but only to protect democracy and human rights, and only when everything else has been tried first.
-
-In a federation, the central government typically has the authority to use force internally (e.g., federal police or military) to uphold the constitution, but this coercive power belongs to the federal level, not to a voluntary collective. In a confederation, member states retain almost all control over force; collective coercion is rare and usually requires unanimous consent, making enforcement weak. Cosmopolitan democracy differs by establishing collective, transnational authority over the legitimate use of force, tightly limited to defending democratic rights across borders. It rejects both unilateral interventions and the impotence typical of confederations, instead creating a legally constrained and democratically accountable mechanism for force as a truly last resort.
-
-
-### Normative principles applied to climate change
-
-Cosmopolitan Law → Climate
-
-Cosmopolitan law would treat climate stability as a universal right and excessive emissions as violations of others’ autonomy and well-being. States, corporations, and communities would hold cross-border duties not to cause climate harm. Emissions, deforestation, and ecological degradation become legally actionable because they infringe shared rights in health, environmental safety, and intergenerational security.
-
-Universal Constitutional Principles → Climate
-
-Universal constitutional principles would establish global minimum environmental standards that no actor may violate—such as limits on pollution, protection of vulnerable populations, and obligations toward future generations. Climate harm becomes a breach of constitutional-level norms, not merely a policy problem.
-
-Global Civic Commitment → Climate
-
-Global civic commitment prioritizes collective action to secure a stable climate as a precondition for democratic autonomy. Because climate impacts silence vulnerable groups and distort equality, the principle demands urgent support for those most affected—through climate finance, adaptation measures, and guaranteed participation of marginalized communities in global decision-making.
-
-Cosmopolitan Social Justice → Climate
-
-Cosmopolitan social justice requires that the distribution of climate burdens and resources support democratic equality. High emitters bear greater responsibilities; vulnerable communities receive greater protections. Just transition, equitable access to clean technology, and fair resource use are not charity—they are democratic obligations to preserve equal political agency.
-
-Non-Coercive Global Order → Climate
-
-In climate governance, disputes over responsibility, compliance, or resource use should be resolved through peaceful, legal, and institutional means: mediation, arbitration, climate courts, and graduated sanctions. Force is almost never relevant, but in an extreme case—if a regime weaponized environmental destruction to undermine democratic rights—collective action could be authorized only as a last, legally constrained resort.
-
-### Normative principles applied to digital governance
-
-Cosmopolitan Law → Digital
-
-Cosmopolitan law would treat digital rights—privacy, data protection, transparency, freedom from algorithmic bias, and access to digital infrastructure—as universal and enforceable across borders. Companies and states would have legally binding obligations not to violate these rights, regardless of jurisdiction.
-
-Universal Constitutional Principles → Digital
-
-Universal constitutional principles would create binding limits on how digital actors may treat individuals: no mass surveillance, no opaque algorithmic manipulation, no discrimination encoded in digital systems. Platform governance and state digital policies must respect constitutional-level digital rights.
-
-Global Civic Commitment → Digital
-
-Global civic commitment requires empowering individuals and communities to participate in shaping global digital rules. It prioritizes efforts to include those currently excluded—those harmed by algorithmic bias, lacking connectivity, or subject to unilateral corporate control. The long-term aim is a democratic digital public sphere where people collectively shape the technologies that govern them.
-
-Cosmopolitan Social Justice → Digital
-
-Cosmopolitan social justice demands that the digital economy be structured to support equal democratic participation. Concentration of digital power, exploitative data extraction, opaque AI, and digital monopolies undermine political equality and therefore violate this principle. Data, compute, and digital infrastructure must be governed in ways that empower—not marginalize—users.
-
-Non-Coercive Global Order → Digital
-
-Digital disputes—cyberattacks, data theft, election interference, platform harms—must be resolved through legal and institutional mechanisms rather than digital retaliation or cyberwarfare. International digital courts and coordinated sanctions replace unilateral responses. Coercive action is legitimate only in extreme cases where digital tools are used to systematically destroy democratic rights.
+Digital disputes—between platforms, regulators, users—go to international courts and coordinated mechanisms, not cyberwarfare or unilateral retaliation. Adam and the millions his systems affect gain democratic standing in the governance networks that currently treat them as passive subjects.
 
 ## Conclusion
 

@@ -29,89 +29,64 @@ sighs. "Which means we need a miracle."
 
 Three people. Three continents. One problem: **They have the deeply seeded feeling that democracy wasn't built for their current problems.**
 
-
-
-
-But something that I found quite interesting is the the notion of cosmopolitan democracy, which I did not know. So here we go for the moment. The theory has been built quite a bit by David Held in his book "Democracy and the Global Order" (2004) and further developed by Daniele Archibugi.
-
-The post will be structured as follows (for the moment):
-
-- We choose two key issues that require global governance models - climate change and digital governance
-- We briefly review two common governance models beyond nation-states - the federal and confederal models . This they allow us to make it easier to understand cosmopolitan democracy and where it differs from our common approaches.
-
-## Two issues at hand climate change and digital governance
-
-Before we dive into the different models, let us first clarify why we even care about democracy beyond nation-states. Two key issues that come to my mind are climate change and digital governance. Both issues are inherently global and require governance models that transcend national borders. We will use these two examples to visualize the different governance models later on.
-
-## The federal model
-
-In the [federal model](https://en.wikipedia.org/wiki/Federalism) we typically have several layers of governance with one federal government on top and several states or regions below. A famous example is the federal model at the example of Germany and the USA. Each of the layers has certain competences and rights that are typically laid out in a shared constitution and enforced by some share institutions like the parliament, the central executive and the courts. In Germany, we have clearly laid out that almost all basic education is within the competency of the regions, while the military monopole is clearly within the federal government. 
-
-The federal model is quite common within democratic states and it is perfectly normal to have a federal states where the citizens vote parliments and the different layer, e.g. for city hall, regional parliaments or the national state.
-
-### Institutuional design principles of federations
-
-Federations rest on four core institutional design principles. 
-
-- First, hierarchical division of competences establishes clear vertical authority where federal law supersedes state law in case of conflict, with constitutional enumeration preventing jurisdictional disputes. 
-- Second, territorial subsidiarity ensures decisions are made at the lowest effective territorial level, but always within nested, exclusive territorial units—each level governs its own bounded space without overlap. 
-- Third, dual legitimacy balances popular sovereignty with state representation, typically through bicameral legislatures where one chamber represents citizens directly and another represents constituent states. 
-- Fourth, constitutional unity maintains a single constitutional order with one primary citizenship, ensuring federal courts have final authority and preventing fragmentation.
-
-Together, these principles create stable multi-level governance within clearly bounded federal territory, but they limit participation to nested territorial units and maintain sharp hierarchies between levels.
-
-### Normative foundations of federalism
-
-Federal systems rest on several implicit normative principles. First, they establish universal rights within federal boundaries - constitutional guarantees that apply equally to all citizens regardless of which state or region they inhabit. The German Basic Law's protection of human dignity or the US Bill of Rights exemplify this: certain standards cannot be violated by any level of government within the federation.
-Second, federations embrace a principle of internal subsidiarity and self-determination - the idea that decisions should be made at the most appropriate level, with regions maintaining autonomy in their spheres of competence. However, this self-determination is always constrained by federal constitutional principles and the primacy of federal unity.
-Third, most modern federations incorporate commitments to internal social justice - redistribution mechanisms (like Germany's Länderfinanzausgleich) that transfer resources from wealthier to poorer regions to ensure roughly equal living conditions across the federation. This reflects a normative commitment that citizenship in the federation entitles one to certain minimum standards regardless of local economic circumstances.
-Crucially, these normative principles apply only within federal boundaries. Federations distinguish sharply between insiders (citizens) and outsiders, with no normative obligations to ensure that external actors enjoy the same rights, self-determination, or social justice. The federal government may treat non-citizens differently, engage in exploitative economic practices externally, or use force abroad under very different principles than those governing internal disputes.
-
-### A federal solution for climate change
-
-A federal solution to climate change would mean creating a central authority with binding powers over all member units — for example, a global or regional federal government empowered to set and enforce emission limits, collect a unified carbon tax, and redistribute revenues for adaptation and green investment.
-Individual states or regions could still manage local policies, but ultimate climate goals, standards, and enforcement would be decided federally, much like a national government sets environmental law for its provinces.
-
-### A federal solution for digital governance
-
-A federal solution to digital governance would establish a central digital authority—for instance, a federal “Digital Commission” or “Data Ministry”—with binding power over all member units.
-It would set uniform rules for privacy, cybersecurity, AI safety, and platform accountability, ensuring that citizens everywhere enjoy the same digital rights and protections.
-Member states or regions could still handle local implementation (e.g., education, infrastructure), but core standards and enforcement—such as data protection laws, content regulation, or antitrust actions—would be decided and applied federally.
-In essence, the internet and digital economy would be governed as a single legal space, with one overarching framework rather than a patchwork of national laws.
-
 ## The confederal model
 
-The [confederal model](https://en.wikipedia.org/wiki/Confederation) on the other hand is a political union of sovereign states united for purposes of somme common action. Famous examples of confederations are the United Nations, NATO etc. So confederations are a common way to interact between states. The key distinction is the sovereignty of the individual states. They keep their independence but they sign a treaty to act together on some common topic. 
+### What is a confederation?
 
-It is an absolutely central distinction that the confederal model has fairly little to do with democracy etc. The states that might participate in the confederation might be democratic or not. But it is very rare to see some kind of democratic instition that is associated with confederations.
+Consider Amara's situation: she cannot vote in Shanghai, Houston, or Frankfurt—yet decisions there determine whether her homeland survives. This isn't a flaw in democracy; it's a feature of how global governance is structured.
 
-Another instersting observation is that quite a number of federal states have been created from previously loosely connected confederations. So there is some common assumption or intuition that any improvement of the UN would mean that the confederation would have to become something like a federal "world state".
+Amara has been studying global climate governance, trying to understand why the system fails her homeland. In Brussels, Sofia has been writing a report on EU climate policy effectiveness. They don't know it yet, but they're analyzing opposite sides of the same problem.
 
-### Institutional design principles of confederations
+The global order is not a government. It's a [confederation](https://en.wikipedia.org/wiki/Confederation)—a loose association of sovereign states that cooperate voluntarily. The United Nations, NATO, the Paris Climate Agreement: all confederations.
 
-Confederations are built on radically different institutional principles prioritizing state sovereignty.
+In a confederation, member states keep their independence but sign treaties to act together on specific topics. The key institutional feature is that states retain full sovereignty—decisions require consensus, there are no binding enforcement mechanisms, and citizens participate only through their national governments.
 
-- First, sovereignty preservation ensures member states retain full independence through unanimous voting, explicit withdrawal rights, and treaty-based rather than constitutional arrangements.
-- Second, functional minimalism restricts confederal institutions to only what states explicitly authorize, with no implied powers or expansion of authority beyond the original treaty mandate.
-- Third, interstate coordination without hierarchy positions the confederation as a forum for negotiation between equal sovereigns rather than a higher governing authority, with secretariats providing administrative support but holding no independent power.
-- Fourth, indirect representation only ensures citizens participate solely through their national governments—there are no direct elections to confederal bodies, no confederal citizenship, and no direct enforcement against individuals. 
+Climate conferences illustrate this: 198 countries produce agreements with no binding consequences for non-compliance. Summits produce commitments, countries pursue national interests, emissions continue rising—and the Maldives continues sinking. The Paris Agreement set ambitious targets, but when countries miss them, there are no penalties beyond diplomatic pressure.
 
-These principles maintain state equality and prevent confederal institutions from threatening member sovereignty, but result in weak enforcement, minimal democratic participation, and fragmented governance incapable of addressing problems that transcend state boundaries.
+This structure creates Amara's democratic disconnect: The factories in Shanghai, American fossil fuel policies, and EU climate decisions all impact whether her homeland remains habitable—yet she can vote in none of these jurisdictions. Decisions affecting her survival are made by governments she cannot influence democratically.
 
-### Normative foundations of confederations
+### Key characteristics
 
-Unlike federations, confederations typically lack robust shared normative principles. The treaty establishing a confederation usually defines narrow functional goals (mutual defense, trade coordination, diplomatic cooperation) without establishing universal rights or justice principles that bind member states.
-Member states in a confederation retain the right to maintain radically different internal normative orders. The United Nations, for instance, includes liberal democracies, authoritarian states, and theocracies - there is no requirement that members share commitments to human rights, social justice, or democratic governance (though the UN Charter articulates aspirational principles that are weakly enforced).
-Where normative principles appear in confederal arrangements - such as the UN Universal Declaration of Human Rights or NATO's democratic governance requirements - they are either non-binding (purely aspirational) or weakly enforced (states can violate them with minimal consequences). The confederal model prioritizes sovereignty over shared principles: if a normative principle conflicts with state sovereignty, sovereignty wins.
-This creates what might be called normative minimalism: confederations function with the bare minimum shared principles necessary for coordination, avoiding deeper commitments that might constrain member autonomy. There is typically no commitment to social justice between members, no binding constraints on how states treat their own citizens, and no obligation to resolve disputes non-coercively (beyond non-binding preferences for peaceful resolution).
+Confederations share four institutional features: **sovereignty preservation** (unanimous voting, withdrawal rights), **functional minimalism** (limited to what treaties explicitly authorize), **no hierarchy** (states as equal sovereigns, not subjects of higher authority), and **indirect representation** (Amara participates only through her national government, never directly).
 
-### Confederations and climate change
+They also lack strong normative foundations. Confederate treaties define narrow goals—mutual defense, trade coordination—without establishing binding universal rights. When principles appear (like the UN Declaration of Human Rights), they're aspirational and weakly enforced. Sovereignty always trumps shared values—or survival.
 
-In a confederal system, states remain fully sovereign and cooperate voluntarily through treaties and joint commitments, without any binding supranational authority. Climate policy is coordinated through intergovernmental forums—like the UNFCCC and the Paris Agreement—where each country sets its own targets and enforcement depends on political will, peer pressure, or reputational costs. This means progress relies on consensus and voluntary compliance rather than legal obligation. In practice, this is almost exactly how global climate governance currently works: a loose confederation of states negotiating collective goals but implementing them nationally.
+The result: weak enforcement, minimal democratic participation, fragmented governance. This is why Amara watches the ocean rise while having no democratic recourse. When she presents her analysis at a climate policy conference in Geneva, Sofia is in the audience. After the panel, Sofia approaches: "I work on the federal alternative you mentioned. But I think you should know—it's not the solution you're hoping for."
 
-### Confederations and digital governance
+## The federal model—and Sofia's experience
 
-A confederal approach to digital governance would involve states negotiating common principles—for example, around data privacy, cybersecurity, or AI ethics—through voluntary international agreements. Implementation and enforcement would remain at the national level, with each government deciding how to apply shared guidelines. Existing frameworks such as the OECD AI Principles, Council of Europe’s Convention 108, or G7 digital charters embody this model: cooperation without a central regulator, relying on alignment and mutual trust rather than binding federal law. Like climate governance, today’s digital governance is largely confederal—fragmented, consensus-based, and state-led.
+### What is a federation?
+
+What Sofia knows from Brussels is that the EU represents the world's most ambitious attempt at federal governance beyond the nation-state. A [federation](https://en.wikipedia.org/wiki/Federalism) differs fundamentally from confederation: it creates binding supranational authority. Germany, the United States, and the EU all share this structure—multiple levels of government with the higher level having enforcement power.
+
+In a federation, federal law supersedes member state law. There's a shared constitution, binding courts, and citizens vote in both national and federal elections. The EU demonstrates this: European regulations become law across all member states, the European Court of Justice can overrule national courts, and citizens elect the European Parliament directly.
+
+Sofia's daily work operates within this federal structure: EU climate regulations have legal force, the Emissions Trading System binds all members, and enforcement mechanisms exist that confederations lack. Unlike climate conferences where Amara watches countries make voluntary pledges, Sofia works in a system where decisions become binding law.
+
+### Key characteristics of federations
+
+Federations rest on institutional features that solve confederation's problems: **hierarchical authority** (federal law supersedes state law), **territorial subsidiarity** (decisions at appropriate levels, but within nested territories), **dual legitimacy** (citizens vote at both levels), and **constitutional unity** (shared legal framework with binding courts).
+
+They also embody strong normative foundations. Federal constitutions establish universal rights that apply to all citizens—Germany's Basic Law, the US Bill of Rights. They create redistribution mechanisms ensuring minimum standards across regions. They distinguish sharply between insiders (citizens with full rights) and outsiders.
+
+This federal structure gives Sofia tools Amara lacks: binding regulations, enforcement mechanisms, supranational courts, and democratic participation in institutions that wield real power.
+
+### Sofia's reality: federal power and federal gridlock
+
+Yet Sofia had just closed her laptop after another failed climate negotiation when she saw Amara's conference paper. The EU has binding power, but that doesn't mean it works smoothly.
+
+Twenty-seven countries, twenty-seven veto points. Even among democracies with similar values and roughly comparable economic systems, consensus proves extraordinarily difficult. Climate policy requires balancing Polish coal interests, German industrial concerns, French nuclear preferences, and Nordic renewable ambitions—all within a single legal framework.
+
+The federal model works within relatively bounded cultural and political contexts. The EU, operating among twenty-seven relatively similar states, already faces severe difficulties achieving consensus and maintaining democratic legitimacy. Sofia sees this daily: the formal power exists, but practical politics create gridlock.
+
+### The scale problem
+
+After Sofia's presentation, Amara understands the challenge: scaling federal governance to 198 countries with fundamentally incompatible political systems presents a different magnitude of problem. The world includes liberal democracies, authoritarian states, theocracies, and hybrid regimes. Could China and the US share a constitution? Would Russia and the EU accept the same legal framework? Could India and Pakistan agree on a federal judiciary?
+
+Multiplying the EU's complexity by seven—and adding nuclear weapons and fundamental ideological conflicts—suggests the obstacles to world federalism are not merely practical but structural. The federal model works within culturally relatively homogeneous boundaries. But the world exceeds those boundaries substantially.
+
+After they share their analyses, both Amara and Sofia realize neither confederation nor federation solves the problem. Confederation leaves affected populations without democratic recourse. Federation offers binding power but cannot scale to global diversity.
+
 
 ## The problem - The existence of overlapping networks of governance
 

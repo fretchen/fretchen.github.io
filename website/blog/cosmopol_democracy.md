@@ -17,9 +17,9 @@ Amara watches the ocean from her balcony. In 50 years, this view will be
 underwater. The carbon emissions drowning her country come from Beijing, 
 Houston, and Frankfurt—places where she has no vote, no voice, no say.
 
-**Shanghai, China**
-Chen deploys his latest AI model. European regulators want to audit his code. 
-American platforms host it. Chinese authorities monitor it. He's built something 
+**Singapore**
+Adam deploys his latest AI model. European regulators want to audit his code. 
+American platforms host it. Singaporean authorities monitor it. He's built something 
 that exists everywhere and nowhere—governed by everyone and no one.
 
 **Brussels, Belgium**
@@ -57,7 +57,7 @@ The result: weak enforcement, minimal democratic participation, fragmented gover
 
 ### What is a federation?
 
-What Sofia knows from Brussels is that the EU represents the world's most ambitious attempt at federal governance beyond the nation-state. A [federation](https://en.wikipedia.org/wiki/Federalism) differs fundamentally from confederation: it creates binding supranational authority. Germany, the United States, and the EU all share this structure—multiple levels of government with the higher level having enforcement power.
+What Sofia knows from Brussels is that the EU represents the world's most ambitious attempt at federal governance beyond the nation-state. A [federation](https://en.wikipedia.org/wiki/Federalism) differs fundamentally from confederation: it creates binding supranational authority. Germany, the United States, and the EU all share this structure — multiple levels of government with the higher level having enforcement power.
 
 In a federation, federal law supersedes member state law. There's a shared constitution, binding courts, and citizens vote in both national and federal elections. The EU demonstrates this: European regulations become law across all member states, the European Court of Justice can overrule national courts, and citizens elect the European Parliament directly.
 
@@ -87,30 +87,33 @@ Multiplying the EU's complexity by seven—and adding nuclear weapons and fundam
 
 After they share their analyses, both Amara and Sofia realize neither confederation nor federation solves the problem. Confederation leaves affected populations without democratic recourse. Federation offers binding power but cannot scale to global diversity.
 
+## Cosmopolitan democracy: Overlapping networks
 
-## The problem - The existence of overlapping networks of governance
+Over coffee, Adam joins their conversation. He's been facing similar frustrations with digital governance—but from a different angle.
 
-We are now ready to dive into the cosmopolitan democracy model. We will follow the initial definitions from the book by David Held. The following is an extract from the initial book, where he describes the features of of cosmopolitan democracy in table 12.1. For each of the points I will add some notes afterwards. The features are
+"Your models assume governance happens in territorial boxes," Adam says. "But consider my work on AI models: European regulators want to audit it. American platforms host it. Singaporean authorities monitor it. Meanwhile, the open-source community that actually built the underlying framework has its own governance processes—completely separate from any government."
 
-We can start the discussion with the following essential observation, according to the book (feature 1 in the book):
+He continues: "Then there's the data. It flows across jurisdictions instantly. Some is governed by GDPR in Europe, some by different rules in California, some by Chinese data sovereignty laws, and some exists in regulatory grey zones. Multiple authorities, overlapping jurisdictions, no clear hierarchy."
 
-> The global order consists of multiple and overlapping networks of power involving the body, welfare, culture, civic associations, the economy, coercive relations and organized violence, and regulatory and legal relations. The case for cosmopolitan democracy arises from these diverse networks - the different power systems which constitute the interconnections of different peoples and nations.
+Amara recognizes the pattern: "That's exactly what I experience with climate. Emissions come from everywhere, impacts hit everywhere, and governance is fragmented across states, corporations, NGOs, cities—all with different authorities that overlap and intersect."
 
-Here, cosmopolitan democracy basically says that a lot of politcal topics cut across states and their internal governance. We rather have different networks of issues and these networks should have a suitable governance structure. 
+Sofia nods: "And in the EU, we see this even within our federal structure. Climate policy involves the Commission, member states, regional governments, cities, private companies, and civil society organizations—all with different roles and authorities that don't fit neatly into a hierarchy."
 
-On this topic cosmopolitan democracy is a bit similar to a federation as it recognizes multiple networks of power. However, it goes further as it gives up on the hierachy that is so central to federal states. Compoared to confederations it is more coordinated and do not think that states have complete control of their internal dealings. Pushed to the extreme this feature does not really require the idea of states anymore. However, it remains unclear how the networks would coordinate, how it is decided who is within the networks etc.
+They're all describing the overlapping networks of power that led David Held to work on cosmopolitan democracy (CD). It captures exactly this reality: the global order consists of multiple and overlapping networks of power involving the body, welfare, culture, civic associations, the economy, coercive relations and organized violence, and regulatory and legal relations. The case for cosmopolitan democracy arises from these diverse networks—the different power systems which constitute the interconnections of different peoples and nations.
 
-### Problem statement applied to climate change
+### Why overlapping networks matter
 
-Climate change is a beautiful example of overlapping governance networks. The drivers of emissions involve states, multinational corporations, global markets, and transnational supply chains. The impacts—droughts, heatwaves, floods—spread across borders regardless of political authority. Scientific bodies, NGOs, cities, and financial actors also shape outcomes. This dispersion of power mirrors Held’s argument: global problems are embedded in networks that intersect but do not map neatly onto sovereign states.
+This network perspective differs fundamentally from both confederation and federation. Confederations assume states are the primary actors, cooperating voluntarily. Federations assume nested territorial hierarchies with clear authority levels. But reality—as Amara, Sofia, and Adam all experience—operates through overlapping functional networks that don't respect these boundaries.
 
-### Problem statement applied to digital governance
+Climate governance involves states, but also corporations setting emissions targets, cities forming climate alliances, NGOs monitoring compliance, and scientific bodies establishing standards. Digital governance involves states, but also platform companies making content rules, standards bodies setting protocols, open-source communities building infrastructure, and users forming governance communities.
 
-Digital governance similarly rests on dispersed networks of authority and influence. Tech companies write rules for billions of users; states regulate only part of this domain; NGOs, standards bodies, and open-source communities shape key infrastructures; and data flows connect regions instantly and invisibly. Digital power thus emerges from interactions between state and non-state actors operating across borders, demonstrating why a state-centric model of governance cannot capture the structure of digital life.
+These networks don't fit into territorial boxes. They overlap, intersect, and operate at multiple scales simultaneously. An AI safety standard might be developed by a technical community, adopted by a platform company, endorsed by an international body, and enforced (or not) by national regulators—with affected users having input at various points but no single "citizenship" that grants them comprehensive democratic participation.
 
-## The Institutional Design: How are these principles implemented?
+This is the puzzle cosmopolitan democracy attempts to solve: how to create democratic governance structures that match these overlapping networks of actual power and influence.
 
-Once, you follow the argument that we need a flexible and overlapping governance structure, the next question is how to implement this in practice. The book actually proposes two key principles that should guide the institutional design of cosmopolitan democracy.
+## The Institutional Design: How do you govern overlapping networks?
+
+Once you accept this network-based view of global governance, the next question becomes practical: how do you actually implement democratic governance across these overlapping systems? Held proposes two key institutional principles.
 
 ### Institutional Principle 1 - Multi-level democratic law-making
 

@@ -132,57 +132,46 @@ across borders, in networks, at multiple levels simultaneously...That's exactly 
 
 "Let me send you both the reference," Adam says, sharing the document. "Doesn't look like we are going to sleep tonight anyways..."
 
-### Why overlapping networks matter
+## The Institutional Design: How do you govern overlapping networks?
+
 
 Helds network perspective differs fundamentally from both confederation and federation. Confederations assume states are the primary actors, cooperating voluntarily. Federations assume nested territorial hierarchies with clear authority levels. But reality—as Amara, Sofia, and Adam all experience—operates through overlapping functional networks that don't respect these boundaries.
 
-Climate governance involves states, but also corporations setting emissions targets, cities forming climate alliances, NGOs monitoring compliance, and scientific bodies establishing standards. Digital governance involves states, but also platform companies making content rules, standards bodies setting protocols, open-source communities building infrastructure, and users forming governance communities.
+Over the next few hours, our three night owls work through Held's framework together. Two core institutional mechanisms emerge...
 
-These networks don't fit into territorial boxes. They overlap, intersect, and operate at multiple scales simultaneously. An AI safety standard might be developed by a technical community, adopted by a platform company, endorsed by an international body, and enforced (or not) by national regulators—with affected users having input at various points but no single "citizenship" that grants them comprehensive democratic participation.
-
-This is the puzzle cosmopolitan democracy attempts to solve: how to create democratic governance structures that match these overlapping networks of actual power and influence.
-
-## The Institutional Design: How do you govern overlapping networks?
-
-Over the next few hours, they work through Held's framework together—Sofia with 
-her Brussels citations, Adam googling furiously, Amara connecting it to her water 
-governance research. Two core institutional mechanisms emerge...
 
 ### Institutional Principle 1 - Multi-level democratic law-making
 
-Definition according to the book (feature 4 of CD in the book):
+The first mechanism breaks the assumption that only national governments make 
+binding laws. Instead, democratic law-making happens at every level where power 
+operates—local, national, regional, and global. Courts exist at each level, and 
+higher courts can check lower ones when rights are violated.
 
-> Law-making and law enforcement can be developed within this framework at a variety of locations and levels, along with an expansion of the influence of regional and international courts to monitor and check political and social authority.
+Think of it as governance that matches reality: when a water basin crosses three 
+borders, there's a basin-level authority with democratic accountability. When AI 
+systems operate globally, there's a global-level framework with enforceable rights. 
+Power is shared across multiple scales, not trapped in territorial boxes.
 
-This feature means that laws are not made and enforced only by national governments. Instead, rules and courts exist at many levels at the same time—local, national, regional, and global—and they work together. Different layers of authority can create and enforce laws, and higher-level courts can step in when lower levels violate rights or abuse power. In simple terms: power is shared across many levels, and multiple courts ensure everyone plays by the rules.
-
-This addresses Adam's regulatory gap problem directly—rules would exist at every level where power actually operates, preventing the jurisdiction shopping that currently plagues digital governance.
+For Adam, this solves his regulatory gap problem directly—rules would exist at 
+every level where his AI systems operate, preventing the jurisdiction shopping 
+that currently plagues digital governance.
 
 ### Institutional Principle 2 - Nested citizenship
 
-The definition from the book:
+"The second principle is even more radical," Sofia says, scrolling down. "Citizenship  isn't limited to your nation-state. You can be a citizen in multiple overlapping communities—city, region, country, and also transnational bodies that affect your life."
 
-> People can enjoy membership in the diverse communities which significantly affect them and, accordingly, access to a variety of form: of political participation. Citizenship would be extended, in principle to membership in all cross-cutting political communities, from the local to the global.
+Adam looks up. "So I'd have democratic rights wherever my AI systems are governed? 
+Not just Malta, but also in the EU digital authority, the global AI standards body?"
 
-This feature means that people are not limited to belonging politically to just one community (usually the nation-state). Instead, they can be citizens in many overlapping communities at once—their city, their region, their country, and also transnational or global bodies that affect their lives. Each level gives them political rights and ways to participate. In simple terms: your political voice follows the real-life sources of power that shape your world, no matter where they sit geographically.
+"And I'd be a citizen of the climate system itself," Amara adds, seeing it. "Not 
+just voting in Tunisia, but having democratic standing in the institutions that 
+govern the emissions drowning my region."
 
-For Amara, this means citizenship not just in the Maldives, but in the climate system itself—democratic membership in the institutions that govern the emissions drowning her homeland. For Adam, it means recognized political standing in the digital governance networks that currently treat him as either a passive subject or an ungoverned actor.
+"Your political voice follows the actual sources of power that shape your world," 
+Sofia summarizes. "Not just where you were born."
 
-In a federation, people typically have dual citizenship (state + federal), but political participation is still bound to the territorial units of the federation; cross-border or global political membership is not recognized. In a confederation, citizenship remains almost entirely national, and political participation at the confederal level is usually indirect (through governments, not individuals). Cosmopolitan democracy goes further by giving individuals direct political membership in multiple overlapping communities, including global ones. This creates a model where political belonging follows functional interdependence—not just territorial borders—something federations and confederations do only partially or not at all.
-
-### Institutional design principles applied to climate change
-
-For Amara, these two principles translate into concrete possibilities. Multi-level law-making would mean binding climate rules legislated and enforced across local, national, regional, and global levels—with courts able to hold states and corporations accountable when their emissions violate others' rights. The current voluntary pledge system that fails the Maldives would be replaced by enforceable obligations at every governance level.
-
-Nested citizenship would give Amara direct political membership in climate governance institutions. Not just representation through the Maldivian government at climate conferences, but actual citizenship rights in a global climate authority—the ability to vote, deliberate, and hold decision-makers accountable in the very institutions that determine whether her homeland survives. She would be a citizen of the climate system, with democratic standing wherever climate decisions are made.
-
-### Institutional design principles applied to digital governance
-
-For Adam, the same principles offer solutions to his regulatory fragmentation. Multi-level law-making would close the gaps he currently navigates: digital rights and AI rules enacted and enforced across local, regional, and global institutions—preventing the jurisdiction shopping that lets platforms exploit regulatory arbitrage. His AI model would face coherent rules at every level where it operates, rather than conflicting requirements from authorities that don't coordinate.
-
-Nested citizenship would give Adam—and the millions his systems affect—democratic membership in digital governance bodies. Not passive subjection to terms of service he didn't write, or regulatory regimes he can't influence, but actual citizenship rights: participation in platform rule-making, voting rights in regional data authorities, democratic standing in global AI oversight institutions. Users would become citizens of the digital systems that govern their data, their algorithms, their digital lives.
-
-Sofia sees how this differs from the EU's federal model: instead of trying to create a single territorial authority over digital systems that inherently transcend borders, cosmopolitan democracy creates democratic membership in the overlapping functional networks where digital power actually operates. The governance structure matches the technology's actual architecture.
+For Adam, this means recognized political standing in the digital governance 
+networks that currently treat him as either a passive subject or an ungoverned actor.
 
 ## The Normative Foundation: Rights, not just rules
 

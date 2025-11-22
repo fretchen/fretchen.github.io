@@ -79,7 +79,7 @@ This federal structure gives Sofia tools Amara lacks: binding regulations, enfor
 
 ### Sofia's reality: federal power and federal gridlock
 
-Yet Sofia had just closed her laptop after another failed climate negotiation when she saw Amara's conference paper. The EU has binding power, but that doesn't mean it works smoothly.
+The EU might have binding power, but that doesn't mean it works smoothly.
 
 Twenty-seven countries, twenty-seven veto points. Even among democracies with similar values and roughly comparable economic systems, consensus proves extraordinarily difficult. Climate policy requires balancing Polish coal interests, German industrial concerns, French nuclear preferences, and Nordic renewable ambitions—all within a single legal framework.
 
@@ -87,7 +87,7 @@ The federal model works within relatively bounded cultural and political context
 
 ### The scale problem
 
-After Sofia's presentation, Amara understands the challenge: scaling federal governance to 198 countries with fundamentally incompatible political systems presents a different magnitude of problem. The world includes liberal democracies, authoritarian states, theocracies, and hybrid regimes. Could China and the US share a constitution? Would Russia and the EU accept the same legal framework? Could India and Pakistan agree on a federal judiciary?
+After Sofia's explanations, Amara understands the challenge: scaling federal governance to 198 countries with fundamentally incompatible political systems presents a different magnitude of problem. The world includes liberal democracies, authoritarian states, theocracies, and hybrid regimes. Could China and the US share a constitution? Would Russia and the EU accept the same legal framework? Could India and Pakistan agree on a federal judiciary?
 
 Multiplying the EU's complexity by seven—and adding nuclear weapons and fundamental ideological conflicts—suggests the obstacles to world federalism are not merely practical but structural. The federal model works within culturally relatively homogeneous boundaries. But the world exceeds those boundaries substantially.
 
@@ -96,15 +96,14 @@ Multiplying the EU's complexity by seven—and adding nuclear weapons and fundam
 "Three jurisdictions, one AI model, zero coordination." Adam's voice carries from 
 the window table.  As Sofia and Amara exchange had become increasingly lively, Adam could stop overhearing their discussion. In the end it felt so familiar that he had to join: "I know exactly how stuck you are."
 
-Sofia and Amara exchange glances, then Sofia calls over: "You work in digital 
-governance?"
+Sofia and Amara exchange glances, then Sofia calls over: "You work in IT ?"
 
 "Try to." Adam walks over with his laptop. "Adam. Malta-based, perpetually confused 
-about which regulator to listen to. You're water and climate?"
+about which rules to listen to. You're water and climate?"
 
 "And EU gridlock," Sofia adds. "Apparently we're all having the same terrible night."
 
-"Over coffee, Adam joins their conversation. He's been facing similar frustrations with digital governance—but from a different angle.
+Over yet another coffee, Adam joins their conversation. He's been facing similar frustrations with digital governance—but from a different angle.
 
 ## Cosmopolitan democracy: Overlapping networks
 

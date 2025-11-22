@@ -197,7 +197,7 @@ Key analytical moment: "This is why Amara watches the ocean rise while having no
 ### Task 2.4: Cosmopolitan Solution durch alle drei Perspektiven (6 Stunden) ✅ STARK ÜBERARBEITET
 
 **Original Strategy:**
-- **Institutional Design:** Adam erklärt (er denkt in Systemen)
+- **Institutional Design:** Chen erklärt (er denkt in Systemen)
 - **Normative Principles:** Amara erklärt (sie denkt in Rechten)
 - **Pragmatic Implementation:** Sofia erklärt (sie kennt Politik)
 
@@ -573,27 +573,16 @@ Bereit anzufangen? 🚀
 
 **Strukturelle Issues:**
 
-1. **Einleitung noch hybrid**
+1. **Einleitung noch holprig**
    - Hat Charakter-Hooks aber auch persönliche Autorstimme
-   - Plan war vollständige Narrative, Realität ist Kompromiss
-   - Funktioniert aber! Nur nicht wie ursprünglich geplant
-
-2. **Chen → Adam Änderung nicht im Workplan**
-   - Character name/location changed during implementation
-   - Workplan references "Chen (Shanghai)" throughout
-   - Should update all Chen references to Adam (Singapore)
-
-3. **Keine interaktiven Elemente**
-   - Phase 3 komplett übersprungen
-   - Keine visualizations, games, calculators
-   - Artikel bleibt reiner Text
-   - War als "optional" markiert, also OK
-
-4. **Backstories nicht vollständig**
-   - Charaktere haben nur kurze Introductions
-   - Keine 200-300 Wort Backstories wie geplant
-   - Keine Key Quotes Library
+   - Die Einleitung noch sehr holprig. Man versteht nicht so richtig wo die drei Charaktere herkommen und insgesamt fehlt der Flow.
+   - The whole introduction of Amara is really not clean. How could this be improved ?
    - Charaktere erscheinen "on demand" statt kontinuierlich präsent
+   - Weiterhin ist der Sprung von den drei Charakteren zu Amara echt noch sehr abrupt.
+   - Also the jump from Amara to a confederation is confusing. Once we are in the whole confederation section it flows, but it is not helpful right now.
+
+   - the jump from her presentation of the confederation to Sofia is abrupt as well. Maybe a small transition sentence or paragraph would help.
+   - The article has improved. However the story around the three characters is still poorly set up. The section on the three characters should better introduce the context. That we have the three characters. The meet at a conference etc. How could we achieve this ? The most important part here is clarity for the reader and the possibility to set up a hook. Second
 
 **Content-Qualität Issues:**
 
@@ -607,7 +596,6 @@ Bereit anzufangen? 🚀
    - Sofia weniger präsent in zweiter Hälfte
    - Adam kommt erst spät (aber das war Absicht für narrative)
    - Amara dominiert Climate-Diskussion
-   - Nicht die geplanten ~33% pro Person
 
 7. **Emotionaler Arc nicht vollständig**
    - Plan: Ohnmacht → Erkenntnis → Hoffnung

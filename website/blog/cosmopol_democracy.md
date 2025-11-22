@@ -8,42 +8,33 @@ tokenID: 123
 
 In the last few weeks I kept wondering quite a bit about the association between democratic governance and nation-states. In the current environment your passport tells you where you can vote. But what if the decisions that shape your life—your climate, your data, your economic future—are made by governments you can't vote for? This is the paradox of modern democracy and in this blog post I decide to dive into different models, federations, conferations and cosmopolitan democracy that attempt to solve it.
 
-And as for other economic or political topics, I really like to explore it from the personal perspective of some fictional characters. So here they are:
+And as for other economic or political topics, I really like to explore it from the personal perspective of some fictional characters. So time to get started:
 
-## The characters: Three People, One common problem
+## A ferry lounge at 2 AM
 
-**Malé, Maldives**
-Amara watches the ocean from her balcony. In 50 years, this view will be 
-underwater. The carbon emissions drowning her country come from Beijing, 
-Houston, and Frankfurt—places where she has no vote, no voice, no say.
+We are in the ferry's lounge on the ferry from Barcelona to Tunis. It is nearly empty—just Amara, a sleeping truck driver in the corner, the humming coffee machine, and two other insomniacs she hasn't noticed yet.
 
-**Singapore**
-Adam deploys his latest AI model. European regulators want to audit his code. 
-American platforms host it. Singaporean authorities monitor it. He's built something 
-that exists everywhere and nowhere—governed by everyone and no one.
+Amara spreads her research across two tables: water level charts from the Medjerda basin, extraction data from three countries, meeting notes from Barcelona that led 
+nowhere. European agricultural policies, Libyan water extraction, and Algerian dam 
+construction all determine whether her region has sustainable water—yet she can 
+vote in none of these jurisdictions.
 
-**Brussels, Belgium**
-Sofia closes her laptop after another failed climate negotiation. Twenty-seven 
-countries, twenty-seven veto points. "We need unanimous consent," her colleague 
-sighs. "Which means we need a miracle."
+Two tables away its Sofia, a seasoned member of the EU commision. She tries to focus on her own Tunisia briefing notes. But she 
+keeps glancing at Amara's charts—the basin maps, the extraction data, the obvious 
+frustration. She recognizes that frustration.
 
-Three people. Three continents. One problem: **They have the deeply seeded feeling that democracy wasn't built for their current problems.**
+Near the window, Adam curses quietly at his laptop. Three different regulatory 
+frameworks, three incompatible requirements, one AI model. He reaches for coffee 
+and notices the two women surrounded by governance documents. He's not the only 
+one having jurisdiction problems tonight.
 
-## The confederal model
+### Amara's confederal trap
 
-### What is a confederation?
-
-Consider Amara's situation: she cannot vote in Shanghai, Houston, or Frankfurt—yet decisions there determine whether her homeland survives. This isn't a flaw in democracy; it's a feature of how global governance is structured.
-
-Amara has been studying global climate governance, trying to understand why the system fails her homeland. In Brussels, Sofia has been writing a report on EU climate policy effectiveness. They don't know it yet, but they're analyzing opposite sides of the same problem.
-
-The global order is not a government. It's a [confederation](https://en.wikipedia.org/wiki/Confederation)—a loose association of sovereign states that cooperate voluntarily. The United Nations, NATO, the Paris Climate Agreement: all confederations.
+Amara has spent years studying transboundary water governance, trying to understand why the system fails her region. From those studies she learns that shared water resources are governed through a [confederation](https://en.wikipedia.org/wiki/Confederation) — a loose association of sovereign states that cooperate voluntarily. The United Nations water conventions, Mediterranean water partnerships, bilateral treaties: all confederations.
 
 In a confederation, member states keep their independence but sign treaties to act together on specific topics. The key institutional feature is that states retain full sovereignty—decisions require consensus, there are no binding enforcement mechanisms, and citizens participate only through their national governments.
 
-Climate conferences illustrate this: 198 countries produce agreements with no binding consequences for non-compliance. Summits produce commitments, countries pursue national interests, emissions continue rising—and the Maldives continues sinking. The Paris Agreement set ambitious targets, but when countries miss them, there are no penalties beyond diplomatic pressure.
-
-This structure creates Amara's democratic disconnect: The factories in Shanghai, American fossil fuel policies, and EU climate decisions all impact whether her homeland remains habitable—yet she can vote in none of these jurisdictions. Decisions affecting her survival are made by governments she cannot influence democratically.
+Water governance conferences illustrate this: neighboring countries produce agreements with no binding enforcement mechanisms. Summits produce commitments, countries pursue national interests, aquifers continue depleting—and communities like Amara's keep losing water. The Mediterranean water framework set cooperative targets, but when countries exceed extraction limits, there are no penalties beyond diplomatic complaints.
 
 ### Key characteristics
 
@@ -51,7 +42,22 @@ Confederations share four institutional features: **sovereignty preservation** (
 
 They also lack strong normative foundations. Confederate treaties define narrow goals—mutual defense, trade coordination—without establishing binding universal rights. When principles appear (like the UN Declaration of Human Rights), they're aspirational and weakly enforced. Sovereignty always trumps shared values—or survival.
 
-The result: weak enforcement, minimal democratic participation, fragmented governance. This is why Amara watches the ocean rise while having no democratic recourse. When she presents her analysis at a climate policy conference in Geneva, Sofia is in the audience. After the panel, Sofia approaches: "I work on the federal alternative you mentioned. But I think you should know—it's not the solution you're hoping for."
+The result: weak enforcement, minimal democratic participation, fragmented governance. This is why Amara watches the ocean rise while having no democratic recourse.
+
+Sofia has been sitting two tables away, trying to work on her own briefing notes 
+for the Tunisia meetings. But she keeps glancing at Amara's charts—the basin maps, 
+the extraction data, the obvious frustration in how Amara reorganizes the same 
+papers repeatedly.
+
+She recognizes that frustration. She's felt it in every EU climate negotiation.
+
+"Transboundary water governance?" Sofia asks, moving to the adjacent table.
+
+Amara looks up, surprised someone knows what she's looking at. "The kind that 
+doesn't work. You're familiar with it?"
+
+"Different domain, same problem," Sofia says. "Twenty-seven countries, climate 
+policy, unanimous consent required. I work for the EU."
 
 ## The federal model—and Sofia's experience
 

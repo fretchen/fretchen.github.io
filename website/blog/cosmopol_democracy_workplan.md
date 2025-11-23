@@ -11,6 +11,7 @@
 ### Task 1.1: Persona-Profile erstellen (3-4 Stunden)
 
 **Amara - Die Klimabetroffene**
+
 - **Background:** 28 Jahre, Klimaaktivistin aus Malé, Malediven
 - **Persönliche Stakes:** Ihr Heimatland wird in ihrer Lebenszeit untergehen
 - **Kernfrustration:** "Ich kann nicht für die Politiker stimmen, die meine Zukunft entscheiden"
@@ -19,6 +20,7 @@
 - **Key Quote:** "I have a passport, but what good is national citizenship when the problem isn't national?"
 
 **Adam - Der Tech-Worker** ✅ IMPLEMENTED (Singapore, not Shanghai)
+
 - **Background:** 34 Jahre, AI/ML-Entwickler in Singapore, arbeitet für globale Plattform
 - **Persönliche Stakes:** Seine Arbeit unterliegt 3+ widersprüchlichen Rechtssystemen
 - **Kernfrustration:** "Ich werde von Gesetzen regiert, die ich nicht mitbestimmen kann"
@@ -27,6 +29,7 @@
 - **Key Quote:** "Your models assume governance happens in territorial boxes. But consider my AI model: European regulators want to audit it. American platforms host it. Singaporean authorities monitor it."
 
 **Sofia - Die Insider-Kritikerin**
+
 - **Background:** 42 Jahre, EU-Beamtin (DG Climate Action), Brüssel
 - **Persönliche Stakes:** Sieht täglich wie gute Absichten an Strukturen scheitern
 - **Kernfrustration:** "Wir sind zwischen Föderation und Konföderation gefangen"
@@ -34,7 +37,8 @@
 - **Stimme/Tone:** Erfahren, desillusioniert aber nicht zynisch, institutionelles Wissen
 - **Key Quote:** "We all agree something must be done, but when push comes to shove, national interest wins every time."
 
-**Deliverable:** 
+**Deliverable:**
+
 - ~~Markdown-Dokument: `cosmopol_democracy_personas.md`~~ → ❌ NOT CREATED
 - ✅ Character introductions in article (~3 paragraphs each)
 - ⚠️ Full backstories not developed (only brief intros)
@@ -57,7 +61,7 @@ ACT 2: Failed Solutions (40% des Artikels)
 │   ├─ Institutional analysis through her EU experience
 │   └─ Climate + Digital examples through her lens
 │
-├─ Section B: The Confederate Reality  
+├─ Section B: The Confederate Reality
 │   ├─ Amara erklärt: "Why voluntary cooperation fails"
 │   ├─ COP29 experience, UN frustrations
 │   └─ Climate + Digital examples through her lens
@@ -84,6 +88,7 @@ ACT 4: What It Means (10% des Artikels)
 ```
 
 **Deliverable:**
+
 - ✅ Story outline established (Problem → Failed Solutions → CD Solution)
 - ✅ Transitions: Geneva conference + coffee conversation as devices
 - ⚠️ Balance incomplete: ~40% Amara, 35% Adam, 25% Sofia (not 33% each)
@@ -95,8 +100,9 @@ ACT 4: What It Means (10% des Artikels)
 ### Task 2.1: Einleitung neu schreiben (3 Stunden)
 
 **Altes Opening:**
+
 ```
-"In the last few weeks I kept wondering quite a bit about 
+"In the last few weeks I kept wondering quite a bit about
 the association between democratic governance and nation-states..."
 ```
 
@@ -106,33 +112,34 @@ the association between democratic governance and nation-states..."
 ## November 2024: Three People, One Crisis
 
 **Malé, Maldives**
-Amara watches the ocean from her balcony. In 50 years, this view will be 
-underwater. The carbon emissions drowning her country come from Beijing, 
+Amara watches the ocean from her balcony. In 50 years, this view will be
+underwater. The carbon emissions drowning her country come from Beijing,
 Houston, and Frankfurt—places where she has no vote, no voice, no say.
 
 **Singapore**
-Adam deploys his latest AI model. European regulators want to audit his code. 
-American platforms host it. Singaporean authorities monitor it. He's built something 
+Adam deploys his latest AI model. European regulators want to audit his code.
+American platforms host it. Singaporean authorities monitor it. He's built something
 that exists everywhere and nowhere—governed by everyone and no one.
 
 **Brussels, Belgium**
-Sofia closes her laptop after another failed climate negotiation. Twenty-seven 
-countries, twenty-seven veto points. "We need unanimous consent," her colleague 
+Sofia closes her laptop after another failed climate negotiation. Twenty-seven
+countries, twenty-seven veto points. "We need unanimous consent," her colleague
 sighs. "Which means we need a miracle."
 
 Three people. Three continents. One problem: **Democracy wasn't built for this.**
 
 ---
 
-Your passport tells you where you can vote. But what if the decisions that 
-shape your life—your climate, your data, your economic future—are made by 
+Your passport tells you where you can vote. But what if the decisions that
+shape your life—your climate, your data, your economic future—are made by
 governments you can't vote for?
 
-This is the paradox of 21st-century democracy. And three competing models 
+This is the paradox of 21st-century democracy. And three competing models
 claim to solve it...
 ```
 
 **Deliverable:**
+
 - ✅ Neue Einleitung implementiert (~400 Wörter)
 - ✅ Hook für alle drei Personas etabliert
 - ✅ Zentrale Frage formuliert
@@ -143,6 +150,7 @@ claim to solve it...
 ### Task 2.2: Federal Model durch Sofia's Augen (4 Stunden) ✅ VOLLSTÄNDIG IMPLEMENTIERT
 
 **Transformation Strategy:**
+
 - ✅ **Behalte:** Institutionelle Prinzipien, Vergleichstabellen
 - ✅ **Entferne:** Lange Blockzitate → Sidebar callouts
 - ✅ **Füge hinzu:** Sofia's EU-Erfahrung als running example
@@ -150,6 +158,7 @@ claim to solve it...
 **Actual Implementation (Lines 62-102 in article):**
 
 Sections created:
+
 - "What Sofia knows from Brussels" (EU federal mechanics)
 - "Sofia's reality: federal power and federal gridlock"
 - "The scale problem" (Amara understands federation limitations)
@@ -159,6 +168,7 @@ Sections created:
 ❌ Negotiation simulator NOT implemented (optional, skipped)
 
 **Deliverable:**
+
 - ✅ Federal model section (~800 words)
 - ✅ Sofia's voice consistent throughout (Brussels insider perspective)
 - ✅ Reduzierte theoretische Dichte, erhöhte narrative Dichte
@@ -169,6 +179,7 @@ Sections created:
 ### Task 2.3: Confederate Model durch Amara's Augen (4 Stunden) ✅ VOLLSTÄNDIG IMPLEMENTIERT
 
 **Transformation Strategy:**
+
 - ✅ **Fokus:** Amara's climate governance experience as entry point
 - ✅ **Emotional Hook:** Powerlessness watching emissions rise with no democratic recourse
 - ✅ **Theorie:** Through her analysis of voluntary cooperation failure
@@ -176,6 +187,7 @@ Sections created:
 **Actual Implementation (Lines 37-60 in article):**
 
 Narrative device: Geneva climate conference
+
 - "Consider Amara's situation" opening
 - Amara studying climate governance in Geneva
 - Conference interaction: "Sovereignty is sacred," [delegate] insists
@@ -187,6 +199,7 @@ Key analytical moment: "This is why Amara watches the ocean rise while having no
 ❌ Commitment Tracker NOT implemented (optional, skipped)
 
 **Deliverable:**
+
 - ✅ Confederate model section (~500 words)
 - ✅ Amara's powerlessness visible through concrete example
 - ✅ Konkrete Beispiele: Climate emissions from "Beijing, Houston, and Frankfurt—places where she has no vote"
@@ -197,6 +210,7 @@ Key analytical moment: "This is why Amara watches the ocean rise while having no
 ### Task 2.4: Cosmopolitan Solution durch alle drei Perspektiven (6 Stunden) ✅ STARK ÜBERARBEITET
 
 **Original Strategy:**
+
 - **Institutional Design:** Chen erklärt (er denkt in Systemen)
 - **Normative Principles:** Amara erklärt (sie denkt in Rechten)
 - **Pragmatic Implementation:** Sofia erklärt (sie kennt Politik)
@@ -204,12 +218,14 @@ Key analytical moment: "This is why Amara watches the ocean rise while having no
 **Actual Implementation (Lines 104-219):**
 
 **Part 1: Collaborative Discovery (Lines 104-130)**
+
 - ✅ "Over coffee, Adam joins their conversation" (not Chen)
 - ✅ Adam's insight: "Your models assume governance happens in territorial boxes"
 - ✅ All three discover overlapping networks pattern together
 - ✅ Held's framework introduced collaboratively (no single explainer)
 
 **Part 2: Institutional Design (Lines 132-154) - Option B**
+
 - ✅ Opening: "Amara, Sofia, and Adam study Held's framework together"
 - ✅ Multi-level lawmaking: Analytical explanation + Adam's regulatory gap application
 - ✅ Nested citizenship: Analytical explanation + Amara's climate system citizenship
@@ -228,7 +244,8 @@ Key analytical moment: "This is why Amara watches the ocean rise while having no
 Each person explains what this means for their domain.
 
 [Continue with remaining principles, rotating perspectives]
-```
+
+````
 
 **Part 3: Normative Principles (Lines 156-195) - MASSIVELY SHORTENED**
 - ✅ Sofia introduces: "What principles should guide these institutions?"
@@ -256,34 +273,35 @@ Each person explains what this means for their domain.
 ## What Would Actually Change?
 
 **For Amara:**
-"I could vote in the Global Climate Assembly. My voice would count where 
-it matters—not just in Malé, but in the institutions setting emission 
+"I could vote in the Global Climate Assembly. My voice would count where
+it matters—not just in Malé, but in the institutions setting emission
 standards."
 
 **For Adam:** (NOT Chen)
-"One set of digital rights, enforceable everywhere. No more jurisdiction 
+"One set of digital rights, enforceable everywhere. No more jurisdiction
 shopping, no more regulatory arbitrage. Clear rules, democratic process."
 
 **For Sofia:**
-"We'd stop pretending voluntary commitments will save us. Real authority, 
+"We'd stop pretending voluntary commitments will save us. Real authority,
 real accountability, real democracy—at every level that matters."
 
 ### It's Already Beginning
 
-The International Criminal Court. The European Parliament. WHO pandemic 
-protocols. These are all proto-cosmopolitan institutions—imperfect, 
+The International Criminal Court. The European Parliament. WHO pandemic
+protocols. These are all proto-cosmopolitan institutions—imperfect,
 incomplete, but real.
 
-The question isn't "Can we build cosmopolitan democracy?"  
+The question isn't "Can we build cosmopolitan democracy?"
 It's "Can we build it fast enough?"
 
 ---
 
-*Three people, one planet, infinite possibilities—if we're brave enough 
+*Three people, one planet, infinite possibilities—if we're brave enough
 to reimagine what democracy means.*
-```
+````
 
 **Deliverable:**
+
 - ❌ Conclusion NOT YET WRITTEN (500-700 Wörter target)
 - Status: HIGH PRIORITY - Article currently ends after applications section
 - Estimated time: 2-3 hours to implement planned structure
@@ -300,12 +318,14 @@ to reimagine what democracy means.*
 Reason: Focus on narrative and analytical content, interactive elements deemed optional/low-priority.
 
 Possible elements that could be added later:
+
 1. Democracy Deficit Calculator
 2. Emission vs. Impact Map
 3. Governance Model Builder
 4. Sofia's Negotiation Game
 
 **Deliverable:**
+
 - ❌ No mockups created
 - ❌ No tech stack decisions made
 - Decision: Skip Phase 3 entirely to focus on content quality
@@ -315,6 +335,7 @@ Possible elements that could be added later:
 ### Task 3.2: Prototyp implementieren (8-12 Stunden, optional) ❌ SKIPPED
 
 **Deliverable:**
+
 - ❌ No interactive elements implemented
 
 ---
@@ -324,6 +345,7 @@ Possible elements that could be added later:
 ### Task 4.1: Voice Consistency Check (2 Stunden) ⚠️ PARTIAL
 
 **Status:**
+
 - ✅ Jede Person hat distinkte Stimme (Amara/powerlessness, Adam/fragmentation, Sofia/gridlock)
 - ✅ Übergänge zwischen Perspektiven smooth (Geneva conference, coffee conversation)
 - ⚠️ Balance unequal: ~40% Amara, 35% Adam, 25% Sofia (target 33% each)
@@ -331,6 +353,7 @@ Possible elements that could be added later:
 - ⚠️ Emotionaler Arc: More analytical than emotional (intentional per "curious intellectuals" tone)
 
 **Deliverable:**
+
 - ⚠️ Voice imbalance identified: Sofia underrepresented by ~200-300 words
 - MEDIUM PRIORITY fix needed
 
@@ -339,6 +362,7 @@ Possible elements that could be added later:
 ### Task 4.2: Theoriegehalt bewahren (2 Stunden) ✅ COMPLETED
 
 **Actual Implementation:**
+
 - ✅ All core institutional principles maintained (multi-level law-making, nested citizenship)
 - ✅ All 5 normative principles present (clustered thematically)
 - ❌ Sidebar-Boxen NOT implemented (optional)
@@ -347,6 +371,7 @@ Possible elements that could be added later:
 - ✅ Balance achieved: ~60% narrative anchoring, 40% theoretical explanation
 
 **Deliverable:**
+
 - ✅ Theorie-Check: All Held features present and accurately represented
 - ✅ No oversimplification that causes misrepresentation
 - ✅ Character examples enhance rather than distort theory
@@ -358,12 +383,14 @@ Possible elements that could be added later:
 **Target:** 4000-5000 Wörter (original ~5500)
 
 **Achieved Cuts:**
+
 1. ✅ Normative section: 70% reduction through thematic clustering
 2. ✅ Applications: 80% reduction (100 lines → 20 lines total)
 3. ✅ Removed bullet-point enumerations throughout
 4. ✅ Option B institutional section (analytical with light character touch)
 
 **Deliverable:**
+
 - ✅ Final length: ~4500 words (achieved target)
 - ✅ Reading time: ~18 minutes
 - ✅ Massive cuts successful without theoretical content loss
@@ -373,18 +400,21 @@ Possible elements that could be added later:
 ### Task 4.4: SEO & Metadaten (1 Stunde) ❌ NOT UPDATED
 
 **Current State:**
+
 - ❌ Title: Still "Democracy beyond the nation-state - What is there?"
 - ❌ Description: Generic, not character-focused
 - ❌ Keywords: Not optimized for cosmopolitan democracy, climate justice, digital rights
 - ❌ Social share image: Not created
 
 **Planned Updates (NOT YET IMPLEMENTED):**
+
 - Suggested Title: "Democracy Beyond Borders: Meet the People Fighting for a Say in Their Future"
 - Suggested Description: "Amara's country is drowning. Adam's code is governed by three countries. Sofia can't get 27 nations to agree. Can cosmopolitan democracy solve what federations and confederations can't?"
 - Keywords to add: cosmopolitan democracy, global governance, climate justice, digital rights, Amara, Adam, Sofia
 - Social share image: Character portraits or governance visualization
 
 **Deliverable:**
+
 - ❌ HIGH PRIORITY: Metadata update needed to reflect character-driven narrative approach
 
 ---
@@ -396,16 +426,19 @@ Possible elements that could be added later:
 **Status:** Optional, low priority
 
 **Zielgruppe für Feedback:**
+
 - 1-2 "curious intellectuals" (Zielgruppe)
 - 1 akademischer Reviewer (fact-check)
 
 **Fragen:**
+
 - War die Story engaging?
 - Welche Person war am interessantesten? (Currently: Amara most present)
 - Wo wurde es langweilig/verwirrend?
 - Ist die Theorie noch verständlich?
 
 **Deliverable:**
+
 - ❌ No beta readers engaged yet
 - LOW PRIORITY: Can be done post-initial publish
 
@@ -414,6 +447,7 @@ Possible elements that could be added later:
 ### Task 5.2: Finalisierung (1 Stunde) ⚠️ PARTIAL
 
 **Status Check:**
+
 - ⚠️ Typos: Not systematically checked
 - ⚠️ Links: Not verified (no external links added yet)
 - ⚠️ Blockquote-Styling: Not tested
@@ -422,6 +456,7 @@ Possible elements that could be added later:
 - ⚠️ Branch merge: Still on `cosmopolitan_democracy` branch
 
 **Deliverable:**
+
 - ⚠️ Pre-publish checklist incomplete
 - Estimated: 1 hour to complete basic checks
 
@@ -429,30 +464,33 @@ Possible elements that could be added later:
 
 ## Zeitplan Zusammenfassung
 
-| Phase | Tasks | Geschätzte Zeit |
-|-------|-------|----------------|
-| Phase 1: Foundation | Personas + Narrative Arc | 5-6h |
-| Phase 2: Content | Umschreiben aller Sections | 19-21h |
-| Phase 3: Interactive (Optional) | Konzept + Prototyp | 11-15h |
-| Phase 4: Refinement | Voice/Theory/Length/SEO | 7h |
-| Phase 5: Review | Beta-reading + Fixes | 3-5h |
-| **TOTAL (ohne Interactive)** | | **34-39h** |
-| **TOTAL (mit Interactive)** | | **45-54h** |
+| Phase                           | Tasks                      | Geschätzte Zeit |
+| ------------------------------- | -------------------------- | --------------- |
+| Phase 1: Foundation             | Personas + Narrative Arc   | 5-6h            |
+| Phase 2: Content                | Umschreiben aller Sections | 19-21h          |
+| Phase 3: Interactive (Optional) | Konzept + Prototyp         | 11-15h          |
+| Phase 4: Refinement             | Voice/Theory/Length/SEO    | 7h              |
+| Phase 5: Review                 | Beta-reading + Fixes       | 3-5h            |
+| **TOTAL (ohne Interactive)**    |                            | **34-39h**      |
+| **TOTAL (mit Interactive)**     |                            | **45-54h**      |
 
 ---
 
 ## Prioritäten wenn Zeit knapp:
 
 ### Must-Have (Core):
+
 - ✅ Phase 1: Personas entwickeln
 - ✅ Phase 2: Content umschreiben
 - ✅ Task 4.1-4.2: Voice & Theorie-Check
 
 ### Nice-to-Have:
+
 - ⚠️ Phase 3: Interactive elements (prototyping)
 - ⚠️ Task 4.3: Aggressive Kürzung (wenn Zeit fehlt, kann länger bleiben)
 
 ### Can-Drop:
+
 - ❌ Aufwändige interaktive Games
 - ❌ Custom illustrations für Personas
 - ❌ Multi-Reader beta testing (1 Reviewer reicht)
@@ -462,21 +500,25 @@ Possible elements that could be added later:
 ## Erfolgskriterien
 
 **Narrative Quality:**
+
 - [ ] Leser fühlt emotionale Verbindung zu mindestens einer Person
 - [ ] Story-Arc ist vollständig (Setup → Conflict → Resolution)
 - [ ] Keine "lecture mode"-Momente, nur dialog/narrative
 
 **Theoretical Rigor:**
+
 - [ ] Alle 8 Features von Held's cosmopolitan democracy present
 - [ ] Institutional vs. Normative distinction klar
 - [ ] Vergleich zu Federation/Confederation präzise
 
 **Accessibility:**
+
 - [ ] Non-academic Leser versteht 90% beim ersten Lesen
 - [ ] Keine undefined jargon (oder sofort erklärt)
 - [ ] Examples vor Theory (immer)
 
 **Engagement:**
+
 - [ ] Reading time: 15-20min (optimal für Blog)
 - [ ] Multiple entry points (kann bei jeder Person einsteigen)
 - [ ] Shareable quotes von jeder Person
@@ -499,12 +541,12 @@ Bereit anzufangen? 🚀
 ### Abgeschlossene Aufgaben ✅
 
 **Phase 1: Charakterentwicklung & Narrative Foundation**
+
 - ✅ **Task 1.1: Persona-Profile** - TEILWEISE ABGESCHLOSSEN
   - Charaktere erstellt: Amara (Malé), **Adam** (Singapore, nicht Chen!), Sofia (Brussels)
   - Character introductions implementiert (3 kurze Absätze)
   - Änderung: Adam statt Chen (Singapore statt Shanghai)
   - Backstories noch nicht vollständig ausgearbeitet
-  
 - ✅ **Task 1.2: Narrative Arc** - GRUNDSTRUKTUR ETABLIERT
   - Story structure folgt ungefähr dem Plan: Problem → Failed Solutions → Cosmopolitan Solution
   - Charaktere führen durch verschiedene Governance-Modelle
@@ -539,7 +581,6 @@ Bereit anzufangen? 🚀
   - Multi-level law-making: Adam's regulatory gap problem addressiert
   - Nested citizenship: Amara + Adam Perspektiven integriert
   - Climate/Digital applications: Stark an Charaktere gebunden (Option B implementiert)
-  
 - ✅ **Normative Principles** - RADIKAL GEKÜRZT & NEU STRUKTURIERT
   - Einleitung mit Sofia's Kommentar: "But institutions alone won't work"
   - Von 5 einzelnen Prinzipien + lange Anwendungen → kompakte thematische Cluster
@@ -629,24 +670,28 @@ Bereit anzufangen? 🚀
 ### Was gut funktioniert ✅
 
 **Narrative Integration:**
+
 - ✅ Charaktere als Ankerpunkte etabliert
 - ✅ Geneva conference als narrative device
 - ✅ Collaborative discovery (kein Hero) gut umgesetzt
 - ✅ Convergence narrative (Amara → Sofia → Adam zusammen) funktioniert
 
 **Strukturelle Verbesserungen:**
+
 - ✅ Confederation → Federation → CD Reihenfolge logisch
 - ✅ Institutional → Normative Trennung klar
 - ✅ Applications stark an Charaktere gebunden
 - ✅ Massive Kürzung macht Artikel lesbarer
 
 **Charakter-Spezifisches:**
+
 - ✅ Amara's climate powerlessness emotional wirksam
 - ✅ Adam's digital governance fragmentation gut erklärt
 - ✅ Sofia's EU gridlock experience authentisch
 - ✅ Alle drei haben distinkte Perspektiven
 
 **Theoretische Substanz:**
+
 - ✅ Alle Held Features noch präsent
 - ✅ Institutional principles erklärt
 - ✅ Normative foundations addressiert
@@ -655,6 +700,7 @@ Bereit anzufangen? 🚀
 ### Nächste Schritte zur Vervollständigung 📋
 
 **HIGH PRIORITY:**
+
 1. ⚠️ **Write Conclusion** (Task 2.5)
    - "What Would Actually Change?" für alle drei Charaktere
    - Proto-examples (ICC, EU Parliament, WHO)
@@ -673,12 +719,12 @@ Bereit anzufangen? 🚀
    - Eventuell kurze Sofia-Momente hinzufügen
    - Estimated: 1-2 Stunden
 
-**MEDIUM PRIORITY:**
-4. ⚠️ **Backstory Integration**
-   - Kurze Backstory-Moments wo Charaktere aktuell "erscheinen"
-   - Muss nicht separate Personas-Dokument sein
-   - In-text character development
-   - Estimated: 2 Stunden
+**MEDIUM PRIORITY:** 4. ⚠️ **Backstory Integration**
+
+- Kurze Backstory-Moments wo Charaktere aktuell "erscheinen"
+- Muss nicht separate Personas-Dokument sein
+- In-text character development
+- Estimated: 2 Stunden
 
 5. ⚠️ **Smooth Transitions**
    - Zwischen Amara's confederation und Sofia's federation
@@ -692,12 +738,12 @@ Bereit anzufangen? 🚀
    - Actual timeline vs. planned timeline
    - Estimated: 30 Minuten (THIS TASK)
 
-**LOW PRIORITY (Optional):**
-7. ⭕ **Beta Reading**
-   - 1-2 "curious intellectuals" Feedback
-   - Academic fact-check
-   - Engagement metrics nach publish
-   - Estimated: External timing
+**LOW PRIORITY (Optional):** 7. ⭕ **Beta Reading**
+
+- 1-2 "curious intellectuals" Feedback
+- Academic fact-check
+- Engagement metrics nach publish
+- Estimated: External timing
 
 8. ⭕ **Sidebar Elements**
    - Definitionen in collapsible boxes
@@ -715,17 +761,18 @@ Bereit anzufangen? 🚀
 
 **Completion Status: ~75%**
 
-| Phase | Planned | Actual Status | % Complete |
-|-------|---------|---------------|------------|
-| Phase 1: Foundation | 5-6h | Partially done | 70% |
-| Phase 2: Content | 19-21h | Mostly done | 85% |
-| Phase 3: Interactive | 11-15h | SKIPPED | 0% |
-| Phase 4: Refinement | 7h | Partial | 50% |
-| Phase 5: Review | 3-5h | Not started | 0% |
+| Phase                | Planned | Actual Status  | % Complete |
+| -------------------- | ------- | -------------- | ---------- |
+| Phase 1: Foundation  | 5-6h    | Partially done | 70%        |
+| Phase 2: Content     | 19-21h  | Mostly done    | 85%        |
+| Phase 3: Interactive | 11-15h  | SKIPPED        | 0%         |
+| Phase 4: Refinement  | 7h      | Partial        | 50%        |
+| Phase 5: Review      | 3-5h    | Not started    | 0%         |
 
 **Quality Metrics:**
 
 ✅ **Achieved:**
+
 - Narrative integration successful
 - Theoretical rigor maintained (mostly)
 - Length target hit (~4500 words)
@@ -733,12 +780,14 @@ Bereit anzufangen? 🚀
 - Accessibility improved dramatically
 
 ⚠️ **Partially Achieved:**
+
 - Voice consistency (good but unbalanced)
 - Emotional arc (analytical not emotional)
 - Smooth transitions (mostly works)
 - Theory/Narrative balance (70/30 achieved)
 
 ❌ **Not Achieved:**
+
 - Complete backstories for characters
 - Fully narrative introduction (hybrid instead)
 - Conclusion with character futures

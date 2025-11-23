@@ -14,18 +14,18 @@ And as for other economic or political topics, I really like to explore it from 
 
 We are in the ferry's lounge on the ferry from Barcelona to Tunis. It is nearly empty—just Amara, a sleeping truck driver in the corner, the humming coffee machine, and two other insomniacs she hasn't noticed yet.
 
-Amara spreads her research across two tables: water level charts from the Medjerda basin, extraction data from three countries, meeting notes from Barcelona that led 
-nowhere. European agricultural policies, Libyan water extraction, and Algerian dam 
-construction all determine whether her region has sustainable water—yet she can 
+Amara spreads her research across two tables: water level charts from the Medjerda basin, extraction data from three countries, meeting notes from Barcelona that led
+nowhere. European agricultural policies, Libyan water extraction, and Algerian dam
+construction all determine whether her region has sustainable water—yet she can
 vote in none of these jurisdictions.
 
-Two tables away its Sofia, a seasoned member of the EU commision. She tries to focus on her own Tunisia briefing notes. But she 
-keeps glancing at Amara's charts—the basin maps, the extraction data, the obvious 
+Two tables away its Sofia, a seasoned member of the EU commision. She tries to focus on her own Tunisia briefing notes. But she
+keeps glancing at Amara's charts—the basin maps, the extraction data, the obvious
 frustration. She recognizes that frustration.
 
-Near the window, Adam curses quietly at his laptop. Three different regulatory 
-frameworks, three incompatible requirements, one AI model. He reaches for coffee 
-and notices the two women surrounded by governance documents. He's not the only 
+Near the window, Adam curses quietly at his laptop. Three different regulatory
+frameworks, three incompatible requirements, one AI model. He reaches for coffee
+and notices the two women surrounded by governance documents. He's not the only
 one having jurisdiction problems tonight.
 
 ### Amara's confederal trap
@@ -44,19 +44,19 @@ They also lack strong normative foundations. Confederate treaties define narrow 
 
 The result: weak enforcement, minimal democratic participation, fragmented governance. This is why Amara watches the ocean rise while having no democratic recourse.
 
-Sofia has been sitting two tables away, trying to work on her own briefing notes 
-for the Tunisia meetings. But she keeps glancing at Amara's charts—the basin maps, 
-the extraction data, the obvious frustration in how Amara reorganizes the same 
+Sofia has been sitting two tables away, trying to work on her own briefing notes
+for the Tunisia meetings. But she keeps glancing at Amara's charts—the basin maps,
+the extraction data, the obvious frustration in how Amara reorganizes the same
 papers repeatedly.
 
 She recognizes that frustration. She's felt it in every EU climate negotiation.
 
 "Transboundary water governance?" Sofia asks, moving to the adjacent table.
 
-Amara looks up, surprised someone knows what she's looking at. "The kind that 
+Amara looks up, surprised someone knows what she's looking at. "The kind that
 doesn't work. You're familiar with it?"
 
-"Different domain, same problem," Sofia says. "Twenty-seven countries, climate 
+"Different domain, same problem," Sofia says. "Twenty-seven countries, climate
 policy, unanimous consent required. I work for the EU."
 
 ## The federal model—and Sofia's experience
@@ -93,12 +93,12 @@ Multiplying the EU's complexity by seven—and adding nuclear weapons and fundam
 
 "So we're stuck choosing between systems that both fail," Amara says bitterly.
 
-"Three jurisdictions, one AI model, zero coordination." Adam's voice carries from 
-the window table.  As Sofia and Amara exchange had become increasingly lively, Adam could stop overhearing their discussion. In the end it felt so familiar that he had to join: "I know exactly how stuck you are."
+"Three jurisdictions, one AI model, zero coordination." Adam's voice carries from
+the window table. As Sofia and Amara exchange had become increasingly lively, Adam could stop overhearing their discussion. In the end it felt so familiar that he had to join: "I know exactly how stuck you are."
 
 Sofia and Amara exchange glances, then Sofia calls over: "You work in IT ?"
 
-"Try to." Adam walks over with his laptop. "Adam. Malta-based, perpetually confused 
+"Try to." Adam walks over with his laptop. "Adam. Malta-based, perpetually confused
 about which rules to listen to. You're water and climate?"
 
 "And EU gridlock," Sofia adds. "Apparently we're all having the same terrible night."
@@ -115,17 +115,17 @@ Amara recognizes the pattern: "That's exactly what I experience with climate. Em
 
 Sofia nods: "And in the EU, we see this even within our federal structure. Climate policy involves the Commission, member states, regional governments, cities, private companies, and civil society organizations—all with different roles and authorities that don't fit neatly into a hierarchy."
 
-Amara leans back, exhausted. "So we're stuck. Voluntary cooperation that fails, 
+Amara leans back, exhausted. "So we're stuck. Voluntary cooperation that fails,
 or binding authority that can't scale. Is there even a third option?"
 
 Sofia stares at her cold coffee, thinking. "I was in a seminar by some political theorist in Brussels once ...David Held. Now that I think about it, he wrote about exactly this problem back in the 90s. The whole argument was that neither confederation nor federation works for genuinely transnational challenges."
 
 "And his solution?" Adam asks.
 
-"Cosmopolitan democracy. Multiple overlapping networks of authority instead of 
-territorial hierarchies." 
+"Cosmopolitan democracy. Multiple overlapping networks of authority instead of
+territorial hierarchies."
 
-Adam directly googles the terms on his laptop and finds a relevant source: a 1995 book chapter on democratic governance beyond the nation-state. 
+Adam directly googles the terms on his laptop and finds a relevant source: a 1995 book chapter on democratic governance beyond the nation-state.
 "Here. He argues for democratic institutions that match how power actually works—
 across borders, in networks, at multiple levels simultaneously...That's exactly what we've been describing."
 
@@ -133,83 +133,89 @@ across borders, in networks, at multiple levels simultaneously...That's exactly 
 
 ## The Institutional Design: How do you govern overlapping networks?
 
-
 Helds network perspective differs fundamentally from both confederation and federation. Confederations assume states are the primary actors, cooperating voluntarily. Federations assume nested territorial hierarchies with clear authority levels. But reality—as Amara, Sofia, and Adam all experience—operates through overlapping functional networks that don't respect these boundaries.
 
 Over the next few hours, our three night owls work through Held's framework together. Two core institutional mechanisms emerge...
 
-
 ### Institutional Principle 1 - Multi-level democratic law-making
 
-The first mechanism breaks the assumption that only national governments make 
-binding laws. Instead, democratic law-making happens at every level where power 
-operates—local, national, regional, and global. Courts exist at each level, and 
+The first mechanism breaks the assumption that only national governments make
+binding laws. Instead, democratic law-making happens at every level where power
+operates—local, national, regional, and global. Courts exist at each level, and
 higher courts can check lower ones when rights are violated.
 
-Think of it as governance that matches reality: when a water basin crosses three 
-borders, there's a basin-level authority with democratic accountability. When AI 
-systems operate globally, there's a global-level framework with enforceable rights. 
+Think of it as governance that matches reality: when a water basin crosses three
+borders, there's a basin-level authority with democratic accountability. When AI
+systems operate globally, there's a global-level framework with enforceable rights.
 Power is shared across multiple scales, not trapped in territorial boxes.
 
-For Adam, this solves his regulatory gap problem directly—rules would exist at 
-every level where his AI systems operate, preventing the jurisdiction shopping 
+For Adam, this solves his regulatory gap problem directly—rules would exist at
+every level where his AI systems operate, preventing the jurisdiction shopping
 that currently plagues digital governance.
 
 ### Institutional Principle 2 - Nested citizenship
 
-"The second principle is even more radical," Sofia says, scrolling down. "Citizenship  isn't limited to your nation-state. You can be a citizen in multiple overlapping communities—city, region, country, and also transnational bodies that affect your life."
+"The second principle is even more radical," Sofia says, scrolling down. "Citizenship isn't limited to your nation-state. You can be a citizen in multiple overlapping communities—city, region, country, and also transnational bodies that affect your life."
 
-Adam looks up. "So I'd have democratic rights wherever my AI systems are governed? 
+Adam looks up. "So I'd have democratic rights wherever my AI systems are governed?
 Not just Malta, but also in the EU digital authority, the global AI standards body?"
 
-"And I'd be a citizen of the climate system itself," Amara adds, seeing it. "Not 
-just voting in Tunisia, but having democratic standing in the institutions that 
+"And I'd be a citizen of the climate system itself," Amara adds, seeing it. "Not
+just voting in Tunisia, but having democratic standing in the institutions that
 govern the emissions drowning my region."
 
-"Your political voice follows the actual sources of power that shape your world," 
+"Your political voice follows the actual sources of power that shape your world,"
 Sofia summarizes. "Not just where you were born."
 
-For Adam, this means recognized political standing in the digital governance 
+For Adam, this means recognized political standing in the digital governance
 networks that currently treat him as either a passive subject or an ungoverned actor.
+
+"But wait," Adam says, looking up from the screen. "These mechanisms—multi-level
+law-making, nested citizenship—they're just procedures. Who decides what these
+institutions actually _do_? What stops a cosmopolitan climate authority from imposing
+European environmental standards on Tunisia's development? Or global AI regulations
+that serve Silicon Valley interests?"
+
+Amara nods sharply. "Exactly. The UN _has_ mechanisms. The problem isn't structure—
+it's whose values get encoded in the system."
+
+Sofia pauses. Now she remembers the discussions during the seminar by Held and it is a tough one. "Held anticipated this. He argued that the institutional design only works if it rests on normative foundations—principles that constrain what any institution can do, regardless of which countries dominate it."
 
 ## The Normative Foundation: Rights, not just rules
 
-"The institutional design tells us *how* to govern," Sofia observes. "But what 
-principles should guide these institutions?"
-
-Held's framework rests on five normative principles that distinguish cosmopolitan 
-democracy from both the voluntarism of confederations and the territorial limits 
+Held's framework rests on five normative principles that distinguish cosmopolitan
+democracy from both the voluntarism of confederations and the territorial limits
 of federations.
 
 ### Core Rights Framework
 
-**Cosmopolitan law** establishes universal rights—health, social welfare, culture, 
-civic participation, economy, peace, politics—that apply everywhere, regardless of 
-nationality. For Amara, this means climate stability becomes a legally enforceable 
-right, not a diplomatic aspiration. For Adam, digital rights—privacy, data protection, 
+**Cosmopolitan law** establishes universal rights—health, social welfare, culture,
+civic participation, economy, peace, politics—that apply everywhere, regardless of
+nationality. For Amara, this means climate stability becomes a legally enforceable
+right, not a diplomatic aspiration. For Adam, digital rights—privacy, data protection,
 algorithmic transparency—gain enforceable status across all jurisdictions.
 
-**Universal constitutional principles** create red lines no actor may cross: no mass 
-surveillance, no environmental destruction that violates others' survival, no 
-concentration of power that undermines democratic participation. These are 
+**Universal constitutional principles** create red lines no actor may cross: no mass
+surveillance, no environmental destruction that violates others' survival, no
+concentration of power that undermines democratic participation. These are
 constitutional-level constraints, not voluntary guidelines.
 
 ### Democratic Imperatives
 
-**Global civic commitment** requires actively supporting those excluded from democratic 
-participation. Climate finance for vulnerable populations isn't charity—it's a 
-democratic obligation ensuring equal political agency. Digital inclusion for those 
+**Global civic commitment** requires actively supporting those excluded from democratic
+participation. Climate finance for vulnerable populations isn't charity—it's a
+democratic obligation ensuring equal political agency. Digital inclusion for those
 harmed by algorithmic bias follows the same logic.
 
-**Cosmopolitan social justice** demands that economic activity—whether carbon emissions 
-or data extraction—support rather than undermine democratic equality. High emitters 
-bear greater climate responsibilities; digital monopolies that concentrate power 
+**Cosmopolitan social justice** demands that economic activity—whether carbon emissions
+or data extraction—support rather than undermine democratic equality. High emitters
+bear greater climate responsibilities; digital monopolies that concentrate power
 violate this principle directly.
 
-**Non-coercive relations** govern dispute resolution through courts and mediation, with 
+**Non-coercive relations** govern dispute resolution through courts and mediation, with
 collective force permitted only as last resort to defend democratic rights.
 
-Together, these principles create normative foundations that confederations lack and 
+Together, these principles create normative foundations that confederations lack and
 federations apply only within borders—cosmopolitan democracy extends them globally.
 
 ### What this means for Amara's climate challenge
@@ -230,8 +236,7 @@ Digital disputes—between platforms, regulators, users—go to international co
 
 ## Conclusion
 
-* **Cosmopolitan democracy = normatively federal, structurally confederal, but ontologically post-sovereign.**
-* It borrows from **federalism** the *constitutionalism*, *rights framework*, and *direct citizenship*.
-* It borrows from **confederalism** the *plurality*, *voluntary coordination*, and *respect for local autonomy*.
-* But it ultimately **transcends both** by grounding authority in *universal personhood* rather than *member units*.
-
+- **Cosmopolitan democracy = normatively federal, structurally confederal, but ontologically post-sovereign.**
+- It borrows from **federalism** the _constitutionalism_, _rights framework_, and _direct citizenship_.
+- It borrows from **confederalism** the _plurality_, _voluntary coordination_, and _respect for local autonomy_.
+- But it ultimately **transcends both** by grounding authority in _universal personhood_ rather than _member units_.

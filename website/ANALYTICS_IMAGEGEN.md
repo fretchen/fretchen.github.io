@@ -9,6 +9,7 @@ We track the complete user journey from discovering the image generation feature
 ## Tracked Events
 
 ### 1. `imagegen-connect-hover`
+
 **When:** User hovers over the "Connect your account to create artwork" button (collapsed state)
 
 **Metadata:** None
@@ -18,6 +19,7 @@ We track the complete user journey from discovering the image generation feature
 ---
 
 ### 2. `imagegen-connect-click`
+
 **When:** User clicks the "Connect your account to create artwork" button
 
 **Metadata:** None
@@ -27,9 +29,11 @@ We track the complete user journey from discovering the image generation feature
 ---
 
 ### 3. `imagegen-create-artwork-click`
+
 **When:** User clicks the "Create Artwork" button (expanded state)
 
 **Metadata:**
+
 - `hasReferenceImage`: `true | false` - whether user uploaded a reference image
 - `promptLength`: `number` - length of the AI prompt in characters
 - `isConnected`: `true | false` - wallet connection status (should always be true)
@@ -74,6 +78,7 @@ Overall Conversion: 25% (250/1000)
 ## Umami Dashboard Queries
 
 ### Basic Funnel Metrics
+
 ```
 Event: imagegen-connect-hover
 Count: Total users who showed interest
@@ -86,6 +91,7 @@ Count: Total creation attempts
 ```
 
 ### Reference Image Usage
+
 ```
 Event: imagegen-create-artwork-click
 Filter: hasReferenceImage = true
@@ -93,6 +99,7 @@ Percentage of total creates
 ```
 
 ### Prompt Length Analysis
+
 ```
 Event: imagegen-create-artwork-click
 Metric: avg(promptLength)
@@ -100,6 +107,7 @@ Distribution: Group by promptLength ranges (0-50, 51-100, 101-200, 200+)
 ```
 
 ### Image Size Preference
+
 ```
 Event: imagegen-create-artwork-click
 Group by: imageSize
@@ -107,6 +115,7 @@ Sort by: count DESC
 ```
 
 ### Advanced: Prompt Length vs Reference Image
+
 ```
 Event: imagegen-create-artwork-click
 Filter: hasReferenceImage = true
@@ -124,6 +133,7 @@ Hypothesis: Users with reference images may use shorter prompts
 ## Key Metrics to Monitor
 
 ### 1. Drop-off Points
+
 - **Awareness Drop-off**: Users who hover but don't click
   - High drop-off suggests unclear value proposition
   - Consider improving CTA copy or design
@@ -133,6 +143,7 @@ Hypothesis: Users with reference images may use shorter prompts
   - Monitor for connection problems or UX friction
 
 ### 2. Usage Patterns
+
 - **Reference Image Adoption**: Track % of users utilizing this feature
   - Low usage might mean it's hard to discover
   - High usage indicates strong feature value
@@ -146,7 +157,9 @@ Hypothesis: Users with reference images may use shorter prompts
   - Could influence default selection
 
 ### 3. Conversion Rate by Cohort
+
 Compare conversion rates across:
+
 - New vs returning users
 - Mobile vs desktop
 - Time of day / day of week
@@ -168,7 +181,7 @@ Compare conversion rates across:
 
 - ✅ **Context-aware**: Tracks image size, reference image presence, prompt length
 - ✅ **Non-blocking**: Uses event handlers that don't interrupt user flow
-- ✅ **Privacy-safe**: Tracks prompt *length* not content
+- ✅ **Privacy-safe**: Tracks prompt _length_ not content
 - ✅ **Debug mode**: Console logs in development (respects `analyticsConfig.debugMode`)
 - ✅ **Opt-out**: Respects `VITE_DISABLE_ANALYTICS` environment variable
 
@@ -177,11 +190,13 @@ Compare conversion rates across:
 ## Privacy Considerations
 
 **What we track:**
+
 - User interactions (hover, click)
 - Configuration choices (image size, whether reference image exists)
 - Prompt length in characters
 
 **What we DON'T track:**
+
 - Actual prompt content (privacy-sensitive)
 - Reference image content
 - Wallet addresses
@@ -195,6 +210,7 @@ All tracking respects user's privacy preferences and can be disabled via environ
 ## Testing
 
 ### Development Mode
+
 Set `NODE_ENV=development` and `VITE_DISABLE_ANALYTICS=false` to see console logs:
 
 ```bash
@@ -209,11 +225,13 @@ Set `NODE_ENV=development` and `VITE_DISABLE_ANALYTICS=false` to see console log
 ```
 
 ### Production Verification
+
 1. Check browser console (should be silent)
 2. Verify in Umami dashboard that events appear
 3. Test with `VITE_DISABLE_ANALYTICS=true` - no events should fire
 
 ### Manual Testing Checklist
+
 - [ ] Hover over connect button - event fires once
 - [ ] Click connect button - event fires
 - [ ] Create artwork without reference image - event has `hasReferenceImage: false`
@@ -263,6 +281,7 @@ Set `NODE_ENV=development` and `VITE_DISABLE_ANALYTICS=false` to see console log
 ## Future Enhancements
 
 Potential improvements:
+
 - Track time between hover and click (dwell time)
 - Track time spent crafting prompt before creating
 - A/B test different CTA copy or button designs

@@ -1,18 +1,21 @@
 # Webmention Automation
 
 Dieses Projekt sendet automatisch Webmentions an:
+
 - **Bridgy Publish**: Cross-Posting auf Mastodon und Bluesky
 - **Bridgy Fed**: Federation in das Fediverse/Bluesky
 
 ## Unterschied: Bridgy Publish vs. Bridgy Fed
 
 ### Bridgy Publish
+
 - **Zweck**: Cross-Posting auf deine eigenen Social Media Accounts
 - **Targets**: `brid.gy/publish/mastodon`, `brid.gy/publish/bluesky`
 - **Endpoint**: `https://brid.gy/publish/webmention`
 - **Resultat**: Post erscheint auf deinen Mastodon/Bluesky Accounts
 
 ### Bridgy Fed
+
 - **Zweck**: Federation - dein Blog wird selbst zu einem Fediverse/Bluesky Account
 - **Target**: `https://fed.brid.gy/`
 - **Endpoint**: `https://fed.brid.gy/`
@@ -40,11 +43,13 @@ Diese Links sind im statischen HTML vorhanden und erfüllen die Anforderungen be
 Das `utils/sendWebmentions.ts` Script kann aus **zwei Quellen** lesen:
 
 #### **Option A: Lokales Build-Directory** (Standard)
+
 - Schnell
 - Funktioniert offline
 - Ideal für lokale Tests
 
 #### **Option B: gh-pages Branch**
+
 - Liest deployed Content
 - Benötigt Git Worktree
 - Stellt sicher, dass tatsächlich deployed wurde
@@ -82,6 +87,7 @@ SEND_WEBMENTIONS=true POST_ID=19 npm run send-webmentions
 ```
 
 **Was passiert:**
+
 - Post wird an Bridgy Publish gesendet → Cross-Posting auf Mastodon/Bluesky
 - Post wird an Bridgy Fed gesendet → Federation an Follower im Fediverse/Bluesky
 
@@ -90,11 +96,13 @@ SEND_WEBMENTIONS=true POST_ID=19 npm run send-webmentions
 ### Für neue Blog-Posts:
 
 1. **Build erstellen:**
+
    ```bash
    npm run build
    ```
 
 2. **Webmentions senden (nur für neue Posts):**
+
    ```bash
    SEND_WEBMENTIONS=true ONLY_RECENT=1 npm run send-webmentions
    ```
@@ -114,11 +122,11 @@ SEND_WEBMENTIONS=true npm run send-webmentions
 
 ## Environment Variables
 
-| Variable | Beschreibung | Standard | Beispiel |
-|----------|--------------|----------|----------|
-| `SEND_WEBMENTIONS` | Tatsächlich senden (nicht Dry-Run) | `false` | `true` |
-| `ONLY_RECENT` | Nur Posts der letzten N Tage | Alle | `7` |
-| `POST_ID` | Nur spezifischer Post | Alle | `19` |
+| Variable           | Beschreibung                       | Standard | Beispiel |
+| ------------------ | ---------------------------------- | -------- | -------- |
+| `SEND_WEBMENTIONS` | Tatsächlich senden (nicht Dry-Run) | `false`  | `true`   |
+| `ONLY_RECENT`      | Nur Posts der letzten N Tage       | Alle     | `7`      |
+| `POST_ID`          | Nur spezifischer Post              | Alle     | `19`     |
 
 ## Bridgy Setup
 
@@ -155,7 +163,7 @@ SEND_WEBMENTIONS=true npm run send-webmentions
 ### Bridgy antwortet mit Fehler
 
 - **Ursache:** URL nicht erreichbar, Microformats fehlen, Account nicht verbunden
-- **Lösung:** 
+- **Lösung:**
   1. Prüfe, ob die URL öffentlich erreichbar ist
   2. Validiere Microformats mit [indiewebify.me](https://indiewebify.me)
   3. Prüfe Bridgy-Account-Verbindung auf [brid.gy](https://brid.gy)

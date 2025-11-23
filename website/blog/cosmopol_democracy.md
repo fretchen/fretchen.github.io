@@ -1,18 +1,20 @@
 ---
 publishing_date: 2025-11-08
-title: Democracy beyond the nation-state - What is there ?
+title: Three Governance Models for a Transnational World
 category: "others"
-description: I explore how democratic governence models can be extend beyond nation states.
+description: When climate, water, and digital challenges cross borders but democracy doesn't, what's the alternative? This narrative essay compares confederation, federation, and cosmopolitan democracy through three fictional characters on a Barcelona-Tunis ferry.
 tokenID: 123
 ---
 
+## Prologue
+
 In the last few weeks I kept wondering quite a bit about the association between democratic governance and nation-states. In the current environment your passport tells you where you can vote. But what if the decisions that shape your life—your climate, your data, your economic future—are made by governments you can't vote for? This is the paradox of modern democracy and in this blog post I decide to dive into different models, federations, conferations and cosmopolitan democracy that attempt to solve it.
 
-And as for other economic or political topics, I really like to explore it from the personal perspective of some fictional characters. So time to get started:
+In the last few blog posts on the prisoners dilemma or the tragedy of the commons I really learned to appreciate the power of characters. Therefore, I decided to package my learnings into some fictional story with three characters again. Time to them...
 
 ## Three people, one common issue
 
-We are in the ferry's lounge on the ferry from Barcelona to Tunis. It is nearly empty—just Amara, a sleeping truck driver in the corner, the humming coffee machine, and two other insomniacs she hasn't noticed yet.
+We are in the ferry's lounge on the ferry from Barcelona to Tunis. It is 2 am in the morning, so the lounge is nearly empty — just Amara, the humming coffee machine, and two other insomniacs she hasn't noticed yet.
 
 Amara spreads her research across two tables: water level charts from the Medjerda basin, extraction data from three countries, meeting notes from Barcelona that led
 nowhere. European agricultural policies, Libyan water extraction, and Algerian dam
@@ -225,7 +227,7 @@ Adam zeroes in on constitutional limits. "No mass surveillance, no algorithmic m
 
 "Both of you gain what you lacked," Sofia observes. "Democratic voice that follows actual power, not just territory."
 
-## Conclusion
+## Dawn of a new governance?
 
 Dawn breaks over the Mediterranean as the ferry approaches Tunis harbor. The three 
 of them stand at the railing, exhausted, watching the city emerge from darkness.
@@ -252,3 +254,12 @@ And maybe—" she glances at her water charts, then at them— "maybe that's whe
 change starts."
 
 The ferry docks. They walk off into separate directions, carrying the same questions.
+
+
+## Epilogue
+
+I am super curious how you would continue this story of cosmopolitan democracy. It is already 90 years old, so it is easy to dismis it as utopian thinking. Yet, the problems of our time seem to require exactly such new governance models. What do you think ?
+
+### References
+
+- Held, David. "Democracy and the Global Order: From the Modern State to Cosmopolitan Governance." Stanford University Press, 1995.

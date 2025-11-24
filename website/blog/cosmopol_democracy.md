@@ -207,8 +207,6 @@ force only as last resort.
 "Both of you gain what you lacked," Sofia observes. "Democratic voice that follows
 actual power, not just territory."
 
----
-
 They sit in silence for a while moment, absorbing the implications. Adam closes his laptop. Amara stacks her charts. Sofia checks the time—almost dawn. Without discussion, they gather their things and head to the deck.
 
 ## Epilogue

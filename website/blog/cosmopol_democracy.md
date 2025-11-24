@@ -38,9 +38,9 @@ Water governance conferences illustrate this: neighboring countries produce agre
 
 ### Key characteristics
 
-Confederations share four institutional features: 
+Confederations share four institutional features:
 
-- **sovereignty preservation** (unanimous voting, withdrawal rights) 
+- **sovereignty preservation** (unanimous voting, withdrawal rights)
 - **functional minimalism** (limited to what treaties explicitly authorize)
 - **no hierarchy** (states as equal sovereigns, not subjects of higher authority)
 - **indirect representation** (Amara participates only through her national government, never directly).
@@ -190,44 +190,50 @@ that serve Silicon Valley interests?"
 
 Amara nods sharply. "True. The UN _has_ mechanisms. The problem isn't structure alone but also whose values get encoded in the system."
 
-Sofia pauses. "Held anticipated this. The framework rests on normative foundations. 
+Sofia pauses. "Held anticipated this. The framework rests on normative foundations.
 Look—five principles."
 
 They lean over Adam's laptop, reading in silence. Each gravitates to different parts.
 
 ## The Normative Foundation: Rights, not just rules
 
-Amara focuses on **global civic commitment**: Climate finance for vulnerable 
-populations isn't charity—it's democratic obligation ensuring equal political 
-agency. High emitters don't *choose* to help; they're constitutionally *required* 
+Amara focuses on **global civic commitment**: Climate finance for vulnerable
+populations isn't charity—it's democratic obligation ensuring equal political
+agency. High emitters don't _choose_ to help; they're constitutionally _required_
 to ensure she has standing.
 
 "This changes everything," she says. "I'm not asking permission. I have standing."
 
-Adam zeroes in on **universal constitutional principles**: No mass surveillance. 
-No algorithmic manipulation. No discriminatory systems. These aren't policy 
+Adam zeroes in on **universal constitutional principles**: No mass surveillance.
+No algorithmic manipulation. No discriminatory systems. These aren't policy
 preferences—they're red lines no actor can cross.
 
 "Boundaries," he murmurs. "Actual boundaries on power."
 
-Sofia sees the bigger architecture. **Cosmopolitan law** establishes universal 
-rights everywhere—health, welfare, civic participation, climate stability. Not 
+Sofia sees the bigger architecture. **Cosmopolitan law** establishes universal
+rights everywhere—health, welfare, civic participation, climate stability. Not
 diplomatic aspirations but legally enforceable across all jurisdictions.
 
-**Cosmopolitan social justice** demands economic activity support democratic 
-equality. High emitters bear greater climate responsibilities; digital monopolies 
+**Cosmopolitan social justice** demands economic activity support democratic
+equality. High emitters bear greater climate responsibilities; digital monopolies
 that concentrate power violate the principle directly.
 
-**Non-coercive relations** govern disputes through courts and mediation, collective 
+**Non-coercive relations** govern disputes through courts and mediation, collective
 force only as last resort.
 
-"Both of you gain what you lacked," Sofia observes. "Democratic voice that follows 
+"Both of you gain what you lacked," Sofia observes. "Democratic voice that follows
 actual power, not just territory."
+
+---
+
+They sit in silence for a while moment, absorbing the implications. The lounge has
+slowly filled with early risers—families gathering luggage, truck drivers heading
+to the deck. The theoretical framework they've been dissecting for hours feels both deep and fragile in the face of this ordinary morning bustle.
 
 ## Epilogue
 
-Dawn breaks over the Mediterranean as the ferry approaches Tunis harbor. The three
-of them stand at the railing, exhausted, watching the city emerge from darkness.
+They gather their things without further discussions and head to the deck. Dawn breaks  over the Mediterranean as the ferry approaches Tunis harbor. At the railing, 
+exhausted, they watch the city emerge from darkness.
 
 "So," Adam says quietly. "Did we just solve global governance, or have we been
 talking in circles for six hours?"

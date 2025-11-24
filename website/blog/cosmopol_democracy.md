@@ -36,18 +36,11 @@ In a confederation, member states keep their independence but sign treaties to a
 
 Water governance conferences illustrate this: neighboring countries produce agreements with no binding enforcement mechanisms. Summits produce commitments, countries pursue national interests, aquifers continue depleting—and communities like Amara's keep losing water. The Mediterranean water framework set cooperative targets, but when countries exceed extraction limits, there are no penalties beyond diplomatic complaints.
 
-### Key characteristics
+Amara reviews here notes. Confederations preserve sovereignty above all—unanimous voting, withdrawal rights, no binding authority. They're functionally minimal, doing only what treaties explicitly allow. States remain equal sovereigns with no hierarchy above them. And citizens like her? They participate only through national governments, never directly.
 
-Confederations share four institutional features:
+Worse from a democratic perspective, confederate treaties lack binding normative foundations. They define narrow goals—mutual defense, trade coordination—without establishing universal rights. When principles appear, like the UN Declaration of Human Rights, they're aspirational, weakly enforced. Sovereignty always trumps shared values—or survival.
 
-- **sovereignty preservation** (unanimous voting, withdrawal rights)
-- **functional minimalism** (limited to what treaties explicitly authorize)
-- **no hierarchy** (states as equal sovereigns, not subjects of higher authority)
-- **indirect representation** (Amara participates only through her national government, never directly).
-
-They also lack strong normative foundations. Confederate treaties define narrow goals—mutual defense, trade coordination—without establishing binding universal rights. When principles appear (like the UN Declaration of Human Rights), they're aspirational and weakly enforced. Sovereignty always trumps shared values—or survival.
-
-The result: weak enforcement, minimal democratic participation, fragmented governance. This is why Amara watches the ocean rise while having no democratic recourse.
+Weak enforcement, minimal democratic participation, fragmented governance. This is why she watches the ocean rise while having no democratic recourse.
 
 Amara sighs, reorganizing her charts for the third time. She's stuck, and she knows it.
 
@@ -76,16 +69,9 @@ In a federation, federal law supersedes member state law. There's a shared const
 
 Sofia's daily work operates within this federal structure: EU climate regulations have legal force, the Emissions Trading System binds all members, and enforcement mechanisms exist that confederations lack. Unlike climate conferences where Amara watches countries make voluntary pledges, Sofia works in a system where decisions become binding law.
 
-### Key characteristics of federations
+"The difference is hierarchy," Sofia explains. "Federal law supersedes member state law. We have territorial subsidiarity—decisions at appropriate levels, but within nested territories. Dual legitimacy—citizens vote at both national and EU levels. And constitutional unity: shared legal framework, binding courts."
 
-Federations rest on institutional features that solve confederation's problems:
-
-- **hierarchical authority** (federal law supersedes state law)
-- **territorial subsidiarity** (decisions at appropriate levels, but within nested territories)
-- **dual legitimacy** (citizens vote at both levels)
-- **constitutional unity** (shared legal framework with binding courts).
-
-They also embody strong normative foundations. Federal constitutions establish universal rights that apply to all citizens—Germany's Basic Law, the US Bill of Rights. They create redistribution mechanisms ensuring minimum standards across regions. They distinguish sharply between insiders (citizens with full rights) and outsiders.
+Federations also embody strong normative foundations, she notes. Federal constitutions establish universal rights for all citizens—Germany's Basic Law, the US Bill of Rights. They create redistribution mechanisms ensuring minimum standards across regions. They distinguish sharply between insiders with full rights and outsiders.
 
 This federal structure gives Sofia tools Amara lacks: binding regulations, enforcement mechanisms, supranational courts, and democratic participation in institutions that wield real power.
 
@@ -106,9 +92,9 @@ Multiplying the EU's complexity by seven—and adding nuclear weapons and fundam
 "So we're stuck choosing between systems that both fail," Amara says bitterly.
 
 "Three jurisdictions, one AI model, zero coordination." Adam's voice carries from
-the window table. The conversation between Sofia and Amara had grown increasingly animated. Adam had been listening from the window table—he couldn't help it. The problems they were describing felt painfully familiar. Finally, he had to join in "I know exactly how stuck you are."
+the window table. The conversation between Sofia and Amara has grown increasingly animated. Adam has been listening from the window table—he can't help it. The problems they're describing feel painfully familiar. Finally, he has to join in. "I know exactly how stuck you are."
 
-Sofia and Amara exchange glances, then Sofia calls over: "You work in IT ?"
+Sofia and Amara exchange glances, then Sofia calls over: "You work in IT?"
 
 "Try to." Adam walks over with his laptop. "Adam. Malta-based, perpetually confused
 about which rules to listen to. You're water and climate?"
@@ -193,7 +179,7 @@ Amara nods sharply. "True. The UN _has_ mechanisms. The problem isn't structure 
 Sofia pauses. "Held anticipated this. The framework rests on normative foundations.
 Look—five principles."
 
-They lean over Adam's laptop, reading in silence. Each gravitates to different parts.
+They lean over Adam's laptop, reading in silence. As the night wears on, each gravitates to different parts.
 
 ## The Normative Foundation: Rights, not just rules
 
@@ -226,14 +212,11 @@ actual power, not just territory."
 
 ---
 
-They sit in silence for a while moment, absorbing the implications. The lounge has
-slowly filled with early risers—families gathering luggage, truck drivers heading
-to the deck. The theoretical framework they've been dissecting for hours feels both deep and fragile in the face of this ordinary morning bustle.
+They sit in silence for a while moment, absorbing the implications. Adam closes his laptop. Amara stacks her charts. Sofia checks the time—almost dawn. Without discussion, they gather their things and head to the deck.
 
 ## Epilogue
 
-They gather their things without further discussions and head to the deck. Dawn breaks  over the Mediterranean as the ferry approaches Tunis harbor. At the railing, 
-exhausted, they watch the city emerge from darkness.
+Dawn breaks over the Mediterranean as the ferry approaches Tunis harbor. At the railing, exhausted, they watch the city emerge from darkness.
 
 "So," Adam says quietly. "Did we just solve global governance, or have we been
 talking in circles for six hours?"

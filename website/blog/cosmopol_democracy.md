@@ -1,13 +1,13 @@
 ---
 publishing_date: 2025-11-08
-title: Three Governance Models for a Transnational World
+title: Democracy beyond the nation-state - What is there ?
 category: "others"
 description: When climate, water, and digital challenges cross borders but democracy doesn't, what's the alternative? This narrative essay compares confederation, federation, and cosmopolitan democracy through three fictional characters on a Barcelona-Tunis ferry.
 ---
 
 ## Prologue
 
-In the last few weeks I kept wondering quite a bit about the association between democratic governance and nation-states. In the current environment your passport tells you where you can vote. But what if the decisions that shape your life—your climate, your data, your economic future—are made by governments you can't vote for? This is the paradox of modern democracy and in this blog post I decide to dive into different models, federations, conferations and cosmopolitan democracy that attempt to solve it.
+In the last few weeks I kept wondering quite a bit about on the possibilty of democratic governance beyond nation-states. In the current environment your passport tells you where you can vote. But what if the decisions that shape your life—your climate, your data, your economic future—are made by governments you can't vote for? This is a paradox of modern governance approaches and in this blog post I decide to dive into different models, federations, conferations and cosmopolitan democracy that attempt to solve it.
 
 ## Three people, one common issue
 
@@ -18,9 +18,7 @@ nowhere. European agricultural policies, Libyan water extraction, and Algerian d
 construction all determine whether her region has sustainable water—yet she can
 vote in none of these jurisdictions.
 
-Two tables away its Sofia, a seasoned member of the EU commision. She tries to focus on her own Tunisia briefing notes. But she
-keeps glancing at Amara's charts—the basin maps, the extraction data, the obvious
-frustration. She recognizes that frustration.
+Two tables away its Sofia, a seasoned member of the EU commision. She tries to focus on her own Tunisia briefing notes. But she keeps glancing at Amara's charts—the basin maps, the extraction data, the obvious frustration. She recognizes that frustration.
 
 Near the window, Adam curses quietly at his laptop. Three different regulatory
 frameworks, three incompatible requirements, one AI model. He reaches for coffee

@@ -7,6 +7,7 @@ import * as styles from "../../layouts/styles";
 import { useLocale } from "../../hooks/useLocale";
 import { useConnect } from "wagmi";
 import { useUmami } from "../../hooks/useUmami";
+import { css } from "../../styled-system/css";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -188,6 +189,9 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 }
 
 export default function Page() {
+  // Feature flag - check if AI assistant is enabled
+  const isAiAssistantEnabled = false;
+
   // Analytics hook
   const { trackEvent } = useUmami();
 
@@ -386,6 +390,42 @@ export default function Page() {
     }
     sendMessage(currentInput);
   };
+
+  // If feature is disabled, show maintenance message
+  if (!isAiAssistantEnabled) {
+    return (
+      <div className={styles.assistantPageContainer}>
+        <div
+          className={css({
+            maxWidth: "500px",
+            margin: "0 auto",
+            textAlign: "center",
+            padding: "16",
+          })}
+        >
+          <h3
+            className={css({
+              fontSize: "2xl",
+              fontWeight: "semibold",
+              marginBottom: "4",
+              color: "gray.800",
+            })}
+          >
+            🔧 Temporarily Unavailable
+          </h3>
+          <p
+            className={css({
+              fontSize: "md",
+              color: "gray.600",
+              lineHeight: "1.5",
+            })}
+          >
+            AI Assistant is currently under maintenance. Please check back later.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.assistantPageContainer}>

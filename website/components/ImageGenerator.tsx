@@ -108,6 +108,9 @@ export function ImageGenerator({
   onSuccess,
   onError,
 }: ImageGeneratorProps) {
+  // Feature flag - set if image generation is enabled
+  const isImageGenEnabled = false;
+
   // Analytics hook
   const { trackEvent } = useUmami();
 
@@ -598,7 +601,37 @@ export function ImageGenerator({
         overflow: "hidden",
       })}
     >
-      {!isConnected ? (
+      {!isImageGenEnabled ? (
+        // Feature disabled message
+        <div
+          className={css({
+            maxWidth: "500px",
+            margin: "0 auto",
+            textAlign: "center",
+            padding: "8",
+          })}
+        >
+          <h3
+            className={css({
+              fontSize: "2xl",
+              fontWeight: "semibold",
+              marginBottom: "4",
+              color: "gray.800",
+            })}
+          >
+            🔧 Temporarily Unavailable
+          </h3>
+          <p
+            className={css({
+              fontSize: "md",
+              color: "gray.600",
+              lineHeight: "1.5",
+            })}
+          >
+            AI Image Generation is currently under maintenance. Please check back later.
+          </p>
+        </div>
+      ) : !isConnected ? (
         // Collapsed State - Clean & Simple
         <div
           className={css({

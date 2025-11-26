@@ -51,7 +51,7 @@ describe("GenImNFTv4", function () {
   }
 
   async function deployGenImNFTv4DirectFixture() {
-    // Alternative fixture for direct v3 deployment
+    // Alternative fixture for direct v4 deployment
     const [owner, otherAccount, thirdAccount] = await ethers.getSigners();
 
     const GenImNFTv4 = await ethers.getContractFactory("GenImNFTv4");
@@ -63,7 +63,7 @@ describe("GenImNFTv4", function () {
 
     return {
       proxy: proxy as any,
-      GenImNFTv3,
+      GenImNFTv4,
       owner,
       otherAccount,
       thirdAccount,
@@ -200,23 +200,23 @@ describe("GenImNFTv4", function () {
     it("Should enforce authorization for image updates after upgrade to v4", async function () {
       const { proxy, owner, thirdAccount } = await loadFixture(deployGenImNFTv3AndUpgradeToV4Fixture);
 
-      // Token 0 exists but has no authorized updater (minted in v3 before upgrade)
+      // Token 0 exists (minted in v3 before upgrade)
       expect(await proxy.isImageUpdated(0)).to.be.false;
-      expect(await proxy.getAuthorizedImageUpdater(0)).to.equal(ethers.ZeroAddress);
 
       // NEW V4 BEHAVIOR: Unauthorized attacker cannot update anymore
       await expect(
         proxy.connect(thirdAccount).requestImageUpdate(0, "ipfs://attacker-url")
-      ).to.be.rejectedWith("No authorized updater");
+      ).to.be.rejectedWith("Not authorized agent");
 
-      // Owner can authorize themselves
-      await proxy.connect(owner).authorizeImageUpdater(0, owner.address);
+      // Owner whitelists themselves as authorized agent
+      await proxy.connect(owner).authorizeAgentWallet(owner.address);
+      expect(await proxy.isAuthorizedAgent(owner.address)).to.be.true;
       
       // Fund contract for payment
       const mintPrice = await proxy.mintPrice();
       await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://funding", true, { value: mintPrice });
 
-      // Now authorized owner can update
+      // Now authorized agent can update
       await proxy.connect(owner).requestImageUpdate(0, "ipfs://updated-v4");
       expect(await proxy.isImageUpdated(0)).to.be.true;
       expect(await proxy.tokenURI(0)).to.equal("ipfs://updated-v4");
@@ -233,36 +233,46 @@ describe("GenImNFTv4", function () {
   // V4-specific authorization tests are below
 
   describe("V4 Specific Features (Authorization & Security)", function () {
-    it("Should automatically authorize defaultImageUpdater on mint", async function () {
+    it("Should allow owner to whitelist agent wallets (EIP-8004)", async function () {
       const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
       
-      // Set default image updater
-      await proxy.connect(owner).setDefaultImageUpdater(otherAccount.address);
-      expect(await proxy.defaultImageUpdater()).to.equal(otherAccount.address);
+      // Initially not whitelisted
+      expect(await proxy.isAuthorizedAgent(otherAccount.address)).to.be.false;
 
-      const mintPrice = await proxy.mintPrice();
-      // Mint a token
-      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://test", true, { value: mintPrice });
+      // Owner whitelists agent
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
+      expect(await proxy.isAuthorizedAgent(otherAccount.address)).to.be.true;
       
-      // Check that default updater was automatically authorized
-      expect(await proxy.getAuthorizedImageUpdater(0)).to.equal(otherAccount.address);
+      // Owner can revoke
+      await proxy.connect(owner).revokeAgentWallet(otherAccount.address);
+      expect(await proxy.isAuthorizedAgent(otherAccount.address)).to.be.false;
     });
 
-    it("Should allow token owner to authorize custom updater", async function () {
+    it("Should allow whitelisted agent to update any token", async function () {
       const { proxy, owner, otherAccount, thirdAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
       const mintPrice = await proxy.mintPrice();
 
-      // Mint without default updater set
-      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://test-token", true, { value: mintPrice });
-      expect(await proxy.getAuthorizedImageUpdater(0)).to.equal(ethers.ZeroAddress);
+      // Mint two tokens by different owners
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://token0", true, { value: mintPrice });
+      await proxy.connect(thirdAccount)["safeMint(string,bool)"]("ipfs://token1", true, { value: mintPrice });
 
-      // Change to private
-      await proxy.connect(owner).setTokenListed(0, false);
-      expect(await proxy.isTokenListed(0)).to.be.false;
+      // Whitelist otherAccount as agent
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
 
-      // Change back to public
-      await proxy.connect(owner).setTokenListed(0, true);
-      expect(await proxy.isTokenListed(0)).to.be.true;
+      // Fund contract for payments
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://funding", true, { value: mintPrice });
+
+      // Whitelisted agent can update any token (regardless of owner)
+      await proxy.connect(otherAccount).requestImageUpdate(0, "ipfs://updated0");
+      expect(await proxy.isImageUpdated(0)).to.be.true;
+      expect(await proxy.tokenURI(0)).to.equal("ipfs://updated0");
+
+      // Fund again
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://funding2", true, { value: mintPrice });
+
+      await proxy.connect(otherAccount).requestImageUpdate(1, "ipfs://updated1");
+      expect(await proxy.isImageUpdated(1)).to.be.true;
+      expect(await proxy.tokenURI(1)).to.equal("ipfs://updated1");
     });
 
     it("Should return only public tokens when querying", async function () {
@@ -385,7 +395,7 @@ describe("GenImNFTv4", function () {
       // This test verifies that the exploit from Nov 26, 2025 is now FIXED in v4
       // Original attacker: 0x8B6B008A0073D34D04ff00210E7200Ab00003300
       // Original vulnerability: No authorization in requestImageUpdate()
-      // V4 Fix: Authorization required via defaultImageUpdater or authorizeImageUpdater()
+      // V4 Fix: EIP-8004 compatible whitelist - only authorized agents can update
 
       const { proxy, owner, otherAccount, thirdAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
       const mintPrice = await proxy.mintPrice();
@@ -403,28 +413,22 @@ describe("GenImNFTv4", function () {
       expect(contractBalance).to.equal(mintPrice);
 
       // Step 3: Attacker (unauthorized third party) watches for mint event and attacks
-      const attackerBalanceBefore = await hre.ethers.provider.getBalance(thirdAccount.address);
+      // THE EXPLOIT IS NOW BLOCKED: Attacker tries to call requestImageUpdate
+      await expect(
+        proxy.connect(thirdAccount).requestImageUpdate(tokenId, "ipfs://attacker-controlled-url")
+      ).to.be.rejectedWith("Not authorized agent");
 
-      // THE EXPLOIT: Attacker calls requestImageUpdate without any authorization
-      const attackTx = await proxy.connect(thirdAccount).requestImageUpdate(tokenId, "ipfs://attacker-controlled-url");
-      const receipt = await attackTx.wait();
+      // Step 4: Verify exploit was blocked
+      expect(await proxy.isImageUpdated(tokenId)).to.be.false; // Token NOT updated
+      expect(await proxy.tokenURI(tokenId)).to.equal(""); // URI unchanged
 
-      // Calculate gas cost to verify profit
-      const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
-      const attackerBalanceAfter = await hre.ethers.provider.getBalance(thirdAccount.address);
-
-      // Step 4: Verify exploit succeeded
-      expect(await proxy.isImageUpdated(tokenId)).to.be.true; // Token marked as updated
-      expect(await proxy.tokenURI(tokenId)).to.equal("ipfs://attacker-controlled-url"); // Attacker controls URI
-
-      // Step 5: Verify attacker received payment (financial motivation)
-      const attackerProfit = attackerBalanceAfter - attackerBalanceBefore + BigInt(gasUsed);
-      expect(attackerProfit).to.equal(mintPrice); // Attacker stole the reward
-
-      // Step 6: Verify legitimate updater is now locked out
-      await expect(proxy.connect(owner).requestImageUpdate(tokenId, "ipfs://legitimate-url")).to.be.rejectedWith(
-        "Image already updated",
-      );
+      // Step 5: Only whitelisted agent can update
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
+      await proxy.connect(otherAccount).requestImageUpdate(tokenId, "ipfs://legitimate-url");
+      
+      // Step 6: Verify legitimate update succeeded
+      expect(await proxy.isImageUpdated(tokenId)).to.be.true;
+      expect(await proxy.tokenURI(tokenId)).to.equal("ipfs://legitimate-url");
 
       // Impact: Token is permanently locked with attacker's URL, legitimate service cannot update
     });

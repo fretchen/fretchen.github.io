@@ -31,15 +31,15 @@ contract GenImNFTv4 is
     // NEW: Flag indicating if token is publicly listed (visible in public galleries)
     mapping(uint256 => bool) private _isListed;
 
-    // V4: Default image updater service address (set by owner)
+    // V4: EIP-8004 compatible whitelist for authorized agent wallets
     // MUST be placed AFTER all v3 variables to maintain storage layout compatibility
-    address public defaultImageUpdater;
+    mapping(address => bool) private _whitelistedAgentWallets;
 
     // Events
-    event ImageUpdaterAuthorized(uint256 indexed tokenId, address indexed updater);
+    event AgentWalletAuthorized(address indexed agentWallet);
+    event AgentWalletRevoked(address indexed agentWallet);
     event ImageUpdateRequested(uint256 indexed tokenId, address indexed updater, string imageUrl);
     event UpdaterPaid(uint256 indexed tokenId, address indexed updater, uint256 amount);
-    event DefaultImageUpdaterSet(address indexed updater);
     
     // NEW: Event for listing changes
     event TokenListingChanged(uint256 indexed tokenId, bool isListed);
@@ -84,20 +84,20 @@ contract GenImNFTv4 is
      * @dev Reinitializer function for upgrading from v3 to v4
      * Fixes CVE-2025-11-26: Unauthorized image update exploit
      * 
-     * Security Fix: Adds authorization requirement for requestImageUpdate()
-     * - Introduces defaultImageUpdater for automatic authorization on mint
-     * - Allows token owners to authorize specific updaters
+     * Security Fix: Adds EIP-8004 compatible whitelist for authorized agent wallets
+     * - Only whitelisted agent wallets can call requestImageUpdate()
+     * - Owner manages whitelist via authorizeAgentWallet/revokeAgentWallet
      * - Prevents unauthorized parties from stealing rewards and locking tokens
+     * - Compatible with EIP-8004 Trustless Agents standard
      * 
      * No state migration needed - new security model applies to future operations only.
-     * Existing tokens (0-157+) remain in their current state.
+     * Owner must call authorizeAgentWallet() after upgrade to whitelist backend service.
      * 
      * @custom:oz-upgrades-validate-as-reinitializer version=4
      */
     function reinitializeV4() reinitializer(4) public {
         // No state changes needed
-        // The new authorization checks in requestImageUpdate will protect future updates
-        // Existing tokens can be authorized by their owners using authorizeImageUpdater
+        // Owner must call authorizeAgentWallet(0xAAEBC1441323B8ad6Bdf6793A8428166b510239C) after upgrade
     }
 
     /**
@@ -115,10 +115,32 @@ contract GenImNFTv4 is
         mintPrice = newPrice;
     }
 
-    function setDefaultImageUpdater(address updater) public onlyOwner {
-        require(updater != address(0), "Invalid updater address");
-        defaultImageUpdater = updater;
-        emit DefaultImageUpdaterSet(updater);
+    /**
+     * @dev Authorizes an agent wallet to update token images (EIP-8004 compatible)
+     * @param agentWallet The address of the agent wallet to authorize
+     */
+    function authorizeAgentWallet(address agentWallet) public onlyOwner {
+        require(agentWallet != address(0), "Invalid agent wallet");
+        _whitelistedAgentWallets[agentWallet] = true;
+        emit AgentWalletAuthorized(agentWallet);
+    }
+
+    /**
+     * @dev Revokes authorization from an agent wallet (EIP-8004 compatible)
+     * @param agentWallet The address of the agent wallet to revoke
+     */
+    function revokeAgentWallet(address agentWallet) public onlyOwner {
+        _whitelistedAgentWallets[agentWallet] = false;
+        emit AgentWalletRevoked(agentWallet);
+    }
+
+    /**
+     * @dev Checks if an address is an authorized agent (EIP-8004 compatible)
+     * @param agentWallet The address to check
+     * @return True if the address is authorized
+     */
+    function isAuthorizedAgent(address agentWallet) public view returns (bool) {
+        return _whitelistedAgentWallets[agentWallet];
     }
 
     // Anyone can mint by paying the fee (backward compatible)
@@ -145,26 +167,8 @@ contract GenImNFTv4 is
         // Set listing status
         _isListed[tokenId] = isListed;
         
-        // Authorize the default image updater service (if set)
-        if (defaultImageUpdater != address(0)) {
-            _authorizedImageUpdaters[tokenId] = defaultImageUpdater;
-            emit ImageUpdaterAuthorized(tokenId, defaultImageUpdater);
-        }
-        
         emit TokenListingChanged(tokenId, isListed);
         return tokenId;
-    }
-
-    /**
-     * @dev Authorize an address to update the image for a token (only token owner)
-     * @param tokenId The ID of the token
-     * @param updater The address authorized to update the image
-     */
-    function authorizeImageUpdater(uint256 tokenId, address updater) external {
-        require(ownerOf(tokenId) == msg.sender, "Not token owner");
-        require(updater != address(0), "Invalid updater address");
-        _authorizedImageUpdaters[tokenId] = updater;
-        emit ImageUpdaterAuthorized(tokenId, updater);
     }
 
     /**
@@ -263,6 +267,7 @@ contract GenImNFTv4 is
     /**
      * @dev Marks a token as updated with an image, emits an event
      * and pays a compensation to the updater.
+     * Only whitelisted agent wallets can call this function (EIP-8004 compatible).
      * @param tokenId The ID of the token being updated
      * @param imageUrl The URL of the updated image
      */
@@ -270,10 +275,8 @@ contract GenImNFTv4 is
         require(_exists(tokenId), "Token does not exist");
         require(!_imageUpdated[tokenId], "Image already updated");
         
-        // SECURITY: Only the authorized updater can update the image
-        address authorizedUpdater = _authorizedImageUpdaters[tokenId];
-        require(authorizedUpdater != address(0), "No authorized updater");
-        require(msg.sender == authorizedUpdater, "Not authorized to update this token");
+        // SECURITY FIX (CVE-2025-11-26): Only whitelisted agent wallets can update images
+        require(_whitelistedAgentWallets[msg.sender], "Not authorized agent");
 
         // Mark the token as updated
         _imageUpdated[tokenId] = true;
@@ -316,16 +319,6 @@ contract GenImNFTv4 is
     }
 
     /**
-     * @dev Gets the authorized image updater for a token
-     * @param tokenId The ID of the token
-     * @return The address of the authorized updater (address(0) if none)
-     */
-    function getAuthorizedImageUpdater(uint256 tokenId) public view returns (address) {
-        require(_exists(tokenId), "Token does not exist");
-        return _authorizedImageUpdaters[tokenId];
-    }
-
-    /**
      * @dev Checks if a token exists
      */
     function _exists(uint256 tokenId) internal view returns (bool) {
@@ -341,8 +334,7 @@ contract GenImNFTv4 is
         // Clean up mappings when burning (to == address(0))
         if (to == address(0)) {
             delete _imageUpdated[tokenId];
-            delete _authorizedImageUpdaters[tokenId];
-            delete _isListed[tokenId]; // NEW: Clean up listing status
+            delete _isListed[tokenId]; // Clean up listing status
         }
         
         return super._update(to, tokenId, auth);
@@ -376,7 +368,7 @@ contract GenImNFTv4 is
     /**
      * @dev Storage gap for future upgrades
      * V3: 50 slots reserved (used: 0 custom variables beyond inherited)
-     * V4: 48 slots reserved (used: 1 slot for defaultImageUpdater address)
+     * V4: 48 slots reserved (used: 1 slot for _whitelistedAgentWallets mapping)
      * Always reserve space for future storage variables to maintain upgrade compatibility
      */
     uint256[48] private __gap;

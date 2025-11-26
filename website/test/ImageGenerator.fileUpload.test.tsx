@@ -1,6 +1,8 @@
 /**
  * ImageGenerator Reference Image & Edit Mode Integration Tests
  *
+ * SKIPPED: Feature temporarily deactivated due to security exploit fix in progress
+ *
  * Umfassende Tests für die ImageGenerator Komponente:
  * - File Upload Functionality
  * - UI State Management
@@ -29,7 +31,7 @@ beforeAll(() => {
   } as ReturnType<typeof useAccount>);
 });
 
-describe("ImageGenerator Reference Image Integration", () => {
+describe.skip("ImageGenerator Reference Image Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 

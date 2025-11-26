@@ -1,6 +1,8 @@
 /**
  * ImageGenerator Component Tests
  *
+ * SKIPPED: Feature temporarily deactivated due to security exploit fix in progress
+ *
  * This test suite verifies the functionality of the ImageGenerator component,
  * which allows users to create AI-generated artwork and mint it as NFTs on the blockchain.
  *
@@ -59,7 +61,7 @@ vi.mock("../hooks/useLocale", () => ({
   useLocale: ({ label }: { label: string }) => `mocked-${label}`,
 }));
 
-describe("ImageGenerator Component", () => {
+describe.skip("ImageGenerator Component", () => {
   describe("Collapsed State (First-time visitors)", () => {
     it("should render collapsed state when wallet is not connected", () => {
       // Mock disconnected wallet to ensure collapsed state

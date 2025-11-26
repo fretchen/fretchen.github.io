@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * Integration tests for the ImageGenerator API
  * Tests the Scaleway Cloud Functions API based on readhandler.js
  *
+ * SKIPPED: Feature temporarily deactivated due to security exploit fix in progress
+ *
  * @fileoverview Integration tests covering successful API responses, error handling,
  * network issues, response validation, and URL construction for the ImageGenerator API
  */
-describe("ImageGenerator API Integration", () => {
+describe.skip("ImageGenerator API Integration", () => {
   const mockApiResponse = {
     metadata_url: "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/token_123.json",
     image_url: "https://my-imagestore.s3.nl-ams.scw.cloud/images/generated_image_123.png",

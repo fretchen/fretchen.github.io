@@ -228,9 +228,114 @@ describe("GenImNFTv4", function () {
     createBasicNFTTests(deployGenImNFTv4DirectFixtureViem);
   });
 
-  // NOTE: Shared image update tests from v2/v3 are SKIPPED for v4
-  // because v4 requires authorization which is not set up in shared tests
-  // V4-specific authorization tests are below
+  // V4-specific image update tests WITH authorization setup
+  describe("Image Updates with Authorization (Direct V4 Deployment)", function () {
+    it("Should allow whitelisted agent to request image update and receive payment", async function () {
+      const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
+      const mintPrice = await proxy.mintPrice();
+
+      // Mint a token
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://initial", true, { value: mintPrice });
+      const tokenId = 0n;
+
+      // Whitelist agent
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
+
+      // Record balances before update
+      const agentBalanceBefore = await hre.ethers.provider.getBalance(otherAccount.address);
+      const contractBalanceBefore = await hre.ethers.provider.getBalance(await proxy.getAddress());
+
+      // Request image update
+      const tx = await proxy.connect(otherAccount).requestImageUpdate(tokenId, "ipfs://updated");
+      const receipt = await tx.wait();
+      const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+
+      // Verify token was updated
+      expect(await proxy.isImageUpdated(tokenId)).to.be.true;
+      expect(await proxy.tokenURI(tokenId)).to.equal("ipfs://updated");
+
+      // Verify payment was made to agent
+      const agentBalanceAfter = await hre.ethers.provider.getBalance(otherAccount.address);
+      const contractBalanceAfter = await hre.ethers.provider.getBalance(await proxy.getAddress());
+
+      expect(agentBalanceAfter).to.equal(agentBalanceBefore + mintPrice - gasUsed);
+      expect(contractBalanceAfter).to.equal(contractBalanceBefore - mintPrice);
+    });
+
+    it("Should reject image update from non-whitelisted address", async function () {
+      const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
+      const mintPrice = await proxy.mintPrice();
+
+      // Mint a token
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://initial", true, { value: mintPrice });
+      const tokenId = 0n;
+
+      // Try to update without being whitelisted
+      await expect(
+        proxy.connect(otherAccount).requestImageUpdate(tokenId, "ipfs://unauthorized")
+      ).to.be.rejectedWith("Not authorized agent");
+
+      // Verify token was NOT updated
+      expect(await proxy.isImageUpdated(tokenId)).to.be.false;
+      expect(await proxy.tokenURI(tokenId)).to.equal("ipfs://initial");
+    });
+
+    it("Should prevent duplicate image updates", async function () {
+      const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
+      const mintPrice = await proxy.mintPrice();
+
+      // Mint a token and whitelist agent
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://initial", true, { value: mintPrice });
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
+
+      // First update should succeed
+      await proxy.connect(otherAccount).requestImageUpdate(0, "ipfs://updated");
+      expect(await proxy.isImageUpdated(0)).to.be.true;
+
+      // Second update should fail
+      await expect(
+        proxy.connect(otherAccount).requestImageUpdate(0, "ipfs://double-update")
+      ).to.be.rejectedWith("Image already updated");
+    });
+
+    it("Should reject update for non-existent token", async function () {
+      const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
+
+      // Whitelist agent
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
+
+      // Try to update non-existent token
+      await expect(
+        proxy.connect(otherAccount).requestImageUpdate(999, "ipfs://nonexistent")
+      ).to.be.rejectedWith("Token does not exist");
+    });
+
+    it("Should allow revoking agent authorization", async function () {
+      const { proxy, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixture);
+      const mintPrice = await proxy.mintPrice();
+
+      // Mint tokens
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://token0", true, { value: mintPrice });
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://token1", true, { value: mintPrice });
+
+      // Whitelist and use agent
+      await proxy.connect(owner).authorizeAgentWallet(otherAccount.address);
+      await proxy.connect(otherAccount).requestImageUpdate(0, "ipfs://updated0");
+      expect(await proxy.isImageUpdated(0)).to.be.true;
+
+      // Revoke authorization
+      await proxy.connect(owner).revokeAgentWallet(otherAccount.address);
+      expect(await proxy.isAuthorizedAgent(otherAccount.address)).to.be.false;
+
+      // Fund contract again
+      await proxy.connect(owner)["safeMint(string,bool)"]("ipfs://funding", true, { value: mintPrice });
+
+      // Should now be rejected
+      await expect(
+        proxy.connect(otherAccount).requestImageUpdate(1, "ipfs://updated1")
+      ).to.be.rejectedWith("Not authorized agent");
+    });
+  });
 
   describe("V4 Specific Features (Authorization & Security)", function () {
     it("Should allow owner to whitelist agent wallets (EIP-8004)", async function () {

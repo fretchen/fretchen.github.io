@@ -1,7 +1,6 @@
 import "@nomicfoundation/hardhat-toolbox-viem";
 import "@nomicfoundation/hardhat-verify";
 import "hardhat-abi-exporter";
-import "hardhat-gas-reporter";
 import "@openzeppelin/hardhat-upgrades";
 import { vars } from "hardhat/config";
 
@@ -13,18 +12,9 @@ const SEPOLIA_PRIVATE_KEY: string = vars.get(
 );
 const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
 const OPTIMISTIC_ETHERSCAN_API_KEY: string = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY", "dummy-optimistic-key");
-const COINMARKETCAP_API_KEY: string = vars.get("COINMARKETCAP_API_KEY", "dummy-cmc-key");
 
 const config = {
   solidity: "0.8.28",
-  gasReporter: {
-    currency: "EUR",
-    L1: "ethereum",
-    L2: "optimism",
-    L2Etherscan: OPTIMISTIC_ETHERSCAN_API_KEY,
-    L1Etherscan: ETHERSCAN_API_KEY,
-    coinmarketcap: COINMARKETCAP_API_KEY,
-  },
   networks: {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,

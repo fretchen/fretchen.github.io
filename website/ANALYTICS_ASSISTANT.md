@@ -23,6 +23,7 @@ We track a simplified user journey focused on the "Connect your wallet to send" 
 **When:** User clicks the "Connect your wallet to send" button (only when wallet is not connected)
 
 **Metadata:**
+
 - `hasInput`: `true | false` - whether user has already typed a message before clicking connect
 
 **Purpose:** Shows engagement - users who actively want to use the assistant
@@ -34,6 +35,7 @@ We track a simplified user journey focused on the "Connect your wallet to send" 
 **When:** User sends their first message after connecting (tracked only once per session)
 
 **Metadata:**
+
 - `messageLength`: `number` - length of the first message in characters
 - `isMobile`: `true | false` - whether user is on mobile device
 
@@ -186,12 +188,14 @@ Purpose: Identify platform-specific usage patterns
 ## Privacy Considerations
 
 **What we track:**
+
 - User interactions with connect button (hover, click)
 - Whether user typed input before connecting
 - First message length in characters
 - Device type (mobile/desktop)
 
 **What we DON'T track:**
+
 - Actual message content (privacy-sensitive)
 - Wallet addresses
 - Conversation history
@@ -277,22 +281,26 @@ Expected console output:
 ### vs ImageGenerator Funnel
 
 Both track:
+
 - Hover (awareness)
-- Click (interest)  
+- Click (interest)
 - Action (conversion)
 
 Key difference:
+
 - ImageGenerator: Tracks image creation parameters
 - Assistant: Tracks message complexity and typing behavior
 
 ### vs Wallet Connection Funnel
 
 Wallet funnel tracks:
+
 - Wallet provider selection
 - Connection success/failure
 - Time to connect
 
 Assistant funnel focuses on:
+
 - Feature discovery
 - Usage intent
 - First interaction success
@@ -302,6 +310,7 @@ Assistant funnel focuses on:
 ## Future Enhancements
 
 Potential improvements:
+
 - Track time between hover and click (hesitation metric)
 - Track time from click to first message (onboarding duration)
 - Track balance top-up correlation with message sending

@@ -9,8 +9,10 @@ We track the complete user journey from opening the wallet dropdown to successfu
 ## Tracked Events
 
 ### 1. `wallet-dropdown-open`
+
 **When:** User opens the wallet connection dropdown (hover/click)
 **Metadata:**
+
 - `device`: `'mobile' | 'desktop'`
 
 **Purpose:** Baseline for conversion rate - shows how many users are interested in connecting
@@ -18,8 +20,10 @@ We track the complete user journey from opening the wallet dropdown to successfu
 ---
 
 ### 2. `wallet-connect-attempt`
+
 **When:** User clicks on a specific wallet connector (e.g., MetaMask, WalletConnect)
 **Metadata:**
+
 - `connector`: Wallet name (e.g., `'MetaMask'`, `'WalletConnect'`)
 - `connectorId`: Unique connector identifier
 - `device`: `'mobile' | 'desktop'`
@@ -29,8 +33,10 @@ We track the complete user journey from opening the wallet dropdown to successfu
 ---
 
 ### 3. `wallet-connect-success`
+
 **When:** Wallet connection is successfully established
 **Metadata:**
+
 - `connector`: Wallet name that was connected
 - `hasEnsName`: `true | false` - whether user has an ENS name
 - `device`: `'mobile' | 'desktop'`
@@ -41,8 +47,10 @@ We track the complete user journey from opening the wallet dropdown to successfu
 ---
 
 ### 4. `wallet-connect-error`
+
 **When:** Wallet connection fails
 **Metadata:**
+
 - `connector`: Wallet name that failed
 - `error`: Error message (e.g., `'User rejected connection'`, `'Wallet not found'`)
 - `device`: `'mobile' | 'desktop'`
@@ -52,8 +60,10 @@ We track the complete user journey from opening the wallet dropdown to successfu
 ---
 
 ### 5. `wallet-dropdown-close`
+
 **When:** User closes dropdown without clicking any connector
 **Metadata:**
+
 - `hadInteraction`: Always `false` (only tracked when no connector was clicked)
 - `device`: `'mobile' | 'desktop'`
 
@@ -94,6 +104,7 @@ Dropdown Opens: 1000 users interested
 ## Umami Dashboard Queries
 
 ### Most Popular Wallets
+
 ```
 Event: wallet-connect-attempt
 Group by: connector
@@ -101,6 +112,7 @@ Sort by: count DESC
 ```
 
 ### Success Rate by Wallet
+
 ```
 Event: wallet-connect-success
 Group by: connector
@@ -108,6 +120,7 @@ Compare with: wallet-connect-attempt
 ```
 
 ### Common Error Messages
+
 ```
 Event: wallet-connect-error
 Group by: error
@@ -115,6 +128,7 @@ Sort by: count DESC
 ```
 
 ### Mobile vs Desktop Performance
+
 ```
 Event: wallet-connect-success
 Filter: device = mobile
@@ -126,6 +140,7 @@ Metric: avg(timeToConnect)
 ```
 
 ### Drop-off Analysis
+
 ```
 Event: wallet-dropdown-close
 Filter: hadInteraction = false
@@ -176,13 +191,16 @@ Group by: device
 ## Testing
 
 ### Development Mode
+
 Set `NODE_ENV=development` to see console logs for all tracked events:
+
 ```
 [Analytics] wallet-dropdown-open { device: 'desktop' }
 [Analytics] wallet-connect-attempt { connector: 'MetaMask', ... }
 ```
 
 ### Production Mode
+
 Events are silently tracked (no console logs)
 Check Umami dashboard to verify events are being received
 
@@ -191,6 +209,7 @@ Check Umami dashboard to verify events are being received
 ## Future Enhancements
 
 Potential improvements:
+
 - Track time spent viewing dropdown before closing
 - Track retry attempts after errors
 - A/B test different connector orderings

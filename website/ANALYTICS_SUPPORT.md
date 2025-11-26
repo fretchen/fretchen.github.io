@@ -13,6 +13,7 @@ We track the complete user journey from discovering the support button to succes
 **When:** User hovers over the support star button (☆) - only when wallet is connected
 
 **Metadata:**
+
 - `variant`: `'progress' | 'inline'` - button variant (sticky top bar vs inline content)
 - `currentSupports`: `number` - how many supports this post already has
 - `readingProgress`: `number` (optional) - percentage of article read (0-100, only for progress variant)
@@ -26,6 +27,7 @@ We track the complete user journey from discovering the support button to succes
 **When:** User clicks the support star button
 
 **Metadata:**
+
 - `variant`: `'progress' | 'inline'` - button variant
 - `currentSupports`: `number` - current support count
 - `readingProgress`: `number` (optional) - reading progress at time of click
@@ -40,6 +42,7 @@ We track the complete user journey from discovering the support button to succes
 **When:** Support transaction is successfully confirmed on-chain
 
 **Metadata:**
+
 - `url`: `string` - the post URL that was supported
 - `previousSupports`: `string` - support count before this transaction
 
@@ -243,6 +246,7 @@ Low rate indicates: wallet issues, network problems, insufficient funds
 ## Privacy Considerations
 
 **What we track:**
+
 - User interactions (hover, click) - only when wallet connected
 - Button variant and placement
 - Reading progress (percentage, not content)
@@ -250,6 +254,7 @@ Low rate indicates: wallet issues, network problems, insufficient funds
 - Post URLs (public content identifiers)
 
 **What we DON'T track:**
+
 - Wallet addresses
 - Transaction hashes
 - User identity
@@ -344,7 +349,7 @@ Expected console output:
    - Alert if drops below 80%
 
 7. **Monetization Potential**: Revenue opportunity assessment
-   - Overall conversion rate * visitors = potential supporters
+   - Overall conversion rate \* visitors = potential supporters
    - Calculate ROI of content production
 
 ---
@@ -354,6 +359,7 @@ Expected console output:
 ### Based on Reading Progress
 
 If users support at:
+
 - **0-25%**: Strong intro/reputation → Promote earlier
 - **50-75%**: Value recognition → Current placement works
 - **75-100%**: Post-appreciation → Add end-of-article CTA
@@ -361,6 +367,7 @@ If users support at:
 ### Based on Social Proof
 
 If high support count increases conversion:
+
 - Make support count more prominent
 - Add "Join X supporters" messaging
 - Highlight top supported posts
@@ -368,10 +375,12 @@ If high support count increases conversion:
 ### Based on Variant Performance
 
 If progress variant performs better:
+
 - Use progress variant as default
 - Remove inline variant to simplify
 
 If inline variant performs better:
+
 - Add more inline CTAs throughout content
 - Make progress variant less intrusive
 
@@ -382,11 +391,13 @@ If inline variant performs better:
 ### vs ImageGenerator & Assistant
 
 All track:
+
 - Discovery (hover/awareness)
 - Intent (click/attempt)
 - Conversion (success/completion)
 
 Support funnel unique features:
+
 - **Reading progress**: Content engagement metric
 - **Social proof**: Existing support influence
 - **Content identification**: URL-level tracking
@@ -395,6 +406,7 @@ Support funnel unique features:
 ### Revenue Tracking
 
 Unlike ImageGenerator (direct payment for service):
+
 - Support is voluntary donation
 - Lower conversion expected (15-20% vs 30%+)
 - But indicates content quality/value
@@ -405,6 +417,7 @@ Unlike ImageGenerator (direct payment for service):
 ## Future Enhancements
 
 Potential improvements:
+
 - Track time between hover and click (hesitation)
 - Track support amount selection (if variable amounts added)
 - Correlate with visitor source (social media, direct, search)

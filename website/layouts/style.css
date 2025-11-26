@@ -32,6 +32,26 @@ p {
   margin-bottom: 1em;
 }
 
+/* Blockquote styling for citations */
+blockquote {
+  margin: 1.5em 0;
+  padding: 1em 1.5em;
+  border-left: 4px solid #3b82f6;
+  background-color: #f9fafb;
+  font-style: italic;
+  color: #4b5563;
+  border-radius: 4px;
+}
+
+blockquote p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+blockquote p:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+
 /* Page Transition Animation */
 #page-content {
   opacity: 1;

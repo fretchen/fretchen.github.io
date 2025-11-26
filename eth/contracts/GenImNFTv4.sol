@@ -22,9 +22,6 @@ contract GenImNFTv4 is
     // Price for minting an NFT
     uint256 public mintPrice;
 
-    // Default image updater service address (set by owner)
-    address public defaultImageUpdater;
-
     // Authorized addresses that can update images for tokens
     mapping(uint256 => address) private _authorizedImageUpdaters;
 
@@ -33,6 +30,10 @@ contract GenImNFTv4 is
 
     // NEW: Flag indicating if token is publicly listed (visible in public galleries)
     mapping(uint256 => bool) private _isListed;
+
+    // V4: Default image updater service address (set by owner)
+    // MUST be placed AFTER all v3 variables to maintain storage layout compatibility
+    address public defaultImageUpdater;
 
     // Events
     event ImageUpdaterAuthorized(uint256 indexed tokenId, address indexed updater);
@@ -43,6 +44,15 @@ contract GenImNFTv4 is
     // NEW: Event for listing changes
     event TokenListingChanged(uint256 indexed tokenId, bool isListed);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initializes the contract. Should only be called once.
+     * @custom:oz-upgrades-validate-as-initializer
+     */
     function initialize() initializer public {
         __ERC721_init("GenImNFTv4", "GENIMGv4");
         __ERC721URIStorage_init();
@@ -58,6 +68,7 @@ contract GenImNFTv4 is
     /**
      * @dev Reinitializer function for upgrading from v2 to v3
      * This function adds the new functionality while preserving existing state
+     * @custom:oz-upgrades-validate-as-reinitializer version=3
      */
     function reinitializeV3() reinitializer(3) public {
         // Mark all existing tokens as publicly listed (opt-out system)
@@ -71,8 +82,17 @@ contract GenImNFTv4 is
 
     /**
      * @dev Reinitializer function for upgrading from v3 to v4
-     * Fixes security exploit: Adds authorization requirement for image updates
-     * No state migration needed - new security model applies to future operations
+     * Fixes CVE-2025-11-26: Unauthorized image update exploit
+     * 
+     * Security Fix: Adds authorization requirement for requestImageUpdate()
+     * - Introduces defaultImageUpdater for automatic authorization on mint
+     * - Allows token owners to authorize specific updaters
+     * - Prevents unauthorized parties from stealing rewards and locking tokens
+     * 
+     * No state migration needed - new security model applies to future operations only.
+     * Existing tokens (0-157+) remain in their current state.
+     * 
+     * @custom:oz-upgrades-validate-as-reinitializer version=4
      */
     function reinitializeV4() reinitializer(4) public {
         // No state changes needed
@@ -353,6 +373,11 @@ contract GenImNFTv4 is
         return super.supportsInterface(interfaceId);
     }
 
-    // Storage gap adjusted for new mapping
-    uint256[49] private __gap;
+    /**
+     * @dev Storage gap for future upgrades
+     * V3: 50 slots reserved (used: 0 custom variables beyond inherited)
+     * V4: 48 slots reserved (used: 1 slot for defaultImageUpdater address)
+     * Always reserve space for future storage variables to maintain upgrade compatibility
+     */
+    uint256[48] private __gap;
 }

@@ -181,9 +181,36 @@ async function upgradeToV4() {
     // Validate upgrade compatibility
     console.log("");
     console.log("🔍 Validating upgrade compatibility...");
-    await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
-      kind: "uups",
-    });
+    console.log("🔍 Checking if proxy is registered with OpenZeppelin...");
+    
+    try {
+      await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+        kind: "uups",
+      });
+      console.log("✅ Proxy is registered");
+    } catch (error: any) {
+      if (error.message && error.message.includes("not registered")) {
+        console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
+        console.log("📦 Importing proxy with forceImport...");
+        console.log("   This is normal for contracts deployed without OpenZeppelin Upgrades Plugin");
+        
+        await upgrades.forceImport(proxyAddress, GenImNFTv3Factory, {
+          kind: "uups",
+        });
+        
+        console.log("✅ Proxy imported successfully");
+        console.log("");
+        console.log("🔍 Retrying upgrade validation...");
+        
+        // Retry validation after import
+        await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+          kind: "uups",
+        });
+      } else {
+        throw error;
+      }
+    }
+    
     console.log("✅ OpenZeppelin upgrade validation passed");
   } catch (error) {
     console.error("❌ Pre-upgrade validation failed:");
@@ -419,9 +446,34 @@ async function validateUpgrade(proxyAddress: string) {
   console.log(`✅ Total supply: ${totalSupply.toString()}`);
 
   // Validate upgrade compatibility
-  await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
-    kind: "uups",
-  });
+  console.log("");
+  console.log("🔍 Checking if proxy is registered with OpenZeppelin...");
+  try {
+    await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+      kind: "uups",
+    });
+    console.log("✅ Proxy is registered");
+  } catch (error: any) {
+    if (error.message && error.message.includes("not registered")) {
+      console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
+      console.log("📦 Importing proxy with forceImport...");
+      
+      await upgrades.forceImport(proxyAddress, GenImNFTv3Factory, {
+        kind: "uups",
+      });
+      
+      console.log("✅ Proxy imported successfully");
+      console.log("");
+      console.log("🔍 Retrying upgrade validation...");
+      
+      // Retry validation after import
+      await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+        kind: "uups",
+      });
+    } else {
+      throw error;
+    }
+  }
 
   console.log("✅ GenImNFTv4 upgrade validation passed");
   console.log("✅ Storage layout is compatible");

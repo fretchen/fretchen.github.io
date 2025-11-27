@@ -174,22 +174,18 @@ The script automatically validates:
 ### Common Errors
 
 1. **"Configuration file not found"**
-
    - Ensure the config file exists in the specified path
    - Check file permissions
 
 2. **"Invalid JSON"**
-
    - Validate JSON syntax using a JSON validator
    - Check for missing commas or brackets
 
 3. **"Invalid genImNFTAddress format"**
-
    - Ensure address is 42 characters (0x + 40 hex characters)
    - Verify address checksum
 
 4. **"Network mismatch"**
-
    - Ensure config network matches Hardhat network parameter
    - This is a warning, not an error
 

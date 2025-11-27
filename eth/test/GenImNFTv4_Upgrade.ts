@@ -66,11 +66,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
   }
 
   // Helper function to backup and restore config
-  async function withTempConfig(
-    proxyAddress: string,
-    options: UpgradeV4ConfigOptions,
-    testFn: () => Promise<void>,
-  ) {
+  async function withTempConfig(proxyAddress: string, options: UpgradeV4ConfigOptions, testFn: () => Promise<void>) {
     const originalConfigPath = path.join(__dirname, "../scripts/upgrade-genimg-v4.config.json");
     const backupConfigPath = path.join(__dirname, "../scripts/upgrade-genimg-v4.config.json.backup");
     const tempConfigPath = await createTempConfig(proxyAddress, options);
@@ -371,14 +367,10 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     it("Should authorize agent wallet after upgrade via config", async function () {
       const { proxyAddress, otherAccount } = await deployGenImNFTv3Fixture();
 
-      await withTempConfig(
-        proxyAddress,
-        { dryRun: false, authorizeAgentWallet: otherAccount.address },
-        async () => {
-          const result = await upgradeToV4();
-          expect(result).to.have.property("success", true);
-        },
-      );
+      await withTempConfig(proxyAddress, { dryRun: false, authorizeAgentWallet: otherAccount.address }, async () => {
+        const result = await upgradeToV4();
+        expect(result).to.have.property("success", true);
+      });
 
       const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
 
@@ -390,13 +382,9 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     it("Should verify isAuthorizedAgent() works correctly", async function () {
       const { proxyAddress, otherAccount, thirdAccount } = await deployGenImNFTv3Fixture();
 
-      await withTempConfig(
-        proxyAddress,
-        { dryRun: false, authorizeAgentWallet: otherAccount.address },
-        async () => {
-          await upgradeToV4();
-        },
-      );
+      await withTempConfig(proxyAddress, { dryRun: false, authorizeAgentWallet: otherAccount.address }, async () => {
+        await upgradeToV4();
+      });
 
       const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
 
@@ -432,13 +420,9 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     it("Should allow authorized agent to update after authorization", async function () {
       const { proxyAddress, owner, otherAccount } = await deployGenImNFTv3Fixture();
 
-      await withTempConfig(
-        proxyAddress,
-        { dryRun: false, authorizeAgentWallet: otherAccount.address },
-        async () => {
-          await upgradeToV4();
-        },
-      );
+      await withTempConfig(proxyAddress, { dryRun: false, authorizeAgentWallet: otherAccount.address }, async () => {
+        await upgradeToV4();
+      });
 
       const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
 

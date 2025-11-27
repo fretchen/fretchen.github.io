@@ -256,9 +256,7 @@ async function main() {
   if (!deploymentFilePath) {
     console.error("❌ No deployment file specified!");
     console.error("\nUsage:");
-    console.error(
-      "  DEPLOYMENT_FILE=scripts/deployments/genimg-v4-upgrade-optimisticEthereum-2025-11-27.json \\",
-    );
+    console.error("  DEPLOYMENT_FILE=scripts/deployments/genimg-v4-upgrade-optimisticEthereum-2025-11-27.json \\");
     console.error("  npx hardhat run scripts/verify-genimg-v4.ts --network optimisticEthereum");
     console.error("\nAlternatively, check the deployments/ directory for available files:");
 
@@ -292,7 +290,9 @@ async function main() {
 
   // Verify network matches
   if (deploymentData.network !== network.name) {
-    console.warn(`⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${network.name})`);
+    console.warn(
+      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${network.name})`,
+    );
     console.warn("   Continuing anyway, but verification may fail if networks don't match");
     console.log("");
   }

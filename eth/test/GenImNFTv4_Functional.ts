@@ -47,7 +47,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     it("Should allow whitelisted agent to request image update and receive payment", async function () {
       const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
       const publicClient = await hre.viem.getPublicClient();
-      
+
       const mintPrice = await contract.read.mintPrice();
 
       // Mint a token
@@ -90,7 +90,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Try to update without being whitelisted
       await expect(
-        contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account })
+        contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account }),
       ).to.be.rejectedWith("Not authorized agent");
 
       // Verify token was NOT updated
@@ -112,7 +112,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Second update should fail
       await expect(
-        contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account })
+        contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account }),
       ).to.be.rejectedWith("Image already updated");
     });
 
@@ -124,7 +124,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Try to update non-existent token
       await expect(
-        contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account })
+        contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account }),
       ).to.be.rejectedWith("Token does not exist");
     });
 
@@ -150,7 +150,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Should now be rejected
       await expect(
-        contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account })
+        contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account }),
       ).to.be.rejectedWith("Not authorized agent");
     });
   });
@@ -158,14 +158,14 @@ describe("GenImNFTv4 - Functional Tests", function () {
   describe("V4 Specific Features (Authorization & Security)", function () {
     it("Should allow owner to whitelist agent wallets (EIP-8004)", async function () {
       const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
-      
+
       // Initially not whitelisted
       expect(await contract.read.isAuthorizedAgent([otherAccount.account.address])).to.equal(false);
 
       // Owner whitelists agent
       await contract.write.authorizeAgentWallet([otherAccount.account.address], { account: owner.account });
       expect(await contract.read.isAuthorizedAgent([otherAccount.account.address])).to.equal(true);
-      
+
       // Owner can revoke
       await contract.write.revokeAgentWallet([otherAccount.account.address], { account: owner.account });
       expect(await contract.read.isAuthorizedAgent([otherAccount.account.address])).to.equal(false);
@@ -224,8 +224,14 @@ describe("GenImNFTv4 - Functional Tests", function () {
       // Mint tokens by different owners with mixed privacy settings
       await contract.write.safeMint(["ipfs://owner-public1", true], { value: mintPrice, account: owner.account });
       await contract.write.safeMint(["ipfs://owner-private", false], { value: mintPrice, account: owner.account });
-      await contract.write.safeMint(["ipfs://other-public1", true], { value: mintPrice, account: otherAccount.account });
-      await contract.write.safeMint(["ipfs://other-private", false], { value: mintPrice, account: otherAccount.account });
+      await contract.write.safeMint(["ipfs://other-public1", true], {
+        value: mintPrice,
+        account: otherAccount.account,
+      });
+      await contract.write.safeMint(["ipfs://other-private", false], {
+        value: mintPrice,
+        account: otherAccount.account,
+      });
       await contract.write.safeMint(["ipfs://owner-public2", true], { value: mintPrice, account: owner.account });
 
       // Get all public tokens (should return tokens from both owners)
@@ -329,9 +335,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
       const tokenId = 0n;
 
       // Verify initial state
-      expect((await contract.read.ownerOf([tokenId])).toLowerCase()).to.equal(
-        owner.account.address.toLowerCase(),
-      );
+      expect((await contract.read.ownerOf([tokenId])).toLowerCase()).to.equal(owner.account.address.toLowerCase());
       expect(await contract.read.isImageUpdated([tokenId])).to.equal(false);
 
       // Step 2: Contract has funds from mint (to pay updater)

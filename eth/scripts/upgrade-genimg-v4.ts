@@ -20,15 +20,18 @@ const UpgradeV4ConfigSchema = z.object({
     validateOnly: z.boolean(),
     dryRun: z.boolean(),
     verify: z.boolean(),
-    authorizeAgentWallet: z.string().optional().refine((addr) => {
-      if (!addr) return true;
-      try {
-        getAddress(addr);
-        return true;
-      } catch {
-        return false;
-      }
-    }, "Invalid agent wallet address format"),
+    authorizeAgentWallet: z
+      .string()
+      .optional()
+      .refine((addr) => {
+        if (!addr) return true;
+        try {
+          getAddress(addr);
+          return true;
+        } catch {
+          return false;
+        }
+      }, "Invalid agent wallet address format"),
     waitConfirmations: z.number().optional(),
   }),
   metadata: z.object({
@@ -168,9 +171,7 @@ async function upgradeToV4() {
           const tokenURI = await currentProxy.tokenURI(i);
           const isListed = await currentProxy.isTokenListed(i);
           const isUpdated = await currentProxy.isImageUpdated(i);
-          console.log(
-            `  Token ${i}: Owner=${tokenOwner.slice(0, 8)}..., Listed=${isListed}, Updated=${isUpdated}`,
-          );
+          console.log(`  Token ${i}: Owner=${tokenOwner.slice(0, 8)}..., Listed=${isListed}, Updated=${isUpdated}`);
           console.log(`           URI=${tokenURI.slice(0, 30)}...`);
         } catch (error) {
           console.log(`  Token ${i}: Error reading - ${error}`);
@@ -182,7 +183,7 @@ async function upgradeToV4() {
     console.log("");
     console.log("🔍 Validating upgrade compatibility...");
     console.log("🔍 Checking if proxy is registered with OpenZeppelin...");
-    
+
     try {
       await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
         kind: "uups",
@@ -193,15 +194,15 @@ async function upgradeToV4() {
         console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
         console.log("📦 Importing proxy with forceImport...");
         console.log("   This is normal for contracts deployed without OpenZeppelin Upgrades Plugin");
-        
+
         await upgrades.forceImport(proxyAddress, GenImNFTv3Factory, {
           kind: "uups",
         });
-        
+
         console.log("✅ Proxy imported successfully");
         console.log("");
         console.log("🔍 Retrying upgrade validation...");
-        
+
         // Retry validation after import
         await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
           kind: "uups",
@@ -210,7 +211,7 @@ async function upgradeToV4() {
         throw error;
       }
     }
-    
+
     console.log("✅ OpenZeppelin upgrade validation passed");
   } catch (error) {
     console.error("❌ Pre-upgrade validation failed:");
@@ -259,7 +260,9 @@ async function upgradeToV4() {
 
     console.log(`✅ Total supply preserved: ${preUpgradeSupply.toString()} → ${postUpgradeSupply.toString()}`);
     console.log(`✅ Owner preserved: ${postUpgradeOwner === preUpgradeOwner}`);
-    console.log(`✅ Mint price preserved: ${ethers.formatEther(preUpgradeMintPrice)} ETH → ${ethers.formatEther(postUpgradeMintPrice)} ETH`);
+    console.log(
+      `✅ Mint price preserved: ${ethers.formatEther(preUpgradeMintPrice)} ETH → ${ethers.formatEther(postUpgradeMintPrice)} ETH`,
+    );
     console.log(`✅ Contract name: ${postUpgradeName}`);
 
     // Test V4 functionality
@@ -291,7 +294,7 @@ async function upgradeToV4() {
 
       // Check if already authorized
       const isAlreadyAuthorized = await v4Contract.isAuthorizedAgent(options.authorizeAgentWallet);
-      
+
       if (isAlreadyAuthorized) {
         console.log("✅ Agent wallet already authorized");
       } else {
@@ -333,7 +336,7 @@ async function upgradeToV4() {
     console.log(`📍 Contract address: ${proxyAddress}`);
     console.log(`📊 Total supply: ${postUpgradeSupply.toString()}`);
     console.log(`🔒 Security fix: CVE-2025-11-26 - Unauthorized image update exploit`);
-    
+
     if (options.authorizeAgentWallet) {
       console.log(`🔐 Authorized agent: ${options.authorizeAgentWallet}`);
     }
@@ -409,7 +412,7 @@ async function upgradeToV4() {
     console.log("3. ✅ Update frontend/dApp to use new V4 ABI");
     console.log("4. ✅ Monitor for any unauthorized image update attempts");
     console.log("5. ✅ Announce security fix to users");
-    
+
     if (!options.authorizeAgentWallet) {
       console.log("");
       console.log("⚠️  WARNING: No agent wallet authorized!");
@@ -457,15 +460,15 @@ async function validateUpgrade(proxyAddress: string) {
     if (error.message && error.message.includes("not registered")) {
       console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
       console.log("📦 Importing proxy with forceImport...");
-      
+
       await upgrades.forceImport(proxyAddress, GenImNFTv3Factory, {
         kind: "uups",
       });
-      
+
       console.log("✅ Proxy imported successfully");
       console.log("");
       console.log("🔍 Retrying upgrade validation...");
-      
+
       // Retry validation after import
       await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
         kind: "uups",
@@ -499,7 +502,7 @@ async function simulateUpgrade(proxyAddress: string, config: UpgradeV4Config) {
   console.log("3. Call reinitializeV4() (no state changes)");
   console.log("4. Verify upgrade success");
   console.log("5. Test V4 security functions");
-  
+
   if (config.options.authorizeAgentWallet) {
     console.log(`6. Authorize agent wallet: ${config.options.authorizeAgentWallet}`);
   }

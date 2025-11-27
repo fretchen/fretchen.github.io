@@ -1,6 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
 import hre from "hardhat";
 
 // Import shared test utilities
@@ -14,19 +13,20 @@ import {
 
 describe("GenImNFTv4 - Functional Tests", function () {
   async function deployGenImNFTv4DirectFixtureViem(): Promise<ContractFixture> {
-    // Deploy using ethers.js (required for upgrades)
-    const GenImNFTv4 = await ethers.getContractFactory("GenImNFTv4");
-    const proxy = await upgrades.deployProxy(GenImNFTv4, [], {
-      initializer: "initialize",
-      kind: "uups",
-    });
-    await proxy.waitForDeployment();
-
-    // Get viem clients for all testing
+    // Deploy using viem only
     const [viemOwner, viemOtherAccount, viemRecipient] = await hre.viem.getWalletClients();
 
-    // Create viem contract interface at the proxy address
-    const viemContract = await hre.viem.getContractAt("GenImNFTv4", await proxy.getAddress());
+    // Deploy implementation contract
+    const implementation = await hre.viem.deployContract("GenImNFTv4");
+
+    // Deploy ERC1967Proxy pointing to implementation
+    const proxy = await hre.viem.deployContract("ERC1967Proxy", [
+      implementation.address,
+      "0x8129fc1c", // initialize() selector
+    ]);
+
+    // Get contract interface at proxy address
+    const viemContract = await hre.viem.getContractAt("GenImNFTv4", proxy.address);
 
     return {
       contract: viemContract,

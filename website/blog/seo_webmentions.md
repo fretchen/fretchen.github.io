@@ -193,12 +193,11 @@ The implementation timeline coincided with a measurable traffic increase:
 3. October 21: Build system optimization and client-side LaTeX migration
 4. Traffic increase observed throughout October
 
-
 While these are certainly encouraging correlations, I also published a number of new [blog posts](/blog/18/) on quantum physics and blockchain, which may have contributed to the traffic increase. So I will have to see how things evolve over the next months.
 
 ## Key Findings and Recommendations
 
-I would summarize my main findings in the following way: 
+I would summarize my main findings in the following way:
 
 1. **Manual metadata investment yields compound returns**: Writing custom descriptions for each post required significant manual effort, but this metadata propagates across multiple systems (search results, social previews, structured data). The initial time investment creates ongoing value.
 

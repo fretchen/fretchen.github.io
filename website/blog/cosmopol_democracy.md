@@ -3,6 +3,7 @@ publishing_date: 2025-11-08
 title: Democracy beyond the nation-state - What is there ?
 category: "others"
 description: When climate, water, and digital challenges cross borders but democracy doesn't, what's the alternative? This narrative essay compares confederation, federation, and cosmopolitan democracy through three fictional characters on a Barcelona-Tunis ferry.
+tokenID: 160
 ---
 
 ## Prologue

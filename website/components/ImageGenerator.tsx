@@ -109,7 +109,7 @@ export function ImageGenerator({
   onError,
 }: ImageGeneratorProps) {
   // Feature flag - set if image generation is enabled
-  const isImageGenEnabled = false;
+  const isImageGenEnabled = true;
 
   // Analytics hook
   const { trackEvent } = useUmami();

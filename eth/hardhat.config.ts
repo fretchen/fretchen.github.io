@@ -10,8 +10,8 @@ const SEPOLIA_PRIVATE_KEY: string = vars.get(
   "SEPOLIA_PRIVATE_KEY",
   "0x1234567890123456789012345678901234567890123456789012345678901234",
 );
+// V2 API uses single Etherscan key for all chains (including Optimism, Base, Polygon, etc.)
 const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
-const OPTIMISTIC_ETHERSCAN_API_KEY: string = vars.get("OPTIMISTIC_ETHERSCAN_API_KEY", "dummy-optimistic-key");
 
 const config = {
   solidity: "0.8.28",
@@ -32,16 +32,24 @@ const config = {
   etherscan: {
     apiKey: {
       sepolia: ETHERSCAN_API_KEY,
-      optsepolia: OPTIMISTIC_ETHERSCAN_API_KEY,
-      optimisticEthereum: OPTIMISTIC_ETHERSCAN_API_KEY,
+      optsepolia: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
+      optimisticEthereum: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
     },
     customChains: [
       {
         network: "optsepolia",
         chainId: 11155420,
         urls: {
-          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          apiURL: "https://api.etherscan.io/v2/api?chainid=11155420",
           browserURL: "https://sepolia-optimism.etherscan.io/",
+        },
+      },
+      {
+        network: "optimisticEthereum",
+        chainId: 10,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=10",
+          browserURL: "https://optimistic.etherscan.io/",
         },
       },
     ],

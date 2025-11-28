@@ -1,7 +1,7 @@
 {
   "proxyAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
   "options": {
-    "validateOnly": true,
+    "validateOnly": false,
     "dryRun": false,
     "verify": true,
     "authorizeAgentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",

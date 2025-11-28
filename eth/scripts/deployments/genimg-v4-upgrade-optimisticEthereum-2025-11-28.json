@@ -1,0 +1,38 @@
+{
+  "network": "optimisticEthereum",
+  "timestamp": "2025-11-28T07:01:59.366Z",
+  "blockNumber": 144357271,
+  "upgradeType": "GenImNFTv3 → GenImNFTv4",
+  "proxyAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+  "implementationAddress": "0x7D0cD4dafeDaCe169D8Df9c582eBDAD68bc74dbA",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "securityFix": "CVE-2025-11-26",
+  "preUpgradeState": {
+    "totalSupply": "103",
+    "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+    "mintPrice": "0.00002"
+  },
+  "postUpgradeState": {
+    "totalSupply": "103",
+    "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+    "mintPrice": "0.00002",
+    "authorizedAgent": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C"
+  },
+  "config": {
+    "proxyAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": true,
+      "authorizeAgentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      "waitConfirmations": 2
+    },
+    "metadata": {
+      "description": "Upgrade GenImNFTv3 to v4 - CVE-2025-11-26 Security Fix",
+      "version": "4.0.0",
+      "environment": "production",
+      "securityFix": "CVE-2025-11-26",
+      "attackerAddress": "0x8B6B008A0073D34D04ff00210E7200Ab00003300"
+    }
+  }
+}

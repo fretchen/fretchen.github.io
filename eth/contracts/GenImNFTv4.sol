@@ -22,7 +22,8 @@ contract GenImNFTv4 is
     // Price for minting an NFT
     uint256 public mintPrice;
 
-    // Authorized addresses that can update images for tokens
+    /// @dev DEPRECATED: Unused since v4, kept for storage layout compatibility
+    /// Was intended for per-token authorization but replaced by global whitelist (_whitelistedAgentWallets)
     mapping(uint256 => address) private _authorizedImageUpdaters;
 
     // Flag indicating if the image has already been updated

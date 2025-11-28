@@ -141,7 +141,7 @@ async function testContractFunctionality(proxyAddress: string): Promise<void> {
     try {
       const allPublicTokens = await contract.getAllPublicTokens();
       console.log(`✅ Public Tokens: ${allPublicTokens.length} tokens`);
-    } catch (error) {
+    } catch {
       console.log("⚠️  getAllPublicTokens() test skipped");
     }
 
@@ -151,7 +151,7 @@ async function testContractFunctionality(proxyAddress: string): Promise<void> {
       const owner = await contract.owner();
       const isAuthorized = await contract.isAuthorizedAgent(owner);
       console.log(`✅ V4 Security: isAuthorizedAgent() function works (owner authorized: ${isAuthorized})`);
-    } catch (error) {
+    } catch {
       console.log("⚠️  V4 security functions test failed - this might not be a V4 contract");
     }
 

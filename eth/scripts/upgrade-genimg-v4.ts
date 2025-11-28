@@ -189,8 +189,8 @@ async function upgradeToV4() {
         kind: "uups",
       });
       console.log("✅ Proxy is registered");
-    } catch (error: any) {
-      if (error.message && error.message.includes("not registered")) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("not registered")) {
         console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
         console.log("📦 Importing proxy with forceImport...");
         console.log("   This is normal for contracts deployed without OpenZeppelin Upgrades Plugin");
@@ -270,15 +270,23 @@ async function upgradeToV4() {
     console.log("🧪 Testing V4 Security Features");
     console.log("-".repeat(40));
 
-    // Check that new functions exist
+    // Verify V4 security functions exist and work
     try {
-      const isAuthorizedFn = v4Contract.isAuthorizedAgent;
-      console.log("✅ isAuthorizedAgent() function exists");
+      // Test isAuthorizedAgent function
+      const ownerAddress = await v4Contract.owner();
+      const isOwnerAuthorized = await v4Contract.isAuthorizedAgent(ownerAddress);
+      console.log(`✅ isAuthorizedAgent() works - owner authorized: ${isOwnerAuthorized}`);
 
-      const authorizeFn = v4Contract.authorizeAgentWallet;
+      // Verify authorizeAgentWallet and revokeAgentWallet functions exist by checking they're callable
+      // (we don't actually call them here as they require owner permissions)
+      if (typeof v4Contract.authorizeAgentWallet !== "function") {
+        throw new Error("authorizeAgentWallet function not found");
+      }
       console.log("✅ authorizeAgentWallet() function exists");
 
-      const revokeFn = v4Contract.revokeAgentWallet;
+      if (typeof v4Contract.revokeAgentWallet !== "function") {
+        throw new Error("revokeAgentWallet function not found");
+      }
       console.log("✅ revokeAgentWallet() function exists");
     } catch (error) {
       console.error("❌ V4 functions not found:", error);
@@ -456,8 +464,8 @@ async function validateUpgrade(proxyAddress: string) {
       kind: "uups",
     });
     console.log("✅ Proxy is registered");
-  } catch (error: any) {
-    if (error.message && error.message.includes("not registered")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes("not registered")) {
       console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
       console.log("📦 Importing proxy with forceImport...");
 

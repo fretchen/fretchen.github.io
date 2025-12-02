@@ -190,7 +190,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 
 export default function Page() {
   // Feature flag - check if AI assistant is enabled
-  const isAiAssistantEnabled = false;
+  const isAiAssistantEnabled = true;
 
   // Analytics hook
   const { trackEvent } = useUmami();

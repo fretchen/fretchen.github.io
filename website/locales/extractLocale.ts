@@ -27,5 +27,12 @@ function extractLocale(urlPathname: string) {
     urlPathnameWithoutLocale = "/";
   }
 
+  // Ensure trailing slash for all non-root paths (GitHub Pages convention)
+  // This prevents "Duplicate without user-selected canonical" SEO issues
+  // since GitHub Pages always serves URLs with trailing slashes
+  if (urlPathnameWithoutLocale !== "/" && !urlPathnameWithoutLocale.endsWith("/")) {
+    urlPathnameWithoutLocale = urlPathnameWithoutLocale + "/";
+  }
+
   return { locale, urlPathnameWithoutLocale };
 }

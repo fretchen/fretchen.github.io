@@ -3,7 +3,11 @@ export { extractLocale };
 import { locales, defaultLocale } from "./locales";
 
 function extractLocale(urlPathname: string) {
-  const path = urlPathname.split("/");
+  // Strip query strings before processing - they should not be part of canonical URLs
+  // This prevents invalid URLs like "/imagegen?foo=bar/" (trailing slash after query)
+  const [cleanPathname] = urlPathname.split("?");
+
+  const path = cleanPathname.split("/");
 
   let locale;
   let urlPathnameWithoutLocale;
@@ -18,7 +22,7 @@ function extractLocale(urlPathname: string) {
     }
   } else {
     locale = defaultLocale;
-    urlPathnameWithoutLocale = urlPathname;
+    urlPathnameWithoutLocale = cleanPathname;
   }
 
   // Normalize edge cases: convert "//" or "" to "/"

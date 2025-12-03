@@ -141,11 +141,52 @@ describe("extractLocale", () => {
       const result = extractLocale("//");
       expect(result.urlPathnameWithoutLocale).toBe("/");
     });
+  });
 
-    it("should handle paths with query strings", () => {
-      // Note: This tests current behavior - query strings may need special handling
+  describe("query string handling", () => {
+    /**
+     * Query strings must be stripped before adding trailing slashes.
+     * Otherwise we get invalid URLs like "/imagegen?foo=bar/" instead of "/imagegen/".
+     *
+     * For canonical URLs, query strings should be removed entirely since
+     * they represent the same content with different parameters.
+     */
+
+    it("should strip query strings and add trailing slash correctly", () => {
       const result = extractLocale("/imagegen?foo=bar");
       expect(result.locale).toBe("en");
+      // Query string should be removed, trailing slash added to path
+      expect(result.urlPathnameWithoutLocale).toBe("/imagegen/");
+    });
+
+    it("should handle German paths with query strings", () => {
+      const result = extractLocale("/de/blog?page=2");
+      expect(result.locale).toBe("de");
+      expect(result.urlPathnameWithoutLocale).toBe("/blog/");
+    });
+
+    it("should handle complex query strings", () => {
+      const result = extractLocale("/blog/5?utm_source=twitter&utm_medium=social");
+      expect(result.locale).toBe("en");
+      expect(result.urlPathnameWithoutLocale).toBe("/blog/5/");
+    });
+
+    it("should handle root path with query string", () => {
+      const result = extractLocale("/?ref=homepage");
+      expect(result.locale).toBe("en");
+      expect(result.urlPathnameWithoutLocale).toBe("/");
+    });
+
+    it("should handle German root with query string", () => {
+      const result = extractLocale("/de?lang=de");
+      expect(result.locale).toBe("de");
+      expect(result.urlPathnameWithoutLocale).toBe("/");
+    });
+
+    it("should handle path with trailing slash and query string", () => {
+      const result = extractLocale("/imagegen/?foo=bar");
+      expect(result.locale).toBe("en");
+      expect(result.urlPathnameWithoutLocale).toBe("/imagegen/");
     });
   });
 });

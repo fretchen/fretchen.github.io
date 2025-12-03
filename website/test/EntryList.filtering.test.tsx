@@ -70,11 +70,7 @@ describe("EntryList - Link consistency after filtering", () => {
    * use originalIndex.
    */
   it("should fall back to array index when originalIndex is not provided", () => {
-    const blogs: BlogEntry[] = [
-      { title: "First Post" },
-      { title: "Second Post" },
-      { title: "Third Post" },
-    ];
+    const blogs: BlogEntry[] = [{ title: "First Post" }, { title: "Second Post" }, { title: "Third Post" }];
 
     render(<EntryList blogs={blogs} basePath="/blog" />);
 

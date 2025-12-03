@@ -101,7 +101,7 @@ describe("extractLocale", () => {
         const result = extractLocale(path);
         expect(
           result.urlPathnameWithoutLocale.endsWith("/"),
-          `Expected "${result.urlPathnameWithoutLocale}" to end with "/" for input "${path}"`
+          `Expected "${result.urlPathnameWithoutLocale}" to end with "/" for input "${path}"`,
         ).toBe(true);
       }
     });
@@ -113,7 +113,7 @@ describe("extractLocale", () => {
         const result = extractLocale(path);
         expect(
           result.urlPathnameWithoutLocale.endsWith("/"),
-          `Expected "${result.urlPathnameWithoutLocale}" to end with "/" for input "${path}"`
+          `Expected "${result.urlPathnameWithoutLocale}" to end with "/" for input "${path}"`,
         ).toBe(true);
       }
     });

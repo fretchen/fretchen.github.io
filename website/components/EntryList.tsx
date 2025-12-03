@@ -35,8 +35,14 @@ const EntryList: React.FC<EntryListProps> = ({
   return (
     <div className={entryList.container}>
       {displayBlogs.map((blog, index) => {
-        // Calculates the correct index for links when order is reversed
-        const linkIndex = reverseOrder ? blogs.length - 1 - index : index;
+        // Use originalIndex if provided (for filtered lists), otherwise calculate from array position
+        // This ensures correct link indices when the blog list is filtered by category
+        const linkIndex =
+          blog.originalIndex !== undefined
+            ? blog.originalIndex
+            : reverseOrder
+              ? blogs.length - 1 - index
+              : index;
         const entryUrl = `${basePath}/${linkIndex}`;
 
         // Format publishing date as ISO8601 for dt-published if available

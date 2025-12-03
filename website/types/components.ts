@@ -81,6 +81,12 @@ export interface BlogEntry {
   nftMetadata?: NFTMetadata;
   category?: string; // Primary category
   secondaryCategory?: string; // Optional secondary category
+  /**
+   * Original index in the full blog list.
+   * Used to maintain correct link indices when the list is filtered.
+   * If not provided, the array position will be used for link generation.
+   */
+  originalIndex?: number;
 }
 
 /**

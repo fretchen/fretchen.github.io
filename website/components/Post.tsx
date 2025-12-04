@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
+import EndOfArticleSupport from "./EndOfArticleSupport";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
@@ -214,6 +215,9 @@ export function Post({
           </Markdown>
         </div>
       )}
+
+      {/* End of Article Support CTA - appears after content, before navigation */}
+      <EndOfArticleSupport />
 
       {/* Navigation zwischen Posts, nur angezeigt wenn vorhanden */}
       {(prevPost || nextPost) && (

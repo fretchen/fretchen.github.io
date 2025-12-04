@@ -1760,22 +1760,31 @@ export const metadataLine = {
     display: "inline-block",
   }),
   supportButton: css({
-    background: "none",
+    // Orange CTA button - complementary to blue, warm and inviting
+    background: "linear-gradient(135deg, #FF6B35 0%, #FF8255 100%)",
     border: "none",
-    color: "inherit",
+    color: "#ffffff",
     cursor: "pointer",
     textDecoration: "none",
-    fontSize: "inherit",
+    fontSize: "sm",
     fontFamily: "inherit",
-    padding: 0,
+    fontWeight: "medium",
+    padding: "4px 12px",
     margin: 0,
+    borderRadius: "999px", // Pill shape
     transition: "all 0.2s ease",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
     _hover: {
-      color: "brand",
+      transform: "scale(1.05)",
+      boxShadow: "0 2px 8px rgba(255, 107, 53, 0.4)",
     },
     _disabled: {
       cursor: "default",
-      opacity: 0.6,
+      opacity: 0.7,
+      background: "linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%)",
+      color: "#666",
+      transform: "none",
+      boxShadow: "none",
     },
   }),
 };

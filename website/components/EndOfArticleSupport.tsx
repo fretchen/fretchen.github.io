@@ -108,18 +108,41 @@ const styles = {
     background: "linear-gradient(135deg, #FFF5F0 0%, #FFE8DC 100%)",
     border: "1px solid #FFAB91",
     textAlign: "center",
+    // Mobile: Compact layout
+    "@media (max-width: 768px)": {
+      marginTop: "lg",
+      marginBottom: "md",
+      padding: "md",
+      borderRadius: "md",
+    },
+    "@media (max-width: 480px)": {
+      marginTop: "md",
+      marginBottom: "sm",
+      padding: "sm",
+    },
   }),
   content: css({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     gap: "sm",
+    // Mobile: Tighter spacing
+    "@media (max-width: 480px)": {
+      gap: "xs",
+    },
   }),
   headline: css({
     fontSize: "lg",
     fontWeight: "semibold",
     color: "#8B4513",
     margin: 0,
+    // Mobile: Smaller headline
+    "@media (max-width: 768px)": {
+      fontSize: "md",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "sm",
+    },
   }),
   button: css({
     display: "inline-flex",
@@ -143,6 +166,16 @@ const styles = {
       cursor: "wait",
       opacity: 0.8,
     },
+    // Mobile: Smaller button
+    "@media (max-width: 768px)": {
+      fontSize: "sm",
+      padding: "10px 20px",
+      gap: "xs",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "sm",
+      padding: "8px 16px",
+    },
   }),
   buttonSuccess: css({
     display: "inline-flex",
@@ -157,21 +190,44 @@ const styles = {
     padding: "12px 24px",
     borderRadius: "999px",
     boxShadow: "0 2px 8px rgba(76, 175, 80, 0.3)",
+    // Mobile: Smaller button
+    "@media (max-width: 768px)": {
+      fontSize: "sm",
+      padding: "10px 20px",
+      gap: "xs",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "sm",
+      padding: "8px 16px",
+    },
   }),
   price: css({
     fontSize: "sm",
     opacity: 0.8,
     fontWeight: "normal",
+    // Mobile: Smaller price
+    "@media (max-width: 480px)": {
+      fontSize: "xs",
+    },
   }),
   subtitle: css({
     fontSize: "sm",
     color: "#A0522D",
     margin: 0,
+    // Mobile: Smaller subtitle
+    "@media (max-width: 480px)": {
+      fontSize: "xs",
+    },
   }),
   hint: css({
     fontSize: "xs",
     color: "#CD853F",
     margin: 0,
     marginTop: "xs",
+    // Mobile: Even smaller hint
+    "@media (max-width: 480px)": {
+      fontSize: "2xs",
+      marginTop: "2px",
+    },
   }),
 };

@@ -223,24 +223,8 @@ async function generateSitemap(): Promise<void> {
   fs.writeFileSync(SITEMAP_PATH, sitemapXml, "utf-8");
   console.log(`[Sitemap] Sitemap written to ${SITEMAP_PATH}`);
 
-  // Also generate robots.txt if it doesn't exist
-  // Using O_CREAT | O_EXCL flags to atomically check and create (avoids TOCTOU race condition)
-  const robotsPath = path.join(BUILD_DIR, "robots.txt");
-  const robotsTxt = `User-agent: *
-Allow: /
-
-Sitemap: ${SITE_URL}/sitemap.xml
-`;
-  try {
-    fs.writeFileSync(robotsPath, robotsTxt, { encoding: "utf-8", flag: "wx" });
-    console.log(`[Sitemap] robots.txt written to ${robotsPath}`);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "EEXIST") {
-      console.log(`[Sitemap] robots.txt already exists, skipping`);
-    } else {
-      throw err;
-    }
-  }
+  // Note: robots.txt with Sitemap reference is maintained in public/robots.txt
+  // and copied to build/ during the build process
 }
 
 // Run if called directly

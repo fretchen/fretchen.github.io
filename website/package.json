@@ -4,7 +4,7 @@
     "prepare": "panda codegen",
     "build": "vike build",
     "build:local": "vike build",
-    "postbuild": "tsx ./utils/cleanVike.ts",
+    "postbuild": "tsx ./utils/cleanVike.ts && tsx ./utils/generateSitemap.ts",
     "preview": "vike preview",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

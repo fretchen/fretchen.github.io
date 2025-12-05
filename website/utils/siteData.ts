@@ -14,15 +14,15 @@
 
 // Import favicon for h-card u-photo
 import favicon from "../pages/image_3_1fc7cfc7b9e9.jpg";
+// Import core config (no image dependencies, usable in build scripts)
+import { SITE_CONFIG } from "./siteConfig";
 
 /**
- * Core site information
+ * Core site information with photo
+ * Extends SITE_CONFIG with image assets that can't be imported in build scripts
  */
 export const SITE = {
-  name: "fretchen",
-  url: "https://www.fretchen.eu",
-  description: "Physicist, researcher, and developer sharing thoughts on quantum physics, AI, and technology.",
-  tagline: "Exploring Web3, Quantum Mechanics & Decentralized Technologies",
+  ...SITE_CONFIG,
   photo: favicon, // u-photo for h-card (favicon/profile image)
 } as const;
 

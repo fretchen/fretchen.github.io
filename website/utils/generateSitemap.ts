@@ -14,13 +14,10 @@
 
 import fs from "fs";
 import path from "path";
+import { SITE_CONFIG } from "./siteConfig";
+import { locales, defaultLocale } from "../locales/locales";
 
-// Inline site config to avoid importing siteData.ts (which imports .jpg files)
-const SITE_URL = "https://www.fretchen.eu";
-
-// Inline locales to keep script standalone
-const locales = ["en", "de"];
-const defaultLocale = "en";
+const SITE_URL = SITE_CONFIG.url;
 
 const BUILD_DIR = "./build";
 const SITEMAP_PATH = path.join(BUILD_DIR, "sitemap.xml");
@@ -227,15 +224,22 @@ async function generateSitemap(): Promise<void> {
   console.log(`[Sitemap] Sitemap written to ${SITEMAP_PATH}`);
 
   // Also generate robots.txt if it doesn't exist
+  // Using O_CREAT | O_EXCL flags to atomically check and create (avoids TOCTOU race condition)
   const robotsPath = path.join(BUILD_DIR, "robots.txt");
-  if (!fs.existsSync(robotsPath)) {
-    const robotsTxt = `User-agent: *
+  const robotsTxt = `User-agent: *
 Allow: /
 
 Sitemap: ${SITE_URL}/sitemap.xml
 `;
-    fs.writeFileSync(robotsPath, robotsTxt, "utf-8");
+  try {
+    fs.writeFileSync(robotsPath, robotsTxt, { encoding: "utf-8", flag: "wx" });
     console.log(`[Sitemap] robots.txt written to ${robotsPath}`);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+      console.log(`[Sitemap] robots.txt already exists, skipping`);
+    } else {
+      throw err;
+    }
   }
 }
 

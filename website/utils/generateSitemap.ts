@@ -113,9 +113,10 @@ function getLocaleInfo(urlPath: string): {
   // Generate alternates for all locales
   const alternates = locales.map((l) => ({
     hreflang: l,
-    href: l === defaultLocale 
-      ? `${SITE_URL}${canonicalPath}` 
-      : `${SITE_URL}/${l}${canonicalPath === "/" ? "/" : canonicalPath}`,
+    href:
+      l === defaultLocale
+        ? `${SITE_URL}${canonicalPath}`
+        : `${SITE_URL}/${l}${canonicalPath === "/" ? "/" : canonicalPath}`,
   }));
 
   // Add x-default pointing to the default locale version
@@ -156,10 +157,7 @@ function generateSitemapXml(urls: SitemapUrl[]): string {
   const urlEntries = urls
     .map((url) => {
       const alternateLinks = url.alternates
-        ?.map(
-          (alt) =>
-            `    <xhtml:link rel="alternate" hreflang="${alt.hreflang}" href="${alt.href}"/>`,
-        )
+        ?.map((alt) => `    <xhtml:link rel="alternate" hreflang="${alt.hreflang}" href="${alt.href}"/>`)
         .join("\n");
 
       return `  <url>

@@ -6,7 +6,7 @@
   "endpoints": [
     {
       "name": "OpenAPI",
-      "endpoint": "https://raw.githubusercontent.com/fretchen/fretchen.github.io/main/scw_js/openapi.json",
+      "endpoint": "/openapi.json",
       "version": "3.1.0"
     },
     {

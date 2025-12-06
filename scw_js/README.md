@@ -1,59 +1,125 @@
-# README
+# Fretchen AI Services
 
-Serverless functions for SCW. We use the node runtime here.
+Serverless functions for AI image generation and LLM services with blockchain integration on Optimism L2.
+
+## 📖 API Documentation
+
+- **OpenAPI Spec**: [`openapi.json`](./openapi.json) - Full REST API documentation
+- **EIP-8004 Registration**: [`agent-registration.json`](./agent-registration.json) - Agent discovery and trust
+
+### Quick Links
+
+| Service | Endpoint | Description |
+|---------|----------|-------------|
+| Image Generation | `genimgbfl` | AI image generation + NFT minting |
+| LLM | `llm` | Blockchain-authenticated LLM |
+| Leaf History | `leafhistory` | Merkle tree leaf queries |
+| NFT Reader | `readnftv2` | Read NFT metadata |
 
 ## Functions
 
+### `genimg_bfl.js` - AI Image Generation
+
+Generates AI images using Black Forest Labs API and updates NFT tokens on Optimism.
+
+**Endpoint:** POST
+
+**Parameters:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prompt` | string | ✅ | Text prompt for AI image generation |
+| `tokenId` | number | ✅ | NFT token ID to update |
+| `mode` | string | ❌ | `generate` (default) or `edit` |
+| `size` | string | ❌ | `1024x1024` (default) or `1792x1024` |
+| `referenceImage` | base64 | ❌ | Required for `edit` mode |
+
+**Example:**
+
+```json
+{
+  "prompt": "A beautiful sunset over mountains",
+  "tokenId": 42,
+  "mode": "generate",
+  "size": "1024x1024"
+}
+```
+
+**Response:**
+
+```json
+{
+  "metadata_url": "https://...",
+  "image_url": "https://...",
+  "transaction_hash": "0x...",
+  "mintPrice": "500000000000000"
+}
+```
+
+### `sc_llm.js` - Blockchain LLM
+
+LLM service with wallet signature authentication and Merkle-tree based usage tracking.
+
+**Endpoint:** POST
+
+**Parameters:**
+
+```json
+{
+  "data": {
+    "prompt": "Your question here",
+    "useDummyData": false
+  },
+  "auth": {
+    "address": "0xYourWalletAddress",
+    "signature": "0x...",
+    "message": "Signed message"
+  }
+}
+```
+
+**Requirements:**
+- Wallet must have minimum balance of 0.00001 ETH
+- Valid EIP-191 signature required
+
 ### `readhandler_v2.js`
 
-Main NFT handler that generates AI images and updates NFT tokens on the blockchain.
+NFT metadata reader.
 
-**Parameters:**
+### `leaf_history.js`
 
-- `prompt` (required): Text prompt for AI image generation
-- `tokenId` (required): NFT token ID to update
-- `size` (optional): Image size, either "1024x1024" (default) or "1792x1024"
+Query Merkle tree leaves for usage tracking.
 
-**Example:**
+## 🔗 On-Chain Integration
 
-```
-GET /function?prompt=beautiful+landscape&tokenId=123&size=1792x1024
-```
-
-### `dec_ai.js`
-
-Simple script for testing the IONOS AI API without the NFT component. Useful for development and testing image generation functionality independently.
-
-**Parameters:**
-
-- `prompt` (required): Text prompt for AI image generation
-- `tokenId` (optional): Token ID for metadata (defaults to "0")
-- `size` (optional): Image size, either "1024x1024" (default) or "1792x1024"
-
-**Example:**
-
-```
-GET /function?prompt=comic+style+landscape&size=1792x1024
-```
+| Contract | Chain | Address |
+|----------|-------|---------|
+| GenImNFTv4 | Optimism | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` |
 
 ## Local Testing
 
-For local testing, you can simply run the following command:
-
 ```bash
-NODE_ENV=test node readhandler_v2.js
-```
+# Image Generation
+NODE_ENV=test node genimg_bfl.js
 
-For testing the AI API without NFT functionality:
-
-```bash
-NODE_ENV=test node dec_ai.js
+# LLM Service  
+NODE_ENV=test node sc_llm.js
 ```
 
 ## Deployment
 
-To deploy the function, you can use the following command:
-
 ```bash
 serverless deploy
 ```
+
+## 🏷️ EIP-8004 Agent Registration
+
+This service is designed to be discoverable via [EIP-8004](https://eips.ethereum.org/EIPS/eip-8004) (Trustless Agents). 
+
+The [`agent-registration.json`](./agent-registration.json) file contains:
+- Service endpoints (OpenAPI, direct URLs)
+- Agent wallet address for on-chain identity
+- Pricing information
+- Contract addresses
+
+To register this agent on-chain, mint an NFT in the EIP-8004 Identity Registry pointing to this registration file.

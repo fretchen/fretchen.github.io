@@ -1,0 +1,59 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Fretchen AI Services",
+  "description": "AI image generation and LLM services with on-chain settlement on Optimism L2. Includes AI-powered NFT minting and blockchain-authenticated LLM access with Merkle-tree based usage tracking.",
+  "image": "https://www.fretchen.eu/assets/static/image_3_1fc7cfc7b9e9.6dd4a243.jpg",
+  "endpoints": [
+    {
+      "name": "OpenAPI",
+      "endpoint": "https://raw.githubusercontent.com/fretchen/fretchen.github.io/main/scw_js/openapi.json",
+      "version": "3.1.0"
+    },
+    {
+      "name": "genimg",
+      "endpoint": "https://my-personal-js-cloudfr-parzqjl2-genimgbfl.functions.fnc.fr-par.scw.cloud",
+      "description": "AI Image Generation + NFT Update endpoint"
+    },
+    {
+      "name": "llm",
+      "endpoint": "https://my-personal-js-cloudfr-parzqjl2-llm.functions.fnc.fr-par.scw.cloud",
+      "description": "Blockchain-authenticated LLM endpoint"
+    },
+    {
+      "name": "agentWallet",
+      "endpoint": "eip155:10:0xAAEBC1441323B8ad6Bdf6793A8428166b510239C"
+    }
+  ],
+  "registrations": [],
+  "supportedTrust": ["reputation"],
+  "contracts": {
+    "GenImNFTv4": {
+      "chain": "optimism",
+      "chainId": 10,
+      "address": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+      "version": "4.0.0"
+    },
+    "LLMv1": {
+      "chain": "optimism", 
+      "chainId": 10,
+      "address": "0xYourLLMContractAddress",
+      "version": "1.0.0"
+    }
+  },
+  "pricing": {
+    "genimg": {
+      "mintPrice": "0.0005 ETH",
+      "description": "Cost to mint a new AI-generated NFT"
+    },
+    "llm": {
+      "minBalance": "0.00001 ETH",
+      "description": "Minimum wallet balance required for LLM access"
+    }
+  },
+  "links": {
+    "website": "https://www.fretchen.eu",
+    "github": "https://github.com/fretchen/fretchen.github.io",
+    "imagegen": "https://www.fretchen.eu/imagegen/",
+    "assistant": "https://www.fretchen.eu/assistent/"
+  }
+}

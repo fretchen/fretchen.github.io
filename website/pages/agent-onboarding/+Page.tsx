@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/styles";
-import { useAccount } from "wagmi";
 
 export default function Page() {
   // Form state
@@ -10,20 +9,12 @@ export default function Page() {
   const [walletAddress, setWalletAddress] = useState("");
   const [generatedJson, setGeneratedJson] = useState<string | null>(null);
 
-  // Wallet connection
-  const { address, isConnected } = useAccount();
-
   // Collapsible sections
-  const [showSchema, setShowSchema] = useState(false);
-  const [showEndpoints, setShowEndpoints] = useState(false);
   const [showWhitelisting, setShowWhitelisting] = useState(false);
-
-  // Use connected wallet if available
-  const effectiveWallet = walletAddress || (isConnected ? address : "");
 
   // Generate JSON from form
   const generateJson = () => {
-    if (!agentName || !apiEndpoint || !effectiveWallet) {
+    if (!agentName || !apiEndpoint || !walletAddress) {
       alert("Please fill in all fields");
       return;
     }
@@ -40,7 +31,7 @@ export default function Page() {
         },
         {
           name: "agentWallet",
-          endpoint: `eip155:10:${effectiveWallet}`,
+          endpoint: `eip155:10:${walletAddress}`,
         },
       ],
       registrations: [],
@@ -57,7 +48,7 @@ export default function Page() {
 
 **Agent Name:** ${agentName || "(please fill in)"}
 **API Endpoint:** ${apiEndpoint || "(please fill in)"}
-**Wallet Address:** ${effectiveWallet || "(please fill in)"}
+**Wallet Address:** ${walletAddress || "(please fill in)"}
 
 ### Generated JSON
 \`\`\`json
@@ -134,8 +125,6 @@ ${generatedJson || "(please generate JSON first)"}
           </p>
         </div>
 
-
-
         {/* Benefits Section */}
         <div
           className={css({
@@ -184,7 +173,7 @@ ${generatedJson || "(please generate JSON first)"}
             </p>
           </div>
         </div>
-                {/* How It Works Section */}
+        {/* How It Works Section */}
         <div
           className={css({
             mb: "10",
@@ -397,7 +386,7 @@ ${generatedJson || "(please generate JSON first)"}
               />
             </div>
 
-            {/* Wallet Address */}
+            {/* Payment Wallet Address */}
             <div>
               <label
                 className={css({
@@ -408,22 +397,22 @@ ${generatedJson || "(please generate JSON first)"}
                   mb: "1",
                 })}
               >
-                Wallet Address
-                {isConnected && (
-                  <span className={css({ color: "green.600", ml: "2", fontWeight: "normal" })}>✓ Connected</span>
-                )}
+                Payment Wallet Address
+                <span className={css({ fontWeight: "normal", color: "gray.500", ml: "1" })}>
+                  (where you receive ETH)
+                </span>
               </label>
               <input
                 type="text"
-                value={effectiveWallet}
+                value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder={isConnected ? address : "0x... or connect wallet above"}
+                placeholder="0x..."
                 className={css({
                   width: "100%",
                   px: "3",
                   py: "2",
                   border: "1px solid",
-                  borderColor: isConnected ? "green.300" : "gray.300",
+                  borderColor: "gray.300",
                   borderRadius: "md",
                   fontSize: "sm",
                   fontFamily: "mono",
@@ -454,7 +443,7 @@ ${generatedJson || "(please generate JSON first)"}
                 _hover: { bg: "gray.700" },
                 _disabled: { opacity: 0.5, cursor: "not-allowed" },
               })}
-              disabled={!agentName || !apiEndpoint || !effectiveWallet}
+              disabled={!agentName || !apiEndpoint || !walletAddress}
             >
               Generate JSON
             </button>
@@ -532,175 +521,8 @@ ${generatedJson || "(please generate JSON first)"}
           )}
         </div>
 
-        {/* Collapsible Details */}
+        {/* Whitelisting Details */}
         <div className={css({ mb: "8" })}>
-          <h2
-            className={css({
-              fontSize: "xl",
-              fontWeight: "semibold",
-              mb: "4",
-              color: "gray.800",
-            })}
-          >
-            📚 Technical Details
-          </h2>
-
-          {/* JSON Schema */}
-          <div
-            className={css({
-              border: "1px solid",
-              borderColor: "gray.200",
-              borderRadius: "md",
-              mb: "3",
-            })}
-          >
-            <button
-              onClick={() => setShowSchema(!showSchema)}
-              className={css({
-                width: "100%",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: "4",
-                bg: "transparent",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                _hover: { bg: "gray.50" },
-              })}
-            >
-              <span className={css({ fontWeight: "medium", color: "gray.800" })}>Full JSON Schema</span>
-              <span
-                className={css({
-                  color: "gray.400",
-                  transition: "transform 0.2s",
-                  transform: showSchema ? "rotate(180deg)" : "rotate(0deg)",
-                })}
-              >
-                ▼
-              </span>
-            </button>
-            {showSchema && (
-              <div className={css({ p: "4", pt: "0" })}>
-                <pre
-                  className={css({
-                    bg: "gray.900",
-                    color: "gray.100",
-                    p: "4",
-                    borderRadius: "md",
-                    overflow: "auto",
-                    fontSize: "xs",
-                    lineHeight: "1.5",
-                  })}
-                >
-                  {`{
-  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-  "name": "Your Agent Name",
-  "description": "Description of your AI service...",
-  "image": "https://your-domain.com/agent-image.png",
-  "endpoints": [
-    {
-      "name": "OpenAPI",
-      "endpoint": "https://your-domain.com/openapi.json",
-      "version": "3.1.0"
-    },
-    {
-      "name": "your-service",
-      "endpoint": "https://your-domain.com/api"
-    },
-    {
-      "name": "agentWallet",
-      "endpoint": "eip155:10:0xYourWalletAddress"
-    }
-  ],
-  "registrations": [],
-  "supportedTrust": ["reputation"]
-}`}
-                </pre>
-              </div>
-            )}
-          </div>
-
-          {/* Endpoint Types */}
-          <div
-            className={css({
-              border: "1px solid",
-              borderColor: "gray.200",
-              borderRadius: "md",
-              mb: "3",
-            })}
-          >
-            <button
-              onClick={() => setShowEndpoints(!showEndpoints)}
-              className={css({
-                width: "100%",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: "4",
-                bg: "transparent",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                _hover: { bg: "gray.50" },
-              })}
-            >
-              <span className={css({ fontWeight: "medium", color: "gray.800" })}>Endpoint Types Explained</span>
-              <span
-                className={css({
-                  color: "gray.400",
-                  transition: "transform 0.2s",
-                  transform: showEndpoints ? "rotate(180deg)" : "rotate(0deg)",
-                })}
-              >
-                ▼
-              </span>
-            </button>
-            {showEndpoints && (
-              <div className={css({ p: "4", pt: "0" })}>
-                <div className={css({ display: "grid", gap: "3" })}>
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "gray.50",
-                      borderRadius: "md",
-                    })}
-                  >
-                    <code className={css({ color: "blue.600", fontWeight: "medium" })}>agentWallet</code>
-                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
-                      Your Ethereum wallet in CAIP-10 format: eip155:chainId:address
-                    </p>
-                  </div>
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "gray.50",
-                      borderRadius: "md",
-                    })}
-                  >
-                    <code className={css({ color: "blue.600", fontWeight: "medium" })}>OpenAPI</code>
-                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
-                      URL to your OpenAPI 3.x specification (optional but recommended)
-                    </p>
-                  </div>
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "gray.50",
-                      borderRadius: "md",
-                    })}
-                  >
-                    <code className={css({ color: "blue.600", fontWeight: "medium" })}>Service Endpoints</code>
-                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
-                      Your API endpoints (genimg, llm, or custom names)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Whitelisting Process */}
           <div
             className={css({
               border: "1px solid",

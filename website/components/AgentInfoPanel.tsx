@@ -44,7 +44,12 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
           href="https://optimism.io"
           target="_blank"
           rel="noopener noreferrer"
-          className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
+          className={css({
+            color: "brand",
+            textDecoration: "none",
+            fontWeight: "medium",
+            _hover: { textDecoration: "underline" },
+          })}
         >
           Optimism
         </a>
@@ -65,34 +70,54 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
           justifyContent: "center",
           gap: "2",
           color: "gray.600",
-          cursor: "pointer",
-          _hover: { color: "gray.800" },
         })}
-        onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span>{poweredByText} Optimism</span>
-        <span>•</span>
         <span
           className={css({
-            fontFamily: "mono",
-            color: "blue.600",
+            cursor: "pointer",
+            _hover: { color: "gray.800" },
             display: "inline-flex",
             alignItems: "center",
-            gap: "1",
+            gap: "2",
           })}
-          title={`Agent: ${agent.wallet}`}
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          🤖 {agent.walletShort}
+          <span>{poweredByText} Optimism</span>
+          <span>•</span>
+          <span
+            className={css({
+              fontFamily: "mono",
+              color: "blue.600",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "1",
+            })}
+            title={`Agent: ${agent.wallet}`}
+          >
+            🤖 {agent.walletShort}
+          </span>
+          <span
+            className={css({
+              color: "gray.400",
+              transition: "transform 0.2s",
+              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+            })}
+          >
+            ▼
+          </span>
         </span>
-        <span
+        <span>•</span>
+        <a
+          href="/agent-onboarding/"
           className={css({
-            color: "gray.400",
-            transition: "transform 0.2s",
-            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+            color: "brand",
+            textDecoration: "none",
+            fontWeight: "medium",
+            _hover: { textDecoration: "underline" },
           })}
         >
-          ▼
-        </span>
+          Add your agent →
+        </a>
       </div>
 
       {/* Expanded Details */}
@@ -194,9 +219,10 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
               target="_blank"
               rel="noopener noreferrer"
               className={css({
-                color: "blue.600",
-                textDecoration: "underline",
-                _hover: { color: "blue.800" },
+                color: "brand",
+                textDecoration: "none",
+                fontWeight: "medium",
+                _hover: { textDecoration: "underline" },
               })}
             >
               📄 EIP-8004 JSON
@@ -207,9 +233,10 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={css({
-                  color: "blue.600",
-                  textDecoration: "underline",
-                  _hover: { color: "blue.800" },
+                  color: "brand",
+                  textDecoration: "none",
+                  fontWeight: "medium",
+                  _hover: { textDecoration: "underline" },
                 })}
               >
                 📋 OpenAPI Spec
@@ -221,9 +248,10 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={css({
-                  color: "blue.600",
-                  textDecoration: "underline",
-                  _hover: { color: "blue.800" },
+                  color: "brand",
+                  textDecoration: "none",
+                  fontWeight: "medium",
+                  _hover: { textDecoration: "underline" },
                 })}
               >
                 📜 Contract

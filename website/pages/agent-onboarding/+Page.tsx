@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/styles";
 
+// Validate Ethereum address format
+const isValidEthAddress = (address: string): boolean => {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+};
+
 export default function Page() {
   // Form state
   const [agentName, setAgentName] = useState("");
@@ -14,6 +19,11 @@ export default function Page() {
 
   // Collapsible sections
   const [showWhitelisting, setShowWhitelisting] = useState(false);
+
+  // Derived validation state
+  const walletIsEmpty = walletAddress.trim() === "";
+  const walletIsValid = walletIsEmpty || isValidEthAddress(walletAddress);
+  const canGenerate = agentName && apiEndpoint && walletAddress && isValidEthAddress(walletAddress);
 
   // Generate JSON from form
   const generateJson = () => {
@@ -699,17 +709,22 @@ ${generatedJson || "(please generate JSON first)"}
                   px: "3",
                   py: "2",
                   border: "1px solid",
-                  borderColor: "gray.300",
+                  borderColor: walletIsValid ? "gray.300" : "red.500",
                   borderRadius: "md",
                   fontSize: "sm",
                   fontFamily: "mono",
                   _focus: {
                     outline: "none",
-                    borderColor: "blue.500",
-                    boxShadow: "0 0 0 1px var(--colors-blue-500)",
+                    borderColor: walletIsValid ? "blue.500" : "red.500",
+                    boxShadow: walletIsValid ? "0 0 0 1px var(--colors-blue-500)" : "0 0 0 1px var(--colors-red-500)",
                   },
                 })}
               />
+              {!walletIsValid && (
+                <p className={css({ fontSize: "xs", color: "red.600", mt: "1" })}>
+                  Invalid address format. Must be 0x followed by 40 hexadecimal characters.
+                </p>
+              )}
             </div>
           </div>
 
@@ -730,7 +745,7 @@ ${generatedJson || "(please generate JSON first)"}
                 _hover: { bg: "gray.700" },
                 _disabled: { opacity: 0.5, cursor: "not-allowed" },
               })}
-              disabled={!agentName || !walletAddress || !apiEndpoint}
+              disabled={!canGenerate}
             >
               Generate JSON
             </button>

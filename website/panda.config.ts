@@ -27,6 +27,17 @@ export default defineConfig({
           background: { value: "#ffffff" },
           light: { value: "#ffffff" },
         },
+      },
+      semanticTokens: {
+        colors: {
+          // Alpha/Experimental banner colors
+          alphaBanner: {
+            bg: { value: "{colors.indigo.50}" },
+            border: { value: "{colors.indigo.300}" },
+            text: { value: "{colors.indigo.800}" },
+            icon: { value: "{colors.indigo.600}" },
+          },
+        },
         spacing: {
           "0": { value: "0px" },
           xs: { value: "5px" },

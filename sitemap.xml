@@ -577,4 +577,13 @@
     <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/imagegen/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/imagegen/"/>
   </url>
+  <url>
+    <loc>https://www.fretchen.eu/agent-onboarding/</loc>
+    <lastmod>2025-12-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.fretchen.eu/agent-onboarding/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/agent-onboarding/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/agent-onboarding/"/>
+  </url>
 </urlset>

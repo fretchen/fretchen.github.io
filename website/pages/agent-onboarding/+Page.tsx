@@ -11,7 +11,6 @@ export default function Page() {
 
   // Collapsible sections
   const [showWhitelisting, setShowWhitelisting] = useState(false);
-  const [showApiRequirements, setShowApiRequirements] = useState(false);
 
   // Generate JSON from form
   const generateJson = () => {
@@ -79,18 +78,31 @@ ${generatedJson || "(please generate JSON first)"}
         {/* Alpha Banner */}
         <div
           className={css({
-            bg: "yellow.100",
+            bg: "alphaBanner.bg",
             border: "1px solid",
-            borderColor: "yellow.400",
+            borderColor: "alphaBanner.border",
             borderRadius: "md",
             p: "3",
             mb: "6",
             textAlign: "center",
           })}
         >
-          <span className={css({ fontSize: "sm", color: "yellow.800" })}>
-            ⚠️ <strong>Alpha Software</strong> – The registration process is currently manual. Your feedback shapes the
-            protocol.
+          <span className={css({ fontSize: "sm", color: "alphaBanner.text" })}>
+            <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Alpha Experiment</strong> – Building
+            towards{" "}
+            <a
+              href="https://eips.ethereum.org/EIPS/eip-8004"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={css({
+                color: "alphaBanner.icon",
+                textDecoration: "underline",
+                fontWeight: "medium",
+              })}
+            >
+              EIP-8004 (Trustless Agents)
+            </a>
+            . Currently manual whitelisting, preparing for permissionless on-chain registration.
           </span>
         </div>
 
@@ -98,7 +110,7 @@ ${generatedJson || "(please generate JSON first)"}
         <div
           className={css({
             textAlign: "center",
-            mb: "10",
+            mb: "8",
             pt: "2",
           })}
         >
@@ -121,60 +133,34 @@ ${generatedJson || "(please generate JSON first)"}
               lineHeight: "1.6",
             })}
           >
-            An experiment in trustless AI service payments. Join as an early provider and see if the future of AI
-            infrastructure might be decentral.
+            Join as an early provider and help shape the protocol.
           </p>
         </div>
 
-        {/* Benefits Section */}
+        {/* Benefits Section - Compact */}
         <div
           className={css({
             display: "grid",
             gridTemplateColumns: { base: "1fr", md: "repeat(3, 1fr)" },
-            gap: "6",
+            gap: "4",
             mb: "10",
           })}
         >
-          <div
-            className={css({
-              textAlign: "center",
-              p: "4",
-            })}
-          >
-            <div className={css({ fontSize: "3xl", mb: "2" })}>🔑</div>
-            <h3 className={css({ fontWeight: "semibold", mb: "2", color: "gray.800" })}>Whitelisted Access</h3>
-            <p className={css({ fontSize: "sm", color: "gray.600" })}>
-              Once approved, payments flow directly to your wallet. No middleman after whitelisting.
-            </p>
+          <div className={css({ textAlign: "center", p: "3" })}>
+            <span className={css({ fontSize: "2xl" })}>🔑</span>
+            <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>Direct payments after whitelisting</p>
           </div>
-
-          <div
-            className={css({
-              textAlign: "center",
-              p: "4",
-            })}
-          >
-            <div className={css({ fontSize: "3xl", mb: "2" })}>🛠️</div>
-            <h3 className={css({ fontWeight: "semibold", mb: "2", color: "gray.800" })}>Your Infrastructure</h3>
-            <p className={css({ fontSize: "sm", color: "gray.600" })}>
-              Run your own nodes, keep your keys. You control everything.
-            </p>
+          <div className={css({ textAlign: "center", p: "3" })}>
+            <span className={css({ fontSize: "2xl" })}>🛠️</span>
+            <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>Your infrastructure, your keys</p>
           </div>
-
-          <div
-            className={css({
-              textAlign: "center",
-              p: "4",
-            })}
-          >
-            <div className={css({ fontSize: "3xl", mb: "2" })}>📊</div>
-            <h3 className={css({ fontWeight: "semibold", mb: "2", color: "gray.800" })}>Transparent Settlement</h3>
-            <p className={css({ fontSize: "sm", color: "gray.600" })}>
-              All transactions visible on Optimism L2. Open, auditable, trustless.
-            </p>
+          <div className={css({ textAlign: "center", p: "3" })}>
+            <span className={css({ fontSize: "2xl" })}>📊</span>
+            <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>Transparent on Optimism L2</p>
           </div>
         </div>
-        {/* How It Works Section */}
+
+        {/* SECTION 1: What Your API Needs To Do */}
         <div
           className={css({
             mb: "10",
@@ -187,23 +173,153 @@ ${generatedJson || "(please generate JSON first)"}
         >
           <h2
             className={css({
-              fontSize: "lg",
+              fontSize: "xl",
               fontWeight: "semibold",
               mb: "4",
               color: "gray.800",
-              textAlign: "center",
             })}
           >
-            How It Works
+            📡 What Your API Needs To Do
           </h2>
+
+          <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
+            Your API endpoint receives requests and updates NFT tokens on-chain. No authentication needed – the system
+            is prepaid via smart contract.
+          </p>
+
+          <div className={css({ display: "grid", gap: "4", md: { gridTemplateColumns: "1fr 1fr" } })}>
+            {/* Request Format */}
+            <div>
+              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
+                Your API receives (POST)
+              </h4>
+              <pre
+                className={css({
+                  bg: "gray.900",
+                  color: "gray.100",
+                  p: "3",
+                  borderRadius: "md",
+                  overflow: "auto",
+                  fontSize: "xs",
+                  lineHeight: "1.5",
+                })}
+              >
+                {`{
+  "prompt": "A sunset...",
+  "tokenId": 42,
+  "mode": "generate",
+  "size": "1024x1024"
+}`}
+              </pre>
+            </div>
+
+            {/* Response Format */}
+            <div>
+              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
+                Your API returns
+              </h4>
+              <pre
+                className={css({
+                  bg: "gray.900",
+                  color: "gray.100",
+                  p: "3",
+                  borderRadius: "md",
+                  overflow: "auto",
+                  fontSize: "xs",
+                  lineHeight: "1.5",
+                })}
+              >
+                {`{
+  "metadata_url": "https://...",
+  "image_url": "https://...",
+  "transaction_hash": "0x..."
+}`}
+              </pre>
+            </div>
+          </div>
+
+          {/* Links */}
+          <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", mt: "4" })}>
+            <a
+              href="/openapi.json"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={css({
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "1",
+                px: "3",
+                py: "1.5",
+                bg: "white",
+                borderRadius: "md",
+                color: "indigo.600",
+                textDecoration: "none",
+                fontSize: "sm",
+                fontWeight: "medium",
+                border: "1px solid",
+                borderColor: "gray.300",
+                _hover: { bg: "gray.100" },
+              })}
+            >
+              📄 Full OpenAPI Spec →
+            </a>
+            <a
+              href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_bfl.js"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={css({
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "1",
+                px: "3",
+                py: "1.5",
+                bg: "white",
+                borderRadius: "md",
+                color: "indigo.600",
+                textDecoration: "none",
+                fontSize: "sm",
+                fontWeight: "medium",
+                border: "1px solid",
+                borderColor: "gray.300",
+                _hover: { bg: "gray.100" },
+              })}
+            >
+              💻 Reference Implementation →
+            </a>
+          </div>
+        </div>
+
+        {/* SECTION 2: How The Payment Flow Works */}
+        <div
+          className={css({
+            mb: "10",
+            p: "6",
+            bg: "gray.50",
+            borderRadius: "lg",
+            border: "1px solid",
+            borderColor: "gray.200",
+          })}
+        >
+          <h2
+            className={css({
+              fontSize: "xl",
+              fontWeight: "semibold",
+              mb: "4",
+              color: "gray.800",
+            })}
+          >
+            💰 How The Payment Flow Works
+          </h2>
+
           <div
             className={css({
               display: "grid",
               gridTemplateColumns: { base: "1fr", md: "repeat(4, 1fr)" },
-              gap: "4",
+              gap: "2",
+              textAlign: "center",
             })}
           >
-            <div className={css({ textAlign: "center", p: "3" })}>
+            <div className={css({ p: "3" })}>
               <div
                 className={css({
                   fontSize: "2xl",
@@ -217,15 +333,16 @@ ${generatedJson || "(please generate JSON first)"}
                   justifyContent: "center",
                   margin: "0 auto",
                   border: "1px solid",
-                  borderColor: "gray.200",
+                  borderColor: "gray.300",
                 })}
               >
                 1
               </div>
-              <h3 className={css({ fontWeight: "medium", fontSize: "sm", color: "gray.800" })}>Submit Registration</h3>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Create your JSON &amp; open issue</p>
+              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>User Pays</p>
+              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>ETH → Smart Contract</p>
             </div>
-            <div className={css({ textAlign: "center", p: "3" })}>
+
+            <div className={css({ p: "3" })}>
               <div
                 className={css({
                   fontSize: "2xl",
@@ -239,15 +356,16 @@ ${generatedJson || "(please generate JSON first)"}
                   justifyContent: "center",
                   margin: "0 auto",
                   border: "1px solid",
-                  borderColor: "gray.200",
+                  borderColor: "gray.300",
                 })}
               >
                 2
               </div>
-              <h3 className={css({ fontWeight: "medium", fontSize: "sm", color: "gray.800" })}>Manual Review</h3>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>We verify your service</p>
+              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>Frontend Calls You</p>
+              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>POST to your API</p>
             </div>
-            <div className={css({ textAlign: "center", p: "3" })}>
+
+            <div className={css({ p: "3" })}>
               <div
                 className={css({
                   fontSize: "2xl",
@@ -261,20 +379,21 @@ ${generatedJson || "(please generate JSON first)"}
                   justifyContent: "center",
                   margin: "0 auto",
                   border: "1px solid",
-                  borderColor: "gray.200",
+                  borderColor: "gray.300",
                 })}
               >
                 3
               </div>
-              <h3 className={css({ fontWeight: "medium", fontSize: "sm", color: "gray.800" })}>Whitelist On-Chain</h3>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Your wallet is approved</p>
+              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>You Update Token</p>
+              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Write to contract</p>
             </div>
-            <div className={css({ textAlign: "center", p: "3" })}>
+
+            <div className={css({ p: "3" })}>
               <div
                 className={css({
                   fontSize: "2xl",
                   mb: "2",
-                  bg: "green.100",
+                  bg: "gray.200",
                   borderRadius: "full",
                   width: "12",
                   height: "12",
@@ -283,18 +402,35 @@ ${generatedJson || "(please generate JSON first)"}
                   justifyContent: "center",
                   margin: "0 auto",
                   border: "1px solid",
-                  borderColor: "green.300",
-                  color: "green.700",
+                  borderColor: "gray.400",
+                  color: "gray.800",
                 })}
               >
-                ✓
+                💰
               </div>
-              <h3 className={css({ fontWeight: "medium", fontSize: "sm", color: "gray.800" })}>Go Live!</h3>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Direct ETH payments</p>
+              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>ETH → Your Wallet</p>
+              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Direct payment</p>
             </div>
           </div>
+
+          <div
+            className={css({
+              mt: "4",
+              p: "3",
+              bg: "white",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.200",
+            })}
+          >
+            <p className={css({ fontSize: "sm", color: "gray.700" })}>
+              <strong>Key insight:</strong> Payment happens BEFORE your API is called. You only need to do the work and
+              update the token. No payment handling required on your side.
+            </p>
+          </div>
         </div>
-        {/* Quick Registration Form */}
+
+        {/* SECTION 3: Get Started - Registration Form */}
         <div
           className={css({
             bg: "gray.50",
@@ -313,8 +449,12 @@ ${generatedJson || "(please generate JSON first)"}
               color: "gray.800",
             })}
           >
-            🚀 Quick Start: Generate Your Registration
+            🚀 Get Started: Register Your Service
           </h2>
+
+          <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
+            Generate your registration JSON and open a GitHub issue to request whitelisting.
+          </p>
 
           <div className={css({ display: "grid", gap: "4", mb: "4" })}>
             {/* Agent Name */}
@@ -522,7 +662,7 @@ ${generatedJson || "(please generate JSON first)"}
           )}
         </div>
 
-        {/* Whitelisting Details */}
+        {/* SECTION 4: Whitelisting Process (Collapsible) */}
         <div className={css({ mb: "8" })}>
           <div
             className={css({
@@ -563,16 +703,16 @@ ${generatedJson || "(please generate JSON first)"}
                   <div
                     className={css({
                       p: "3",
-                      bg: "yellow.50",
+                      bg: "white",
                       borderRadius: "md",
                       border: "1px solid",
-                      borderColor: "yellow.200",
+                      borderColor: "gray.200",
                     })}
                   >
-                    <p className={css({ fontSize: "sm", color: "yellow.800", fontWeight: "medium" })}>
+                    <p className={css({ fontSize: "sm", color: "gray.800", fontWeight: "medium" })}>
                       Why is whitelisting required?
                     </p>
-                    <p className={css({ fontSize: "sm", color: "yellow.700", mt: "1" })}>
+                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
                       During the alpha phase, we manually review providers to ensure quality and prevent spam. This is a
                       temporary measure.
                     </p>
@@ -580,16 +720,16 @@ ${generatedJson || "(please generate JSON first)"}
                   <div
                     className={css({
                       p: "3",
-                      bg: "green.50",
+                      bg: "white",
                       borderRadius: "md",
                       border: "1px solid",
-                      borderColor: "green.200",
+                      borderColor: "gray.200",
                     })}
                   >
-                    <p className={css({ fontSize: "sm", color: "green.800", fontWeight: "medium" })}>
+                    <p className={css({ fontSize: "sm", color: "gray.800", fontWeight: "medium" })}>
                       What happens after whitelisting?
                     </p>
-                    <p className={css({ fontSize: "sm", color: "green.700", mt: "1" })}>
+                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
                       Once your wallet is whitelisted in the smart contract, all payments between users and your service
                       are fully decentralized. No middleman, no approval needed.
                     </p>
@@ -597,181 +737,17 @@ ${generatedJson || "(please generate JSON first)"}
                   <div
                     className={css({
                       p: "3",
-                      bg: "blue.50",
+                      bg: "white",
                       borderRadius: "md",
                       border: "1px solid",
-                      borderColor: "blue.200",
+                      borderColor: "gray.200",
                     })}
                   >
-                    <p className={css({ fontSize: "sm", color: "blue.800", fontWeight: "medium" })}>Long-term vision</p>
-                    <p className={css({ fontSize: "sm", color: "blue.700", mt: "1" })}>
+                    <p className={css({ fontSize: "sm", color: "gray.800", fontWeight: "medium" })}>Long-term vision</p>
+                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
                       Once EIP-8004 Identity Registry is deployed on Optimism, registration will be fully permissionless
                       and on-chain.
                     </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* API Requirements Section */}
-        <div className={css({ mb: "8" })}>
-          <div
-            className={css({
-              border: "1px solid",
-              borderColor: "gray.200",
-              borderRadius: "md",
-            })}
-          >
-            <button
-              onClick={() => setShowApiRequirements(!showApiRequirements)}
-              className={css({
-                width: "100%",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: "4",
-                bg: "transparent",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                _hover: { bg: "gray.50" },
-              })}
-            >
-              <span className={css({ fontWeight: "medium", color: "gray.800" })}>📡 API Requirements</span>
-              <span
-                className={css({
-                  color: "gray.400",
-                  transition: "transform 0.2s",
-                  transform: showApiRequirements ? "rotate(180deg)" : "rotate(0deg)",
-                })}
-              >
-                ▼
-              </span>
-            </button>
-            {showApiRequirements && (
-              <div className={css({ p: "4", pt: "0" })}>
-                <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
-                  Your API endpoint must accept POST requests and return JSON responses. No authentication required -
-                  the system is prepaid via smart contract.
-                </p>
-
-                <div className={css({ display: "grid", gap: "4" })}>
-                  {/* Request Format */}
-                  <div>
-                    <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
-                      Request Format (POST)
-                    </h4>
-                    <pre
-                      className={css({
-                        bg: "gray.900",
-                        color: "gray.100",
-                        p: "3",
-                        borderRadius: "md",
-                        overflow: "auto",
-                        fontSize: "xs",
-                        lineHeight: "1.5",
-                      })}
-                    >
-                      {`{
-  "prompt": "A beautiful sunset over mountains",
-  "tokenId": 42,
-  "mode": "generate",  // or "edit"
-  "size": "1024x1024"  // or "1792x1024"
-}`}
-                    </pre>
-                  </div>
-
-                  {/* Response Format */}
-                  <div>
-                    <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
-                      Response Format
-                    </h4>
-                    <pre
-                      className={css({
-                        bg: "gray.900",
-                        color: "gray.100",
-                        p: "3",
-                        borderRadius: "md",
-                        overflow: "auto",
-                        fontSize: "xs",
-                        lineHeight: "1.5",
-                      })}
-                    >
-                      {`{
-  "metadata_url": "https://...",
-  "image_url": "https://...",
-  "transaction_hash": "0x...",
-  "message": "Success"
-}`}
-                    </pre>
-                  </div>
-
-                  {/* Key Points */}
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "blue.50",
-                      borderRadius: "md",
-                      border: "1px solid",
-                      borderColor: "blue.200",
-                    })}
-                  >
-                    <p className={css({ fontSize: "sm", color: "blue.800", fontWeight: "medium", mb: "2" })}>
-                      Key Points
-                    </p>
-                    <ul className={css({ fontSize: "sm", color: "blue.700", pl: "4", listStyleType: "disc" })}>
-                      <li>Your service calls the smart contract to update the token</li>
-                      <li>Payment happens before your API is called (prepaid)</li>
-                      <li>Return the transaction hash for verification</li>
-                    </ul>
-                  </div>
-
-                  {/* Links */}
-                  <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", mt: "2" })}>
-                    <a
-                      href="/openapi.json"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={css({
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "1",
-                        px: "3",
-                        py: "1.5",
-                        bg: "gray.100",
-                        borderRadius: "md",
-                        color: "brand",
-                        textDecoration: "none",
-                        fontSize: "sm",
-                        fontWeight: "medium",
-                        _hover: { bg: "gray.200" },
-                      })}
-                    >
-                      📄 Full OpenAPI Spec →
-                    </a>
-                    <a
-                      href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_bfl.js"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={css({
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "1",
-                        px: "3",
-                        py: "1.5",
-                        bg: "gray.100",
-                        borderRadius: "md",
-                        color: "brand",
-                        textDecoration: "none",
-                        fontSize: "sm",
-                        fontWeight: "medium",
-                        _hover: { bg: "gray.200" },
-                      })}
-                    >
-                      💻 Reference Implementation →
-                    </a>
                   </div>
                 </div>
               </div>
@@ -804,7 +780,7 @@ ${generatedJson || "(please generate JSON first)"}
               py: "2",
               bg: "gray.100",
               borderRadius: "md",
-              color: "brand",
+              color: "indigo.600",
               textDecoration: "none",
               fontWeight: "medium",
               _hover: { bg: "gray.200" },
@@ -812,45 +788,6 @@ ${generatedJson || "(please generate JSON first)"}
           >
             📄 agent-registration.json →
           </a>
-        </div>
-
-        {/* EIP-8004 Notice */}
-        <div
-          className={css({
-            p: "4",
-            bg: "gray.100",
-            borderRadius: "md",
-            border: "1px solid",
-            borderColor: "gray.300",
-          })}
-        >
-          <h3
-            className={css({
-              fontSize: "lg",
-              fontWeight: "semibold",
-              mb: "2",
-              color: "gray.800",
-            })}
-          >
-            🔮 Building Towards EIP-8004
-          </h3>
-          <p className={css({ color: "gray.600", fontSize: "sm", lineHeight: "1.6" })}>
-            We&apos;re working towards the{" "}
-            <a
-              href="https://eips.ethereum.org/EIPS/eip-8004"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={css({
-                color: "brand",
-                textDecoration: "none",
-                _hover: { textDecoration: "underline" },
-              })}
-            >
-              EIP-8004 (Trustless Agents)
-            </a>{" "}
-            standard. Once the Identity Registry is deployed, the manual whitelisting will be replaced with fully
-            permissionless on-chain registration.
-          </p>
         </div>
       </article>
     </div>

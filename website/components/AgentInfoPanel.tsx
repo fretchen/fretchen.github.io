@@ -8,6 +8,10 @@
  * - Trust mechanisms
  *
  * Following EIP-8004 (Trustless Agents) format.
+ *
+ * Supports two variants:
+ * - "footer": Horizontal layout for wide areas (default)
+ * - "sidebar": Vertical layout for narrow sidebars
  */
 
 import React, { useState } from "react";
@@ -18,18 +22,22 @@ import { useLocale } from "../hooks/useLocale";
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
   service?: "genimg" | "llm";
+  // Layout variant
+  variant?: "footer" | "sidebar";
 }
 
-export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
+export function AgentInfoPanel({ service = "genimg", variant = "footer" }: AgentInfoPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { agent, isLoading, error } = useAgentInfo();
 
   // Localized texts
   const poweredByText = useLocale({ label: "imagegen.poweredBy" });
 
+  const isSidebar = variant === "sidebar";
+
   if (isLoading) {
     return (
-      <div className={css({ fontSize: "xs", color: "gray.500", textAlign: "center", mt: "2" })}>
+      <div className={css({ fontSize: "xs", color: "gray.500", textAlign: isSidebar ? "left" : "center", mt: "2" })}>
         {poweredByText} Optimism...
       </div>
     );
@@ -38,7 +46,7 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
   if (error || !agent.wallet) {
     // Fallback to basic display
     return (
-      <div className={css({ fontSize: "xs", color: "gray.600", textAlign: "center", mt: "2" })}>
+      <div className={css({ fontSize: "xs", color: "gray.600", textAlign: isSidebar ? "left" : "center", mt: "2" })}>
         {poweredByText}{" "}
         <a
           href="https://optimism.io"
@@ -59,7 +67,147 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
 
   const serviceEndpoint = service === "genimg" ? agent.genimgEndpoint : agent.llmEndpoint;
   const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
+  const contractAddress = service === "genimg" ? agent.contracts.genImNFT : agent.contracts.llm;
 
+  // Sidebar variant - vertical layout
+  if (isSidebar) {
+    return (
+      <div className={css({ fontSize: "xs" })}>
+        {/* Compact Header */}
+        <div
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "gray.600",
+            cursor: "pointer",
+            _hover: { color: "gray.800" },
+          })}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <span className={css({ display: "flex", alignItems: "center", gap: "1" })}>
+            <span>🤖</span>
+            <span className={css({ fontFamily: "mono", color: "blue.600" })}>{agent.walletShort}</span>
+          </span>
+          <span
+            className={css({
+              color: "gray.400",
+              transition: "transform 0.2s",
+              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+            })}
+          >
+            ▼
+          </span>
+        </div>
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div
+            className={css({
+              mt: "2",
+              pt: "2",
+              borderTop: "1px solid",
+              borderColor: "gray.200",
+            })}
+          >
+            {/* Agent Name */}
+            <div className={css({ display: "flex", alignItems: "center", gap: "2", mb: "2" })}>
+              {agent.image && (
+                <img
+                  src={agent.image}
+                  alt={agent.name}
+                  className={css({
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "full",
+                    objectFit: "cover",
+                  })}
+                />
+              )}
+              <span className={css({ fontWeight: "medium", color: "gray.800", fontSize: "xs" })}>{agent.name}</span>
+            </div>
+
+            {/* Details */}
+            <div className={css({ display: "grid", gap: "1", color: "gray.600", fontSize: "xs" })}>
+              {serviceHostname && (
+                <div>
+                  <span className={css({ color: "gray.500" })}>Endpoint: </span>
+                  <code className={css({ fontFamily: "mono", color: "gray.700" })}>{serviceHostname}</code>
+                </div>
+              )}
+              <div>
+                <span className={css({ color: "gray.500" })}>Trust: </span>
+                <span>{agent.supportedTrust.join(", ") || "none"}</span>
+              </div>
+            </div>
+
+            {/* Links - Vertical */}
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "1",
+                mt: "2",
+                pt: "2",
+                borderTop: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <a
+                href="/agent-registration.json"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={css({
+                  color: "brand",
+                  textDecoration: "none",
+                  fontSize: "xs",
+                  _hover: { textDecoration: "underline" },
+                })}
+              >
+                📄 EIP-8004 JSON
+              </a>
+              {contractAddress && (
+                <a
+                  href={`https://optimistic.etherscan.io/address/${contractAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: "brand",
+                    textDecoration: "none",
+                    fontSize: "xs",
+                    _hover: { textDecoration: "underline" },
+                  })}
+                >
+                  📜 Contract
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Add Agent Link - Always visible */}
+        <a
+          href="/agent-onboarding/"
+          className={css({
+            display: "block",
+            mt: "2",
+            pt: "2",
+            borderTop: "1px solid",
+            borderColor: "gray.200",
+            color: "brand",
+            textDecoration: "none",
+            fontSize: "xs",
+            fontWeight: "medium",
+            _hover: { textDecoration: "underline" },
+          })}
+        >
+          🆕 Become a provider
+        </a>
+      </div>
+    );
+  }
+
+  // Footer variant - horizontal layout (default)
   return (
     <div className={css({ mt: "2", fontSize: "xs" })}>
       {/* Compact Header - Always visible */}
@@ -242,9 +390,9 @@ export function AgentInfoPanel({ service = "genimg" }: AgentInfoPanelProps) {
                 📋 OpenAPI Spec
               </a>
             )}
-            {agent.contracts.genImNFT && (
+            {contractAddress && (
               <a
-                href={`https://optimistic.etherscan.io/address/${agent.contracts.genImNFT}`}
+                href={`https://optimistic.etherscan.io/address/${contractAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={css({

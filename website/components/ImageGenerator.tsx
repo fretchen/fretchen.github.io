@@ -9,6 +9,7 @@ import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
+import { AgentInfoPanel } from "./AgentInfoPanel";
 
 const defaultImageUrl = "https://mypersonaljscloudivnad9dy-genimgbfl.functions.fnc.fr-par.scw.cloud";
 
@@ -235,12 +236,6 @@ export function ImageGenerator({
   const artworkCreatedText = useLocale({ label: "imagegen.artworkCreated" });
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
   const switchingToOptimismText = useLocale({ label: "imagegen.switchingToOptimism" });
-
-  // Links
-  const poweredByText = useLocale({ label: "imagegen.poweredBy" });
-  const viewContractText = useLocale({ label: "imagegen.viewContract" });
-  const learnMoreOptimismText = useLocale({ label: "imagegen.learnMoreOptimism" });
-  const viewContractEtherscanText = useLocale({ label: "imagegen.viewContractEtherscan" });
 
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
@@ -994,29 +989,8 @@ export function ImageGenerator({
               </div>
             </div>
 
-            {/* Contract details under Create Artwork button */}
-            <div className={css({ mt: "2", fontSize: "xs", color: "gray.600", textAlign: "center" })}>
-              {poweredByText}{" "}
-              <a
-                href="https://optimism.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={learnMoreOptimismText}
-                className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
-              >
-                Optimism
-              </a>{" "}
-              •{" "}
-              <a
-                href={`https://optimistic.etherscan.io/address/${genAiNFTContractConfig.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={viewContractEtherscanText}
-                className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
-              >
-                {viewContractText} ↗
-              </a>
-            </div>
+            {/* Agent Info Panel - Expandable */}
+            <AgentInfoPanel service="genimg" />
 
             {/* Hidden accessible description used by aria-describedby for the Create Artwork button */}
             <span

@@ -18,6 +18,7 @@ import React, { useState } from "react";
 import { css } from "../styled-system/css";
 import { useAgentInfo } from "../hooks/useAgentInfo";
 import { useLocale } from "../hooks/useLocale";
+import { genAiNFTContractConfig, llmV1ContractConfig } from "../utils/getChain";
 
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
@@ -67,7 +68,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
 
   const serviceEndpoint = service === "genimg" ? agent.genimgEndpoint : agent.llmEndpoint;
   const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
-  const contractAddress = service === "genimg" ? agent.contracts.genImNFT : agent.contracts.llm;
+  const contractAddress = service === "genimg" ? genAiNFTContractConfig.address : llmV1ContractConfig.address;
 
   // Sidebar variant - vertical layout
   if (isSidebar) {

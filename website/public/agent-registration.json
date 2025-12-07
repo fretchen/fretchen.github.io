@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "Fretchen AI Services",
-  "description": "AI image generation and LLM services with on-chain settlement on Optimism L2. Includes AI-powered NFT minting (0.0005 ETH) via GenImNFTv4 contract and blockchain-authenticated LLM access with Merkle-tree based usage tracking via LLMv1 contract. Website: https://www.fretchen.eu | GitHub: https://github.com/fretchen/fretchen.github.io",
+  "description": "AI image generation and LLM services with on-chain settlement on Optimism L2. Includes AI-powered NFT minting and blockchain-authenticated LLM access with Merkle-tree based usage tracking. Website: https://www.fretchen.eu | GitHub: https://github.com/fretchen/fretchen.github.io",
   "image": "https://www.fretchen.eu/assets/static/image_3_1fc7cfc7b9e9.6dd4a243.jpg",
   "endpoints": [
     {
@@ -20,14 +20,6 @@
     {
       "name": "agentWallet",
       "endpoint": "eip155:10:0xAAEBC1441323B8ad6Bdf6793A8428166b510239C"
-    },
-    {
-      "name": "GenImNFTv4",
-      "endpoint": "eip155:10:0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"
-    },
-    {
-      "name": "LLMv1",
-      "endpoint": "eip155:10:0x5B3881438FAFb457530240c37083bCDb609F7599"
     }
   ],
   "registrations": [],

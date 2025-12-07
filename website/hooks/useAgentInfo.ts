@@ -10,7 +10,7 @@
  * 3. No build-time coupling
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // EIP-8004 Registration File Schema
 export interface AgentEndpoint {
@@ -42,10 +42,6 @@ export interface AgentInfo {
   genimgEndpoint: string | null;
   llmEndpoint: string | null;
   openApiUrl: string | null;
-  contracts: {
-    genImNFT: string | null;
-    llm: string | null;
-  };
   supportedTrust: string[];
   raw: AgentRegistration | null;
 }
@@ -82,10 +78,6 @@ const emptyAgent: AgentInfo = {
   genimgEndpoint: null,
   llmEndpoint: null,
   openApiUrl: null,
-  contracts: {
-    genImNFT: null,
-    llm: null,
-  },
   supportedTrust: [],
   raw: null,
 };
@@ -97,7 +89,7 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAgent = async () => {
+  const fetchAgent = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -113,9 +105,6 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
       const walletEndpoint = data.endpoints.find((e) => e.name === "agentWallet")?.endpoint;
       const wallet = walletEndpoint ? parseCAIP10(walletEndpoint) : null;
 
-      const genImNFTEndpoint = data.endpoints.find((e) => e.name === "GenImNFTv4")?.endpoint;
-      const llmContractEndpoint = data.endpoints.find((e) => e.name === "LLMv1")?.endpoint;
-
       const parsedAgent: AgentInfo = {
         name: data.name,
         description: data.description,
@@ -125,10 +114,6 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
         genimgEndpoint: data.endpoints.find((e) => e.name === "genimg")?.endpoint || null,
         llmEndpoint: data.endpoints.find((e) => e.name === "llm")?.endpoint || null,
         openApiUrl: data.endpoints.find((e) => e.name === "OpenAPI")?.endpoint || null,
-        contracts: {
-          genImNFT: genImNFTEndpoint ? parseCAIP10(genImNFTEndpoint) : null,
-          llm: llmContractEndpoint ? parseCAIP10(llmContractEndpoint) : null,
-        },
         supportedTrust: data.supportedTrust,
         raw: data,
       };
@@ -141,13 +126,13 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [agentUrl]);
 
   useEffect(() => {
     if (autoFetch) {
       fetchAgent();
     }
-  }, [agentUrl, autoFetch]);
+  }, [autoFetch, fetchAgent]);
 
   return {
     agent,

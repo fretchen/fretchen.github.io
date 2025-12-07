@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/styles";
+import { useToast } from "../../components/Toast";
 
 // Validate Ethereum address format
 const isValidEthAddress = (address: string): boolean => {
@@ -19,6 +20,9 @@ export default function Page() {
 
   // Collapsible sections
   const [showWhitelisting, setShowWhitelisting] = useState(false);
+
+  // Toast for feedback
+  const { showToast, ToastComponent } = useToast();
 
   // Derived validation state
   const walletIsEmpty = walletAddress.trim() === "";
@@ -791,7 +795,7 @@ ${generatedJson || "(please generate JSON first)"}
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(generatedJson);
-                    alert("Copied to clipboard!");
+                    showToast("Copied to clipboard!", "success");
                   }}
                   className={css({
                     fontSize: "xs",
@@ -951,6 +955,7 @@ ${generatedJson || "(please generate JSON first)"}
           </a>
         </div>
       </article>
+      {ToastComponent}
     </div>
   );
 }

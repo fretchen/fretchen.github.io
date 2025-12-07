@@ -9,24 +9,34 @@ export default function Page() {
   const [walletAddress, setWalletAddress] = useState("");
   const [generatedJson, setGeneratedJson] = useState<string | null>(null);
 
+  // Service selection (radio: one at a time)
+  const [serviceType, setServiceType] = useState<"genimg" | "llm">("genimg");
+
   // Collapsible sections
   const [showWhitelisting, setShowWhitelisting] = useState(false);
 
   // Generate JSON from form
   const generateJson = () => {
-    if (!agentName || !apiEndpoint || !walletAddress) {
-      alert("Please fill in all fields");
+    if (!agentName || !walletAddress) {
+      alert("Please fill in agent name and wallet address");
       return;
     }
+
+    if (!apiEndpoint) {
+      alert("Please fill in the API endpoint");
+      return;
+    }
+
+    const serviceName = serviceType === "genimg" ? "Image Generation" : "Chat/LLM";
 
     const json = {
       type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
       name: agentName,
-      description: `AI service provided by ${agentName}. Integrated with fretchen.eu for on-chain settlement.`,
+      description: `${serviceName} service provided by ${agentName}. Integrated with fretchen.eu for on-chain settlement.`,
       image: "",
       endpoints: [
         {
-          name: "service",
+          name: serviceType,
           endpoint: apiEndpoint,
         },
         {
@@ -44,9 +54,11 @@ export default function Page() {
   // Generate GitHub issue URL
   const getGitHubIssueUrl = () => {
     const title = encodeURIComponent(`Agent Registration: ${agentName || "New Agent"}`);
+    const serviceName = serviceType === "genimg" ? "Image Generation" : "Chat/LLM";
     const body = encodeURIComponent(`## Agent Registration Request
 
 **Agent Name:** ${agentName || "(please fill in)"}
+**Service Type:** ${serviceName}
 **API Endpoint:** ${apiEndpoint || "(please fill in)"}
 **Wallet Address:** ${walletAddress || "(please fill in)"}
 
@@ -183,58 +195,110 @@ ${generatedJson || "(please generate JSON first)"}
           </h2>
 
           <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
-            Your API endpoint receives requests and updates NFT tokens on-chain. No authentication needed – the system
-            is prepaid via smart contract.
+            We support two service types. Your API receives requests and interacts with our smart contracts. No
+            authentication needed – the system is prepaid.
           </p>
 
+          {/* Two Service Types */}
           <div className={css({ display: "grid", gap: "4", md: { gridTemplateColumns: "1fr 1fr" } })}>
-            {/* Request Format */}
-            <div>
-              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
-                Your API receives (POST)
+            {/* Image Generation */}
+            <div
+              className={css({
+                p: "4",
+                bg: "white",
+                borderRadius: "md",
+                border: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "3" })}>
+                🖼️ Image Generation
               </h4>
-              <pre
-                className={css({
-                  bg: "gray.900",
-                  color: "gray.100",
-                  p: "3",
-                  borderRadius: "md",
-                  overflow: "auto",
-                  fontSize: "xs",
-                  lineHeight: "1.5",
-                })}
-              >
-                {`{
-  "prompt": "A sunset...",
-  "tokenId": 42,
-  "mode": "generate",
-  "size": "1024x1024"
-}`}
-              </pre>
+              <div className={css({ mb: "2" })}>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>Request:</span>
+                <pre
+                  className={css({
+                    bg: "gray.900",
+                    color: "gray.100",
+                    p: "2",
+                    borderRadius: "md",
+                    overflow: "auto",
+                    fontSize: "xs",
+                    lineHeight: "1.4",
+                    mt: "1",
+                  })}
+                >
+                  {`{ "prompt": "...", "tokenId": 42 }`}
+                </pre>
+              </div>
+              <div className={css({ mb: "2" })}>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>Response:</span>
+                <pre
+                  className={css({
+                    bg: "gray.900",
+                    color: "gray.100",
+                    p: "2",
+                    borderRadius: "md",
+                    overflow: "auto",
+                    fontSize: "xs",
+                    lineHeight: "1.4",
+                    mt: "1",
+                  })}
+                >
+                  {`{ "image_url": "...", "tx": "0x..." }`}
+                </pre>
+              </div>
+              <p className={css({ fontSize: "xs", color: "gray.500", mt: "2" })}>→ Updates NFT metadata on-chain</p>
             </div>
 
-            {/* Response Format */}
-            <div>
-              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
-                Your API returns
+            {/* Chat/LLM */}
+            <div
+              className={css({
+                p: "4",
+                bg: "white",
+                borderRadius: "md",
+                border: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "3" })}>
+                💬 Chat / LLM
               </h4>
-              <pre
-                className={css({
-                  bg: "gray.900",
-                  color: "gray.100",
-                  p: "3",
-                  borderRadius: "md",
-                  overflow: "auto",
-                  fontSize: "xs",
-                  lineHeight: "1.5",
-                })}
-              >
-                {`{
-  "metadata_url": "https://...",
-  "image_url": "https://...",
-  "transaction_hash": "0x..."
-}`}
-              </pre>
+              <div className={css({ mb: "2" })}>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>Request:</span>
+                <pre
+                  className={css({
+                    bg: "gray.900",
+                    color: "gray.100",
+                    p: "2",
+                    borderRadius: "md",
+                    overflow: "auto",
+                    fontSize: "xs",
+                    lineHeight: "1.4",
+                    mt: "1",
+                  })}
+                >
+                  {`{ "message": "...", "address": "0x..." }`}
+                </pre>
+              </div>
+              <div className={css({ mb: "2" })}>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>Response:</span>
+                <pre
+                  className={css({
+                    bg: "gray.900",
+                    color: "gray.100",
+                    p: "2",
+                    borderRadius: "md",
+                    overflow: "auto",
+                    fontSize: "xs",
+                    lineHeight: "1.4",
+                    mt: "1",
+                  })}
+                >
+                  {`{ "response": "...", "leaf": "0x..." }`}
+                </pre>
+              </div>
+              <p className={css({ fontSize: "xs", color: "gray.500", mt: "2" })}>→ Deducts from user balance</p>
             </div>
           </div>
 
@@ -261,7 +325,7 @@ ${generatedJson || "(please generate JSON first)"}
                 _hover: { bg: "gray.100" },
               })}
             >
-              📄 Full OpenAPI Spec →
+              📄 OpenAPI Spec →
             </a>
             <a
               href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_bfl.js"
@@ -284,7 +348,30 @@ ${generatedJson || "(please generate JSON first)"}
                 _hover: { bg: "gray.100" },
               })}
             >
-              💻 Reference Implementation →
+              🖼️ ImageGen Example →
+            </a>
+            <a
+              href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/sc_llm.js"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={css({
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "1",
+                px: "3",
+                py: "1.5",
+                bg: "white",
+                borderRadius: "md",
+                color: "indigo.600",
+                textDecoration: "none",
+                fontSize: "sm",
+                fontWeight: "medium",
+                border: "1px solid",
+                borderColor: "gray.300",
+                _hover: { bg: "gray.100" },
+              })}
+            >
+              💬 Chat Example →
             </a>
           </div>
         </div>
@@ -492,6 +579,63 @@ ${generatedJson || "(please generate JSON first)"}
               />
             </div>
 
+            {/* Service Type - Radio */}
+            <div>
+              <label
+                className={css({
+                  display: "block",
+                  fontSize: "sm",
+                  fontWeight: "medium",
+                  color: "gray.700",
+                  mb: "2",
+                })}
+              >
+                Service Type
+              </label>
+              <div className={css({ display: "flex", gap: "4", flexWrap: "wrap" })}>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                    cursor: "pointer",
+                    fontSize: "sm",
+                    color: serviceType === "genimg" ? "gray.900" : "gray.600",
+                    fontWeight: serviceType === "genimg" ? "medium" : "normal",
+                  })}
+                >
+                  <input
+                    type="radio"
+                    name="serviceType"
+                    checked={serviceType === "genimg"}
+                    onChange={() => setServiceType("genimg")}
+                    className={css({ width: "4", height: "4", cursor: "pointer" })}
+                  />
+                  🖼️ Image Generation
+                </label>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                    cursor: "pointer",
+                    fontSize: "sm",
+                    color: serviceType === "llm" ? "gray.900" : "gray.600",
+                    fontWeight: serviceType === "llm" ? "medium" : "normal",
+                  })}
+                >
+                  <input
+                    type="radio"
+                    name="serviceType"
+                    checked={serviceType === "llm"}
+                    onChange={() => setServiceType("llm")}
+                    className={css({ width: "4", height: "4", cursor: "pointer" })}
+                  />
+                  💬 Chat / LLM
+                </label>
+              </div>
+            </div>
+
             {/* API Endpoint */}
             <div>
               <label
@@ -503,13 +647,15 @@ ${generatedJson || "(please generate JSON first)"}
                   mb: "1",
                 })}
               >
-                API Endpoint
+                {serviceType === "genimg" ? "🖼️ Image Generation" : "💬 Chat / LLM"} Endpoint
               </label>
               <input
                 type="url"
                 value={apiEndpoint}
                 onChange={(e) => setApiEndpoint(e.target.value)}
-                placeholder="https://api.your-service.com"
+                placeholder={
+                  serviceType === "genimg" ? "https://api.your-service.com/genimg" : "https://api.your-service.com/llm"
+                }
                 className={css({
                   width: "100%",
                   px: "3",
@@ -584,7 +730,7 @@ ${generatedJson || "(please generate JSON first)"}
                 _hover: { bg: "gray.700" },
                 _disabled: { opacity: 0.5, cursor: "not-allowed" },
               })}
-              disabled={!agentName || !apiEndpoint || !walletAddress}
+              disabled={!agentName || !walletAddress || !apiEndpoint}
             >
               Generate JSON
             </button>

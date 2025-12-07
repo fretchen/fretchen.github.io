@@ -11,6 +11,7 @@ export default function Page() {
 
   // Collapsible sections
   const [showWhitelisting, setShowWhitelisting] = useState(false);
+  const [showApiRequirements, setShowApiRequirements] = useState(false);
 
   // Generate JSON from form
   const generateJson = () => {
@@ -607,6 +608,170 @@ ${generatedJson || "(please generate JSON first)"}
                       Once EIP-8004 Identity Registry is deployed on Optimism, registration will be fully permissionless
                       and on-chain.
                     </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* API Requirements Section */}
+        <div className={css({ mb: "8" })}>
+          <div
+            className={css({
+              border: "1px solid",
+              borderColor: "gray.200",
+              borderRadius: "md",
+            })}
+          >
+            <button
+              onClick={() => setShowApiRequirements(!showApiRequirements)}
+              className={css({
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: "4",
+                bg: "transparent",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                _hover: { bg: "gray.50" },
+              })}
+            >
+              <span className={css({ fontWeight: "medium", color: "gray.800" })}>📡 API Requirements</span>
+              <span
+                className={css({
+                  color: "gray.400",
+                  transition: "transform 0.2s",
+                  transform: showApiRequirements ? "rotate(180deg)" : "rotate(0deg)",
+                })}
+              >
+                ▼
+              </span>
+            </button>
+            {showApiRequirements && (
+              <div className={css({ p: "4", pt: "0" })}>
+                <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
+                  Your API endpoint must accept POST requests and return JSON responses. No authentication required -
+                  the system is prepaid via smart contract.
+                </p>
+
+                <div className={css({ display: "grid", gap: "4" })}>
+                  {/* Request Format */}
+                  <div>
+                    <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
+                      Request Format (POST)
+                    </h4>
+                    <pre
+                      className={css({
+                        bg: "gray.900",
+                        color: "gray.100",
+                        p: "3",
+                        borderRadius: "md",
+                        overflow: "auto",
+                        fontSize: "xs",
+                        lineHeight: "1.5",
+                      })}
+                    >
+                      {`{
+  "prompt": "A beautiful sunset over mountains",
+  "tokenId": 42,
+  "mode": "generate",  // or "edit"
+  "size": "1024x1024"  // or "1792x1024"
+}`}
+                    </pre>
+                  </div>
+
+                  {/* Response Format */}
+                  <div>
+                    <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "2" })}>
+                      Response Format
+                    </h4>
+                    <pre
+                      className={css({
+                        bg: "gray.900",
+                        color: "gray.100",
+                        p: "3",
+                        borderRadius: "md",
+                        overflow: "auto",
+                        fontSize: "xs",
+                        lineHeight: "1.5",
+                      })}
+                    >
+                      {`{
+  "metadata_url": "https://...",
+  "image_url": "https://...",
+  "transaction_hash": "0x...",
+  "message": "Success"
+}`}
+                    </pre>
+                  </div>
+
+                  {/* Key Points */}
+                  <div
+                    className={css({
+                      p: "3",
+                      bg: "blue.50",
+                      borderRadius: "md",
+                      border: "1px solid",
+                      borderColor: "blue.200",
+                    })}
+                  >
+                    <p className={css({ fontSize: "sm", color: "blue.800", fontWeight: "medium", mb: "2" })}>
+                      Key Points
+                    </p>
+                    <ul className={css({ fontSize: "sm", color: "blue.700", pl: "4", listStyleType: "disc" })}>
+                      <li>Your service calls the smart contract to update the token</li>
+                      <li>Payment happens before your API is called (prepaid)</li>
+                      <li>Return the transaction hash for verification</li>
+                    </ul>
+                  </div>
+
+                  {/* Links */}
+                  <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", mt: "2" })}>
+                    <a
+                      href="/openapi.json"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={css({
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "1",
+                        px: "3",
+                        py: "1.5",
+                        bg: "gray.100",
+                        borderRadius: "md",
+                        color: "brand",
+                        textDecoration: "none",
+                        fontSize: "sm",
+                        fontWeight: "medium",
+                        _hover: { bg: "gray.200" },
+                      })}
+                    >
+                      📄 Full OpenAPI Spec →
+                    </a>
+                    <a
+                      href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_bfl.js"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={css({
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "1",
+                        px: "3",
+                        py: "1.5",
+                        bg: "gray.100",
+                        borderRadius: "md",
+                        color: "brand",
+                        textDecoration: "none",
+                        fontSize: "sm",
+                        fontWeight: "medium",
+                        _hover: { bg: "gray.200" },
+                      })}
+                    >
+                      💻 Reference Implementation →
+                    </a>
                   </div>
                 </div>
               </div>

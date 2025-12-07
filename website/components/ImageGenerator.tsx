@@ -237,12 +237,6 @@ export function ImageGenerator({
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
   const switchingToOptimismText = useLocale({ label: "imagegen.switchingToOptimism" });
 
-  // Links
-  const poweredByText = useLocale({ label: "imagegen.poweredBy" });
-  const viewContractText = useLocale({ label: "imagegen.viewContract" });
-  const learnMoreOptimismText = useLocale({ label: "imagegen.learnMoreOptimism" });
-  const viewContractEtherscanText = useLocale({ label: "imagegen.viewContractEtherscan" });
-
   const getButtonState = () => {
     if (isSwitchingChain) return "switching";
     if (isLoading) return "loading";

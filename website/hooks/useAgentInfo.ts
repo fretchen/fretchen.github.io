@@ -1,16 +1,16 @@
 /**
  * Hook to load and parse EIP-8004 agent registration data.
- * 
+ *
  * Fetches the agent-registration.json from the public folder and provides
  * parsed data for display in the UI.
- * 
+ *
  * This approach allows for:
  * 1. Same workflow as loading external agent registrations
  * 2. Easy migration to IPFS/S3 later
  * 3. No build-time coupling
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 // EIP-8004 Registration File Schema
 export interface AgentEndpoint {
@@ -106,16 +106,16 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
       if (!response.ok) {
         throw new Error(`Failed to fetch agent registration: ${response.status}`);
       }
-      
+
       const data: AgentRegistration = await response.json();
-      
+
       // Parse endpoints
       const walletEndpoint = data.endpoints.find((e) => e.name === "agentWallet")?.endpoint;
       const wallet = walletEndpoint ? parseCAIP10(walletEndpoint) : null;
-      
+
       const genImNFTEndpoint = data.endpoints.find((e) => e.name === "GenImNFTv4")?.endpoint;
       const llmContractEndpoint = data.endpoints.find((e) => e.name === "LLMv1")?.endpoint;
-      
+
       const parsedAgent: AgentInfo = {
         name: data.name,
         description: data.description,
@@ -132,7 +132,7 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
         supportedTrust: data.supportedTrust,
         raw: data,
       };
-      
+
       setAgent(parsedAgent);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error fetching agent";

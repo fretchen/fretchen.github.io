@@ -30,6 +30,7 @@
         "summary": "Generate AI Image and Update NFT",
         "description": "Generates an AI image using Black Forest Labs (BFL) API, uploads to S3, and updates the NFT token URI on Optimism. Requires the token to exist and not have an image yet (for generate mode).",
         "tags": ["Image Generation"],
+        "x-server": "https://my-personal-js-cloudfr-parzqjl2-genimgbfl.functions.fnc.fr-par.scw.cloud",
         "requestBody": {
           "required": true,
           "content": {
@@ -108,6 +109,88 @@
           "chainId": 10,
           "contract": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
           "method": "requestImageUpdate"
+        }
+      }
+    },
+    "/llm": {
+      "post": {
+        "operationId": "chatWithLLM",
+        "summary": "Chat with LLM using wallet authentication",
+        "description": "Sends a prompt to the LLM and returns a response. Requires wallet signature for authentication and deducts from user's prepaid balance. Usage is tracked via Merkle-tree for on-chain verification.",
+        "tags": ["LLM"],
+        "x-server": "https://my-personal-js-cloudfr-parzqjl2-llm.functions.fnc.fr-par.scw.cloud",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMRequest"
+              },
+              "examples": {
+                "basic": {
+                  "summary": "Basic LLM request",
+                  "value": {
+                    "data": {
+                      "prompt": "What is the capital of France?"
+                    },
+                    "auth": {
+                      "address": "0x1234567890abcdef1234567890abcdef12345678",
+                      "signature": "0x...",
+                      "message": "Sign this message to authenticate"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LLM response generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing parameters or invalid signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient balance - user needs to deposit more ETH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-blockchain": {
+          "chain": "optimism",
+          "chainId": 10,
+          "contract": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1",
+          "method": "updateLeaf"
         }
       }
     }
@@ -222,6 +305,28 @@
           }
         },
         "description": "Wallet signature authentication for LLM access"
+      },
+      "LLMResponse": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "string",
+            "description": "The LLM's response text"
+          },
+          "leaf": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "description": "Merkle leaf hash for usage verification"
+          },
+          "remainingBalance": {
+            "type": "string",
+            "description": "User's remaining balance in wei"
+          },
+          "cost": {
+            "type": "string",
+            "description": "Cost of this request in wei"
+          }
+        }
       },
       "ErrorResponse": {
         "type": "object",

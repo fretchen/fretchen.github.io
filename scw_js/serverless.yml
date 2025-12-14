@@ -28,6 +28,8 @@ functions:
     handler: readhandler_v2.handle
   genimgbfl:
     handler: genimg_bfl.handle
+  genimgx402:
+    handler: genimg_x402.handle
   llm:
     handler: sc_llm.handle
   leafhistory:

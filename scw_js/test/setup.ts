@@ -12,6 +12,7 @@ export const mockViemFunctions = {
   getContract: vi.fn(),
   http: vi.fn(),
   parseEther: vi.fn(),
+  parseAbiItem: vi.fn(),
   privateKeyToAccount: vi.fn(),
 };
 
@@ -34,6 +35,11 @@ export function setupGlobalMocks() {
   vi.mock("viem/accounts", () => ({
     privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
   }));
+
+  // Setup parseAbiItem default
+  mockViemFunctions.parseAbiItem.mockReturnValue({
+    signature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+  });
 
   // Mock AWS SDK
   vi.mock("@aws-sdk/client-s3", () => ({

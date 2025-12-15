@@ -15,13 +15,111 @@ Das x402-Protokoll nutzt den HTTP-Statuscode `402 Payment Required` für automat
 
 ### Technologie-Stack
 
-- **[x402 npm Package](https://www.npmjs.com/package/x402)** - Offizielles x402 Core Package für 402-Responses und Basic Transaction-Verification
-- **Custom Mint-Verification** - Event-Parsing für TokenId-Extraktion
-- **Viem/Ethers** - Blockchain-Interaktion und Event-Parsing
+- **x402 Protocol Standard** - HTTP 402 Payment Required Protokoll (Manual Implementation)
+- **Viem** - Blockchain-Interaktion und Event-Parsing
+- **Custom Implementation** - Direkte On-Chain Verification ohne Facilitator
 
 **Aufteilung:**
-- ✅ x402 Package: 80% (402-Response, Basic TX-Check)
-- ✅ Custom Code: 20% (Mint-Event Parsing, TokenId Extraktion)
+- ✅ x402-Style 402 Response: Manual (klar und direkt)
+- ✅ Transaction Verification: Viem (status, recipient, amount)
+- ✅ Mint-Event Parsing: Custom (NFT-spezifisch, TokenId Extraktion)
+
+**Warum KEIN [x402 npm Package](https://www.npmjs.com/package/x402)?**
+
+1. **Facilitator-Dependency**: x402 Package ist designed für Facilitator-basierte Verification (zentralisierter Service)
+   ```javascript
+   // x402 Package Design:
+   import { verify } from "x402/verify";
+   const result = await verify(payload, requirements); // ➜ Ruft Facilitator auf!
+   ```
+
+2. **Self-Sovereign Approach**: Wir wollen direkt On-Chain verifizieren ohne externe Dependencies
+   ```javascript
+   // Unser Ansatz:
+   const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+   const mintLog = receipt.logs.find(/* Transfer from 0x0 */);
+   // ➜ Direkt auf Optimism, kein Middleman
+   ```
+
+3. **NFT-Mint-Spezifisch**: x402 ist optimiert für Standard USDC-Transfers, nicht für NFT-Mint-Verification mit TokenId-Extraktion
+
+4. **Subpath Exports**: x402 Package nutzt Subpath Exports (`x402/client`, `x402/verify`), nicht Root-Import
+
+**Entscheidung**: Manual x402-konforme Implementation für maximale Kontrolle und Zero-Dependency-Approach
+
+---
+
+## x402 Package vs. Manual Implementation
+
+### x402 Package Analyse
+
+Das [x402 npm Package](https://www.npmjs.com/package/x402) (70k+ Downloads) ist ein **production-ready** Package von Coinbase für das x402 Payment Protocol. Es bietet:
+
+**Verfügbare Module:**
+```javascript
+import { verify, settle } from "x402/verify";          // Facilitator-basierte Verification
+import { preparePaymentHeader } from "x402/client";    // Client-side Payment Header
+import { exact } from "x402/schemes";                   // Payment Schemes
+```
+
+**Package Design:**
+- ✅ Middleware für Express/Hono/Next.js
+- ✅ Standardisierte 402 Response Formate
+- ✅ Facilitator-Integration für Payment Verification
+- ✅ Lifecycle Hooks (onBeforeVerify, onAfterSettle, etc.)
+- ✅ Multi-Network Support (EVM, Solana)
+
+**Warum nicht verwendet:**
+
+| Aspekt | x402 Package | Unsere Requirements |
+|--------|--------------|---------------------|
+| **Verification** | Facilitator-Service | Direkt On-Chain |
+| **Architecture** | Middleware-basiert | Serverless Function |
+| **Payment Type** | Standard USDC Transfer | NFT Mint Transaction |
+| **Dependencies** | Facilitator erforderlich | Self-Sovereign |
+| **Use Case** | Generische API Payments | NFT-spezifischer Flow |
+
+**Beispiel: x402 Package mit Facilitator**
+```javascript
+import { useFacilitator } from "x402/verify";
+
+const { verify } = useFacilitator({
+  url: "https://x402.org/facilitator"  // ❌ Externe Dependency!
+});
+
+const result = await verify(paymentPayload, paymentRequirements);
+// ➜ Ruft Facilitator auf, nicht direkt Blockchain
+```
+
+**Unsere Manual Implementation**
+```javascript
+// Direkte On-Chain Verification ohne Facilitator
+const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+
+// Basic Checks
+if (receipt.status !== "success") return { valid: false };
+if (tx.to !== CONTRACT_ADDRESS) return { valid: false };
+if (tx.value < MINT_PRICE) return { valid: false };
+
+// NFT-spezifisch: TokenId aus Mint-Event extrahieren
+const mintLog = receipt.logs.find(log => /* Transfer from 0x0 */);
+const tokenId = parseInt(mintLog.topics[3], 16);
+
+return { valid: true, tokenId, payer };
+```
+
+**Vorteile unserer Manual Implementation:**
+- ✅ **Self-Sovereign**: Keine Abhängigkeit von Facilitator-Services
+- ✅ **NFT-Optimiert**: TokenId-Extraktion aus Mint-Event
+- ✅ **Serverless-Ready**: Passt perfekt zu Scaleway Functions
+- ✅ **Transparent**: Klarer, direkter Code ohne Abstraction-Layer
+- ✅ **Zero External Dependencies**: Nur Viem für Blockchain-Zugriff
+
+**Wann x402 Package verwenden?**
+- Express/Hono/Next.js Middleware-Integration
+- Standard USDC Payment Flows
+- Facilitator-basierte Verification gewünscht
+- Multi-Network Support benötigt
 
 ---
 
@@ -120,12 +218,15 @@ Das x402-Protokoll nutzt den HTTP-Statuscode `402 Payment Required` für automat
 
 **Ziel:** 402-Response bei fehlendem Payment, Mint-Verification bei vorhandenem Payment
 
-### 1.0 Dependencies installieren
+### 1.0 Dependencies
 
 ```bash
 cd scw_js
-npm install x402 viem
+# Viem bereits installiert (v2.38.3)
+# Keine zusätzlichen Dependencies nötig
 ```
+
+**Note**: `viem` bereits vorhanden für Blockchain-Interaktion. Keine x402 Package Dependency.
 
 ### 1.1 Request-Handler erweitern
 
@@ -133,25 +234,44 @@ npm install x402 viem
 - Ohne Payment → Return `402` via x402 Package
 - Mit Payment → Verifiziere Mint-Event und generiere Bild
 
-### 1.2 402 Response mit x402 Package
+### 1.2 402 Response (x402-konform, Manual)
 
 ```javascript
-import { createPaymentRequired } from 'x402';
+// Config
+const MINT_PRICE = "500000000000000"; // 0.0005 ETH
+const GENIMG_CONTRACT_ADDRESS = "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb";
 
-// 402-Response erstellen
+// 402-Response erstellen (x402-Protocol-konform)
 function create402Response() {
-  return createPaymentRequired({
-    amount: '500000000000000',
+  const paymentInfo = {
+    scheme: "exact",
+    network: "optimism",
+    maxAmountRequired: MINT_PRICE,
     recipient: GENIMG_CONTRACT_ADDRESS,
-    network: 'optimism',
     metadata: {
-      resource: 'genimg',
-      description: 'Mint an NFT to generate your AI image',
-      paymentType: 'contract-call',
+      resource: "genimg",
+      description: "Mint an NFT to generate your AI image",
+      paymentType: "contract-call",
       contractAddress: GENIMG_CONTRACT_ADDRESS,
-      contractMethod: 'mint()'
+      contractMethod: "mint()"
     }
-  });
+  };
+
+  return {
+    statusCode: 402,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "*",
+      "Access-Control-Allow-Methods": "*",
+      "Content-Type": "application/json",
+      "X-Payment": JSON.stringify(paymentInfo)
+    },
+    body: JSON.stringify({
+      error: "Payment required",
+      message: "Please mint an NFT to generate your image",
+      payment: paymentInfo
+    })
+  };
 }
 ```
 
@@ -173,12 +293,11 @@ X-Payment: {
 }
 ```
 
-### 1.3 Mint-Verification (x402 + Custom)
+### 1.3 Mint-Verification (Direkte On-Chain Verification)
 
-Kombination aus x402 Basic-Verification und Custom Mint-Event-Parsing:
+Direkte On-Chain Verification ohne Facilitator:
 
 ```javascript
-import { verifyPayment } from 'x402';
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { optimism } from 'viem/chains';
 
@@ -192,23 +311,30 @@ const TRANSFER_EVENT = parseAbiItem(
   'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)'
 );
 
-async function verifyMintPayment(paymentProof) {
-  const { txHash, tokenId } = JSON.parse(paymentProof);
-  
-  // 1. Basic Verification via x402 Package
-  const basicVerification = await verifyPayment({
-    txHash,
-    expectedRecipient: GENIMG_CONTRACT_ADDRESS,
-    expectedAmount: MINT_PRICE,
-    network: 'optimism'
-  });
-  
-  if (!basicVerification.valid) {
-    return { 
-      valid: false, 
-      error: basicVerification.error || 'Invalid transaction' 
-    };
-  }
+async function verifyMintPayment(publicClient, txHash) {
+  try {
+    // 1. Get Transaction Receipt
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+    
+    if (!receipt || receipt.status !== "success") {
+      return { valid: false, error: "Transaction failed or not found" };
+    }
+
+    // 2. Get Transaction Details
+    const tx = await publicClient.getTransaction({ hash: txHash });
+
+    // 3. Verify Recipient (Contract Address)
+    if (tx.to?.toLowerCase() !== GENIMG_CONTRACT_ADDRESS.toLowerCase()) {
+      return { valid: false, error: "Transaction not sent to correct contract" };
+    }
+
+    // 4. Verify Transaction Value >= MINT_PRICE
+    if (BigInt(tx.value) < BigInt(MINT_PRICE)) {
+      return {
+        valid: false,
+        error: `Insufficient payment. Expected at least ${MINT_PRICE}, got ${tx.value}`
+      };
+    }
   
   // 2. Custom: Mint-Event aus Receipt extrahieren
   const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
@@ -240,21 +366,22 @@ async function verifyMintPayment(paymentProof) {
 }
 ```
 
-**Was macht x402:**
-- ✅ Transaction Status prüfen
-- ✅ Recipient (Contract) verifizieren
-- ✅ Amount (≥ MINT_PRICE) prüfen
-- ✅ Network-spezifische Provider-Logik
-
-**Was ist Custom:**
+**Was wird geprüft:**
+- ✅ Transaction Status (success/reverted)
+- ✅ Recipient (Contract Address match)
+- ✅ Amount (≥ MINT_PRICE)
 - ✅ Mint-Event Detection (Transfer from 0x0)
 - ✅ TokenId Extraktion aus Event
 - ✅ Minter-Adresse extrahieren
 
-### 1.4 Vollständiger Handler mit x402 Package
+**Vorteile gegenüber Facilitator:**
+- ✅ Self-Sovereign (keine externe Dependency)
+- ✅ Transparent (direkter Blockchain-Zugriff)
+- ✅ NFT-optimiert (TokenId-Extraktion)
+
+### 1.4 Vollständiger Handler (x402-konform)
 
 ```javascript
-import { createPaymentRequired, verifyPayment } from 'x402';
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { optimism } from 'viem/chains';
 
@@ -544,8 +671,8 @@ Der Server kann aus dem txHash:
 
 | Datei | Änderungen |
 |-------|------------|
-| `scw_js/package.json` | Add: `x402`, `viem` |
-| `scw_js/genimg_bfl.js` | 402-Response (x402), Mint-Verification (x402 + custom) |
+| `scw_js/package.json` | Dependencies: `viem` (bereits vorhanden) |
+| `scw_js/genimg_x402.js` | **NEU**: 402-Response (manual), Mint-Verification (direct on-chain) |
 | `website/components/ImageGenerator.tsx` | 402-Handling, vereinfachter Flow |
 | `website/hooks/useImageGeneration.ts` | (neu) Fetch + 402 + Mint + Retry |
 | `website/public/openapi.json` | 402-Response dokumentieren |
@@ -554,15 +681,15 @@ Der Server kann aus dem txHash:
 
 ## Zeitschätzung
 
-| Phase | Aufwand | Mit x402 Package |
-|-------|---------|------------------|
-| Phase 1: Server (402 + Mint-Verify) | 3-4h | **2-3h** ✅ |
-| Phase 2: Client (402-Handling) | 3-4h | 3-4h |
-| Phase 3: Contract | 0h | 0h |
-| Phase 4: Testing | 2-3h | 2-3h |
-| **Total** | 8-11h | **7-10h** ✅ |
+| Phase | Aufwand | Status |
+|-------|---------|--------|
+| Phase 1: Server (402 + Mint-Verify) | 3-4h | ✅ **Fertig** (`genimg_x402.js`) |
+| Phase 2: Client (402-Handling) | 3-4h | ⏳ Todo |
+| Phase 3: Contract | 0h | ✅ Keine Änderungen |
+| Phase 4: Testing | 2-3h | ⏳ Unit Tests vorhanden |
+| **Total** | 8-11h | **Phase 1 abgeschlossen** |
 
-**Zeitsparung durch x402 Package:** ~1-2h (Basic-Verification fertig implementiert)
+**Manual Implementation:** Klarer, direkter Code ohne Facilitator-Overhead
 
 ---
 
@@ -591,9 +718,17 @@ Die `agent-registration.json` könnte ein x402-Payment-Schema referenzieren:
 
 ## Referenzen
 
-- [x402 npm Package](https://www.npmjs.com/package/x402) - Offizielles x402 Core Package
-- [x402 Protocol Specification](https://github.com/standard-crypto/x402) - Standard für Payment Required
+- [x402 npm Package](https://www.npmjs.com/package/x402) - Offizielles x402 Core Package (für Facilitator-basierte Flows)
+- [x402 Protocol Specification](https://github.com/coinbase/x402) - Standard für Payment Required (Coinbase)
+- [x402 Express Examples](https://github.com/coinbase/x402/tree/main/examples/typescript/servers/advanced) - Advanced Server Patterns
 - [HTTP 402 Payment Required](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402)
 - [EIP-8004 Trustless Agents](https://eips.ethereum.org/EIPS/eip-8004)
 - [Viem Documentation](https://viem.sh/) - TypeScript Interface für Ethereum
 - [Optimism Documentation](https://docs.optimism.io/)
+
+## Implementation Status
+
+- ✅ **genimg_x402.js**: Vollständige Server-Implementation mit x402-konformer 402 Response und direkter On-Chain Verification
+- ✅ **Unit Tests**: Comprehensive Test-Suite mit 22 Tests
+- ✅ **Demo Notebook**: `notebooks/genimg_x402_demo.ipynb` für lokales Testing
+- ⏳ **Client Integration**: Website-Integration folgt in Phase 2

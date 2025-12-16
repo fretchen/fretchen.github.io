@@ -15,6 +15,6 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       exclude: ["node_modules/**", "test/**", "coverage/**", "*.config.*"],
     },
-    include: ["test/**/*.test.js"],
+    include: ["test/**/*.test.js", "**/test/**/*.test.js"],
   },
 });

@@ -67,11 +67,14 @@ export async function handle(event, _context) {
 
   const { paymentPayload, paymentRequirements } = body;
 
-  logger.info({
-    network: paymentPayload.accepted?.network,
-    amount: paymentRequirements.amount,
-    scheme: paymentPayload.accepted?.scheme,
-  }, "Processing verification request");
+  logger.info(
+    {
+      network: paymentPayload.accepted?.network,
+      amount: paymentRequirements.amount,
+      scheme: paymentPayload.accepted?.scheme,
+    },
+    "Processing verification request",
+  );
 
   try {
     // Verify the payment
@@ -88,11 +91,14 @@ export async function handle(event, _context) {
         }),
       };
     } else {
-      logger.warn({
-        invalidReason: result.invalidReason,
-        payer: result.payer,
-      }, "Payment verification failed");
-      
+      logger.warn(
+        {
+          invalidReason: result.invalidReason,
+          payer: result.payer,
+        },
+        "Payment verification failed",
+      );
+
       return {
         statusCode: 200, // Still return 200, but with isValid: false
         headers,
@@ -125,7 +131,7 @@ if (process.env.NODE_ENV === "test") {
 
     const scw_fnc_node = await import("@scaleway/serverless-functions");
     scw_fnc_node.serveHandler(handle, 8080);
-    
+
     logger.info("🚀 Local server started at http://localhost:8080");
     logger.info("Testing endpoint: POST http://localhost:8080");
   })().catch((err) => logger.error({ err }, "Error starting local server"));

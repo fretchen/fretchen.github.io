@@ -78,7 +78,7 @@ function getChain(network) {
  */
 function getTokenInfo(network, asset) {
   const normalizedAsset = asset.toLowerCase();
-  
+
   // Optimism Mainnet
   if (network === "eip155:10") {
     if (normalizedAsset === "0x0b2c639c533813f4aa9d7837caf62653d097ff85") {
@@ -88,14 +88,14 @@ function getTokenInfo(network, asset) {
       return { address: asset, name: "Tether USD", version: "1" };
     }
   }
-  
+
   // Optimism Sepolia
   if (network === "eip155:11155420") {
     if (normalizedAsset === "0x5fd84259d66cd46123540766be93dfe6d43130d7") {
       return { address: asset, name: "USD Coin", version: "2" };
     }
   }
-  
+
   throw new Error(`Unknown or unsupported token address for network: ${network}`);
 }
 
@@ -126,9 +126,26 @@ function getEIP712Domain(chainId, tokenAddress, tokenName, tokenVersion) {
  * @param {string} tokenVersion - Token version
  * @returns {Promise<boolean>} True if signature is valid
  */
-async function verifySignature(authorization, signature, chainId, tokenAddress, tokenName, tokenVersion) {
+async function verifySignature(
+  authorization,
+  signature,
+  chainId,
+  tokenAddress,
+  tokenName,
+  tokenVersion,
+) {
   try {
     const domain = getEIP712Domain(chainId, tokenAddress, tokenName, tokenVersion);
+
+    logger.info(
+      {
+        domain,
+        message: authorization,
+        signature,
+        expectedAddress: authorization.from,
+      },
+      "Verifying EIP-712 signature",
+    );
 
     const recoveredAddress = await verifyTypedData({
       address: authorization.from,
@@ -138,6 +155,11 @@ async function verifySignature(authorization, signature, chainId, tokenAddress, 
       message: authorization,
       signature,
     });
+
+    logger.info(
+      { recoveredAddress, expectedAddress: authorization.from },
+      "Signature verification result",
+    );
 
     return recoveredAddress;
   } catch (error) {
@@ -248,8 +270,18 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
     }
 
     // 9. Verify signature (expensive operation, do after simple checks)
+    // Convert authorization values to proper types for EIP-712
+    const authorizationForSig = {
+      from: authorization.from,
+      to: authorization.to,
+      value: BigInt(authorization.value),
+      validAfter: BigInt(authorization.validAfter),
+      validBefore: BigInt(authorization.validBefore),
+      nonce: authorization.nonce,
+    };
+
     const isSignatureValid = await verifySignature(
-      authorization,
+      authorizationForSig,
       signature,
       chain.id,
       tokenInfo.address,
@@ -300,12 +332,15 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
     }
 
     // All checks passed
-    logger.info({
-      payer,
-      amount: authorization.value,
-      network,
-      recipient: authorization.to,
-    }, "Payment verification successful");
+    logger.info(
+      {
+        payer,
+        amount: authorization.value,
+        network,
+        recipient: authorization.to,
+      },
+      "Payment verification successful",
+    );
 
     return {
       isValid: true,

@@ -269,7 +269,27 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // 9. Verify signature (expensive operation, do after simple checks)
+    // 9. Verify signature format and validate (expensive operation, do after simple checks)
+    // Check if signature has 0x prefix
+    if (!signature.startsWith("0x")) {
+      return {
+        isValid: false,
+        invalidReason: X402_ERRORS.INVALID_SIGNATURE,
+        payer,
+        message: "Signature must start with '0x' prefix",
+      };
+    }
+
+    // Check signature length (should be 132 characters: 0x + 130 hex chars)
+    if (signature.length !== 132) {
+      return {
+        isValid: false,
+        invalidReason: X402_ERRORS.INVALID_SIGNATURE,
+        payer,
+        message: `Invalid signature length: expected 132 characters (0x + 130 hex), got ${signature.length}`,
+      };
+    }
+
     // Convert authorization values to proper types for EIP-712
     const authorizationForSig = {
       from: authorization.from,

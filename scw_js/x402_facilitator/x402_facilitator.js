@@ -2,10 +2,11 @@
 
 /**
  * x402 v2 Facilitator - Main Handler
- * Handles POST /verify endpoint for payment verification
+ * Handles POST /verify and POST /settle endpoints
  */
 
 import { verifyPayment } from "./x402_verify.js";
+import { settlePayment } from "./x402_settle.js";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -42,6 +43,19 @@ export async function handle(event, _context) {
     };
   }
 
+  // Determine endpoint from path
+  const path = event.path || event.rawUrl || "";
+  const isSettleEndpoint = path.includes("/settle");
+  const isVerifyEndpoint = path.includes("/verify");
+
+  if (!isSettleEndpoint && !isVerifyEndpoint) {
+    return {
+      statusCode: 404,
+      headers,
+      body: JSON.stringify({ error: "Endpoint not found. Use /verify or /settle" }),
+    };
+  }
+
   let body;
   try {
     body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
@@ -69,15 +83,58 @@ export async function handle(event, _context) {
 
   logger.info(
     {
+      endpoint: isSettleEndpoint ? "settle" : "verify",
       network: paymentPayload.accepted?.network,
       amount: paymentRequirements.amount,
       scheme: paymentPayload.accepted?.scheme,
     },
-    "Processing verification request",
+    "Processing request",
   );
 
   try {
-    // Verify the payment
+    // Handle /settle endpoint
+    if (isSettleEndpoint) {
+      const result = await settlePayment(paymentPayload, paymentRequirements);
+
+      if (result.success) {
+        logger.info(
+          { payer: result.payer, transaction: result.transaction },
+          "Settlement successful",
+        );
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            payer: result.payer,
+            transaction: result.transaction,
+            network: result.network,
+          }),
+        };
+      } else {
+        logger.warn(
+          {
+            errorReason: result.errorReason,
+            payer: result.payer,
+          },
+          "Settlement failed",
+        );
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            errorReason: result.errorReason,
+            payer: result.payer,
+            transaction: "",
+            network: result.network,
+          }),
+        };
+      }
+    }
+
+    // Handle /verify endpoint
     const result = await verifyPayment(paymentPayload, paymentRequirements);
 
     if (result.isValid) {
@@ -110,14 +167,16 @@ export async function handle(event, _context) {
       };
     }
   } catch (error) {
-    logger.error({ err: error }, "Unexpected error in verify handler");
+    logger.error({ err: error }, "Unexpected error in handler");
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         error: "Internal server error",
-        isValid: false,
-        invalidReason: "unexpected_verify_error",
+        [isSettleEndpoint ? "success" : "isValid"]: false,
+        [isSettleEndpoint ? "errorReason" : "invalidReason"]: isSettleEndpoint
+          ? "unexpected_settlement_error"
+          : "unexpected_verify_error",
       }),
     };
   }

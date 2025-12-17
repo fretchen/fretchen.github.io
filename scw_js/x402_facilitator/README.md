@@ -9,7 +9,7 @@ The x402 Facilitator enables resource servers to verify and settle blockchain pa
 ## Features
 
 - ✅ **POST /verify** - Verify EIP-3009 payment authorizations
-- 🚧 **POST /settle** - Execute verified payments on-chain (coming soon)
+- ✅ **POST /settle** - Execute verified payments on-chain
 - 🚧 **GET /supported** - List supported networks and schemes (coming soon)
 - ✅ **Multi-Token Support** - USDC and USDT0 (via usdt0.to)
 

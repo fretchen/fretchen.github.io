@@ -160,6 +160,38 @@ describe("x402 Verify", () => {
     expect(result.invalidReason).toBe("invalid_payload");
   });
 
+  test("rejects signature without 0x prefix", async () => {
+    const payload = {
+      ...validPaymentPayload,
+      payload: {
+        ...validPaymentPayload.payload,
+        signature:
+          "2d6a7588d6acca505cbf0d9a4a227e0c52c6c34008c8e8986a1283259764173608a2ce6496642e377d6da8dbbf5836e9bd15092f9ecab05ded3d6293af148b571c", // Missing 0x
+      },
+    };
+    const result = await verifyPayment(payload, validPaymentRequirements);
+
+    expect(result.isValid).toBe(false);
+    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.message).toContain("must start with '0x' prefix");
+  });
+
+  test("rejects signature with invalid length", async () => {
+    const payload = {
+      ...validPaymentPayload,
+      payload: {
+        ...validPaymentPayload.payload,
+        signature:
+          "0x2d6a7588d6acca505cbf0d9a4a227e0c52c6c34008c8e8986a1283259764173608a2ce6496642e377d6da8dbbf5836e9bd15092f9ecab05ded3d6293af148b57", // Too short
+      },
+    };
+    const result = await verifyPayment(payload, validPaymentRequirements);
+
+    expect(result.isValid).toBe(false);
+    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.message).toContain("Invalid signature length");
+  });
+
   // Note: Full signature and blockchain integration tests would require
   // actual wallet signatures and testnet interaction
 });

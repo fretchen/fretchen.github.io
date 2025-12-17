@@ -7,6 +7,7 @@
 
 import { verifyPayment } from "./x402_verify.js";
 import { settlePayment } from "./x402_settle.js";
+import { getSupportedCapabilities } from "./x402_supported.js";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -34,17 +35,32 @@ export async function handle(event, _context) {
     };
   }
 
-  // Only accept POST requests
+  // Determine endpoint from path
+  const path = event.path || event.rawUrl || "";
+  const isSupportedEndpoint = path.includes("/supported");
+
+  // Handle GET /supported endpoint
+  if (isSupportedEndpoint && event.httpMethod === "GET") {
+    const capabilities = getSupportedCapabilities();
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(capabilities),
+    };
+  }
+
+  // Only accept POST requests for verify/settle
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: "Method not allowed. Use POST." }),
+      body: JSON.stringify({
+        error: "Method not allowed. Use POST for /verify and /settle, or GET for /supported.",
+      }),
     };
   }
 
-  // Determine endpoint from path
-  const path = event.path || event.rawUrl || "";
+  // Determine endpoint from path (for verify/settle)
   const isSettleEndpoint = path.includes("/settle");
   const isVerifyEndpoint = path.includes("/verify");
 

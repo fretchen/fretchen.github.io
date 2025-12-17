@@ -1,10 +1,10 @@
 // @ts-check
 /**
  * EIP-712 Reference Test
- * 
+ *
  * Diese Tests validieren unsere EIP-712 Implementation gegen die offiziellen
  * Test-Vektoren aus der EIP-712 Spezifikation.
- * 
+ *
  * Quelle: https://eips.ethereum.org/assets/eip-712/Example.js
  */
 
@@ -55,8 +55,7 @@ describe("EIP-712 Reference Tests", () => {
 
     // Erwarteter Hash aus der offiziellen EIP-712 Spezifikation
     // Der Hash aus der Spec hatte einen Tippfehler - korrigiert basierend auf viem's Output
-    const expectedHash =
-      "0xbe609aee343fb3c4b28e1df9e632fca64fcfaede20f02e86244efddf30957bd2";
+    const expectedHash = "0xbe609aee343fb3c4b28e1df9e632fca64fcfaede20f02e86244efddf30957bd2";
 
     expect(hash).toBe(expectedHash);
   });
@@ -109,8 +108,7 @@ describe("EIP-712 Reference Tests", () => {
     expect(hash1).toBe(hash2);
 
     // Der Hash aus unserem generate_test_signature Script
-    const expectedHash =
-      "0x2ffe322a269aef1318b6cfa83e381fe06a1657df078abb0668f71ad1f603b0c8";
+    const expectedHash = "0x2ffe322a269aef1318b6cfa83e381fe06a1657df078abb0668f71ad1f603b0c8";
     expect(hash1).toBe(expectedHash);
   });
 
@@ -133,9 +131,7 @@ describe("EIP-712 Reference Tests", () => {
     const typeHash = keccak256(toHex(typeString));
 
     // Der typeHash sollte konstant sein
-    expect(typeHash).toBe(
-      "0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267",
-    );
+    expect(typeHash).toBe("0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267");
   });
 
   test("Domain separator calculation", () => {

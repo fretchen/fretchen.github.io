@@ -10,8 +10,8 @@ The x402 Facilitator enables resource servers to verify and settle blockchain pa
 
 - ✅ **POST /verify** - Verify EIP-3009 payment authorizations
 - ✅ **POST /settle** - Execute verified payments on-chain
-- 🚧 **GET /supported** - List supported networks and schemes (coming soon)
-- ✅ **Multi-Token Support** - USDC and USDT0 (via usdt0.to)
+- ✅ **GET /supported** - List supported networks, schemes, and tokens
+- ✅ **Multi-Token Support** - USDC and USDT
 
 ## Supported Networks
 
@@ -121,6 +121,56 @@ Verifies a payment authorization without executing on-chain.
   "isValid": false,
   "invalidReason": "insufficient_funds",
   "payer": "0x857b06519E91e3A54538791bDbb0E22373e36b66"
+}
+```
+
+### GET /supported
+
+Returns information about supported payment schemes, networks, and tokens.
+
+**Request:** None (GET request)
+
+**Response:**
+```json
+{
+  "kinds": [
+    {
+      "x402Version": 2,
+      "scheme": "exact",
+      "network": "eip155:10",
+      "assets": [
+        {
+          "address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          "name": "USDC",
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        {
+          "address": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+          "name": "Tether USD",
+          "symbol": "USDT",
+          "decimals": 6
+        }
+      ]
+    },
+    {
+      "x402Version": 2,
+      "scheme": "exact",
+      "network": "eip155:11155420",
+      "assets": [
+        {
+          "address": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+          "name": "USDC",
+          "symbol": "USDC",
+          "decimals": 6
+        }
+      ]
+    }
+  ],
+  "extensions": [],
+  "signers": {
+    "eip155:*": ["0x..."]
+  }
 }
 ```
 

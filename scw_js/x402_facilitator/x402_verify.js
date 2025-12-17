@@ -82,7 +82,7 @@ function getTokenInfo(network, asset) {
   // Optimism Mainnet
   if (network === "eip155:10") {
     if (normalizedAsset === "0x0b2c639c533813f4aa9d7837caf62653d097ff85") {
-      return { address: asset, name: "USD Coin", version: "2" };
+      return { address: asset, name: "USDC", version: "2" };
     }
     if (normalizedAsset === "0x01bff41798a0bcf287b996046ca68b395dbc1071") {
       return { address: asset, name: "Tether USD", version: "1" };
@@ -92,7 +92,7 @@ function getTokenInfo(network, asset) {
   // Optimism Sepolia
   if (network === "eip155:11155420") {
     if (normalizedAsset === "0x5fd84259d66cd46123540766be93dfe6d43130d7") {
-      return { address: asset, name: "USD Coin", version: "2" };
+      return { address: asset, name: "USDC", version: "2" };
     }
   }
 
@@ -147,7 +147,7 @@ async function verifySignature(
       "Verifying EIP-712 signature",
     );
 
-    const recoveredAddress = await verifyTypedData({
+    const isValid = await verifyTypedData({
       address: authorization.from,
       domain,
       types: EIP712_TYPES,
@@ -156,14 +156,18 @@ async function verifySignature(
       signature,
     });
 
-    logger.info(
-      { recoveredAddress, expectedAddress: authorization.from },
-      "Signature verification result",
-    );
+    logger.info({ isValid, expectedAddress: authorization.from }, "Signature verification result");
 
-    return recoveredAddress;
+    return isValid;
   } catch (error) {
-    logger.error({ err: error }, "Signature verification failed");
+    logger.error(
+      {
+        err: error,
+        errorMessage: error.message,
+        errorStack: error.stack,
+      },
+      "Signature verification failed",
+    );
     return false;
   }
 }
@@ -299,6 +303,16 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       validBefore: BigInt(authorization.validBefore),
       nonce: authorization.nonce,
     };
+
+    logger.info(
+      {
+        authorizationForSig,
+        signature,
+        chainId: chain.id,
+        tokenAddress: tokenInfo.address,
+      },
+      "About to verify signature with these parameters",
+    );
 
     const isSignatureValid = await verifySignature(
       authorizationForSig,

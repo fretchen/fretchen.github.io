@@ -25,7 +25,7 @@ The x402 Facilitator enables resource servers to verify and settle blockchain pa
 ## Installation
 
 ```bash
-cd scw_js/x402_facilitator
+cd x402_facilitator
 npm install
 ```
 

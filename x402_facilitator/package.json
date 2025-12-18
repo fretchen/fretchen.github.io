@@ -1,0 +1,33 @@
+{
+  "name": "x402-facilitator",
+  "version": "1.0.0",
+  "description": "x402 v2 Payment Facilitator for Optimism",
+  "type": "module",
+  "main": "x402_facilitator.js",
+  "scripts": {
+    "dev": "node x402_facilitator.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "x402",
+    "payments",
+    "optimism",
+    "eip712",
+    "usdc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "viem": "^2.38.3",
+    "dotenv": "^16.0.0",
+    "pino": "^9.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

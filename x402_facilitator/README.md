@@ -47,10 +47,84 @@ LOG_LEVEL=info
 
 ```bash
 # Start local test server
-NODE_ENV=test node x402_facilitator.js
+npm run dev
 
 # Server runs on http://localhost:8080
+# Endpoints:
+#   POST http://localhost:8080/verify
+#   POST http://localhost:8080/settle  
+#   GET  http://localhost:8080/supported
 ```
+
+## Deployment to Scaleway Functions
+
+### Prerequisites
+
+1. **Scaleway Account**: Sign up at [console.scaleway.com](https://console.scaleway.com)
+2. **Scaleway CLI** (optional): Install for easier secret management
+3. **Serverless Framework**: Installed automatically via devDependencies
+
+### Configuration
+
+1. **Set up Scaleway credentials** in `.env`:
+
+```bash
+SCW_ACCESS_KEY=your_access_key
+SCW_SECRET_KEY=your_secret_key
+SCW_DEFAULT_ORGANIZATION_ID=your_org_id
+SCW_DEFAULT_PROJECT_ID=your_project_id
+```
+
+2. **Set facilitator secrets** (via Scaleway Console or CLI):
+
+```bash
+# Required for /settle endpoint
+FACILITATOR_WALLET_PRIVATE_KEY=0x...
+
+# Optional - defaults provided in serverless.yml
+OPTIMISM_RPC_URL=https://mainnet.optimism.io
+OPTIMISM_SEPOLIA_RPC_URL=https://sepolia.optimism.io
+```
+
+### Deploy Commands
+
+```bash
+# Deploy to default stage (dev)
+npm run deploy
+
+# Deploy to production
+npm run deploy:prod
+
+# View deployment info
+npm run info
+
+# View logs for specific function
+npm run logs:verify
+npm run logs:settle
+npm run logs:supported
+
+# Remove deployment
+npm run remove
+```
+
+### Deployment Structure
+
+The facilitator deploys as **three separate Scaleway Functions**:
+
+- **verify** - Off-chain payment verification (256MB, 30s timeout)
+- **settle** - On-chain payment execution (512MB, 60s timeout)  
+- **supported** - Capability discovery (128MB, 10s timeout)
+
+Each function auto-scales independently (0-5 instances) based on traffic.
+
+### Production Checklist
+
+- [ ] Set `FACILITATOR_WALLET_PRIVATE_KEY` as Scaleway secret
+- [ ] Fund facilitator wallet with ETH for gas (Optimism Mainnet/Sepolia)
+- [ ] Configure custom domain (optional)
+- [ ] Set up monitoring and alerts
+- [ ] Test all endpoints after deployment
+- [ ] Update CORS origins if needed (currently allows all)
 
 ## API Usage
 

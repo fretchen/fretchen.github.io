@@ -13,62 +13,81 @@ import pino from "pino";
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
- * Handler function for the verify endpoint
- * @param {Object} event - The event object
- * @param {Object} _context - The invocation context
- * @returns {Promise<{body: string, statusCode: number, headers: Record<string, string>}>}
+ * Common headers for all responses
  */
-export async function handle(event, _context) {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "*",
-    "Content-Type": "application/json",
-  };
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Methods": "*",
+  "Content-Type": "application/json",
+};
 
-  // Handle CORS preflight requests
+/**
+ * Handle /verify endpoint - off-chain verification
+ */
+export async function handleVerify(event, _context) {
+  return handlePaymentRequest(event, _context, false);
+}
+
+/**
+ * Handle /settle endpoint - on-chain execution
+ */
+export async function handleSettle(event, _context) {
+  return handlePaymentRequest(event, _context, true);
+}
+
+/**
+ * Handle /supported endpoint - capability discovery
+ */
+export async function handleSupported(event, _context) {
+  // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
-      headers,
+      headers: CORS_HEADERS,
       body: "",
     };
   }
 
-  // Determine endpoint from path
-  const path = event.path || event.rawUrl || "";
-  const isSupportedEndpoint = path.includes("/supported");
-
-  // Handle GET /supported endpoint
-  if (isSupportedEndpoint && event.httpMethod === "GET") {
-    const capabilities = getSupportedCapabilities();
+  if (event.httpMethod !== "GET") {
     return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify(capabilities),
+      statusCode: 405,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Method not allowed. Use GET." }),
     };
   }
 
-  // Only accept POST requests for verify/settle
+  const capabilities = getSupportedCapabilities();
+  return {
+    statusCode: 200,
+    headers: CORS_HEADERS,
+    body: JSON.stringify(capabilities),
+  };
+}
+
+/**
+ * Unified handler for verify and settle endpoints
+ * @param {Object} event - The event object
+ * @param {Object} _context - The invocation context
+ * @param {boolean} isSettle - Whether this is a settle request
+ * @returns {Promise<{body: string, statusCode: number, headers: Record<string, string>}>}
+ */
+async function handlePaymentRequest(event, _context, isSettle) {
+  // Handle CORS preflight requests
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: "",
+    };
+  }
+
+  // Only accept POST requests
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers,
-      body: JSON.stringify({
-        error: "Method not allowed. Use POST for /verify and /settle, or GET for /supported.",
-      }),
-    };
-  }
-
-  // Determine endpoint from path (for verify/settle)
-  const isSettleEndpoint = path.includes("/settle");
-  const isVerifyEndpoint = path.includes("/verify");
-
-  if (!isSettleEndpoint && !isVerifyEndpoint) {
-    return {
-      statusCode: 404,
-      headers,
-      body: JSON.stringify({ error: "Endpoint not found. Use /verify or /settle" }),
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Method not allowed. Use POST." }),
     };
   }
 
@@ -79,7 +98,7 @@ export async function handle(event, _context) {
     logger.error({ err: error }, "Failed to parse request body");
     return {
       statusCode: 400,
-      headers,
+      headers: CORS_HEADERS,
       body: JSON.stringify({ error: "Invalid JSON in request body" }),
     };
   }
@@ -88,7 +107,7 @@ export async function handle(event, _context) {
   if (!body.paymentPayload || !body.paymentRequirements) {
     return {
       statusCode: 400,
-      headers,
+      headers: CORS_HEADERS,
       body: JSON.stringify({
         error: "Request must include both paymentPayload and paymentRequirements",
       }),
@@ -99,7 +118,7 @@ export async function handle(event, _context) {
 
   logger.info(
     {
-      endpoint: isSettleEndpoint ? "settle" : "verify",
+      endpoint: isSettle ? "settle" : "verify",
       network: paymentPayload.accepted?.network,
       amount: paymentRequirements.amount,
       scheme: paymentPayload.accepted?.scheme,
@@ -109,7 +128,7 @@ export async function handle(event, _context) {
 
   try {
     // Handle /settle endpoint
-    if (isSettleEndpoint) {
+    if (isSettle) {
       const result = await settlePayment(paymentPayload, paymentRequirements);
 
       if (result.success) {
@@ -119,7 +138,7 @@ export async function handle(event, _context) {
         );
         return {
           statusCode: 200,
-          headers,
+          headers: CORS_HEADERS,
           body: JSON.stringify({
             success: true,
             payer: result.payer,
@@ -138,7 +157,7 @@ export async function handle(event, _context) {
 
         return {
           statusCode: 200,
-          headers,
+          headers: CORS_HEADERS,
           body: JSON.stringify({
             success: false,
             errorReason: result.errorReason,
@@ -157,7 +176,7 @@ export async function handle(event, _context) {
       logger.info({ payer: result.payer }, "Payment verification successful");
       return {
         statusCode: 200,
-        headers,
+        headers: CORS_HEADERS,
         body: JSON.stringify({
           isValid: true,
           payer: result.payer,
@@ -174,7 +193,7 @@ export async function handle(event, _context) {
 
       return {
         statusCode: 200, // Still return 200, but with isValid: false
-        headers,
+        headers: CORS_HEADERS,
         body: JSON.stringify({
           isValid: false,
           invalidReason: result.invalidReason,
@@ -186,16 +205,43 @@ export async function handle(event, _context) {
     logger.error({ err: error }, "Unexpected error in handler");
     return {
       statusCode: 500,
-      headers,
+      headers: CORS_HEADERS,
       body: JSON.stringify({
         error: "Internal server error",
-        [isSettleEndpoint ? "success" : "isValid"]: false,
-        [isSettleEndpoint ? "errorReason" : "invalidReason"]: isSettleEndpoint
+        [isSettle ? "success" : "isValid"]: false,
+        [isSettle ? "errorReason" : "invalidReason"]: isSettle
           ? "unexpected_settlement_error"
           : "unexpected_verify_error",
       }),
     };
   }
+}
+
+/**
+ * Local development server with routing
+ * This simulates the separate Scaleway Functions deployment locally
+ */
+export async function handle(event, context) {
+  const path = event.path || event.rawUrl || "";
+
+  if (path.includes("/supported")) {
+    return handleSupported(event, context);
+  }
+  if (path.includes("/settle")) {
+    return handleSettle(event, context);
+  }
+  if (path.includes("/verify")) {
+    return handleVerify(event, context);
+  }
+
+  // Default 404
+  return {
+    statusCode: 404,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({
+      error: "Endpoint not found. Use /verify, /settle, or /supported",
+    }),
+  };
 }
 
 /* This is used to test locally and will not be executed on Scaleway Functions */
@@ -208,6 +254,8 @@ if (process.env.NODE_ENV === "test") {
     scw_fnc_node.serveHandler(handle, 8080);
 
     logger.info("🚀 Local server started at http://localhost:8080");
-    logger.info("Testing endpoint: POST http://localhost:8080");
+    logger.info("   POST http://localhost:8080/verify");
+    logger.info("   POST http://localhost:8080/settle");
+    logger.info("   GET  http://localhost:8080/supported");
   })().catch((err) => logger.error({ err }, "Error starting local server"));
 }

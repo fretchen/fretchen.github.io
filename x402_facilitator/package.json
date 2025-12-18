@@ -5,13 +5,20 @@
   "type": "module",
   "main": "x402_facilitator.js",
   "scripts": {
-    "dev": "node x402_facilitator.js",
+    "dev": "NODE_ENV=test node x402_facilitator.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{js,json,md}\""
+    "format": "prettier --write \"**/*.{js,json,md}\"",
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage production",
+    "info": "serverless info",
+    "logs:verify": "serverless logs -f verify",
+    "logs:settle": "serverless logs -f settle",
+    "logs:supported": "serverless logs -f supported",
+    "remove": "serverless remove"
   },
   "keywords": [
     "x402",
@@ -31,7 +38,8 @@
     "vitest": "^2.1.8",
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "serverless-scaleway-functions": ">=0.4.16"
   },
   "engines": {
     "node": ">=18.0.0"

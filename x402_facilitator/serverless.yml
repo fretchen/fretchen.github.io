@@ -1,0 +1,49 @@
+service: x402-facilitator
+
+# Read environment variables from a .env file
+useDotenv: true
+
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: node22
+  # Environment variables for production
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+  # Secrets (set via Scaleway Console or CLI)
+  secret:
+    FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}
+    OPTIMISM_RPC_URL: ${env:OPTIMISM_RPC_URL, "https://mainnet.optimism.io"}
+    OPTIMISM_SEPOLIA_RPC_URL: ${env:OPTIMISM_SEPOLIA_RPC_URL, "https://sepolia.optimism.io"}
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    - "!.gitignore"
+    - "!.git/**"
+    - "!test/**"
+    - "!coverage/**"
+    - "!.prettierrc"
+    - "!eslint.config.js"
+    - "!vitest.config.js"
+    - "!README.md"
+    - "!EIP712_VERIFICATION.md"
+
+functions:
+  # Verify endpoint - off-chain payment verification
+  verify:
+    handler: x402_facilitator.handleVerify
+    description: Verify x402 v2 payment without on-chain execution
+
+  # Settle endpoint - on-chain payment execution
+  settle:
+    handler: x402_facilitator.handleSettle
+    description: Execute verified x402 v2 payment on-chain
+
+  # Supported endpoint - capability discovery
+  supported:
+    handler: x402_facilitator.handleSupported
+    description: List supported networks, schemes, and tokens

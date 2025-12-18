@@ -3,7 +3,7 @@
 /**
  * Tests for x402 /supported endpoint
  */
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, afterEach } from "vitest";
 import { getSupportedCapabilities } from "../x402_supported.js";
 
 describe("x402 /supported endpoint", () => {

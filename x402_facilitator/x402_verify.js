@@ -5,7 +5,7 @@
  * Verifies EIP-3009 payment authorizations without executing on-chain transactions
  */
 
-import { createPublicClient, http, getContract, verifyTypedData, parseUnits } from "viem";
+import { createPublicClient, http, getContract, verifyTypedData } from "viem";
 import { optimism, optimismSepolia } from "viem/chains";
 import pino from "pino";
 
@@ -65,8 +65,12 @@ const EIP712_TYPES = {
  * @returns {Object} Viem chain object
  */
 function getChain(network) {
-  if (network === "eip155:10") return optimism;
-  if (network === "eip155:11155420") return optimismSepolia;
+  if (network === "eip155:10") {
+    return optimism;
+  }
+  if (network === "eip155:11155420") {
+    return optimismSepolia;
+  }
   throw new Error(`Unsupported network: ${network}`);
 }
 
@@ -201,7 +205,7 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
     let chain;
     try {
       chain = getChain(network);
-    } catch (error) {
+    } catch (_error) {
       return {
         isValid: false,
         invalidReason: X402_ERRORS.INVALID_NETWORK,
@@ -265,7 +269,7 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
     let tokenInfo;
     try {
       tokenInfo = getTokenInfo(network, paymentRequirements.asset);
-    } catch (error) {
+    } catch (_error) {
       return {
         isValid: false,
         invalidReason: X402_ERRORS.INVALID_PAYLOAD,

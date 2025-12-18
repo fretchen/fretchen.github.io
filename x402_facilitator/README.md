@@ -59,6 +59,7 @@ NODE_ENV=test node x402_facilitator.js
 Verifies a payment authorization without executing on-chain.
 
 **Request:**
+
 ```json
 {
   "paymentPayload": {
@@ -108,6 +109,7 @@ Verifies a payment authorization without executing on-chain.
 ```
 
 **Success Response:**
+
 ```json
 {
   "isValid": true,
@@ -116,6 +118,7 @@ Verifies a payment authorization without executing on-chain.
 ```
 
 **Error Response:**
+
 ```json
 {
   "isValid": false,
@@ -131,6 +134,7 @@ Returns information about supported payment schemes, networks, and tokens.
 **Request:** None (GET request)
 
 **Response:**
+
 ```json
 {
   "kinds": [
@@ -190,19 +194,19 @@ The `/verify` endpoint performs the following validations:
 
 ## Error Codes
 
-| Error Code | Description |
-|------------|-------------|
-| `insufficient_funds` | Payer doesn't have enough USDC |
-| `invalid_exact_evm_payload_signature` | Invalid EIP-712 signature |
-| `invalid_exact_evm_payload_authorization_value` | Amount too low |
-| `invalid_exact_evm_payload_authorization_valid_after` | Not yet valid |
-| `invalid_exact_evm_payload_authorization_valid_before` | Expired |
-| `invalid_exact_evm_payload_recipient_mismatch` | Wrong recipient |
-| `invalid_network` | Network not supported |
-| `invalid_payload` | Malformed payload |
-| `unsupported_scheme` | Scheme not supported |
-| `invalid_x402_version` | Wrong protocol version |
-| `unexpected_verify_error` | Unexpected error |
+| Error Code                                             | Description                    |
+| ------------------------------------------------------ | ------------------------------ |
+| `insufficient_funds`                                   | Payer doesn't have enough USDC |
+| `invalid_exact_evm_payload_signature`                  | Invalid EIP-712 signature      |
+| `invalid_exact_evm_payload_authorization_value`        | Amount too low                 |
+| `invalid_exact_evm_payload_authorization_valid_after`  | Not yet valid                  |
+| `invalid_exact_evm_payload_authorization_valid_before` | Expired                        |
+| `invalid_exact_evm_payload_recipient_mismatch`         | Wrong recipient                |
+| `invalid_network`                                      | Network not supported          |
+| `invalid_payload`                                      | Malformed payload              |
+| `unsupported_scheme`                                   | Scheme not supported           |
+| `invalid_x402_version`                                 | Wrong protocol version         |
+| `unexpected_verify_error`                              | Unexpected error               |
 
 ## Testing
 
@@ -227,16 +231,16 @@ serverless deploy --stage production
 
 ### Optimism Mainnet (eip155:10)
 
-| Token | Contract Address |
-|-------|------------------|
-| USDC | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
+| Token | Contract Address                             |
+| ----- | -------------------------------------------- |
+| USDC  | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
 | USDT0 | `0x01bFF41798a0BcF287b996046Ca68b395DbC1071` |
 
 ### Optimism Sepolia (eip155:11155420)
 
-| Token | Contract Address |
-|-------|------------------|
-| USDC | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
+| Token | Contract Address                             |
+| ----- | -------------------------------------------- |
+| USDC  | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
 
 ## Links
 

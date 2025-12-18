@@ -5,7 +5,7 @@
  * Returns information about supported payment schemes and networks
  */
 
-import { optimism, optimismSepolia } from "viem/chains";
+// Supported chains configuration
 import { privateKeyToAccount } from "viem/accounts";
 
 /**
@@ -21,7 +21,7 @@ export function getSupportedCapabilities() {
     try {
       const account = privateKeyToAccount(privateKey);
       signerAddress = account.address;
-    } catch (error) {
+    } catch (_error) {
       // If private key is invalid, don't include signer
     }
   }

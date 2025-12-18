@@ -5,7 +5,7 @@
  * Executes verified payments on-chain via EIP-3009
  */
 
-import { createPublicClient, createWalletClient, http, parseUnits } from "viem";
+import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { optimism, optimismSepolia } from "viem/chains";
 import { verifyPayment } from "./x402_verify.js";

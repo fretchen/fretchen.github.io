@@ -114,7 +114,7 @@ describe("EIP-712 Reference Tests", () => {
 
   test("Type encoding is deterministic", () => {
     // Test dass die Type-Kodierung deterministisch ist
-    const types = {
+    const _types = {
       TransferWithAuthorization: [
         { name: "from", type: "address" },
         { name: "to", type: "address" },

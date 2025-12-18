@@ -1,7 +1,7 @@
 /**
  * Tests for x402 verify endpoint
  */
-import { describe, test, expect, beforeEach, vi } from "vitest";
+import { describe, test, expect } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
 
 describe("x402 Verify", () => {

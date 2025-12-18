@@ -86,6 +86,24 @@ OPTIMISM_RPC_URL=https://mainnet.optimism.io
 OPTIMISM_SEPOLIA_RPC_URL=https://sepolia.optimism.io
 ```
 
+### Custom Domain Setup (Recommended for Production)
+
+Configure a custom domain for x402-compliant path-based routing. See [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md) for detailed instructions.
+
+**Architecture:** Single Scaleway Function with internal path routing (`handle()` method routes `/verify`, `/settle`, `/supported`)
+
+**Quick setup for `facilitator.fretchen.eu`:**
+
+1. Add CNAME record: `facilitator.fretchen.eu` → `x402facilitatorjccmtmdr-facilitator.functions.fnc.fr-par.scw.cloud`
+2. Deploy: `npm run deploy`
+3. Wait for DNS propagation (5-60 minutes)
+4. Test: `curl https://facilitator.fretchen.eu/supported`
+
+**Result - x402 Standard Compliant:**
+- ✅ `https://facilitator.fretchen.eu/verify`
+- ✅ `https://facilitator.fretchen.eu/settle`
+- ✅ `https://facilitator.fretchen.eu/supported`
+
 ### Deploy Commands
 
 ```bash

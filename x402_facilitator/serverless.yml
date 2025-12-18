@@ -33,17 +33,14 @@ package:
     - "!EIP712_VERIFICATION.md"
 
 functions:
-  # Verify endpoint - off-chain payment verification
-  verify:
-    handler: x402_facilitator.handleVerify
-    description: Verify x402 v2 payment without on-chain execution
-
-  # Settle endpoint - on-chain payment execution
-  settle:
-    handler: x402_facilitator.handleSettle
-    description: Execute verified x402 v2 payment on-chain
-
-  # Supported endpoint - capability discovery
-  supported:
-    handler: x402_facilitator.handleSupported
-    description: List supported networks, schemes, and tokens
+  # Single function with path-based routing
+  # Handles /verify, /settle, and /supported endpoints
+  facilitator:
+    handler: x402_facilitator.handle
+    description: x402 v2 payment facilitator with path-based routing
+    # Memory and timeout for the combined function
+    memoryLimit: 512
+    timeout: 60s
+    # Custom domain for x402 standard compliance
+    custom_domains:
+      - facilitator.fretchen.eu

@@ -15,9 +15,7 @@
     "deploy": "serverless deploy",
     "deploy:prod": "serverless deploy --stage production",
     "info": "serverless info",
-    "logs:verify": "serverless logs -f verify",
-    "logs:settle": "serverless logs -f settle",
-    "logs:supported": "serverless logs -f supported",
+    "logs": "serverless logs -f facilitator",
     "remove": "serverless remove"
   },
   "keywords": [

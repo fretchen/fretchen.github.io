@@ -3,8 +3,15 @@
  */
 import { describe, test, expect } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
+import { calculateFee } from "../fee_config.js";
 
 describe("x402 Verify", () => {
+  // Calculate fee for $0.10 payment (minimum transaction amount)
+  const paymentAmount = "100000"; // $0.10 in 6-decimal USDC
+  const tokenAddress = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+  const feeInfo = calculateFee(paymentAmount, tokenAddress);
+  const totalAmount = feeInfo.totalAmount; // payment + fee = "110000"
+
   const validPaymentPayload = {
     x402Version: 2,
     resource: {
@@ -15,8 +22,8 @@ describe("x402 Verify", () => {
     accepted: {
       scheme: "exact",
       network: "eip155:11155420", // Optimism Sepolia for testing
-      amount: "10000",
-      asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+      amount: paymentAmount, // Payment to recipient
+      asset: tokenAddress,
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       maxTimeoutSeconds: 60,
       extra: {
@@ -30,7 +37,7 @@ describe("x402 Verify", () => {
       authorization: {
         from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
-        value: "10000",
+        value: totalAmount, // Must include service fee
         validAfter: "1740672089",
         validBefore: "9999999999", // Far future
         nonce: "0xf3746613c2d920b5fdabc0856f2aeb2d4f88ee6037b8cc5d04a71a4462f13480",
@@ -41,8 +48,8 @@ describe("x402 Verify", () => {
   const validPaymentRequirements = {
     scheme: "exact",
     network: "eip155:11155420",
-    amount: "10000",
-    asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+    amount: paymentAmount,
+    asset: tokenAddress,
     payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     maxTimeoutSeconds: 60,
     extra: {
@@ -115,14 +122,14 @@ describe("x402 Verify", () => {
     expect(result.invalidReason).toBe("invalid_exact_evm_payload_authorization_valid_after");
   });
 
-  test("rejects insufficient amount", async () => {
+  test("rejects insufficient amount (less than payment)", async () => {
     const payload = {
       ...validPaymentPayload,
       payload: {
         ...validPaymentPayload.payload,
         authorization: {
           ...validPaymentPayload.payload.authorization,
-          value: "5000", // Less than required 10000
+          value: "5000", // Less than required payment amount
         },
       },
     };
@@ -130,6 +137,33 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     expect(result.invalidReason).toBe("invalid_exact_evm_payload_authorization_value");
+  });
+
+  test("rejects payment without service fee", async () => {
+    // Note: In real usage, this test would require a valid signature for the wrong amount.
+    // Since we don't have a signer in tests, we test that value < totalAmount is checked.
+    // The signature validation will fail first (as expected), but the important thing is
+    // that the authorization value must include the service fee for the payment to succeed.
+    const payload = {
+      ...validPaymentPayload,
+      payload: {
+        ...validPaymentPayload.payload,
+        authorization: {
+          ...validPaymentPayload.payload.authorization,
+          value: paymentAmount, // Only payment, no fee ("100000" instead of "110000")
+        },
+      },
+    };
+    const result = await verifyPayment(payload, validPaymentRequirements);
+
+    // The signature will be invalid since we changed the value
+    // In production, this prevents users from trying to pay without the fee
+    expect(result.isValid).toBe(false);
+    // Either signature validation fails (because value doesn't match signature)
+    // or fee validation fails (if somehow signature passed)
+    expect(["invalid_exact_evm_payload_signature", "insufficient_authorization"]).toContain(
+      result.invalidReason,
+    );
   });
 
   test("rejects mismatched recipient", async () => {

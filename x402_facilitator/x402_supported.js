@@ -7,7 +7,6 @@
 
 // Supported chains configuration
 import { privateKeyToAccount } from "viem/accounts";
-import { getFeeInformation } from "./fee_config.js";
 
 /**
  * Get supported payment schemes and networks
@@ -27,9 +26,6 @@ export function getSupportedCapabilities() {
     }
   }
 
-  // Get fee information for all supported tokens
-  const feeInfo = getFeeInformation();
-
   const capabilities = {
     kinds: [
       {
@@ -42,7 +38,6 @@ export function getSupportedCapabilities() {
             name: "USDC",
             symbol: "USDC",
             decimals: 6,
-            fees: feeInfo["0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"],
           },
         ],
       },
@@ -56,7 +51,6 @@ export function getSupportedCapabilities() {
             name: "USDC",
             symbol: "USDC",
             decimals: 6,
-            fees: feeInfo["0x5fd84259d66Cd46123540766Be93DFE6D43130D7"],
           },
         ],
       },

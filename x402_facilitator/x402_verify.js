@@ -8,7 +8,6 @@
 import { createPublicClient, http, getContract, verifyTypedData } from "viem";
 import { optimism, optimismSepolia } from "viem/chains";
 import pino from "pino";
-import { validateFeeIncluded } from "./fee_config.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -367,22 +366,6 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
         isValid: false,
         invalidReason: X402_ERRORS.INSUFFICIENT_FUNDS,
         payer,
-      };
-    }
-
-    // 13. Verify service fee is included (do last, after all other validations)
-    const feeValidation = validateFeeIncluded(
-      authorization.value,
-      paymentRequirements.amount,
-      paymentRequirements.asset,
-    );
-
-    if (!feeValidation.valid) {
-      return {
-        isValid: false,
-        invalidReason: "insufficient_authorization",
-        payer,
-        message: feeValidation.error,
       };
     }
 

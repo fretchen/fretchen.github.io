@@ -55,7 +55,6 @@ describe("x402 Agent Whitelist", () => {
     clearWhitelistCache();
   });
 
-
   describe("Manual Whitelist", () => {
     test("whitelists manually added address on Mainnet", async () => {
       const manualWallet = "0x1234567890123456789012345678901234567890";

@@ -64,6 +64,7 @@ The facilitator validates payment recipients using multi-source OR logic:
 ```
 
 **Whitelist Sources:**
+
 - **Manual Whitelist**: Addresses in `MANUAL_WHITELIST` env variable (comma-separated)
 - **Test Wallets**: Hardcoded addresses for Sepolia testing only
 - **GenImNFTv4**: NFT holders on Optimism Mainnet (0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb)
@@ -304,6 +305,7 @@ The facilitator uses a single Scaleway Function with path-based routing:
 **Custom Domain:** `facilitator.fretchen.eu`
 
 1. **Add DNS CNAME:**
+
    ```
    facilitator.fretchen.eu → x402facilitatorjccmtmdr-facilitator.functions.fnc.fr-par.scw.cloud
    ```

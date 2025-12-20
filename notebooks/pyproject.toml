@@ -18,7 +18,7 @@ dotenv = "^0.9.9"
 web3 = "^7.12.1"
 eth-account = "^0.13.7"
 requests = "^2.32.5"
-x402 = "^1.0.0"
+eip712 = "^0.3.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"

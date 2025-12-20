@@ -7,8 +7,8 @@
 
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { optimism, optimismSepolia } from "viem/chains";
 import { verifyPayment } from "./x402_verify.js";
+import { getChainConfig } from "./chain_utils.js";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -33,30 +33,6 @@ const USDC_ABI = [
     outputs: [],
   },
 ];
-
-/**
- * Get chain configuration from network string
- * @param {string} network - Network in format "eip155:chainId"
- * @returns {{chain: any, rpcUrl: string}}
- */
-function getChainConfig(network) {
-  const chainId = parseInt(network.split(":")[1]);
-
-  switch (chainId) {
-    case 10:
-      return {
-        chain: optimism,
-        rpcUrl: process.env.OPTIMISM_RPC_URL || "https://mainnet.optimism.io",
-      };
-    case 11155420:
-      return {
-        chain: optimismSepolia,
-        rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC_URL || "https://sepolia.optimism.io",
-      };
-    default:
-      throw new Error(`Unsupported network: ${network}`);
-  }
-}
 
 /**
  * Split signature into v, r, s components

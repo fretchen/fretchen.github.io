@@ -11,6 +11,16 @@ provider:
   env:
     NODE_ENV: production
     LOG_LEVEL: info
+    # Whitelist configuration
+    WHITELIST_SOURCES: genimg_v4
+    # GenImNFTv4 contract addresses
+    GENIMG_V4_MAINNET_ADDRESS: ""
+    GENIMG_V4_SEPOLIA_ADDRESS: ""
+    # LLMv1 contract addresses (optional)
+    LLMV1_MAINNET_ADDRESS: ""
+    LLMV1_SEPOLIA_ADDRESS: ""
+    # Test wallets (testnet only, comma-separated)
+    TEST_WALLETS: ""
   # Secrets (set via Scaleway Console or CLI)
   secret:
     FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}

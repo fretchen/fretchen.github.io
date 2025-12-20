@@ -6,8 +6,9 @@
  */
 
 import { createPublicClient, http, getContract, verifyTypedData } from "viem";
-import { optimism, optimismSepolia } from "viem/chains";
 import pino from "pino";
+import { isAgentWhitelisted } from "./x402_whitelist.js";
+import { getChain, getTokenInfo } from "./chain_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -24,6 +25,7 @@ const X402_ERRORS = {
   UNSUPPORTED_SCHEME: "unsupported_scheme",
   INVALID_VERSION: "invalid_x402_version",
   VERIFY_ERROR: "unexpected_verify_error",
+  UNAUTHORIZED: "unauthorized_agent",
 };
 
 // USDC EIP-3009 ABI (only needed functions)
@@ -58,50 +60,6 @@ const EIP712_TYPES = {
     { name: "nonce", type: "bytes32" },
   ],
 };
-
-/**
- * Get chain configuration from network identifier
- * @param {string} network - CAIP-2 network identifier (e.g., "eip155:10")
- * @returns {Object} Viem chain object
- */
-function getChain(network) {
-  if (network === "eip155:10") {
-    return optimism;
-  }
-  if (network === "eip155:11155420") {
-    return optimismSepolia;
-  }
-  throw new Error(`Unsupported network: ${network}`);
-}
-
-/**
- * Get token contract address for network
- * @param {string} network - CAIP-2 network identifier
- * @param {string} asset - Token contract address
- * @returns {{address: string, name: string, version: string}} Token info
- */
-function getTokenInfo(network, asset) {
-  const normalizedAsset = asset.toLowerCase();
-
-  // Optimism Mainnet
-  if (network === "eip155:10") {
-    if (normalizedAsset === "0x0b2c639c533813f4aa9d7837caf62653d097ff85") {
-      return { address: asset, name: "USD Coin", version: "2" }; // Mainnet uses "USD Coin"
-    }
-    if (normalizedAsset === "0x01bff41798a0bcf287b996046ca68b395dbc1071") {
-      return { address: asset, name: "Tether USD", version: "1" };
-    }
-  }
-
-  // Optimism Sepolia
-  if (network === "eip155:11155420") {
-    if (normalizedAsset === "0x5fd84259d66cd46123540766be93dfe6d43130d7") {
-      return { address: asset, name: "USDC", version: "2" }; // Testnet uses "USDC"
-    }
-  }
-
-  throw new Error(`Unknown or unsupported token address for network: ${network}`);
-}
 
 /**
  * Get EIP-712 domain for token contract
@@ -184,7 +142,7 @@ async function verifySignature(
  */
 export async function verifyPayment(paymentPayload, paymentRequirements) {
   try {
-    // 1. Validate x402 version
+    // 1. Validate x402 version (basic format check)
     if (paymentPayload.x402Version !== 2) {
       return {
         isValid: false,
@@ -192,7 +150,7 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // 2. Validate scheme
+    // 2. Validate scheme (basic format check)
     if (paymentPayload.accepted.scheme !== "exact") {
       return {
         isValid: false,
@@ -200,7 +158,7 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // 3. Validate network
+    // 3. Validate network (required for whitelist check)
     const network = paymentPayload.accepted.network;
     let chain;
     try {
@@ -212,8 +170,8 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // 4. Extract authorization and signature
-    const { authorization, signature } = paymentPayload.payload;
+    // 4. Extract authorization (required for whitelist check)
+    const { authorization, signature } = paymentPayload.payload || {};
     if (!authorization || !signature) {
       return {
         isValid: false,
@@ -223,7 +181,20 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
 
     const payer = authorization.from;
 
-    // 5. Verify time window (check before expensive signature verification)
+    // 5. Check agent whitelist (after basic validation, before expensive operations)
+    const whitelistCheck = await isAgentWhitelisted(payer, network);
+    if (!whitelistCheck.isWhitelisted) {
+      logger.warn({ payer, network }, "Payment verification failed: Agent not whitelisted");
+      return {
+        isValid: false,
+        invalidReason: X402_ERRORS.UNAUTHORIZED,
+        payer,
+      };
+    }
+
+    logger.info({ payer, network, source: whitelistCheck.source }, "Agent whitelist check passed");
+
+    // 6. Verify time window (check before expensive signature verification)
     const now = Math.floor(Date.now() / 1000);
     const validAfter = parseInt(authorization.validAfter);
     const validBefore = parseInt(authorization.validBefore);
@@ -244,7 +215,7 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // 6. Verify amount
+    // 7. Verify amount
     const authValue = BigInt(authorization.value);
     const requiredAmount = BigInt(paymentRequirements.amount);
 
@@ -256,7 +227,7 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // 7. Verify recipient matches
+    // 8. Verify recipient matches
     if (authorization.to.toLowerCase() !== paymentRequirements.payTo.toLowerCase()) {
       return {
         isValid: false,

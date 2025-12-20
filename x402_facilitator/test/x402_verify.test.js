@@ -1,10 +1,24 @@
 /**
  * Tests for x402 verify endpoint
  */
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
 
 describe("x402 Verify", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    // Enable test_wallets for all tests
+    process.env.WHITELIST_SOURCES = "test_wallets";
+    // Whitelist the test payer address
+    process.env.TEST_WALLETS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+  });
+
+  afterEach(() => {
+    // Restore original environment
+    process.env = { ...originalEnv };
+  });
+
   // Simple payment amount - no fee calculation needed
   const paymentAmount = "100000"; // $0.10 in 6-decimal USDC
   const tokenAddress = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
@@ -54,6 +68,25 @@ describe("x402 Verify", () => {
       version: "2",
     },
   };
+
+  test("rejects unauthorized agent (not whitelisted)", async () => {
+    // Use a different address that is NOT in TEST_WALLETS
+    const payload = {
+      ...validPaymentPayload,
+      payload: {
+        ...validPaymentPayload.payload,
+        authorization: {
+          ...validPaymentPayload.payload.authorization,
+          from: "0x0000000000000000000000000000000000000000", // Not whitelisted
+        },
+      },
+    };
+    const result = await verifyPayment(payload, validPaymentRequirements);
+
+    expect(result.isValid).toBe(false);
+    expect(result.invalidReason).toBe("unauthorized_agent");
+    expect(result.payer).toBe("0x0000000000000000000000000000000000000000");
+  });
 
   test("rejects invalid x402 version", async () => {
     const payload = { ...validPaymentPayload, x402Version: 1 };

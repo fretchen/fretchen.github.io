@@ -31,10 +31,21 @@ vi.mock("viem/accounts", () => ({
 }));
 
 describe("x402_settle", () => {
+  const originalEnv = { ...process.env };
+
   beforeEach(() => {
     // Set required environment variable
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
+    // Enable test_wallets for all tests
+    process.env.WHITELIST_SOURCES = "test_wallets";
+    // Whitelist the test payer address
+    process.env.TEST_WALLETS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+  });
+
+  afterEach(() => {
+    // Restore original environment
+    process.env = { ...originalEnv };
   });
 
   // Simple payment amount - no fee calculation needed

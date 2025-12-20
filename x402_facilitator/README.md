@@ -1,154 +1,167 @@
-# x402 v2 Facilitator
+# x402 Facilitator
 
-A serverless x402 v2 payment facilitator for Optimism L2, implementing EIP-3009 USDC payment verification and settlement.
+A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC payment verification and settlement via Scaleway Functions.
+
+**Production Endpoint:** https://facilitator.fretchen.eu
 
 ## Overview
 
-The x402 Facilitator enables resource servers to verify and settle blockchain payments without running their own blockchain infrastructure. It implements the [x402 v2 specification](https://github.com/coinbase/x402) for internet-native payments.
+The x402 Facilitator bridges the gap between Resource Servers and blockchain payments. It provides three core functions:
 
-## Features
+1. **Verify** - Validates EIP-3009 payment authorizations off-chain
+2. **Settle** - Executes verified payments on Optimism L2
+3. **Supported** - Advertises accepted networks, assets, and payment schemes
 
-- ✅ **POST /verify** - Verify EIP-3009 payment authorizations
-- ✅ **POST /settle** - Execute verified payments on-chain
-- ✅ **GET /supported** - List supported networks, schemes, and tokens
-- ✅ **Multi-Token Support** - USDC and USDT
+### Key Features
 
-## Supported Networks
+- ✅ EIP-3009 `transferWithAuthorization` for USDC payments
+- ✅ Optimism Mainnet and Sepolia testnet support
+- ✅ Multi-source recipient whitelist (GenImNFTv4 + LLMv1 NFT holders)
+- ✅ Single Scaleway Function with path-based routing
+- ✅ Custom domain with TLS termination
+- ✅ Comprehensive test coverage (63+ tests)
+- ✅ CORS-enabled for browser-based applications
 
-- **Optimism Mainnet** (`eip155:10`)
-- **Optimism Sepolia** (`eip155:11155420`)
+## Architecture
 
-## Supported Schemes
+```
+┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
+│  Client/Agent   │ ◄────► │ Resource Server  │ ◄────► │  Facilitator    │
+│                 │         │                  │         │ (Scaleway Func) │
+└─────────────────┘         └──────────────────┘         └────────┬────────┘
+                                                                   │
+                                                                   ▼
+                                                          ┌─────────────────┐
+                                                          │ Optimism L2     │
+                                                          │ (EIP-3009 USDC) │
+                                                          └─────────────────┘
+```
 
-- **exact** - EIP-3009 transfers with authorization (USDC and USDT0)
+### Whitelist Architecture
 
-## Installation
+The facilitator validates payment recipients using multi-source OR logic:
+
+```
+┌────────────────────────────────────────┐
+│     isAgentWhitelisted(address)        │
+│                                        │
+│  ┌──────────────────────────────────┐ │
+│  │  1. MANUAL_WHITELIST (env var)   │ │───┐
+│  └──────────────────────────────────┘ │   │
+│                                        │   │
+│  ┌──────────────────────────────────┐ │   │
+│  │  2. Test Wallets (sepolia only)  │ │───┤ OR logic
+│  └──────────────────────────────────┘ │   │
+│                                        │   │
+│  ┌──────────────────────────────────┐ │   │
+│  │  3. GenImNFTv4 (balanceOf > 0)   │ │───┤
+│  └──────────────────────────────────┘ │   │
+│                                        │   │
+│  ┌──────────────────────────────────┐ │   │
+│  │  4. LLMv1 (balanceOf > 0)        │ │───┘
+│  └──────────────────────────────────┘ │
+└────────────────────────────────────────┘
+```
+
+**Whitelist Sources:**
+- **Manual Whitelist**: Addresses in `MANUAL_WHITELIST` env variable (comma-separated)
+- **Test Wallets**: Hardcoded addresses for Sepolia testing only
+- **GenImNFTv4**: NFT holders on Optimism Mainnet (0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb)
+- **LLMv1**: NFT holders on Optimism Mainnet (0x833F39D6e67390324796f861990ce9B7cf9F5dE1)
+
+All sources are checked automatically. Results are cached for 1 minute.
+
+## Quick Start
+
+### Installation
 
 ```bash
-cd x402_facilitator
 npm install
 ```
 
-## Environment Variables
+### Environment Variables
+
+Create a `.env` file:
 
 ```bash
-# Blockchain RPC endpoints
-OPTIMISM_RPC_URL=https://mainnet.optimism.io
-OPTIMISM_SEPOLIA_RPC_URL=https://sepolia.optimism.io
-
-# Wallet for settlement (required for /settle endpoint)
-FACILITATOR_WALLET_PRIVATE_KEY=your_private_key_here
-
-# Logging
-LOG_LEVEL=info
-```
-
-## Local Testing
-
-```bash
-# Start local test server
-npm run dev
-
-# Server runs on http://localhost:8080
-# Endpoints:
-#   POST http://localhost:8080/verify
-#   POST http://localhost:8080/settle  
-#   GET  http://localhost:8080/supported
-```
-
-## Deployment to Scaleway Functions
-
-### Prerequisites
-
-1. **Scaleway Account**: Sign up at [console.scaleway.com](https://console.scaleway.com)
-2. **Scaleway CLI** (optional): Install for easier secret management
-3. **Serverless Framework**: Installed automatically via devDependencies
-
-### Configuration
-
-1. **Set up Scaleway credentials** in `.env`:
-
-```bash
-SCW_ACCESS_KEY=your_access_key
-SCW_SECRET_KEY=your_secret_key
+# Scaleway credentials (for deployment)
+SCW_ACCESS_KEY=your_scaleway_access_key
+SCW_SECRET_KEY=your_scaleway_secret_key
 SCW_DEFAULT_ORGANIZATION_ID=your_org_id
 SCW_DEFAULT_PROJECT_ID=your_project_id
-```
 
-2. **Set facilitator secrets** (via Scaleway Console or CLI):
+# Manual whitelist (optional, comma-separated addresses)
+MANUAL_WHITELIST=0x1234...,0x5678...
 
-```bash
-# Required for /settle endpoint
-FACILITATOR_WALLET_PRIVATE_KEY=0x...
-
-# Optional - defaults provided in serverless.yml
+# RPC endpoints (optional - have defaults)
 OPTIMISM_RPC_URL=https://mainnet.optimism.io
 OPTIMISM_SEPOLIA_RPC_URL=https://sepolia.optimism.io
 ```
 
-### Custom Domain Setup (Recommended for Production)
+### Scaleway Secrets
 
-Configure a custom domain for x402-compliant path-based routing. See [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md) for detailed instructions.
-
-**Architecture:** Single Scaleway Function with internal path routing (`handle()` method routes `/verify`, `/settle`, `/supported`)
-
-**Quick setup for `facilitator.fretchen.eu`:**
-
-1. Add CNAME record: `facilitator.fretchen.eu` → `x402facilitatorjccmtmdr-facilitator.functions.fnc.fr-par.scw.cloud`
-2. Deploy: `npm run deploy`
-3. Wait for DNS propagation (5-60 minutes)
-4. Test: `curl https://facilitator.fretchen.eu/supported`
-
-**Result - x402 Standard Compliant:**
-- ✅ `https://facilitator.fretchen.eu/verify`
-- ✅ `https://facilitator.fretchen.eu/settle`
-- ✅ `https://facilitator.fretchen.eu/supported`
-
-### Deploy Commands
+Set these in Scaleway Console (Functions → Secrets):
 
 ```bash
-# Deploy to default stage (dev)
-npm run deploy
-
-# Deploy to production
-npm run deploy:prod
-
-# View deployment info
-npm run info
-
-# View logs for specific function
-npm run logs:verify
-npm run logs:settle
-npm run logs:supported
-
-# Remove deployment
-npm run remove
+FACILITATOR_WALLET_PRIVATE_KEY=0x...  # Required for settlement
 ```
 
-### Deployment Structure
+### Local Testing
 
-The facilitator deploys as **three separate Scaleway Functions**:
+```bash
+npm run dev
 
-- **verify** - Off-chain payment verification (256MB, 30s timeout)
-- **settle** - On-chain payment execution (512MB, 60s timeout)  
-- **supported** - Capability discovery (128MB, 10s timeout)
+# Test endpoints
+curl http://localhost:8080/supported
+curl -X POST http://localhost:8080/verify -H "Content-Type: application/json" -d @test-payload.json
+```
 
-Each function auto-scales independently (0-5 instances) based on traffic.
+## API Endpoints
 
-### Production Checklist
+### GET /supported
 
-- [ ] Set `FACILITATOR_WALLET_PRIVATE_KEY` as Scaleway secret
-- [ ] Fund facilitator wallet with ETH for gas (Optimism Mainnet/Sepolia)
-- [ ] Configure custom domain (optional)
-- [ ] Set up monitoring and alerts
-- [ ] Test all endpoints after deployment
-- [ ] Update CORS origins if needed (currently allows all)
+Returns supported networks, schemes, and assets.
 
-## API Usage
+**Response:**
+
+```json
+{
+  "kinds": [
+    {
+      "x402Version": 2,
+      "scheme": "exact",
+      "network": "eip155:10",
+      "assets": [
+        {
+          "address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          "name": "USDC",
+          "symbol": "USDC",
+          "decimals": 6
+        }
+      ]
+    }
+  ],
+  "extensions": [
+    {
+      "name": "recipient_whitelist",
+      "description": "Whitelisted recipients (NFT holders)",
+      "contracts": {
+        "mainnet": {
+          "genimg_v4": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+          "llmv1": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1"
+        }
+      }
+    }
+  ],
+  "signers": {
+    "eip155:*": ["0x..."]
+  }
+}
+```
 
 ### POST /verify
 
-Verifies a payment authorization without executing on-chain.
+Validates payment authorization off-chain.
 
 **Request:**
 
@@ -157,8 +170,8 @@ Verifies a payment authorization without executing on-chain.
   "paymentPayload": {
     "x402Version": 2,
     "resource": {
-      "url": "https://api.example.com/premium-data",
-      "description": "Access to premium market data",
+      "url": "https://api.example.com/data",
+      "description": "Premium data",
       "mimeType": "application/json"
     },
     "accepted": {
@@ -191,11 +204,7 @@ Verifies a payment authorization without executing on-chain.
     "amount": "10000",
     "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     "payTo": "0x...",
-    "maxTimeoutSeconds": 60,
-    "extra": {
-      "name": "USDC",
-      "version": "2"
-    }
+    "maxTimeoutSeconds": 60
   }
 }
 ```
@@ -219,70 +228,35 @@ Verifies a payment authorization without executing on-chain.
 }
 ```
 
-### GET /supported
+### POST /settle
 
-Returns information about supported payment schemes, networks, and tokens.
+Executes verified payment on-chain.
 
-**Request:** None (GET request)
+**Request:** Same as `/verify`
 
 **Response:**
 
 ```json
 {
-  "kinds": [
-    {
-      "x402Version": 2,
-      "scheme": "exact",
-      "network": "eip155:10",
-      "assets": [
-        {
-          "address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-          "name": "USDC",
-          "symbol": "USDC",
-          "decimals": 6
-        },
-        {
-          "address": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
-          "name": "Tether USD",
-          "symbol": "USDT",
-          "decimals": 6
-        }
-      ]
-    },
-    {
-      "x402Version": 2,
-      "scheme": "exact",
-      "network": "eip155:11155420",
-      "assets": [
-        {
-          "address": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-          "name": "USDC",
-          "symbol": "USDC",
-          "decimals": 6
-        }
-      ]
-    }
-  ],
-  "extensions": [],
-  "signers": {
-    "eip155:*": ["0x..."]
-  }
+  "transactionHash": "0x...",
+  "success": true
 }
 ```
 
 ## Verification Checks
 
-The `/verify` endpoint performs the following validations:
+The `/verify` endpoint validates:
 
 1. ✅ **Protocol Version** - Must be x402 v2
 2. ✅ **Scheme Support** - Must be "exact"
 3. ✅ **Network Support** - Must be supported Optimism network
-4. ✅ **Signature Validation** - EIP-712 signature verification
-5. ✅ **Time Window** - validAfter ≤ now < validBefore
-6. ✅ **Amount Check** - Authorization value ≥ required amount
-7. ✅ **Recipient Match** - Authorization.to === paymentRequirements.payTo
-8. ✅ **Nonce Check** - Nonce not already used on-chain
-9. ✅ **Balance Check** - Payer has sufficient USDC balance
+4. ✅ **Recipient Whitelist** - Authorization.to must be whitelisted
+5. ✅ **EIP-712 Signature** - Valid signature from payer
+6. ✅ **Time Window** - validAfter ≤ now < validBefore
+7. ✅ **Amount Match** - Authorization value ≥ required amount
+8. ✅ **Recipient Match** - Authorization.to === paymentRequirements.payTo
+9. ✅ **Nonce Check** - Nonce not already used on-chain
+10. ✅ **Balance Check** - Payer has sufficient USDC balance
 
 ## Error Codes
 
@@ -294,39 +268,86 @@ The `/verify` endpoint performs the following validations:
 | `invalid_exact_evm_payload_authorization_valid_after`  | Not yet valid                  |
 | `invalid_exact_evm_payload_authorization_valid_before` | Expired                        |
 | `invalid_exact_evm_payload_recipient_mismatch`         | Wrong recipient                |
+| `invalid_exact_evm_payload_recipient_not_whitelisted`  | Recipient not authorized       |
 | `invalid_network`                                      | Network not supported          |
 | `invalid_payload`                                      | Malformed payload              |
 | `unsupported_scheme`                                   | Scheme not supported           |
 | `invalid_x402_version`                                 | Wrong protocol version         |
 | `unexpected_verify_error`                              | Unexpected error               |
 
+## Deployment
+
+### Deploy to Scaleway
+
+```bash
+# Deploy
+npm run deploy
+
+# View info
+npm run info
+
+# Check logs
+npm run logs:verify
+npm run logs:settle
+npm run logs:supported
+
+# Remove deployment
+npm run remove
+```
+
+### Custom Domain Setup
+
+The facilitator uses a single Scaleway Function with path-based routing:
+
+**Function URL:** `x402facilitatorjccmtmdr-facilitator.functions.fnc.fr-par.scw.cloud`
+
+**Custom Domain:** `facilitator.fretchen.eu`
+
+1. **Add DNS CNAME:**
+   ```
+   facilitator.fretchen.eu → x402facilitatorjccmtmdr-facilitator.functions.fnc.fr-par.scw.cloud
+   ```
+
+2. **Wait for DNS propagation** (5-60 minutes)
+
+3. **Endpoints:**
+   - `https://facilitator.fretchen.eu/verify`
+   - `https://facilitator.fretchen.eu/settle`
+   - `https://facilitator.fretchen.eu/supported`
+
+TLS termination is handled automatically by Scaleway.
+
+### Production Checklist
+
+- [ ] Set `FACILITATOR_WALLET_PRIVATE_KEY` in Scaleway Secrets
+- [ ] Fund facilitator wallet with ETH for gas (~0.01 ETH minimum)
+- [ ] Configure `MANUAL_WHITELIST` if needed
+- [ ] Test all endpoints after deployment
+- [ ] Set up monitoring and alerts in Scaleway Console
+- [ ] Document endpoint URLs for client applications
+
 ## Testing
 
 ```bash
-# Run unit tests
+# Run all tests
 npm test
 
-# Run tests with coverage
+# Run with coverage
 npm run test:coverage
+
+# Run specific test file
+npm test -- x402_verify.test.js
 ```
 
-## Deployment
+**Test Results:** 63 tests passing, 1 skipped
 
-The facilitator is deployed as a Scaleway Function:
-
-```bash
-# Deploy to Scaleway
-serverless deploy --stage production
-```
-
-## Supported Token Addresses
+## Supported Networks & Assets
 
 ### Optimism Mainnet (eip155:10)
 
 | Token | Contract Address                             |
 | ----- | -------------------------------------------- |
 | USDC  | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
-| USDT0 | `0x01bFF41798a0BcF287b996046Ca68b395DbC1071` |
 
 ### Optimism Sepolia (eip155:11155420)
 
@@ -334,12 +355,45 @@ serverless deploy --stage production
 | ----- | -------------------------------------------- |
 | USDC  | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
 
+## EIP-712 Signature Verification
+
+The facilitator uses [viem](https://viem.sh/) for EIP-712 signature verification:
+
+**Critical Implementation Details:**
+
+1. **Token Name**: Must use `"USDC"` (not `"USD Coin"`)
+2. **Full EIP-712 Hash**: `keccak256("\x19\x01" || domainSeparator || messageHash)`
+3. **BigInt Conversion**: All uint256 fields must be BigInt
+
+**Validation:** Reference tests in `eip712_reference.test.js` validate against official EIP-712 specification.
+
+## Project Structure
+
+```
+x402_facilitator/
+├── x402_facilitator.js          # Main handler (path-based routing)
+├── x402_verify.js                # Verification logic
+├── x402_settle.js                # Settlement logic
+├── x402_supported.js             # Supported networks/schemes
+├── x402_whitelist.js             # Multi-source whitelist
+├── chain_utils.js                # Centralized chain config
+├── serverless.yml                # Scaleway deployment config
+├── package.json
+└── test/
+    ├── x402_facilitator.test.js
+    ├── x402_verify.test.js
+    ├── x402_settle.test.js
+    ├── x402_supported.test.js
+    ├── x402_whitelist.test.js
+    └── eip712_reference.test.js
+```
+
 ## Links
 
 - [x402 Specification](https://github.com/coinbase/x402)
 - [EIP-3009: Transfer With Authorization](https://eips.ethereum.org/EIPS/eip-3009)
-- [USDT0 Documentation](https://docs.usdt0.to/)
-- [Implementation Plan](../../website/blog/X402_FACILITATOR_IMPLEMENTATION_PLAN.md)
+- [Scaleway Functions Documentation](https://www.scaleway.com/en/docs/serverless/functions/)
+- [viem Documentation](https://viem.sh/)
 
 ## License
 

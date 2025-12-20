@@ -27,8 +27,13 @@ The whitelist system uses **OR logic**: an agent is authorized if **any enabled 
 │  2. Agent Whitelist Check (Multi-Source)        │
 │                                                 │
 │     ┌──────────────┐  ┌──────────────┐         │
-│     │ Test Wallets │  │  GenImNFTv4  │         │
-│     │  (Testnet)   │  │   Contract   │         │
+│     │    Manual    │  │ Test Wallets │         │
+│     │  Whitelist   │  │  (Testnet)   │         │
+│     └──────┬───────┘  └──────┬───────┘         │
+│            │                  │                 │
+│     ┌──────┴───────┐  ┌──────┴───────┐         │
+│     │  GenImNFTv4  │  │    LLMv1     │         │
+│     │   Contract   │  │   Contract   │         │
 │     └──────┬───────┘  └──────┬───────┘         │
 │            │                  │                 │
 │            └────────┬─────────┘                 │
@@ -49,7 +54,31 @@ The whitelist system uses **OR logic**: an agent is authorized if **any enabled 
 
 ## Whitelist Sources
 
-### 1. GenImNFTv4 Contract (Primary)
+### 1. Manual Whitelist (Simplest)
+
+A simple comma-separated list of Ethereum addresses. Works on **all networks** (Mainnet and Testnet).
+
+**Configuration:**
+```bash
+# Enable manual whitelist
+WHITELIST_SOURCES=manual
+
+# Add addresses (comma-separated)
+MANUAL_WHITELIST=0x1234...,0x5678...,0xABCD...
+```
+
+**Use Cases:**
+- Quick access grants without smart contract deployment
+- Emergency access during contract issues
+- Temporary agent authorization
+- Development/staging environments
+
+**⚠️ Security Note:**
+- Manual whitelist is stored in environment variables
+- Suitable for small number of trusted agents
+- For large-scale production, use smart contract whitelists
+
+### 2. GenImNFTv4 Contract (Primary)
 
 The GenImNFTv4 smart contract maintains an on-chain whitelist of authorized agents.
 

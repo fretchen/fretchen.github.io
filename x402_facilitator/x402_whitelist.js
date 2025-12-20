@@ -7,7 +7,7 @@
 
 import { createPublicClient, http, getContract } from "viem";
 import pino from "pino";
-import { getChain } from "./chain_utils.js";
+import { getChain, getChainConfig } from "./chain_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -38,16 +38,6 @@ const LLMV1_ABI = [
 ];
 
 /**
- * Parse whitelist sources from environment variable
- * Format: "genimg_v4,llmv1,test_wallets"
- * @returns {Array<string>} List of enabled whitelist sources
- */
-function getEnabledSources() {
-  const sources = process.env.WHITELIST_SOURCES || "genimg_v4";
-  return sources.split(",").map((s) => s.trim().toLowerCase());
-}
-
-/**
  * Get test wallets from environment variable
  * Format: "0x1234...,0x5678..."
  * Only enabled on testnet (Sepolia)
@@ -57,6 +47,28 @@ function getTestWallets() {
   const wallets = process.env.TEST_WALLETS || "";
   if (!wallets) return [];
   return wallets.split(",").map((w) => w.trim().toLowerCase());
+}
+
+/**
+ * Get manual whitelist from environment variable
+ * Format: "0x1234...,0x5678..."
+ * Works on all networks (Mainnet and Testnet)
+ * @returns {Array<string>} List of manually whitelisted addresses
+ */
+function getManualWhitelist() {
+  const wallets = process.env.MANUAL_WHITELIST || "";
+  if (!wallets) return [];
+  return wallets.split(",").map((w) => w.trim().toLowerCase());
+}
+
+/**
+ * Check if address is in manual whitelist (all networks)
+ * @param {string} address - Agent address to check
+ * @returns {boolean} True if address is manually whitelisted
+ */
+function isManuallyWhitelisted(address) {
+  const manualWhitelist = getManualWhitelist();
+  return manualWhitelist.includes(address.toLowerCase());
 }
 
 /**
@@ -71,11 +83,6 @@ function isTestWallet(address, network) {
     return false;
   }
 
-  const enabledSources = getEnabledSources();
-  if (!enabledSources.includes("test_wallets")) {
-    return false;
-  }
-
   const testWallets = getTestWallets();
   return testWallets.includes(address.toLowerCase());
 }
@@ -87,23 +94,15 @@ function isTestWallet(address, network) {
  * @returns {Promise<boolean>} True if authorized
  */
 async function checkGenImgV4(address, network) {
-  const enabledSources = getEnabledSources();
-  if (!enabledSources.includes("genimg_v4")) {
-    return false;
-  }
-
-  // Get contract address from environment
-  const contractAddress =
-    network === "eip155:10"
-      ? process.env.GENIMG_V4_MAINNET_ADDRESS
-      : process.env.GENIMG_V4_SEPOLIA_ADDRESS;
-
-  if (!contractAddress) {
-    logger.warn({ network }, "GenImNFTv4 contract address not configured");
-    return false;
-  }
-
   try {
+    // Get contract address from chain config
+    const chainConfig = getChainConfig(network);
+    const contractAddress = chainConfig.GENIMG_V4_ADDRESS;
+
+    if (!contractAddress) {
+      logger.warn({ network }, "GenImNFTv4 contract address not configured");
+      return false;
+    }
     const chain = getChain(network);
     const publicClient = createPublicClient({
       chain,
@@ -135,7 +134,6 @@ async function checkGenImgV4(address, network) {
         err: error,
         address,
         network,
-        contract: contractAddress,
       },
       "Error checking GenImNFTv4 whitelist",
     );
@@ -150,21 +148,15 @@ async function checkGenImgV4(address, network) {
  * @returns {Promise<boolean>} True if authorized
  */
 async function checkLLMv1(address, network) {
-  const enabledSources = getEnabledSources();
-  if (!enabledSources.includes("llmv1")) {
-    return false;
-  }
-
-  // Get contract address from environment
-  const contractAddress =
-    network === "eip155:10" ? process.env.LLMV1_MAINNET_ADDRESS : process.env.LLMV1_SEPOLIA_ADDRESS;
-
-  if (!contractAddress) {
-    logger.debug({ network }, "LLMv1 contract address not configured");
-    return false;
-  }
-
   try {
+    // Get contract address from chain config
+    const chainConfig = getChainConfig(network);
+    const contractAddress = chainConfig.LLMV1_ADDRESS;
+
+    if (!contractAddress) {
+      logger.debug({ network }, "LLMv1 contract address not configured");
+      return false;
+    }
     const chain = getChain(network);
     const publicClient = createPublicClient({
       chain,
@@ -196,7 +188,6 @@ async function checkLLMv1(address, network) {
         err: error,
         address,
         network,
-        contract: contractAddress,
       },
       "Error checking LLMv1 whitelist",
     );
@@ -225,7 +216,15 @@ export async function isAgentWhitelisted(address, network) {
 
   logger.info({ address, network }, "Checking agent whitelist");
 
-  // Check test wallets first (fastest check)
+  // Check manual whitelist first (fastest - in-memory, all networks)
+  if (isManuallyWhitelisted(normalizedAddress)) {
+    const result = { isWhitelisted: true, source: "manual" };
+    whitelistCache.set(cacheKey, { ...result, timestamp: Date.now() });
+    logger.info({ address, network, source: "manual" }, "Agent whitelisted via manual list");
+    return result;
+  }
+
+  // Check test wallets (testnet only)
   if (isTestWallet(normalizedAddress, network)) {
     const result = { isWhitelisted: true, source: "test_wallets" };
     whitelistCache.set(cacheKey, { ...result, timestamp: Date.now() });
@@ -234,26 +233,16 @@ export async function isAgentWhitelisted(address, network) {
   }
 
   // Check contracts in parallel for performance
-  const checks = [];
-  const enabledSources = getEnabledSources();
-
-  if (enabledSources.includes("genimg_v4")) {
-    checks.push(
-      checkGenImgV4(normalizedAddress, network).then((authorized) => ({
-        authorized,
-        source: "genimg_v4",
-      })),
-    );
-  }
-
-  if (enabledSources.includes("llmv1")) {
-    checks.push(
-      checkLLMv1(normalizedAddress, network).then((authorized) => ({
-        authorized,
-        source: "llmv1",
-      })),
-    );
-  }
+  const checks = [
+    checkGenImgV4(normalizedAddress, network).then((authorized) => ({
+      authorized,
+      source: "genimg_v4",
+    })),
+    checkLLMv1(normalizedAddress, network).then((authorized) => ({
+      authorized,
+      source: "llmv1",
+    })),
+  ];
 
   // Wait for all checks (OR logic - any true = whitelisted)
   const results = await Promise.all(checks);
@@ -272,7 +261,7 @@ export async function isAgentWhitelisted(address, network) {
   // Not whitelisted
   const result = { isWhitelisted: false };
   whitelistCache.set(cacheKey, { ...result, timestamp: Date.now() });
-  logger.warn({ address, network, sources: enabledSources }, "Agent not whitelisted");
+  logger.warn({ address, network }, "Agent not whitelisted");
   return result;
 }
 

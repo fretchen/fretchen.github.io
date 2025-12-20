@@ -34,12 +34,16 @@ export function getChainConfig(network) {
     return {
       chain: optimism,
       rpcUrl: process.env.OPTIMISM_RPC_URL || "https://mainnet.optimism.io",
+      GENIMG_V4_ADDRESS: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+      LLMV1_ADDRESS: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1",
     };
   }
   if (network === "eip155:11155420") {
     return {
       chain: optimismSepolia,
       rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC_URL || "https://sepolia.optimism.io",
+      GENIMG_V4_ADDRESS: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+      LLMV1_ADDRESS: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56",
     };
   }
   throw new Error(`Unsupported network: ${network}`);

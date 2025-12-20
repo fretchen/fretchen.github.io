@@ -8,10 +8,9 @@ describe("x402 Verify", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    // Enable test_wallets for all tests
-    process.env.WHITELIST_SOURCES = "test_wallets";
-    // Whitelist the test payer address
-    process.env.TEST_WALLETS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    // Whitelist multiple addresses: the valid recipient and a different one for mismatch tests
+    process.env.TEST_WALLETS =
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0x0000000000000000000000000000000000000000";
   });
 
   afterEach(() => {
@@ -69,23 +68,32 @@ describe("x402 Verify", () => {
     },
   };
 
-  test("rejects unauthorized agent (not whitelisted)", async () => {
-    // Use a different address that is NOT in TEST_WALLETS
+  test("rejects unauthorized recipient (not whitelisted)", async () => {
+    // Use a recipient address that is NOT whitelisted (different from the 0x000... used for mismatch tests)
+    const unauthorizedRecipient = "0x1111111111111111111111111111111111111111";
     const payload = {
       ...validPaymentPayload,
+      accepted: {
+        ...validPaymentPayload.accepted,
+        payTo: unauthorizedRecipient, // Not whitelisted recipient
+      },
       payload: {
         ...validPaymentPayload.payload,
         authorization: {
           ...validPaymentPayload.payload.authorization,
-          from: "0x0000000000000000000000000000000000000000", // Not whitelisted
+          to: unauthorizedRecipient, // Not whitelisted recipient
         },
       },
     };
-    const result = await verifyPayment(payload, validPaymentRequirements);
+    const requirements = {
+      ...validPaymentRequirements,
+      payTo: unauthorizedRecipient,
+    };
+    const result = await verifyPayment(payload, requirements);
 
     expect(result.isValid).toBe(false);
     expect(result.invalidReason).toBe("unauthorized_agent");
-    expect(result.payer).toBe("0x0000000000000000000000000000000000000000");
+    expect(result.recipient).toBe(unauthorizedRecipient);
   });
 
   test("rejects invalid x402 version", async () => {
@@ -170,13 +178,15 @@ describe("x402 Verify", () => {
   });
 
   test("rejects mismatched recipient", async () => {
+    const differentRecipient = "0x0000000000000000000000000000000000000000";
+
     const payload = {
       ...validPaymentPayload,
       payload: {
         ...validPaymentPayload.payload,
         authorization: {
           ...validPaymentPayload.payload.authorization,
-          to: "0x0000000000000000000000000000000000000000",
+          to: differentRecipient,
         },
       },
     };

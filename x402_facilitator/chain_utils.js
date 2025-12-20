@@ -42,8 +42,8 @@ export function getChainConfig(network) {
     return {
       chain: optimismSepolia,
       rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC_URL || "https://sepolia.optimism.io",
-      GENIMG_V4_ADDRESS: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-      LLMV1_ADDRESS: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56",
+      GENIMG_V4_ADDRESS: null,
+      LLMV1_ADDRESS: null,
     };
   }
   throw new Error(`Unsupported network: ${network}`);

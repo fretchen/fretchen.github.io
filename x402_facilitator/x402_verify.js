@@ -180,19 +180,24 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
     }
 
     const payer = authorization.from;
+    const recipient = authorization.to;
 
-    // 5. Check agent whitelist (after basic validation, before expensive operations)
-    const whitelistCheck = await isAgentWhitelisted(payer, network);
+    // 5. Check recipient whitelist (after basic validation, before expensive operations)
+    // Whitelist controls who can RECEIVE payments (authorized services)
+    const whitelistCheck = await isAgentWhitelisted(recipient, network);
     if (!whitelistCheck.isWhitelisted) {
-      logger.warn({ payer, network }, "Payment verification failed: Agent not whitelisted");
+      logger.warn({ recipient, network }, "Payment verification failed: Recipient not whitelisted");
       return {
         isValid: false,
         invalidReason: X402_ERRORS.UNAUTHORIZED,
-        payer,
+        recipient,
       };
     }
 
-    logger.info({ payer, network, source: whitelistCheck.source }, "Agent whitelist check passed");
+    logger.info(
+      { recipient, network, source: whitelistCheck.source },
+      "Recipient whitelist check passed",
+    );
 
     // 6. Verify time window (check before expensive signature verification)
     const now = Math.floor(Date.now() / 1000);

@@ -155,34 +155,32 @@ describe("x402 Agent Whitelist", () => {
   });
 
   describe("GenImNFTv4 Contract", () => {
-    test("whitelists authorized agent from GenImNFTv4", async () => {
+    test("whitelists authorized agent from GenImNFTv4 on Mainnet", async () => {
       const authorizedAgent = "0xAAEBCD87D01234567890123456789012345678AB";
 
-      const result = await isAgentWhitelisted(authorizedAgent, "eip155:11155420");
+      const result = await isAgentWhitelisted(authorizedAgent, "eip155:10");
 
       expect(result.isWhitelisted).toBe(true);
       expect(result.source).toBe("genimg_v4");
     });
 
-    test("rejects unauthorized agent from GenImNFTv4", async () => {
+    test("rejects unauthorized agent from GenImNFTv4 on Mainnet", async () => {
       const unauthorizedAgent = "0x0000000000000000000000000000000000000000";
 
-      const result = await isAgentWhitelisted(unauthorizedAgent, "eip155:11155420");
+      const result = await isAgentWhitelisted(unauthorizedAgent, "eip155:10");
 
       expect(result.isWhitelisted).toBe(false);
       expect(result.source).toBeUndefined();
     });
 
-    test("uses correct contract address for network", async () => {
+    test("uses correct contract address for mainnet", async () => {
       const agent = "0xAAEBCD87D01234567890123456789012345678AB";
 
-      // Mainnet
+      // Mainnet has contracts deployed
       const mainnetResult = await isAgentWhitelisted(agent, "eip155:10");
       expect(mainnetResult).toBeDefined();
-
-      // Sepolia
-      const sepoliaResult = await isAgentWhitelisted(agent, "eip155:11155420");
-      expect(sepoliaResult).toBeDefined();
+      expect(mainnetResult.isWhitelisted).toBe(true);
+      expect(mainnetResult.source).toBe("genimg_v4");
     });
   });
 
@@ -198,12 +196,12 @@ describe("x402 Agent Whitelist", () => {
       expect(result.source).toBe("test_wallets");
     });
 
-    test("checks multiple sources when first fails", async () => {
+    test("checks multiple sources when first fails (Mainnet)", async () => {
       const authorizedAgent = "0xAAEBCD87D01234567890123456789012345678AB";
       process.env.TEST_WALLETS = "0x9999999999999999999999999999999999999999";
 
-      // Not in test_wallets, but should be found in GenImNFTv4
-      const result = await isAgentWhitelisted(authorizedAgent, "eip155:11155420");
+      // Not in test_wallets, but should be found in GenImNFTv4 on Mainnet
+      const result = await isAgentWhitelisted(authorizedAgent, "eip155:10");
 
       expect(result.isWhitelisted).toBe(true);
       expect(result.source).toBe("genimg_v4");

@@ -37,10 +37,9 @@ describe("x402_settle", () => {
     // Set required environment variable
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    // Enable test_wallets for all tests
-    process.env.WHITELIST_SOURCES = "test_wallets";
-    // Whitelist the test payer address
-    process.env.TEST_WALLETS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    // Whitelist the test recipient addresses (valid one and different one for mismatch tests)
+    process.env.TEST_WALLETS =
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0xDifferentAddress000000000000000000000000";
   });
 
   afterEach(() => {
@@ -243,13 +242,15 @@ describe("x402_settle", () => {
     });
 
     it("handles recipient mismatch", async () => {
+      const differentRecipient = "0xDifferentAddress000000000000000000000000";
+
       const mismatchPayload = {
         ...validPaymentPayload,
         payload: {
           ...validPaymentPayload.payload,
           authorization: {
             ...validPaymentPayload.payload.authorization,
-            to: "0xDifferentAddress000000000000000000000000",
+            to: differentRecipient,
           },
         },
       };

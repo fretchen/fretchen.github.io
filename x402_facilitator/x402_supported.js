@@ -7,6 +7,7 @@
 
 // Supported chains configuration
 import { privateKeyToAccount } from "viem/accounts";
+import { getChainConfig } from "./chain_utils.js";
 
 /**
  * Get supported payment schemes and networks
@@ -25,6 +26,10 @@ export function getSupportedCapabilities() {
       // If private key is invalid, don't include signer
     }
   }
+
+  // Get contract addresses for both networks
+  const mainnetConfig = getChainConfig("eip155:10");
+  const sepoliaConfig = getChainConfig("eip155:11155420");
 
   const capabilities = {
     kinds: [
@@ -55,7 +60,27 @@ export function getSupportedCapabilities() {
         ],
       },
     ],
-    extensions: [],
+    extensions: [
+      {
+        name: "recipient_whitelist",
+        description:
+          "Payment recipients must be authorized through smart contract whitelist. Clients can verify authorization by calling isAuthorizedAgent(address) on the contracts below.",
+        contracts: {
+          "eip155:10": [
+            {
+              name: "GenImNFTv4",
+              address: mainnetConfig.GENIMG_V4_ADDRESS,
+              method: "isAuthorizedAgent(address)",
+            },
+            {
+              name: "LLMv1",
+              address: mainnetConfig.LLMV1_ADDRESS,
+              method: "isAuthorizedAgent(address)",
+            },
+          ],
+        },
+      },
+    ],
   };
 
   // Add signer information if available

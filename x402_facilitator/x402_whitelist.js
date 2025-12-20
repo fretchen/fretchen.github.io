@@ -45,7 +45,9 @@ const LLMV1_ABI = [
  */
 function getTestWallets() {
   const wallets = process.env.TEST_WALLETS || "";
-  if (!wallets) return [];
+  if (!wallets) {
+    return [];
+  }
   return wallets.split(",").map((w) => w.trim().toLowerCase());
 }
 
@@ -57,7 +59,9 @@ function getTestWallets() {
  */
 function getManualWhitelist() {
   const wallets = process.env.MANUAL_WHITELIST || "";
-  if (!wallets) return [];
+  if (!wallets) {
+    return [];
+  }
   return wallets.split(",").map((w) => w.trim().toLowerCase());
 }
 

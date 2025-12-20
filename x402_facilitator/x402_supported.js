@@ -27,9 +27,8 @@ export function getSupportedCapabilities() {
     }
   }
 
-  // Get contract addresses for both networks
+  // Get contract addresses for mainnet
   const mainnetConfig = getChainConfig("eip155:10");
-  const sepoliaConfig = getChainConfig("eip155:11155420");
 
   const capabilities = {
     kinds: [

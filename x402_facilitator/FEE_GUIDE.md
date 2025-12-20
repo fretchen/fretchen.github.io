@@ -20,7 +20,7 @@ This is **significantly cheaper** than traditional payment processors like Strip
 | $100.00 | $0.01 | 0.01% |
 | $500.00 | $0.01 | 0.00% |
 
-**Minimum transaction:** $0.10 (to prevent abuse)
+**Minimum transaction:** $0.02 (to prevent abuse)
 
 ## Implementation for Clients
 
@@ -45,8 +45,8 @@ console.log(feeInfo);
 //   feeModel: "flat",
 //   flatFee: "10000",          // 0.01 USDC in token units
 //   flatFeeUsd: 0.01,
-//   minTransaction: "100000",  // 0.10 USDC minimum
-//   minTransactionUsd: 0.1
+//   minTransaction: "20000",  // 0.02 USDC minimum
+//   minTransactionUsd: 0.02
 // }
 ```
 
@@ -240,13 +240,13 @@ If the signature doesn't include the fee:
 
 ### Amount Too Small
 
-If payment is below minimum ($0.10):
+If payment is below minimum ($0.02):
 
 ```json
 {
   "isValid": false,
   "invalidReason": "amount_too_small",
-  "error": "Transaction amount too small. Minimum: $0.1 (100000 token units)"
+  "error": "Transaction amount too small. Minimum: $0.02 (20000 token units)"
 }
 ```
 

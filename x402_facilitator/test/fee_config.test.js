@@ -66,7 +66,7 @@ describe("Fee Configuration", () => {
     });
 
     it("should throw error for payment below minimum", () => {
-      const paymentAmount = "50000"; // $0.05 USDC (below $0.10 minimum)
+      const paymentAmount = "10000"; // $0.01 USDC (below $0.02 minimum)
 
       expect(() => calculateFee(paymentAmount, USDC_MAINNET)).toThrow(
         /Transaction amount too small/,
@@ -162,8 +162,8 @@ describe("Fee Configuration", () => {
       expect(mainnetFee?.feeModel).toBe("flat");
       expect(mainnetFee?.flatFee).toBe("10000");
       expect(mainnetFee?.flatFeeUsd).toBe(0.01);
-      expect(mainnetFee?.minTransaction).toBe("100000");
-      expect(mainnetFee?.minTransactionUsd).toBe(0.1);
+      expect(mainnetFee?.minTransaction).toBe("20000");
+      expect(mainnetFee?.minTransactionUsd).toBe(0.02);
     });
 
     it("should include all required fields", () => {
@@ -187,7 +187,7 @@ describe("Fee Configuration", () => {
     });
 
     it("should have correct minimum transaction", () => {
-      expect(FEE_CONFIG.MIN_TRANSACTION_USD).toBe(0.1);
+      expect(FEE_CONFIG.MIN_TRANSACTION_USD).toBe(0.02);
     });
 
     it("should support USDC on Optimism Mainnet", () => {

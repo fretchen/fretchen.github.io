@@ -87,7 +87,7 @@ function getTokenInfo(network, asset) {
   // Optimism Mainnet
   if (network === "eip155:10") {
     if (normalizedAsset === "0x0b2c639c533813f4aa9d7837caf62653d097ff85") {
-      return { address: asset, name: "USDC", version: "2" };
+      return { address: asset, name: "USD Coin", version: "2" }; // Mainnet uses "USD Coin"
     }
     if (normalizedAsset === "0x01bff41798a0bcf287b996046ca68b395dbc1071") {
       return { address: asset, name: "Tether USD", version: "1" };
@@ -97,7 +97,7 @@ function getTokenInfo(network, asset) {
   // Optimism Sepolia
   if (network === "eip155:11155420") {
     if (normalizedAsset === "0x5fd84259d66cd46123540766be93dfe6d43130d7") {
-      return { address: asset, name: "USDC", version: "2" };
+      return { address: asset, name: "USDC", version: "2" }; // Testnet uses "USDC"
     }
   }
 

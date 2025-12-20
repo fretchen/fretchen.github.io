@@ -13,7 +13,7 @@ export const FEE_CONFIG = {
   FLAT_FEE_USD: 0.01, // $0.01 per transaction
 
   // Minimum transaction amount (prevents abuse)
-  MIN_TRANSACTION_USD: 0.1, // $0.10 minimum
+  MIN_TRANSACTION_USD: 0.02, // $0.02 minimum
 
   // Token-specific configurations
   SUPPORTED_TOKENS: {

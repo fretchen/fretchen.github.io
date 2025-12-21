@@ -288,10 +288,39 @@ async function verifyWithX402Utilities(paymentPayload, paymentRequirements) {
       };
     }
 
-    // Check balance using x402 utility
-    const balance = await getUSDCBalance(publicClient, payer);
+    // Check balance - use x402 utility or manual check based on network support
+    let balance;
+    const x402HasConfig = getUsdcChainConfigForChain(chain.id);
+    
+    if (x402HasConfig) {
+      // x402 supports this network - use their optimized balance check
+      balance = await getUSDCBalance(publicClient, payer);
+    } else {
+      // Fallback for networks not in x402 (like Optimism) - manual balance check
+      logger.debug({ chainId: chain.id, usdcAddress: usdcConfig.address }, "Using manual balance check");
+      
+      // ERC-20 balanceOf ABI
+      const ERC20_BALANCE_ABI = [
+        {
+          name: "balanceOf",
+          type: "function",
+          stateMutability: "view",
+          inputs: [{ name: "account", type: "address" }],
+          outputs: [{ name: "", type: "uint256" }],
+        },
+      ];
+      
+      const erc20Contract = getContract({
+        address: usdcConfig.address,
+        abi: ERC20_BALANCE_ABI,
+        client: publicClient,
+      });
+      
+      balance = await erc20Contract.read.balanceOf([payer]);
+    }
 
     if (balance < authValue) {
+      logger.warn({ balance: balance.toString(), required: authValue.toString(), payer }, "Insufficient balance");
       return {
         isValid: false,
         invalidReason: "insufficient_funds",

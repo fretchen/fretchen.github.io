@@ -16,6 +16,9 @@ export const mockViemFunctions = {
   privateKeyToAccount: vi.fn(),
 };
 
+// ===== X402 MOCKS =====
+export const mockPreparePaymentHeader = vi.fn();
+
 // ===== AWS SDK MOCKS =====
 export const mockS3Send = vi.fn();
 export const mockPutObjectCommand = vi.fn();
@@ -36,8 +39,14 @@ export function setupGlobalMocks() {
     privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
   }));
 
+  // Mock x402/client
+  vi.mock("x402/client", () => ({
+    preparePaymentHeader: mockPreparePaymentHeader,
+  }));
+
   // Setup parseAbiItem default
   mockViemFunctions.parseAbiItem.mockReturnValue({
+    id: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
     signature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
   });
 
@@ -70,6 +79,8 @@ export function createMockContract() {
     },
     write: {
       requestImageUpdate: vi.fn(),
+      safeMint: vi.fn(),
+      safeTransferFrom: vi.fn(),
     },
   };
 }
@@ -105,11 +116,47 @@ export function cleanupTestEnvironment(envVars: string[] = Object.keys(testEnvir
 // ===== COMMON MOCK CONFIGURATIONS =====
 export function setupDefaultMocks(mockContract: any) {
   // Viem defaults
+  const mockPublicClient = {
+    waitForTransactionReceipt: vi.fn().mockResolvedValue({
+      status: "success",
+      logs: []
+    })
+  };
+  
+  const mockWalletClient = {
+    account: { address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C" }
+  };
+
   mockViemFunctions.getContract.mockReturnValue(mockContract);
-  mockViemFunctions.createPublicClient.mockReturnValue({});
-  mockViemFunctions.createWalletClient.mockReturnValue({});
-  mockViemFunctions.privateKeyToAccount.mockReturnValue({ address: "0x123" });
+  mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+  mockViemFunctions.createWalletClient.mockReturnValue(mockWalletClient);
+  mockViemFunctions.privateKeyToAccount.mockReturnValue({ 
+    address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C" 
+  });
   mockViemFunctions.http.mockReturnValue({});
+  mockViemFunctions.parseEther.mockImplementation((val) => BigInt(parseFloat(val) * 1e18));
+
+  // x402 defaults
+  mockPreparePaymentHeader.mockReturnValue({
+    x402Version: 2,
+    resource: {
+      url: expect.any(String),
+      description: expect.any(String),
+      mimeType: "application/json"
+    },
+    accepts: [{
+      scheme: "exact",
+      network: "eip155:10",
+      amount: "1000",
+      asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      payTo: process.env.NFT_WALLET_ADDRESS || "0xTestWallet",
+      maxTimeoutSeconds: 60,
+      extra: {
+        name: "USDC",
+        version: "2"
+      }
+    }]
+  });
 
   // Contract defaults
   mockContract.read.mintPrice.mockResolvedValue(BigInt("1000000000000000000")); // 1 ETH
@@ -129,6 +176,12 @@ export function setupDefaultMocks(mockContract: any) {
   // Contract write defaults
   mockContract.write.requestImageUpdate.mockResolvedValue(
     "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  );
+  mockContract.write.safeMint.mockResolvedValue(
+    "0xmintTx1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+  );
+  mockContract.write.safeTransferFrom.mockResolvedValue(
+    "0xtransferTx1234567890abcdef1234567890abcdef1234567890abcdef123456",
   );
 }
 

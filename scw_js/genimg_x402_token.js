@@ -13,7 +13,7 @@ import {
 import { optimism } from "viem/chains";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
-import { preparePaymentHeader } from "x402";
+import { preparePaymentHeader } from "x402/client";
 export { handle, create402Response };
 
 // Config
@@ -191,16 +191,14 @@ async function mintNFTToClient(contract, publicClient, clientAddress, metadataUr
     throw new Error("Mint transaction failed");
   }
 
-  // Extract tokenId from Transfer event
+  // Extract tokenId from Transfer event (using viem's decodeEventLog)
   const mintLog = mintReceipt.logs.find((log) => {
     if (log.address.toLowerCase() !== GENIMG_CONTRACT_ADDRESS.toLowerCase()) {
       return false;
     }
-    const transferSignature =
-      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-    const zeroAddress =
-      "0x0000000000000000000000000000000000000000000000000000000000000000";
-    return log.topics[0] === transferSignature && log.topics[1] === zeroAddress;
+    // Check if this is a Transfer event from zero address (mint)
+    const zeroAddress = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    return log.topics[0] === TRANSFER_EVENT.id && log.topics[1] === zeroAddress;
   });
 
   if (!mintLog) {

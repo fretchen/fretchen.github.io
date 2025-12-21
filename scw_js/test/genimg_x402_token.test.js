@@ -58,6 +58,56 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     cleanupTestEnvironment();
   });
 
+  // Helper function to setup successful minting flow
+  function setupSuccessfulMintingFlow(mockTokenId = 42) {
+    mockContract.write.safeMint.mockResolvedValue("0xmintTx");
+    mockContract.write.safeTransferFrom.mockResolvedValue("0xtransferTx");
+    mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
+
+    const mockPublicClient = {
+      waitForTransactionReceipt: vi
+        .fn()
+        .mockResolvedValueOnce({
+          status: "success",
+          logs: [
+            {
+              address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+              topics: [
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x000000000000000000000000742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+                `0x${mockTokenId.toString(16).padStart(64, "0")}`,
+              ],
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          status: "success",
+          logs: [],
+        }),
+    };
+
+    mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          isValid: true,
+          payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockMetadataResponse,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, transaction: "0xsettlement" }),
+      });
+  }
+
   describe("create402Response() - x402 v2 Payment Header", () => {
     test("should create 402 response with x402 v2 payment header", () => {
       const response = create402Response("https://api.example.com/genimg");
@@ -219,69 +269,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     };
 
     test("should verify payment with facilitator", async () => {
-      // Mock complete workflow
-      const mockMintTxHash = "0xmint123";
-      const mockTransferTxHash = "0xtransfer456";
+      // Setup successful minting flow
       const mockTokenId = 42;
-
-      // Mock contract write operations
-      mockContract.write.safeMint = vi.fn().mockResolvedValue(mockMintTxHash);
-      mockContract.write.safeTransferFrom = vi.fn().mockResolvedValue(mockTransferTxHash);
-      mockContract.read.mintPrice = vi.fn().mockResolvedValue(BigInt("10000000000000000"));
-
-      // Mock public client with transaction receipts
-      const mockPublicClient = {
-        waitForTransactionReceipt: vi
-          .fn()
-          .mockResolvedValueOnce({
-            // Mint receipt
-            status: "success",
-            logs: [
-              {
-                address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-                topics: [
-                  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                  "0x0000000000000000000000000000000000000000000000000000000000000000",
-                  "0x000000000000000000000000AAEBC1441323B8ad6Bdf6793A8428166b510239C",
-                  `0x${mockTokenId.toString(16).padStart(64, "0")}`,
-                ],
-              },
-            ],
-          })
-          .mockResolvedValueOnce({
-            // Transfer receipt
-            status: "success",
-            logs: [],
-          }),
-      };
-
-      mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
-
-      // Mock facilitator responses
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          // Verification
-          ok: true,
-          status: 200,
-          json: async () => ({
-            isValid: true,
-            payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-          }),
-        })
-        .mockResolvedValueOnce({
-          // Metadata fetch
-          ok: true,
-          json: async () => mockMetadataResponse,
-        })
-        .mockResolvedValueOnce({
-          // Settlement
-          ok: true,
-          json: async () => ({
-            success: true,
-            transaction: "0xsettlement123",
-          }),
-        });
+      setupSuccessfulMintingFlow(mockTokenId);
 
       const event = {
         httpMethod: "POST",
@@ -433,53 +423,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         },
       };
 
-      // Mock complete workflow
       const mockTokenId = 99;
-      mockContract.write.safeMint.mockResolvedValue("0xmintTx");
-      mockContract.write.safeTransferFrom.mockResolvedValue("0xtransferTx");
-      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
-
-      mockViemFunctions.createPublicClient.mockReturnValue({
-        waitForTransactionReceipt: vi
-          .fn()
-          .mockResolvedValueOnce({
-            status: "success",
-            logs: [
-              {
-                address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-                topics: [
-                  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                  "0x0000000000000000000000000000000000000000000000000000000000000000",
-                  "0x000000000000000000000000AAEBC1441323B8ad6Bdf6793A8428166b510239C",
-                  `0x${mockTokenId.toString(16).padStart(64, "0")}`,
-                ],
-              },
-            ],
-          })
-          .mockResolvedValueOnce({
-            status: "success",
-            logs: [],
-          }),
-      });
-
-      // Mock facilitator responses
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            isValid: true,
-            payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockMetadataResponse,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, transaction: "0xabc" }),
-        });
+      setupSuccessfulMintingFlow(mockTokenId);
 
       const event = {
         httpMethod: "POST",
@@ -502,52 +447,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
   describe("handle() - Size and mode parameters", () => {
     test("should accept valid size parameter", async () => {
-      // Mock successful flow
       const mockTokenId = 77;
-      mockContract.write.safeMint.mockResolvedValue("0xmintTx");
-      mockContract.write.safeTransferFrom.mockResolvedValue("0xtransferTx");
-      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
-
-      mockViemFunctions.createPublicClient.mockReturnValue({
-        waitForTransactionReceipt: vi
-          .fn()
-          .mockResolvedValueOnce({
-            status: "success",
-            logs: [
-              {
-                address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-                topics: [
-                  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                  "0x0000000000000000000000000000000000000000000000000000000000000000",
-                  "0x000000000000000000000000742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-                  `0x${mockTokenId.toString(16).padStart(64, "0")}`,
-                ],
-              },
-            ],
-          })
-          .mockResolvedValueOnce({
-            status: "success",
-            logs: [],
-          }),
-      });
-
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            isValid: true,
-            payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockMetadataResponse,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, transaction: "0xabc" }),
-        });
+      setupSuccessfulMintingFlow(mockTokenId);
 
       const event = {
         httpMethod: "POST",
@@ -621,56 +522,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
   describe("Settlement flow", () => {
     test("should settle payment via facilitator (async)", async () => {
       const mockTokenId = 88;
-      mockContract.write.safeMint.mockResolvedValue("0xmintTx");
-      mockContract.write.safeTransferFrom.mockResolvedValue("0xtransferTx");
-      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
-
-      mockViemFunctions.createPublicClient.mockReturnValue({
-        waitForTransactionReceipt: vi
-          .fn()
-          .mockResolvedValueOnce({
-            status: "success",
-            logs: [
-              {
-                address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-                topics: [
-                  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                  "0x0000000000000000000000000000000000000000000000000000000000000000",
-                  "0x000000000000000000000000742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-                  `0x${mockTokenId.toString(16).padStart(64, "0")}`,
-                ],
-              },
-            ],
-          })
-          .mockResolvedValueOnce({
-            status: "success",
-            logs: [],
-          }),
-      });
-
-      const settleFetchCall = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          success: true,
-          transaction: "0xsettlement123",
-        }),
-      });
-
-      // Mock all fetch calls
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            isValid: true,
-            payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockMetadataResponse,
-        })
-        .mockImplementationOnce(settleFetchCall);
+      setupSuccessfulMintingFlow(mockTokenId);
 
       const event = {
         httpMethod: "POST",
@@ -701,7 +553,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // Wait a bit for async settlement
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      expect(settleFetchCall).toHaveBeenCalled();
+      // Verify settlement endpoint was called (3rd fetch call)
+      expect(global.fetch).toHaveBeenCalledTimes(3);
     });
   });
 });

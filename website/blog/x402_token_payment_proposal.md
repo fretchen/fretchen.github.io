@@ -417,7 +417,7 @@ export function useImageGeneration() {
 
 - [ ] Install dependencies:
   ```bash
-  npm install viem @openzeppelin/merkle-tree
+  npm install viem
   ```
 - [ ] Implement `genimg_x402_token.js` handler:
   - [ ] Parse payment from x402 header

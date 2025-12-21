@@ -2,13 +2,14 @@
 
 /**
  * x402 v2 Facilitator - Settlement Logic
- * Executes verified payments on-chain via EIP-3009
+ * Uses x402 shared utilities for USDC operations
  */
 
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { getUsdcChainConfigForChain } from "x402/shared/evm";
 import { verifyPayment } from "./x402_verify.js";
-import { getChainConfig } from "./chain_utils.js";
+import { getChain, getTokenInfo } from "./chain_utils.js";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -77,9 +78,26 @@ export async function settlePayment(paymentPayload, paymentRequirements) {
       };
     }
 
-    // Get network configuration
+    // Get network and token configuration
     const network = paymentPayload.accepted.network;
-    const { chain, rpcUrl } = getChainConfig(network);
+    const chain = getChain(network);
+    
+    // Get USDC config using x402 utility with fallback
+    const usdcConfig = getUsdcChainConfigForChain(chain.id);
+    let tokenAddress;
+    
+    if (usdcConfig) {
+      tokenAddress = usdcConfig.address;
+      logger.debug({ chainId: chain.id, tokenAddress }, "Using x402 USDC config");
+    } else {
+      // Fallback for Optimism
+      const tokenInfo = getTokenInfo(network, paymentPayload.accepted.asset);
+      tokenAddress = tokenInfo.address;
+      logger.info({ chainId: chain.id, network, tokenAddress }, "Using fallback USDC config");
+    }
+
+    // Get RPC URL from chain config
+    const rpcUrl = chain.rpcUrls.default.http[0];
 
     // Get facilitator private key
     let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
@@ -115,7 +133,6 @@ export async function settlePayment(paymentPayload, paymentRequirements) {
 
     // Extract authorization data
     const { authorization, signature } = paymentPayload.payload;
-    const tokenAddress = paymentPayload.accepted.asset;
 
     // Split signature
     const { v, r, s } = splitSignature(signature);

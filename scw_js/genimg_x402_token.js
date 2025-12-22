@@ -13,15 +13,29 @@ import {
 import { optimism } from "viem/chains";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
-import { preparePaymentHeader } from "x402/client";
 export { handle, create402Response };
 
 // Config
 const FACILITATOR_URL = process.env.FACILITATOR_URL || "https://facilitator.fretchen.eu";
 const GENIMG_CONTRACT_ADDRESS = "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb";
-const USDC_ADDRESS = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"; // Optimism Mainnet
 const MINT_PRICE = parseEther("0.01"); // 0.01 ETH for minting
 const USDC_PAYMENT_AMOUNT = "1000"; // 0.001 USDC (6 decimals)
+
+// Multi-Network Configuration: Server bietet BEIDE Netzwerke an!
+const NETWORK_CONFIG = {
+  "eip155:10": {
+    // Optimism Mainnet
+    name: "Optimism Mainnet",
+    chainId: 10,
+    usdc: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+  },
+  "eip155:11155420": {
+    // Optimism Sepolia
+    name: "Optimism Sepolia",
+    chainId: 11155420,
+    usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+  },
+};
 
 // Transfer-Event for extracting tokenId from mint
 const TRANSFER_EVENT = parseAbiItem(
@@ -34,14 +48,18 @@ const TRANSFER_EVENT = parseAbiItem(
  * @returns {Object} 402 response with x402 v2 payment instructions
  */
 function create402Response(resourceUrl) {
-  const serverWallet = process.env.NFT_WALLET_ADDRESS;
-
-  if (!serverWallet) {
-    throw new Error("NFT_WALLET_ADDRESS not configured");
+  // Derive wallet address from private key
+  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error("NFT_WALLET_PRIVATE_KEY not configured");
   }
+  const account = privateKeyToAccount(`0x${privateKey}`);
+  const serverWallet = account.address;
 
-  // Use x402 preparePaymentHeader to create proper x402 v2 payment header
-  const paymentHeader = preparePaymentHeader({
+  // 🌐 Erstelle x402 v2 Payment Header mit BEIDEN Networks
+  // Client wählt, welches Network er verwenden möchte!
+  const paymentHeader = {
+    x402Version: 2,
     resource: {
       url: resourceUrl || process.env.GENIMG_SERVICE_URL || "https://api.example.com/genimg",
       description: "AI Image Generation with NFT Certificate",
@@ -52,7 +70,19 @@ function create402Response(resourceUrl) {
         scheme: "exact",
         network: "eip155:10", // Optimism Mainnet
         amount: USDC_PAYMENT_AMOUNT,
-        asset: USDC_ADDRESS,
+        asset: NETWORK_CONFIG["eip155:10"].usdc,
+        payTo: serverWallet,
+        maxTimeoutSeconds: 60,
+        extra: {
+          name: "USDC",
+          version: "2",
+        },
+      },
+      {
+        scheme: "exact",
+        network: "eip155:11155420", // Optimism Sepolia (Testnet)
+        amount: USDC_PAYMENT_AMOUNT,
+        asset: NETWORK_CONFIG["eip155:11155420"].usdc,
         payTo: serverWallet,
         maxTimeoutSeconds: 60,
         extra: {
@@ -61,7 +91,7 @@ function create402Response(resourceUrl) {
         },
       },
     ],
-  });
+  };
 
   return {
     statusCode: 402,
@@ -72,11 +102,8 @@ function create402Response(resourceUrl) {
       "Content-Type": "application/json",
       "X-Payment": JSON.stringify(paymentHeader),
     },
-    body: JSON.stringify({
-      error: "Payment required",
-      message: "Please provide USDC payment to generate your image",
-      payment: paymentHeader,
-    }),
+    // x402 Client expects payment fields directly in body (not nested under "payment")
+    body: JSON.stringify(paymentHeader),
   };
 }
 
@@ -90,6 +117,20 @@ async function verifyPaymentWithFacilitator(paymentPayload, serverWallet) {
   try {
     console.log("🔍 Verifying payment with facilitator...");
 
+    // 🌐 Extrahiere Network aus Client-Payment (Client wählt!)
+    const clientNetwork = paymentPayload?.network || "eip155:10"; // Fallback zu Mainnet
+    const networkConfig = NETWORK_CONFIG[clientNetwork];
+
+    if (!networkConfig) {
+      console.error(`❌ Unsupported network: ${clientNetwork}`);
+      return {
+        isValid: false,
+        invalidReason: `unsupported_network: ${clientNetwork}`,
+      };
+    }
+
+    console.log(`📍 Client gewähltes Network: ${networkConfig.name} (${clientNetwork})`);
+
     const response = await fetch(`${FACILITATOR_URL}/verify`, {
       method: "POST",
       headers: {
@@ -99,9 +140,9 @@ async function verifyPaymentWithFacilitator(paymentPayload, serverWallet) {
         paymentPayload,
         paymentRequirements: {
           scheme: "exact",
-          network: "eip155:10",
+          network: clientNetwork, // ✅ Verwende vom Client gewähltes Network!
           amount: USDC_PAYMENT_AMOUNT,
-          asset: USDC_ADDRESS,
+          asset: networkConfig.usdc, // ✅ Richtige USDC Adresse für gewähltes Network!
           payTo: serverWallet,
           maxTimeoutSeconds: 60,
         },
@@ -209,7 +250,11 @@ async function mintNFTToClient(contract, publicClient, clientAddress, metadataUr
   console.log(`✅ NFT minted: tokenId=${tokenId}`);
 
   // Step 2: Transfer to client
-  const serverWallet = process.env.NFT_WALLET_ADDRESS;
+  // Derive server wallet address from private key
+  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
+  const account = privateKeyToAccount(`0x${privateKey}`);
+  const serverWallet = account.address;
+
   const transferTxHash = await contract.write.safeTransferFrom([
     serverWallet,
     clientAddress,
@@ -409,9 +454,9 @@ async function handle(event, context, cb) {
 
   console.log("🔍 Payment received, verifying with facilitator...");
 
-  // Get server wallet
-  const serverWallet = process.env.NFT_WALLET_ADDRESS;
-  if (!serverWallet) {
+  // Get server wallet - derive from private key
+  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
+  if (!privateKey) {
     return {
       statusCode: 500,
       headers: {
@@ -420,10 +465,12 @@ async function handle(event, context, cb) {
       },
       body: JSON.stringify({
         error: "Server configuration error",
-        message: "NFT_WALLET_ADDRESS not configured",
+        message: "NFT_WALLET_PRIVATE_KEY not configured",
       }),
     };
   }
+  const account = privateKeyToAccount(`0x${privateKey}`);
+  const serverWallet = account.address;
 
   // Verify payment with facilitator (includes whitelist check!)
   const verification = await verifyPaymentWithFacilitator(paymentPayload, serverWallet);

@@ -19,7 +19,6 @@ import {
   mockFetchResponse,
   mockMetadataResponse,
   mockViemFunctions,
-  mockGenerateAndUploadImage,
 } from "./setup.js";
 
 // Setup global mocks
@@ -45,8 +44,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
   beforeEach(() => {
     setupTestEnvironment({
-      NFT_WALLET_ADDRESS: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-      NFT_WALLET_PRIVATE_KEY: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      NFT_WALLET_PRIVATE_KEY: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       FACILITATOR_URL: "http://localhost:8080",
     });
     vi.clearAllMocks();
@@ -127,11 +125,31 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(accept.scheme).toBe("exact");
       expect(accept.network).toBe("eip155:10"); // Optimism Mainnet
       expect(accept.amount).toBe("1000"); // 0.001 USDC (6 decimals)
-      expect(accept.asset).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"); // USDC
+      expect(accept.asset).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"); // USDC Mainnet
       expect(accept.extra).toEqual({
         name: "USDC",
         version: "2",
       });
+    });
+
+    test("should offer BOTH networks (Mainnet + Sepolia) in 402 response", () => {
+      const response = create402Response();
+      const payment = JSON.parse(response.headers["X-Payment"]);
+
+      expect(payment.accepts).toBeInstanceOf(Array);
+      expect(payment.accepts.length).toBe(2); // 🌐 Beide Networks!
+
+      // Optimism Mainnet
+      const mainnet = payment.accepts[0];
+      expect(mainnet.network).toBe("eip155:10");
+      expect(mainnet.asset).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
+      expect(mainnet.amount).toBe("1000");
+
+      // Optimism Sepolia
+      const sepolia = payment.accepts[1];
+      expect(sepolia.network).toBe("eip155:11155420");
+      expect(sepolia.asset).toBe("0x5fd84259d66Cd46123540766Be93DFE6D43130D7");
+      expect(sepolia.amount).toBe("1000");
     });
 
     test("should include CORS headers", () => {
@@ -147,11 +165,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const response = create402Response();
       const body = JSON.parse(response.body);
 
-      expect(body.error).toBe("Payment required");
-      expect(body.message).toContain("USDC payment");
-      expect(body.payment).toBeDefined();
-      expect(body.payment.x402Version).toBe(2);
-      expect(body.payment.accepts).toBeDefined();
+      // x402 Client expects payment fields directly in body (not nested)
+      expect(body.x402Version).toBe(2);
+      expect(body.accepts).toBeDefined();
+      expect(body.resource).toBeDefined();
     });
   });
 
@@ -172,7 +189,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.headers["X-Payment"]).toBeDefined();
 
       const body = JSON.parse(response.body);
-      expect(body.error).toBe("Payment required");
+      // Body now contains payment fields directly (x402 v2 format)
+      expect(body.x402Version).toBe(2);
+      expect(body.accepts).toBeDefined();
     });
 
     test("should handle OPTIONS request (CORS preflight)", async () => {
@@ -516,6 +535,185 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const body = JSON.parse(response.body);
       expect(body.error).toContain("referenceImage");
+    });
+  });
+
+  describe("handle() - Multi-Network Support", () => {
+    test("should verify Optimism Mainnet payment", async () => {
+      const mockTokenId = 100;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const mainnetPayment = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:10", // Optimism Mainnet
+          amount: "1000",
+          asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", // Mainnet USDC
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        },
+        payload: {
+          authorization: {
+            from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+            to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            value: "1000",
+          },
+        },
+        network: "eip155:10", // Client gewähltes Network
+      };
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify(mainnetPayment),
+        },
+        body: JSON.stringify({
+          prompt: "Test Mainnet",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      // Verify facilitator was called with correct network
+      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
+      expect(verifyCall).toBeDefined();
+
+      const verifyBody = JSON.parse(verifyCall[1].body);
+      expect(verifyBody.paymentRequirements.network).toBe("eip155:10");
+      expect(verifyBody.paymentRequirements.asset).toBe(
+        "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      );
+    });
+
+    test("should verify Optimism Sepolia payment", async () => {
+      const mockTokenId = 101;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const sepoliaPayment = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:11155420", // Optimism Sepolia
+          amount: "1000",
+          asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", // Sepolia USDC
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        },
+        payload: {
+          authorization: {
+            from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+            to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            value: "1000",
+          },
+        },
+        network: "eip155:11155420", // Client gewähltes Network
+      };
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify(sepoliaPayment),
+        },
+        body: JSON.stringify({
+          prompt: "Test Sepolia",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      // Verify facilitator was called with correct network
+      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
+      expect(verifyCall).toBeDefined();
+
+      const verifyBody = JSON.parse(verifyCall[1].body);
+      expect(verifyBody.paymentRequirements.network).toBe("eip155:11155420");
+      expect(verifyBody.paymentRequirements.asset).toBe(
+        "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+      );
+    });
+
+    test("should reject unsupported network", async () => {
+      const unsupportedPayment = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:1", // Ethereum Mainnet (not supported)
+          amount: "1000",
+          asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        },
+        payload: {
+          authorization: {
+            from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+            to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            value: "1000",
+          },
+        },
+        network: "eip155:1", // Unsupported network
+      };
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify(unsupportedPayment),
+        },
+        body: JSON.stringify({
+          prompt: "Test unsupported",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(402);
+
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe("Payment verification failed");
+      expect(body.reason).toContain("unsupported_network");
+    });
+
+    test("should default to Mainnet when network not specified", async () => {
+      const mockTokenId = 102;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const paymentWithoutNetwork = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          amount: "1000",
+          asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        },
+        payload: {
+          authorization: {
+            from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+            to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            value: "1000",
+          },
+        },
+        // network field missing - should default to Mainnet
+      };
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify(paymentWithoutNetwork),
+        },
+        body: JSON.stringify({
+          prompt: "Test default",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      // Verify default to Mainnet
+      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
+      const verifyBody = JSON.parse(verifyCall[1].body);
+      expect(verifyBody.paymentRequirements.network).toBe("eip155:10"); // Defaults to Mainnet
     });
   });
 

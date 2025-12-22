@@ -35,8 +35,12 @@ export function createReadOnlyFacilitator() {
   // Create read-only signer (only publicClient, no walletClient or getAddresses)
   const readOnlySigner = {
     publicClient: (network) => {
-      if (network === "eip155:10") return optimismPublic;
-      if (network === "eip155:11155420") return sepoliaPublic;
+      if (network === "eip155:10") {
+        return optimismPublic;
+      }
+      if (network === "eip155:11155420") {
+        return sepoliaPublic;
+      }
       throw new Error(`Unsupported network: ${network}`);
     },
     // No walletClient - read-only mode
@@ -115,7 +119,7 @@ export function createFacilitator(requirePrivateKey = true) {
   // This ensures the signer interface matches what x402 expects
   const facilitatorSigner = toFacilitatorEvmSigner({
     address: account.address,
-    readContract: (args) => 
+    readContract: (args) =>
       publicClient.readContract({
         ...args,
         args: args.args || [],

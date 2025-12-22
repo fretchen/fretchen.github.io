@@ -2,92 +2,65 @@
 
 /**
  * x402 v2 Supported Capabilities Module
- * Returns information about supported payment schemes and networks
+ * Creates fresh read-only facilitator instance (no singleton caching)
  */
 
-// Supported chains configuration
-import { privateKeyToAccount } from "viem/accounts";
-import { getChainConfig } from "./chain_utils.js";
+import { createReadOnlyFacilitator } from "./facilitator_instance.js";
+import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
 
 /**
  * Get supported payment schemes and networks
+ * Creates a new read-only facilitator instance each time (no private key required)
  * @returns {Object} Supported capabilities
  */
 export function getSupportedCapabilities() {
-  // Get facilitator signer address from environment
-  const privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
-  let signerAddress = null;
+  // Create fresh read-only facilitator (no caching, no private key needed)
+  const facilitator = createReadOnlyFacilitator();
 
-  if (privateKey) {
-    try {
-      const account = privateKeyToAccount(privateKey);
-      signerAddress = account.address;
-    } catch (_error) {
-      // If private key is invalid, don't include signer
+  // Get base supported capabilities from facilitator
+  const supported = facilitator.getSupported();
+
+  // Add our custom extension information for all networks with smart contracts
+  const contracts = {};
+
+  for (const network of getSupportedNetworks()) {
+    const config = getChainConfig(network);
+
+    // Only add networks that have smart contracts deployed
+    if (config.GENIMG_V4_ADDRESS || config.LLMV1_ADDRESS) {
+      const networkContracts = [];
+
+      if (config.GENIMG_V4_ADDRESS) {
+        networkContracts.push({
+          name: "GenImNFTv4",
+          address: config.GENIMG_V4_ADDRESS,
+          method: "isAuthorizedAgent(address)",
+        });
+      }
+
+      if (config.LLMV1_ADDRESS) {
+        networkContracts.push({
+          name: "LLMv1",
+          address: config.LLMV1_ADDRESS,
+          method: "isAuthorizedAgent(address)",
+        });
+      }
+
+      if (networkContracts.length > 0) {
+        contracts[network] = networkContracts;
+      }
     }
   }
 
-  // Get contract addresses for mainnet
-  const mainnetConfig = getChainConfig("eip155:10");
+  supported.extensions = [
+    ...(supported.extensions || []),
+    {
+      name: "recipient_whitelist",
+      description:
+        "Payment recipients must be authorized through smart contract whitelist. Clients can verify authorization by calling isAuthorizedAgent(address) on the contracts below.",
+      contracts,
+    },
+  ];
 
-  const capabilities = {
-    kinds: [
-      {
-        x402Version: 2,
-        scheme: "exact",
-        network: "eip155:10", // Optimism Mainnet
-        assets: [
-          {
-            address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-            name: "USDC",
-            symbol: "USDC",
-            decimals: 6,
-          },
-        ],
-      },
-      {
-        x402Version: 2,
-        scheme: "exact",
-        network: "eip155:11155420", // Optimism Sepolia
-        assets: [
-          {
-            address: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-            name: "USDC",
-            symbol: "USDC",
-            decimals: 6,
-          },
-        ],
-      },
-    ],
-    extensions: [
-      {
-        name: "recipient_whitelist",
-        description:
-          "Payment recipients must be authorized through smart contract whitelist. Clients can verify authorization by calling isAuthorizedAgent(address) on the contracts below.",
-        contracts: {
-          "eip155:10": [
-            {
-              name: "GenImNFTv4",
-              address: mainnetConfig.GENIMG_V4_ADDRESS,
-              method: "isAuthorizedAgent(address)",
-            },
-            {
-              name: "LLMv1",
-              address: mainnetConfig.LLMV1_ADDRESS,
-              method: "isAuthorizedAgent(address)",
-            },
-          ],
-        },
-      },
-    ],
-  };
-
-  // Add signer information if available
-  if (signerAddress) {
-    capabilities.signers = {
-      "eip155:*": [signerAddress],
-    };
-  }
-
-  return capabilities;
+  return supported;
 }

@@ -95,3 +95,22 @@ export function getTokenInfo(network, tokenAddress) {
 
   return tokenInfo;
 }
+
+/**
+ * Convert CAIP-2 network identifier to numeric chainId
+ * @param {string} network - Network ID (eip155:10 or eip155:11155420)
+ * @returns {number} Numeric chainId
+ * @throws {Error} If network is not supported
+ */
+export function getChainId(network) {
+  const chain = getChain(network);
+  return chain.id;
+}
+
+/**
+ * Get all supported networks
+ * @returns {string[]} Array of supported network identifiers
+ */
+export function getSupportedNetworks() {
+  return ["eip155:10", "eip155:11155420"];
+}

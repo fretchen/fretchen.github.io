@@ -27,6 +27,7 @@ setupGlobalMocks();
 describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
   let handle;
   let create402Response;
+  let createPaymentRequirements;
   let mockContract;
 
   beforeAll(async () => {
@@ -40,6 +41,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     const module = await import("../genimg_x402_token.js");
     handle = module.handle;
     create402Response = module.create402Response;
+
+    // Import x402 helper functions
+    const x402Module = await import("../x402_server.js");
+    createPaymentRequirements = x402Module.createPaymentRequirements;
   });
 
   beforeEach(() => {
@@ -108,14 +113,21 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
   describe("create402Response() - x402 v2 Payment Header", () => {
     test("should create 402 response with x402 v2 payment header", () => {
-      const response = create402Response("https://api.example.com/genimg");
+      const paymentRequirements = createPaymentRequirements({
+        resourceUrl: "https://api.example.com/genimg",
+        description: "AI Image Generation",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      });
+      const response = create402Response(paymentRequirements);
 
       expect(response.statusCode).toBe(402);
       expect(response.headers["X-Payment"]).toBeDefined();
 
       const payment = JSON.parse(response.headers["X-Payment"]);
 
-      // x402 v2 structure (from preparePaymentHeader mock)
+      // x402 v2 structure
       expect(payment.x402Version).toBe(2);
       expect(payment.resource).toBeDefined();
       expect(payment.accepts).toBeInstanceOf(Array);
@@ -132,12 +144,19 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       });
     });
 
-    test("should offer BOTH networks (Mainnet + Sepolia) in 402 response", () => {
-      const response = create402Response();
+    test("should offer multiple networks (Mainnet + Sepolia) in 402 response", () => {
+      const paymentRequirements = createPaymentRequirements({
+        resourceUrl: "/genimg",
+        description: "AI Image Generation",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      });
+      const response = create402Response(paymentRequirements);
       const payment = JSON.parse(response.headers["X-Payment"]);
 
       expect(payment.accepts).toBeInstanceOf(Array);
-      expect(payment.accepts.length).toBe(2); // 🌐 Beide Networks!
+      expect(payment.accepts.length).toBeGreaterThanOrEqual(2); // Multiple networks!
 
       // Optimism Mainnet
       const mainnet = payment.accepts[0];
@@ -153,7 +172,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     });
 
     test("should include CORS headers", () => {
-      const response = create402Response();
+      const paymentRequirements = createPaymentRequirements({
+        resourceUrl: "/genimg",
+        description: "AI Image Generation",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      });
+      const response = create402Response(paymentRequirements);
 
       expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
       expect(response.headers["Access-Control-Allow-Headers"]).toBe("*");
@@ -162,7 +188,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     });
 
     test("should include payment in response body", () => {
-      const response = create402Response();
+      const paymentRequirements = createPaymentRequirements({
+        resourceUrl: "/genimg",
+        description: "AI Image Generation",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      });
+      const response = create402Response(paymentRequirements);
       const body = JSON.parse(response.body);
 
       // x402 Client expects payment fields directly in body (not nested)

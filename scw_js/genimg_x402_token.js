@@ -1,5 +1,5 @@
 // x402 v2 Token Payment Implementation for GenImg
-// Uses USDC payments verified via facilitator + server-side NFT minting
+// Uses official @x402/core and @x402/evm packages for payment handling
 
 import { nftAbi } from "./nft_abi.js";
 import {
@@ -13,196 +13,30 @@ import {
 import { optimism } from "viem/chains";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
+import {
+  createResourceServer,
+  createPaymentRequirements,
+  create402Response,
+  extractPaymentPayload,
+  createSettlementHeaders,
+  NETWORK_CONFIG,
+} from "./x402_server.js";
+
+// Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
 
 // Config
-const FACILITATOR_URL = process.env.FACILITATOR_URL || "https://facilitator.fretchen.eu";
 const GENIMG_CONTRACT_ADDRESS = "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb";
 const MINT_PRICE = parseEther("0.01"); // 0.01 ETH for minting
 const USDC_PAYMENT_AMOUNT = "1000"; // 0.001 USDC (6 decimals)
-
-// Multi-Network Configuration: Server bietet BEIDE Netzwerke an!
-const NETWORK_CONFIG = {
-  "eip155:10": {
-    // Optimism Mainnet
-    name: "Optimism Mainnet",
-    chainId: 10,
-    usdc: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-  },
-  "eip155:11155420": {
-    // Optimism Sepolia
-    name: "Optimism Sepolia",
-    chainId: 11155420,
-    usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-  },
-};
 
 // Transfer-Event for extracting tokenId from mint
 const TRANSFER_EVENT = parseAbiItem(
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 );
 
-/**
- * Creates x402 v2 compliant 402 Payment Required response using x402 package
- * @param {string} resourceUrl - URL of the resource being requested
- * @returns {Object} 402 response with x402 v2 payment instructions
- */
-function create402Response(resourceUrl) {
-  // Derive wallet address from private key
-  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error("NFT_WALLET_PRIVATE_KEY not configured");
-  }
-  const account = privateKeyToAccount(`0x${privateKey}`);
-  const serverWallet = account.address;
-
-  // 🌐 Erstelle x402 v2 Payment Header mit BEIDEN Networks
-  // Client wählt, welches Network er verwenden möchte!
-  const paymentHeader = {
-    x402Version: 2,
-    resource: {
-      url: resourceUrl || process.env.GENIMG_SERVICE_URL || "https://api.example.com/genimg",
-      description: "AI Image Generation with NFT Certificate",
-      mimeType: "application/json",
-    },
-    accepts: [
-      {
-        scheme: "exact",
-        network: "eip155:10", // Optimism Mainnet
-        amount: USDC_PAYMENT_AMOUNT,
-        asset: NETWORK_CONFIG["eip155:10"].usdc,
-        payTo: serverWallet,
-        maxTimeoutSeconds: 60,
-        extra: {
-          name: "USDC",
-          version: "2",
-        },
-      },
-      {
-        scheme: "exact",
-        network: "eip155:11155420", // Optimism Sepolia (Testnet)
-        amount: USDC_PAYMENT_AMOUNT,
-        asset: NETWORK_CONFIG["eip155:11155420"].usdc,
-        payTo: serverWallet,
-        maxTimeoutSeconds: 60,
-        extra: {
-          name: "USDC",
-          version: "2",
-        },
-      },
-    ],
-  };
-
-  return {
-    statusCode: 402,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "*",
-      "Access-Control-Allow-Methods": "*",
-      "Content-Type": "application/json",
-      "X-Payment": JSON.stringify(paymentHeader),
-    },
-    // x402 Client expects payment fields directly in body (not nested under "payment")
-    body: JSON.stringify(paymentHeader),
-  };
-}
-
-/**
- * Verifies payment with facilitator (includes EIP-3009 verification + whitelist check)
- * @param {Object} paymentPayload - x402 payment payload from client
- * @param {string} serverWallet - Server wallet address (payment recipient)
- * @returns {Object} Verification result {isValid, payer, invalidReason}
- */
-async function verifyPaymentWithFacilitator(paymentPayload, serverWallet) {
-  try {
-    console.log("🔍 Verifying payment with facilitator...");
-
-    // 🌐 Extrahiere Network aus Client-Payment (Client wählt!)
-    const clientNetwork = paymentPayload?.network || "eip155:10"; // Fallback zu Mainnet
-    const networkConfig = NETWORK_CONFIG[clientNetwork];
-
-    if (!networkConfig) {
-      console.error(`❌ Unsupported network: ${clientNetwork}`);
-      return {
-        isValid: false,
-        invalidReason: `unsupported_network: ${clientNetwork}`,
-      };
-    }
-
-    console.log(`📍 Client gewähltes Network: ${networkConfig.name} (${clientNetwork})`);
-
-    const response = await fetch(`${FACILITATOR_URL}/verify`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        paymentPayload,
-        paymentRequirements: {
-          scheme: "exact",
-          network: clientNetwork, // ✅ Verwende vom Client gewähltes Network!
-          amount: USDC_PAYMENT_AMOUNT,
-          asset: networkConfig.usdc, // ✅ Richtige USDC Adresse für gewähltes Network!
-          payTo: serverWallet,
-          maxTimeoutSeconds: 60,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Facilitator verify failed: ${response.status} - ${errorText}`);
-      return {
-        isValid: false,
-        invalidReason: `facilitator_error: ${response.status}`,
-      };
-    }
-
-    const result = await response.json();
-    console.log(`✅ Facilitator verification result:`, result);
-
-    return result;
-  } catch (error) {
-    console.error("❌ Error verifying payment with facilitator:", error);
-    return {
-      isValid: false,
-      invalidReason: `verification_failed: ${error.message}`,
-    };
-  }
-}
-
-/**
- * Settles payment via facilitator (facilitator executes on-chain USDC transfer)
- * @param {Object} paymentPayload - x402 payment payload
- * @returns {Object} Settlement result {transactionHash, success}
- */
-async function settlePaymentWithFacilitator(paymentPayload) {
-  try {
-    console.log("💰 Settling payment with facilitator...");
-
-    const response = await fetch(`${FACILITATOR_URL}/settle`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ paymentPayload }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Facilitator settle failed: ${response.status} - ${errorText}`);
-      throw new Error(`Settlement failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log(`✅ Payment settled:`, result);
-
-    return result;
-  } catch (error) {
-    console.error("❌ Error settling payment:", error);
-    throw error;
-  }
-}
+// Create x402 Resource Server instance (shared across requests)
+const resourceServer = createResourceServer();
 
 /**
  * Mints NFT to server wallet and transfers to client
@@ -373,7 +207,7 @@ async function handle(event, context, cb) {
   let body;
   try {
     body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-  } catch (error) {
+  } catch (_error) {
     return {
       body: JSON.stringify({ error: "Invalid JSON body" }),
       headers: {
@@ -384,14 +218,8 @@ async function handle(event, context, cb) {
     };
   }
 
-  // Get payment from headers or body
-  const paymentHeader = event.headers["x-payment"];
-  const paymentPayload = paymentHeader
-    ? typeof paymentHeader === "string"
-      ? JSON.parse(paymentHeader)
-      : paymentHeader
-    : body.payment;
-
+  // Extract payment payload using x402 helper (supports v1 and v2 headers)
+  const paymentPayload = extractPaymentPayload(event.headers) || body.payment;
   const prompt = body.prompt;
 
   // Validate prompt
@@ -446,15 +274,34 @@ async function handle(event, context, cb) {
 
   // ====== x402 v2 TOKEN PAYMENT FLOW ======
 
-  // No payment payload → Return 402
+  // No payment payload → Return 402 Payment Required using x402 v2 API
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
-    return create402Response(event.path);
+
+    // Get server wallet address
+    const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error("NFT_WALLET_PRIVATE_KEY not configured");
+    }
+    const account = privateKeyToAccount(`0x${privateKey}`);
+    const serverWallet = account.address;
+
+    // Create payment requirements using x402 helper
+    const paymentRequirements = createPaymentRequirements({
+      resourceUrl: event.path || process.env.GENIMG_SERVICE_URL || "https://api.example.com/genimg",
+      description: "AI Image Generation with NFT Certificate",
+      mimeType: "application/json",
+      amount: USDC_PAYMENT_AMOUNT,
+      payTo: serverWallet,
+      // Default: accepts all supported networks (Optimism + Base, mainnet + testnet)
+    });
+
+    return create402Response(paymentRequirements);
   }
 
-  console.log("🔍 Payment received, verifying with facilitator...");
+  console.log("🔍 Payment received, verifying...");
 
-  // Get server wallet - derive from private key
+  // Get server wallet address for verification
   const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
   if (!privateKey) {
     return {
@@ -472,8 +319,64 @@ async function handle(event, context, cb) {
   const account = privateKeyToAccount(`0x${privateKey}`);
   const serverWallet = account.address;
 
-  // Verify payment with facilitator (includes whitelist check!)
-  const verification = await verifyPaymentWithFacilitator(paymentPayload, serverWallet);
+  // Extract network from payment payload
+  const clientNetwork =
+    paymentPayload?.payload?.authorization?.network ||
+    paymentPayload?.accepted?.network ||
+    "eip155:10";
+
+  const networkConfig = NETWORK_CONFIG[clientNetwork];
+  if (!networkConfig) {
+    console.error(`❌ Unsupported network: ${clientNetwork}`);
+    return {
+      statusCode: 402,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: "unsupported_network",
+        network: clientNetwork,
+      }),
+    };
+  }
+
+  console.log(`📍 Client selected network: ${networkConfig.name} (${clientNetwork})`);
+
+  // Build payment requirements for the selected network
+  const paymentRequirements = {
+    scheme: "exact",
+    network: clientNetwork,
+    amount: USDC_PAYMENT_AMOUNT,
+    asset: networkConfig.usdc,
+    payTo: serverWallet,
+    maxTimeoutSeconds: 60,
+    extra: {
+      name: networkConfig.usdcName,
+      version: networkConfig.usdcVersion,
+    },
+  };
+
+  // Verify payment using x402 Resource Server
+  let verification;
+  try {
+    verification = await resourceServer.verifyPayment(paymentPayload, paymentRequirements);
+  } catch (error) {
+    console.error(`❌ Payment verification error:`, error);
+    return {
+      statusCode: 402,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: "facilitator_error",
+        details: error.message,
+      }),
+    };
+  }
 
   if (!verification.isValid) {
     console.log(`❌ Payment verification failed: ${verification.invalidReason}`);
@@ -535,10 +438,11 @@ async function handle(event, context, cb) {
       referenceImageBase64,
     );
 
-    // Settle payment via facilitator (async, don't wait)
-    settlePaymentWithFacilitator(paymentPayload)
+    // Settle payment via x402 Resource Server (async, don't wait)
+    resourceServer
+      .settlePayment(paymentPayload, paymentRequirements)
       .then((settlement) => {
-        console.log(`✅ Payment settled: ${settlement.transactionHash}`);
+        console.log(`✅ Payment settled:`, settlement);
       })
       .catch((error) => {
         console.error(`⚠️ Settlement failed (non-critical): ${error.message}`);
@@ -548,10 +452,18 @@ async function handle(event, context, cb) {
     // Get mint price for response
     const mintPrice = await contract.read.mintPrice();
 
+    // Create settlement headers (for client confirmation)
+    const settlementHeaders = createSettlementHeaders({
+      success: true,
+      payer: clientAddress,
+      network: clientNetwork,
+    });
+
     return {
       body: JSON.stringify({
         ...result,
         payer: clientAddress,
+        network: clientNetwork,
         size,
         mode,
         mintPrice: mintPrice.toString(),
@@ -560,6 +472,7 @@ async function handle(event, context, cb) {
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
+        ...settlementHeaders,
       },
       statusCode: 200,
     };
@@ -668,10 +581,10 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
               console.error("Failed to start server:", err);
               process.exit(1);
             }
-            console.log(`🚀 x402 Token Payment Local Server listening at ${address}`);
-            console.log(`   Facilitator: ${FACILITATOR_URL}`);
+            console.log(`🚀 x402 v2 Token Payment Local Server listening at ${address}`);
+            console.log(`   Using @x402/core and @x402/evm packages`);
             console.log(`   NFT Contract: ${GENIMG_CONTRACT_ADDRESS}`);
-            console.log(`   Using x402 package for 402 response generation`);
+            console.log(`   Supported Networks: Optimism + Base (Mainnet + Testnet)`);
           });
         });
       });

@@ -119,19 +119,19 @@ export function setupDefaultMocks(mockContract: any) {
   const mockPublicClient = {
     waitForTransactionReceipt: vi.fn().mockResolvedValue({
       status: "success",
-      logs: []
-    })
+      logs: [],
+    }),
   };
-  
+
   const mockWalletClient = {
-    account: { address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C" }
+    account: { address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C" },
   };
 
   mockViemFunctions.getContract.mockReturnValue(mockContract);
   mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
   mockViemFunctions.createWalletClient.mockReturnValue(mockWalletClient);
-  mockViemFunctions.privateKeyToAccount.mockReturnValue({ 
-    address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C" 
+  mockViemFunctions.privateKeyToAccount.mockReturnValue({
+    address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
   });
   mockViemFunctions.http.mockReturnValue({});
   mockViemFunctions.parseEther.mockImplementation((val) => BigInt(parseFloat(val) * 1e18));
@@ -142,20 +142,22 @@ export function setupDefaultMocks(mockContract: any) {
     resource: {
       url: expect.any(String),
       description: expect.any(String),
-      mimeType: "application/json"
+      mimeType: "application/json",
     },
-    accepts: [{
-      scheme: "exact",
-      network: "eip155:10",
-      amount: "1000",
-      asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      payTo: process.env.NFT_WALLET_ADDRESS || "0xTestWallet",
-      maxTimeoutSeconds: 60,
-      extra: {
-        name: "USDC",
-        version: "2"
-      }
-    }]
+    accepts: [
+      {
+        scheme: "exact",
+        network: "eip155:10",
+        amount: "1000",
+        asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+        payTo: process.env.NFT_WALLET_ADDRESS || "0xTestWallet",
+        maxTimeoutSeconds: 60,
+        extra: {
+          name: "USDC",
+          version: "2",
+        },
+      },
+    ],
   });
 
   // Contract defaults

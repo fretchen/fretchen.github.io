@@ -2,19 +2,21 @@
 
 /**
  * x402 v2 Supported Capabilities Module
- * Uses centralized x402Facilitator instance
+ * Creates fresh read-only facilitator instance (no singleton caching)
  */
 
-import { getFacilitator } from "./facilitator_instance.js";
+import { createReadOnlyFacilitator } from "./facilitator_instance.js";
 import { getChainConfig } from "./chain_utils.js";
 
 /**
  * Get supported payment schemes and networks
+ * Creates a new read-only facilitator instance each time (no private key required)
  * @returns {Object} Supported capabilities
  */
 export function getSupportedCapabilities() {
-  const facilitator = getFacilitator();
-  
+  // Create fresh read-only facilitator (no caching, no private key needed)
+  const facilitator = createReadOnlyFacilitator();
+
   // Get base supported capabilities from facilitator
   const supported = facilitator.getSupported();
 

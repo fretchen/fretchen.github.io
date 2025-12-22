@@ -39,7 +39,10 @@ export async function settlePayment(paymentPayload, paymentRequirements) {
     const result = await facilitator.settle(paymentPayload, paymentRequirements);
 
     if (result.success) {
-      logger.info({ hash: result.transaction, network: paymentPayload.accepted.network }, "Transaction confirmed");
+      logger.info(
+        { hash: result.transaction, network: paymentPayload.accepted.network },
+        "Transaction confirmed",
+      );
       return {
         success: true,
         payer: verifyResult.payer,

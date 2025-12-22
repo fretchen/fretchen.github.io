@@ -16,14 +16,65 @@ import { isAgentWhitelisted } from "./x402_whitelist.js";
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
+ * Create read-only facilitator (without signer, for getSupported() only)
+ * @returns {x402Facilitator} Read-only facilitator instance
+ */
+export function createReadOnlyFacilitator() {
+  // Create public-only clients (no wallet/signer)
+  const optimismPublic = createPublicClient({
+    chain: optimism,
+    transport: http(),
+  });
+
+  const sepoliaPublic = createPublicClient({
+    chain: optimismSepolia,
+    transport: http(),
+  });
+
+  // Create read-only signer (only publicClient, no walletClient or getAddresses)
+  const readOnlySigner = {
+    publicClient: (network) => {
+      if (network === "eip155:10") return optimismPublic;
+      if (network === "eip155:11155420") return sepoliaPublic;
+      throw new Error(`Unsupported network: ${network}`);
+    },
+    // No walletClient - read-only mode
+    // Return empty array for getAddresses - no signer available
+    getAddresses: () => [],
+  };
+
+  // Create and configure facilitator
+  const facilitator = new x402Facilitator();
+
+  // Register EVM Exact scheme for Optimism networks (read-only)
+  registerExactEvmScheme(facilitator, {
+    signer: readOnlySigner,
+    networks: ["eip155:10", "eip155:11155420"],
+    deployERC4337WithEIP6492: false,
+  });
+
+  logger.info({
+    networks: ["eip155:10", "eip155:11155420"],
+    msg: "x402 Facilitator initialized (read-only mode)",
+  });
+
+  return facilitator;
+}
+
+/**
  * Create the facilitator instance with Optimism support
+ * @param {boolean} requirePrivateKey - Whether to require private key (default: true)
  * @returns {x402Facilitator} Configured facilitator instance
  */
-export function createFacilitator() {
+export function createFacilitator(requirePrivateKey = true) {
   // Get facilitator private key
   let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error("FACILITATOR_WALLET_PRIVATE_KEY not configured");
+    if (requirePrivateKey) {
+      throw new Error("FACILITATOR_WALLET_PRIVATE_KEY not configured");
+    }
+    // Create read-only facilitator without signer for getSupported()
+    return createReadOnlyFacilitator();
   }
 
   // Normalize private key format
@@ -34,6 +85,10 @@ export function createFacilitator() {
 
   // Validate private key length
   if (privateKey.length !== 66) {
+    // If invalid and requirePrivateKey is false, return read-only facilitator
+    if (!requirePrivateKey) {
+      return createReadOnlyFacilitator();
+    }
     throw new Error(
       `Invalid FACILITATOR_WALLET_PRIVATE_KEY: Expected 64 hex characters, got ${privateKey.length - 2}`,
     );
@@ -156,11 +211,12 @@ let facilitatorInstance = null;
 
 /**
  * Get or create the facilitator instance
+ * @param {boolean} requirePrivateKey - Whether to require private key (default: true)
  * @returns {x402Facilitator} The facilitator instance
  */
-export function getFacilitator() {
+export function getFacilitator(requirePrivateKey = true) {
   if (!facilitatorInstance) {
-    facilitatorInstance = createFacilitator();
+    facilitatorInstance = createFacilitator(requirePrivateKey);
   }
   return facilitatorInstance;
 }

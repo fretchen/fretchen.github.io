@@ -39,7 +39,10 @@ export async function verifyPayment(paymentPayload, paymentRequirements) {
 
     return result;
   } catch (error) {
-    logger.error({ err: error, message: error.message }, "Unexpected error during payment verification");
+    logger.error(
+      { err: error, message: error.message },
+      "Unexpected error during payment verification",
+    );
     return {
       isValid: false,
       invalidReason: "unexpected_verify_error",

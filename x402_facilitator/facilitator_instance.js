@@ -5,11 +5,11 @@
  * Centralized facilitator configuration with Optimism support
  */
 
-import { createPublicClient, createWalletClient, http } from "viem";
+import { createPublicClient, createWalletClient, http, publicActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { optimism, optimismSepolia } from "viem/chains";
 import { x402Facilitator } from "@x402/core/facilitator";
-import { registerExactEvmScheme } from "@x402/evm/exact/facilitator";
+import { registerExactEvmScheme, toFacilitatorEvmSigner } from "@x402/evm/exact/facilitator";
 import pino from "pino";
 import { isAgentWhitelisted } from "./x402_whitelist.js";
 
@@ -97,57 +97,42 @@ export function createFacilitator(requirePrivateKey = true) {
   // Create account from private key
   const account = privateKeyToAccount(privateKey);
 
-  // Create combined client (public + wallet) for Optimism Mainnet
-  const optimismClient = {
-    public: createPublicClient({
-      chain: optimism,
-      transport: http(),
-    }),
-    wallet: createWalletClient({
-      account,
-      chain: optimism,
-      transport: http(),
-    }),
-  };
+  // Create combined client for Optimism Mainnet using .extend(publicActions)
+  // This gives us both wallet and public client methods in one object
+  const optimismClient = createWalletClient({
+    account,
+    chain: optimism,
+    transport: http(),
+  }).extend(publicActions);
 
   // Create combined client for Optimism Sepolia
-  const sepoliaClient = {
-    public: createPublicClient({
-      chain: optimismSepolia,
-      transport: http(),
-    }),
-    wallet: createWalletClient({
-      account,
-      chain: optimismSepolia,
-      transport: http(),
-    }),
-  };
+  const sepoliaClient = createWalletClient({
+    account,
+    chain: optimismSepolia,
+    transport: http(),
+  }).extend(publicActions);
 
-  // Create facilitator signer that selects the right client based on network
-  const facilitatorSigner = {
-    publicClient: (network) => {
-      if (network === "eip155:10") {
-        return optimismClient.public;
-      }
-      if (network === "eip155:11155420") {
-        return sepoliaClient.public;
-      }
-      throw new Error(`Unsupported network: ${network}`);
-    },
-    walletClient: (network) => {
-      if (network === "eip155:10") {
-        return optimismClient.wallet;
-      }
-      if (network === "eip155:11155420") {
-        return sepoliaClient.wallet;
-      }
-      throw new Error(`Unsupported network: ${network}`);
-    },
-    getAddresses: () => {
-      // Return all facilitator wallet addresses
-      return [account.address];
-    },
-  };
+  // Use Sepolia as default for development/testing
+  const defaultClient = sepoliaClient;
+
+  // Create facilitator signer using x402's toFacilitatorEvmSigner helper
+  // The combined client already has all necessary methods (readContract, verifyTypedData, etc.)
+  // toFacilitatorEvmSigner just adds getAddresses() wrapper
+  const facilitatorSigner = toFacilitatorEvmSigner({
+    address: account.address,
+    readContract: (args) => defaultClient.readContract({
+      ...args,
+      args: args.args || [],
+    }),
+    verifyTypedData: (args) => defaultClient.verifyTypedData(args),
+    writeContract: (args) => defaultClient.writeContract({
+      ...args,
+      args: args.args || [],
+    }),
+    sendTransaction: (args) => defaultClient.sendTransaction(args),
+    waitForTransactionReceipt: (args) => defaultClient.waitForTransactionReceipt(args),
+    getCode: (args) => defaultClient.getCode(args),
+  });
 
   // Create and configure facilitator
   const facilitator = new x402Facilitator();

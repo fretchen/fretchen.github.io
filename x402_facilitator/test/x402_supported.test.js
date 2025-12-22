@@ -2,7 +2,7 @@
 
 /**
  * Tests for x402 /supported endpoint
- * 
+ *
  * Note: getSupportedCapabilities() creates a fresh read-only facilitator instance
  * each time, so no singleton caching or resetFacilitator() needed
  */
@@ -54,51 +54,9 @@ describe("x402 /supported endpoint", () => {
     // x402 v2 getSupported() does NOT include assets in kinds
   });
 
-  // x402 v2 getSupported() does not include asset details in kinds
-  // Asset information would need to be fetched separately or hardcoded
-  test.skip("includes USDC on Optimism Mainnet", () => {
-    const capabilities = getSupportedCapabilities();
-
-    const mainnetSupport = capabilities.kinds.find((k) => k.network === "eip155:10");
-    const usdcAsset = mainnetSupport.assets.find(
-      (a) => a.address === "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    );
-
-    expect(usdcAsset).toBeDefined();
-    expect(usdcAsset.name).toBe("USDC");
-    expect(usdcAsset.symbol).toBe("USDC");
-    expect(usdcAsset.decimals).toBe(6);
-  });
-
-  // Note: USDT support is not implemented yet
-  test.skip("includes USDT on Optimism Mainnet", () => {
-    const capabilities = getSupportedCapabilities();
-
-    const mainnetSupport = capabilities.kinds.find((k) => k.network === "eip155:10");
-    const usdtAsset = mainnetSupport.assets.find(
-      (a) => a.address === "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
-    );
-
-    expect(usdtAsset).toBeDefined();
-    expect(usdtAsset.name).toBe("Tether USD");
-    expect(usdtAsset.symbol).toBe("USDT");
-    expect(usdtAsset.decimals).toBe(6);
-  });
-
-  // x402 v2 getSupported() does not include asset details in kinds
-  test.skip("includes USDC on Optimism Sepolia", () => {
-    const capabilities = getSupportedCapabilities();
-
-    const sepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:11155420");
-    const usdcAsset = sepoliaSupport.assets.find(
-      (a) => a.address === "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-    );
-
-    expect(usdcAsset).toBeDefined();
-    expect(usdcAsset.name).toBe("USDC");
-    expect(usdcAsset.symbol).toBe("USDC");
-    expect(usdcAsset.decimals).toBe(6);
-  });
+  // Note: x402 v2 getSupported() does not include asset details (USDC, USDT, etc.)
+  // Asset information is not provided in the kinds array by the facilitator
+  // If needed, asset details would need to be added separately in the response
 
   test("does not include signer addresses (read-only mode)", () => {
     // getSupportedCapabilities uses read-only facilitator without private key

@@ -18,6 +18,38 @@ const logger = pino({ level: process.env.LOG_LEVEL || "info" });
  */
 export async function verifyPayment(paymentPayload, paymentRequirements) {
   try {
+    // 🔍 DEBUG: Log authorization types as received
+    const auth = paymentPayload?.payload?.authorization;
+    if (auth) {
+      logger.info(
+        {
+          authTypes: {
+            value: typeof auth.value,
+            validAfter: typeof auth.validAfter,
+            validBefore: typeof auth.validBefore,
+          },
+          authValues: {
+            value: auth.value,
+            validAfter: auth.validAfter,
+            validBefore: auth.validBefore,
+          },
+        },
+        "Authorization data received",
+      );
+    }
+
+    // 🔍 DEBUG: Log what x402 will use for EIP-712 domain reconstruction
+    logger.info(
+      {
+        extraName: paymentPayload?.accepted?.extra?.name,
+        extraVersion: paymentPayload?.accepted?.extra?.version,
+        asset: paymentPayload?.accepted?.asset,
+        network: paymentPayload?.accepted?.network,
+        payTo: paymentPayload?.accepted?.payTo,
+      },
+      "EIP-712 Domain reconstruction parameters",
+    );
+
     const facilitator = getFacilitator();
     const result = await facilitator.verify(paymentPayload, paymentRequirements);
 

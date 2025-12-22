@@ -6,7 +6,7 @@
  */
 
 import { createReadOnlyFacilitator } from "./facilitator_instance.js";
-import { getChainConfig } from "./chain_utils.js";
+import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
 
 /**
  * Get supported payment schemes and networks
@@ -20,8 +20,37 @@ export function getSupportedCapabilities() {
   // Get base supported capabilities from facilitator
   const supported = facilitator.getSupported();
 
-  // Add our custom extension information
-  const mainnetConfig = getChainConfig("eip155:10");
+  // Add our custom extension information for all networks with smart contracts
+  const contracts = {};
+
+  for (const network of getSupportedNetworks()) {
+    const config = getChainConfig(network);
+
+    // Only add networks that have smart contracts deployed
+    if (config.GENIMG_V4_ADDRESS || config.LLMV1_ADDRESS) {
+      const networkContracts = [];
+
+      if (config.GENIMG_V4_ADDRESS) {
+        networkContracts.push({
+          name: "GenImNFTv4",
+          address: config.GENIMG_V4_ADDRESS,
+          method: "isAuthorizedAgent(address)",
+        });
+      }
+
+      if (config.LLMV1_ADDRESS) {
+        networkContracts.push({
+          name: "LLMv1",
+          address: config.LLMV1_ADDRESS,
+          method: "isAuthorizedAgent(address)",
+        });
+      }
+
+      if (networkContracts.length > 0) {
+        contracts[network] = networkContracts;
+      }
+    }
+  }
 
   supported.extensions = [
     ...(supported.extensions || []),
@@ -29,20 +58,7 @@ export function getSupportedCapabilities() {
       name: "recipient_whitelist",
       description:
         "Payment recipients must be authorized through smart contract whitelist. Clients can verify authorization by calling isAuthorizedAgent(address) on the contracts below.",
-      contracts: {
-        "eip155:10": [
-          {
-            name: "GenImNFTv4",
-            address: mainnetConfig.GENIMG_V4_ADDRESS,
-            method: "isAuthorizedAgent(address)",
-          },
-          {
-            name: "LLMv1",
-            address: mainnetConfig.LLMV1_ADDRESS,
-            method: "isAuthorizedAgent(address)",
-          },
-        ],
-      },
+      contracts,
     },
   ];
 

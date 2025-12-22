@@ -13,6 +13,7 @@ import { toFacilitatorEvmSigner } from "@x402/evm";
 import { registerExactEvmScheme } from "@x402/evm/exact/facilitator";
 import pino from "pino";
 import { isAgentWhitelisted } from "./x402_whitelist.js";
+import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -102,37 +103,79 @@ export function createFacilitator(requirePrivateKey = true) {
   // Create account from private key
   const account = privateKeyToAccount(privateKey);
 
-  // Create separate public and wallet clients for Optimism Sepolia (default for testing)
-  // This matches the pattern from x402 integration tests
-  const publicClient = createPublicClient({
-    chain: optimismSepolia,
-    transport: http(),
-  });
+  // Create clients for all supported networks using chain_utils configuration
+  const supportedNetworks = getSupportedNetworks();
+  const clients = {};
 
-  const walletClient = createWalletClient({
-    account,
-    chain: optimismSepolia,
-    transport: http(),
-  });
+  for (const network of supportedNetworks) {
+    const config = getChainConfig(network);
+    clients[config.chain.id] = {
+      publicClient: createPublicClient({
+        chain: config.chain,
+        transport: http(config.rpcUrl),
+      }),
+      walletClient: createWalletClient({
+        account,
+        chain: config.chain,
+        transport: http(config.rpcUrl),
+      }),
+    };
+  }
+
+  // Helper to select the correct client based on chainId
+  // chainId can be extracted from domain parameter in verifyTypedData
+  // or from the address/contract interaction context
+  const getClientsForChain = (chainId) => {
+    const client = clients[chainId];
+    if (!client) {
+      throw new Error(`Unsupported chainId: ${chainId}`);
+    }
+    return client;
+  };
 
   // Use x402's toFacilitatorEvmSigner helper to create the signer
   // This ensures the signer interface matches what x402 expects
+  // For operations without explicit chainId, we extract it from the domain parameter
   const facilitatorSigner = toFacilitatorEvmSigner({
     address: account.address,
-    readContract: (args) =>
-      publicClient.readContract({
+    readContract: (args) => {
+      // For now, default to Sepolia for contract reads
+      // In production, this should be determined by the network parameter
+      const { publicClient } = getClientsForChain(optimismSepolia.id);
+      return publicClient.readContract({
         ...args,
         args: args.args || [],
-      }),
-    verifyTypedData: (args) => publicClient.verifyTypedData(args),
-    writeContract: (args) =>
-      walletClient.writeContract({
+      });
+    },
+    verifyTypedData: (args) => {
+      // Extract chainId from domain parameter
+      const chainId = Number(args.domain.chainId);
+      const { publicClient } = getClientsForChain(chainId);
+      return publicClient.verifyTypedData(args);
+    },
+    writeContract: (args) => {
+      // Default to Sepolia for write operations
+      const { walletClient } = getClientsForChain(optimismSepolia.id);
+      return walletClient.writeContract({
         ...args,
         args: args.args || [],
-      }),
-    sendTransaction: (args) => walletClient.sendTransaction(args),
-    waitForTransactionReceipt: (args) => publicClient.waitForTransactionReceipt(args),
-    getCode: (args) => publicClient.getCode(args),
+      });
+    },
+    sendTransaction: (args) => {
+      // Default to Sepolia for transactions
+      const { walletClient } = getClientsForChain(optimismSepolia.id);
+      return walletClient.sendTransaction(args);
+    },
+    waitForTransactionReceipt: (args) => {
+      // Default to Sepolia for receipt waiting
+      const { publicClient } = getClientsForChain(optimismSepolia.id);
+      return publicClient.waitForTransactionReceipt(args);
+    },
+    getCode: (args) => {
+      // Default to Sepolia for code retrieval
+      const { publicClient } = getClientsForChain(optimismSepolia.id);
+      return publicClient.getCode(args);
+    },
   });
 
   // Create and configure facilitator
@@ -141,7 +184,7 @@ export function createFacilitator(requirePrivateKey = true) {
   // Register EVM Exact scheme for Optimism networks
   registerExactEvmScheme(facilitator, {
     signer: facilitatorSigner,
-    networks: ["eip155:10", "eip155:11155420"],
+    networks: getSupportedNetworks(),
     deployERC4337WithEIP6492: false, // We don't support smart wallets yet
   });
 

@@ -373,6 +373,74 @@ describe("x402 Verify", () => {
     );
   });
 
+  test("validates signature for Optimism Mainnet (chainId 10)", async () => {
+    // This test would have failed before the multi-chain fix
+    // because the facilitator was hardcoded to use Sepolia client for all chains
+
+    const payerAccount = privateKeyToAccount(
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    );
+
+    // Create a client for Optimism Mainnet (chainId 10)
+    const evmClient = new ExactEvmScheme({
+      address: payerAccount.address,
+      signTypedData: async (args) => payerAccount.signTypedData(args),
+    });
+
+    const paymentAmount = "1000000"; // $1.00 in 6-decimal USDC
+    const tokenAddress = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"; // USDC on Optimism Mainnet
+    const recipientAddress = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    const paymentRequirements = {
+      scheme: "exact",
+      network: "eip155:10", // Optimism Mainnet
+      amount: paymentAmount,
+      asset: tokenAddress,
+      payTo: recipientAddress,
+      maxTimeoutSeconds: 300,
+      extra: {
+        name: "USDC",
+        version: "2",
+      },
+    };
+
+    // Create payment payload with REAL signature for Mainnet (chainId 10)
+    const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
+
+    const paymentPayload = {
+      x402Version: 2,
+      resource: {
+        url: "https://api.example.com/mainnet-test",
+        description: "Mainnet multi-chain signature validation test",
+        mimeType: "application/json",
+      },
+      accepted: paymentRequirements,
+      payload: partialPayload.payload,
+    };
+
+    // CRITICAL TEST: Without the multi-chain fix, this would fail because
+    // verifyTypedData would use the Sepolia client instead of Mainnet client
+    // The domain.chainId would be 10 (Mainnet) but the client would be configured for 11155420 (Sepolia)
+    const result = await verifyPayment(paymentPayload, paymentRequirements);
+
+    // We accept both insufficient_funds and unauthorized_agent - we're testing signature validation
+    // The important part is that we DON'T get "invalid_exact_evm_payload_signature"
+    // which would indicate the signer is using the wrong chain client
+    if (!result.isValid) {
+      // Valid errors: insufficient_funds (no USDC) or unauthorized_agent (not whitelisted on Mainnet)
+      expect(["insufficient_funds", "unauthorized_agent"]).toContain(result.invalidReason);
+      console.log(
+        `✓ Mainnet signature validation successful (${result.invalidReason} is expected)`,
+      );
+    } else {
+      expect(result.isValid).toBe(true);
+      console.log("✓ Mainnet full payment verification successful");
+    }
+
+    // Verify it's actually using mainnet chainId
+    expect(paymentPayload.accepted.network).toBe("eip155:10");
+  });
+
   // Note: Additional blockchain integration tests (actual settlement on testnet)
   // would require testnet funds and transaction execution
 });

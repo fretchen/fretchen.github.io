@@ -5,11 +5,12 @@
  * Centralized facilitator configuration with Optimism support
  */
 
-import { createPublicClient, createWalletClient, http, publicActions } from "viem";
+import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { optimism, optimismSepolia } from "viem/chains";
 import { x402Facilitator } from "@x402/core/facilitator";
-import { registerExactEvmScheme, toFacilitatorEvmSigner } from "@x402/evm/exact/facilitator";
+import { toFacilitatorEvmSigner } from "@x402/evm";
+import { registerExactEvmScheme } from "@x402/evm/exact/facilitator";
 import pino from "pino";
 import { isAgentWhitelisted } from "./x402_whitelist.js";
 
@@ -97,41 +98,37 @@ export function createFacilitator(requirePrivateKey = true) {
   // Create account from private key
   const account = privateKeyToAccount(privateKey);
 
-  // Create combined client for Optimism Mainnet using .extend(publicActions)
-  // This gives us both wallet and public client methods in one object
-  const optimismClient = createWalletClient({
-    account,
-    chain: optimism,
+  // Create separate public and wallet clients for Optimism Sepolia (default for testing)
+  // This matches the pattern from x402 integration tests
+  const publicClient = createPublicClient({
+    chain: optimismSepolia,
     transport: http(),
-  }).extend(publicActions);
+  });
 
-  // Create combined client for Optimism Sepolia
-  const sepoliaClient = createWalletClient({
+  const walletClient = createWalletClient({
     account,
     chain: optimismSepolia,
     transport: http(),
-  }).extend(publicActions);
+  });
 
-  // Use Sepolia as default for development/testing
-  const defaultClient = sepoliaClient;
-
-  // Create facilitator signer using x402's toFacilitatorEvmSigner helper
-  // The combined client already has all necessary methods (readContract, verifyTypedData, etc.)
-  // toFacilitatorEvmSigner just adds getAddresses() wrapper
+  // Use x402's toFacilitatorEvmSigner helper to create the signer
+  // This ensures the signer interface matches what x402 expects
   const facilitatorSigner = toFacilitatorEvmSigner({
     address: account.address,
-    readContract: (args) => defaultClient.readContract({
-      ...args,
-      args: args.args || [],
-    }),
-    verifyTypedData: (args) => defaultClient.verifyTypedData(args),
-    writeContract: (args) => defaultClient.writeContract({
-      ...args,
-      args: args.args || [],
-    }),
-    sendTransaction: (args) => defaultClient.sendTransaction(args),
-    waitForTransactionReceipt: (args) => defaultClient.waitForTransactionReceipt(args),
-    getCode: (args) => defaultClient.getCode(args),
+    readContract: (args) => 
+      publicClient.readContract({
+        ...args,
+        args: args.args || [],
+      }),
+    verifyTypedData: (args) => publicClient.verifyTypedData(args),
+    writeContract: (args) =>
+      walletClient.writeContract({
+        ...args,
+        args: args.args || [],
+      }),
+    sendTransaction: (args) => walletClient.sendTransaction(args),
+    waitForTransactionReceipt: (args) => publicClient.waitForTransactionReceipt(args),
+    getCode: (args) => publicClient.getCode(args),
   });
 
   // Create and configure facilitator

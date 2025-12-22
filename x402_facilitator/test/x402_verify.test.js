@@ -4,6 +4,9 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
 import { resetFacilitator } from "../facilitator_instance.js";
+import { privateKeyToAccount } from "viem/accounts";
+import { optimismSepolia } from "viem/chains";
+import { ExactEvmScheme } from "@x402/evm/exact/client";
 
 describe("x402 Verify", () => {
   const originalEnv = { ...process.env };
@@ -274,6 +277,103 @@ describe("x402 Verify", () => {
     expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
   });
 
-  // Note: Full signature and blockchain integration tests would require
-  // actual wallet signatures and testnet interaction
+  /**
+   * END-TO-END SIGNATURE VALIDATION TEST
+   * 
+   * This test creates a REAL signature using viem and x402 client libraries,
+   * then validates it through the full facilitator flow.
+   * 
+   * This is critical because:
+   * 1. It tests the actual cryptographic signature verification
+   * 2. It catches signer configuration issues (like the toFacilitatorEvmSigner bug)
+   * 3. It serves as a reference implementation for TypeScript clients
+   * 
+   * Unlike other tests that use mock signatures, this creates an authentic
+   * EIP-3009 authorization signature that the facilitator must validate.
+   */
+  test("E2E: validates real signature created with x402 client", async () => {
+    // CLIENT SIDE: Create a real signature using the client library
+    // This simulates what happens in a Jupyter notebook or web client
+    
+    // Use Hardhat test account #0 as the payer
+    const payerPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    const payerAccount = privateKeyToAccount(payerPrivateKey);
+    
+    // Create x402 EVM client for signing
+    const evmClient = new ExactEvmScheme({
+      address: payerAccount.address,
+      signTypedData: async (args) => {
+        return await payerAccount.signTypedData(args);
+      },
+    });
+    
+    // Payment parameters
+    const paymentAmount = "100000"; // $0.10 in 6-decimal USDC
+    const tokenAddress = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7"; // Sepolia USDC
+    const recipientAddress = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+    
+    const paymentRequirements = {
+      scheme: "exact",
+      network: "eip155:11155420", // Optimism Sepolia
+      amount: paymentAmount,
+      asset: tokenAddress,
+      payTo: recipientAddress,
+      maxTimeoutSeconds: 300,
+      extra: {
+        name: "USDC",
+        version: "2",
+      },
+    };
+    
+    // Create payment payload with REAL signature using x402 v2 API
+    const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
+    
+    // Combine with resource information to create full payment payload
+    const paymentPayload = {
+      x402Version: 2,
+      resource: {
+        url: "https://api.example.com/e2e-test",
+        description: "End-to-end signature validation test",
+        mimeType: "application/json",
+      },
+      accepted: paymentRequirements,
+      payload: partialPayload.payload,
+    };
+    
+    // FACILITATOR SIDE: Verify the signature
+    const result = await verifyPayment(paymentPayload, paymentRequirements);
+    
+    // The signature validation should succeed (or fail with insufficient_funds)
+    // We accept insufficient_funds because the test wallet doesn't have real USDC on Sepolia
+    // 
+    // What matters is that we DON'T get "invalid_exact_evm_payload_signature"
+    // which would indicate a signer configuration problem (the bug we fixed)
+    //
+    // Success cases:
+    // - isValid: true (wallet has funds - unlikely in tests)
+    // - invalidReason: "insufficient_funds" (signature valid, but no balance)
+    //
+    // Failure case:
+    // - invalidReason: "invalid_exact_evm_payload_signature" (signer bug)
+    
+    if (!result.isValid) {
+      // Signature was validated correctly, but wallet doesn't have sufficient balance
+      // This is expected in test environment without real testnet funds
+      expect(result.invalidReason).toBe("insufficient_funds");
+      console.log("✓ Signature validation successful (insufficient funds is expected)");
+    } else {
+      // If the wallet happens to have funds, that's also valid
+      expect(result.isValid).toBe(true);
+      expect(result.invalidReason).toBeUndefined();
+      console.log("✓ Full payment verification successful");
+    }
+    
+    // Verify the payer address is correctly identified
+    expect(paymentPayload.payload.authorization.from.toLowerCase()).toBe(
+      payerAccount.address.toLowerCase()
+    );
+  });
+
+  // Note: Additional blockchain integration tests (actual settlement on testnet)
+  // would require testnet funds and transaction execution
 });

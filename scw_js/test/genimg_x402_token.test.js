@@ -1,6 +1,12 @@
 /**
  * Tests for genimg_x402_token.js - x402 v2 Token Payment Implementation
  *
+ * x402 v2 Architecture (Pull Model):
+ * - Server offers multiple networks in 402 response (accepts array)
+ * - Client selects locally from offered networks (default: accepts[0])
+ * - Server can restrict offered networks via `networks` parameter
+ * - New: `sepoliaTest` body flag controls server-side network offering
+ *
  * Tests the complete x402 token payment flow:
  * 1. Client requests without payment → 402 with x402 v2 payment header
  * 2. Client provides payment → Facilitator verification
@@ -68,6 +74,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
 
     const mockPublicClient = {
+      getBalance: vi.fn().mockResolvedValue(BigInt("1000000000000000000")), // 1 ETH
+      readContract: vi.fn().mockResolvedValue(BigInt("10000000")), // 10 USDC
+      getBytecode: vi.fn().mockResolvedValue("0x1234..."), // Contract exists
       waitForTransactionReceipt: vi
         .fn()
         .mockResolvedValueOnce({
@@ -135,16 +144,16 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const accept = payment.accepts[0];
       expect(accept.scheme).toBe("exact");
-      expect(accept.network).toBe("eip155:10"); // Optimism Mainnet
+      expect(accept.network).toBe("eip155:11155420"); // Optimism Sepolia (jetzt ZUERST)
       expect(accept.amount).toBe("1000"); // 0.001 USDC (6 decimals)
-      expect(accept.asset).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"); // USDC Mainnet
+      expect(accept.asset).toBe("0x5fd84259d66Cd46123540766Be93DFE6D43130D7"); // USDC Sepolia
       expect(accept.extra).toEqual({
         name: "USDC",
         version: "2",
       });
     });
 
-    test("should offer multiple networks (Mainnet + Sepolia) in 402 response", () => {
+    test("should offer multiple networks in 402 response (Sepolia first)", () => {
       const paymentRequirements = createPaymentRequirements({
         resourceUrl: "/genimg",
         description: "AI Image Generation",
@@ -158,17 +167,20 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(payment.accepts).toBeInstanceOf(Array);
       expect(payment.accepts.length).toBeGreaterThanOrEqual(2); // Multiple networks!
 
-      // Optimism Mainnet
-      const mainnet = payment.accepts[0];
-      expect(mainnet.network).toBe("eip155:10");
-      expect(mainnet.asset).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
-      expect(mainnet.amount).toBe("1000");
+      // ⚠️ ORDER CHANGED: Sepolia is now FIRST in NETWORK_CONFIG
+      // This matters because default x402 client selects accepts[0]
 
-      // Optimism Sepolia
-      const sepolia = payment.accepts[1];
+      // Optimism Sepolia - NOW FIRST
+      const sepolia = payment.accepts[0];
       expect(sepolia.network).toBe("eip155:11155420");
       expect(sepolia.asset).toBe("0x5fd84259d66Cd46123540766Be93DFE6D43130D7");
       expect(sepolia.amount).toBe("1000");
+
+      // Optimism Mainnet - NOW SECOND
+      const mainnet = payment.accepts[1];
+      expect(mainnet.network).toBe("eip155:10");
+      expect(mainnet.asset).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
+      expect(mainnet.amount).toBe("1000");
     });
 
     test("should include CORS headers", () => {
@@ -203,6 +215,44 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.accepts).toBeDefined();
       expect(body.resource).toBeDefined();
     });
+
+    test("should restrict to Sepolia only when networks parameter is set", () => {
+      // Test server-side network restriction via networks parameter
+      const paymentRequirements = createPaymentRequirements({
+        resourceUrl: "/genimg",
+        description: "AI Image Generation",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        networks: ["eip155:11155420"], // Only Sepolia
+      });
+      const response = create402Response(paymentRequirements);
+      const payment = JSON.parse(response.headers["X-Payment"]);
+
+      // Should only offer Sepolia
+      expect(payment.accepts).toBeInstanceOf(Array);
+      expect(payment.accepts.length).toBe(1);
+      expect(payment.accepts[0].network).toBe("eip155:11155420");
+      expect(payment.accepts[0].asset).toBe("0x5fd84259d66Cd46123540766Be93DFE6D43130D7");
+    });
+
+    test("should offer all networks when networks parameter is undefined", () => {
+      // Test default behavior: offer all networks
+      const paymentRequirements = createPaymentRequirements({
+        resourceUrl: "/genimg",
+        description: "AI Image Generation",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        networks: undefined, // Default: all networks
+      });
+      const response = create402Response(paymentRequirements);
+      const payment = JSON.parse(response.headers["X-Payment"]);
+
+      // Should offer all configured networks (Optimism + Base, Mainnet + Testnet)
+      expect(payment.accepts).toBeInstanceOf(Array);
+      expect(payment.accepts.length).toBeGreaterThanOrEqual(4);
+    });
   });
 
   describe("handle() - Request without payment", () => {
@@ -225,6 +275,70 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // Body now contains payment fields directly (x402 v2 format)
       expect(body.x402Version).toBe(2);
       expect(body.accepts).toBeDefined();
+    });
+
+    test("should restrict to Sepolia when sepoliaTest flag is true", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({
+          prompt: "Test image",
+          sepoliaTest: true, // Request Sepolia-only
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(402);
+      const body = JSON.parse(response.body);
+
+      // Should only offer Sepolia network
+      expect(body.accepts).toBeInstanceOf(Array);
+      expect(body.accepts.length).toBe(1);
+      expect(body.accepts[0].network).toBe("eip155:11155420");
+    });
+
+    test("should offer all networks when sepoliaTest flag is false", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({
+          prompt: "Production image",
+          sepoliaTest: false, // All networks
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(402);
+      const body = JSON.parse(response.body);
+
+      // Should offer all networks
+      expect(body.accepts).toBeInstanceOf(Array);
+      expect(body.accepts.length).toBeGreaterThanOrEqual(4); // Optimism + Base, Mainnet + Testnet
+    });
+
+    test("should offer all networks when sepoliaTest flag is omitted", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({
+          prompt: "Default behavior",
+          // sepoliaTest omitted - default to all networks
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(402);
+      const body = JSON.parse(response.body);
+
+      // Should offer all networks (default behavior)
+      expect(body.accepts).toBeInstanceOf(Array);
+      expect(body.accepts.length).toBeGreaterThanOrEqual(4);
     });
 
     test("should handle OPTIONS request (CORS preflight)", async () => {
@@ -297,7 +411,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       },
       accepted: {
         scheme: "exact",
-        network: "eip155:10",
+        network: "eip155:10", // Optimism Mainnet
         amount: "1000",
         asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
@@ -571,7 +685,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     });
   });
 
-  describe("handle() - Multi-Network Support", () => {
+  describe("handle() - Multi-Network Support (x402 v2 Pull Model)", () => {
+    // x402 v2: Server offers networks, client selects locally
+    // These tests verify that server correctly processes payments from different networks
+
     test("should verify Optimism Mainnet payment", async () => {
       const mockTokenId = 100;
       setupSuccessfulMintingFlow(mockTokenId);
@@ -707,10 +824,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.reason).toContain("unsupported_network");
     });
 
-    test("should default to Mainnet when network not specified", async () => {
-      const mockTokenId = 102;
-      setupSuccessfulMintingFlow(mockTokenId);
-
+    test("should reject payment when network not specified (no default to Mainnet)", async () => {
+      // Payment without network field - MUST be rejected (security requirement)
       const paymentWithoutNetwork = {
         x402Version: 2,
         accepted: {
@@ -726,7 +841,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
             value: "1000",
           },
         },
-        // network field missing - should default to Mainnet
+        // network field missing - no default allowed!
       };
 
       const event = {
@@ -741,12 +856,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       };
 
       const response = await handle(event, {});
-      expect(response.statusCode).toBe(200);
 
-      // Verify default to Mainnet
-      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
-      const verifyBody = JSON.parse(verifyCall[1].body);
-      expect(verifyBody.paymentRequirements.network).toBe("eip155:10"); // Defaults to Mainnet
+      // Must return 402 with missing_network error
+      expect(response.statusCode).toBe(402);
+      const body = JSON.parse(response.body);
+      expect(body.reason).toBe("missing_network");
     });
   });
 

@@ -16,20 +16,22 @@ const FACILITATOR_URL = process.env.FACILITATOR_URL || "https://facilitator.fret
  * Maps CAIP-2 network identifiers to chain-specific details
  */
 export const NETWORK_CONFIG = {
-  "eip155:10": {
-    // Optimism Mainnet
-    name: "Optimism Mainnet",
-    chainId: 10,
-    usdc: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    usdcDecimals: 6,
-    usdcName: "USDC",
-    usdcVersion: "2",
-  },
+  // ⚠️ ORDER MATTERS: x402 client may choose first matching network!
+  // Put Sepolia first to test client network selection behavior
   "eip155:11155420": {
     // Optimism Sepolia
     name: "Optimism Sepolia",
     chainId: 11155420,
     usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+    usdcDecimals: 6,
+    usdcName: "USDC",
+    usdcVersion: "2",
+  },
+  "eip155:10": {
+    // Optimism Mainnet
+    name: "Optimism Mainnet",
+    chainId: 10,
+    usdc: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     usdcDecimals: 6,
     usdcName: "USDC",
     usdcVersion: "2",
@@ -168,18 +170,20 @@ export function create402Response(paymentRequirements) {
  * @returns {Object|null} Parsed payment payload or null if not present
  */
 export function extractPaymentPayload(headers) {
-  // Try v2 header first
+  // Try v2 header first (base64-encoded)
   const v2Header = headers["payment-signature"] || headers["Payment-Signature"];
   if (v2Header) {
     try {
-      return JSON.parse(v2Header);
+      // v2 header is base64-encoded, decode it first
+      const decoded = Buffer.from(v2Header, "base64").toString("utf-8");
+      return JSON.parse(decoded);
     } catch (error) {
       console.error("Failed to parse PAYMENT-SIGNATURE header:", error);
       return null;
     }
   }
 
-  // Fallback to v1 header
+  // Fallback to v1 header (plain JSON string)
   const v1Header = headers["x-payment"] || headers["X-Payment"];
   if (v1Header) {
     try {

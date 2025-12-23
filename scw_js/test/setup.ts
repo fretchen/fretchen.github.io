@@ -32,12 +32,28 @@ export function setupGlobalMocks() {
   // Mock viem
   vi.mock("viem", () => mockViemFunctions);
   vi.mock("viem/chains", () => ({
-    sepolia: { id: 11155111 },
-    optimism: { id: 10 },
+    sepolia: { id: 11155111, name: "Sepolia" },
+    optimism: { id: 10, name: "Optimism" },
+    optimismSepolia: { id: 11155420, name: "Optimism Sepolia" },
+    base: { id: 8453, name: "Base" },
+    baseSepolia: { id: 84532, name: "Base Sepolia" },
   }));
   vi.mock("viem/accounts", () => ({
     privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
   }));
+
+  // Setup default privateKeyToAccount mock
+  mockViemFunctions.privateKeyToAccount.mockImplementation((key) => ({
+    address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+    signMessage: vi.fn(),
+    signTransaction: vi.fn(),
+    signTypedData: vi.fn(),
+  }));
+
+  // Setup parseEther mock to work like the real function
+  mockViemFunctions.parseEther.mockImplementation((eth) => {
+    return BigInt(parseFloat(eth) * 1e18);
+  });
 
   // Mock x402/client
   vi.mock("x402/client", () => ({

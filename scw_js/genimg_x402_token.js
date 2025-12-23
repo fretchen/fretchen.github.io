@@ -10,7 +10,7 @@ import {
   parseEther,
   parseAbiItem,
 } from "viem";
-import { optimism } from "viem/chains";
+import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 import {
@@ -35,6 +35,93 @@ const TRANSFER_EVENT = parseAbiItem(
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 );
 
+/**
+ * Map CAIP-2 network identifier to Viem chain object
+ * Buyer determines the chain via payment network!
+ * @param {string} network - CAIP-2 network ID (e.g., "eip155:11155420")
+ * @returns {import("viem/chains").Chain}
+ */
+function getViemChain(network) {
+  const chainMap = {
+    "eip155:10": optimism,
+    "eip155:11155420": optimismSepolia,
+    "eip155:8453": base,
+    "eip155:84532": baseSepolia,
+  };
+  const chain = chainMap[network];
+  if (!chain) {
+    throw new Error(`Unsupported network: ${network}`);
+  }
+  return chain;
+}
+
+/**
+ * Pre-flight checks before starting expensive operations
+ * Validates server wallet has sufficient balance and contract is deployed
+ * @param {Object} publicClient - Viem public client
+ * @param {string} serverAddress - Server wallet address
+ * @param {string} contractAddress - NFT contract address
+ * @param {bigint} mintPrice - Required ETH for minting
+ * @param {string} chainName - Human-readable chain name
+ * @returns {Promise<{success: boolean, error?: string, details?: any}>}
+ */
+async function preFlightChecks(publicClient, serverAddress, contractAddress, mintPrice, chainName) {
+  try {
+    // Check 1: Server wallet balance
+    const balance = await publicClient.getBalance({ address: serverAddress });
+    const estimatedGas = parseEther("0.001"); // Conservative gas estimate
+    const requiredBalance = mintPrice + estimatedGas;
+
+    if (balance < requiredBalance) {
+      const balanceEth = parseFloat(balance.toString()) / 1e18;
+      const requiredEth = parseFloat(requiredBalance.toString()) / 1e18;
+      return {
+        success: false,
+        error: "insufficient_server_funds",
+        details: {
+          message: `Server wallet has insufficient funds on ${chainName}`,
+          serverAddress,
+          currentBalance: `${balanceEth.toFixed(6)} ETH`,
+          requiredBalance: `${requiredEth.toFixed(6)} ETH`,
+          deficit: `${(requiredEth - balanceEth).toFixed(6)} ETH`,
+          chain: chainName,
+        },
+      };
+    }
+
+    // Check 2: Contract deployment
+    const contractCode = await publicClient.getBytecode({ address: contractAddress });
+    if (!contractCode || contractCode === "0x") {
+      return {
+        success: false,
+        error: "contract_not_deployed",
+        details: {
+          message: `NFT contract not deployed on ${chainName}`,
+          contractAddress,
+          chain: chainName,
+        },
+      };
+    }
+
+    console.log(`✅ Pre-flight checks passed on ${chainName}`);
+    console.log(`   Server balance: ${(parseFloat(balance.toString()) / 1e18).toFixed(6)} ETH`);
+    console.log(`   Contract deployed: ${contractAddress}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error(`❌ Pre-flight check error:`, error);
+    return {
+      success: false,
+      error: "preflight_check_failed",
+      details: {
+        message: `Failed to perform pre-flight checks on ${chainName}`,
+        errorDetails: error.message, // Renamed from "reason" to avoid conflict
+        chain: chainName,
+      },
+    };
+  }
+}
+
 // Create x402 Resource Server instance (shared across requests)
 const resourceServer = createResourceServer();
 
@@ -51,7 +138,8 @@ async function mintNFTToClient(contract, publicClient, clientAddress, metadataUr
   console.log(`🎨 Minting NFT to server, then transferring to ${clientAddress}`);
 
   // Step 1: Mint to server wallet
-  const mintTxHash = await contract.write.safeMint([metadataUrl, true], {
+  // Use single-parameter safeMint(uri) - the contract deployed uses this version
+  const mintTxHash = await contract.write.safeMint([metadataUrl], {
     value: MINT_PRICE,
   });
 
@@ -272,6 +360,12 @@ async function handle(event, context, cb) {
     console.log("🖼️  Reference image provided for editing");
   }
 
+  // Extract test mode flag from body
+  const sepoliaTest = body.sepoliaTest === true;
+  if (sepoliaTest) {
+    console.log("🧪 Test mode enabled: Will only accept Sepolia");
+  }
+
   // ====== x402 v2 TOKEN PAYMENT FLOW ======
 
   // No payment payload → Return 402 Payment Required using x402 v2 API
@@ -286,6 +380,16 @@ async function handle(event, context, cb) {
     const account = privateKeyToAccount(`0x${privateKey}`);
     const serverWallet = account.address;
 
+    // 🎯 Dynamic network selection based on sepoliaTest flag
+    let networks = undefined; // undefined = all supported networks
+
+    if (sepoliaTest) {
+      // Test mode: Only accept Sepolia
+      networks = ["eip155:11155420"];
+      console.log("   Restricting to Sepolia testnet");
+    }
+    // Production mode: Accept all networks (Optimism + Base, mainnet + testnet)
+
     // Create payment requirements using x402 helper
     const paymentRequirements = createPaymentRequirements({
       resourceUrl: event.path || process.env.GENIMG_SERVICE_URL || "https://api.example.com/genimg",
@@ -293,7 +397,7 @@ async function handle(event, context, cb) {
       mimeType: "application/json",
       amount: USDC_PAYMENT_AMOUNT,
       payTo: serverWallet,
-      // Default: accepts all supported networks (Optimism + Base, mainnet + testnet)
+      networks, // Dynamic: undefined (all) or ["eip155:11155420"] (Sepolia only)
     });
 
     return create402Response(paymentRequirements);
@@ -320,10 +424,25 @@ async function handle(event, context, cb) {
   const serverWallet = account.address;
 
   // Extract network from payment payload
-  const clientNetwork =
-    paymentPayload?.payload?.authorization?.network ||
-    paymentPayload?.accepted?.network ||
-    "eip155:10";
+  // x402 v2: Client wählt aus server's accepts array, sendet Auswahl in accepted.network
+  const clientNetwork = paymentPayload?.accepted?.network;
+  console.log(`🌐 Payment payload network: ${clientNetwork}`);
+  if (!clientNetwork) {
+    console.error(`❌ No network specified in payment payload`);
+    console.error(`   Payload structure:`, JSON.stringify(paymentPayload, null, 2));
+    return {
+      statusCode: 402,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: "missing_network",
+        message: "Payment payload must specify a network (e.g., eip155:11155420)",
+      }),
+    };
+  }
 
   const networkConfig = NETWORK_CONFIG[clientNetwork];
   if (!networkConfig) {
@@ -338,6 +457,7 @@ async function handle(event, context, cb) {
         error: "Payment verification failed",
         reason: "unsupported_network",
         network: clientNetwork,
+        supported: Object.keys(NETWORK_CONFIG),
       }),
     };
   }
@@ -406,15 +526,19 @@ async function handle(event, context, cb) {
       throw new Error("NFT_WALLET_PRIVATE_KEY not configured");
     }
 
+    // Get chain from payment network (buyer determines the chain!)
+    const viemChain = getViemChain(clientNetwork);
+    console.log(`🔗 Using chain: ${viemChain.name} (id: ${viemChain.id})`);
+
     const account = privateKeyToAccount(`0x${privateKey.replace("0x", "")}`);
     const publicClient = createPublicClient({
-      chain: optimism,
+      chain: viemChain,
       transport: http(),
     });
 
     const walletClient = createWalletClient({
       account,
-      chain: optimism,
+      chain: viemChain,
       transport: http(),
     });
 
@@ -426,6 +550,33 @@ async function handle(event, context, cb) {
         wallet: walletClient,
       },
     });
+
+    // ====== PRE-FLIGHT CHECKS ======
+    // Validate before starting expensive operations (image generation)
+    console.log(`🔍 Running pre-flight checks...`);
+    const preFlightResult = await preFlightChecks(
+      publicClient,
+      account.address,
+      GENIMG_CONTRACT_ADDRESS,
+      MINT_PRICE,
+      viemChain.name,
+    );
+
+    if (!preFlightResult.success) {
+      console.error(`❌ Pre-flight check failed: ${preFlightResult.error}`);
+      return {
+        statusCode: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          error: "Service configuration error",
+          reason: preFlightResult.error,
+          ...preFlightResult.details,
+        }),
+      };
+    }
 
     // Generate image and mint NFT
     const result = await generateImageAndMintNFT(

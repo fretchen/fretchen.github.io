@@ -10,7 +10,6 @@ import {
   parseEther,
   parseAbiItem,
 } from "viem";
-import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 import {
@@ -21,12 +20,12 @@ import {
   createSettlementHeaders,
   NETWORK_CONFIG,
 } from "./x402_server.js";
+import { getGenImgContractConfig, getViemChain } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
 
-// Config
-const GENIMG_CONTRACT_ADDRESS = "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb";
+// Config - MINT_PRICE is static
 const MINT_PRICE = parseEther("0.01"); // 0.01 ETH for minting
 const USDC_PAYMENT_AMOUNT = "1000"; // 0.001 USDC (6 decimals)
 
@@ -36,38 +35,17 @@ const TRANSFER_EVENT = parseAbiItem(
 );
 
 /**
- * Map CAIP-2 network identifier to Viem chain object
- * Buyer determines the chain via payment network!
- * @param {string} network - CAIP-2 network ID (e.g., "eip155:11155420")
- * @returns {import("viem/chains").Chain}
- */
-function getViemChain(network) {
-  const chainMap = {
-    "eip155:10": optimism,
-    "eip155:11155420": optimismSepolia,
-    "eip155:8453": base,
-    "eip155:84532": baseSepolia,
-  };
-  const chain = chainMap[network];
-  if (!chain) {
-    throw new Error(`Unsupported network: ${network}`);
-  }
-  return chain;
-}
-
-/**
  * Pre-flight checks before starting expensive operations
- * Validates server wallet has sufficient balance and contract is deployed
+ * Validates server wallet has sufficient balance for minting
  * @param {Object} publicClient - Viem public client
  * @param {string} serverAddress - Server wallet address
- * @param {string} contractAddress - NFT contract address
  * @param {bigint} mintPrice - Required ETH for minting
  * @param {string} chainName - Human-readable chain name
  * @returns {Promise<{success: boolean, error?: string, details?: any}>}
  */
-async function preFlightChecks(publicClient, serverAddress, contractAddress, mintPrice, chainName) {
+async function preFlightChecks(publicClient, serverAddress, mintPrice, chainName) {
   try {
-    // Check 1: Server wallet balance
+    // Check: Server wallet balance
     const balance = await publicClient.getBalance({ address: serverAddress });
     const estimatedGas = parseEther("0.001"); // Conservative gas estimate
     const requiredBalance = mintPrice + estimatedGas;
@@ -89,23 +67,8 @@ async function preFlightChecks(publicClient, serverAddress, contractAddress, min
       };
     }
 
-    // Check 2: Contract deployment
-    const contractCode = await publicClient.getBytecode({ address: contractAddress });
-    if (!contractCode || contractCode === "0x") {
-      return {
-        success: false,
-        error: "contract_not_deployed",
-        details: {
-          message: `NFT contract not deployed on ${chainName}`,
-          contractAddress,
-          chain: chainName,
-        },
-      };
-    }
-
     console.log(`✅ Pre-flight checks passed on ${chainName}`);
     console.log(`   Server balance: ${(parseFloat(balance.toString()) / 1e18).toFixed(6)} ETH`);
-    console.log(`   Contract deployed: ${contractAddress}`);
 
     return { success: true };
   } catch (error) {
@@ -115,7 +78,7 @@ async function preFlightChecks(publicClient, serverAddress, contractAddress, min
       error: "preflight_check_failed",
       details: {
         message: `Failed to perform pre-flight checks on ${chainName}`,
-        errorDetails: error.message, // Renamed from "reason" to avoid conflict
+        errorDetails: error.message,
         chain: chainName,
       },
     };
@@ -132,9 +95,18 @@ const resourceServer = createResourceServer();
  * @param {Object} publicClient - Viem public client
  * @param {string} clientAddress - Client's wallet address
  * @param {string} metadataUrl - Token metadata URL
+ * @param {string} contractAddress - NFT contract address for event filtering
+ * @param {string} serverWallet - Server wallet address for transfer
  * @returns {Object} {tokenId, mintTxHash, transferTxHash}
  */
-async function mintNFTToClient(contract, publicClient, clientAddress, metadataUrl) {
+async function mintNFTToClient(
+  contract,
+  publicClient,
+  clientAddress,
+  metadataUrl,
+  contractAddress,
+  serverWallet,
+) {
   console.log(`🎨 Minting NFT to server, then transferring to ${clientAddress}`);
 
   // Step 1: Mint to server wallet
@@ -156,7 +128,7 @@ async function mintNFTToClient(contract, publicClient, clientAddress, metadataUr
 
   // Extract tokenId from Transfer event (using viem's decodeEventLog)
   const mintLog = mintReceipt.logs.find((log) => {
-    if (log.address.toLowerCase() !== GENIMG_CONTRACT_ADDRESS.toLowerCase()) {
+    if (log.address.toLowerCase() !== contractAddress.toLowerCase()) {
       return false;
     }
     // Check if this is a Transfer event from zero address (mint)
@@ -172,11 +144,6 @@ async function mintNFTToClient(contract, publicClient, clientAddress, metadataUr
   console.log(`✅ NFT minted: tokenId=${tokenId}`);
 
   // Step 2: Transfer to client
-  // Derive server wallet address from private key
-  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-  const account = privateKeyToAccount(`0x${privateKey}`);
-  const serverWallet = account.address;
-
   const transferTxHash = await contract.write.safeTransferFrom([
     serverWallet,
     clientAddress,
@@ -211,6 +178,8 @@ async function generateImageAndMintNFT(
   contract,
   publicClient,
   clientAddress,
+  contractAddress,
+  serverWallet,
   size = "1024x1024",
   mode = "generate",
   referenceImageBase64 = null,
@@ -250,7 +219,14 @@ async function generateImageAndMintNFT(
   console.log(`✅ Image generated: ${imageUrl}`);
 
   // Mint NFT to client
-  const mintResult = await mintNFTToClient(contract, publicClient, clientAddress, metadataUrl);
+  const mintResult = await mintNFTToClient(
+    contract,
+    publicClient,
+    clientAddress,
+    metadataUrl,
+    contractAddress,
+    serverWallet,
+  );
 
   return {
     metadata_url: metadataUrl,
@@ -324,6 +300,24 @@ async function handle(event, context, cb) {
 
   console.log(`📝 Prompt: "${prompt}"`);
 
+  // Get server wallet configuration (needed for all payment operations)
+  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
+  if (!privateKey) {
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Server configuration error",
+        message: "NFT_WALLET_PRIVATE_KEY not configured",
+      }),
+    };
+  }
+  const account = privateKeyToAccount(`0x${privateKey.replace(/^0x/, "")}`);
+  const serverWallet = account.address;
+
   // Get optional parameters
   const mode = body.mode || "generate";
   const size = body.size || "1024x1024";
@@ -372,14 +366,6 @@ async function handle(event, context, cb) {
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
-    // Get server wallet address
-    const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-    if (!privateKey) {
-      throw new Error("NFT_WALLET_PRIVATE_KEY not configured");
-    }
-    const account = privateKeyToAccount(`0x${privateKey}`);
-    const serverWallet = account.address;
-
     // 🎯 Dynamic network selection based on sepoliaTest flag
     let networks = undefined; // undefined = all supported networks
 
@@ -404,24 +390,6 @@ async function handle(event, context, cb) {
   }
 
   console.log("🔍 Payment received, verifying...");
-
-  // Get server wallet address for verification
-  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
-    return {
-      statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        error: "Server configuration error",
-        message: "NFT_WALLET_PRIVATE_KEY not configured",
-      }),
-    };
-  }
-  const account = privateKeyToAccount(`0x${privateKey}`);
-  const serverWallet = account.address;
 
   // Extract network from payment payload
   // x402 v2: Client wählt aus server's accepts array, sendet Auswahl in accepted.network
@@ -463,6 +431,27 @@ async function handle(event, context, cb) {
   }
 
   console.log(`📍 Client selected network: ${networkConfig.name} (${clientNetwork})`);
+
+  // Get contract address for the selected network
+  let contractAddress;
+  try {
+    contractAddress = getGenImgContractConfig(clientNetwork).address;
+  } catch (error) {
+    console.error(`❌ ${error.message}`);
+    return {
+      statusCode: 402,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: "contract_not_deployed",
+        network: clientNetwork,
+        message: error.message,
+      }),
+    };
+  }
 
   // Build payment requirements for the selected network
   const paymentRequirements = {
@@ -520,17 +509,10 @@ async function handle(event, context, cb) {
   // ====== IMAGE GENERATION & NFT MINTING ======
 
   try {
-    // Setup wallet client for NFT minting
-    const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-    if (!privateKey) {
-      throw new Error("NFT_WALLET_PRIVATE_KEY not configured");
-    }
-
     // Get chain from payment network (buyer determines the chain!)
     const viemChain = getViemChain(clientNetwork);
     console.log(`🔗 Using chain: ${viemChain.name} (id: ${viemChain.id})`);
 
-    const account = privateKeyToAccount(`0x${privateKey.replace("0x", "")}`);
     const publicClient = createPublicClient({
       chain: viemChain,
       transport: http(),
@@ -543,7 +525,7 @@ async function handle(event, context, cb) {
     });
 
     const contract = getContract({
-      address: GENIMG_CONTRACT_ADDRESS,
+      address: contractAddress,
       abi: nftAbi,
       client: {
         public: publicClient,
@@ -557,7 +539,6 @@ async function handle(event, context, cb) {
     const preFlightResult = await preFlightChecks(
       publicClient,
       account.address,
-      GENIMG_CONTRACT_ADDRESS,
       MINT_PRICE,
       viemChain.name,
     );
@@ -584,6 +565,8 @@ async function handle(event, context, cb) {
       contract,
       publicClient,
       clientAddress,
+      contractAddress,
+      serverWallet,
       size,
       mode,
       referenceImageBase64,
@@ -734,7 +717,9 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
             }
             console.log(`🚀 x402 v2 Token Payment Local Server listening at ${address}`);
             console.log(`   Using @x402/core and @x402/evm packages`);
-            console.log(`   NFT Contract: ${GENIMG_CONTRACT_ADDRESS}`);
+            console.log(`   NFT Contracts:`);
+            console.log(`     - Optimism Mainnet: 0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb`);
+            console.log(`     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85`);
             console.log(`   Supported Networks: Optimism + Base (Mainnet + Testnet)`);
           });
         });

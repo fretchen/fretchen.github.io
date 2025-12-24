@@ -68,7 +68,15 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
   });
 
   // Helper function to setup successful minting flow
-  function setupSuccessfulMintingFlow(mockTokenId = 42) {
+  // @param {number} mockTokenId - Token ID to use in mock
+  // @param {string} network - CAIP-2 network ID (e.g., "eip155:10" or "eip155:11155420")
+  function setupSuccessfulMintingFlow(mockTokenId = 42, network = "eip155:10") {
+    // Determine contract address based on network
+    const contractAddress =
+      network === "eip155:11155420"
+        ? "0x10827cC42a09D0BAD2d43134C69F0e776D853D85" // Sepolia
+        : "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"; // Mainnet
+
     mockContract.write.safeMint.mockResolvedValue("0xmintTx");
     mockContract.write.safeTransferFrom.mockResolvedValue("0xtransferTx");
     mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
@@ -83,7 +91,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
           status: "success",
           logs: [
             {
-              address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+              address: contractAddress, // Use network-specific address
               topics: [
                 "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -739,7 +747,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
     test("should verify Optimism Sepolia payment", async () => {
       const mockTokenId = 101;
-      setupSuccessfulMintingFlow(mockTokenId);
+      setupSuccessfulMintingFlow(mockTokenId, "eip155:11155420"); // Specify Sepolia network
 
       const sepoliaPayment = {
         x402Version: 2,

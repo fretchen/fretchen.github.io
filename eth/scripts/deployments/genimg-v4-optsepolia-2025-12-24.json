@@ -1,0 +1,34 @@
+{
+  "network": "optsepolia",
+  "timestamp": "2025-12-24T09:33:18.233Z",
+  "blockNumber": 37383129,
+  "proxyAddress": "0x10827cC42a09D0BAD2d43134C69F0e776D853D85",
+  "implementationAddress": "0x5D0103393DDcD988867437233c197c6A38b23360",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "GenImNFTv4",
+  "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+  "mintPrice": "0.00003",
+  "agentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+  "deploymentOptions": {
+    "verify": true,
+    "waitConfirmations": 2,
+    "configUsed": "deploy-genimg-v4.config.json"
+  },
+  "config": {
+    "parameters": {
+      "mintPrice": "0.00003",
+      "agentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C"
+    },
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": true,
+      "waitConfirmations": 2
+    },
+    "metadata": {
+      "description": "GenImNFTv4 deployment to Optimism Sepolia for testing",
+      "version": "4.0.0",
+      "environment": "testnet"
+    }
+  }
+}

@@ -8,7 +8,6 @@ import {
   createPublicClient,
   http,
   parseEther,
-  parseAbiItem,
 } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
@@ -35,10 +34,9 @@ export { handle, create402Response };
 const USDC_PAYMENT_AMOUNT = "1000"; // 0.001 USDC (6 decimals)
 const GAS_BUFFER = parseEther("0.00001"); // ~$0.02 buffer for gas on L2
 
-// Transfer-Event for extracting tokenId from mint
-const TRANSFER_EVENT = parseAbiItem(
-  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-);
+// ERC721 Transfer event hash: keccak256("Transfer(address,address,uint256)")
+// Used to extract tokenId from mint transaction logs
+const TRANSFER_EVENT_HASH = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
 /**
  * Pre-flight checks before starting expensive operations
@@ -133,14 +131,15 @@ async function mintNFTToClient(
     throw new Error("Mint transaction failed");
   }
 
-  // Extract tokenId from Transfer event (using viem's decodeEventLog)
+  // Extract tokenId from Transfer event
+  // Transfer event: topics[0]=event hash, topics[1]=from, topics[2]=to, topics[3]=tokenId
   const mintLog = mintReceipt.logs.find((log) => {
     if (log.address.toLowerCase() !== contractAddress.toLowerCase()) {
       return false;
     }
     // Check if this is a Transfer event from zero address (mint)
     const zeroAddress = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    return log.topics[0] === TRANSFER_EVENT.id && log.topics[1] === zeroAddress;
+    return log.topics[0] === TRANSFER_EVENT_HASH && log.topics[1] === zeroAddress;
   });
 
   if (!mintLog) {
@@ -151,6 +150,7 @@ async function mintNFTToClient(
   console.log(`✅ NFT minted: tokenId=${tokenId}`);
 
   // Step 2: Transfer to client
+  // Note: We trust the event log - no ownerOf check needed (avoids RPC lag issues)
   const transferTxHash = await contract.write.safeTransferFrom([
     serverWallet,
     clientAddress,

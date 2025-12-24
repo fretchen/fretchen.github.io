@@ -172,6 +172,7 @@ async function mintNFTToClient(
 
 /**
  * Generates image and mints NFT
+ * @param {boolean} useMockImage - If true, use mock image (test mode, no BFL costs)
  */
 async function generateImageAndMintNFT(
   prompt,
@@ -183,40 +184,54 @@ async function generateImageAndMintNFT(
   size = "1024x1024",
   mode = "generate",
   referenceImageBase64 = null,
+  useMockImage = false,
 ) {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
   // Use temporary tokenId for image generation (we'll get real one after mint)
   const tempTokenId = Date.now();
 
-  // Generate and upload image
-  const metadataUrl = await generateAndUploadImage(
-    prompt,
-    tempTokenId,
-    "bfl",
-    size,
-    mode,
-    referenceImageBase64,
-  );
+  let metadataUrl;
+  let imageUrl;
 
-  // Validate metadata URL
-  const baseDomain = new URL(JSON_BASE_PATH);
-  const allowedHostnames = [baseDomain.hostname];
-  const url = new URL(metadataUrl);
-  if (!allowedHostnames.includes(url.hostname)) {
-    throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
+  if (useMockImage) {
+    // Mock image generation for test mode (no BFL API or S3 costs)
+    console.log("🎭 Using mock image (test mode)");
+    
+    // Use dummy URLs for test mode
+    imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
+    metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
+    
+  } else {
+    // Real image generation via BFL API
+    metadataUrl = await generateAndUploadImage(
+      prompt,
+      tempTokenId,
+      "bfl",
+      size,
+      mode,
+      referenceImageBase64,
+    );
+
+    // Validate metadata URL
+    const baseDomain = new URL(JSON_BASE_PATH);
+    const allowedHostnames = [baseDomain.hostname];
+    const url = new URL(metadataUrl);
+    if (!allowedHostnames.includes(url.hostname)) {
+      throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
+    }
+
+    // Load metadata to extract image URL
+    const metadataResponse = await fetch(metadataUrl);
+    if (!metadataResponse.ok) {
+      throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
+    }
+
+    const metadata = await metadataResponse.json();
+    imageUrl = metadata.image;
   }
 
-  // Load metadata to extract image URL
-  const metadataResponse = await fetch(metadataUrl);
-  if (!metadataResponse.ok) {
-    throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
-  }
-
-  const metadata = await metadataResponse.json();
-  const imageUrl = metadata.image;
-
-  console.log(`✅ Image generated: ${imageUrl}`);
+  console.log(`✅ Image ${useMockImage ? "mocked" : "generated"}: ${imageUrl}`);
 
   // Mint NFT to client
   const mintResult = await mintNFTToClient(
@@ -357,7 +372,7 @@ async function handle(event, context, cb) {
   // Extract test mode flag from body
   const sepoliaTest = body.sepoliaTest === true;
   if (sepoliaTest) {
-    console.log("🧪 Test mode enabled: Will only accept Sepolia");
+    console.log("🧪 Test mode enabled: Sepolia only, mock image generation");
   }
 
   // ====== x402 v2 TOKEN PAYMENT FLOW ======
@@ -366,15 +381,16 @@ async function handle(event, context, cb) {
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
-    // 🎯 Dynamic network selection based on sepoliaTest flag
-    let networks = undefined; // undefined = all supported networks
-
+    // 🎯 Network selection based on test mode
+    // Test mode: Only Sepolia testnet (no costs)
+    // Production: Only Optimism Mainnet (real payments)
+    const networks = sepoliaTest ? ["eip155:11155420"] : ["eip155:10"];
+    
     if (sepoliaTest) {
-      // Test mode: Only accept Sepolia
-      networks = ["eip155:11155420"];
       console.log("   Restricting to Sepolia testnet");
+    } else {
+      console.log("   Production mode: Optimism Mainnet only");
     }
-    // Production mode: Accept all networks (Optimism + Base, mainnet + testnet)
 
     // Create payment requirements using x402 helper
     const paymentRequirements = createPaymentRequirements({
@@ -383,7 +399,7 @@ async function handle(event, context, cb) {
       mimeType: "application/json",
       amount: USDC_PAYMENT_AMOUNT,
       payTo: serverWallet,
-      networks, // Dynamic: undefined (all) or ["eip155:11155420"] (Sepolia only)
+      networks, // Test: ["eip155:11155420"], Prod: ["eip155:10"]
     });
 
     return create402Response(paymentRequirements);
@@ -395,6 +411,42 @@ async function handle(event, context, cb) {
   // x402 v2: Client wählt aus server's accepts array, sendet Auswahl in accepted.network
   const clientNetwork = paymentPayload?.accepted?.network;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
+  
+  // Validate network matches test mode
+  if (sepoliaTest && clientNetwork !== "eip155:11155420") {
+    console.error(`❌ Test mode requires Sepolia, got: ${clientNetwork}`);
+    return {
+      statusCode: 402,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: "invalid_network_for_test_mode",
+        message: "Test mode only accepts Sepolia testnet (eip155:11155420)",
+        received: clientNetwork,
+      }),
+    };
+  }
+  
+  if (!sepoliaTest && clientNetwork !== "eip155:10") {
+    console.error(`❌ Production mode requires Optimism Mainnet, got: ${clientNetwork}`);
+    return {
+      statusCode: 402,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: "invalid_network_for_production",
+        message: "Production mode only accepts Optimism Mainnet (eip155:10)",
+        received: clientNetwork,
+      }),
+    };
+  }
+  
   if (!clientNetwork) {
     console.error(`❌ No network specified in payment payload`);
     console.error(`   Payload structure:`, JSON.stringify(paymentPayload, null, 2));
@@ -538,6 +590,7 @@ async function handle(event, context, cb) {
     console.log(`🔍 Running pre-flight checks...`);
     const preFlightResult = await preFlightChecks(
       publicClient,
+      sepoliaTest, // Use mock image in test mode
       account.address,
       MINT_PRICE,
       viemChain.name,
@@ -718,9 +771,11 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
             console.log(`🚀 x402 v2 Token Payment Local Server listening at ${address}`);
             console.log(`   Using @x402/core and @x402/evm packages`);
             console.log(`   NFT Contracts:`);
-            console.log(`     - Optimism Mainnet: 0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb`);
-            console.log(`     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85`);
-            console.log(`   Supported Networks: Optimism + Base (Mainnet + Testnet)`);
+            console.log(`     - Optimism Mainnet: 0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb (Production)`);
+            console.log(`     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85 (Test)`);
+            console.log(`   Network Policy:`);
+            console.log(`     - Production: Optimism Mainnet only`);
+            console.log(`     - Test mode (sepoliaTest=true): Sepolia only + mock images`);
           });
         });
       });

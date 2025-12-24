@@ -307,13 +307,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.accepts[0].network).toBe("eip155:11155420");
     });
 
-    test("should offer all networks when sepoliaTest flag is false", async () => {
+    test("should offer Mainnet only when sepoliaTest flag is false (production mode)", async () => {
       const event = {
         httpMethod: "POST",
         headers: {},
         body: JSON.stringify({
           prompt: "Production image",
-          sepoliaTest: false, // All networks
+          sepoliaTest: false, // Production: Mainnet only
         }),
         path: "/genimg",
       };
@@ -323,18 +323,19 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(402);
       const body = JSON.parse(response.body);
 
-      // Should offer all networks
+      // Production mode: only Mainnet
       expect(body.accepts).toBeInstanceOf(Array);
-      expect(body.accepts.length).toBeGreaterThanOrEqual(4); // Optimism + Base, Mainnet + Testnet
+      expect(body.accepts.length).toBe(1);
+      expect(body.accepts[0].network).toBe("eip155:10"); // Optimism Mainnet
     });
 
-    test("should offer all networks when sepoliaTest flag is omitted", async () => {
+    test("should offer Mainnet only when sepoliaTest flag is omitted (default: production)", async () => {
       const event = {
         httpMethod: "POST",
         headers: {},
         body: JSON.stringify({
           prompt: "Default behavior",
-          // sepoliaTest omitted - default to all networks
+          // sepoliaTest omitted - default to production (Mainnet only)
         }),
         path: "/genimg",
       };
@@ -344,9 +345,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(402);
       const body = JSON.parse(response.body);
 
-      // Should offer all networks (default behavior)
+      // Default is production mode: only Mainnet
       expect(body.accepts).toBeInstanceOf(Array);
-      expect(body.accepts.length).toBeGreaterThanOrEqual(4);
+      expect(body.accepts.length).toBe(1);
+      expect(body.accepts[0].network).toBe("eip155:10"); // Optimism Mainnet
     });
 
     test("should handle OPTIONS request (CORS preflight)", async () => {
@@ -745,7 +747,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       );
     });
 
-    test("should verify Optimism Sepolia payment", async () => {
+    test("should verify Optimism Sepolia payment (test mode)", async () => {
       const mockTokenId = 101;
       setupSuccessfulMintingFlow(mockTokenId, "eip155:11155420"); // Specify Sepolia network
 
@@ -775,6 +777,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         },
         body: JSON.stringify({
           prompt: "Test Sepolia",
+          sepoliaTest: true, // REQUIRED: Enable test mode for Sepolia
         }),
         path: "/genimg",
       };
@@ -793,7 +796,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       );
     });
 
-    test("should reject unsupported network", async () => {
+    test("should reject unsupported network (production only accepts Mainnet)", async () => {
       const unsupportedPayment = {
         x402Version: 2,
         accepted: {
@@ -829,7 +832,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const body = JSON.parse(response.body);
       expect(body.error).toBe("Payment verification failed");
-      expect(body.reason).toContain("unsupported_network");
+      // Production mode rejects all networks except Mainnet
+      expect(body.reason).toBe("invalid_network_for_production");
+      expect(body.expected).toBe("eip155:10");
+      expect(body.received).toBe("eip155:1");
     });
 
     test("should reject payment when network not specified (no default to Mainnet)", async () => {

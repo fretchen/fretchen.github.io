@@ -18,16 +18,22 @@ import {
   create402Response,
   extractPaymentPayload,
   createSettlementHeaders,
-  NETWORK_CONFIG,
 } from "./x402_server.js";
-import { getGenImgContractConfig, getViemChain } from "./getChain.js";
+import {
+  getGenImgContractConfig,
+  getViemChain,
+  getUSDCConfig,
+  validatePaymentNetwork,
+  getExpectedNetwork,
+  getChainNameFromEIP155,
+} from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
 
-// Config - MINT_PRICE is static
-const MINT_PRICE = parseEther("0.01"); // 0.01 ETH for minting
+// Config
 const USDC_PAYMENT_AMOUNT = "1000"; // 0.001 USDC (6 decimals)
+const GAS_BUFFER = parseEther("0.00001"); // ~$0.02 buffer for gas on L2
 
 // Transfer-Event for extracting tokenId from mint
 const TRANSFER_EVENT = parseAbiItem(
@@ -39,7 +45,7 @@ const TRANSFER_EVENT = parseAbiItem(
  * Validates server wallet has sufficient balance for minting
  * @param {Object} publicClient - Viem public client
  * @param {string} serverAddress - Server wallet address
- * @param {bigint} mintPrice - Required ETH for minting
+ * @param {bigint} mintPrice - Required ETH for minting (from contract)
  * @param {string} chainName - Human-readable chain name
  * @returns {Promise<{success: boolean, error?: string, details?: any}>}
  */
@@ -47,8 +53,7 @@ async function preFlightChecks(publicClient, serverAddress, mintPrice, chainName
   try {
     // Check: Server wallet balance
     const balance = await publicClient.getBalance({ address: serverAddress });
-    const estimatedGas = parseEther("0.001"); // Conservative gas estimate
-    const requiredBalance = mintPrice + estimatedGas;
+    const requiredBalance = mintPrice + GAS_BUFFER;
 
     if (balance < requiredBalance) {
       const balanceEth = parseFloat(balance.toString()) / 1e18;
@@ -97,6 +102,7 @@ const resourceServer = createResourceServer();
  * @param {string} metadataUrl - Token metadata URL
  * @param {string} contractAddress - NFT contract address for event filtering
  * @param {string} serverWallet - Server wallet address for transfer
+ * @param {bigint} mintPrice - Mint price from contract
  * @returns {Object} {tokenId, mintTxHash, transferTxHash}
  */
 async function mintNFTToClient(
@@ -106,13 +112,14 @@ async function mintNFTToClient(
   metadataUrl,
   contractAddress,
   serverWallet,
+  mintPrice,
 ) {
   console.log(`🎨 Minting NFT to server, then transferring to ${clientAddress}`);
 
   // Step 1: Mint to server wallet
   // Use single-parameter safeMint(uri) - the contract deployed uses this version
   const mintTxHash = await contract.write.safeMint([metadataUrl], {
-    value: MINT_PRICE,
+    value: mintPrice,
   });
 
   console.log(`📝 Mint transaction submitted: ${mintTxHash}`);
@@ -173,6 +180,7 @@ async function mintNFTToClient(
 /**
  * Generates image and mints NFT
  * @param {boolean} useMockImage - If true, use mock image (test mode, no BFL costs)
+ * @param {bigint} mintPrice - Mint price from contract
  */
 async function generateImageAndMintNFT(
   prompt,
@@ -185,6 +193,7 @@ async function generateImageAndMintNFT(
   mode = "generate",
   referenceImageBase64 = null,
   useMockImage = false,
+  mintPrice = BigInt(0),
 ) {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
@@ -197,11 +206,10 @@ async function generateImageAndMintNFT(
   if (useMockImage) {
     // Mock image generation for test mode (no BFL API or S3 costs)
     console.log("🎭 Using mock image (test mode)");
-    
+
     // Use dummy URLs for test mode
     imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
     metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
-    
   } else {
     // Real image generation via BFL API
     metadataUrl = await generateAndUploadImage(
@@ -241,6 +249,7 @@ async function generateImageAndMintNFT(
     metadataUrl,
     contractAddress,
     serverWallet,
+    mintPrice,
   );
 
   return {
@@ -385,7 +394,7 @@ async function handle(event, context, cb) {
     // Test mode: Only Sepolia testnet (no costs)
     // Production: Only Optimism Mainnet (real payments)
     const networks = sepoliaTest ? ["eip155:11155420"] : ["eip155:10"];
-    
+
     if (sepoliaTest) {
       console.log("   Restricting to Sepolia testnet");
     } else {
@@ -407,14 +416,13 @@ async function handle(event, context, cb) {
 
   console.log("🔍 Payment received, verifying...");
 
-  // Extract network from payment payload
-  // x402 v2: Client wählt aus server's accepts array, sendet Auswahl in accepted.network
+  // Extract and validate network from payment payload
   const clientNetwork = paymentPayload?.accepted?.network;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
-  
-  // Validate network matches test mode
-  if (sepoliaTest && clientNetwork !== "eip155:11155420") {
-    console.error(`❌ Test mode requires Sepolia, got: ${clientNetwork}`);
+
+  const networkValidation = validatePaymentNetwork(clientNetwork, sepoliaTest);
+  if (!networkValidation.valid) {
+    console.error(`❌ Network validation failed: ${networkValidation.reason}`);
     return {
       statusCode: 402,
       headers: {
@@ -423,99 +431,29 @@ async function handle(event, context, cb) {
       },
       body: JSON.stringify({
         error: "Payment verification failed",
-        reason: "invalid_network_for_test_mode",
-        message: "Test mode only accepts Sepolia testnet (eip155:11155420)",
-        received: clientNetwork,
-      }),
-    };
-  }
-  
-  if (!sepoliaTest && clientNetwork !== "eip155:10") {
-    console.error(`❌ Production mode requires Optimism Mainnet, got: ${clientNetwork}`);
-    return {
-      statusCode: 402,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: "invalid_network_for_production",
-        message: "Production mode only accepts Optimism Mainnet (eip155:10)",
-        received: clientNetwork,
-      }),
-    };
-  }
-  
-  if (!clientNetwork) {
-    console.error(`❌ No network specified in payment payload`);
-    console.error(`   Payload structure:`, JSON.stringify(paymentPayload, null, 2));
-    return {
-      statusCode: 402,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: "missing_network",
-        message: "Payment payload must specify a network (e.g., eip155:11155420)",
+        reason: networkValidation.reason,
+        expected: networkValidation.expected,
+        received: networkValidation.received,
       }),
     };
   }
 
-  const networkConfig = NETWORK_CONFIG[clientNetwork];
-  if (!networkConfig) {
-    console.error(`❌ Unsupported network: ${clientNetwork}`);
-    return {
-      statusCode: 402,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: "unsupported_network",
-        network: clientNetwork,
-        supported: Object.keys(NETWORK_CONFIG),
-      }),
-    };
-  }
-
-  console.log(`📍 Client selected network: ${networkConfig.name} (${clientNetwork})`);
-
-  // Get contract address for the selected network
-  let contractAddress;
-  try {
-    contractAddress = getGenImgContractConfig(clientNetwork).address;
-  } catch (error) {
-    console.error(`❌ ${error.message}`);
-    return {
-      statusCode: 402,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: "contract_not_deployed",
-        network: clientNetwork,
-        message: error.message,
-      }),
-    };
-  }
+  // Get configurations for validated network
+  const usdcConfig = getUSDCConfig(clientNetwork);
+  const contractAddress = getGenImgContractConfig(clientNetwork).address;
+  console.log(`📍 Client selected network: ${usdcConfig.name} (${clientNetwork})`);
 
   // Build payment requirements for the selected network
   const paymentRequirements = {
     scheme: "exact",
     network: clientNetwork,
     amount: USDC_PAYMENT_AMOUNT,
-    asset: networkConfig.usdc,
+    asset: usdcConfig.address,
     payTo: serverWallet,
     maxTimeoutSeconds: 60,
     extra: {
-      name: networkConfig.usdcName,
-      version: networkConfig.usdcVersion,
+      name: usdcConfig.usdcName,
+      version: usdcConfig.usdcVersion,
     },
   };
 
@@ -563,7 +501,8 @@ async function handle(event, context, cb) {
   try {
     // Get chain from payment network (buyer determines the chain!)
     const viemChain = getViemChain(clientNetwork);
-    console.log(`🔗 Using chain: ${viemChain.name} (id: ${viemChain.id})`);
+    const chainName = getChainNameFromEIP155(clientNetwork);
+    console.log(`🔗 Using chain: ${chainName} (${clientNetwork})`);
 
     const publicClient = createPublicClient({
       chain: viemChain,
@@ -585,15 +524,20 @@ async function handle(event, context, cb) {
       },
     });
 
+    // Read mint price from contract (not hardcoded!)
+    const mintPrice = await contract.read.mintPrice();
+    console.log(
+      `💰 Mint price from contract: ${(parseFloat(mintPrice.toString()) / 1e18).toFixed(6)} ETH`,
+    );
+
     // ====== PRE-FLIGHT CHECKS ======
     // Validate before starting expensive operations (image generation)
     console.log(`🔍 Running pre-flight checks...`);
     const preFlightResult = await preFlightChecks(
       publicClient,
-      sepoliaTest, // Use mock image in test mode
       account.address,
-      MINT_PRICE,
-      viemChain.name,
+      mintPrice,
+      chainName,
     );
 
     if (!preFlightResult.success) {
@@ -623,9 +567,11 @@ async function handle(event, context, cb) {
       size,
       mode,
       referenceImageBase64,
+      sepoliaTest, // useMockImage in test mode
+      mintPrice,
     );
 
-    // Settle payment via x402 Resource Server (async, don't wait)
+    // Settlement is async, don't wait)
     resourceServer
       .settlePayment(paymentPayload, paymentRequirements)
       .then((settlement) => {
@@ -635,9 +581,6 @@ async function handle(event, context, cb) {
         console.error(`⚠️ Settlement failed (non-critical): ${error.message}`);
         // Note: Image already generated and NFT minted, settlement failure is logged but doesn't fail request
       });
-
-    // Get mint price for response
-    const mintPrice = await contract.read.mintPrice();
 
     // Create settlement headers (for client confirmation)
     const settlementHeaders = createSettlementHeaders({
@@ -771,8 +714,12 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
             console.log(`🚀 x402 v2 Token Payment Local Server listening at ${address}`);
             console.log(`   Using @x402/core and @x402/evm packages`);
             console.log(`   NFT Contracts:`);
-            console.log(`     - Optimism Mainnet: 0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb (Production)`);
-            console.log(`     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85 (Test)`);
+            console.log(
+              `     - Optimism Mainnet: 0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb (Production)`,
+            );
+            console.log(
+              `     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85 (Test)`,
+            );
             console.log(`   Network Policy:`);
             console.log(`     - Production: Optimism Mainnet only`);
             console.log(`     - Test mode (sepoliaTest=true): Sepolia only + mock images`);

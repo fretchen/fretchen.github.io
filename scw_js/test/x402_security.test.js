@@ -10,8 +10,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 import {
   extractPaymentPayload,
   createPaymentRequirements,
-  NETWORK_CONFIG,
+  getSupportedNetworks,
 } from "../x402_server.js";
+import { getUSDCConfig } from "../getChain.js";
 import { handle } from "../genimg_x402_token.js";
 
 describe("x402 Security: Header Encoding", () => {
@@ -72,7 +73,9 @@ describe("x402 Security: Network Validation", () => {
   it("should reject payment with no network specified", async () => {
     const paymentPayload = {
       scheme: "exact",
-      // network: missing!
+      accepted: {
+        // network: missing!
+      },
       authorization: { v: 27, r: "0xabc", s: "0xdef" },
       transfer: { from: "0x123", to: "0x456", value: "1000" },
     };
@@ -90,17 +93,18 @@ describe("x402 Security: Network Validation", () => {
 
     const result = await handle(event);
 
-    // Service may return 400 or 402 for invalid payment
-    expect([400, 402]).toContain(result.statusCode);
+    // Service returns 402 for invalid payment
+    expect(result.statusCode).toBe(402);
     const body = JSON.parse(result.body);
-    expect(body.reason || body.error).toMatch(/missing_network|Payment/i);
-    expect(body.message).toContain("must specify a network");
+    expect(body.reason).toBe("missing_network");
   });
 
-  it("should reject unsupported network", async () => {
+  it("should reject unsupported network (production only accepts Mainnet)", async () => {
     const paymentPayload = {
       scheme: "exact",
-      network: "eip155:1", // Ethereum Mainnet - not supported
+      accepted: {
+        network: "eip155:1", // Ethereum Mainnet - not supported in production
+      },
       authorization: { v: 27, r: "0xabc", s: "0xdef" },
       transfer: { from: "0x123", to: "0x456", value: "1000" },
     };
@@ -118,13 +122,12 @@ describe("x402 Security: Network Validation", () => {
 
     const result = await handle(event);
 
-    // Service may return 400 or 402 for invalid payment
-    expect([400, 402]).toContain(result.statusCode);
+    // Production mode rejects all networks except Mainnet
+    expect(result.statusCode).toBe(402);
     const body = JSON.parse(result.body);
-    expect(body.reason || body.error).toMatch(/unsupported_network|Payment/i);
-    expect(body.network).toBe("eip155:1");
-    expect(body.supported).toContain("eip155:10"); // Optimism Mainnet
-    expect(body.supported).toContain("eip155:11155420"); // Optimism Sepolia
+    expect(body.reason).toBe("invalid_network_for_production");
+    expect(body.expected).toBe("eip155:10");
+    expect(body.received).toBe("eip155:1");
   });
 
   it("should accept supported testnet network", async () => {
@@ -165,18 +168,20 @@ describe("x402 Security: Network Validation", () => {
   });
 
   it("should validate all supported networks are configured", () => {
-    const supportedNetworks = [
-      "eip155:10", // Optimism Mainnet
-      "eip155:11155420", // Optimism Sepolia
-      "eip155:8453", // Base Mainnet
-      "eip155:84532", // Base Sepolia
-    ];
+    const supportedNetworks = getSupportedNetworks();
 
+    // Verify we have all expected networks
+    expect(supportedNetworks).toContain("eip155:10"); // Optimism Mainnet
+    expect(supportedNetworks).toContain("eip155:11155420"); // Optimism Sepolia
+    expect(supportedNetworks).toContain("eip155:8453"); // Base Mainnet
+    expect(supportedNetworks).toContain("eip155:84532"); // Base Sepolia
+
+    // Verify each has USDC config
     for (const network of supportedNetworks) {
-      expect(NETWORK_CONFIG[network]).toBeDefined();
-      expect(NETWORK_CONFIG[network].chainId).toBeDefined();
-      expect(NETWORK_CONFIG[network].name).toBeDefined();
-      expect(NETWORK_CONFIG[network].usdc).toBeDefined();
+      const config = getUSDCConfig(network);
+      expect(config.chainId).toBeDefined();
+      expect(config.name).toBeDefined();
+      expect(config.address).toBeDefined();
     }
   });
 });
@@ -203,8 +208,8 @@ describe("x402 Security: Payment Requirements", () => {
 
     // Verify each has correct USDC address
     for (const accept of requirements.accepts) {
-      const config = NETWORK_CONFIG[accept.network];
-      expect(accept.asset).toBe(config.usdc);
+      const config = getUSDCConfig(accept.network);
+      expect(accept.asset).toBe(config.address);
     }
   });
 

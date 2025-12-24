@@ -33,8 +33,8 @@ export function setupGlobalMocks() {
   vi.mock("viem", () => mockViemFunctions);
   vi.mock("viem/chains", () => ({
     sepolia: { id: 11155111, name: "Sepolia" },
-    optimism: { id: 10, name: "Optimism" },
-    optimismSepolia: { id: 11155420, name: "Optimism Sepolia" },
+    optimism: { id: 10, name: "OP Mainnet" },
+    optimismSepolia: { id: 11155420, name: "OP Sepolia" },
     base: { id: 8453, name: "Base" },
     baseSepolia: { id: 84532, name: "Base Sepolia" },
   }));

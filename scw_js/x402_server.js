@@ -7,61 +7,25 @@
 
 import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { getUSDCConfig } from "./getChain.js";
 
 // Facilitator configuration
 const FACILITATOR_URL = process.env.FACILITATOR_URL || "https://facilitator.fretchen.eu";
 
-/**
- * Multi-chain network configuration
- * Maps CAIP-2 network identifiers to chain-specific details
- */
-export const NETWORK_CONFIG = {
-  // ⚠️ ORDER MATTERS: x402 client may choose first matching network!
-  // Put Sepolia first to test client network selection behavior
-  "eip155:11155420": {
-    // Optimism Sepolia
-    name: "Optimism Sepolia",
-    chainId: 11155420,
-    usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-    usdcDecimals: 6,
-    usdcName: "USDC",
-    usdcVersion: "2",
-  },
-  "eip155:10": {
-    // Optimism Mainnet
-    name: "Optimism Mainnet",
-    chainId: 10,
-    usdc: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    usdcDecimals: 6,
-    usdcName: "USDC",
-    usdcVersion: "2",
-  },
-  "eip155:8453": {
-    // Base Mainnet
-    name: "Base Mainnet",
-    chainId: 8453,
-    usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    usdcDecimals: 6,
-    usdcName: "USDC",
-    usdcVersion: "2",
-  },
-  "eip155:84532": {
-    // Base Sepolia
-    name: "Base Sepolia",
-    chainId: 84532,
-    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    usdcDecimals: 6,
-    usdcName: "USDC",
-    usdcVersion: "2",
-  },
-};
+// Supported networks (CAIP-2 identifiers)
+const SUPPORTED_NETWORKS = [
+  "eip155:11155420", // Optimism Sepolia
+  "eip155:10", // Optimism Mainnet
+  "eip155:8453", // Base Mainnet
+  "eip155:84532", // Base Sepolia
+];
 
 /**
  * Get supported networks list
  * @returns {string[]} Array of supported CAIP-2 network identifiers
  */
 export function getSupportedNetworks() {
-  return Object.keys(NETWORK_CONFIG);
+  return SUPPORTED_NETWORKS;
 }
 
 /**
@@ -109,16 +73,13 @@ export function createPaymentRequirements({
 }) {
   // Build accepts array with all supported networks
   const accepts = networks.map((network) => {
-    const config = NETWORK_CONFIG[network];
-    if (!config) {
-      throw new Error(`Unsupported network: ${network}`);
-    }
+    const config = getUSDCConfig(network); // throws if unsupported
 
     return {
       scheme: "exact",
       network,
       amount,
-      asset: config.usdc,
+      asset: config.address,
       payTo,
       maxTimeoutSeconds: 60,
       extra: {

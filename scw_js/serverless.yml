@@ -14,6 +14,7 @@ provider:
     BFL_API_TOKEN: ${env:BFL_API_TOKEN}
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
+    USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
 
 plugins:
   - serverless-scaleway-functions
@@ -28,8 +29,9 @@ functions:
     handler: readhandler_v2.handle
   genimgbfl:
     handler: genimg_bfl.handle
-  genimgx402:
-    handler: genimg_x402.handle
+  genimgx402token:
+    handler: genimg_x402_token.handle
+    description: "x402 v2 Token Payment - Paid image generation with USDC"
   llm:
     handler: sc_llm.handle
   leafhistory:

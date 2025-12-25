@@ -24,7 +24,8 @@ import {
 export { handle, create402Response };
 
 // Config
-const USDC_PAYMENT_AMOUNT = "10000"; // 0.001 USDC (6 decimals)
+// USDC has 6 decimals: 70000 = 0.07 USDC = 7 cents
+const USDC_PAYMENT_AMOUNT = process.env.USDC_PAYMENT_AMOUNT || "70000";
 const GAS_BUFFER = parseEther("0.00001"); // ~$0.02 buffer for gas on L2
 
 // ERC721 Transfer event hash: keccak256("Transfer(address,address,uint256)")

@@ -172,9 +172,7 @@ async function mintNFTToClient(
         error.shortMessage?.includes("ERC721NonexistentToken");
 
       if (isNonExistentTokenError && attempt < MAX_TRANSFER_RETRIES) {
-        console.log(
-          `⏳ RPC state lag detected, waiting ${RETRY_DELAY_MS}ms before retry...`,
-        );
+        console.log(`⏳ RPC state lag detected, waiting ${RETRY_DELAY_MS}ms before retry...`);
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }

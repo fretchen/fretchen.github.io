@@ -8,6 +8,8 @@ export interface X402GenImgRequest {
   mode?: "generate" | "edit";
   referenceImage?: string; // base64 encoded
   sepoliaTest?: boolean;
+  /** Expected chain ID for validation - prevents signing on wrong network */
+  expectedChainId?: number;
 }
 
 export interface X402GenImgResponse {

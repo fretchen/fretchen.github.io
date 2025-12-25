@@ -10,7 +10,7 @@ import { useWalletClient, useAccount } from "wagmi";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 
 // API URL from environment
-const X402_API_URL = import.meta.env.PUBLIC_ENV___IMAGE_URL;
+const X402_API_URL = import.meta.env.PUBLIC_ENV__IMAGE_URL;
 
 export interface UseX402ImageGenerationResult {
   generateImage: (request: X402GenImgRequest) => Promise<X402GenImgResponse>;
@@ -69,12 +69,54 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
 
         // === Make the paid request ===
         console.log("[x402] Making request to:", X402_API_URL);
-        console.log("[x402] Request body:", JSON.stringify(request));
+        // Remove expectedChainId from request body (it's only for client-side validation)
+        const { expectedChainId, ...requestBody } = request;
+        console.log("[x402] Request body:", JSON.stringify(requestBody));
+        console.log("[x402] Expected chain ID for validation:", expectedChainId);
 
+        // First, make a preflight request to get payment requirements for validation
+        // This prevents signing for the wrong chain
+        if (expectedChainId) {
+          console.log("[x402] Making preflight request to validate chain...");
+          const preflightResponse = await fetch(X402_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+          });
+          
+          if (preflightResponse.status === 402) {
+            // Extract network from payment requirements
+            const paymentRequiredHeader = preflightResponse.headers.get("Payment-Required");
+            if (paymentRequiredHeader) {
+              try {
+                const decoded = JSON.parse(atob(paymentRequiredHeader));
+                const serverNetwork = decoded.accepts?.[0]?.network;
+                console.log("[x402] Server requires network:", serverNetwork);
+                
+                // Validate chain matches expectation
+                const expectedNetwork = `eip155:${expectedChainId}`;
+                if (serverNetwork && serverNetwork !== expectedNetwork) {
+                  throw new Error(
+                    `Chain mismatch! Expected ${expectedNetwork} but server requires ${serverNetwork}. ` +
+                    `This could indicate a configuration error.`
+                  );
+                }
+                console.log("[x402] Chain validation passed:", expectedNetwork);
+              } catch (parseError) {
+                if (parseError instanceof Error && parseError.message.includes("Chain mismatch")) {
+                  throw parseError;
+                }
+                console.warn("[x402] Could not parse payment requirements for validation:", parseError);
+              }
+            }
+          }
+        }
+
+        // Now make the actual paid request
         const response = await fetchWithPayment(X402_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(request),
+          body: JSON.stringify(requestBody),
         });
 
         console.log("[x402] Response received, status:", response.status);

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount, useConnect, useSwitchChain, useChainId } from "wagmi";
+import { optimism, optimismSepolia } from "viem/chains";
 import { css } from "../styled-system/css";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
@@ -109,6 +110,12 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  const currentChainId = useChainId();
+
+  // Determine target chain based on testnet setting
+  const useTestnet = import.meta.env.PUBLIC_ENV__USE_TESTNET === "true";
+  const targetChain = useTestnet ? optimismSepolia : optimism;
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -141,6 +148,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const connectAccountFirstText = useLocale({ label: "imagegen.connectAccountFirst" });
   const enterPromptErrorText = useLocale({ label: "imagegen.enterPromptError" });
   const unknownErrorText = useLocale({ label: "imagegen.unknownError" });
+  const chainSwitchFailedText = useLocale({ label: "imagegen.chainSwitchFailed" }) || "Failed to switch network";
+  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" }) || "Switching network...";
 
   // x402 specific messages
   const awaitingSignatureText = useLocale({ label: "imagegen.awaitingSignature" }) || "Sign USDC payment...";
@@ -179,6 +188,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
 
   const getButtonState = (): string => {
+    if (isSwitchingChain) return "switching";
     if (isLoading || x402Status === "awaiting-signature" || x402Status === "processing") return "loading";
     if (!prompt.trim()) return "needsPrompt";
     return "ready";
@@ -186,6 +196,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   const getButtonText = (state: string) => {
     switch (state) {
+      case "switching":
+        return switchingNetworkText;
       case "loading":
         if (x402Status === "awaiting-signature") return awaitingSignatureText;
         if (x402Status === "processing") return processingPaymentText;
@@ -206,7 +218,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Button Components
   const CreateArtworkButton = () => {
     const isDisabled = buttonState === "needsPrompt";
-    const isLoadingState = buttonState === "loading";
+    const isLoadingState = buttonState === "loading" || buttonState === "switching";
 
     const handleClick = () => {
       // Track create artwork attempt with context
@@ -259,6 +271,22 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       return;
     }
 
+    // === Automatic Chain Switch ===
+    // Ensure user is on the correct chain before making payment
+    if (currentChainId !== targetChain.id) {
+      console.log(`[x402] Chain mismatch: current=${currentChainId}, target=${targetChain.id} (${targetChain.name})`);
+      try {
+        await switchChainAsync({ chainId: targetChain.id });
+        console.log(`[x402] Successfully switched to ${targetChain.name}`);
+      } catch (switchError) {
+        console.error("[x402] Chain switch failed:", switchError);
+        const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
+        setError(errorMsg);
+        onError?.(errorMsg);
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -275,7 +303,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         mode,
         referenceImage: isEditMode ? referenceImageBase64 : undefined,
         // Use testnet: controlled by PUBLIC_ENV__USE_TESTNET
-        sepoliaTest: import.meta.env.PUBLIC_ENV__USE_TESTNET === "true",
+        sepoliaTest: useTestnet,
+        // Pass expected chain ID for validation in hook
+        expectedChainId: targetChain.id,
       });
 
       console.log("[x402] Image generation completed:", result);

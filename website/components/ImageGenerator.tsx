@@ -274,8 +274,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         size,
         mode,
         referenceImage: isEditMode ? referenceImageBase64 : undefined,
-        // Use testnet: controlled by PUBLIC_ENV__USE_TESTNET or defaults to DEV mode
-        sepoliaTest: import.meta.env.PUBLIC_ENV__USE_TESTNET === "true" || import.meta.env.DEV,
+        // Use testnet: controlled by PUBLIC_ENV__USE_TESTNET
+        sepoliaTest: import.meta.env.PUBLIC_ENV__USE_TESTNET === "true",
       });
 
       console.log("[x402] Image generation completed:", result);

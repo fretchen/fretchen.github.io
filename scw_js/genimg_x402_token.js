@@ -633,7 +633,10 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
         fastify.register(corsModule.default, {
           origin: true,
           methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: ["Content-Type", "Authorization", "X-Payment"],
+          // Allow ALL headers for x402 payment protocol (PAYMENT-SIGNATURE, etc.)
+          allowedHeaders: "*",
+          // Expose payment response headers to browser JavaScript
+          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
         });
 
         // URL Data Plugin for Query Parameters

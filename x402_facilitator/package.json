@@ -40,11 +40,11 @@
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@scaleway/serverless-functions": "^1.1.2",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^4.0.16",
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
     "serverless-scaleway-functions": ">=0.4.16",
-    "vitest": "^2.1.8"
+    "vitest": "^4.0.16"
   },
   "engines": {
     "node": ">=18.0.0"

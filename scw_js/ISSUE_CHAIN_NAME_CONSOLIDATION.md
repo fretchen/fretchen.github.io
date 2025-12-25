@@ -1,9 +1,11 @@
 # GitHub Issue: Chain-Namen Konsolidierung
 
 ## Titel
+
 `refactor: Consolidate chain name handling across codebase`
 
 ## Labels
+
 - `enhancement`
 - `tech-debt`
 - `x402`
@@ -14,23 +16,26 @@
 
 Es existieren **drei verschiedene Namenskonventionen** für Chain-Namen im Codebase:
 
-| Quelle | Optimism Mainnet | Optimism Sepolia |
-|--------|------------------|------------------|
-| **viem/chains** (Bibliothek) | `"OP Mainnet"` | `"OP Sepolia"` |
-| **getUSDCConfig()** | `"Optimism Mainnet"` | `"Optimism Sepolia"` |
-| **Einige Tests** | `"Optimism"` | `"Optimism Sepolia"` |
+| Quelle                       | Optimism Mainnet     | Optimism Sepolia     |
+| ---------------------------- | -------------------- | -------------------- |
+| **viem/chains** (Bibliothek) | `"OP Mainnet"`       | `"OP Sepolia"`       |
+| **getUSDCConfig()**          | `"Optimism Mainnet"` | `"Optimism Sepolia"` |
+| **Einige Tests**             | `"Optimism"`         | `"Optimism Sepolia"` |
 
 ### Betroffene Stellen
 
 #### Produktion
+
 - `genimg_x402_token.js` Zeile 503: `viemChain.name` → `"OP Mainnet"` / `"OP Sepolia"`
 - `genimg_x402_token.js` Zeile 443: `usdcConfig.name` → `"Optimism Mainnet"` / `"Optimism Sepolia"`
 - `genimg_x402_token.js` Zeile 536: `viemChain.name` wird an `preFlightChecks()` übergeben
 
 #### Konfiguration
+
 - `getChain.js` `getUSDCConfig()`: Eigene Namen definiert
 
 #### Tests
+
 - `preflight_checks.test.js`: Erwartet teilweise `"Optimism Sepolia"`, teilweise `"Optimism"`
 - `setup.ts`: viem/chains Mock mit echten viem-Namen
 
@@ -47,6 +52,7 @@ Es existieren **drei verschiedene Namenskonventionen** für Chain-Namen im Codeb
 ## Vorgeschlagene Lösung: Option D - getUSDCConfig als Single Source of Truth
 
 ### Begründung
+
 1. `getUSDCConfig()` ist bereits zentral und enthält alle relevanten Informationen
 2. Die Namen dort (`"Optimism Sepolia"`) sind leserlicher als viem-Namen (`"OP Sepolia"`)
 3. viem-Namen könnten sich in Library-Updates ändern
@@ -68,12 +74,12 @@ Es existieren **drei verschiedene Namenskonventionen** für Chain-Namen im Codeb
 
 ### Alternative Optionen
 
-| Option | Beschreibung | Pro | Contra |
-|--------|--------------|-----|--------|
-| **A** | Alle auf viem-Namen | Konsistenz mit Lib | Kurze Namen, Library-abhängig |
-| **B** | Alle auf lesbare Namen | Benutzerfreundlich | Abweichung von viem |
-| **C** | Neue `getChainDisplayName()` | Klare Trennung | Mehr Abstraktion |
-| **D** ✅ | `getUSDCConfig()` als Source | Bereits vorhanden | - |
+| Option   | Beschreibung                 | Pro                | Contra                        |
+| -------- | ---------------------------- | ------------------ | ----------------------------- |
+| **A**    | Alle auf viem-Namen          | Konsistenz mit Lib | Kurze Namen, Library-abhängig |
+| **B**    | Alle auf lesbare Namen       | Benutzerfreundlich | Abweichung von viem           |
+| **C**    | Neue `getChainDisplayName()` | Klare Trennung     | Mehr Abstraktion              |
+| **D** ✅ | `getUSDCConfig()` als Source | Bereits vorhanden  | -                             |
 
 ---
 

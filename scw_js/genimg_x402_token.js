@@ -17,7 +17,6 @@ import {
   getViemChain,
   getUSDCConfig,
   validatePaymentNetwork,
-  getExpectedNetwork,
   getChainNameFromEIP155,
 } from "./getChain.js";
 

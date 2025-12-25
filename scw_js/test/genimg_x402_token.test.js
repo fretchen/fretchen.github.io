@@ -1089,7 +1089,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         httpMethod: "POST",
         headers: {
           "x-payment": JSON.stringify({
-            accepted: { network: "eip155:11155420", asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
+            accepted: {
+              network: "eip155:11155420",
+              asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+            },
             payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
           }),
         },
@@ -1123,7 +1126,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         httpMethod: "POST",
         headers: {
           "x-payment": JSON.stringify({
-            accepted: { network: "eip155:11155420", asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
+            accepted: {
+              network: "eip155:11155420",
+              asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+            },
             payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
           }),
         },
@@ -1186,7 +1192,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
   describe("Security: Payment Requirements", () => {
     test("should create payment requirements with all supported networks", async () => {
-      const { createPaymentRequirements, getSupportedNetworks } = await import("../x402_server.js");
+      const { createPaymentRequirements } = await import("../x402_server.js");
       const { getUSDCConfig } = await import("../getChain.js");
 
       const requirements = createPaymentRequirements({

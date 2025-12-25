@@ -18,7 +18,7 @@ export default {
     creating: "Wird erstellt...",
     generating: "Wird generiert...",
     mintingInfo:
-      "Registrierung auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
+      "Zahlung mit USDC auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
     myArtworks: "Meine Kunstwerke",
     allPublicArtworks: "Alle öffentlichen Kunstwerke",
     artwork: "Kunstwerk",
@@ -36,6 +36,13 @@ export default {
     chainSwitchTimeout: "Netzwerkwechsel-Timeout - bitte versuche es erneut",
     extractTokenId: "Kunstwerk-ID konnte nicht aus der Transaktion extrahiert werden",
     unknownError: "Ein unbekannter Fehler ist aufgetreten",
+    chainSwitchFailed: "Netzwerkwechsel fehlgeschlagen - bitte erneut versuchen",
+    // x402 Zahlung
+    awaitingSignature: "USDC-Zahlung in Wallet signieren...",
+    processingPayment: "Zahlung wird verarbeitet...",
+    mintingNft: "Dein NFT wird erstellt...",
+    paymentConfirmed: "Zahlung bestätigt!",
+    usdcCost: "Kosten: $0,07 USDC",
     // File upload
     uploadReferenceImage: "Referenzbild hochladen (Optional)",
     dragDropHere: "Bild hierher ziehen oder klicken zum Durchsuchen",

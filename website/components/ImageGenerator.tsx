@@ -148,12 +148,12 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const connectAccountFirstText = useLocale({ label: "imagegen.connectAccountFirst" });
   const enterPromptErrorText = useLocale({ label: "imagegen.enterPromptError" });
   const unknownErrorText = useLocale({ label: "imagegen.unknownError" });
-  const chainSwitchFailedText = useLocale({ label: "imagegen.chainSwitchFailed" }) || "Failed to switch network";
-  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" }) || "Switching network...";
+  const chainSwitchFailedText = useLocale({ label: "imagegen.chainSwitchFailed" });
+  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
 
   // x402 specific messages
-  const awaitingSignatureText = useLocale({ label: "imagegen.awaitingSignature" }) || "Sign USDC payment...";
-  const processingPaymentText = useLocale({ label: "imagegen.processingPayment" }) || "Processing...";
+  const awaitingSignatureText = useLocale({ label: "imagegen.awaitingSignature" });
+  const processingPaymentText = useLocale({ label: "imagegen.processingPayment" });
 
   // File upload
   const uploadReferenceImageText = useLocale({ label: "imagegen.uploadReferenceImage" });

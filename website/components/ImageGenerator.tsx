@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAccount, useConnect, useSwitchChain, useChainId } from "wagmi";
-import { optimism, optimismSepolia } from "viem/chains";
 import { css } from "../styled-system/css";
+import { getChain } from "../utils/getChain";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
@@ -113,9 +113,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const currentChainId = useChainId();
 
-  // Determine target chain based on testnet setting
-  const useTestnet = import.meta.env.PUBLIC_ENV__USE_TESTNET === "true";
-  const targetChain = useTestnet ? optimismSepolia : optimism;
+  // Determine target chain from centralized config (PUBLIC_ENV__CHAIN_NAME)
+  const targetChain = getChain();
+  const useTestnet = targetChain.id === 11155420; // optimismSepolia.id
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -302,7 +302,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         size,
         mode,
         referenceImage: isEditMode ? referenceImageBase64 : undefined,
-        // Use testnet: controlled by PUBLIC_ENV__USE_TESTNET
+        // Use testnet: derived from PUBLIC_ENV__CHAIN_NAME
         sepoliaTest: useTestnet,
         // Pass expected chain ID for validation in hook
         expectedChainId: targetChain.id,

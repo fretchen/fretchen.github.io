@@ -2,13 +2,7 @@
 // Uses official @x402/core and @x402/evm packages for payment handling
 
 import { nftAbi } from "./nft_abi.js";
-import {
-  getContract,
-  createWalletClient,
-  createPublicClient,
-  http,
-  parseEther,
-} from "viem";
+import { getContract, createWalletClient, createPublicClient, http, parseEther } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 import {
@@ -31,7 +25,7 @@ import {
 export { handle, create402Response };
 
 // Config
-const USDC_PAYMENT_AMOUNT = "1000"; // 0.001 USDC (6 decimals)
+const USDC_PAYMENT_AMOUNT = "10000"; // 0.001 USDC (6 decimals)
 const GAS_BUFFER = parseEther("0.00001"); // ~$0.02 buffer for gas on L2
 
 // ERC721 Transfer event hash: keccak256("Transfer(address,address,uint256)")

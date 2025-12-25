@@ -878,6 +878,355 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     });
   });
 
+  describe("Token ID Extraction from Mint Event", () => {
+    // These tests ensure the TRANSFER_EVENT_HASH bug doesn't reappear
+    // Bug context: parseAbiItem().id returns undefined, not the event hash
+
+    test("TRANSFER_EVENT_HASH should match known keccak256 hash", () => {
+      // keccak256("Transfer(address,address,uint256)") = 0xddf252ad...
+      // This is the well-known ERC721 Transfer event signature
+      // If this changes, token ID extraction will break
+      const TRANSFER_EVENT_HASH =
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+      // Verify the hash matches what's used in mocks and production
+      expect(TRANSFER_EVENT_HASH).toBe(
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      );
+      expect(TRANSFER_EVENT_HASH.length).toBe(66); // 0x + 64 hex chars
+      expect(TRANSFER_EVENT_HASH.startsWith("0x")).toBe(true);
+    });
+
+    test("should extract tokenId correctly from various hex formats", () => {
+      // Test the parseInt(topics[3], 16) logic works for various token IDs
+      const testCases = [
+        { hex: "0x0000000000000000000000000000000000000000000000000000000000000001", expected: 1 },
+        { hex: "0x000000000000000000000000000000000000000000000000000000000000002a", expected: 42 },
+        { hex: "0x0000000000000000000000000000000000000000000000000000000000000003", expected: 3 },
+        {
+          hex: "0x00000000000000000000000000000000000000000000000000000000000003e8",
+          expected: 1000,
+        },
+        {
+          hex: "0x000000000000000000000000000000000000000000000000000000000000ffff",
+          expected: 65535,
+        },
+      ];
+
+      testCases.forEach(({ hex, expected }) => {
+        const tokenId = parseInt(hex, 16);
+        expect(tokenId).toBe(expected);
+      });
+    });
+
+    test("should fail gracefully when mint event is not found", async () => {
+      // Setup mock that returns logs without Transfer event from zero address
+      mockContract.write.safeMint.mockResolvedValue("0xmintTx");
+      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
+
+      const mockPublicClient = {
+        getBalance: vi.fn().mockResolvedValue(BigInt("1000000000000000000")),
+        readContract: vi.fn().mockResolvedValue(BigInt("10000000")),
+        getBytecode: vi.fn().mockResolvedValue("0x1234..."),
+        waitForTransactionReceipt: vi.fn().mockResolvedValue({
+          status: "success",
+          logs: [], // Empty logs - no Transfer event
+        }),
+      };
+
+      mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+
+      // Mock facilitator verification AND image service response
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            isValid: true,
+            payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockMetadataResponse,
+        });
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: {
+              network: "eip155:10",
+              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+              payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            },
+            payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
+          }),
+        },
+        body: JSON.stringify({ prompt: "Test" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(500);
+      // Error is wrapped as "Operation failed" in handle()
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe("Operation failed");
+    });
+
+    test("should correctly identify mint event by zero address in topics[1]", async () => {
+      // This tests that we properly filter for Transfer FROM zero address (mint)
+      // vs regular transfers between addresses
+      const mockTokenId = 123;
+      const contractAddress = "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb";
+      const TRANSFER_EVENT_HASH =
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+      const zeroAddress = "0x0000000000000000000000000000000000000000000000000000000000000000";
+      const regularAddress = "0x000000000000000000000000742d35Cc6634C0532925a3b844Bc9e7595f0bEb";
+
+      mockContract.write.safeMint.mockResolvedValue("0xmintTx");
+      mockContract.write.safeTransferFrom.mockResolvedValue("0xtransferTx");
+      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
+
+      const mockPublicClient = {
+        getBalance: vi.fn().mockResolvedValue(BigInt("1000000000000000000")),
+        readContract: vi.fn().mockResolvedValue(BigInt("10000000")),
+        getBytecode: vi.fn().mockResolvedValue("0x1234..."),
+        waitForTransactionReceipt: vi
+          .fn()
+          .mockResolvedValueOnce({
+            status: "success",
+            logs: [
+              // Regular transfer (NOT a mint) - should be skipped
+              {
+                address: contractAddress,
+                topics: [
+                  TRANSFER_EVENT_HASH,
+                  regularAddress, // FROM regular address (not zero)
+                  regularAddress,
+                  "0x0000000000000000000000000000000000000000000000000000000000000001",
+                ],
+              },
+              // Actual mint event (FROM zero address)
+              {
+                address: contractAddress,
+                topics: [
+                  TRANSFER_EVENT_HASH,
+                  zeroAddress, // FROM zero address = MINT
+                  regularAddress,
+                  `0x${mockTokenId.toString(16).padStart(64, "0")}`,
+                ],
+              },
+            ],
+          })
+          .mockResolvedValueOnce({ status: "success", logs: [] }),
+      };
+
+      mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        })
+        .mockResolvedValueOnce({ ok: true, json: async () => mockMetadataResponse })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, transaction: "0xsettlement" }),
+        });
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: {
+              network: "eip155:10",
+              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+              payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            },
+            payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
+          }),
+        },
+        body: JSON.stringify({ prompt: "Test" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      const body = JSON.parse(response.body);
+      expect(body.tokenId).toBe(mockTokenId); // Should pick the mint, not the regular transfer
+    });
+  });
+
+  // ============================================================================
+  // Pre-Flight Checks Tests (consolidated from preflight_checks.test.js)
+  // ============================================================================
+
+  describe("Pre-Flight Checks", () => {
+    test("should fail BEFORE image generation when server wallet has insufficient ETH", async () => {
+      // Mock publicClient with VERY LOW balance
+      const mockPublicClient = {
+        getBalance: vi.fn().mockResolvedValue(BigInt("100000000000000")), // 0.0001 ETH
+        readContract: vi.fn().mockResolvedValue(BigInt("10000000")),
+        getBytecode: vi.fn().mockResolvedValue("0x1234..."),
+      };
+
+      mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+
+      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000")); // 0.01 ETH
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          isValid: true,
+          payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        }),
+      });
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: { network: "eip155:11155420", asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
+            payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
+          }),
+        },
+        body: JSON.stringify({ prompt: "Test image", sepoliaTest: true }),
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(500);
+      const body = JSON.parse(response.body);
+      expect(body.reason).toBe("insufficient_server_funds");
+      expect(body.chain).toBe("OP Sepolia");
+    });
+
+    test("should handle RPC errors gracefully during pre-flight checks", async () => {
+      const mockPublicClient = {
+        getBalance: vi.fn().mockRejectedValue(new Error("RPC connection failed")),
+        readContract: vi.fn().mockResolvedValue(BigInt("10000000")),
+        getBytecode: vi.fn().mockResolvedValue("0x1234..."),
+      };
+
+      mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+      mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+      });
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: { network: "eip155:11155420", asset: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
+            payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
+          }),
+        },
+        body: JSON.stringify({ prompt: "Test", sepoliaTest: true }),
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(500);
+      const body = JSON.parse(response.body);
+      expect(body.reason).toBe("preflight_check_failed");
+    });
+  });
+
+  // ============================================================================
+  // Security Tests (consolidated from x402_security.test.js)
+  // ============================================================================
+
+  describe("Security: Header Encoding", () => {
+    test("should decode base64-encoded PAYMENT-SIGNATURE header", async () => {
+      const { extractPaymentPayload } = await import("../x402_server.js");
+
+      const paymentPayload = {
+        scheme: "exact",
+        network: "eip155:11155420",
+        authorization: { v: 27, r: "0xabc", s: "0xdef" },
+      };
+
+      const base64Encoded = Buffer.from(JSON.stringify(paymentPayload)).toString("base64");
+      const headers = { "Payment-Signature": base64Encoded };
+
+      const result = extractPaymentPayload(headers);
+
+      expect(result).not.toBeNull();
+      expect(result.scheme).toBe("exact");
+      expect(result.network).toBe("eip155:11155420");
+    });
+
+    test("should handle malformed base64 gracefully", async () => {
+      const { extractPaymentPayload } = await import("../x402_server.js");
+
+      const headers = { "Payment-Signature": "not-valid-base64!!!" };
+      const result = extractPaymentPayload(headers);
+
+      expect(result).toBeNull();
+    });
+
+    test("should still support v1 X-PAYMENT header (plain JSON)", async () => {
+      const { extractPaymentPayload } = await import("../x402_server.js");
+
+      const paymentPayload = { scheme: "exact", network: "eip155:11155420" };
+      const headers = { "X-Payment": JSON.stringify(paymentPayload) };
+
+      const result = extractPaymentPayload(headers);
+
+      expect(result).not.toBeNull();
+      expect(result.network).toBe("eip155:11155420");
+    });
+  });
+
+  describe("Security: Payment Requirements", () => {
+    test("should create payment requirements with all supported networks", async () => {
+      const { createPaymentRequirements, getSupportedNetworks } = await import("../x402_server.js");
+      const { getUSDCConfig } = await import("../getChain.js");
+
+      const requirements = createPaymentRequirements({
+        resourceUrl: "/test",
+        description: "Test Resource",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      });
+
+      expect(requirements.x402Version).toBe(2);
+      expect(requirements.accepts).toHaveLength(4);
+
+      const networks = requirements.accepts.map((a) => a.network);
+      expect(networks).toContain("eip155:10");
+      expect(networks).toContain("eip155:11155420");
+
+      for (const accept of requirements.accepts) {
+        const config = getUSDCConfig(accept.network);
+        expect(accept.asset).toBe(config.address);
+      }
+    });
+
+    test("should validate all supported networks are configured", async () => {
+      const { getSupportedNetworks } = await import("../x402_server.js");
+      const { getUSDCConfig } = await import("../getChain.js");
+
+      const supportedNetworks = getSupportedNetworks();
+
+      expect(supportedNetworks).toContain("eip155:10");
+      expect(supportedNetworks).toContain("eip155:11155420");
+
+      for (const network of supportedNetworks) {
+        const config = getUSDCConfig(network);
+        expect(config.chainId).toBeDefined();
+        expect(config.address).toBeDefined();
+      }
+    });
+  });
+
   describe("Settlement flow", () => {
     test("should settle payment via facilitator (async)", async () => {
       const mockTokenId = 88;

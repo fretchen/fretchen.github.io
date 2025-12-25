@@ -30,11 +30,7 @@ const config = {
     },
   },
   etherscan: {
-    apiKey: {
-      sepolia: ETHERSCAN_API_KEY,
-      optsepolia: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
-      optimisticEthereum: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
-    },
+    apiKey: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
     customChains: [
       {
         network: "optsepolia",

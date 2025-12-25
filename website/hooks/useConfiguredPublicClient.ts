@@ -15,6 +15,7 @@ import { getChain } from "../utils/getChain";
 export function useConfiguredPublicClient() {
   return useMemo(() => {
     const chain = getChain();
-    return getPublicClient({ ...config, chains: [chain] });
+    // Must pass chainId explicitly to get the correct chain's public client
+    return getPublicClient(config, { chainId: chain.id });
   }, []);
 }

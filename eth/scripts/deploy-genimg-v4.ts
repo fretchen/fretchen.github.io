@@ -13,18 +13,15 @@ const GenImV4DeployConfigSchema = z.object({
     agentWallet: z
       .string()
       .optional()
-      .refine(
-        (addr) => {
-          if (!addr) return true;
-          try {
-            getAddress(addr);
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        "Invalid agent wallet address format",
-      ),
+      .refine((addr) => {
+        if (!addr) return true;
+        try {
+          getAddress(addr);
+          return true;
+        } catch {
+          return false;
+        }
+      }, "Invalid agent wallet address format"),
   }),
   options: z.object({
     validateOnly: z.boolean(),
@@ -118,8 +115,6 @@ async function validateDeployment(): Promise<void> {
 async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
   console.log("🧪 Simulating GenImNFTv4 deployment...");
 
-  const GenImNFTv4Factory = await ethers.getContractFactory("GenImNFTv4");
-
   console.log("📋 Deployment parameters:");
   console.log(`  - Mint Price: ${config.parameters.mintPrice} ETH`);
   console.log(`  - Agent Wallet: ${config.parameters.agentWallet || "Not specified (can be set after deployment)"}`);
@@ -199,9 +194,7 @@ async function deployGenImV4() {
   console.log("✅ GenImNFTv4 deployed successfully!");
   console.log("=".repeat(60));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
-  console.log(
-    `📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`,
-  );
+  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
   console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
@@ -238,8 +231,7 @@ async function deployGenImV4() {
 
   // Verify deployment
   console.log("🔍 Verifying deployment...");
-  const implementationAddress =
-    await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
   console.log(`📄 Contract deployed at: ${proxyAddress}`);
 

@@ -143,15 +143,50 @@ async function mintNFTToClient(
   const tokenId = parseInt(mintLog.topics[3], 16);
   console.log(`✅ NFT minted: tokenId=${tokenId}`);
 
-  // Step 2: Transfer to client
-  // Note: We trust the event log - no ownerOf check needed (avoids RPC lag issues)
-  const transferTxHash = await contract.write.safeTransferFrom([
-    serverWallet,
-    clientAddress,
-    BigInt(tokenId),
-  ]);
+  // Step 2: Transfer to client with retry logic
+  // Public RPCs on testnets can lag behind - retry if token appears non-existent
+  const MAX_TRANSFER_RETRIES = 3;
+  const RETRY_DELAY_MS = 2000;
 
-  console.log(`📤 Transfer transaction submitted: ${transferTxHash}`);
+  let transferTxHash;
+  let lastError;
+
+  for (let attempt = 1; attempt <= MAX_TRANSFER_RETRIES; attempt++) {
+    try {
+      console.log(`📤 Transfer attempt ${attempt}/${MAX_TRANSFER_RETRIES}...`);
+
+      transferTxHash = await contract.write.safeTransferFrom([
+        serverWallet,
+        clientAddress,
+        BigInt(tokenId),
+      ]);
+
+      console.log(`📤 Transfer transaction submitted: ${transferTxHash}`);
+      break; // Success - exit retry loop
+    } catch (error) {
+      lastError = error;
+
+      // Check if this is an RPC state lag error (token appears non-existent)
+      const isNonExistentTokenError =
+        error.message?.includes("ERC721NonexistentToken") ||
+        error.shortMessage?.includes("ERC721NonexistentToken");
+
+      if (isNonExistentTokenError && attempt < MAX_TRANSFER_RETRIES) {
+        console.log(
+          `⏳ RPC state lag detected, waiting ${RETRY_DELAY_MS}ms before retry...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+
+      // For other errors or final attempt, throw
+      throw error;
+    }
+  }
+
+  if (!transferTxHash) {
+    throw lastError || new Error("Transfer failed after retries");
+  }
 
   // Wait for transfer confirmation
   const transferReceipt = await publicClient.waitForTransactionReceipt({

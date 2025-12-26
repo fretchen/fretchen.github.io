@@ -47,10 +47,8 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
 
       try {
         // === Dynamic imports (browser-only, like the notebook) ===
-        console.log("[x402] Loading x402 packages...");
         const { x402Client, wrapFetchWithPayment, x402HTTPClient } = await import("@x402/fetch");
         const { registerExactEvmScheme } = await import("@x402/evm/exact/client");
-        console.log("[x402] Packages loaded successfully");
 
         // === Create signer adapter for wagmi WalletClient ===
         // The notebook uses privateKeyToAccount which returns { address, signTypedData }
@@ -59,20 +57,15 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
           address: walletClient.account.address,
           signTypedData: walletClient.signTypedData.bind(walletClient),
         };
-        console.log("[x402] Signer created:", signer.address);
 
         // === Setup x402 client (exactly like Quickstart) ===
         const client = new x402Client();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x402 SDK expects specific signer interface
         registerExactEvmScheme(client, { signer: signer as any });
-        console.log("[x402] x402Client created and EVM scheme registered");
 
         // === Make the paid request ===
-        console.log("[x402] Making request to:", X402_API_URL);
         // Remove expectedChainId from request body (it's only for client-side validation)
         const { expectedChainId, ...requestBody } = request;
-        console.log("[x402] Request body:", JSON.stringify(requestBody));
-        console.log("[x402] Expected chain ID for validation:", expectedChainId);
 
         // === Create a validating fetch wrapper ===
         // This validates the chain from the 402 response BEFORE signing,
@@ -95,12 +88,11 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
                       `This could indicate a configuration error.`,
                   );
                 }
-                console.log("[x402] Chain validation passed:", expectedNetwork);
               } catch (parseError) {
                 if (parseError instanceof Error && parseError.message.includes("Chain mismatch")) {
                   throw parseError;
                 }
-                console.warn("[x402] Could not parse payment requirements for validation:", parseError);
+                // Silently continue if header parsing fails - the request will proceed
               }
             }
           }
@@ -118,17 +110,14 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
           body: JSON.stringify(requestBody),
         });
 
-        console.log("[x402] Response received, status:", response.status);
         setStatus("processing");
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("[x402] Error response:", errorText);
           throw new Error(`Request failed: ${response.status} - ${errorText}`);
         }
 
         const result: X402GenImgResponse = await response.json();
-        console.log("[x402] Success! TokenId:", result.tokenId);
 
         // === Extract payment receipt (like Quickstart step 3) ===
         try {
@@ -139,17 +128,15 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
               transaction: receipt.transaction,
               network: receipt.network,
             });
-            console.log("[x402] Payment settled:", receipt.transaction);
           }
-        } catch (e) {
-          console.warn("[x402] Could not extract payment receipt:", e);
+        } catch {
+          // Payment receipt extraction is optional - continue without it
         }
 
         setStatus("success");
         return result;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        console.error("[x402] Error:", errorMessage, err);
         setError(errorMessage);
         setStatus("error");
         throw err;

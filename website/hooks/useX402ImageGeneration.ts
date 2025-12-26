@@ -11,6 +11,7 @@ import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402Gen
 
 // API URL from environment
 const X402_API_URL = "https://mypersonaljscloudivnad9dy-genimgx402token.functions.fnc.fr-par.scw.cloud" || import.meta.env.PUBLIC_ENV__IMAGE_URL;
+// const X402_API_URL = import.meta.env.PUBLIC_ENV__IMAGE_URL;
 
 export interface UseX402ImageGenerationResult {
   generateImage: (request: X402GenImgRequest) => Promise<X402GenImgResponse>;

@@ -95,6 +95,7 @@ const resourceServer = createResourceServer();
  * @param {string} contractAddress - NFT contract address for event filtering
  * @param {string} serverWallet - Server wallet address for transfer
  * @param {bigint} mintPrice - Mint price from contract
+ * @param {boolean} isListed - Whether to list the NFT in public gallery
  * @returns {Object} {tokenId, mintTxHash, transferTxHash}
  */
 async function mintNFTToClient(
@@ -105,12 +106,15 @@ async function mintNFTToClient(
   contractAddress,
   serverWallet,
   mintPrice,
+  isListed = false,
 ) {
-  console.log(`🎨 Minting NFT to server, then transferring to ${clientAddress}`);
+  console.log(
+    `🎨 Minting NFT to server (isListed=${isListed}), then transferring to ${clientAddress}`,
+  );
 
   // Step 1: Mint to server wallet
-  // Use single-parameter safeMint(uri) - the contract deployed uses this version
-  const mintTxHash = await contract.write.safeMint([metadataUrl], {
+  // Use safeMint(uri, isListed) to set public gallery visibility
+  const mintTxHash = await contract.write.safeMint([metadataUrl, isListed], {
     value: mintPrice,
   });
 
@@ -208,6 +212,7 @@ async function mintNFTToClient(
  * Generates image and mints NFT
  * @param {boolean} useMockImage - If true, use mock image (test mode, no BFL costs)
  * @param {bigint} mintPrice - Mint price from contract
+ * @param {boolean} isListed - Whether to list the NFT in public gallery
  */
 async function generateImageAndMintNFT(
   prompt,
@@ -221,6 +226,7 @@ async function generateImageAndMintNFT(
   referenceImageBase64 = null,
   useMockImage = false,
   mintPrice = BigInt(0),
+  isListed = false,
 ) {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
@@ -277,6 +283,7 @@ async function generateImageAndMintNFT(
     contractAddress,
     serverWallet,
     mintPrice,
+    isListed,
   );
 
   return {
@@ -372,6 +379,7 @@ async function handle(event, context, cb) {
   // Get optional parameters
   const mode = body.mode || "generate";
   const size = body.size || "1024x1024";
+  const isListed = body.isListed === true; // Default: false (not listed in public gallery)
 
   // Validate size parameter
   const validSizes = ["1024x1024", "1792x1024"];
@@ -596,6 +604,7 @@ async function handle(event, context, cb) {
       referenceImageBase64,
       sepoliaTest, // useMockImage in test mode
       mintPrice,
+      isListed,
     );
 
     // Settlement is async, don't wait)
@@ -623,6 +632,7 @@ async function handle(event, context, cb) {
         network: clientNetwork,
         size,
         mode,
+        isListed,
         mintPrice: mintPrice.toString(),
         message: `Image successfully ${mode === "edit" ? "edited" : "generated"} and NFT minted`,
       }),

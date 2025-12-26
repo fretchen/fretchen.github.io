@@ -306,6 +306,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         sepoliaTest: useTestnet,
         // Pass expected chain ID for validation in hook
         expectedChainId: targetChain.id,
+        // Whether to list in public gallery
+        isListed,
       });
 
       console.log("[x402] Image generation completed:", result);

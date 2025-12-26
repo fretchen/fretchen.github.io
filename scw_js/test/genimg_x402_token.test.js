@@ -1291,6 +1291,112 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     });
   });
 
+  describe("isListed Parameter", () => {
+    test("should pass isListed=true to safeMint when specified", async () => {
+      const mockTokenId = 55;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: {
+              network: "eip155:10",
+              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+              payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            },
+            payload: {
+              authorization: {
+                from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              },
+            },
+          }),
+        },
+        body: JSON.stringify({
+          prompt: "Test with isListed",
+          isListed: true,
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      const body = JSON.parse(response.body);
+      expect(body.isListed).toBe(true);
+      expect(body.tokenId).toBe(mockTokenId);
+    });
+
+    test("should default isListed to false when not specified", async () => {
+      const mockTokenId = 56;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: {
+              network: "eip155:10",
+              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+              payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            },
+            payload: {
+              authorization: {
+                from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              },
+            },
+          }),
+        },
+        body: JSON.stringify({
+          prompt: "Test without isListed",
+          // isListed not specified
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      const body = JSON.parse(response.body);
+      expect(body.isListed).toBe(false);
+    });
+
+    test("should treat non-boolean isListed values as false", async () => {
+      const mockTokenId = 57;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify({
+            accepted: {
+              network: "eip155:10",
+              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+              payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            },
+            payload: {
+              authorization: {
+                from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              },
+            },
+          }),
+        },
+        body: JSON.stringify({
+          prompt: "Test with string isListed",
+          isListed: "true", // String instead of boolean
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      const body = JSON.parse(response.body);
+      // Should be false because "true" !== true (strict comparison)
+      expect(body.isListed).toBe(false);
+    });
+  });
+
   describe("Settlement flow", () => {
     test("should settle payment via facilitator (async)", async () => {
       const mockTokenId = 88;

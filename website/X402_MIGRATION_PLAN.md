@@ -457,3 +457,105 @@ Falls Probleme auftreten:
 2. **Dependencies** installieren und testen
 3. **Hook** entwickeln (isoliert testbar)
 4. **Schrittweise Migration** des ImageGenerator
+---
+
+## Phase 8: `isListed` Parameter Integration
+
+### 8.1 Hintergrund
+
+Der `isListed` Parameter steuert, ob ein NFT in der öffentlichen Galerie sichtbar ist:
+- `true`: NFT erscheint in "All Public Artworks"
+- `false` (default): NFT bleibt privat
+
+**Contract-Funktionen (`GenImNFTv4.sol`):**
+```solidity
+function safeMint(string memory uri) public payable returns (uint256)
+function safeMint(string memory uri, bool isListed) public payable returns (uint256)
+```
+
+### 8.2 Änderungen
+
+#### 8.2.1 ABI erweitern (`scw_js/nft_abi.js`)
+
+Zweite `safeMint`-Variante hinzufügen:
+```javascript
+{
+  inputs: [
+    { internalType: "string", name: "uri", type: "string" },
+    { internalType: "bool", name: "isListed", type: "bool" },
+  ],
+  name: "safeMint",
+  outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+  stateMutability: "payable",
+  type: "function",
+}
+```
+
+#### 8.2.2 Server-Logik (`scw_js/genimg_x402_token.js`)
+
+1. `isListed` aus Request-Body lesen (default: `false`)
+2. Parameter an `mintNFTToClient()` durchreichen
+3. `safeMint([metadataUrl, isListed])` aufrufen
+4. `isListed` im Response zurückgeben
+
+#### 8.2.3 TypeScript-Types (`website/types/x402.ts`)
+
+```typescript
+export interface X402GenImgRequest {
+  prompt: string;
+  size?: "1024x1024" | "1792x1024";
+  mode?: "generate" | "edit";
+  referenceImage?: string;
+  sepoliaTest?: boolean;
+  expectedChainId?: number;
+  isListed?: boolean;  // NEU: Public gallery visibility
+}
+
+export interface X402GenImgResponse {
+  image_url: string;
+  metadata_url: string;
+  tokenId: number;
+  contractAddress: string;
+  mintTxHash: string;
+  transferTxHash: string;
+  isListed?: boolean;  // NEU: Bestätigung des Listing-Status
+}
+```
+
+#### 8.2.4 Frontend (`website/components/ImageGenerator.tsx`)
+
+`isListed` State an `generateImage()` übergeben:
+```typescript
+const result = await generateImage({
+  prompt,
+  size,
+  mode,
+  referenceImage: isEditMode ? referenceImageBase64 : undefined,
+  sepoliaTest: useTestnet,
+  expectedChainId: targetChain.id,
+  isListed,  // NEU
+});
+```
+
+### 8.3 Datenfluss
+
+```
+Frontend                    Server                      Contract
+   │                           │                           │
+   │  {prompt, isListed: true} │                           │
+   │ ─────────────────────────>│                           │
+   │                           │  safeMint(url, true)      │
+   │                           │ ─────────────────────────>│
+   │                           │                           │
+   │                           │  <─── tokenId ────────────│
+   │                           │                           │
+   │  {tokenId, isListed: true}│                           │
+   │ <─────────────────────────│                           │
+```
+
+### 8.4 Test-Checkliste
+
+- [ ] `isListed: true` → NFT erscheint in Public Gallery
+- [ ] `isListed: false` (default) → NFT bleibt privat
+- [ ] `isListed` nicht angegeben → default `false`
+- [ ] Response enthält `isListed` Bestätigung

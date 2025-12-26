@@ -10,6 +10,8 @@ export interface X402GenImgRequest {
   sepoliaTest?: boolean;
   /** Expected chain ID for validation - prevents signing on wrong network */
   expectedChainId?: number;
+  /** Whether to list the NFT in the public gallery (default: false) */
+  isListed?: boolean;
 }
 
 export interface X402GenImgResponse {
@@ -19,6 +21,8 @@ export interface X402GenImgResponse {
   contractAddress: string;
   mintTxHash: string;
   transferTxHash: string;
+  /** Whether the NFT is listed in the public gallery */
+  isListed?: boolean;
 }
 
 export interface X402PaymentReceipt {

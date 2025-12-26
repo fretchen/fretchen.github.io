@@ -1,0 +1,17 @@
+{
+  "parameters": {
+    "mintPrice": "0.00003",
+    "agentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C"
+  },
+  "options": {
+    "validateOnly": false,
+    "dryRun": false,
+    "verify": true,
+    "waitConfirmations": 2
+  },
+  "metadata": {
+    "description": "GenImNFTv4 deployment to Optimism Sepolia for testing",
+    "version": "4.0.0",
+    "environment": "testnet"
+  }
+}

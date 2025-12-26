@@ -66,31 +66,38 @@ describe("x402 /supported endpoint", () => {
 
     const capabilities = getSupportedCapabilities();
 
-    // signers exists but is empty array (read-only mode)
+    // signers contains the zero address in read-only mode (each scheme has a signer)
     expect(capabilities.signers).toBeDefined();
     expect(capabilities.signers["eip155:*"]).toBeDefined();
     expect(Array.isArray(capabilities.signers["eip155:*"])).toBe(true);
-    expect(capabilities.signers["eip155:*"].length).toBe(0); // Empty in read-only mode
+    // Read-only mode uses zero address as placeholder
+    expect(capabilities.signers["eip155:*"]).toEqual([
+      "0x0000000000000000000000000000000000000000",
+    ]);
   });
 
-  test("signers is empty array when private key is not set", () => {
+  test("signers shows zero address when private key is not set (read-only mode)", () => {
     delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
 
     const capabilities = getSupportedCapabilities();
 
-    // Read-only facilitator always has signers, but empty
+    // Read-only facilitator uses zero address as signer placeholder
     expect(capabilities.signers).toBeDefined();
-    expect(capabilities.signers["eip155:*"]).toEqual([]);
+    expect(capabilities.signers["eip155:*"]).toEqual([
+      "0x0000000000000000000000000000000000000000",
+    ]);
   });
 
-  test("signers is empty array when private key is invalid", () => {
+  test("signers shows zero address when private key is invalid (read-only mode)", () => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY = "invalid-key";
 
     const capabilities = getSupportedCapabilities();
 
-    // Read-only facilitator doesn't validate private key, always has empty signers
+    // Read-only facilitator uses zero address as signer placeholder
     expect(capabilities.signers).toBeDefined();
-    expect(capabilities.signers["eip155:*"]).toEqual([]);
+    expect(capabilities.signers["eip155:*"]).toEqual([
+      "0x0000000000000000000000000000000000000000",
+    ]);
   });
 
   test("includes recipient whitelist extension", () => {

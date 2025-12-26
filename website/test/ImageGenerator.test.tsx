@@ -1,8 +1,6 @@
 /**
  * ImageGenerator Component Tests
  *
- * SKIPPED: Feature temporarily deactivated due to security exploit fix in progress
- *
  * This test suite verifies the functionality of the ImageGenerator component,
  * which allows users to create AI-generated artwork and mint it as NFTs on the blockchain.
  *
@@ -32,10 +30,10 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
-import { useAccount, useSwitchChain, useChainId, useConnect } from "wagmi";
+import { useAccount, useSwitchChain, useChainId, useConnect, useWalletClient } from "wagmi";
 
 // No need to mock getChain - it's just reading env vars and returning constants
 // The real implementation works fine in tests
@@ -61,7 +59,7 @@ vi.mock("../hooks/useLocale", () => ({
   useLocale: ({ label }: { label: string }) => `mocked-${label}`,
 }));
 
-describe.skip("ImageGenerator Component", () => {
+describe("ImageGenerator Component", () => {
   describe("Collapsed State (First-time visitors)", () => {
     it("should render collapsed state when wallet is not connected", () => {
       // Mock disconnected wallet to ensure collapsed state
@@ -139,11 +137,19 @@ describe.skip("ImageGenerator Component", () => {
   describe("Expanded State (Connected users)", () => {
     it("should render expanded state when wallet is connected", () => {
       // Mock connected wallet to ensure expanded state
-      vi.mocked(useAccount).mockReturnValueOnce({
+      vi.mocked(useAccount).mockReturnValue({
         address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
         isConnected: true,
         status: "connected",
       } as ReturnType<typeof useAccount>);
+
+      // Mock wallet client for x402 hook
+      vi.mocked(useWalletClient).mockReturnValue({
+        data: {
+          account: { address: "0x1234567890123456789012345678901234567890" },
+          signTypedData: vi.fn(),
+        },
+      } as any);
 
       render(<ImageGenerator />);
 
@@ -164,18 +170,27 @@ describe.skip("ImageGenerator Component", () => {
 
     // Override the centralized mocks for this specific test
     // Mock a connected wallet on the wrong chain (Ethereum mainnet = 1)
-    vi.mocked(useAccount).mockReturnValueOnce({
+    vi.mocked(useAccount).mockReturnValue({
       address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
       isConnected: true,
       status: "connected",
     } as ReturnType<typeof useAccount>);
 
-    // Mock that user is on wrong chain (Ethereum mainnet instead of Optimism)
-    vi.mocked(useChainId).mockReturnValueOnce(1);
+    // Mock wallet client for x402 hook
+    vi.mocked(useWalletClient).mockReturnValue({
+      data: {
+        account: { address: "0x1234567890123456789012345678901234567890" },
+        signTypedData: vi.fn(),
+      },
+    } as any);
 
-    // Mock the switchChain function with unknown cast to bypass strict typing
-    vi.mocked(useSwitchChain).mockReturnValueOnce({
+    // Mock that user is on wrong chain (Ethereum mainnet instead of Optimism)
+    vi.mocked(useChainId).mockReturnValue(1);
+
+    // Mock the switchChainAsync function (used by the x402 flow)
+    vi.mocked(useSwitchChain).mockReturnValue({
       switchChain: mockSwitchChain,
+      switchChainAsync: mockSwitchChain,
       isPending: false,
       chains: [{ id: 10, name: "Optimism" }],
     } as unknown as ReturnType<typeof useSwitchChain>);
@@ -199,7 +214,7 @@ describe.skip("ImageGenerator Component", () => {
     if (createButton) {
       fireEvent.click(createButton);
 
-      // Verify that switchChain was called with Optimism chain ID (10)
+      // Verify that switchChainAsync was called with Optimism chain ID (10)
       expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 10 });
     } else {
       // If no create button is found, at least verify the mock is set up correctly

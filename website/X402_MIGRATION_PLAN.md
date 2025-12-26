@@ -407,9 +407,9 @@ In `types/blockchain.ts`:
 - [x] Types erstellen (`types/x402.ts`)
 - [x] Hook erstellen (`useX402ImageGeneration.ts`)
 - [x] ImageGenerator refactoren
+- [x] Unit Tests schreiben (`useX402ImageGeneration.test.ts`, `ImageGenerator.fileUpload.test.tsx`)
 - [ ] Environment Variable setzen (optional, hat Default)
 - [ ] Lokalisierung aktualisieren (neue x402-Keys)
-- [ ] Unit Tests schreiben
 - [ ] E2E Test auf Sepolia
 - [ ] Alte Imports/Types entfernen (bereits erledigt)
 - [ ] Dokumentation aktualisieren

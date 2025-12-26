@@ -113,15 +113,85 @@ NODE_ENV=test node sc_llm.js
 serverless deploy
 ```
 
-## 🏷️ EIP-8004 Agent Registration
+---
 
-This service is designed to be discoverable via [EIP-8004](https://eips.ethereum.org/EIPS/eip-8004) (Trustless Agents).
+## 🔐 Adding New Networks (USDC Configuration)
 
-The [`agent-registration.json`](./agent-registration.json) file contains:
+When adding support for a new network, follow this checklist to prevent EIP-712 domain mismatches (see CVE-2025-12-26).
 
-- Service endpoints (OpenAPI, direct URLs)
-- Agent wallet address for on-chain identity
-- Pricing information
-- Contract addresses
+### Background: Why This Matters
 
-To register this agent on-chain, mint an NFT in the EIP-8004 Identity Registry pointing to this registration file.
+USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712 typed signatures. The signature includes a **domain separator** with the token's name and version. If our configuration doesn't match the on-chain contract, settlements will fail **after** expensive operations (like image generation) have completed.
+
+**The Bug Pattern:**
+
+1. Server returns `paymentRequirements.extra: {name: "USDC"}` in 402 response
+2. Client creates signature with domain `{name: "USDC"}`
+3. Server verifies signature → ✅ **PASSES** (both use same value)
+4. Server performs expensive operation (BFL image generation)
+5. Settlement on-chain → ❌ **FAILS** (contract uses `{name: "USD Coin"}`)
+
+### Checklist: Adding a New Network
+
+- [ ] **Step 1: Find USDC Contract Address**
+  - Official Circle docs: https://developers.circle.com/stablecoins/docs/usdc-on-main-networks
+  - Verify on block explorer (Etherscan, Basescan, etc.)
+
+- [ ] **Step 2: Read EIP-712 Domain from Contract**
+
+  ```javascript
+  // Use viem to read the domain
+  const domain = await publicClient.readContract({
+    address: USDC_ADDRESS,
+    abi: [{ name: "eip712Domain", type: "function", ... }],
+    functionName: "eip712Domain",
+  });
+  console.log("Name:", domain[1]);    // e.g., "USD Coin" or "USDC"
+  console.log("Version:", domain[2]); // e.g., "2"
+  ```
+
+- [ ] **Step 3: Add Configuration to `getChain.js`**
+
+  ```javascript
+  case "eip155:CHAIN_ID":
+    return {
+      name: getChainNameFromEIP155(network),
+      chainId: CHAIN_ID,
+      address: "0x...",
+      decimals: 6,
+      usdcName: "EXACT_NAME_FROM_CONTRACT", // From Step 2!
+      usdcVersion: "2",
+    };
+  ```
+
+- [ ] **Step 4: Add viem Chain to `getViemChain()`**
+
+  ```javascript
+  case "eip155:CHAIN_ID":
+    return newChain; // Import from viem/chains
+  ```
+
+- [ ] **Step 5: Add Integration Test**
+      Add the network to `test/getChain.test.js` in the "EIP-712 Domain Validation" section.
+
+- [ ] **Step 6: Run Validation Tests**
+
+  ```bash
+  npm test -- --run getChain.test.js
+  ```
+
+- [ ] **Step 7: Test on Testnet First**
+      Always deploy to testnet and verify a complete payment flow before mainnet.
+
+### Known USDC Domain Names
+
+| Network          | CAIP-2 ID         | Domain Name | Version | Verified      |
+| ---------------- | ----------------- | ----------- | ------- | ------------- |
+| Optimism Mainnet | `eip155:10`       | `USD Coin`  | `2`     | ✅ 2025-12-26 |
+| Optimism Sepolia | `eip155:11155420` | `USDC`      | `2`     | ✅ 2025-12-26 |
+| Base Mainnet     | `eip155:8453`     | `USD Coin`  | `2`     | ✅ 2025-12-26 |
+| Base Sepolia     | `eip155:84532`    | `USDC`      | `2`     | ✅ 2025-12-26 |
+
+> ⚠️ **Warning:** Mainnet and Testnet often have DIFFERENT domain names! Always verify.
+
+---

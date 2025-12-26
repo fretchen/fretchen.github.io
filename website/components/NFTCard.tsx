@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
-import { genAiNFTContractConfig } from "../utils/getChain";
+import { genAiNFTContractConfig, getChain } from "../utils/getChain";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
@@ -111,10 +111,12 @@ export function NFTCard({
         let isListed: boolean | undefined;
         if (!isPublicView) {
           try {
+            const chain = getChain();
             const isListedResult = await readContract(config, {
               ...genAiNFTContractConfig,
               functionName: "isTokenListed",
               args: [tokenId],
+              chainId: chain.id,
             });
             isListed = isListedResult as boolean;
           } catch (error) {

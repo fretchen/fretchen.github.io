@@ -115,6 +115,8 @@ export function create402Response(paymentRequirements) {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "*",
       "Access-Control-Allow-Methods": "*",
+      // CRITICAL: Expose custom headers to browser JavaScript (CORS requirement)
+      "Access-Control-Expose-Headers": "Payment-Required, X-Payment, PAYMENT-REQUIRED",
       "Content-Type": "application/json",
       "Payment-Required": paymentRequiredHeader,
       // Backwards compatibility with v1

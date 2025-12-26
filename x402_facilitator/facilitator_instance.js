@@ -3,14 +3,16 @@
 /**
  * x402 v2 Facilitator Instance
  * Centralized facilitator configuration with Optimism support
+ *
+ * Architecture: One ExactEvmScheme per network (following x402 best practices)
+ * Each network has its own dedicated viem client, eliminating chain selection issues
  */
 
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { optimism, optimismSepolia } from "viem/chains";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
-import { registerExactEvmScheme } from "@x402/evm/exact/facilitator";
+import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import pino from "pino";
 import { isAgentWhitelisted } from "./x402_whitelist.js";
 import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
@@ -18,49 +20,89 @@ import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
+ * Create a FacilitatorEvmSigner for a specific network
+ * The signer is bound to a single chain - no dynamic chain selection needed
+ * @param {import("viem").Account} account - The account to use for signing
+ * @param {string} network - The network identifier (e.g., "eip155:10")
+ * @returns {Object} FacilitatorEvmSigner bound to the specified network
+ */
+function createSignerForNetwork(account, network) {
+  const config = getChainConfig(network);
+
+  const publicClient = createPublicClient({
+    chain: config.chain,
+    transport: http(config.rpcUrl),
+  });
+
+  const walletClient = createWalletClient({
+    account,
+    chain: config.chain,
+    transport: http(config.rpcUrl),
+  });
+
+  // Create signer bound to this specific chain
+  // No dynamic chain selection needed - the viem clients are already configured
+  return toFacilitatorEvmSigner({
+    address: account.address,
+    readContract: (args) =>
+      publicClient.readContract({
+        ...args,
+        args: args.args || [],
+      }),
+    verifyTypedData: (args) => publicClient.verifyTypedData(args),
+    writeContract: (args) =>
+      walletClient.writeContract({
+        ...args,
+        args: args.args || [],
+      }),
+    sendTransaction: (args) => walletClient.sendTransaction(args),
+    waitForTransactionReceipt: (args) => publicClient.waitForTransactionReceipt(args),
+    getCode: (args) => publicClient.getCode(args),
+  });
+}
+
+/**
  * Create read-only facilitator (without signer, for getSupported() only)
  * @returns {x402Facilitator} Read-only facilitator instance
  */
 export function createReadOnlyFacilitator() {
-  // Create public-only clients (no wallet/signer)
-  const optimismPublic = createPublicClient({
-    chain: optimism,
-    transport: http(),
-  });
-
-  const sepoliaPublic = createPublicClient({
-    chain: optimismSepolia,
-    transport: http(),
-  });
-
-  // Create read-only signer (only publicClient, no walletClient or getAddresses)
-  const readOnlySigner = {
-    publicClient: (network) => {
-      if (network === "eip155:10") {
-        return optimismPublic;
-      }
-      if (network === "eip155:11155420") {
-        return sepoliaPublic;
-      }
-      throw new Error(`Unsupported network: ${network}`);
-    },
-    // No walletClient - read-only mode
-    // Return empty array for getAddresses - no signer available
-    getAddresses: () => [],
-  };
-
-  // Create and configure facilitator
   const facilitator = new x402Facilitator();
 
-  // Register EVM Exact scheme for Optimism networks (read-only)
-  registerExactEvmScheme(facilitator, {
-    signer: readOnlySigner,
-    networks: ["eip155:10", "eip155:11155420"],
-    deployERC4337WithEIP6492: false,
-  });
+  // Register each network with a read-only scheme
+  for (const network of getSupportedNetworks()) {
+    const config = getChainConfig(network);
+
+    const publicClient = createPublicClient({
+      chain: config.chain,
+      transport: http(config.rpcUrl),
+    });
+
+    // Read-only signer (no wallet operations)
+    const readOnlySigner = toFacilitatorEvmSigner({
+      address: "0x0000000000000000000000000000000000000000",
+      readContract: (args) =>
+        publicClient.readContract({
+          ...args,
+          args: args.args || [],
+        }),
+      verifyTypedData: (args) => publicClient.verifyTypedData(args),
+      writeContract: () => {
+        throw new Error("Read-only facilitator cannot write contracts");
+      },
+      sendTransaction: () => {
+        throw new Error("Read-only facilitator cannot send transactions");
+      },
+      waitForTransactionReceipt: () => {
+        throw new Error("Read-only facilitator cannot wait for receipts");
+      },
+      getCode: (args) => publicClient.getCode(args),
+    });
+
+    facilitator.register(network, new ExactEvmScheme(readOnlySigner));
+  }
 
   logger.info({
-    networks: ["eip155:10", "eip155:11155420"],
+    networks: getSupportedNetworks(),
     msg: "x402 Facilitator initialized (read-only mode)",
   });
 
@@ -69,6 +111,7 @@ export function createReadOnlyFacilitator() {
 
 /**
  * Create the facilitator instance with Optimism support
+ * Uses separate ExactEvmScheme per network (x402 best practice)
  * @param {boolean} requirePrivateKey - Whether to require private key (default: true)
  * @returns {x402Facilitator} Configured facilitator instance
  */
@@ -79,7 +122,6 @@ export function createFacilitator(requirePrivateKey = true) {
     if (requirePrivateKey) {
       throw new Error("FACILITATOR_WALLET_PRIVATE_KEY not configured");
     }
-    // Create read-only facilitator without signer for getSupported()
     return createReadOnlyFacilitator();
   }
 
@@ -91,7 +133,6 @@ export function createFacilitator(requirePrivateKey = true) {
 
   // Validate private key length
   if (privateKey.length !== 66) {
-    // If invalid and requirePrivateKey is false, return read-only facilitator
     if (!requirePrivateKey) {
       return createReadOnlyFacilitator();
     }
@@ -103,96 +144,20 @@ export function createFacilitator(requirePrivateKey = true) {
   // Create account from private key
   const account = privateKeyToAccount(privateKey);
 
-  // Create clients for all supported networks using chain_utils configuration
-  const supportedNetworks = getSupportedNetworks();
-  const clients = {};
-
-  for (const network of supportedNetworks) {
-    const config = getChainConfig(network);
-    clients[config.chain.id] = {
-      publicClient: createPublicClient({
-        chain: config.chain,
-        transport: http(config.rpcUrl),
-      }),
-      walletClient: createWalletClient({
-        account,
-        chain: config.chain,
-        transport: http(config.rpcUrl),
-      }),
-    };
-  }
-
-  // Helper to select the correct client based on chainId
-  // chainId can be extracted from domain parameter in verifyTypedData
-  // or from the address/contract interaction context
-  const getClientsForChain = (chainId) => {
-    const client = clients[chainId];
-    if (!client) {
-      throw new Error(`Unsupported chainId: ${chainId}`);
-    }
-    return client;
-  };
-
-  // Use x402's toFacilitatorEvmSigner helper to create the signer
-  // This ensures the signer interface matches what x402 expects
-  // For operations without explicit chainId, we extract it from the domain parameter
-  const facilitatorSigner = toFacilitatorEvmSigner({
-    address: account.address,
-    readContract: (args) => {
-      // For now, default to Sepolia for contract reads
-      // In production, this should be determined by the network parameter
-      const { publicClient } = getClientsForChain(optimismSepolia.id);
-      return publicClient.readContract({
-        ...args,
-        args: args.args || [],
-      });
-    },
-    verifyTypedData: (args) => {
-      // Extract chainId from domain parameter
-      const chainId = Number(args.domain.chainId);
-      const { publicClient } = getClientsForChain(chainId);
-      return publicClient.verifyTypedData(args);
-    },
-    writeContract: (args) => {
-      // Default to Sepolia for write operations
-      const { walletClient } = getClientsForChain(optimismSepolia.id);
-      return walletClient.writeContract({
-        ...args,
-        args: args.args || [],
-      });
-    },
-    sendTransaction: (args) => {
-      // Default to Sepolia for transactions
-      const { walletClient } = getClientsForChain(optimismSepolia.id);
-      return walletClient.sendTransaction(args);
-    },
-    waitForTransactionReceipt: (args) => {
-      // Default to Sepolia for receipt waiting
-      const { publicClient } = getClientsForChain(optimismSepolia.id);
-      return publicClient.waitForTransactionReceipt(args);
-    },
-    getCode: (args) => {
-      // Default to Sepolia for code retrieval
-      const { publicClient } = getClientsForChain(optimismSepolia.id);
-      return publicClient.getCode(args);
-    },
-  });
-
   // Create and configure facilitator
   const facilitator = new x402Facilitator();
 
-  // Register EVM Exact scheme for Optimism networks
-  registerExactEvmScheme(facilitator, {
-    signer: facilitatorSigner,
-    networks: getSupportedNetworks(),
-    deployERC4337WithEIP6492: false, // We don't support smart wallets yet
-  });
+  // Register a separate ExactEvmScheme for each network
+  // This follows x402 best practices: one signer per network
+  const supportedNetworks = getSupportedNetworks();
+  for (const network of supportedNetworks) {
+    const signer = createSignerForNetwork(account, network);
+    facilitator.register(network, new ExactEvmScheme(signer));
+  }
 
-  // Add whitelist check BEFORE verification
-  // If verification would succeed but recipient is not whitelisted, we reject it
+  // Add whitelist check AFTER verification
   facilitator.onAfterVerify(async ({ paymentPayload, result }) => {
     if (!result.isValid) {
-      // Already failed, no need to check whitelist
       return;
     }
 
@@ -201,17 +166,14 @@ export function createFacilitator(requirePrivateKey = true) {
 
     if (!network || !recipient) {
       logger.warn("Missing network or recipient after verification");
-      // Modify result to fail
       result.isValid = false;
       result.invalidReason = "invalid_payload";
       return;
     }
 
-    // Check recipient whitelist (GenImNFTv4/LLMv1 NFT holders only)
     const whitelistCheck = await isAgentWhitelisted(recipient, network);
     if (!whitelistCheck.isWhitelisted) {
       logger.warn({ recipient, network }, "Payment verification failed: Recipient not whitelisted");
-      // Modify result to fail
       result.isValid = false;
       result.invalidReason = "unauthorized_agent";
       result.recipient = recipient;
@@ -226,7 +188,7 @@ export function createFacilitator(requirePrivateKey = true) {
 
   logger.info(
     {
-      networks: ["eip155:10", "eip155:11155420"],
+      networks: supportedNetworks,
       signerAddress: account.address,
     },
     "x402 Facilitator initialized",

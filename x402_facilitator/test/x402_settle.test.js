@@ -338,4 +338,81 @@ describe("x402_settle", () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe("chain selection correctness", () => {
+    it("getChainIdFromAsset returns Mainnet chainId for Mainnet USDC", async () => {
+      // This test verifies the asset-to-chain mapping that enables correct chain selection
+      const { getChainIdFromAsset } = await import("../chain_utils.js");
+      
+      // Mainnet USDC address
+      const mainnetUSDC = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
+      const chainId = getChainIdFromAsset(mainnetUSDC);
+      
+      expect(chainId).toBe(10); // Optimism Mainnet
+    });
+
+    it("getChainIdFromAsset returns Sepolia chainId for Sepolia USDC", async () => {
+      const { getChainIdFromAsset } = await import("../chain_utils.js");
+      
+      // Sepolia USDC address
+      const sepoliaUSDC = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+      const chainId = getChainIdFromAsset(sepoliaUSDC);
+      
+      expect(chainId).toBe(11155420); // Optimism Sepolia
+    });
+
+    it("getChainIdFromAsset is case-insensitive", async () => {
+      const { getChainIdFromAsset } = await import("../chain_utils.js");
+      
+      // Test lowercase
+      const lowerMainnet = "0x0b2c639c533813f4aa9d7837caf62653d097ff85";
+      expect(getChainIdFromAsset(lowerMainnet)).toBe(10);
+      
+      // Test uppercase
+      const upperMainnet = "0x0B2C639C533813F4AA9D7837CAF62653D097FF85";
+      expect(getChainIdFromAsset(upperMainnet)).toBe(10);
+    });
+
+    it("getChainIdFromAsset returns null for unknown assets", async () => {
+      const { getChainIdFromAsset } = await import("../chain_utils.js");
+      
+      const unknownAsset = "0x0000000000000000000000000000000000000000";
+      const chainId = getChainIdFromAsset(unknownAsset);
+      
+      expect(chainId).toBeNull();
+    });
+
+    it("settles Mainnet payment using Mainnet USDC address (integration)", async () => {
+      // This integration test ensures that Mainnet payments use the Mainnet chain
+      // The asset address 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85 should map to chainId 10
+      const mainnetPayload = {
+        ...validPaymentPayload,
+        network: "eip155:10",
+        accepted: {
+          ...validPaymentPayload.accepted,
+          network: "eip155:10",
+          asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+        },
+        payload: {
+          ...validPaymentPayload.payload,
+          authorization: {
+            ...validPaymentPayload.payload.authorization,
+            to: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          },
+        },
+      };
+
+      const mainnetRequirements = {
+        ...validPaymentRequirements,
+        network: "eip155:10",
+        asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      };
+
+      // This should not throw - if the chain selection is correct, it will use the Mainnet client
+      const result = await settlePayment(mainnetPayload, mainnetRequirements);
+      
+      // Result should have the correct network
+      expect(result.network).toBe("eip155:10");
+    });
+  });
 });

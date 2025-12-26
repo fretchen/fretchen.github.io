@@ -338,4 +338,10 @@ describe("x402_settle", () => {
       expect(result).toBeDefined();
     });
   });
+
+  // Note: Cross-chain security tests are covered in x402_verify.test.js
+  // The test "validates signature for Optimism Mainnet (chainId 10)" ensures that:
+  // 1. Mainnet signatures are validated with chain-bound Mainnet clients
+  // 2. The facilitator uses separate ExactEvmScheme per network
+  // Since settlePayment() calls verifyPayment() internally, the same security applies.
 });

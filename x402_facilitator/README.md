@@ -276,6 +276,79 @@ The `/verify` endpoint validates:
 | `invalid_x402_version`                                 | Wrong protocol version         |
 | `unexpected_verify_error`                              | Unexpected error               |
 
+## Security Considerations
+
+### Trust Model
+
+The x402 protocol requires **explicit trust** in the Facilitator. Both the Payer (client) and the Resource Server must trust the Facilitator to act honestly.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     TRUST MODEL                         │
+│                                                         │
+│  Payer ──────────── Facilitator ────────── Resource    │
+│        trusts           │           Server trusts      │
+│                         │                              │
+│                         ▼                              │
+│                MUST BE TRUSTWORTHY                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+### What the Facilitator Controls
+
+| Control                       | Risk                           |
+| ----------------------------- | ------------------------------ |
+| EIP-3009 signature from Payer | Can trigger settlement         |
+| Verification result           | Can lie ("invalid" when valid) |
+| Settlement execution          | Can delay or omit              |
+| Response to Resource Server   | Can report false status        |
+
+### What EIP-3009 Protects (Even with Malicious Facilitator)
+
+The cryptographic signature **binds** these fields:
+
+- **`to` (recipient)** → Facilitator **cannot** redirect funds to another address
+- **`value` (amount)** → Facilitator **cannot** take more than signed
+- **`validBefore`** → Signature expires automatically
+
+**Key insight:** A malicious Facilitator cannot **steal** funds – only send them to the designated `payTo` address.
+
+### Potential Attack Vectors
+
+1. **Settlement without Service (Fraud)**
+   - Facilitator executes settlement but reports failure to Resource Server
+   - Payer loses money, receives no service
+
+2. **Denial of Service**
+   - Facilitator accepts signature but never settles
+   - Signature expires (`validBefore` timeout)
+
+3. **Cross-Chain Replay** (Fixed in this implementation)
+   - Signature created for one chain, settled on another
+   - Mitigated by chain-bound viem clients (one `ExactEvmScheme` per network)
+
+### Recommendations
+
+1. **Use only known Facilitators** (e.g., verified x402 implementations)
+2. **Implement Facilitator whitelist** in client applications
+3. **Verify settlement on-chain** (don't trust Facilitator response alone)
+4. **Start with small amounts** when testing new services
+5. **Monitor for network mismatches** between signed and settled transactions
+
+### Multi-Chain Security
+
+This Facilitator creates **separate signers per network** to prevent cross-chain attacks:
+
+```javascript
+// Each network gets its own chain-bound signer
+for (const network of getSupportedNetworks()) {
+  const scheme = createSignerForNetwork(account, network);
+  facilitator.register(network, scheme);
+}
+```
+
+This ensures that signatures for Mainnet (chainId 10) are validated with a Mainnet client, preventing accidental or malicious settlement on the wrong chain.
+
 ## Deployment
 
 ### Deploy to Scaleway

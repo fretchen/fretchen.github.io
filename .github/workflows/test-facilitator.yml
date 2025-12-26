@@ -6,13 +6,14 @@ permissions:
 on:
   pull_request:
     paths:
-      - "scw_js/**"
+      - "x402_facilitator/**"
       - ".github/workflows/test-facilitator.yml"
   push:
     branches:
       - main
     paths:
       - "x402_facilitator/**"
+      - ".github/workflows/test-facilitator.yml"
 
 jobs:
   test-facilitator:

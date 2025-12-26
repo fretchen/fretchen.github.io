@@ -14,7 +14,7 @@
  * - Optimism Sepolia: "USDC" (testnet deployment)
  * - Mismatch causes settlement to fail AFTER expensive operations complete
  */
-import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, test, expect } from "vitest";
 import { createPublicClient, http } from "viem";
 import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 

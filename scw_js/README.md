@@ -124,6 +124,7 @@ When adding support for a new network, follow this checklist to prevent EIP-712 
 USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712 typed signatures. The signature includes a **domain separator** with the token's name and version. If our configuration doesn't match the on-chain contract, settlements will fail **after** expensive operations (like image generation) have completed.
 
 **The Bug Pattern:**
+
 1. Server returns `paymentRequirements.extra: {name: "USDC"}` in 402 response
 2. Client creates signature with domain `{name: "USDC"}`
 3. Server verifies signature → ✅ **PASSES** (both use same value)
@@ -137,6 +138,7 @@ USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712
   - Verify on block explorer (Etherscan, Basescan, etc.)
 
 - [ ] **Step 2: Read EIP-712 Domain from Contract**
+
   ```javascript
   // Use viem to read the domain
   const domain = await publicClient.readContract({
@@ -149,6 +151,7 @@ USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712
   ```
 
 - [ ] **Step 3: Add Configuration to `getChain.js`**
+
   ```javascript
   case "eip155:CHAIN_ID":
     return {
@@ -162,26 +165,28 @@ USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712
   ```
 
 - [ ] **Step 4: Add viem Chain to `getViemChain()`**
+
   ```javascript
   case "eip155:CHAIN_ID":
     return newChain; // Import from viem/chains
   ```
 
 - [ ] **Step 5: Add Integration Test**
-  Add the network to `test/getChain.test.js` in the "EIP-712 Domain Validation" section.
+      Add the network to `test/getChain.test.js` in the "EIP-712 Domain Validation" section.
 
 - [ ] **Step 6: Run Validation Tests**
+
   ```bash
   npm test -- --run getChain.test.js
   ```
 
 - [ ] **Step 7: Test on Testnet First**
-  Always deploy to testnet and verify a complete payment flow before mainnet.
+      Always deploy to testnet and verify a complete payment flow before mainnet.
 
 ### Known USDC Domain Names
 
-| Network          | CAIP-2 ID         | Domain Name | Version | Verified |
-|------------------|-------------------|-------------|---------|----------|
+| Network          | CAIP-2 ID         | Domain Name | Version | Verified      |
+| ---------------- | ----------------- | ----------- | ------- | ------------- |
 | Optimism Mainnet | `eip155:10`       | `USD Coin`  | `2`     | ✅ 2025-12-26 |
 | Optimism Sepolia | `eip155:11155420` | `USDC`      | `2`     | ✅ 2025-12-26 |
 | Base Mainnet     | `eip155:8453`     | `USD Coin`  | `2`     | ✅ 2025-12-26 |
@@ -190,4 +195,3 @@ USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712
 > ⚠️ **Warning:** Mainnet and Testnet often have DIFFERENT domain names! Always verify.
 
 ---
-

@@ -133,7 +133,7 @@ export function getUSDCConfig(network) {
         chainId: 10,
         address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
         decimals: 6,
-        usdcName: "USDC",
+        usdcName: "USD Coin", // Mainnet uses "USD Coin" for EIP-712 domain
         usdcVersion: "2",
       };
     case "eip155:11155420": // Optimism Sepolia
@@ -142,7 +142,7 @@ export function getUSDCConfig(network) {
         chainId: 11155420,
         address: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
         decimals: 6,
-        usdcName: "USDC",
+        usdcName: "USDC", // Sepolia uses "USDC" for EIP-712 domain
         usdcVersion: "2",
       };
     case "eip155:8453": // Base Mainnet

@@ -1231,6 +1231,64 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         expect(config.address).toBeDefined();
       }
     });
+
+    /**
+     * CRITICAL: EIP-712 Domain Name Validation
+     *
+     * Background on CVE-2025-12-26 (USDC Domain Name Mismatch):
+     * - USDC contracts use different EIP-712 domain names on different networks
+     * - Optimism Mainnet: "USD Coin" (official Circle deployment)
+     * - Optimism Sepolia: "USDC" (testnet deployment)
+     *
+     * Why this matters:
+     * 1. Client creates EIP-3009 signature using extra.name from 402 response
+     * 2. Server verifies using same extra.name (off-chain, passes if both match)
+     * 3. Settlement executes on-chain where contract uses its ACTUAL domain name
+     *
+     * If extra.name is wrong:
+     * - Verification PASSES (both sides use same wrong value)
+     * - Expensive operations complete (image generation, etc.)
+     * - Settlement FAILS (on-chain domain mismatch)
+     * - User loses money without receiving service!
+     */
+    test("should use correct EIP-712 domain names for USDC contracts", async () => {
+      const { getUSDCConfig } = await import("../getChain.js");
+
+      // Optimism Mainnet uses "USD Coin" (official Circle USDC deployment)
+      const mainnetConfig = getUSDCConfig("eip155:10");
+      expect(mainnetConfig.usdcName).toBe("USD Coin");
+
+      // Optimism Sepolia uses "USDC" (testnet deployment)
+      const sepoliaConfig = getUSDCConfig("eip155:11155420");
+      expect(sepoliaConfig.usdcName).toBe("USDC");
+    });
+
+    test("should include EIP-712 domain info in payment requirements extra field", async () => {
+      const { createPaymentRequirements } = await import("../x402_server.js");
+
+      const requirements = createPaymentRequirements({
+        resourceUrl: "/test",
+        description: "Test",
+        mimeType: "application/json",
+        amount: "1000",
+        payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      });
+
+      // Find mainnet and sepolia accepts
+      const mainnetAccept = requirements.accepts.find((a) => a.network === "eip155:10");
+      const sepoliaAccept = requirements.accepts.find((a) => a.network === "eip155:11155420");
+
+      // Verify extra field contains correct EIP-712 domain info
+      expect(mainnetAccept.extra).toEqual({
+        name: "USD Coin", // Critical: Must match on-chain contract domain
+        version: "2",
+      });
+
+      expect(sepoliaAccept.extra).toEqual({
+        name: "USDC", // Different from mainnet!
+        version: "2",
+      });
+    });
   });
 
   describe("Settlement flow", () => {

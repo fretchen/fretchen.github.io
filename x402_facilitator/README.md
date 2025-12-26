@@ -343,7 +343,7 @@ This Facilitator creates **separate signers per network** to prevent cross-chain
 // Each network gets its own chain-bound signer
 for (const network of getSupportedNetworks()) {
   const scheme = createSignerForNetwork(account, network);
-  facilitator.registerPaymentScheme(network, scheme);
+  facilitator.register(network, scheme);
 }
 ```
 

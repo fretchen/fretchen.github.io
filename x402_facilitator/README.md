@@ -296,12 +296,12 @@ The x402 protocol requires **explicit trust** in the Facilitator. Both the Payer
 
 ### What the Facilitator Controls
 
-| Control | Risk |
-|---------|------|
-| EIP-3009 signature from Payer | Can trigger settlement |
-| Verification result | Can lie ("invalid" when valid) |
-| Settlement execution | Can delay or omit |
-| Response to Resource Server | Can report false status |
+| Control                       | Risk                           |
+| ----------------------------- | ------------------------------ |
+| EIP-3009 signature from Payer | Can trigger settlement         |
+| Verification result           | Can lie ("invalid" when valid) |
+| Settlement execution          | Can delay or omit              |
+| Response to Resource Server   | Can report false status        |
 
 ### What EIP-3009 Protects (Even with Malicious Facilitator)
 

@@ -6,7 +6,6 @@ secondaryCategory: "webdev"
 description: "Detaillierter Implementierungsplan zur Integration des x402 Payment-Protokolls in den AI Image Generation Service mit Beibehaltung der NFT-Funktionalität. Der NFT-Mint dient als Payment-Proof."
 ---
 
-
 ## Übersicht
 
 Integration des x402 Payment-Protokolls in den ImageGen-Service **mit Beibehaltung der NFT-Funktionalität**. Der NFT-Mint wird als Payment-Proof akzeptiert.
@@ -20,6 +19,7 @@ Das x402-Protokoll nutzt den HTTP-Statuscode `402 Payment Required` für automat
 - **Custom Implementation** - Direkte On-Chain Verification ohne Facilitator
 
 **Aufteilung:**
+
 - ✅ x402-Style 402 Response: Manual (klar und direkt)
 - ✅ Transaction Verification: Viem (status, recipient, amount)
 - ✅ Mint-Event Parsing: Custom (NFT-spezifisch, TokenId Extraktion)
@@ -27,6 +27,7 @@ Das x402-Protokoll nutzt den HTTP-Statuscode `402 Payment Required` für automat
 **Warum KEIN [x402 npm Package](https://www.npmjs.com/package/x402)?**
 
 1. **Facilitator-Dependency**: x402 Package ist designed für Facilitator-basierte Verification (zentralisierter Service)
+
    ```javascript
    // x402 Package Design:
    import { verify } from "x402/verify";
@@ -34,6 +35,7 @@ Das x402-Protokoll nutzt den HTTP-Statuscode `402 Payment Required` für automat
    ```
 
 2. **Self-Sovereign Approach**: Wir wollen direkt On-Chain verifizieren ohne externe Dependencies
+
    ```javascript
    // Unser Ansatz:
    const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
@@ -56,13 +58,15 @@ Das x402-Protokoll nutzt den HTTP-Statuscode `402 Payment Required` für automat
 Das [x402 npm Package](https://www.npmjs.com/package/x402) (70k+ Downloads) ist ein **production-ready** Package von Coinbase für das x402 Payment Protocol. Es bietet:
 
 **Verfügbare Module:**
+
 ```javascript
-import { verify, settle } from "x402/verify";          // Facilitator-basierte Verification
-import { preparePaymentHeader } from "x402/client";    // Client-side Payment Header
-import { exact } from "x402/schemes";                   // Payment Schemes
+import { verify, settle } from "x402/verify"; // Facilitator-basierte Verification
+import { preparePaymentHeader } from "x402/client"; // Client-side Payment Header
+import { exact } from "x402/schemes"; // Payment Schemes
 ```
 
 **Package Design:**
+
 - ✅ Middleware für Express/Hono/Next.js
 - ✅ Standardisierte 402 Response Formate
 - ✅ Facilitator-Integration für Payment Verification
@@ -71,20 +75,21 @@ import { exact } from "x402/schemes";                   // Payment Schemes
 
 **Warum nicht verwendet:**
 
-| Aspekt | x402 Package | Unsere Requirements |
-|--------|--------------|---------------------|
-| **Verification** | Facilitator-Service | Direkt On-Chain |
-| **Architecture** | Middleware-basiert | Serverless Function |
-| **Payment Type** | Standard USDC Transfer | NFT Mint Transaction |
-| **Dependencies** | Facilitator erforderlich | Self-Sovereign |
-| **Use Case** | Generische API Payments | NFT-spezifischer Flow |
+| Aspekt           | x402 Package             | Unsere Requirements   |
+| ---------------- | ------------------------ | --------------------- |
+| **Verification** | Facilitator-Service      | Direkt On-Chain       |
+| **Architecture** | Middleware-basiert       | Serverless Function   |
+| **Payment Type** | Standard USDC Transfer   | NFT Mint Transaction  |
+| **Dependencies** | Facilitator erforderlich | Self-Sovereign        |
+| **Use Case**     | Generische API Payments  | NFT-spezifischer Flow |
 
 **Beispiel: x402 Package mit Facilitator**
+
 ```javascript
 import { useFacilitator } from "x402/verify";
 
 const { verify } = useFacilitator({
-  url: "https://x402.org/facilitator"  // ❌ Externe Dependency!
+  url: "https://x402.org/facilitator", // ❌ Externe Dependency!
 });
 
 const result = await verify(paymentPayload, paymentRequirements);
@@ -92,6 +97,7 @@ const result = await verify(paymentPayload, paymentRequirements);
 ```
 
 **Unsere Manual Implementation**
+
 ```javascript
 // Direkte On-Chain Verification ohne Facilitator
 const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
@@ -109,6 +115,7 @@ return { valid: true, tokenId, payer };
 ```
 
 **Vorteile unserer Manual Implementation:**
+
 - ✅ **Self-Sovereign**: Keine Abhängigkeit von Facilitator-Services
 - ✅ **NFT-Optimiert**: TokenId-Extraktion aus Mint-Event
 - ✅ **Serverless-Ready**: Passt perfekt zu Scaleway Functions
@@ -116,6 +123,7 @@ return { valid: true, tokenId, payer };
 - ✅ **Zero External Dependencies**: Nur Viem für Blockchain-Zugriff
 
 **Wann x402 Package verwenden?**
+
 - Express/Hono/Next.js Middleware-Integration
 - Standard USDC Payment Flows
 - Facilitator-basierte Verification gewünscht
@@ -158,6 +166,7 @@ return { valid: true, tokenId, payer };
 ```
 
 **Probleme:**
+
 - Zwei separate User-Interaktionen (Mint + Generate)
 - Server muss Token-Status on-chain prüfen
 - Kein standardisiertes Payment-Protokoll
@@ -206,6 +215,7 @@ return { valid: true, tokenId, payer };
 ```
 
 **Vorteile:**
+
 - ✅ NFT-Funktionalität bleibt erhalten
 - ✅ x402-konformes Payment-Protokoll
 - ✅ Ein zusammenhängender User-Flow
@@ -253,8 +263,8 @@ function create402Response() {
       description: "Mint an NFT to generate your AI image",
       paymentType: "contract-call",
       contractAddress: GENIMG_CONTRACT_ADDRESS,
-      contractMethod: "mint()"
-    }
+      contractMethod: "mint()",
+    },
   };
 
   return {
@@ -264,18 +274,19 @@ function create402Response() {
       "Access-Control-Allow-Headers": "*",
       "Access-Control-Allow-Methods": "*",
       "Content-Type": "application/json",
-      "X-Payment": JSON.stringify(paymentInfo)
+      "X-Payment": JSON.stringify(paymentInfo),
     },
     body: JSON.stringify({
       error: "Payment required",
       message: "Please mint an NFT to generate your image",
-      payment: paymentInfo
-    })
+      payment: paymentInfo,
+    }),
   };
 }
 ```
 
 **Generiertes Format:**
+
 ```http
 HTTP/1.1 402 Payment Required
 X-Payment: {
@@ -315,7 +326,7 @@ async function verifyMintPayment(publicClient, txHash) {
   try {
     // 1. Get Transaction Receipt
     const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
-    
+
     if (!receipt || receipt.status !== "success") {
       return { valid: false, error: "Transaction failed or not found" };
     }
@@ -335,10 +346,10 @@ async function verifyMintPayment(publicClient, txHash) {
         error: `Insufficient payment. Expected at least ${MINT_PRICE}, got ${tx.value}`
       };
     }
-  
+
   // 2. Custom: Mint-Event aus Receipt extrahieren
   const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
-  
+
   // Finde Transfer-Event mit from=0x0 (Mint)
   const mintLog = receipt.logs.find(log => {
     if (log.address.toLowerCase() !== GENIMG_CONTRACT_ADDRESS.toLowerCase()) {
@@ -348,15 +359,15 @@ async function verifyMintPayment(publicClient, txHash) {
     return log.topics[0] === TRANSFER_EVENT.signature &&
            log.topics[1] === '0x0000000000000000000000000000000000000000000000000000000000000000';
   });
-  
+
   if (!mintLog) {
     return { valid: false, error: 'No mint event found in transaction' };
   }
-  
+
   // 3. TokenId aus Event extrahieren
   const mintedTokenId = parseInt(mintLog.topics[3], 16);
   const minterAddress = '0x' + mintLog.topics[2].slice(26);
-  
+
   return {
     valid: true,
     tokenId: mintedTokenId,
@@ -367,6 +378,7 @@ async function verifyMintPayment(publicClient, txHash) {
 ```
 
 **Was wird geprüft:**
+
 - ✅ Transaction Status (success/reverted)
 - ✅ Recipient (Contract Address match)
 - ✅ Amount (≥ MINT_PRICE)
@@ -375,6 +387,7 @@ async function verifyMintPayment(publicClient, txHash) {
 - ✅ Minter-Adresse extrahieren
 
 **Vorteile gegenüber Facilitator:**
+
 - ✅ Self-Sovereign (keine externe Dependency)
 - ✅ Transparent (direkter Blockchain-Zugriff)
 - ✅ NFT-optimiert (TokenId-Extraktion)
@@ -382,68 +395,64 @@ async function verifyMintPayment(publicClient, txHash) {
 ### 1.4 Vollständiger Handler (x402-konform)
 
 ```javascript
-import { createPublicClient, http, parseAbiItem } from 'viem';
-import { optimism } from 'viem/chains';
+import { createPublicClient, http, parseAbiItem } from "viem";
+import { optimism } from "viem/chains";
 
 // Config
-const MINT_PRICE = '500000000000000'; // 0.0005 ETH
-const GENIMG_CONTRACT_ADDRESS = '0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb';
+const MINT_PRICE = "500000000000000"; // 0.0005 ETH
+const GENIMG_CONTRACT_ADDRESS = "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb";
 
 const publicClient = createPublicClient({
   chain: optimism,
-  transport: http(process.env.OPTIMISM_RPC_URL)
+  transport: http(process.env.OPTIMISM_RPC_URL),
 });
 
 export async function handler(event) {
-  const paymentProof = event.headers['x-payment'];
+  const paymentProof = event.headers["x-payment"];
   const { prompt } = JSON.parse(event.body);
-  
+
   // Kein Payment → 402 via x402 Package
   if (!paymentProof) {
     const payment = createPaymentRequired({
       amount: MINT_PRICE,
       recipient: GENIMG_CONTRACT_ADDRESS,
-      network: 'optimism',
+      network: "optimism",
       metadata: {
-        resource: 'genimg',
-        description: 'Mint an NFT to generate your AI image',
-        paymentType: 'contract-call',
+        resource: "genimg",
+        description: "Mint an NFT to generate your AI image",
+        paymentType: "contract-call",
         contractAddress: GENIMG_CONTRACT_ADDRESS,
-        contractMethod: 'mint()'
-      }
+        contractMethod: "mint()",
+      },
     });
-    
+
     return {
       statusCode: 402,
       headers: {
-        'X-Payment': JSON.stringify(payment)
+        "X-Payment": JSON.stringify(payment),
       },
-      body: JSON.stringify({ 
-        error: 'Payment required',
-        message: 'Please mint an NFT to generate your image'
-      })
+      body: JSON.stringify({
+        error: "Payment required",
+        message: "Please mint an NFT to generate your image",
+      }),
     };
   }
-  
+
   // Payment verifizieren (x402 + Custom Mint-Check)
   const verification = await verifyMintPayment(paymentProof);
   if (!verification.valid) {
-    return { 
-      statusCode: 402, 
-      body: JSON.stringify({ error: verification.error })
+    return {
+      statusCode: 402,
+      body: JSON.stringify({ error: verification.error }),
     };
   }
-  
+
   // Bild generieren mit verifiziertem tokenId
-  const result = await generateImageAndUpdateNFT(
-    prompt, 
-    verification.tokenId,
-    verification.payer
-  );
-  
+  const result = await generateImageAndUpdateNFT(prompt, verification.tokenId, verification.payer);
+
   return {
     statusCode: 200,
-    body: JSON.stringify(result)
+    body: JSON.stringify(result),
   };
 }
 ```
@@ -504,12 +513,12 @@ export async function handler(event) {
 
 ### 2.3 Änderungen am aktuellen Flow
 
-| Aktuell | Neu (x402) |
-|---------|------------|
-| Separater Mint-Button | Ein "Generate"-Button |
-| User wartet auf Mint, dann Generate | Ein durchgehender Flow |
-| TokenId manuell übergeben | TokenId aus Mint-Event extrahiert |
-| Server prüft Token on-chain | Server verifiziert Payment-Proof |
+| Aktuell                             | Neu (x402)                        |
+| ----------------------------------- | --------------------------------- |
+| Separater Mint-Button               | Ein "Generate"-Button             |
+| User wartet auf Mint, dann Generate | Ein durchgehender Flow            |
+| TokenId manuell übergeben           | TokenId aus Mint-Event extrahiert |
+| Server prüft Token on-chain         | Server verifiziert Payment-Proof  |
 
 ### 2.4 Pseudocode
 
@@ -517,49 +526,45 @@ export async function handler(event) {
 async function generateImageWithPayment(prompt: string) {
   // 1. Erster Request - löst 402 aus
   let response = await fetch(GENIMG_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
   });
-  
+
   if (response.status === 402) {
     // 2. Parse Payment-Details
-    const paymentDetails = JSON.parse(
-      response.headers.get('X-Payment') || '{}'
-    );
-    
+    const paymentDetails = JSON.parse(response.headers.get("X-Payment") || "{}");
+
     // 3. NFT Minting durchführen
     const { hash: txHash } = await writeContract({
       address: paymentDetails.contractAddress,
       abi: GenImNFTv4ABI,
-      functionName: 'mint',
-      value: BigInt(paymentDetails.maxAmountRequired)
+      functionName: "mint",
+      value: BigInt(paymentDetails.maxAmountRequired),
     });
-    
+
     // 4. Auf Confirmation warten
     const receipt = await waitForTransactionReceipt({ hash: txHash });
-    
+
     // 5. TokenId aus Mint-Event extrahieren
-    const mintEvent = receipt.logs.find(
-      log => log.topics[0] === TRANSFER_EVENT_SIGNATURE
-    );
+    const mintEvent = receipt.logs.find((log) => log.topics[0] === TRANSFER_EVENT_SIGNATURE);
     const tokenId = parseInt(mintEvent.topics[3], 16);
-    
+
     // 6. Retry mit Payment-Proof
     response = await fetch(GENIMG_ENDPOINT, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-Payment': JSON.stringify({ txHash, tokenId })
+        "Content-Type": "application/json",
+        "X-Payment": JSON.stringify({ txHash, tokenId }),
       },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt }),
     });
   }
-  
+
   if (!response.ok) {
-    throw new Error('Image generation failed');
+    throw new Error("Image generation failed");
   }
-  
+
   return response.json();
 }
 ```
@@ -574,12 +579,12 @@ async function generateImageWithPayment(prompt: string) {
 
 Der aktuelle Contract unterstützt bereits alles, was für x402 benötigt wird:
 
-| Funktion | Bereits vorhanden | Für x402 genutzt |
-|----------|-------------------|------------------|
-| `mint()` | ✅ | Payment-Transaktion |
-| `Transfer` Event | ✅ | TokenId + Payer extrahieren |
-| `requestImageUpdate()` | ✅ | Bild on-chain speichern |
-| Whitelisted Provider | ✅ | Server kann TokenURI updaten |
+| Funktion               | Bereits vorhanden | Für x402 genutzt             |
+| ---------------------- | ----------------- | ---------------------------- |
+| `mint()`               | ✅                | Payment-Transaktion          |
+| `Transfer` Event       | ✅                | TokenId + Payer extrahieren  |
+| `requestImageUpdate()` | ✅                | Bild on-chain speichern      |
+| Whitelisted Provider   | ✅                | Server kann TokenURI updaten |
 
 ### Mint-Event als Payment-Proof
 
@@ -594,6 +599,7 @@ event Transfer(
 ```
 
 Der Server kann aus dem txHash:
+
 1. Prüfen ob Transaktion erfolgreich war
 2. TokenId extrahieren
 3. Payer-Adresse verifizieren
@@ -611,13 +617,13 @@ Der Server kann aus dem txHash:
 
 ### 4.2 Edge Cases
 
-| Edge Case | Handling |
-|-----------|----------|
+| Edge Case                          | Handling                                   |
+| ---------------------------------- | ------------------------------------------ |
 | Payment Success, Generation Failed | Bild später generieren (TokenId existiert) |
-| Doppelte Payments verhindern | Server prüft ob TokenId schon Bild hat |
-| Timeout bei Mint | Client zeigt Retry-Option |
-| Invalid txHash | 402 mit Fehlermeldung |
-| Falscher Contract | 402 - nur GenImNFTv4 akzeptiert |
+| Doppelte Payments verhindern       | Server prüft ob TokenId schon Bild hat     |
+| Timeout bei Mint                   | Client zeigt Retry-Option                  |
+| Invalid txHash                     | 402 mit Fehlermeldung                      |
+| Falscher Contract                  | 402 - nur GenImNFTv4 akzeptiert            |
 
 ### 4.3 Monitoring
 
@@ -636,7 +642,7 @@ Der Server kann aus dem txHash:
 + if (!event.headers['x-payment']) {
 +   return { statusCode: 402, headers: { 'X-Payment': ... } };
 + }
-+ 
++
 + // Mint-Verification statt Token-Check
 - const tokenExists = await contract.ownerOf(tokenId);
 + const { valid, tokenId } = await verifyMintPayment(paymentProof);
@@ -659,7 +665,7 @@ Der Server kann aus dem txHash:
 + const response = await fetch('/genimg', { body: { prompt } });
 + if (response.status === 402) {
 +   const tx = await mint();  // Automatisch getriggert
-+   await fetch('/genimg', { 
++   await fetch('/genimg', {
 +     headers: { 'X-Payment': { txHash: tx.hash } }
 +   });
 + }
@@ -669,25 +675,25 @@ Der Server kann aus dem txHash:
 
 ## Dateien zu ändern
 
-| Datei | Änderungen |
-|-------|------------|
-| `scw_js/package.json` | Dependencies: `viem` (bereits vorhanden) |
-| `scw_js/genimg_x402.js` | **NEU**: 402-Response (manual), Mint-Verification (direct on-chain) |
-| `website/components/ImageGenerator.tsx` | 402-Handling, vereinfachter Flow |
-| `website/hooks/useImageGeneration.ts` | (neu) Fetch + 402 + Mint + Retry |
-| `website/public/openapi.json` | 402-Response dokumentieren |
+| Datei                                   | Änderungen                                                          |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `scw_js/package.json`                   | Dependencies: `viem` (bereits vorhanden)                            |
+| `scw_js/genimg_x402.js`                 | **NEU**: 402-Response (manual), Mint-Verification (direct on-chain) |
+| `website/components/ImageGenerator.tsx` | 402-Handling, vereinfachter Flow                                    |
+| `website/hooks/useImageGeneration.ts`   | (neu) Fetch + 402 + Mint + Retry                                    |
+| `website/public/openapi.json`           | 402-Response dokumentieren                                          |
 
 ---
 
 ## Zeitschätzung
 
-| Phase | Aufwand | Status |
-|-------|---------|--------|
-| Phase 1: Server (402 + Mint-Verify) | 3-4h | ✅ **Fertig** (`genimg_x402.js`) |
-| Phase 2: Client (402-Handling) | 3-4h | ⏳ Todo |
-| Phase 3: Contract | 0h | ✅ Keine Änderungen |
-| Phase 4: Testing | 2-3h | ⏳ Unit Tests vorhanden |
-| **Total** | 8-11h | **Phase 1 abgeschlossen** |
+| Phase                               | Aufwand | Status                           |
+| ----------------------------------- | ------- | -------------------------------- |
+| Phase 1: Server (402 + Mint-Verify) | 3-4h    | ✅ **Fertig** (`genimg_x402.js`) |
+| Phase 2: Client (402-Handling)      | 3-4h    | ⏳ Todo                          |
+| Phase 3: Contract                   | 0h      | ✅ Keine Änderungen              |
+| Phase 4: Testing                    | 2-3h    | ⏳ Unit Tests vorhanden          |
+| **Total**                           | 8-11h   | **Phase 1 abgeschlossen**        |
 
 **Manual Implementation:** Klarer, direkter Code ohne Facilitator-Overhead
 
@@ -705,10 +711,10 @@ Die `agent-registration.json` könnte ein x402-Payment-Schema referenzieren:
 ```json
 {
   "endpoints": [
-    { 
-      "name": "genimg", 
-      "endpoint": "https://...", 
-      "paymentProtocol": "x402" 
+    {
+      "name": "genimg",
+      "endpoint": "https://...",
+      "paymentProtocol": "x402"
     }
   ]
 }

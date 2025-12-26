@@ -653,6 +653,30 @@ export const nftAbi = [
   {
     inputs: [
       {
+        internalType: "string",
+        name: "uri",
+        type: "string",
+      },
+      {
+        internalType: "bool",
+        name: "isListed",
+        type: "bool",
+      },
+    ],
+    name: "safeMint",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "address",
         name: "from",
         type: "address",

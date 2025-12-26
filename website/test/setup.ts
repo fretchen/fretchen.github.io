@@ -8,6 +8,9 @@ vi.mock("wagmi", () => ({
     address: "0x123456789abcdef",
     isConnected: false,
   })),
+  useWalletClient: vi.fn(() => ({
+    data: undefined,
+  })),
   useSignMessage: vi.fn(() => ({
     signMessageAsync: vi.fn(),
   })),

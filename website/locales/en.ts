@@ -18,7 +18,7 @@ export default {
     creating: "Creating...",
     generating: "Generating...",
     mintingInfo:
-      "Mints on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
+      "Pays with USDC on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
     myArtworks: "My Artworks",
     allPublicArtworks: "All Public Artworks",
     artwork: "Artwork",
@@ -36,6 +36,13 @@ export default {
     chainSwitchTimeout: "Chain switch timeout - please try again",
     extractTokenId: "Could not extract artwork ID from transaction",
     unknownError: "An unknown error occurred",
+    chainSwitchFailed: "Failed to switch network - please try again",
+    // x402 Payment
+    awaitingSignature: "Sign USDC payment in wallet...",
+    processingPayment: "Processing payment...",
+    mintingNft: "Minting your NFT...",
+    paymentConfirmed: "Payment confirmed!",
+    usdcCost: "Cost: $0.07 USDC",
     // File upload
     uploadReferenceImage: "Upload Reference Image (Optional)",
     dragDropHere: "Drag & drop an image here, or click to browse",

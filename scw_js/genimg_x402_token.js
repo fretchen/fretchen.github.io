@@ -95,6 +95,7 @@ const resourceServer = createResourceServer();
  * @param {string} contractAddress - NFT contract address for event filtering
  * @param {string} serverWallet - Server wallet address for transfer
  * @param {bigint} mintPrice - Mint price from contract
+ * @param {boolean} isListed - Whether to list the NFT in public gallery
  * @returns {Object} {tokenId, mintTxHash, transferTxHash}
  */
 async function mintNFTToClient(
@@ -105,12 +106,15 @@ async function mintNFTToClient(
   contractAddress,
   serverWallet,
   mintPrice,
+  isListed = false,
 ) {
-  console.log(`🎨 Minting NFT to server, then transferring to ${clientAddress}`);
+  console.log(
+    `🎨 Minting NFT to server (isListed=${isListed}), then transferring to ${clientAddress}`,
+  );
 
   // Step 1: Mint to server wallet
-  // Use single-parameter safeMint(uri) - the contract deployed uses this version
-  const mintTxHash = await contract.write.safeMint([metadataUrl], {
+  // Use safeMint(uri, isListed) to set public gallery visibility
+  const mintTxHash = await contract.write.safeMint([metadataUrl, isListed], {
     value: mintPrice,
   });
 
@@ -143,15 +147,48 @@ async function mintNFTToClient(
   const tokenId = parseInt(mintLog.topics[3], 16);
   console.log(`✅ NFT minted: tokenId=${tokenId}`);
 
-  // Step 2: Transfer to client
-  // Note: We trust the event log - no ownerOf check needed (avoids RPC lag issues)
-  const transferTxHash = await contract.write.safeTransferFrom([
-    serverWallet,
-    clientAddress,
-    BigInt(tokenId),
-  ]);
+  // Step 2: Transfer to client with retry logic
+  // Public RPCs on testnets can lag behind - retry if token appears non-existent
+  const MAX_TRANSFER_RETRIES = 3;
+  const RETRY_DELAY_MS = 2000;
 
-  console.log(`📤 Transfer transaction submitted: ${transferTxHash}`);
+  let transferTxHash;
+  let lastError;
+
+  for (let attempt = 1; attempt <= MAX_TRANSFER_RETRIES; attempt++) {
+    try {
+      console.log(`📤 Transfer attempt ${attempt}/${MAX_TRANSFER_RETRIES}...`);
+
+      transferTxHash = await contract.write.safeTransferFrom([
+        serverWallet,
+        clientAddress,
+        BigInt(tokenId),
+      ]);
+
+      console.log(`📤 Transfer transaction submitted: ${transferTxHash}`);
+      break; // Success - exit retry loop
+    } catch (error) {
+      lastError = error;
+
+      // Check if this is an RPC state lag error (token appears non-existent)
+      const isNonExistentTokenError =
+        error.message?.includes("ERC721NonexistentToken") ||
+        error.shortMessage?.includes("ERC721NonexistentToken");
+
+      if (isNonExistentTokenError && attempt < MAX_TRANSFER_RETRIES) {
+        console.log(`⏳ RPC state lag detected, waiting ${RETRY_DELAY_MS}ms before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+
+      // For other errors or final attempt, throw
+      throw error;
+    }
+  }
+
+  if (!transferTxHash) {
+    throw lastError || new Error("Transfer failed after retries");
+  }
 
   // Wait for transfer confirmation
   const transferReceipt = await publicClient.waitForTransactionReceipt({
@@ -175,6 +212,7 @@ async function mintNFTToClient(
  * Generates image and mints NFT
  * @param {boolean} useMockImage - If true, use mock image (test mode, no BFL costs)
  * @param {bigint} mintPrice - Mint price from contract
+ * @param {boolean} isListed - Whether to list the NFT in public gallery
  */
 async function generateImageAndMintNFT(
   prompt,
@@ -188,6 +226,7 @@ async function generateImageAndMintNFT(
   referenceImageBase64 = null,
   useMockImage = false,
   mintPrice = BigInt(0),
+  isListed = false,
 ) {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
@@ -244,6 +283,7 @@ async function generateImageAndMintNFT(
     contractAddress,
     serverWallet,
     mintPrice,
+    isListed,
   );
 
   return {
@@ -339,6 +379,7 @@ async function handle(event, context, cb) {
   // Get optional parameters
   const mode = body.mode || "generate";
   const size = body.size || "1024x1024";
+  const isListed = body.isListed === true; // Default: false (not listed in public gallery)
 
   // Validate size parameter
   const validSizes = ["1024x1024", "1792x1024"];
@@ -563,6 +604,7 @@ async function handle(event, context, cb) {
       referenceImageBase64,
       sepoliaTest, // useMockImage in test mode
       mintPrice,
+      isListed,
     );
 
     // Settlement is async, don't wait)
@@ -590,6 +632,7 @@ async function handle(event, context, cb) {
         network: clientNetwork,
         size,
         mode,
+        isListed,
         mintPrice: mintPrice.toString(),
         message: `Image successfully ${mode === "edit" ? "edited" : "generated"} and NFT minted`,
       }),
@@ -633,7 +676,10 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
         fastify.register(corsModule.default, {
           origin: true,
           methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: ["Content-Type", "Authorization", "X-Payment"],
+          // Allow ALL headers for x402 payment protocol (PAYMENT-SIGNATURE, etc.)
+          allowedHeaders: "*",
+          // Expose payment response headers to browser JavaScript
+          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
         });
 
         // URL Data Plugin for Query Parameters

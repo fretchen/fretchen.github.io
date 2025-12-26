@@ -67,10 +67,6 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         registerExactEvmScheme(client, { signer: signer as any });
         console.log("[x402] x402Client created and EVM scheme registered");
 
-        // === Wrap fetch with payment handling ===
-        const fetchWithPayment = wrapFetchWithPayment(fetch, client);
-        console.log("[x402] fetchWithPayment wrapper created");
-
         // === Make the paid request ===
         console.log("[x402] Making request to:", X402_API_URL);
         // Remove expectedChainId from request body (it's only for client-side validation)
@@ -78,27 +74,21 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         console.log("[x402] Request body:", JSON.stringify(requestBody));
         console.log("[x402] Expected chain ID for validation:", expectedChainId);
 
-        // First, make a preflight request to get payment requirements for validation
-        // This prevents signing for the wrong chain
-        if (expectedChainId) {
-          console.log("[x402] Making preflight request to validate chain...");
-          const preflightResponse = await fetch(X402_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestBody),
-          });
+        // === Create a validating fetch wrapper ===
+        // This validates the chain from the 402 response BEFORE signing,
+        // avoiding an extra preflight request
+        const validatingFetch: typeof fetch = async (input, init) => {
+          const response = await fetch(input, init);
 
-          if (preflightResponse.status === 402) {
-            // Extract network from payment requirements
-            const paymentRequiredHeader = preflightResponse.headers.get("Payment-Required");
+          // Validate chain from 402 response before x402 SDK triggers signing
+          if (response.status === 402 && expectedChainId) {
+            const paymentRequiredHeader = response.headers.get("Payment-Required");
             if (paymentRequiredHeader) {
               try {
                 const decoded = JSON.parse(atob(paymentRequiredHeader));
                 const serverNetwork = decoded.accepts?.[0]?.network;
-                console.log("[x402] Server requires network:", serverNetwork);
-
-                // Validate chain matches expectation
                 const expectedNetwork = `eip155:${expectedChainId}`;
+
                 if (serverNetwork && serverNetwork !== expectedNetwork) {
                   throw new Error(
                     `Chain mismatch! Expected ${expectedNetwork} but server requires ${serverNetwork}. ` +
@@ -114,9 +104,14 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
               }
             }
           }
-        }
 
-        // Now make the actual paid request
+          return response;
+        };
+
+        // Wrap the validating fetch with payment handling
+        const fetchWithPayment = wrapFetchWithPayment(validatingFetch, client);
+
+        // Make the paid request (single request flow)
         const response = await fetchWithPayment(X402_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

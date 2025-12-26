@@ -151,7 +151,7 @@ export function getUSDCConfig(network) {
         chainId: 8453,
         address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         decimals: 6,
-        usdcName: "USDC",
+        usdcName: "USD Coin", // Mainnet uses "USD Coin" for EIP-712 domain
         usdcVersion: "2",
       };
     case "eip155:84532": // Base Sepolia

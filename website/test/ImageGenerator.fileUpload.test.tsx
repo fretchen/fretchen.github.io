@@ -29,12 +29,13 @@ beforeAll(() => {
   } as ReturnType<typeof useAccount>);
 
   // Mock wallet client for x402 hook
+
   vi.mocked(useWalletClient).mockReturnValue({
     data: {
       account: { address: "0x1234567890123456789012345678901234567890" },
       signTypedData: vi.fn(),
     },
-  } as any);
+  } as ReturnType<typeof useWalletClient>);
 });
 
 describe("ImageGenerator Reference Image Integration", () => {

@@ -30,7 +30,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
 import { useAccount, useSwitchChain, useChainId, useConnect, useWalletClient } from "wagmi";
@@ -144,12 +144,13 @@ describe("ImageGenerator Component", () => {
       } as ReturnType<typeof useAccount>);
 
       // Mock wallet client for x402 hook
+
       vi.mocked(useWalletClient).mockReturnValue({
         data: {
           account: { address: "0x1234567890123456789012345678901234567890" },
           signTypedData: vi.fn(),
         },
-      } as any);
+      } as ReturnType<typeof useWalletClient>);
 
       render(<ImageGenerator />);
 
@@ -177,12 +178,13 @@ describe("ImageGenerator Component", () => {
     } as ReturnType<typeof useAccount>);
 
     // Mock wallet client for x402 hook
+
     vi.mocked(useWalletClient).mockReturnValue({
       data: {
         account: { address: "0x1234567890123456789012345678901234567890" },
         signTypedData: vi.fn(),
       },
-    } as any);
+    } as ReturnType<typeof useWalletClient>);
 
     // Mock that user is on wrong chain (Ethereum mainnet instead of Optimism)
     vi.mocked(useChainId).mockReturnValue(1);

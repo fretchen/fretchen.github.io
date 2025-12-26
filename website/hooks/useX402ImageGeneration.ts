@@ -9,8 +9,10 @@ import { useState, useCallback } from "react";
 import { useWalletClient, useAccount } from "wagmi";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 
-// API URL from environment
-const X402_API_URL = "https://mypersonaljscloudivnad9dy-genimgx402token.functions.fnc.fr-par.scw.cloud" || import.meta.env.PUBLIC_ENV__IMAGE_URL;
+// API URL from environment (fallback to env var if not set)
+const X402_API_URL =
+  import.meta.env.PUBLIC_ENV__IMAGE_URL ||
+  "https://mypersonaljscloudivnad9dy-genimgx402token.functions.fnc.fr-par.scw.cloud";
 // const X402_API_URL = import.meta.env.PUBLIC_ENV__IMAGE_URL;
 
 export interface UseX402ImageGenerationResult {
@@ -61,6 +63,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
 
         // === Setup x402 client (exactly like Quickstart) ===
         const client = new x402Client();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x402 SDK expects specific signer interface
         registerExactEvmScheme(client, { signer: signer as any });
         console.log("[x402] x402Client created and EVM scheme registered");
 
@@ -84,7 +87,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestBody),
           });
-          
+
           if (preflightResponse.status === 402) {
             // Extract network from payment requirements
             const paymentRequiredHeader = preflightResponse.headers.get("Payment-Required");
@@ -93,13 +96,13 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
                 const decoded = JSON.parse(atob(paymentRequiredHeader));
                 const serverNetwork = decoded.accepts?.[0]?.network;
                 console.log("[x402] Server requires network:", serverNetwork);
-                
+
                 // Validate chain matches expectation
                 const expectedNetwork = `eip155:${expectedChainId}`;
                 if (serverNetwork && serverNetwork !== expectedNetwork) {
                   throw new Error(
                     `Chain mismatch! Expected ${expectedNetwork} but server requires ${serverNetwork}. ` +
-                    `This could indicate a configuration error.`
+                      `This could indicate a configuration error.`,
                   );
                 }
                 console.log("[x402] Chain validation passed:", expectedNetwork);
@@ -135,9 +138,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         // === Extract payment receipt (like Quickstart step 3) ===
         try {
           const httpClient = new x402HTTPClient(client);
-          const receipt = httpClient.getPaymentSettleResponse(
-            (name: string) => response.headers.get(name)
-          );
+          const receipt = httpClient.getPaymentSettleResponse((name: string) => response.headers.get(name));
           if (receipt) {
             setPaymentReceipt({
               transaction: receipt.transaction,
@@ -159,7 +160,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         throw err;
       }
     },
-    [walletClient]
+    [walletClient],
   );
 
   const reset = useCallback(() => {

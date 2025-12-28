@@ -105,12 +105,9 @@ The server responds with a `402 Payment Required` status and tells you exactly h
 }
 ```
 
-This response tells the client everything it needs: pay **0.07 USDC** (`amount: "70000"` with 6 decimals) on **Optimism Mainnet** (`network: "eip155:10"`) to the server wallet. The client can then sign an EIP-3009 authorization and resubmit the request with the `PAYMENT-SIGNATURE` header.
+This response tells the client everything it needs: pay **0.07 USDC** (`amount: "70000"` with 6 decimals) on **Optimism Mainnet** (`network: "eip155:10"`) to the server wallet. The simplicity of this interaction is the key strength of x402 and just an absolut beauty.
 
-The key difference from my previous set-up is the facilitator. It handles all the blockchain complexity – verifying signatures off-chain and settling payments on-chain – so the seller doesn't need to maintain blockchain infrastructure.
-
-
----
+Now, we can come the key difference of the x402 setup: the facilitator. It handles all the blockchain complexity – verifying signatures off-chain and settling payments on-chain – so the seller doesn't need to maintain blockchain infrastructure. It is very similar to any payment provider in the traditional web world, think Stripe or PayPal. However, here we can (and I actually had to) implement our own custom facilitator.
 
 ## The Facilitator
 

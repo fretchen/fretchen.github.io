@@ -1,0 +1,203 @@
+---
+publishing_date: 2025-12-31
+title: x402 Standard for paying AI agents
+category: "blockchain"
+secondaryCategory: "ai"
+description: "I implemented the x402 payment standard for AI agents to autonomously pay for image generation services without accounts or sessions."
+---
+import MermaidDiagram from "../components/MermaidDiagram";
+
+export const x402FlowDiagram = `
+sequenceDiagram
+    participant Buyer as fretchen.eu/imagegen<br/>(Buyer)
+    participant Seller as imagegen-agent.fretchen.eu<br/>(Seller)
+    participant Facilitator as facilitator.fretchen.eu<br/>(Facilitator)
+    participant Blockchain as Optimism L2<br/>(USDC)
+
+    Buyer->>Seller: 1. POST /genimg (no payment)
+    Seller-->>Buyer: 2. 402 Payment Required<br/>+ PAYMENT-REQUIRED header
+
+    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
+
+    Buyer->>Seller: 4. POST /genimg<br/>+ PAYMENT-SIGNATURE header
+    Seller->>Facilitator: 5. POST /verify
+    Facilitator-->>Seller: 6. Payment valid ✓
+
+    Note over Seller: 7. Generate image<br/>+ Mint NFT
+
+    Seller->>Facilitator: 8. POST /settle
+    Facilitator->>Blockchain: 9. transferWithAuthorization
+    Blockchain-->>Facilitator: 10. Transaction confirmed
+    Facilitator-->>Seller: 11. Settlement complete
+
+    Seller-->>Buyer: 12. 200 OK + Image URL + NFT
+`;
+
+**TL;DR:** The endpoint `imagegen-agent.fretchen.eu` now uses the x402 standard for payments. This enables users to automatically pay for image generation in a fairly simple and standardized way.
+
+## Introduction
+
+Over the last year, I created an AI image generator, which can be paid on the blockchain. Obviously, I was not the last one and a number of frameworks popped up to standardize the payment process. One of the most popular ones is [x402](https://docs.cdp.coinbase.com/x402/welcome) from Coinbase. So I implemented this standard for my image generation endpoint. This blog post explains how it works and what it means for AI agents or other users that want to autonomously pay for image generation.
+
+## The x402 Standard
+
+Without the standard, I had no easy and machine-friendly way to request payments for the image generation service. If you look at it this is actually a very frequent problem for web services with paywalls. Most modern web services want to get paid, but the payment process is often cumbersome and not standardized. This is where x402 comes into play. It standardizes the payment request and settlement process over HTTP.
+
+The protocol uses that already existing [HTTP 402 Payment Required](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402) status code. At its core, x402 uses a simple request-response flow:
+
+1. **Client requests a resource** – A standard HTTP request to the server
+2. **Server responds with 402** – Returns payment requirements in the `PAYMENT-REQUIRED` header
+3. **Client creates payment** – Signs a payment payload using their wallet 
+4. **Client resubmits with payment** – Same request, but with `PAYMENT-SIGNATURE` header
+5. **Server verifies and settles** – Validates via a facilitator, then delivers the resource
+
+The key benefits are:
+
+- **Stateless** – No accounts, sessions, or authentication required
+- **HTTP-native** – Works with existing web infrastructure
+- **Machine-friendly** – AI agents can pay autonomously
+- **Micropayment-ready** – Pay per request with minimal fees of less than a cent in my case.
+
+## The Architecture
+
+In the implementation, there are three main actors:
+
+- **Buyer**: `fretchen.eu/imagegen` – The frontend where users request AI-generated images
+- **Seller**: `imagegen-agent.fretchen.eu` – The resource server that generates images and mints NFTs
+- **Facilitator**: `facilitator.fretchen.eu` – Handles payment verification and settlement on Optimism
+
+Here's how they interact:
+
+<MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
+
+Buyer and seller were already present in my previous set-up, however, now their interaction is more standardized via x402. Here's a real example – if you send a request without payment:
+
+```bash
+curl -X POST https://imagegen-agent.fretchen.eu/genimg \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "A futuristic cityscape at sunset"}'
+```
+
+The server responds with a `402 Payment Required` status and tells you exactly how to pay:
+
+```json
+{
+  "x402Version": 2,
+  "resource": {
+    "url": "/genimg",
+    "description": "AI Image Generation with NFT Certificate",
+    "mimeType": "application/json"
+  },
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "eip155:10",
+      "amount": "70000",
+      "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      "payTo": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      "maxTimeoutSeconds": 60,
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
+    }
+  ]
+}
+```
+
+This response tells the client everything it needs: pay **0.07 USDC** (`amount: "70000"` with 6 decimals) on **Optimism Mainnet** (`network: "eip155:10"`) to the server wallet. The client can then sign an EIP-3009 authorization and resubmit the request with the `PAYMENT-SIGNATURE` header.
+
+The key difference from my previous set-up is the facilitator. It handles all the blockchain complexity – verifying signatures off-chain and settling payments on-chain – so the seller doesn't need to maintain blockchain infrastructure.
+
+
+---
+
+## The Facilitator
+
+What does the Facilitator do?
+
+1. **Verify** – Validates off-chain whether the signed payment is valid
+2. **Settle** – Executes the payment on-chain (EIP-3009 transferWithAuthorization)
+3. **Supported** – Advertises which networks/assets are supported
+
+Why a custom Facilitator?
+- Coinbase only offers Base/Solana
+- We need Optimism (that's where our NFTs live)
+- Whitelist logic for NFT holders (GenImNFTv4, LLMv1)
+
+Code: `x402_facilitator/` in the `facilitator` branch
+Endpoint: https://facilitator.fretchen.eu
+
+## The ImageGen Endpoint
+
+How does the endpoint work now?
+
+1. **Request without payment:**
+   ```http
+   GET /genimg HTTP/1.1
+   Host: imagegen-agent.fretchen.eu
+   ```
+
+2. **Response 402 with Payment-Requirements:**
+   ```http
+   HTTP/1.1 402 Payment Required
+   PAYMENT-REQUIRED: {...paymentDetails...}
+   ```
+   
+3. **Request with payment:**
+   ```http
+   GET /genimg HTTP/1.1
+   PAYMENT-SIGNATURE: {...signedPayment...}
+   ```
+
+4. **Success:**
+   - Image is generated (Black Forest Labs)
+   - NFT is minted (GenImNFTv4)
+   - Payment is settled (Facilitator)
+
+Price: 0.07 USDC (~7 cents) per image
+Code: `scw_js/genimg_x402_token.js`
+
+## What This Means for AI Agents
+
+The actual point: Standardization!
+
+An AI agent can now:
+1. Ping the endpoint
+2. Read the Payment-Requirements (standardized format)
+3. Automatically pay with USDC (sign, no gas)
+4. Receive the image
+
+No proprietary integration needed – x402 is an open standard.
+Any x402-compatible client works out-of-the-box.
+
+## Technical Details
+
+For the nerds:
+
+**Network:** Optimism L2
+**Asset:** USDC (0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85)
+**Payment Scheme:** EIP-3009 (transferWithAuthorization)
+**Facilitator Endpoints:**
+- POST /verify
+- POST /settle  
+- GET /supported
+
+**NFT Integration:**
+- GenImNFTv4: 0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb
+- Server mints the NFT after successful payment
+- Metadata is stored on IPFS
+
+## Links & Resources
+
+- [x402 Documentation (Coinbase)](https://docs.cdp.coinbase.com/x402/welcome)
+- [Facilitator Code](https://github.com/fretchen/fretchen.github.io/tree/facilitator/x402_facilitator)
+- [ImageGen Endpoint Code](https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_x402_token.js)
+- [EIP-3009: Transfer with Authorization](https://eips.ethereum.org/EIPS/eip-3009)
+
+## Conclusion
+
+1-2 sentences: What is the take-away?
+
+x402 finally makes "Payment Required" usable. 
+For machines and humans alike.

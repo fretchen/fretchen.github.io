@@ -1,5 +1,5 @@
 ---
-publishing_date: 2025-12-31
+publishing_date: 2025-12-29
 title: First experiences with the x402 Standard for paying AI agents
 category: "blockchain"
 secondaryCategory: "ai"
@@ -209,6 +209,7 @@ console.log("NFT Token ID:", result.tokenId);
 ```
 
 That's it! The `fetchWithPayment` wrapper automatically:
+
 1. Sends the initial POST request
 2. Receives `402 Payment Required` with USDC payment requirements
 3. Creates an EIP-3009 signature (no gas needed!)
@@ -216,6 +217,7 @@ That's it! The `fetchWithPayment` wrapper automatically:
 5. Returns the generated image URL and NFT token ID
 
 **Success response:**
+
 - Image is generated (Black Forest Labs)
 - NFT is minted (GenImNFTv4)
 - Payment is settled (Facilitator)

@@ -1,0 +1,240 @@
+---
+publishing_date: 2025-12-29
+title: First experiences with the x402 Standard for paying AI agents
+category: "blockchain"
+secondaryCategory: "ai"
+description: "I implemented the x402 payment standard for AI agents to autonomously pay for image generation services without accounts or sessions."
+tokenID: 176
+---
+
+import MermaidDiagram from "../components/MermaidDiagram";
+
+export const x402FlowDiagram = `
+sequenceDiagram
+    participant Buyer as fretchen.eu/imagegen<br/>(Buyer)
+    participant Seller as imagegen-agent.fretchen.eu<br/>(Seller)
+    participant Facilitator as facilitator.fretchen.eu<br/>(Facilitator)
+    participant Blockchain as Optimism L2<br/>(USDC)
+
+    Buyer->>Seller: 1. POST /genimg (no payment)
+    Seller-->>Buyer: 2. 402 Payment Required<br/>+ PAYMENT-REQUIRED header
+
+    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
+
+    Buyer->>Seller: 4. POST /genimg<br/>+ PAYMENT-SIGNATURE header
+    Seller->>Facilitator: 5. POST /verify
+    Facilitator-->>Seller: 6. Payment valid ✓
+
+    Note over Seller: 7. Generate image<br/>+ Mint NFT
+
+    Seller->>Facilitator: 8. POST /settle
+    Facilitator->>Blockchain: 9. transferWithAuthorization
+    Blockchain-->>Facilitator: 10. Transaction confirmed
+    Facilitator-->>Seller: 11. Settlement complete
+
+    Seller-->>Buyer: 12. 200 OK + Image URL + NFT
+
+`;
+
+## Introduction
+
+Over the last year, I've built two AI services with blockchain payments: an [image generator with NFT minting](/blog/9) and an [LLM assistant with Merkle-tree batching](/blog/16). Both work well – users can pay anonymously with crypto, no accounts needed, costs under control.
+
+But each service has its own payment logic. My image generator uses a custom smart contract flow, my LLM assistant uses prepaid deposits. If someone wanted to build a client that uses both, they'd need to understand two completely different payment systems. And if an AI agent wanted to pay for my services autonomously? It would need custom integration for each endpoint.
+
+This is where [x402](https://docs.cdp.coinbase.com/x402/welcome) comes in. It's Coinbase's standard for machine-friendly payments over HTTP, and I've now implemented it for my image generation endpoint. This post explains the standard, my facilitator implementation, and what it means for AI-to-AI payments.
+
+## The x402 Standard
+
+Without the standard, I had no easy and machine-friendly way to request payments for the image generation service. If you look at it this is actually a very frequent problem for web services with paywalls. Most modern web services want to get paid, but the payment process is often cumbersome and not standardized. This is where x402 comes into play. It standardizes the payment request and settlement process over HTTP.
+
+The protocol uses that already existing [HTTP 402 Payment Required](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402) status code. At its core, x402 uses a simple request-response flow:
+
+1. **Client requests a resource** – A standard HTTP request to the server
+2. **Server responds with 402** – Returns payment requirements in the `PAYMENT-REQUIRED` header
+3. **Client creates payment** – Signs a payment payload using their wallet
+4. **Client resubmits with payment** – Same request, but with `PAYMENT-SIGNATURE` header
+5. **Server verifies and settles** – Validates via a facilitator, then delivers the resource
+
+The key benefits are:
+
+- **Stateless** – No accounts, sessions, or authentication required
+- **HTTP-native** – Works with existing web infrastructure
+- **Machine-friendly** – AI agents can pay autonomously
+- **Micropayment-ready** – Pay per request with minimal fees of less than a cent in my case.
+
+## The Architecture
+
+In the implementation, there are three main actors:
+
+- **Buyer**: `fretchen.eu/imagegen` – The frontend where users request AI-generated images
+- **Seller**: `imagegen-agent.fretchen.eu` – The resource server that generates images and mints NFTs
+- **Facilitator**: `facilitator.fretchen.eu` – Handles payment verification and settlement on Optimism (I'll explain the facilitator's role in detail below)
+
+Here's how they interact:
+
+<MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
+
+Buyer and seller were already present in my previous set-up, however, now their interaction is more standardized via x402. Here's a real example – if you send a request without payment:
+
+```bash
+curl -X POST https://imagegen-agent.fretchen.eu/genimg \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "A futuristic cityscape at sunset"}'
+```
+
+The server responds with a `402 Payment Required` status and tells you exactly how to pay:
+
+```json
+{
+  "x402Version": 2,
+  "resource": {
+    "url": "/genimg",
+    "description": "AI Image Generation with NFT Certificate",
+    "mimeType": "application/json"
+  },
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "eip155:10",
+      "amount": "70000",
+      "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      "payTo": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+      "maxTimeoutSeconds": 60,
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
+    }
+  ]
+}
+```
+
+This response tells the client everything it needs: pay **0.07 USDC** (USDC uses 6 decimals, so `amount: "70000"` = 0.07 USDC) on **Optimism Mainnet** (`network: "eip155:10"`) to the server wallet. The simplicity of this interaction is the key strength of x402 and just an absolute beauty.
+
+Now we come to the key difference of the x402 setup: the facilitator. It handles all the blockchain complexity – verifying signatures off-chain and settling payments on-chain – so the seller doesn't need to maintain blockchain infrastructure. It is very similar to any payment provider in the traditional web world, think Stripe or PayPal. However, here we can (and I actually had to) implement our own custom facilitator.
+
+## The Facilitator
+
+Before I used x402, I did not have the facilitator. Payment went directly from the buyer to the seller and were mediated by some smart contract. So obviously, I wanted to move towards x402 syntax and avoid the facilitator. However, this piece is a surprisingly integral part of the x402 architecture. Without it, you will not be able to use any of the provided SDKs etc. So at some point I decided to simply accept its existance and implement one on my own.
+
+I now think about the facilitator as also a payment processor from the world of web2. It handles all the payment logic, so the seller can focus on delivering the resource. However, this also brings in a lot of the problems that I currently have with x402 as I will explain below. But first, what does the Facilitator do? It actually has three main functions, which are all exposed via HTTP endpoints:
+
+1. **Verify** – Validates off-chain whether the signed payment is valid
+2. **Settle** – Executes the payment on-chain via [EIP-3009](https://eips.ethereum.org/EIPS/eip-3009) `transferWithAuthorization`[^1]
+3. **Supported** – Advertises which networks/assets are supported
+
+All three endpoints have strong support by the official x402 SDKs. Under the hood, my facilitator uses the following packages from the x402 ecosystem:
+
+- **`@x402/core/facilitator`** – The `x402Facilitator` class that orchestrates verification and settlement
+- **`@x402/evm`** – The `toFacilitatorEvmSigner` adapter that bridges viem to x402
+- **`@x402/evm/exact/facilitator`** – The `ExactEvmScheme` that implements EIP-3009 payment logic
+
+The main flow is: create a `FacilitatorEvmSigner` from viem clients, wrap it in an `ExactEvmScheme`, and register it with the `x402Facilitator` for each supported network. The facilitator then exposes `verify()` and `settle()` methods that handle all the cryptographic validation and blockchain transactions. You can find the full code in the `x402_facilitator/` folder [of my repository](https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator). The facilitator is deployed at [facilitator.fretchen.eu](https://facilitator.fretchen.eu) but only usable for whitelisted wallets.
+
+### Some learnings
+
+And this brings me to some of the learnings that I had with the facilitator. It is still a fairly young standard and a nice bridge between web2 and web3. So it was actually surpringly easy to build a lot of really major security flaws into the facilitator. I only found them after some live testing, but this really shook my confidence in the tech as it clearly requires a lot of trust to use a specific facilitator. Some of the issues that I had to fix while I was working through the code:
+
+#### Cross-Chain Replay Attack
+
+My initial implementation used a single viem client that dynamically selected the chain. This opened the door to a nasty bug: a signature created for Optimism Sepolia (testnet) could potentially be validated or settled on Optimism Mainnet – using real money! The fix was to create **separate signers per network**, each bound to a specific chain:
+
+```javascript
+// Each network gets its own chain-bound signer
+for (const network of getSupportedNetworks()) {
+  const signer = createSignerForNetwork(account, network);
+  facilitator.register(network, new ExactEvmScheme(signer));
+}
+```
+
+#### Trust Model Complexity
+
+Building the facilitator made me realize how much trust is involved. The facilitator holds the EIP-3009 signature and controls:
+
+- **Verification result** – Could lie about validity
+- **Settlement execution** – Could delay or omit settlement
+- **Response to seller** – Could report false status
+
+The good news: EIP-3009 cryptographically protects the `payTo` address and amount. A malicious facilitator **cannot redirect funds** – only fail to execute the transfer.
+
+#### Settlement Without Service (Potential Fraud)
+
+A malicious facilitator could execute settlement but report failure to the resource server. The payer loses money but receives no service. This is why verifying settlements **on-chain** (not just trusting the facilitator response) is important for high-value transactions.
+
+#### Missing Fee Structure
+
+One thing that's notably absent from the x402 specification is a clear fee model for facilitators. Currently, the facilitator pays all gas fees for on-chain settlement but has no standardized way to recoup these costs. In my implementation, the facilitator wallet simply absorbs the gas costs (~$0.001-0.01 per transaction on Optimism L2), which works for small-scale testing but isn't sustainable.
+
+The protocol doesn't specify:
+
+- How facilitators should charge for their service
+- Whether fees should be deducted from the payment amount or charged separately
+- How to handle failed settlements (who pays the gas?)
+
+This is a really weak spot of the x402 standard at the moment. This lack of an economic model for the facilitator most likely will lead to substantial concentration risks. Only a few large players will be able to run facilitators at scale, which brings back the trust issues that are so essential for web3.
+
+Now that we understand the infrastructure, let's see how the actual image generation endpoint uses it.
+
+## The ImageGen Endpoint
+
+Part of my website is the imagegen feature, which calls a serverless function to generate AI images via Black Forest Labs and mints an NFT via the GenImNFTv4 contract. The NFT serves as a certificate of authenticity and proof of ownership for the generated image – I've written more about the [original implementation](/blog/9) and the [gallery features](/blog/12) in previous posts. This endpoint is now upgraded to use the x402 standard for payments and accessible to anyone interested under [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). How does the endpoint work now?
+
+Using the official x402 TypeScript SDK, the buyer-side code is remarkably simple:
+
+```typescript
+import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
+import { registerExactEvmScheme } from "@x402/evm/exact/client";
+import { privateKeyToAccount } from "viem/accounts";
+
+// 1. Setup: Create wallet and x402 client
+const signer = privateKeyToAccount(`0x${PRIVATE_KEY}`);
+const client = new x402Client();
+registerExactEvmScheme(client, { signer });
+
+// 2. Wrap fetch with automatic payment handling
+const fetchWithPayment = wrapFetchWithPayment(fetch, client);
+
+// 3. Make request - payment is handled automatically!
+const response = await fetchWithPayment("https://imagegen-agent.fretchen.eu/genimg", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ prompt: "A futuristic cityscape at sunset" }),
+});
+
+// 4. Get result
+const result = await response.json();
+console.log("Image URL:", result.imageUrl);
+console.log("NFT Token ID:", result.tokenId);
+```
+
+That's it! The `fetchWithPayment` wrapper automatically:
+
+1. Sends the initial POST request
+2. Receives `402 Payment Required` with USDC payment requirements
+3. Creates an EIP-3009 signature (no gas needed!)
+4. Retries the request with `PAYMENT-SIGNATURE` header
+5. Returns the generated image URL and NFT token ID
+
+**Success response:**
+
+- Image is generated (Black Forest Labs)
+- NFT is minted (GenImNFTv4)
+- Payment is settled (Facilitator)
+
+Price: 0.07 USDC (~7 cents) per image
+Code: `scw_js/genimg_x402_token.js`
+
+## Conclusion - What This Means for AI Agents
+
+With x402, paying for AI services becomes as simple as making an HTTP request. Here's what I learned building this:
+
+- **Standardization works**: The same client code can pay any x402 endpoint – no custom integration needed
+- **The facilitator is the weak spot**: Trust, fees, and centralization risks need better solutions
+- **Machine-friendly payments are real**: An AI agent can now pay for image generation without human intervention
+
+If you want to try it yourself, the endpoint is live at [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). Send a request, get a 402, and see how the payment flow works. The code is open source – contributions and feedback are welcome.
+
+As for the facilitator fee problem: I'm still looking for a good solution. If you have ideas, let me know.
+
+[^1]: EIP-3009 is a token standard that allows transfers via cryptographic signatures instead of on-chain transactions. The user signs an authorization off-chain, and the facilitator submits it to the blockchain – so the user pays no gas fees for the actual transfer.

@@ -35,11 +35,13 @@ sequenceDiagram
 
 `;
 
-**TL;DR:** The endpoint `imagegen-agent.fretchen.eu` now uses the x402 standard for payments. This enables users to automatically pay for image generation in a fairly simple and standardized way.
-
 ## Introduction
 
-Over the last year, I created an AI image generator, which can be paid on the blockchain. Obviously, I was not the last one and a number of frameworks popped up to standardize the payment process. One of the most popular ones is [x402](https://docs.cdp.coinbase.com/x402/welcome) from Coinbase. So I implemented this standard for my image generation endpoint. This blog post explains how it works and what it means for AI agents or other users that want to autonomously pay for image generation.
+Over the last year, I've built two AI services with blockchain payments: an [image generator with NFT minting](/blog/9) and an [LLM assistant with Merkle-tree batching](/blog/16). Both work well – users can pay anonymously with crypto, no accounts needed, costs under control.
+
+But each service has its own payment logic. My image generator uses a custom smart contract flow, my LLM assistant uses prepaid deposits. If someone wanted to build a client that uses both, they'd need to understand two completely different payment systems. And if an AI agent wanted to pay for my services autonomously? It would need custom integration for each endpoint.
+
+This is where [x402](https://docs.cdp.coinbase.com/x402/welcome) comes in. It's Coinbase's standard for machine-friendly payments over HTTP, and I've now implemented it for my image generation endpoint. This post explains the standard, my facilitator implementation, and what it means for AI-to-AI payments.
 
 ## The x402 Standard
 
@@ -66,7 +68,7 @@ In the implementation, there are three main actors:
 
 - **Buyer**: `fretchen.eu/imagegen` – The frontend where users request AI-generated images
 - **Seller**: `imagegen-agent.fretchen.eu` – The resource server that generates images and mints NFTs
-- **Facilitator**: `facilitator.fretchen.eu` – Handles payment verification and settlement on Optimism
+- **Facilitator**: `facilitator.fretchen.eu` – Handles payment verification and settlement on Optimism (I'll explain the facilitator's role in detail below)
 
 Here's how they interact:
 
@@ -107,9 +109,9 @@ The server responds with a `402 Payment Required` status and tells you exactly h
 }
 ```
 
-This response tells the client everything it needs: pay **0.07 USDC** (`amount: "70000"` with 6 decimals) on **Optimism Mainnet** (`network: "eip155:10"`) to the server wallet. The simplicity of this interaction is the key strength of x402 and just an absolut beauty.
+This response tells the client everything it needs: pay **0.07 USDC** (USDC uses 6 decimals, so `amount: "70000"` = 0.07 USDC) on **Optimism Mainnet** (`network: "eip155:10"`) to the server wallet. The simplicity of this interaction is the key strength of x402 and just an absolute beauty.
 
-Now, we can come the key difference of the x402 setup: the facilitator. It handles all the blockchain complexity – verifying signatures off-chain and settling payments on-chain – so the seller doesn't need to maintain blockchain infrastructure. It is very similar to any payment provider in the traditional web world, think Stripe or PayPal. However, here we can (and I actually had to) implement our own custom facilitator.
+Now we come to the key difference of the x402 setup: the facilitator. It handles all the blockchain complexity – verifying signatures off-chain and settling payments on-chain – so the seller doesn't need to maintain blockchain infrastructure. It is very similar to any payment provider in the traditional web world, think Stripe or PayPal. However, here we can (and I actually had to) implement our own custom facilitator.
 
 ## The Facilitator
 
@@ -118,10 +120,10 @@ Before I used x402, I did not have the facilitator. Payment went directly from t
 I now think about the facilitator as also a payment processor from the world of web2. It handles all the payment logic, so the seller can focus on delivering the resource. However, this also brings in a lot of the problems that I currently have with x402 as I will explain below. But first, what does the Facilitator do? It actually has three main functions, which are all exposed via HTTP endpoints:
 
 1. **Verify** – Validates off-chain whether the signed payment is valid
-2. **Settle** – Executes the payment on-chain (EIP-3009 transferWithAuthorization)
+2. **Settle** – Executes the payment on-chain via [EIP-3009](https://eips.ethereum.org/EIPS/eip-3009) `transferWithAuthorization`[^1]
 3. **Supported** – Advertises which networks/assets are supported
 
-All of them have strong support by the official x402 SDKs. Under the hood, my facilitator uses the following packages from the x402 ecosystem:
+All three endpoints have strong support by the official x402 SDKs. Under the hood, my facilitator uses the following packages from the x402 ecosystem:
 
 - **`@x402/core/facilitator`** – The `x402Facilitator` class that orchestrates verification and settlement
 - **`@x402/evm`** – The `toFacilitatorEvmSigner` adapter that bridges viem to x402
@@ -171,11 +173,11 @@ The protocol doesn't specify:
 
 This is a really weak spot of the x402 standard at the moment. This lack of an economic model for the facilitator most likely will lead to substantial concentration risks. Only a few large players will be able to run facilitators at scale, which brings back the trust issues that are so essential for web3.
 
+Now that we understand the infrastructure, let's see how the actual image generation endpoint uses it.
 
 ## The ImageGen Endpoint
 
-Part of my website is the imagegen feature, which calls a serverless function to generate AI images via Black Forest Labs and mints an NFT as a certificate of authenticity via the GenImNFTv4 contract. This endpoint is now upgraded to use the x402 standard for payments and accessible to anyone interested under [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). So
-How does the endpoint work now?
+Part of my website is the imagegen feature, which calls a serverless function to generate AI images via Black Forest Labs and mints an NFT via the GenImNFTv4 contract. The NFT serves as a certificate of authenticity and proof of ownership for the generated image – I've written more about the [original implementation](/blog/9) and the [gallery features](/blog/12) in previous posts. This endpoint is now upgraded to use the x402 standard for payments and accessible to anyone interested under [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). How does the endpoint work now?
 
 Using the official x402 TypeScript SDK, the buyer-side code is remarkably simple:
 
@@ -222,14 +224,15 @@ Code: `scw_js/genimg_x402_token.js`
 
 ## Conclusion - What This Means for AI Agents
 
-Altogether, this is a nice step to simplify payments for AI services. The code in the frontend is now substantially easier and more standardized. More importantly, I can start searching for other AI agents with x402 payment interface and connect to the network.
+With x402, paying for AI services becomes as simple as making an HTTP request. Here's what I learned building this:
 
-And if I find a good way to introduce a fee structure for the facilitator, I can see x402 becoming a really powerful standard for pay-per-use AI services.
+- **Standardization works**: The same client code can pay any x402 endpoint – no custom integration needed
+- **The facilitator is the weak spot**: Trust, fees, and centralization risks need better solutions
+- **Machine-friendly payments are real**: An AI agent can now pay for image generation without human intervention
+
+If you want to try it yourself, the endpoint is live at [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). Send a request, get a 402, and see how the payment flow works. The code is open source – contributions and feedback are welcome.
+
+As for the facilitator fee problem: I'm still looking for a good solution. If you have ideas, let me know.
 
 
-## Links & Resources
-
-- [x402 Documentation (Coinbase)](https://docs.cdp.coinbase.com/x402/welcome)
-- [Facilitator Code](https://github.com/fretchen/fretchen.github.io/tree/facilitator/x402_facilitator)
-- [ImageGen Endpoint Code](https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_x402_token.js)
-- [EIP-3009: Transfer with Authorization](https://eips.ethereum.org/EIPS/eip-3009)
+[^1]: EIP-3009 is a token standard that allows transfers via cryptographic signatures instead of on-chain transactions. The user signs an authorization off-chain, and the facilitator submits it to the blockchain – so the user pays no gas fees for the actual transfer.

@@ -1,9 +1,10 @@
 ---
 publishing_date: 2025-12-31
-title: x402 Standard for paying AI agents
+title: First experiences with the x402 Standard for paying AI agents
 category: "blockchain"
 secondaryCategory: "ai"
 description: "I implemented the x402 payment standard for AI agents to autonomously pay for image generation services without accounts or sessions."
+tokenID: 176
 ---
 
 import MermaidDiagram from "../components/MermaidDiagram";
@@ -233,6 +234,5 @@ With x402, paying for AI services becomes as simple as making an HTTP request. H
 If you want to try it yourself, the endpoint is live at [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). Send a request, get a 402, and see how the payment flow works. The code is open source – contributions and feedback are welcome.
 
 As for the facilitator fee problem: I'm still looking for a good solution. If you have ideas, let me know.
-
 
 [^1]: EIP-3009 is a token standard that allows transfers via cryptographic signatures instead of on-chain transactions. The user signs an authorization off-chain, and the facilitator submits it to the blockchain – so the user pays no gas fees for the actual transfer.

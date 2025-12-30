@@ -1,8 +1,6 @@
 /**
  * ImageGenerator Reference Image & Edit Mode Integration Tests
  *
- * SKIPPED: Feature temporarily deactivated due to security exploit fix in progress
- *
  * Umfassende Tests für die ImageGenerator Komponente:
  * - File Upload Functionality
  * - UI State Management
@@ -17,7 +15,7 @@ import React from "react";
 import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
-import { useAccount } from "wagmi";
+import { useAccount, useWalletClient } from "wagmi";
 
 // Override wagmi mock for this file to force connected state for all tests
 beforeAll(() => {
@@ -29,9 +27,18 @@ beforeAll(() => {
     isDisconnected: false,
     isReconnecting: false,
   } as ReturnType<typeof useAccount>);
+
+  // Mock wallet client for x402 hook
+
+  vi.mocked(useWalletClient).mockReturnValue({
+    data: {
+      account: { address: "0x1234567890123456789012345678901234567890" },
+      signTypedData: vi.fn(),
+    },
+  } as ReturnType<typeof useWalletClient>);
 });
 
-describe.skip("ImageGenerator Reference Image Integration", () => {
+describe("ImageGenerator Reference Image Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 

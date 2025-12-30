@@ -16,6 +16,9 @@ const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
   switch (CHAIN_NAME) {
     case "sepolia":
       return { address: "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6", abi: GenImNFTv3ABI } as const;
+    case "optimismSepolia":
+      // GenImNFTv4 deployed on 2025-12-24
+      return { address: "0x10827cC42a09D0BAD2d43134C69F0e776D853D85", abi: GenImNFTv3ABI } as const;
     case "optimism":
       return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
     default:

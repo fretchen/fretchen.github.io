@@ -56,6 +56,36 @@ In US terms, if $\pi_t^{Dem} = 0.6$:
 - 60% of budget priorities go to Democratic goals (social programs, climate spending, etc.)
 - 40% go to Republican priorities (defense, tax cuts, etc.)
 
+### Strategy: The Mapping from State to Allocation
+
+The key object we're analyzing is the **strategy** $\sigma^i: [0,1] \to [0,1]$, which maps each political state $X_t$ to an allocation $\pi_t^i$.
+
+**Notation:** We typically write $\pi^i(X_t)$ for party $i$'s allocation as a function of the state.
+
+### Naive Strategies as Benchmarks
+
+Before finding the optimal strategy, consider some simple alternatives:
+
+| Strategy | Formula | Interpretation |
+|----------|---------|----------------|
+| **Proportional** | $\pi^{Dem}(X_t) = X_t$ | "Fair share" — you get what your strength justifies |
+| **Winner-Takes-All** | $\pi^{Dem}(X_t) = \begin{cases} 1 & \text{if } X_t > 0.5 \\ 0 & \text{otherwise} \end{cases}$ | Dictatorial — majority party gets everything |
+| **Fifty-Fifty** | $\pi^{Dem}(X_t) = 0.5$ | Compromise — always split evenly, ignore strength |
+| **Status Quo** | $\pi^{Dem}(X_t) = \pi_{t-1}^{Dem}$ | Inertia — never change past allocation |
+
+**None of these are equilibrium strategies!** Each fails the self-enforcement constraint:
+- **Proportional**: When strong, you'd rather grab more (knowing your strength might decline)
+- **Winner-Takes-All**: Minority party would deviate (blocking, filibuster, shutdown)
+- **Fifty-Fifty**: Ignores political reality — strong party won't accept it
+- **Status Quo**: Not credible after regime change
+
+The **equilibrium strategy** must balance what you can demand today against the risk of future retaliation.
+
+## Benchmarking different strategies quantitatively
+
+We have seen above a number of simple strategies, but it is really hard to argue which one is better if we do not introduce some kind of measures of success. Economists use two concepts to do so.
+
+
 ## What is $U^i$? How Happy You Are With Your Slice
 
 Now here's the twist: **getting twice as much pizza doesn't make you twice as happy**.
@@ -93,23 +123,24 @@ $$U^i(0.5) > \frac{1}{2}U^i(0) + \frac{1}{2}U^i(1)$$
 
 This *should* make compromise attractive—parties would prefer stable, moderate outcomes over risky all-or-nothing gambles. But as we'll see, the commitment problem undermines this natural tendency.
 
-The allocation $\pi_t$ depends on the political state $X_t$ and the *history* of past states.
-
 ## The Payoff: What Parties Maximize
 
-Here's the crucial definition. Each party maximizes their **expected discounted utility**:
+Each party chooses a **strategy** $\sigma^i: X \to [0,1]$ that maps each political state to an allocation. Given strategies $(\sigma^1, \sigma^2)$, party 1's payoff is:
 
-$$V_t^1(\rho, h_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\pi_\tau) \mid h_t\right]$$
+$$V_t^1(\sigma^1, \sigma^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\sigma^1(X_\tau)) \mid X_t\right]$$
 
-Let me unpack this:
+**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\sigma^{1*}, \sigma^{2*})$ where:
+1. Each strategy depends only on the current state $X_t$ (not full history)
+2. Neither party can improve their payoff by deviating unilaterally
+3. The self-enforcement constraint holds: complying is better than deviating
 
 | Symbol | Meaning | US Interpretation |
 |--------|---------|-------------------|
 | $V_t^1$ | Party 1's value at time $t$ | Democrats' expected future welfare |
+| $\sigma^i(X_t)$ | Strategy: state → allocation | The "rule" for budget shares |
 | $\delta$ | Discount factor (0 to 1) | How much future matters vs. present |
-| $U^1(\pi_\tau)$ | Utility from allocation at time $\tau$ | Satisfaction from budget share |
-| $h_t$ | History up to time $t$ | Past election results, past deals |
-| $E[\cdot \mid h_t]$ | Expectation given history | Forecast based on current situation |
+| $U^1(\pi)$ | Utility from allocation | Satisfaction from budget share |
+| $E[\cdot \mid X_t]$ | Expectation given state | Forecast based on current strength |
 
 **The discount factor $\delta$ is crucial:**
 

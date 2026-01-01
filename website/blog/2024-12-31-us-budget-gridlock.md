@@ -86,15 +86,61 @@ The **equilibrium strategy** must balance what you can demand today against the 
 We have seen above a number of simple strategies, but it is really hard to argue which one is better if we do not introduce some kind of measures of success. Economists use two concepts to do so.
 
 
-## What is $U^i$? How Happy You Are With Your Slice
+### What is $U^i$? How Happy You Are With Your Slice
 
-Now here's the twist: **getting twice as much pizza doesn't make you twice as happy**.
+Here's the crucial insight: **doubling your budget share doesn't double your party's welfare**.
 
-Think about it:
-- Going from **0% to 25%** of the budget = AMAZING! You were getting nothing!
-- Going from **75% to 100%** = Nice, but... you already have most of what you want
+Think about it in political terms:
+- Going from **10% to 20%** of the budget (doubling!) = Transformative! You can finally fund core priorities
+- Going from **50% to 100%** (also doubling!) = Nice, but diminishing returns — most important programs are already funded
 
-The utility function $U^i(\pi)$ captures this. It translates "what you get" into "how happy you are."
+The utility function $U^i(\pi)$ captures this non-linearity. It translates "budget share you control" into "political value you extract."
+
+**Why this matters for negotiations:** A party controlling 30% values an additional 10% far more than a party controlling 70% values the same 10%. This creates natural pressure for compromise—in theory.
+
+## The Payoff: What Parties Maximize
+
+Now we have the pieces:
+- $X_t$ = political strength (the state)
+- $\sigma^i(X_t)$ = strategy (state → allocation)
+- $U^i(\pi)$ = utility (how you value today's allocation)
+
+But there's a crucial problem: **budget negotiations don't happen just once**. You're not choosing an allocation for today only—you're choosing a strategy that will govern allocations for years to come.
+
+The **payoff** $V^i$ captures the total value of a strategy over time. Think of it as:
+- Utility $U^i(\pi_t)$ = "How happy am I with this year's budget?"
+- Payoff $V^i$ = "How happy am I with the entire future stream of budgets?"
+
+Formally, party 1's payoff from strategies $(\sigma^1, \sigma^2)$ starting at state $X_t$ is:
+
+$$V_t^1(\sigma^1, \sigma^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\sigma^1(X_\tau)) \mid X_t\right]$$
+
+**Breaking this down:**
+- $U^1(\sigma^1(X_\tau))$ = utility from allocation in period $\tau$
+- $\delta^{\tau-t}$ = discount factor (future matters less than present)
+- $\sum_{\tau \geq t}$ = sum over all future periods
+- $E[\cdot \mid X_t]$ = expected value, since future states are uncertain
+
+**In plain English:** Your payoff is the present discounted value of all future budget shares you expect to get, given how political strength will evolve.
+
+
+
+
+**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\sigma^{1*}, \sigma^{2*})$ where:
+1. Each strategy depends only on the current state $X_t$ (not full history)
+2. Neither party can improve their payoff by deviating unilaterally
+3. The self-enforcement constraint holds: complying is better than deviating
+
+| Symbol | Meaning | US Interpretation |
+|--------|---------|-------------------|
+| $V_t^1$ | Party 1's value at time $t$ | Democrats' expected future welfare |
+| $\sigma^i(X_t)$ | Strategy: state → allocation | The "rule" for budget shares |
+| $\delta$ | Discount factor (0 to 1) | How much future matters vs. present |
+| $U^1(\pi)$ | Utility from allocation | Satisfaction from budget share |
+| $E[\cdot \mid X_t]$ | Expectation given state | Forecast based on current strength |
+
+
+## Appendix: Mathematical Details
 
 ### Typical Mathematical Forms
 

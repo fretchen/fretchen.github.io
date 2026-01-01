@@ -41,37 +41,57 @@ $$X_{t+1} = X_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma^2)$$
 
 Today's strength $X_t$ influences tomorrow's, but random shocks (elections, scandals, economic conditions) create uncertainty. This is a continuous approximation of discrete transition probabilities.
 
-## What is $U^i$? What Parties Care About
-
-The utility function $U^i(\pi)$ captures how much party $i$ values getting share $\pi$ of the budget.
-
-**Critical assumption: $U^i$ is concave (risk aversion)**
-
-This means:
-$$U^i(0.5) > \frac{1}{2}U^i(0) + \frac{1}{2}U^i(1)$$
-
-**In plain English:** A guaranteed 50% of the budget is worth more to a party than a coin flip between getting everything or nothing.
-
-**Why does this matter for US politics?**
-
-- Parties would *prefer* stable compromises over boom-bust cycles
-- Losing everything (0%) is disproportionately painful
-- This *should* make compromise attractive...
-
-But as we'll see, the commitment problem undermines this natural tendency.
-
 ## What is $\pi_t^i$? The Budget Allocation
 
 The variable $\pi_t^i$ is simply **party $i$'s share of the budget at time $t$**.
 
-Since we're dividing a pie of size 1:
+Imagine the federal budget is a pizza:
+- $\pi^{Dem} = 0.6$ means Democrats get 60% of the pizza
+- $\pi^{Rep} = 0.4$ means Republicans get 40%
+
+That's it. $\pi$ is just **the size of your slice**. Since we're dividing a pie of size 1:
 $$\pi_t^1 + \pi_t^2 = 1$$
 
-**In US terms:**
-
-If $\pi_t^{Dem} = 0.6$, this means:
+In US terms, if $\pi_t^{Dem} = 0.6$:
 - 60% of budget priorities go to Democratic goals (social programs, climate spending, etc.)
 - 40% go to Republican priorities (defense, tax cuts, etc.)
+
+## What is $U^i$? How Happy You Are With Your Slice
+
+Now here's the twist: **getting twice as much pizza doesn't make you twice as happy**.
+
+Think about it:
+- Going from **0% to 25%** of the budget = AMAZING! You were getting nothing!
+- Going from **75% to 100%** = Nice, but... you already have most of what you want
+
+The utility function $U^i(\pi)$ captures this. It translates "what you get" into "how happy you are."
+
+### Typical Mathematical Forms
+
+Economists commonly use **power utility** (also called CRRA - Constant Relative Risk Aversion):
+
+$$U(\pi) = \pi^{1-\gamma}$$
+
+where $\gamma \geq 0$ is the risk aversion parameter:
+- $\gamma = 0$: Linear utility (no risk aversion) — $U(\pi) = \pi$
+- $\gamma = 0.5$: Square root — $U(\pi) = \sqrt{\pi}$
+- $\gamma \to 1$: Logarithmic — $U(\pi) = \ln(\pi)$
+
+### Normalization
+
+Following Acemoglu, we normalize so that:
+- $U^i(0) = 0$ (getting nothing = zero happiness)
+- $U^i(1) = 1$ (getting everything = maximum happiness)
+
+The function is **monotonically increasing** (more is always better) but **concave** (diminishing returns). It's not peaked anywhere—it keeps rising, just more slowly.
+
+### Why Concavity Matters
+
+$$U^i(0.5) > \frac{1}{2}U^i(0) + \frac{1}{2}U^i(1)$$
+
+**In plain English:** A guaranteed 50% is worth more than a coin flip between 0% and 100%.
+
+This *should* make compromise attractive—parties would prefer stable, moderate outcomes over risky all-or-nothing gambles. But as we'll see, the commitment problem undermines this natural tendency.
 
 The allocation $\pi_t$ depends on the political state $X_t$ and the *history* of past states.
 

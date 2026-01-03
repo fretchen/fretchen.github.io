@@ -41,26 +41,30 @@ $$X_{t+1} = X_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma^2)$$
 
 Today's strength $X_t$ influences tomorrow's, but random shocks (elections, scandals, economic conditions) create uncertainty. This is a continuous approximation of discrete transition probabilities.
 
-## What is $\pi_t^i$? The Budget Allocation
+## What is $Y_t^i$? The Budget Allocation
 
-The variable $\pi_t^i$ is simply **party $i$'s share of the budget at time $t$**.
+**Notation note:** Following Dixit-Grossman-Gul (DGG, 2000) and Acemoglu's Chapter 23, we use $Y_t$ for allocations and $\rho$ for strategies (division processes).
+
+The variable $Y_t^i$ is simply **party $i$'s share of the budget at time $t$**.
 
 Imagine the federal budget is a pizza:
-- $\pi^{Dem} = 0.6$ means Democrats get 60% of the pizza
-- $\pi^{Rep} = 0.4$ means Republicans get 40%
+- $Y^{Dem} = 0.6$ means Democrats get 60% of the pizza
+- $Y^{Rep} = 0.4$ means Republicans get 40%
 
-That's it. $\pi$ is just **the size of your slice**. Since we're dividing a pie of size 1:
-$$\pi_t^1 + \pi_t^2 = 1$$
+That's it. $Y$ is just **the size of your slice**. Since we're dividing a pie of size 1:
+$$Y_t^1 + Y_t^2 = 1$$
 
-In US terms, if $\pi_t^{Dem} = 0.6$:
+In US terms, if $Y_t^{Dem} = 0.6$:
 - 60% of budget priorities go to Democratic goals (social programs, climate spending, etc.)
 - 40% go to Republican priorities (defense, tax cuts, etc.)
 
-### Strategy: The Mapping from State to Allocation
+### Strategy (Division Process): The Mapping from State to Allocation
 
-The key object we're analyzing is the **strategy** $\sigma^i: [0,1] \to [0,1]$, which maps each political state $X_t$ to an allocation $\pi_t^i$.
+The key object we're analyzing is the **strategy** $\rho^i: [0,1] \to [0,1]$, which maps each political state $X_t$ to an allocation $Y_t^i$.
 
-**Notation:** We typically write $\pi^i(X_t)$ for party $i$'s allocation as a function of the state.
+**Terminology note:** DGG (2000) calls this a "division process," while we use "strategy" to align with standard game theory terminology. They mean the same thing—a rule that assigns allocations based on the current state.
+
+**Notation:** We typically write $Y^i(X_t)$ or $\rho^i(X_t)$ for party $i$'s allocation as a function of the state.
 
 ### Naive Strategies as Benchmarks
 
@@ -68,23 +72,14 @@ Before finding the optimal strategy, consider some simple alternatives:
 
 | Strategy | Formula | Interpretation |
 |----------|---------|----------------|
-| **Proportional** | $\pi^{Dem}(X_t) = X_t$ | "Fair share" — you get what your strength justifies |
-| **Winner-Takes-All** | $\pi^{Dem}(X_t) = \begin{cases} 1 & \text{if } X_t > 0.5 \\ 0 & \text{otherwise} \end{cases}$ | Dictatorial — majority party gets everything |
-| **Fifty-Fifty** | $\pi^{Dem}(X_t) = 0.5$ | Compromise — always split evenly, ignore strength |
-| **Status Quo** | $\pi^{Dem}(X_t) = \pi_{t-1}^{Dem}$ | Inertia — never change past allocation |
-
-**None of these are equilibrium strategies!** Each fails the self-enforcement constraint:
-- **Proportional**: When strong, you'd rather grab more (knowing your strength might decline)
-- **Winner-Takes-All**: Minority party would deviate (blocking, filibuster, shutdown)
-- **Fifty-Fifty**: Ignores political reality — strong party won't accept it
-- **Status Quo**: Not credible after regime change
-
-The **equilibrium strategy** must balance what you can demand today against the risk of future retaliation.
+| **Proportional** | $Y^{fair}(X_t) = X_t$ | "Fair share" — you get what your strength justifies |
+| **Winner-Takes-All** | $\bar{\rho}=\bar{Y}(X_t) = \begin{cases} 1 & \text{if } X_t > 0.5 \\ 0 & \text{otherwise} \end{cases}$ | Dictatorial — majority party gets everything |
+| **Fifty-Fifty** | $Y^{Dem}(X_t) = 0.5$ | Compromise — always split evenly, ignore strength |
+| **Status Quo** | $Y^{Dem}(X_t) = Y_{t-1}^{Dem}$ | Inertia — never change past allocation |
 
 ## Benchmarking different strategies quantitatively
 
 We have seen above a number of simple strategies, but it is really hard to argue which one is better if we do not introduce some kind of measures of success. Economists use two concepts to do so.
-
 
 ### What is $U^i$? How Happy You Are With Your Slice
 
@@ -102,43 +97,105 @@ The utility function $U^i(\pi)$ captures this non-linearity. It translates "budg
 
 Now we have the pieces:
 - $X_t$ = political strength (the state)
-- $\sigma^i(X_t)$ = strategy (state → allocation)
-- $U^i(\pi)$ = utility (how you value today's allocation)
+- $\rho^i(X_t)$ = strategy/division process (state → allocation)
+- $U^i(Y)$ = utility (how you value today's allocation)
 
 But there's a crucial problem: **budget negotiations don't happen just once**. You're not choosing an allocation for today only—you're choosing a strategy that will govern allocations for years to come.
 
 The **payoff** $V^i$ captures the total value of a strategy over time. Think of it as:
-- Utility $U^i(\pi_t)$ = "How happy am I with this year's budget?"
+- Utility $U^i(Y_t)$ = "How happy am I with this year's budget?"
 - Payoff $V^i$ = "How happy am I with the entire future stream of budgets?"
 
-Formally, party 1's payoff from strategies $(\sigma^1, \sigma^2)$ starting at state $X_t$ is:
+Formally, party 1's payoff from strategies $(\rho^1, \rho^2)$ starting at state $X_t$ is:
 
-$$V_t^1(\sigma^1, \sigma^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\sigma^1(X_\tau)) \mid X_t\right]$$
+$$V_t^1(\rho^1, \rho^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\rho^1(X_\tau)) \mid X_t\right]$$
 
 **Breaking this down:**
-- $U^1(\sigma^1(X_\tau))$ = utility from allocation in period $\tau$
+- $U^1(\rho^1(X_\tau))$ = utility from allocation in period $\tau$
 - $\delta^{\tau-t}$ = discount factor (future matters less than present)
 - $\sum_{\tau \geq t}$ = sum over all future periods
 - $E[\cdot \mid X_t]$ = expected value, since future states are uncertain
 
 **In plain English:** Your payoff is the present discounted value of all future budget shares you expect to get, given how political strength will evolve.
 
-
-
-
-**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\sigma^{1*}, \sigma^{2*})$ where:
+**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\rho^{1*}, \rho^{2*})$ where:
 1. Each strategy depends only on the current state $X_t$ (not full history)
 2. Neither party can improve their payoff by deviating unilaterally
 3. The self-enforcement constraint holds: complying is better than deviating
 
-| Symbol | Meaning | US Interpretation |
-|--------|---------|-------------------|
-| $V_t^1$ | Party 1's value at time $t$ | Democrats' expected future welfare |
-| $\sigma^i(X_t)$ | Strategy: state → allocation | The "rule" for budget shares |
-| $\delta$ | Discount factor (0 to 1) | How much future matters vs. present |
-| $U^1(\pi)$ | Utility from allocation | Satisfaction from budget share |
-| $E[\cdot \mid X_t]$ | Expectation given state | Forecast based on current strength |
 
+# A few words on the winner takes all strategy
+
+From the papers it seems quite clear that the winner takes all strategy $\bar{\rho}$ is an extreme. Both parties take everything when in power and nothing when out of power. This is the **least cooperative strategy possible**—any cooperation must do better for both parties.
+
+### Incentive Compatibility Constraint
+
+For a strategy $\rho$ to be sustainable, it must be better than reverting to winner-takes-all:
+
+$$V^i_t(\rho \mid X_t) \geq V^i_t(\bar{\rho} \mid X_t)$$
+
+This must hold for both parties ($i \in \{1,2\}$) at all times $t$ and all states $X_t$ where party $i$ is in power.
+
+### The Pareto Frontier
+
+The set of all efficient compromises is characterized by:
+
+$$v^2 = \max_{\rho \in \mathcal{F}} V_0^2(\rho, X_0) \quad \text{subject to} \quad V_0^1(\rho, X_0) \geq v^1$$
+
+**In plain English:** Find the best deal for party 2, while ensuring party 1 gets at least $v^1$, restricting to strategies that are self-enforcing.
+
+**Key definitions:**
+- $v^1$ = minimum payoff we're guaranteeing to party 1
+- $\mathcal{F}$ = set of **feasible, incentive-compatible** strategies
+- A strategy $\rho \in \mathcal{F}$ if:
+  - **Feasible**: $Y_t^1 + Y_t^2 = 1$ (allocations sum to 100%)
+  - **Incentive-compatible**: $V^i_t(\rho \mid X_t) \geq V^i_t(\bar{\rho} \mid X_t)$ for both parties at all times
+
+By varying $v_1$ from its minimum to maximum, we trace out the **Pareto frontier**—all possible efficient compromises where you can't make one party better off without making the other worse off.
+
+### The Critical Allocation $Y^*(X_0)$
+
+A key object in the analysis is **the minimum initial allocation that keeps cooperation viable**.
+
+**Definition:** Let $Y^*(X_0)$ be the initial allocation to the minority party (party not in power) that makes the party in power **exactly indifferent** between:
+- **Cooperating**: Accept $Y^*(X_0)$ and continue cooperation
+- **Deviating**: Grab 100% now and face winner-takes-all forever
+
+Formally, if party $i$ is in power, then:
+$$V^i_t(\rho^*, h_t) = V^i_t(\bar{\rho}, h_t)$$
+
+**In plain English:** $Y^*(X_0)$ is the **binding minimum share**. Give the minority any less, and the majority says "forget cooperation, I'll just take everything." 
+
+It is actually important to note that the calculation of the exact value of $Y^*(X_0)$ is fairly non trivial and even avoided in the original paper and the  chapter 23 by Acemoglu. However, its existence and properties are sufficient for our purposes.
+
+## The Main Result: The High-Water Mark Rule
+
+**Theorem (DGG):** A strategy $\rho$ is efficient if and only if **the allocations $Y$ it generates** satisfy:
+
+**(i) Initial condition:**
+$$Y(X_0) \begin{cases} \geq Y^*(X_0) & \text{if } X_0 \in S_1 \text{ (party 1 in power)} \\ \leq Y^*(X_0) & \text{if } X_0 \in S_2 \text{ (party 2 in power)} \end{cases}$$
+
+**(ii) Evolution rule (the ratchet):**
+$$Y(X_t) = \begin{cases} \max[Y^*(X_t), Y(X_{t-1})] & \text{if } X_t \in S_1 \\ \min[Y^*(X_t), Y(X_{t-1})] & \text{if } X_t \in S_2 \end{cases}$$
+
+for all $t \geq 1$.
+
+**In plain English:** Budget allocations are "sticky"—they can only increase when your party is in power, and only decrease when you're out of power.
+
+**Intuition via example:** Suppose Democrats are in power:
+- **Time 0:** Democrats at strength $X_0 = 0.55$, get allocation $Y_0 = 0.58$
+- **Time 1:** Democrats weaken to $X_1 = 0.52$ → Allocation **stays** at $Y_1 = 0.58$ (stickiness!)
+- **Time 2:** Democrats strengthen to $X_2 = 0.60$ → Allocation **rises** to $Y_2 = 0.62$ (ratchet up!)
+- **Time 3:** Republicans take power ($X_3 = 0.45$) → Democrat allocation **drops** to $Y_3 = 0.42$
+
+**Why this happens:** The incentive compatibility constraint binds at certain points:
+- When your party **weakens** while in power: you still demand your previous allocation (or you'd deviate)
+- When your party **strengthens** while in power: you demand more (new $Y^*(X_t)$ is higher)
+- When you **lose power**: your allocation drops to what the new majority will tolerate
+
+The allocation acts like a **"high-water mark"** that resets only when the other party takes control.
+
+*Proof: See Acemoglu Chapter 23 or DGG (2000, Appendix).*
 
 ## Appendix: Mathematical Details
 
@@ -171,11 +228,11 @@ This *should* make compromise attractive—parties would prefer stable, moderate
 
 ## The Payoff: What Parties Maximize
 
-Each party chooses a **strategy** $\sigma^i: X \to [0,1]$ that maps each political state to an allocation. Given strategies $(\sigma^1, \sigma^2)$, party 1's payoff is:
+Each party chooses a **strategy** $\rho^i: X \to [0,1]$ that maps each political state to an allocation. Given strategies $(\rho^1, \rho^2)$, party 1's payoff is:
 
-$$V_t^1(\sigma^1, \sigma^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\sigma^1(X_\tau)) \mid X_t\right]$$
+$$V_t^1(\rho^1, \rho^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\rho^1(X_\tau)) \mid X_t\right]$$
 
-**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\sigma^{1*}, \sigma^{2*})$ where:
+**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\rho^{1*}, \rho^{2*})$ where:
 1. Each strategy depends only on the current state $X_t$ (not full history)
 2. Neither party can improve their payoff by deviating unilaterally
 3. The self-enforcement constraint holds: complying is better than deviating
@@ -183,9 +240,9 @@ $$V_t^1(\sigma^1, \sigma^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1
 | Symbol | Meaning | US Interpretation |
 |--------|---------|-------------------|
 | $V_t^1$ | Party 1's value at time $t$ | Democrats' expected future welfare |
-| $\sigma^i(X_t)$ | Strategy: state → allocation | The "rule" for budget shares |
+| $\rho^i(X_t)$ | Strategy: state → allocation | The "rule" for budget shares |
 | $\delta$ | Discount factor (0 to 1) | How much future matters vs. present |
-| $U^1(\pi)$ | Utility from allocation | Satisfaction from budget share |
+| $U^1(Y)$ | Utility from allocation | Satisfaction from budget share |
 | $E[\cdot \mid X_t]$ | Expectation given state | Forecast based on current strength |
 
 **The discount factor $\delta$ is crucial:**

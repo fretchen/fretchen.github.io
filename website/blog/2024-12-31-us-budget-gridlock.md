@@ -118,10 +118,12 @@ $$V_t^1(\rho^1, \rho^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\rh
 
 **In plain English:** Your payoff is the present discounted value of all future budget shares you expect to get, given how political strength will evolve.
 
-**What we're looking for:** A **Markov Perfect Equilibrium** (MPE) — a pair of strategies $(\rho^{1*}, \rho^{2*})$ where:
-1. Each strategy depends only on the current state $X_t$ (not full history)
-2. Neither party can improve their payoff by deviating unilaterally
-3. The self-enforcement constraint holds: complying is better than deviating
+### Limiting case of $\delta = 0$ (living in the now)
+
+If parties only care about today ($\delta = 0$), then the payoff simplifies to:
+$$V_t^i(\rho^1, \rho^2, X_t) = U^i(\rho^i(X_t))$$
+
+If you want to maximize your payoff, you just maximize today's utility. This leads to the winner-takes-all outcome, as each party grabs everything when in power.
 
 
 # A few words on the winner takes all strategy
@@ -166,7 +168,71 @@ $$V^i_t(\rho^*, h_t) = V^i_t(\bar{\rho}, h_t)$$
 
 **In plain English:** $Y^*(X_0)$ is the **binding minimum share**. Give the minority any less, and the majority says "forget cooperation, I'll just take everything." 
 
-It is actually important to note that the calculation of the exact value of $Y^*(X_0)$ is fairly non trivial and even avoided in the original paper and the  chapter 23 by Acemoglu. However, its existence and properties are sufficient for our purposes.
+### How Time Horizons Affect the Binding Minimum $Y^*(X_t)$
+
+The calculation of $Y^*(X_t)$ is non-trivial and even avoided in the original DGG paper, but we can understand how it depends on the discount factor $\delta$ (patience) through limit analysis.
+
+**Extreme case: $\delta = 0$ (living in the now)**
+
+When parties care only about today, the incentive compatibility constraint becomes:
+
+$$U(Y_t) \geq U(1)$$
+
+Since $U$ is strictly increasing, this requires $Y_t = 1$ — the party in power must get **everything** to not deviate. 
+
+**Implication:** With $\delta = 0$, cooperation is **impossible**. Only winner-takes-all ($\bar{\rho}$) is sustainable. The binding minimum $Y^*(X_t) = 1$ for the party in power.
+
+**Extension: Small $\delta$ (first-order approximation)**
+
+For small but positive $\delta$, we can derive an explicit approximation for $Y^*$ by expanding both sides of the incentive compatibility constraint to first order.
+
+**Step 1: Expand $V_{t+1}(\bar{\rho})$ (winner-takes-all value)**
+
+Under winner-takes-all, the party in power today faces uncertain control tomorrow. Let $p(X_t)$ be the probability of remaining in power. To first order in $\delta$:
+
+$$V_{t+1}(\bar{\rho}) \approx E[U(\bar{Y}_{t+1})] = p(X_t) \cdot U(1) + [1-p(X_t)] \cdot U(0)$$
+
+**Step 2: Expand $V_{t+1}(\rho)$ (cooperation value)**
+
+Under cooperation with allocation $Y$, the expected utility tomorrow is approximately:
+$$V_{t+1}(\rho) \approx E[U(Y_{t+1})]$$
+
+For a moderate cooperation strategy, this is bounded between $U(0)$ and $U(1)$, typically around $U(E[Y]) \approx U(0.5)$ for balanced political states.
+
+**Step 3: The indifference condition**
+
+The party in power is indifferent between cooperating at $Y^*$ and deviating:
+$$U(Y^*) + \delta \cdot V_{t+1}(\rho) = U(1) + \delta \cdot V_{t+1}(\bar{\rho})$$
+
+Substituting the first-order expansions:
+$$U(Y^*) + \delta \cdot E[U(Y_{t+1})] = U(1) + \delta \cdot [p(X_t) \cdot U(1) + (1-p(X_t)) \cdot U(0)]$$
+
+Rearranging:
+$$U(Y^*) = U(1) + \delta \cdot \{p(X_t) \cdot U(1) + [1-p(X_t)] \cdot U(0) - E[U(Y_{t+1})]\}$$
+
+**Step 4: Closed-form approximation**
+
+For small $\delta$, use $U(Y) \approx U(1) + U'(1)(Y-1)$ near $Y=1$:
+
+$$Y^*(X_t) \approx 1 - \delta \cdot \frac{E[U(Y_{t+1})] - p(X_t) \cdot U(1) - [1-p(X_t)] \cdot U(0)}{U'(1)}$$
+
+**Key insights from this expression:**
+
+1. **Dependence on $p(X_t)$:** If $p(X_t) \approx 1$ (very likely to stay in power), then $Y^* \approx 1$ even for positive $\delta$ — no need to compromise
+2. **Dependence on $E[U(Y_{t+1})]$:** Higher expected future cooperation value → lower $Y^*$ needed today
+3. **Dependence on $\delta$:** Linear relationship: $Y^* \approx 1 - c \cdot \delta$ for small $\delta$
+
+**Concrete example with power utility $U(Y) = Y^{1-\gamma}$:**
+
+For $\gamma = 0.5$ (square root utility), $p = 0.6$ (60% chance to stay in power), and $E[Y_{t+1}] \approx 0.6$:
+$$Y^* \approx 1 - \delta \cdot \frac{0.6^{0.5} - 0.6 \cdot 1 - 0.4 \cdot 0}{0.5 \cdot 1^{-0.5}} = 1 - \delta \cdot \frac{0.775 - 0.6}{0.5} \approx 1 - 0.35\delta$$
+
+**Implications:**
+1. As $\delta \to 0$: $Y^* \to 1$ (need to give almost everything to party in power)
+2. For $\delta = 0.5$: $Y^* \approx 0.825$ (party in power needs 82.5% to not deviate)
+3. For $\delta = 0.9$: $Y^* \approx 0.685$ (party in power needs 68.5%)
+
+**Why this matters politically:** Short electoral cycles and term limits create low effective $\delta$, pushing $Y^*$ higher and making cooperation harder to sustain. The closed form shows this is a **continuous relationship**, not a phase transition.
 
 ## The Main Result: The High-Water Mark Rule
 
@@ -194,6 +260,12 @@ for all $t \geq 1$.
 - When you **lose power**: your allocation drops to what the new majority will tolerate
 
 The allocation acts like a **"high-water mark"** that resets only when the other party takes control.
+
+
+## On the high-water rule and the time horizon
+
+
+
 
 *Proof: See Acemoglu Chapter 23 or DGG (2000, Appendix).*
 

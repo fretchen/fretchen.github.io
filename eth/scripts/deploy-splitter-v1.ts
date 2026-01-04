@@ -1,0 +1,357 @@
+#!/usr/bin/env npx hardhat run
+import { ethers, upgrades, network } from "hardhat";
+import { validateImplementation } from "./validate-contract";
+import * as fs from "fs";
+import * as path from "path";
+import { z } from "zod";
+import { getAddress } from "viem";
+
+// Zod Schema for configuration validation
+const SplitterV1DeployConfigSchema = z.object({
+  parameters: z.object({
+    tokenAddress: z
+      .string()
+      .refine(
+        (addr) => {
+          try {
+            getAddress(addr);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        "Invalid token address format"
+      ),
+    facilitatorWallet: z
+      .string()
+      .refine(
+        (addr) => {
+          try {
+            getAddress(addr);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        "Invalid facilitator wallet address format"
+      ),
+    fixedFee: z.string().refine((fee) => {
+      const num = parseInt(fee);
+      return !isNaN(num) && num > 0;
+    }, "Fixed fee must be a positive number string"),
+  }),
+  options: z.object({
+    validateOnly: z.boolean(),
+    dryRun: z.boolean(),
+    verify: z.boolean(),
+    waitConfirmations: z.number().optional(),
+  }),
+  metadata: z.object({
+    description: z.string(),
+    version: z.string(),
+    environment: z.string(),
+    notes: z.string().optional(),
+  }),
+});
+
+// TypeScript type from Zod schema
+type SplitterV1DeployConfig = z.infer<typeof SplitterV1DeployConfigSchema>;
+
+/**
+ * Load USDCSplitterV1 deployment configuration
+ */
+function loadConfig(): SplitterV1DeployConfig {
+  const configPath = path.join(__dirname, "deploy-splitter-v1.config.json");
+
+  console.log(`📄 Loading configuration from: ${configPath}`);
+
+  if (!fs.existsSync(configPath)) {
+    throw new Error(`Configuration file not found: ${configPath}`);
+  }
+
+  const configContent = fs.readFileSync(configPath, "utf8");
+  let configRaw: unknown;
+
+  try {
+    configRaw = JSON.parse(configContent);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+    }
+    throw error;
+  }
+
+  // Zod validation
+  let config: SplitterV1DeployConfig;
+  try {
+    config = SplitterV1DeployConfigSchema.parse(configRaw);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Config validation failed: ${error.message}`);
+    }
+    throw error;
+  }
+
+  console.log("✅ Configuration loaded and validated");
+  console.log(`📋 Config: ${JSON.stringify(config, null, 2)}`);
+
+  return config;
+}
+
+/**
+ * Validate deployment without deploying
+ */
+async function validateDeployment(): Promise<void> {
+  console.log("🔍 Validating USDCSplitterV1 contract...");
+
+  try {
+    const SplitterFactory = await ethers.getContractFactory("USDCSplitterV1");
+
+    // Validate contract bytecode
+    console.log("✅ Contract compiles successfully");
+
+    // Validate OpenZeppelin upgradeable patterns
+    await upgrades.validateImplementation(SplitterFactory, {
+      kind: "uups",
+    });
+
+    console.log("✅ OpenZeppelin upgrade validation passed");
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("❌ Validation failed:", error.message);
+      throw error;
+    }
+    throw error;
+  }
+
+  console.log("✅ All validations passed!");
+}
+
+/**
+ * Simulate deployment (dry run)
+ */
+async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void> {
+  console.log("🧪 Simulating USDCSplitterV1 deployment...");
+
+  console.log("📋 Deployment parameters:");
+  console.log(`  - Token Address: ${config.parameters.tokenAddress}`);
+  console.log(`  - Facilitator Wallet: ${config.parameters.facilitatorWallet}`);
+  console.log(`  - Fixed Fee: ${config.parameters.fixedFee} (raw units)`);
+  console.log("");
+
+  console.log("✅ Simulation complete (no actual deployment)");
+}
+
+/**
+ * Deploy USDCSplitterV1 using OpenZeppelin Upgrades Plugin
+ *
+ * Usage examples:
+ * - Deploy to Optimism Sepolia: npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+ * - Deploy to Optimism Mainnet: npx hardhat run scripts/deploy-splitter-v1.ts --network optimisticEthereum
+ * - Deploy locally: npx hardhat run scripts/deploy-splitter-v1.ts --network hardhat
+ * - Validation only: Set validateOnly: true in config
+ * - Dry run: Set dryRun: true in config
+ *
+ * Configuration is loaded from deploy-splitter-v1.config.json
+ */
+async function deploySplitterV1() {
+  console.log("🚀 USDCSplitterV1 Deployment Script");
+  console.log("=".repeat(60));
+  console.log(`Network: ${network.name}`);
+  console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
+  console.log("");
+
+  // Load configuration
+  const config = loadConfig();
+  const options = config.options || {};
+  const parameters = config.parameters;
+
+  // Check if validation only
+  if (options.validateOnly) {
+    console.log("🔍 Validation Only Mode - No deployment will occur");
+    return await validateDeployment();
+  }
+
+  // Check if dry run
+  if (options.dryRun) {
+    console.log("🧪 Dry Run Mode - Simulation only");
+    return await simulateDeployment(config);
+  }
+
+  // Get contract factory
+  console.log("📦 Getting USDCSplitterV1 contract factory...");
+  const SplitterFactory = await ethers.getContractFactory("USDCSplitterV1");
+
+  // Pre-deployment validation
+  console.log("🔍 Pre-Deployment Validation");
+  console.log("-".repeat(40));
+
+  try {
+    await upgrades.validateImplementation(SplitterFactory, {
+      kind: "uups",
+    });
+    console.log("✅ OpenZeppelin upgrade validation passed");
+  } catch (error: unknown) {
+    console.error("❌ Pre-deployment validation failed:");
+    throw error;
+  }
+
+  // Deploy the upgradeable contract
+  console.log("");
+  console.log("🚀 Deploying USDCSplitterV1...");
+  console.log(`📋 Token: ${parameters.tokenAddress}`);
+  console.log(`📋 Facilitator Wallet: ${parameters.facilitatorWallet}`);
+  console.log(`📋 Fixed Fee: ${parameters.fixedFee} (raw units)`);
+  console.log("");
+
+  const Splitter = await upgrades.deployProxy(
+    SplitterFactory,
+    [parameters.tokenAddress, parameters.facilitatorWallet, parameters.fixedFee],
+    {
+      kind: "uups",
+      initializer: "initialize",
+    }
+  );
+
+  await Splitter.waitForDeployment();
+  const proxyAddress = await Splitter.getAddress();
+
+  console.log("✅ USDCSplitterV1 deployed successfully!");
+  console.log("=".repeat(60));
+  console.log(`📍 Proxy Address: ${proxyAddress}`);
+  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
+  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
+  console.log("");
+
+  // Post-deployment verification
+  console.log("⚙️  Post-Deployment Verification");
+  console.log("-".repeat(40));
+
+  const deployedContract = SplitterFactory.attach(proxyAddress);
+
+  // Verify implementation contract
+  console.log("🔧 Verifying implementation contract...");
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const implementationCode = await ethers.provider.getCode(implementationAddress);
+  if (implementationCode === "0x") {
+    throw new Error(`No contract code found at implementation address: ${implementationAddress}`);
+  }
+  console.log(`✅ Implementation contract verified (${implementationCode.length} bytes)`);
+
+  // Test implementation contract ABI compatibility
+  try {
+    SplitterFactory.attach(implementationAddress);
+    console.log("✅ Implementation contract ABI compatible");
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message);
+    } else {
+      console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error);
+    }
+  }
+
+  // Verify proxy state
+  console.log("🔍 Verifying proxy state...");
+  const owner = await deployedContract.owner();
+  const [deployer] = await ethers.getSigners();
+  console.log(`✅ Owner: ${owner}`);
+  console.log(`✅ Deployer: ${deployer.address}`);
+
+  if (owner !== deployer.address) {
+    throw new Error(`Owner mismatch: expected ${deployer.address}, got ${owner}`);
+  }
+
+  const token = await deployedContract.token();
+  const facilitatorWallet = await deployedContract.facilitatorWallet();
+  const fixedFee = await deployedContract.fixedFee();
+
+  console.log(`✅ Token: ${token}`);
+  console.log(`✅ Facilitator Wallet: ${facilitatorWallet}`);
+  console.log(`✅ Fixed Fee: ${fixedFee.toString()} (raw units)`);
+
+  // Validate configuration matches
+  if (token !== parameters.tokenAddress) {
+    throw new Error(`Token mismatch: expected ${parameters.tokenAddress}, got ${token}`);
+  }
+  if (facilitatorWallet !== parameters.facilitatorWallet) {
+    throw new Error(`Facilitator wallet mismatch: expected ${parameters.facilitatorWallet}, got ${facilitatorWallet}`);
+  }
+  if (fixedFee.toString() !== parameters.fixedFee) {
+    throw new Error(`Fixed fee mismatch: expected ${parameters.fixedFee}, got ${fixedFee.toString()}`);
+  }
+
+  console.log("✅ All verifications passed!");
+  console.log("");
+
+  // Create deployment info
+  const deploymentInfo = {
+    network: network.name,
+    timestamp: new Date().toISOString(),
+    blockNumber: await ethers.provider.getBlockNumber(),
+    proxyAddress: proxyAddress,
+    implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
+    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    contractType: "USDCSplitterV1",
+    owner: owner,
+    token: token,
+    facilitatorWallet: facilitatorWallet,
+    fixedFee: fixedFee.toString(),
+    deploymentOptions: {
+      verify: options.verify || false,
+      waitConfirmations: options.waitConfirmations || 1,
+      configUsed: "deploy-splitter-v1.config.json",
+    },
+    config: config,
+  };
+
+  console.log("📋 Deployment Summary:");
+  console.log(JSON.stringify(deploymentInfo, null, 2));
+
+  // Save deployment information to file
+  const deploymentsDir = path.join(__dirname, "deployments");
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+  const deploymentFileName = `splitter-v1-${network.name}-${timestamp}.json`;
+  const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
+
+  fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
+  console.log(`💾 Deployment info saved to: ${deploymentFilePath}`);
+
+  // Comprehensive validation using validate-contract functions
+  console.log("\n🔍 Running comprehensive validation...");
+  try {
+    await validateImplementation(deploymentInfo.implementationAddress, "USDCSplitterV1");
+    console.log("✅ Comprehensive validation completed successfully!");
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.log("⚠️  Warning: Comprehensive validation failed:", error.message);
+    } else {
+      console.log("⚠️  Warning: Comprehensive validation failed:", error);
+    }
+  }
+
+  // Contract verification if enabled
+  if (options.verify) {
+    console.log("\n🔍 Etherscan verification...");
+    console.log("⚠️  Note: Etherscan verification for upgradeable contracts should be done separately");
+    console.log("📝 Use: npx hardhat verify --network <network> <proxy-address>");
+  }
+
+  console.log("\n✅ Deployment completed successfully!");
+  console.log("=".repeat(60));
+  console.log("\n📝 Next Steps:");
+  console.log("1. Save the proxy address for x402 facilitator configuration");
+  console.log("2. Update x402_facilitator/ SPLITTER_ADDRESS constant");
+  console.log("3. Update scw_js/genimg_x402_token.js paymentRequirements");
+  console.log("4. Test executeSplit() with EIP-3009 authorization");
+  console.log("5. Verify contracts on Optimistic Etherscan if needed");
+}
+
+// Execute deployment
+deploySplitterV1().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

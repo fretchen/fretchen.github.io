@@ -1,0 +1,19 @@
+{
+  "parameters": {
+    "tokenAddress": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    "facilitatorWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+    "fixedFee": "10000"
+  },
+  "options": {
+    "validateOnly": true,
+    "dryRun": true,
+    "verify": true,
+    "waitConfirmations": 2
+  },
+  "metadata": {
+    "description": "USDCSplitterV1 deployment to Optimism Mainnet - USDC payment splitting with EIP-3009",
+    "version": "1.0.0",
+    "environment": "mainnet",
+    "notes": "tokenAddress is USDC on Optimism (0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85), fixedFee is 0.01 USDC (10000 = 10000 * 10^-6)"
+  }
+}

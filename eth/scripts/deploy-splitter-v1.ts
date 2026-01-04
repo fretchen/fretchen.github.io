@@ -9,19 +9,6 @@ import { getAddress } from "viem";
 // Zod Schema for configuration validation
 const SplitterV1DeployConfigSchema = z.object({
   parameters: z.object({
-    tokenAddress: z
-      .string()
-      .refine(
-        (addr) => {
-          try {
-            getAddress(addr);
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        "Invalid token address format"
-      ),
     facilitatorWallet: z
       .string()
       .refine(
@@ -58,7 +45,7 @@ const SplitterV1DeployConfigSchema = z.object({
 type SplitterV1DeployConfig = z.infer<typeof SplitterV1DeployConfigSchema>;
 
 /**
- * Load USDCSplitterV1 deployment configuration
+ * Load EIP3009SplitterV1 deployment configuration
  */
 function loadConfig(): SplitterV1DeployConfig {
   const configPath = path.join(__dirname, "deploy-splitter-v1.config.json");
@@ -102,10 +89,10 @@ function loadConfig(): SplitterV1DeployConfig {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
-  console.log("🔍 Validating USDCSplitterV1 contract...");
+  console.log("🔍 Validating EIP3009SplitterV1 contract...");
 
   try {
-    const SplitterFactory = await ethers.getContractFactory("USDCSplitterV1");
+    const SplitterFactory = await ethers.getContractFactory("EIP3009SplitterV1");
 
     // Validate contract bytecode
     console.log("✅ Contract compiles successfully");
@@ -131,19 +118,19 @@ async function validateDeployment(): Promise<void> {
  * Simulate deployment (dry run)
  */
 async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void> {
-  console.log("🧪 Simulating USDCSplitterV1 deployment...");
+  console.log("🧪 Simulating EIP3009SplitterV1 deployment...");
 
   console.log("📋 Deployment parameters:");
-  console.log(`  - Token Address: ${config.parameters.tokenAddress}`);
   console.log(`  - Facilitator Wallet: ${config.parameters.facilitatorWallet}`);
   console.log(`  - Fixed Fee: ${config.parameters.fixedFee} (raw units)`);
+  console.log(`  - Note: Token is now a parameter of executeSplit(), not a state variable`);
   console.log("");
 
   console.log("✅ Simulation complete (no actual deployment)");
 }
 
 /**
- * Deploy USDCSplitterV1 using OpenZeppelin Upgrades Plugin
+ * Deploy EIP3009SplitterV1 using OpenZeppelin Upgrades Plugin
  *
  * Usage examples:
  * - Deploy to Optimism Sepolia: npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
@@ -155,7 +142,7 @@ async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void>
  * Configuration is loaded from deploy-splitter-v1.config.json
  */
 async function deploySplitterV1() {
-  console.log("🚀 USDCSplitterV1 Deployment Script");
+  console.log("🚀 EIP3009SplitterV1 Deployment Script");
   console.log("=".repeat(60));
   console.log(`Network: ${network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
@@ -179,8 +166,8 @@ async function deploySplitterV1() {
   }
 
   // Get contract factory
-  console.log("📦 Getting USDCSplitterV1 contract factory...");
-  const SplitterFactory = await ethers.getContractFactory("USDCSplitterV1");
+  console.log("📦 Getting EIP3009SplitterV1 contract factory...");
+  const SplitterFactory = await ethers.getContractFactory("EIP3009SplitterV1");
 
   // Pre-deployment validation
   console.log("🔍 Pre-Deployment Validation");
@@ -198,15 +185,15 @@ async function deploySplitterV1() {
 
   // Deploy the upgradeable contract
   console.log("");
-  console.log("🚀 Deploying USDCSplitterV1...");
-  console.log(`📋 Token: ${parameters.tokenAddress}`);
+  console.log("🚀 Deploying EIP3009SplitterV1...");
   console.log(`📋 Facilitator Wallet: ${parameters.facilitatorWallet}`);
   console.log(`📋 Fixed Fee: ${parameters.fixedFee} (raw units)`);
+  console.log(`📋 Note: Token is now a parameter of executeSplit()`);
   console.log("");
 
   const Splitter = await upgrades.deployProxy(
     SplitterFactory,
-    [parameters.tokenAddress, parameters.facilitatorWallet, parameters.fixedFee],
+    [parameters.facilitatorWallet, parameters.fixedFee],
     {
       kind: "uups",
       initializer: "initialize",
@@ -216,7 +203,7 @@ async function deploySplitterV1() {
   await Splitter.waitForDeployment();
   const proxyAddress = await Splitter.getAddress();
 
-  console.log("✅ USDCSplitterV1 deployed successfully!");
+  console.log("✅ EIP3009SplitterV1 deployed successfully!");
   console.log("=".repeat(60));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
   console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
@@ -261,18 +248,14 @@ async function deploySplitterV1() {
     throw new Error(`Owner mismatch: expected ${deployer.address}, got ${owner}`);
   }
 
-  const token = await deployedContract.token();
   const facilitatorWallet = await deployedContract.facilitatorWallet();
   const fixedFee = await deployedContract.fixedFee();
 
-  console.log(`✅ Token: ${token}`);
   console.log(`✅ Facilitator Wallet: ${facilitatorWallet}`);
   console.log(`✅ Fixed Fee: ${fixedFee.toString()} (raw units)`);
+  console.log(`ℹ️  Token: Passed as parameter to executeSplit() (not stored in state)`);
 
   // Validate configuration matches
-  if (token !== parameters.tokenAddress) {
-    throw new Error(`Token mismatch: expected ${parameters.tokenAddress}, got ${token}`);
-  }
   if (facilitatorWallet !== parameters.facilitatorWallet) {
     throw new Error(`Facilitator wallet mismatch: expected ${parameters.facilitatorWallet}, got ${facilitatorWallet}`);
   }
@@ -291,9 +274,9 @@ async function deploySplitterV1() {
     proxyAddress: proxyAddress,
     implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
     adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
-    contractType: "USDCSplitterV1",
+    contractType: "EIP3009SplitterV1",
     owner: owner,
-    token: token,
+    tokenNote: "Token is passed as parameter to executeSplit() - supports USDC, EURC, and other EIP-3009 tokens",
     facilitatorWallet: facilitatorWallet,
     fixedFee: fixedFee.toString(),
     deploymentOptions: {
@@ -323,7 +306,7 @@ async function deploySplitterV1() {
   // Comprehensive validation using validate-contract functions
   console.log("\n🔍 Running comprehensive validation...");
   try {
-    await validateImplementation(deploymentInfo.implementationAddress, "USDCSplitterV1");
+    await validateImplementation(deploymentInfo.implementationAddress, "EIP3009SplitterV1");
     console.log("✅ Comprehensive validation completed successfully!");
   } catch (error: unknown) {
     if (error instanceof Error) {

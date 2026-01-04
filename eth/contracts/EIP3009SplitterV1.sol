@@ -47,7 +47,7 @@ interface IERC20_EIP3009 {
 }
 
 /**
- * @title USDCSplitterV1
+ * @title EIP3009SplitterV1
  * @notice Splits ERC-20 token payments between seller and facilitator using EIP-3009
  * @dev Uses UUPS proxy pattern for upgradeability
  * @dev Compatible with any ERC-20 token implementing EIP-3009 (USDC, EURC, etc.)
@@ -71,23 +71,19 @@ interface IERC20_EIP3009 {
  * - NOT compatible with fee-on-transfer or rebasing tokens
  * - Only standard ERC-20 tokens with EIP-3009 support
  */
-contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
+contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     /// @notice Contract version for upgrade tracking
     uint256 public constant VERSION = 1;
 
-    /// @notice ERC-20 token contract address (must support EIP-3009)
-    /// @custom:storage-slot 0
-    address public token;
-    
     /// @notice Wallet address that receives facilitator fees
-    /// @custom:storage-slot 1
+    /// @custom:storage-slot 0
     address public facilitatorWallet;
     
     /// @notice Fixed fee in token base units
     /// @dev Example: For USDC (6 decimals), 10_000 = 0.01 USDC
-    /// @custom:storage-slot 2
+    /// @custom:storage-slot 1
     uint256 public fixedFee;
 
     /**
@@ -116,23 +112,19 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
 
     /**
      * @notice Initialize the contract
-     * @param _token ERC-20 token contract address (must support EIP-3009)
      * @param _facilitatorWallet Wallet to receive facilitator fees
      * @param _fixedFee Fixed fee in token base units
      */
     function initialize(
-        address _token,
         address _facilitatorWallet,
         uint256 _fixedFee
     ) public initializer {
-        require(_token != address(0), "Invalid token address");
         require(_facilitatorWallet != address(0), "Invalid facilitator wallet");
         require(_fixedFee > 0, "Fee must be greater than 0");
 
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         
-        token = _token;
         facilitatorWallet = _facilitatorWallet;
         fixedFee = _fixedFee;
     }
@@ -146,6 +138,12 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
      *      This cryptographically binds the seller to the buyer's signature, preventing
      *      the facilitator from redirecting funds to a different address.
      * 
+     * @dev FLEXIBILITY: Token is passed as parameter to support multiple EIP-3009 tokens
+     *      (USDC, EURC, etc.) with a single contract deployment. The caller is responsible
+     *      for providing a valid EIP-3009 token address. The EIP-712 domain binding in
+     *      the buyer's signature ensures cross-token replay attacks are not possible.
+     * 
+     * @param token ERC-20 token contract address (must support EIP-3009)
      * @param buyer Buyer's address (authorization signer)
      * @param seller Seller's address (receives amount - fee)
      * @param salt Random bytes32 used in nonce generation (nonce = keccak256(seller, salt))
@@ -158,6 +156,7 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
      * @param s ECDSA signature s
      */
     function executeSplit(
+        address token,
         address buyer,
         address seller,
         bytes32 salt,
@@ -169,6 +168,7 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 r,
         bytes32 s
     ) external {
+        require(token != address(0), "Invalid token address");
         require(seller != address(0), "Invalid seller address");
         require(totalAmount > fixedFee, "Amount must exceed fee");
         
@@ -231,11 +231,12 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
 
     /**
      * @notice Check if an authorization has been used
+     * @param token Token contract address
      * @param authorizer Authorizer's address
      * @param nonce Authorization nonce
      * @return True if the authorization has been used
      */
-    function isAuthorizationUsed(address authorizer, bytes32 nonce) external view returns (bool) {
+    function isAuthorizationUsed(address token, address authorizer, bytes32 nonce) external view returns (bool) {
         return IERC20_EIP3009(token).authorizationState(authorizer, nonce);
     }
 

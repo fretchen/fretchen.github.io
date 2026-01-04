@@ -6,8 +6,8 @@
 
 ### Implementation Progress
 
-- ✅ **Core Contract (USDCSplitterV1.sol)** - Complete with security hardening
-- ✅ **Comprehensive Test Suite** - 29 tests passing (functional + security)
+- ✅ **Core Contract (EIP3009SplitterV1.sol)** - Complete with security hardening (token-agnostic)
+- ✅ **Comprehensive Test Suite** - 40 tests passing (functional + security + attack vectors)
 - ✅ **UUPS Upgradeability** - Storage gap, version tracking, OpenZeppelin validation
 - ✅ **Security Audit** - SafeERC20, EIP-3009 validation, upgrade patterns
 - 🔄 **Deployment Scripts** - Not yet implemented
@@ -109,19 +109,21 @@ sellerAmount = totalAmount - fee
 
 ## 6. Contract Design (Conceptual)
 
-### ✅ IMPLEMENTED: USDCSplitterV1.sol
+### ✅ IMPLEMENTED: EIP3009SplitterV1.sol
 
-**Status:** Complete with security hardening
+**Status:** Complete with security hardening + token-agnostic design
 
 **Key Changes from Plan:**
+- ✅ Token as parameter (supports USDC, EURC, any EIP-3009 token)
 - ✅ Uses `SafeERC20.safeTransfer()` instead of raw `IERC20.transfer()`
 - ✅ Generic `IERC20_EIP3009` interface (not USDC-specific)
 - ✅ Storage gap (`__gap[50]`) for upgrade safety
 - ✅ Version constant (`VERSION = 1`)
 - ✅ Fee-on-transfer documentation (not supported)
 - ✅ Solidity 0.8.33 with OpenZeppelin validation
+- ✅ 40 comprehensive tests (including 6 token parameter attack vector tests)
 
-**Contract Location:** `/eth/contracts/USDCSplitterV1.sol`
+**Contract Location:** `/eth/contracts/EIP3009SplitterV1.sol`
 
 ### ⚠️ EIP-3009 Limitation
 
@@ -231,7 +233,7 @@ interface IUSDC_EIP3009 {
     ) external;
 }
 
-contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
+contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
     address public usdc;
     address public facilitatorWallet;
     uint256 public fixedFee;
@@ -330,7 +332,7 @@ async function main() {
   const configPath = process.env.CONFIG_PATH || "./scripts/splitter-v1.config.json";
   const config = ConfigSchema.parse(JSON.parse(fs.readFileSync(configPath, "utf-8")));
   
-  console.log("Deploying USDCSplitterV1 with config:", config);
+  console.log("Deploying EIP3009SplitterV1 with config:", config);
   
   if (config.validateOnly) {
     console.log("✅ Config validated successfully");
@@ -346,7 +348,7 @@ async function main() {
   }
   
   // Deploy implementation + proxy
-  const splitter = await viem.deployContract("USDCSplitterV1", []);
+  const splitter = await viem.deployContract("EIP3009SplitterV1", []);
   console.log(`Implementation deployed: ${splitter.address}`);
   
   // Deploy proxy with initialization
@@ -393,7 +395,7 @@ main().catch(console.error);
 
 **Status:** 29 tests passing (100% success rate on functional tests)
 
-**Test File:** `/eth/test/USDCSplitterV1.test.ts`
+**Test File:** `/eth/test/EIP3009SplitterV1.test.ts`
 
 **Coverage:**
 
@@ -443,7 +445,7 @@ main().catch(console.error);
 
 **Test Execution:**
 ```bash
-npx hardhat test test/USDCSplitterV1.test.ts
+npx hardhat test test/EIP3009SplitterV1.test.ts
 # 29 passing (800ms)
 ```
 
@@ -479,8 +481,8 @@ npx hardhat test test/USDCSplitterV1.test.ts
    - Version tracking (`VERSION = 1`)
    - OpenZeppelin validator passing:
      ```bash
-     npx @openzeppelin/upgrades-core validate artifacts/build-info --contract USDCSplitterV1
-     # ✔ contracts/USDCSplitterV1.sol:USDCSplitterV1
+     npx @openzeppelin/upgrades-core validate artifacts/build-info --contract EIP3009SplitterV1
+     # ✔ contracts/EIP3009SplitterV1.sol:EIP3009SplitterV1
      # SUCCESS
      ```
 
@@ -531,7 +533,7 @@ npx hardhat test test/USDCSplitterV1.test.ts
 
 ### Phase 1: Development & Testing ✅ COMPLETE
 
-- ✅ Contract implementation (USDCSplitterV1.sol)
+- ✅ Contract implementation (EIP3009SplitterV1.sol - token agnostic)
 - ✅ Mock contracts (MockUSDC_EIP3009.sol)
 - ✅ Comprehensive test suite (29 tests)
 - ✅ Security hardening (SafeERC20, upgrade patterns)
@@ -690,7 +692,7 @@ Clients signing EIP-3009 authorizations must set:
 
 ### 15.5 Deployment Sequence
 
-1. Deploy `USDCSplitterV1` proxy on Optimism
+1. Deploy `EIP3009SplitterV1` proxy on Optimism
 2. Verify contract on Etherscan
 3. Update `x402_facilitator/` with Splitter address
 4. Update `scw_js/genimg_x402_token.js` paymentRequirements

@@ -1,18 +1,20 @@
 # Implementation Plan: USDC Fee Splitter using EIP-3009
 
-## Status: ✅ V1 Contract & Tests Complete
+## Status: ✅ Ready for Optimism Sepolia Deployment
 
 **Last Updated:** January 4, 2026
 
 ### Implementation Progress
 
 - ✅ **Core Contract (EIP3009SplitterV1.sol)** - Complete with security hardening (token-agnostic)
-- ✅ **Comprehensive Test Suite** - 40 tests passing (functional + security + attack vectors)
+- ✅ **Comprehensive Test Suite** - 57 tests passing (38 functional + 19 deployment)
 - ✅ **UUPS Upgradeability** - Storage gap, version tracking, OpenZeppelin validation
-- ✅ **Security Audit** - SafeERC20, EIP-3009 validation, upgrade patterns
-- 🔄 **Deployment Scripts** - Not yet implemented
-- 🔄 **x402 Integration** - Not yet implemented
-- 🔄 **Frontend/SDK Updates** - Not yet implemented
+- ✅ **Security Audit** - SafeERC20, EIP-3009 validation, upgrade patterns, attack vector tests
+- ✅ **Deployment Scripts** - Complete with config validation, dry-run, and verification
+- ✅ **Deployment Tests** - 19 tests covering script integration and validation
+- 🚀 **Ready for Sepolia Deployment** - All prerequisites met
+- ⏳ **x402 Integration** - Pending post-deployment
+- ⏳ **Frontend/SDK Updates** - Pending post-deployment
 
 ### Key Deviations from Original Plan
 
@@ -29,7 +31,12 @@
    - EIP-3009 authorization security (expired, future, wrong signer)
    - Edge cases (buyer=seller, seller=facilitator)
    - Insufficient balance scenarios
-   - Total: 29 tests vs originally planned ~10
+   - Token parameter attack vectors (6 tests)
+   - Deployment script integration tests (19 tests)
+   - **Total: 57 tests** (38 functional + 19 deployment)
+   - Split into two files following LLMv1 pattern:
+     - `EIP3009SplitterV1_Functional.test.ts` - Business logic
+     - `EIP3009SplitterV1_Deployment.ts` - Deployment & config validation
 
 4. **Upgrade Patterns**: Added full upgrade infrastructure
    - Storage gap (`__gap[50]`)
@@ -121,9 +128,12 @@ sellerAmount = totalAmount - fee
 - ✅ Version constant (`VERSION = 1`)
 - ✅ Fee-on-transfer documentation (not supported)
 - ✅ Solidity 0.8.33 with OpenZeppelin validation
-- ✅ 40 comprehensive tests (including 6 token parameter attack vector tests)
+- ✅ 57 comprehensive tests (38 functional + 19 deployment, including 6 token parameter attack vector tests)
 
 **Contract Location:** `/eth/contracts/EIP3009SplitterV1.sol`
+**Test Files:** 
+- `/eth/test/EIP3009SplitterV1_Functional.test.ts` (38 tests)
+- `/eth/test/EIP3009SplitterV1_Deployment.ts` (19 tests)
 
 ### ⚠️ EIP-3009 Limitation
 
@@ -393,11 +403,13 @@ main().catch(console.error);
 
 ### ✅ IMPLEMENTED: Comprehensive Test Suite
 
-**Status:** 29 tests passing (100% success rate on functional tests)
+**Status:** 57 tests passing (100% success rate)
 
-**Test File:** `/eth/test/EIP3009SplitterV1.test.ts`
+**Test Files:** 
+- `/eth/test/EIP3009SplitterV1_Functional.test.ts` - 38 business logic tests
+- `/eth/test/EIP3009SplitterV1_Deployment.ts` - 19 deployment & integration tests
 
-**Coverage:**
+**Functional Test Coverage (38 tests):**
 
 #### Basic Functionality (2 tests)
 - ✅ Initialize with correct parameters
@@ -432,7 +444,7 @@ main().catch(console.error);
 - ✅ Owner can authorize upgrade
 - ✅ Reject upgrade from non-owner
 
-#### EIP-3009 Authorization Security (6 tests) **(NEW - Beyond Original Plan)**
+#### EIP-3009 Authorization Security (6 tests)
 - ✅ Reject expired authorization (validBefore in past)
 - ✅ Reject not-yet-valid authorization (validAfter in future)
 - ✅ Reject wrong signer (signature mismatch)
@@ -440,19 +452,69 @@ main().catch(console.error);
 - ✅ Work when seller equals buyer (self-payment edge case)
 - ✅ Work when seller equals facilitator (edge case)
 
+#### Seller Verification Security (5 tests)
+- ✅ Reject facilitator redirect attack (wrong seller)
+- ✅ Reject wrong salt for correct seller
+- ✅ Reject seller swap between authorizations
+- ✅ Verify cryptographic binding of seller to nonce
+- ✅ Prevent facilitator self-theft attack
+
+#### Token Parameter Attack Vectors (6 tests) **(NEW - Token Agnostic Design)**
+- ✅ Reject zero address token
+- ✅ Handle fake token gracefully (non-contract EOA)
+- ✅ Prevent cross-token replay (EIP-712 domain binding)
+- ✅ Support multiple different tokens in sequence
+- ✅ Prevent nonce reuse across tokens
+- ✅ Verify no persistent contract balance
+
+**Deployment Test Coverage (19 tests):**
+
+#### Basic Deployment (5 tests)
+- ✅ Deploy with correct parameters
+- ✅ UUPS proxy verification
+- ✅ Upgrade-ready validation
+- ✅ VERSION constant check
+- ✅ Re-initialization prevention
+
+#### Token Agnostic Design (2 tests)
+- ✅ Verify no token storage in state
+- ✅ Token as parameter in executeSplit and isAuthorizationUsed
+
+#### Script Integration Tests (6 tests)
+- ✅ Deploy using deployment script with config
+- ✅ Validate configuration only mode
+- ✅ Dry run simulation
+- ✅ Config schema validation (rejects invalid)
+- ✅ Invalid address rejection
+- ✅ Deployment info file creation
+
+#### Configuration Validation (2 tests)
+- ✅ Reject invalid fixed fee (zero)
+- ✅ Accept different valid fee amounts
+
+#### Post-Deployment Verification (4 tests)
+- ✅ Implementation contract exists
+- ✅ Proxy admin verification (UUPS zero address)
+- ✅ Correct owner after deployment
+- ✅ Correct parameters after deployment
+
 **Mock Contracts:**
-- ✅ `MockUSDC_EIP3009.sol` - Full EIP-3009 implementation for testing
+- ✅ `MockUSDC_EIP3009.sol` - Full EIP-3009 implementation with domain separation
 
 **Test Execution:**
 ```bash
-npx hardhat test test/EIP3009SplitterV1.test.ts
-# 29 passing (800ms)
-```
+# Functional tests (38)
+npx hardhat test test/EIP3009SplitterV1_Functional.test.ts
+# 38 passing (937ms)
 
-### Deployment Tests (NOT YET IMPLEMENTED)
-- ⏳ Proxy initialization validation
-- ⏳ Config-driven deployment script
-- ⏳ Network-specific configurations
+# Deployment tests (19)
+npx hardhat test test/EIP3009SplitterV1_Deployment.ts
+# 19 passing (934ms)
+
+# All tests (57)
+npx hardhat test test/EIP3009SplitterV1*.ts
+# 57 passing (2s)
+```
 
 ### Unit Tests
 - Correct split for $0.01 / $0.02
@@ -506,15 +568,24 @@ npx hardhat test test/EIP3009SplitterV1.test.ts
    - Limited to standard ERC-20 + EIP-3009 tokens
 
 7. **Test Coverage** ✅
-   - 29 comprehensive tests
-   - Security scenarios covered (replay, expiry, invalid signer)
+   - 57 comprehensive tests (38 functional + 19 deployment)
+   - Security scenarios covered (replay, expiry, invalid signer, attack vectors)
+   - Deployment script integration validated
 
 **Contract Metrics:**
 - Lines of Code: ~210 (including comments)
-- State Variables: 3 (token, facilitatorWallet, fixedFee)
+- State Variables: 2 (facilitatorWallet, fixedFee) - token is parameter
 - Functions: 6 public/external
 - Events: 3
 - OpenZeppelin Dependencies: OwnableUpgradeable, UUPSUpgradeable, SafeERC20
+
+**Deployment Infrastructure:**
+- ✅ Config-driven deployment script (`deploy-splitter-v1.ts`)
+- ✅ Zod schema validation for config
+- ✅ Three modes: deploy, validateOnly, dryRun
+- ✅ Comprehensive post-deployment verification
+- ✅ Deployment info file generation (JSON)
+- ✅ OpenZeppelin validation integration
 
 **Remaining Security Steps:**
 - ⏳ External audit before mainnet
@@ -535,32 +606,93 @@ npx hardhat test test/EIP3009SplitterV1.test.ts
 
 - ✅ Contract implementation (EIP3009SplitterV1.sol - token agnostic)
 - ✅ Mock contracts (MockUSDC_EIP3009.sol)
-- ✅ Comprehensive test suite (29 tests)
+- ✅ Comprehensive test suite (57 tests: 38 functional + 19 deployment)
 - ✅ Security hardening (SafeERC20, upgrade patterns)
+- ✅ Attack vector testing (6 token parameter tests, 5 seller verification tests)
 - ✅ OpenZeppelin validation passing
 - ✅ Solidity 0.8.33 update
+- ✅ Deployment script (`deploy-splitter-v1.ts`) with Zod validation
+- ✅ Deployment configuration (`deploy-splitter-v1.config.json`)
+- ✅ Deployment tests (19 integration tests)
 
-### Phase 2: Deployment Preparation 🔄 IN PROGRESS
+### Phase 2: Optimism Sepolia Deployment 🚀 READY TO EXECUTE
 
-- ⏳ Select L2 → **Optimism** (confirmed, aligns with existing infrastructure)
-- ⏳ Fix fee amount → **10_000 (0.01 USDC)** or **20_000 (0.02 USDC)**
-- ⏳ Create deployment config JSON (`splitter-v1.config.json`)
-- ⏳ Write deployment script (`deploy-splitter-v1.ts`)
-- ⏳ Test on Optimism Sepolia
-- ⏳ Deploy splitter to Optimism mainnet
-- ⏳ Verify contract on Etherscan/Optimistic Etherscan
-- ⏳ Update facilitator wallet configuration
+**Prerequisites Met:**
+- ✅ Hardhat configured for Optimism Sepolia (`optsepolia` network)
+- ✅ Etherscan V2 API configured for Sepolia verification
+- ✅ Deployment script supports network selection
+- ✅ Config file ready (facilitatorWallet: `0xAAEB...239C`, fixedFee: `10000`)
 
-### Phase 3: Integration & Go-Live ❌ NOT STARTED
+**Next Steps:**
+1. ⏳ Update config for Sepolia deployment:
+   ```json
+   {
+     "options": {
+       "validateOnly": false,
+       "dryRun": false,  // Set to false for actual deployment
+       "verify": true,
+       "waitConfirmations": 2
+     },
+     "metadata": {
+       "environment": "testnet"  // Change from "mainnet"
+     }
+   }
+   ```
 
-- ⏳ Configure relayer with Splitter address
-- ⏳ Update x402_facilitator/ (settle, verify logic)
-- ⏳ Update scw_js/genimg_x402_token.js
-- ⏳ Test wallet flows (MetaMask, Rabby)
-- ⏳ Monitor Blockaid / wallet warnings
-- ⏳ Deploy updated Scaleway Functions
-- ⏳ End-to-end testing on testnet
-- ⏳ Production migration
+2. ⏳ Ensure Hardhat vars are set:
+   ```bash
+   npx hardhat vars set SEPOLIA_PRIVATE_KEY
+   npx hardhat vars set ALCHEMY_API_KEY
+   npx hardhat vars set ETHERSCAN_API_KEY
+   ```
+
+3. ⏳ Deploy to Optimism Sepolia:
+   ```bash
+   npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+   ```
+
+4. ⏳ Verify deployment:
+   - Check proxy address in deployment output
+   - Verify on Sepolia Optimism Etherscan
+   - Test `executeSplit()` with Sepolia USDC
+
+5. ⏳ Document deployment addresses:
+   - Proxy address → Update x402_facilitator/ config
+   - Implementation address → For reference
+   - Deployment file → Saved automatically in `scripts/deployments/`
+
+**Optional Pre-Deployment Validation:**
+```bash
+# Validate config without deploying
+npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+# (Set validateOnly: true in config first)
+```
+
+### Phase 3: Integration & Testing on Sepolia ⏳ PENDING
+
+- ⏳ Update x402_facilitator/ with Sepolia Splitter address
+- ⏳ Update x402_facilitator/ USDC address for Sepolia
+- ⏳ Deploy updated x402_facilitator to Scaleway Functions
+- ⏳ Update scw_js/genimg_x402_token.js for Sepolia
+- ⏳ Deploy updated scw_js to Scaleway Functions
+- ⏳ End-to-end test on Sepolia:
+  - Buyer signs EIP-3009 authorization
+  - x402 facilitator verifies and settles
+  - Verify seller receives correct amount
+  - Verify facilitator receives fee
+- ⏳ Monitor wallet warnings (MetaMask, Blockaid)
+
+### Phase 4: Optimism Mainnet Deployment ⏳ PENDING SEPOLIA SUCCESS
+
+- ⏳ Review Sepolia test results
+- ⏳ Update config for mainnet (`environment: "mainnet"`)
+- ⏳ Deploy to Optimism mainnet
+- ⏳ Verify on Optimistic Etherscan
+- ⏳ Update production x402_facilitator/ configuration
+- ⏳ Update production scw_js/ configuration
+- ⏳ Deploy to production Scaleway Functions
+- ⏳ Monitor initial transactions
+- ⏳ Announce to users
 
 ### ⚠️ EVM Version Consideration
 

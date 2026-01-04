@@ -851,3 +851,126 @@ Clients signing EIP-3009 authorizations must set:
 - Atomic execution (no partial states)
 - Compatible with existing x402 whitelist (NFT holders)
 
+---
+
+## 18. Deployment Readiness Summary
+
+### ✅ What's Ready
+
+**Contract & Tests:**
+- ✅ EIP3009SplitterV1.sol (210 LOC, token-agnostic, UUPS upgradeable)
+- ✅ 57 comprehensive tests (100% passing)
+  - 38 functional tests (business logic, security, attack vectors)
+  - 19 deployment tests (script integration, validation)
+- ✅ MockUSDC_EIP3009.sol (full EIP-3009 test implementation)
+
+**Deployment Infrastructure:**
+- ✅ `deploy-splitter-v1.ts` script with:
+  - Zod config validation
+  - validateOnly mode (dry run without gas)
+  - dryRun mode (simulation with logs)
+  - Full deployment with verification
+  - Post-deployment checks
+- ✅ `deploy-splitter-v1.config.json` (mainnet template)
+- ✅ Hardhat network configs for Sepolia & Mainnet
+- ✅ Etherscan V2 API integration
+
+**Security:**
+- ✅ SafeERC20 for transfers
+- ✅ Seller verification (nonce = keccak256(seller, salt))
+- ✅ Token parameter (EIP-712 domain separation prevents cross-token replay)
+- ✅ UUPS upgrade pattern with onlyOwner authorization
+- ✅ No persistent balances (atomic splits)
+- ✅ OpenZeppelin validation passing
+
+### 🚀 Ready to Deploy to Optimism Sepolia
+
+**What You Need:**
+1. **Environment Variables** (via `npx hardhat vars set`):
+   - `SEPOLIA_PRIVATE_KEY` - Deployer wallet private key
+   - `ALCHEMY_API_KEY` - For RPC access
+   - `ETHERSCAN_API_KEY` - For contract verification (V2 API)
+
+2. **Config Update** (`deploy-splitter-v1.config.json`):
+   ```json
+   {
+     "options": {
+       "validateOnly": false,
+       "dryRun": false,
+       "verify": true
+     },
+     "metadata": {
+       "environment": "testnet"  // Change from "mainnet"
+     }
+   }
+   ```
+
+3. **Deploy Command**:
+   ```bash
+   npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+   ```
+
+**Expected Output:**
+- Proxy address (use this for x402_facilitator config)
+- Implementation address (for reference)
+- Deployment file saved to `scripts/deployments/splitter-v1-optsepolia-YYYY-MM-DD.json`
+- Etherscan verification link
+
+### ⏳ What's Pending (Post-Deployment)
+
+**x402 Integration (Requires Deployed Address):**
+- Update `x402_facilitator/x402_settle.js` with Splitter address
+- Update `x402_facilitator/x402_verify.js` validation logic
+- Update USDC address for Sepolia (different from mainnet)
+- Deploy updated facilitator to Scaleway Functions
+
+**Resource Server Updates:**
+- Update `scw_js/genimg_x402_token.js` paymentRequirements
+- Change `payTo` from seller → Splitter address
+- Add `actualRecipient` field for seller
+- Deploy updated scw_js to Scaleway Functions
+
+**Testing:**
+- End-to-end test on Sepolia (buyer → facilitator → settlement)
+- Verify correct splits (seller gets price, facilitator gets 0.01 USDC)
+- Monitor wallet warnings (MetaMask, Blockaid)
+
+**Mainnet Migration (After Sepolia Success):**
+- Review Sepolia test results
+- Update config for mainnet environment
+- Deploy to Optimism mainnet
+- Update production x402_facilitator & scw_js configs
+- Monitor initial production transactions
+
+### 📋 Pre-Deployment Checklist
+
+- [ ] Hardhat vars set (`SEPOLIA_PRIVATE_KEY`, `ALCHEMY_API_KEY`, `ETHERSCAN_API_KEY`)
+- [ ] Config file updated for testnet environment
+- [ ] Test wallet has Sepolia ETH for gas (get from [Alchemy faucet](https://www.alchemy.com/faucets/optimism-sepolia))
+- [ ] Optional: Run validateOnly mode first (`validateOnly: true` in config)
+- [ ] Optional: Run dryRun mode (`dryRun: true` in config)
+- [ ] Ready to execute deployment command
+
+### 🎯 Next Reasonable Step
+
+**Deploy to Optimism Sepolia** is the logical next step because:
+1. ✅ All contract code complete and tested
+2. ✅ Deployment infrastructure ready
+3. ✅ Network configuration in place
+4. ✅ No blocking dependencies
+5. ⏳ Post-deployment work (x402 integration) requires deployed address
+
+**Command to execute:**
+```bash
+# 1. Validate config first (optional but recommended)
+# Set validateOnly: true in config, then:
+npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+
+# 2. If validation passes, deploy
+# Set validateOnly: false, dryRun: false in config, then:
+npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+
+# 3. Save the proxy address from output for x402 integration
+```
+
+---

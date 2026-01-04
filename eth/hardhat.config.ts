@@ -14,7 +14,7 @@ const SEPOLIA_PRIVATE_KEY: string = vars.get(
 const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
 
 const config = {
-  solidity: "0.8.28",
+  solidity: "0.8.33",
   gasReporter: {
     enabled: false,
   },

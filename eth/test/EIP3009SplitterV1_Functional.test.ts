@@ -144,20 +144,8 @@ describe("EIP3009SplitterV1", function () {
     };
   }
 
-  describe("Deployment", function () {
-    it("Should initialize with correct parameters", async function () {
-      const { splitter, facilitator } = await loadFixture(deploySplitterFixture);
-
-      expect(await splitter.read.facilitatorWallet()).to.equal(getAddress(facilitator.account.address));
-      expect(await splitter.read.fixedFee()).to.equal(FEE_1_CENT);
-    });
-
-    it("Should set owner correctly", async function () {
-      const { splitter, owner } = await loadFixture(deploySplitterFixture);
-
-      expect(await splitter.read.owner()).to.equal(getAddress(owner.account.address));
-    });
-  });
+  // Note: Basic deployment tests are in EIP3009SplitterV1_Deployment.ts
+  // This file focuses on functional business logic tests
 
   describe("Split Execution", function () {
     it("Should execute split correctly with 1 cent fee", async function () {

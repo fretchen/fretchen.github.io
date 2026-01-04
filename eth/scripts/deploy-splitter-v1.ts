@@ -141,7 +141,7 @@ async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void>
  *
  * Configuration is loaded from deploy-splitter-v1.config.json
  */
-async function deploySplitterV1() {
+export async function deploySplitterV1(): Promise<boolean | { contract: unknown; address: string; deploymentInfo: unknown }> {
   console.log("🚀 EIP3009SplitterV1 Deployment Script");
   console.log("=".repeat(60));
   console.log(`Network: ${network.name}`);
@@ -156,13 +156,15 @@ async function deploySplitterV1() {
   // Check if validation only
   if (options.validateOnly) {
     console.log("🔍 Validation Only Mode - No deployment will occur");
-    return await validateDeployment();
+    await validateDeployment();
+    return true;
   }
 
   // Check if dry run
   if (options.dryRun) {
     console.log("🧪 Dry Run Mode - Simulation only");
-    return await simulateDeployment(config);
+    await simulateDeployment(config);
+    return true;
   }
 
   // Get contract factory
@@ -331,10 +333,18 @@ async function deploySplitterV1() {
   console.log("3. Update scw_js/genimg_x402_token.js paymentRequirements");
   console.log("4. Test executeSplit() with EIP-3009 authorization");
   console.log("5. Verify contracts on Optimistic Etherscan if needed");
+
+  return {
+    contract: deployedContract,
+    address: proxyAddress,
+    deploymentInfo,
+  };
 }
 
-// Execute deployment
-deploySplitterV1().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Execute deployment only when run directly (not imported)
+if (require.main === module) {
+  deploySplitterV1().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

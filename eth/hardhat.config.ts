@@ -15,6 +15,9 @@ const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan
 
 const config = {
   solidity: "0.8.28",
+  gasReporter: {
+    enabled: false,
+  },
   networks: {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,

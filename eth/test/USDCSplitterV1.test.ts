@@ -59,18 +59,34 @@ describe("USDCSplitterV1", function () {
   }
 
   /**
-   * Helper: Create EIP-3009 authorization signature
+   * Helper: Create EIP-3009 authorization signature with seller verification
+   * 
+   * SECURITY: The nonce is computed as keccak256(seller, salt) to cryptographically
+   * bind the intended seller to the buyer's signature. This prevents a malicious
+   * facilitator from redirecting funds to a different address.
    */
   async function createAuthorization(
     mockUSDC: any,
     buyer: any,
     to: `0x${string}`,
+    seller: `0x${string}`,  // NEW: seller is now required for nonce computation
     amount: bigint,
     validAfter: bigint = 0n,
     validBefore: bigint = BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour from now
   ) {
-    const nonceValue = Date.now() + Math.random();
-    const nonce = keccak256(toHex(nonceValue.toString()));
+    // Generate random salt
+    const saltValue = Date.now() + Math.random();
+    const salt = keccak256(toHex(saltValue.toString()));
+    
+    // Compute nonce as keccak256(abi.encode(seller, salt)) 
+    // This binds seller to the signature - must match Solidity's abi.encode
+    // Uses standard ABI encoding (address padded to 32 bytes + bytes32 = 64 bytes)
+    const nonce = keccak256(
+      encodeAbiParameters(
+        [{ type: "address" }, { type: "bytes32" }],
+        [seller, salt]
+      )
+    );
 
     // Get domain separator from mock USDC
     const domain = await mockUSDC.read.eip712Domain();
@@ -116,6 +132,8 @@ describe("USDCSplitterV1", function () {
     return {
       from: buyer.account.address,
       to,
+      seller,  // Include seller in return for convenience
+      salt,    // Include salt for executeSplit call
       value: amount,
       validAfter,
       validBefore,
@@ -152,14 +170,15 @@ describe("USDCSplitterV1", function () {
       const expectedSellerAmount = totalAmount - FEE_1_CENT; // 0.99 token
       const expectedFee = FEE_1_CENT; // 0.01 token
 
-      // Create authorization
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      // Create authorization with seller bound to nonce
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Execute split (called by anyone, typically facilitator)
       const hash = await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           seller.account.address,
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -191,12 +210,13 @@ describe("USDCSplitterV1", function () {
       const expectedSellerAmount = totalAmount - FEE_2_CENTS; // 4.98 token
       const expectedFee = FEE_2_CENTS; // 0.02 token
 
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           seller.account.address,
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -218,12 +238,13 @@ describe("USDCSplitterV1", function () {
       );
 
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       const hash = await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           seller.account.address,
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -251,13 +272,14 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = FEE_1_CENT; // Amount = fee (seller would get 0)
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await expect(
         splitter.write.executeSplit(
           [
             auth.from as `0x${string}`,
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -275,13 +297,14 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("0.005"); // Less than 0.01 token fee
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await expect(
         splitter.write.executeSplit(
           [
             auth.from as `0x${string}`,
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -299,14 +322,15 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, zeroAddress, totalAmount);
 
-      const zeroAddress = "0x0000000000000000000000000000000000000000";
       await expect(
         splitter.write.executeSplit(
           [
             auth.from as `0x${string}`,
-            zeroAddress as `0x${string}`,
+            zeroAddress,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -324,13 +348,14 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // First execution should succeed
       await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           seller.account.address,
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -351,6 +376,7 @@ describe("USDCSplitterV1", function () {
           [
             auth.from as `0x${string}`,
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -377,11 +403,12 @@ describe("USDCSplitterV1", function () {
       const amount2 = parseToken("2.00");
 
       // First buyer
-      const auth1 = await createAuthorization(mockUSDC, buyer, splitter.address, amount1);
+      const auth1 = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, amount1);
       await splitter.write.executeSplit(
         [
           auth1.from as `0x${string}`,
           seller.account.address,
+          auth1.salt,
           auth1.value,
           auth1.validAfter,
           auth1.validBefore,
@@ -394,11 +421,12 @@ describe("USDCSplitterV1", function () {
       );
 
       // Second buyer
-      const auth2 = await createAuthorization(mockUSDC, buyer2, splitter.address, amount2);
+      const auth2 = await createAuthorization(mockUSDC, buyer2, splitter.address, seller.account.address, amount2);
       await splitter.write.executeSplit(
         [
           auth2.from as `0x${string}`,
           seller.account.address,
+          auth2.salt,
           auth2.value,
           auth2.validAfter,
           auth2.validBefore,
@@ -498,12 +526,13 @@ describe("USDCSplitterV1", function () {
 
       // Execute split
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           seller.account.address,
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -534,13 +563,14 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Execute split
       await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           seller.account.address,
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -598,6 +628,7 @@ describe("USDCSplitterV1", function () {
         mockUSDC,
         buyer,
         splitter.address,
+        seller.account.address,
         totalAmount,
         0n, // validAfter
         now - 3600n, // validBefore: 1 hour in the past
@@ -608,6 +639,7 @@ describe("USDCSplitterV1", function () {
           [
             auth.from as `0x${string}`,
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -632,6 +664,7 @@ describe("USDCSplitterV1", function () {
         mockUSDC,
         buyer,
         splitter.address,
+        seller.account.address,
         totalAmount,
         now + 3600n, // validAfter: 1 hour in the future
         now + 7200n, // validBefore: 2 hours in the future
@@ -642,6 +675,7 @@ describe("USDCSplitterV1", function () {
           [
             auth.from as `0x${string}`,
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -663,13 +697,14 @@ describe("USDCSplitterV1", function () {
       const totalAmount = parseToken("1.00");
       
       // Create authorization signed by otherAccount but claiming to be from buyer
-      const auth = await createAuthorization(mockUSDC, otherAccount, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, otherAccount, splitter.address, seller.account.address, totalAmount);
 
       await expect(
         splitter.write.executeSplit(
           [
             buyer.account.address, // Claim it's from buyer
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -688,13 +723,14 @@ describe("USDCSplitterV1", function () {
 
       // Try to transfer more than buyer has
       const totalAmount = parseToken("10000.00"); // Buyer only has 1000
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await expect(
         splitter.write.executeSplit(
           [
             auth.from as `0x${string}`,
             seller.account.address,
+            auth.salt,
             auth.value,
             auth.validAfter,
             auth.validBefore,
@@ -712,13 +748,15 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      // Buyer is also the seller - nonce encodes buyer as seller
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, buyer.account.address, totalAmount);
 
       // Buyer is also the seller (edge case but valid)
       const hash = await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           buyer.account.address, // seller = buyer
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -743,13 +781,15 @@ describe("USDCSplitterV1", function () {
       const { splitter, mockUSDC, buyer, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, totalAmount);
+      // Seller is the facilitator wallet - nonce encodes facilitator as seller
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, facilitator.account.address, totalAmount);
 
       // Seller is the facilitator wallet
       const hash = await splitter.write.executeSplit(
         [
           auth.from as `0x${string}`,
           facilitator.account.address, // seller = facilitator
+          auth.salt,
           auth.value,
           auth.validAfter,
           auth.validBefore,
@@ -766,6 +806,231 @@ describe("USDCSplitterV1", function () {
 
       // Facilitator should receive both seller amount and fee
       expect(await mockUSDC.read.balanceOf([facilitator.account.address])).to.equal(totalAmount);
+    });
+  });
+
+  describe("Seller Verification Security", function () {
+    it("Should reject when facilitator tries to redirect funds to different seller", async function () {
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(
+        deploySplitterFixture,
+      );
+
+      const totalAmount = parseToken("1.00");
+      
+      // Buyer authorizes payment to seller (nonce encodes seller)
+      const auth = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        seller.account.address, // Buyer intends to pay seller
+        totalAmount,
+      );
+
+      // Malicious facilitator tries to redirect funds to otherAccount (attacker)
+      await expect(
+        splitter.write.executeSplit(
+          [
+            auth.from as `0x${string}`,
+            otherAccount.account.address, // ATTACKER: Not the authorized seller!
+            auth.salt,
+            auth.value,
+            auth.validAfter,
+            auth.validBefore,
+            auth.nonce,
+            auth.v,
+            auth.r,
+            auth.s,
+          ],
+          { account: facilitator.account },
+        ),
+      ).to.be.rejectedWith("Seller not authorized by buyer");
+    });
+
+    it("Should reject when facilitator provides wrong salt for correct seller", async function () {
+      const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
+
+      const totalAmount = parseToken("1.00");
+      
+      // Buyer authorizes payment to seller
+      const auth = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        seller.account.address,
+        totalAmount,
+      );
+
+      // Facilitator tries with correct seller but wrong salt
+      const wrongSalt = keccak256(toHex("wrong-salt"));
+      
+      await expect(
+        splitter.write.executeSplit(
+          [
+            auth.from as `0x${string}`,
+            seller.account.address, // Correct seller
+            wrongSalt, // Wrong salt!
+            auth.value,
+            auth.validAfter,
+            auth.validBefore,
+            auth.nonce, // Original nonce won't match hash(seller, wrongSalt)
+            auth.v,
+            auth.r,
+            auth.s,
+          ],
+          { account: facilitator.account },
+        ),
+      ).to.be.rejectedWith("Seller not authorized by buyer");
+    });
+
+    it("Should reject when facilitator swaps seller between two valid authorizations", async function () {
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount, publicClient } = await loadFixture(
+        deploySplitterFixture,
+      );
+
+      const amount1 = parseToken("1.00");
+      const amount2 = parseToken("2.00");
+      
+      // Buyer creates two authorizations for different sellers
+      const authForSeller = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        seller.account.address,
+        amount1,
+      );
+      
+      const authForOther = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        otherAccount.account.address,
+        amount2,
+      );
+
+      // Facilitator tries to use authForSeller's signature but with otherAccount as seller
+      await expect(
+        splitter.write.executeSplit(
+          [
+            authForSeller.from as `0x${string}`,
+            otherAccount.account.address, // Wrong seller for this auth
+            authForSeller.salt, // Salt from seller auth
+            authForSeller.value,
+            authForSeller.validAfter,
+            authForSeller.validBefore,
+            authForSeller.nonce, // Nonce encodes seller, not otherAccount
+            authForSeller.v,
+            authForSeller.r,
+            authForSeller.s,
+          ],
+          { account: facilitator.account },
+        ),
+      ).to.be.rejectedWith("Seller not authorized by buyer");
+
+      // But correct seller should work
+      const hash = await splitter.write.executeSplit(
+        [
+          authForSeller.from as `0x${string}`,
+          seller.account.address,
+          authForSeller.salt,
+          authForSeller.value,
+          authForSeller.validAfter,
+          authForSeller.validBefore,
+          authForSeller.nonce,
+          authForSeller.v,
+          authForSeller.r,
+          authForSeller.s,
+        ],
+        { account: facilitator.account },
+      );
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      expect(receipt.status).to.equal("success");
+    });
+
+    it("Should verify seller address is cryptographically bound to nonce", async function () {
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
+        deploySplitterFixture,
+      );
+
+      const totalAmount = parseToken("5.00");
+      
+      // Create authorization with seller bound to nonce
+      const auth = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        seller.account.address,
+        totalAmount,
+      );
+
+      // Verify that nonce = keccak256(abi.encode(seller, salt))
+      // Uses standard ABI encoding matching Solidity's abi.encode
+      const expectedNonce = keccak256(
+        encodeAbiParameters(
+          [{ type: "address" }, { type: "bytes32" }],
+          [seller.account.address, auth.salt]
+        )
+      );
+      expect(auth.nonce).to.equal(expectedNonce);
+
+      // Execute split - should succeed because seller matches nonce
+      const hash = await splitter.write.executeSplit(
+        [
+          auth.from as `0x${string}`,
+          seller.account.address,
+          auth.salt,
+          auth.value,
+          auth.validAfter,
+          auth.validBefore,
+          auth.nonce,
+          auth.v,
+          auth.r,
+          auth.s,
+        ],
+        { account: facilitator.account },
+      );
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      expect(receipt.status).to.equal("success");
+
+      // Verify correct distribution
+      const expectedSellerAmount = totalAmount - FEE_1_CENT;
+      expect(await mockUSDC.read.balanceOf([seller.account.address])).to.equal(expectedSellerAmount);
+      expect(await mockUSDC.read.balanceOf([facilitator.account.address])).to.equal(FEE_1_CENT);
+    });
+
+    it("Should prevent facilitator from stealing funds via self as seller", async function () {
+      const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
+
+      const totalAmount = parseToken("100.00");
+      
+      // Buyer authorizes payment to legitimate seller
+      const auth = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        seller.account.address,
+        totalAmount,
+      );
+
+      // Malicious facilitator tries to set themselves as seller
+      await expect(
+        splitter.write.executeSplit(
+          [
+            auth.from as `0x${string}`,
+            facilitator.account.address, // Facilitator tries to steal!
+            auth.salt,
+            auth.value,
+            auth.validAfter,
+            auth.validBefore,
+            auth.nonce,
+            auth.v,
+            auth.r,
+            auth.s,
+          ],
+          { account: facilitator.account },
+        ),
+      ).to.be.rejectedWith("Seller not authorized by buyer");
     });
   });
 });

@@ -54,12 +54,15 @@ interface IERC20_EIP3009 {
  * 
  * Architecture:
  * - Buyer signs ONE EIP-3009 authorization (to = this contract)
- * - Facilitator calls executeSplit()
+ * - Nonce encodes intended seller: nonce = keccak256(seller, salt)
+ * - Facilitator calls executeSplit() with seller and salt
+ * - Contract verifies seller matches what buyer intended
  * - Contract pulls tokens and distributes atomically:
  *   └─ Seller receives (amount - fee)
  *   └─ Facilitator wallet receives fee
  * 
  * Security:
+ * - Seller verification prevents facilitator from redirecting funds
  * - No persistent balances (all funds distributed in same tx)
  * - Fixed fee prevents manipulation
  * - Only owner can update configuration
@@ -139,12 +142,17 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
      * @dev WARNING: The contract temporarily holds tokens within this transaction.
      *      All funds are distributed atomically - no persistent balances remain.
      * 
+     * @dev SECURITY: The nonce must be computed as keccak256(abi.encodePacked(seller, salt)).
+     *      This cryptographically binds the seller to the buyer's signature, preventing
+     *      the facilitator from redirecting funds to a different address.
+     * 
      * @param buyer Buyer's address (authorization signer)
      * @param seller Seller's address (receives amount - fee)
+     * @param salt Random bytes32 used in nonce generation (nonce = keccak256(seller, salt))
      * @param totalAmount Total token amount authorized (seller amount + fee)
      * @param validAfter Authorization valid after timestamp
      * @param validBefore Authorization valid before timestamp
-     * @param nonce Unique authorization nonce
+     * @param nonce Authorization nonce (must equal keccak256(seller, salt))
      * @param v ECDSA signature v
      * @param r ECDSA signature r
      * @param s ECDSA signature s
@@ -152,6 +160,7 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
     function executeSplit(
         address buyer,
         address seller,
+        bytes32 salt,
         uint256 totalAmount,
         uint256 validAfter,
         uint256 validBefore,
@@ -162,6 +171,14 @@ contract USDCSplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
     ) external {
         require(seller != address(0), "Invalid seller address");
         require(totalAmount > fixedFee, "Amount must exceed fee");
+        
+        // SECURITY: Verify that seller was authorized by the buyer
+        // The buyer computed nonce = keccak256(abi.encode(seller, salt)) when signing
+        // If facilitator tries to change seller, the nonce won't match
+        require(
+            keccak256(abi.encode(seller, salt)) == nonce,
+            "Seller not authorized by buyer"
+        );
 
         // Calculate split amounts
         uint256 sellerAmount = totalAmount - fixedFee;

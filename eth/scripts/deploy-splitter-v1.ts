@@ -9,19 +9,14 @@ import { getAddress } from "viem";
 // Zod Schema for configuration validation
 const SplitterV1DeployConfigSchema = z.object({
   parameters: z.object({
-    facilitatorWallet: z
-      .string()
-      .refine(
-        (addr) => {
-          try {
-            getAddress(addr);
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        "Invalid facilitator wallet address format"
-      ),
+    facilitatorWallet: z.string().refine((addr) => {
+      try {
+        getAddress(addr);
+        return true;
+      } catch {
+        return false;
+      }
+    }, "Invalid facilitator wallet address format"),
     fixedFee: z.string().refine((fee) => {
       const num = parseInt(fee);
       return !isNaN(num) && num > 0;
@@ -141,7 +136,9 @@ async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void>
  *
  * Configuration is loaded from deploy-splitter-v1.config.json
  */
-export async function deploySplitterV1(): Promise<boolean | { contract: unknown; address: string; deploymentInfo: unknown }> {
+export async function deploySplitterV1(): Promise<
+  boolean | { contract: unknown; address: string; deploymentInfo: unknown }
+> {
   console.log("🚀 EIP3009SplitterV1 Deployment Script");
   console.log("=".repeat(60));
   console.log(`Network: ${network.name}`);
@@ -193,14 +190,10 @@ export async function deploySplitterV1(): Promise<boolean | { contract: unknown;
   console.log(`📋 Note: Token is now a parameter of executeSplit()`);
   console.log("");
 
-  const Splitter = await upgrades.deployProxy(
-    SplitterFactory,
-    [parameters.facilitatorWallet, parameters.fixedFee],
-    {
-      kind: "uups",
-      initializer: "initialize",
-    }
-  );
+  const Splitter = await upgrades.deployProxy(SplitterFactory, [parameters.facilitatorWallet, parameters.fixedFee], {
+    kind: "uups",
+    initializer: "initialize",
+  });
 
   await Splitter.waitForDeployment();
   const proxyAddress = await Splitter.getAddress();

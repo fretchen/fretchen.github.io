@@ -1,11 +1,11 @@
 {
   "parameters": {
-    "facilitatorWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+    "facilitatorWallet": "0x3f8d2fb6fea24e70155bc61471936f3c9c30c206",
     "fixedFee": "10000"
   },
   "options": {
-    "validateOnly": true,
-    "dryRun": true,
+    "validateOnly": false,
+    "dryRun": false,
     "verify": true,
     "waitConfirmations": 2
   },

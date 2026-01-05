@@ -448,4 +448,68 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
       expect(await splitterContract.fixedFee()).to.equal(BigInt(fixedFee));
     });
   });
+
+  describe("Deployment File Persistence", function () {
+    it("Should save deployment file immediately after successful deploy", async function () {
+      const timestamp = new Date().toISOString().split("T")[0];
+      const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+      const deploymentFilePath = path.join(__dirname, "../scripts/deployments", deploymentFileName);
+
+      // Clean up any existing deployment file
+      if (fs.existsSync(deploymentFilePath)) {
+        fs.unlinkSync(deploymentFilePath);
+      }
+
+      await withTempConfig({ dryRun: false }, async () => {
+        const result = await deploySplitterV1();
+
+        // Deployment should succeed
+        expect(result).to.not.be.a("boolean");
+
+        // Deployment file should exist
+        expect(fs.existsSync(deploymentFilePath)).to.be.true;
+
+        // Verify file contents
+        const deploymentInfo = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
+        expect(deploymentInfo).to.have.property("proxyAddress");
+        expect(deploymentInfo).to.have.property("implementationAddress");
+        expect(deploymentInfo).to.have.property("verificationStatus");
+        expect(deploymentInfo.contractType).to.equal("EIP3009SplitterV1");
+
+        // Clean up
+        if (fs.existsSync(deploymentFilePath)) {
+          fs.unlinkSync(deploymentFilePath);
+        }
+      });
+    });
+
+    it("Should include verification status in deployment file", async function () {
+      const timestamp = new Date().toISOString().split("T")[0];
+      const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+      const deploymentFilePath = path.join(__dirname, "../scripts/deployments", deploymentFileName);
+
+      // Clean up any existing deployment file
+      if (fs.existsSync(deploymentFilePath)) {
+        fs.unlinkSync(deploymentFilePath);
+      }
+
+      await withTempConfig({ dryRun: false }, async () => {
+        await deploySplitterV1();
+
+        // Deployment file should exist
+        expect(fs.existsSync(deploymentFilePath)).to.be.true;
+
+        const deploymentInfo = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
+
+        // Should have verification status field
+        expect(deploymentInfo).to.have.property("verificationStatus");
+        expect(["passed", "failed", "pending"]).to.include(deploymentInfo.verificationStatus);
+
+        // Clean up
+        if (fs.existsSync(deploymentFilePath)) {
+          fs.unlinkSync(deploymentFilePath);
+        }
+      });
+    });
+  });
 });

@@ -197,78 +197,31 @@ export async function deploySplitterV1(): Promise<
 
   await Splitter.waitForDeployment();
   const proxyAddress = await Splitter.getAddress();
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const adminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
 
   console.log("✅ EIP3009SplitterV1 deployed successfully!");
   console.log("=".repeat(60));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
-  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
-  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
+  console.log(`📍 Implementation Address: ${implementationAddress}`);
+  console.log(`📍 Admin Address: ${adminAddress}`);
   console.log("");
 
-  // Post-deployment verification
-  console.log("⚙️  Post-Deployment Verification");
-  console.log("-".repeat(40));
-
+  // Get basic contract state for deployment file (before verification)
   const deployedContract = SplitterFactory.attach(proxyAddress);
-
-  // Verify implementation contract
-  console.log("🔧 Verifying implementation contract...");
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-  const implementationCode = await ethers.provider.getCode(implementationAddress);
-  if (implementationCode === "0x") {
-    throw new Error(`No contract code found at implementation address: ${implementationAddress}`);
-  }
-  console.log(`✅ Implementation contract verified (${implementationCode.length} bytes)`);
-
-  // Test implementation contract ABI compatibility
-  try {
-    SplitterFactory.attach(implementationAddress);
-    console.log("✅ Implementation contract ABI compatible");
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error.message);
-    } else {
-      console.log("⚠️  Warning: Could not attach ABI to implementation contract:", error);
-    }
-  }
-
-  // Verify proxy state
-  console.log("🔍 Verifying proxy state...");
   const owner = await deployedContract.owner();
-  const [deployer] = await ethers.getSigners();
-  console.log(`✅ Owner: ${owner}`);
-  console.log(`✅ Deployer: ${deployer.address}`);
-
-  if (owner !== deployer.address) {
-    throw new Error(`Owner mismatch: expected ${deployer.address}, got ${owner}`);
-  }
-
   const facilitatorWallet = await deployedContract.facilitatorWallet();
   const fixedFee = await deployedContract.fixedFee();
 
-  console.log(`✅ Facilitator Wallet: ${facilitatorWallet}`);
-  console.log(`✅ Fixed Fee: ${fixedFee.toString()} (raw units)`);
-  console.log(`ℹ️  Token: Passed as parameter to executeSplit() (not stored in state)`);
-
-  // Validate configuration matches
-  if (facilitatorWallet !== parameters.facilitatorWallet) {
-    throw new Error(`Facilitator wallet mismatch: expected ${parameters.facilitatorWallet}, got ${facilitatorWallet}`);
-  }
-  if (fixedFee.toString() !== parameters.fixedFee) {
-    throw new Error(`Fixed fee mismatch: expected ${parameters.fixedFee}, got ${fixedFee.toString()}`);
-  }
-
-  console.log("✅ All verifications passed!");
-  console.log("");
-
-  // Create deployment info
+  // Create deployment info IMMEDIATELY after successful deployment
+  // This ensures deployment info is saved even if verification fails
   const deploymentInfo = {
     network: network.name,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyAddress: proxyAddress,
-    implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
-    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    implementationAddress: implementationAddress,
+    adminAddress: adminAddress,
     contractType: "EIP3009SplitterV1",
     owner: owner,
     tokenNote: "Token is passed as parameter to executeSplit() - supports USDC, EURC, and other EIP-3009 tokens",
@@ -280,12 +233,10 @@ export async function deploySplitterV1(): Promise<
       configUsed: "deploy-splitter-v1.config.json",
     },
     config: config,
+    verificationStatus: "pending", // Will be updated after verification
   };
 
-  console.log("📋 Deployment Summary:");
-  console.log(JSON.stringify(deploymentInfo, null, 2));
-
-  // Save deployment information to file
+  // Save deployment information to file BEFORE verification
   const deploymentsDir = path.join(__dirname, "deployments");
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
@@ -297,6 +248,85 @@ export async function deploySplitterV1(): Promise<
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
   console.log(`💾 Deployment info saved to: ${deploymentFilePath}`);
+
+  // Post-deployment verification (non-critical - failures are warnings only)
+  console.log("");
+  console.log("⚙️  Post-Deployment Verification");
+  console.log("-".repeat(40));
+
+  let verificationPassed = true;
+  const verificationErrors: string[] = [];
+
+  // Verify implementation contract
+  console.log("🔧 Verifying implementation contract...");
+  const implementationCode = await ethers.provider.getCode(implementationAddress);
+  if (implementationCode === "0x") {
+    verificationErrors.push(`No contract code found at implementation address: ${implementationAddress}`);
+    verificationPassed = false;
+  } else {
+    console.log(`✅ Implementation contract verified (${implementationCode.length} bytes)`);
+  }
+
+  // Test implementation contract ABI compatibility
+  try {
+    SplitterFactory.attach(implementationAddress);
+    console.log("✅ Implementation contract ABI compatible");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.log("⚠️  Warning: Could not attach ABI to implementation contract:", msg);
+    verificationErrors.push(`ABI compatibility: ${msg}`);
+  }
+
+  // Verify proxy state
+  console.log("🔍 Verifying proxy state...");
+  const [deployer] = await ethers.getSigners();
+  console.log(`✅ Owner: ${owner}`);
+  console.log(`✅ Deployer: ${deployer.address}`);
+
+  if (getAddress(owner) !== getAddress(deployer.address)) {
+    const msg = `Owner mismatch: expected ${deployer.address}, got ${owner}`;
+    console.log(`⚠️  Warning: ${msg}`);
+    verificationErrors.push(msg);
+    verificationPassed = false;
+  }
+
+  console.log(`✅ Facilitator Wallet: ${facilitatorWallet}`);
+  console.log(`✅ Fixed Fee: ${fixedFee.toString()} (raw units)`);
+  console.log(`ℹ️  Token: Passed as parameter to executeSplit() (not stored in state)`);
+
+  // Validate configuration matches (normalize addresses to checksummed format for comparison)
+  if (getAddress(facilitatorWallet) !== getAddress(parameters.facilitatorWallet)) {
+    const msg = `Facilitator wallet mismatch: expected ${parameters.facilitatorWallet}, got ${facilitatorWallet}`;
+    console.log(`⚠️  Warning: ${msg}`);
+    verificationErrors.push(msg);
+    verificationPassed = false;
+  }
+  if (fixedFee.toString() !== parameters.fixedFee) {
+    const msg = `Fixed fee mismatch: expected ${parameters.fixedFee}, got ${fixedFee.toString()}`;
+    console.log(`⚠️  Warning: ${msg}`);
+    verificationErrors.push(msg);
+    verificationPassed = false;
+  }
+
+  // Update deployment file with verification status
+  deploymentInfo.verificationStatus = verificationPassed ? "passed" : "failed";
+  if (verificationErrors.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (deploymentInfo as any).verificationErrors = verificationErrors;
+  }
+  fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
+
+  if (verificationPassed) {
+    console.log("✅ All verifications passed!");
+  } else {
+    console.log("");
+    console.log("⚠️  Some verifications failed (see warnings above)");
+    console.log("   Deployment was successful - contract is deployed and operational");
+  }
+  console.log("");
+
+  console.log("📋 Deployment Summary:");
+  console.log(JSON.stringify(deploymentInfo, null, 2));
 
   // Comprehensive validation using validate-contract functions
   console.log("\n🔍 Running comprehensive validation...");

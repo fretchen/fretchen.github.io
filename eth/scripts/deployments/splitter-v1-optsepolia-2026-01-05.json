@@ -1,0 +1,35 @@
+{
+  "network": "optsepolia",
+  "timestamp": "2026-01-05T07:25:00.000Z",
+  "blockNumber": null,
+  "proxyAddress": "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946",
+  "implementationAddress": "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "EIP3009SplitterV1",
+  "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+  "tokenNote": "Token is passed as parameter to executeSplit() - supports USDC, EURC, and other EIP-3009 tokens",
+  "facilitatorWallet": "0x3F8d2Fb6fEA24E70155bC61471936F3c9C30c206",
+  "fixedFee": "10000",
+  "deploymentOptions": {
+    "verify": false,
+    "waitConfirmations": 1,
+    "configUsed": "deploy-splitter-v1.config.json"
+  },
+  "config": {
+    "parameters": {
+      "facilitatorWallet": "0x3f8d2fb6fea24e70155bc61471936f3c9c30c206",
+      "fixedFee": "10000"
+    },
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": false
+    },
+    "metadata": {
+      "description": "EIP3009SplitterV1 deployment to Optimism Sepolia testnet",
+      "version": "1.0.0",
+      "environment": "testnet"
+    }
+  },
+  "note": "Manually reconstructed - original deployment succeeded but verification script failed due to address case-sensitivity bug (now fixed)"
+}

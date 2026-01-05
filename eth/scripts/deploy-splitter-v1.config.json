@@ -1,6 +1,6 @@
 {
   "parameters": {
-    "facilitatorWallet": "0x3f8d2fb6fea24e70155bc61471936f3c9c30c206",
+    "facilitatorWallet": "0x3F8d2Fb6fEA24E70155bC61471936F3c9C30c206",
     "fixedFee": "10000"
   },
   "options": {

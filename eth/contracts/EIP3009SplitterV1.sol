@@ -134,7 +134,7 @@ contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
      * @dev WARNING: The contract temporarily holds tokens within this transaction.
      *      All funds are distributed atomically - no persistent balances remain.
      * 
-     * @dev SECURITY: The nonce must be computed as keccak256(abi.encodePacked(seller, salt)).
+     * @dev SECURITY: The nonce must be computed as keccak256(abi.encode(seller, salt)).
      *      This cryptographically binds the seller to the buyer's signature, preventing
      *      the facilitator from redirecting funds to a different address.
      * 

@@ -2,6 +2,23 @@ import { ethers, run } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 
+/**
+ * @deprecated This script is deprecated and will be removed in a future version.
+ * Use verify-contract.ts instead, which supports all UUPS proxy contracts, not just GenImNFT and CollectorNFT.
+ *
+ * Example:
+ * npx hardhat run scripts/verify-contract.ts --network optsepolia
+ *
+ * The new script:
+ * - Supports any UUPS proxy contract (not just GenImNFT and CollectorNFT)
+ * - Uses Zod-validated deployment files for type safety
+ * - Does not require contract-specific functionality tests
+ * - Auto-detects deployment files from deployments/ directory
+ * - More maintainable and extensible
+ *
+ * @see verify-contract.ts
+ */
+
 interface DeploymentData {
   network: string;
   proxyAddress: string;

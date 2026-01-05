@@ -4,6 +4,7 @@ const eslint = require("@eslint/js");
 const prettier = require("eslint-plugin-prettier/recommended");
 const globals = require("globals");
 const tseslint = require("typescript-eslint");
+const chaiExpect = require("eslint-plugin-chai-expect");
 
 module.exports = tseslint.config(
   {
@@ -50,6 +51,19 @@ module.exports = tseslint.config(
         ...globals.serviceworker,
         ...globals.browser,
       },
+    },
+  },
+
+  // Chai-expect plugin for test files - fixes @typescript-eslint/no-unused-expressions with Chai assertions
+  {
+    files: ["test/**/*.ts"],
+    plugins: {
+      "chai-expect": chaiExpect,
+    },
+    rules: {
+      "chai-expect/missing-assertion": "error",
+      "chai-expect/terminating-properties": "error",
+      "@typescript-eslint/no-unused-expressions": "off",
     },
   },
 

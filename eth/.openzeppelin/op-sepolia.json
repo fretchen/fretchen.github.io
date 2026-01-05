@@ -10,6 +10,11 @@
       "address": "0x10827cC42a09D0BAD2d43134C69F0e776D853D85",
       "txHash": "0x10a0e1fc0dd520086fd90dc5a921032ff87512f9c2a4faf54692fe2297fe30a1",
       "kind": "uups"
+    },
+    {
+      "address": "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946",
+      "txHash": "0x864df708570be07c98ea3d707f891689154659e6d0514195797e9e1b0a2a3e6d",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -502,6 +507,121 @@
               "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:38",
               "offset": 0,
               "slot": "5"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "820ba084a21c361ebf29c2e4130fb960ce9eef9559ff0b6883424e2a5743fc1b": {
+      "address": "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6",
+      "txHash": "0xeeda6ce5c093bd5ca6a8d2a098faf8c71d02881433d7f1c400d3ac3f72884f29",
+      "layout": {
+        "solcVersion": "0.8.33",
+        "storage": [
+          {
+            "label": "facilitatorWallet",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address",
+            "contract": "EIP3009SplitterV1",
+            "src": "contracts/EIP3009SplitterV1.sol:82"
+          },
+          {
+            "label": "fixedFee",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "EIP3009SplitterV1",
+            "src": "contracts/EIP3009SplitterV1.sol:87"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "EIP3009SplitterV1",
+            "src": "contracts/EIP3009SplitterV1.sol:94"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)86_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
             }
           ],
           "erc7201:openzeppelin.storage.Initializable": [

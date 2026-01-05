@@ -1,0 +1,18 @@
+{
+  "parameters": {
+    "facilitatorWallet": "0x3F8d2Fb6fEA24E70155bC61471936F3c9C30c206",
+    "fixedFee": "10000"
+  },
+  "options": {
+    "validateOnly": false,
+    "dryRun": false,
+    "verify": true,
+    "waitConfirmations": 2
+  },
+  "metadata": {
+    "description": "EIP3009SplitterV1 deployment to Optimism Mainnet - EIP-3009 payment splitting (supports USDC, EURC, etc.)",
+    "version": "1.0.0",
+    "environment": "mainnet",
+    "notes": "Token address is now a parameter of executeSplit(), not a state variable. fixedFee is 0.01 USDC (10000 = 10000 * 10^-6)"
+  }
+}

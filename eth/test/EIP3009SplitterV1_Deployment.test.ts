@@ -19,15 +19,11 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
     // Deploy EIP3009SplitterV1 using OpenZeppelin upgrades
     const SplitterFactory = await hre.ethers.getContractFactory("EIP3009SplitterV1");
     const fixedFee = "10000"; // 1 cent in USDC (6 decimals)
-    
-    const splitterProxy = await hre.upgrades.deployProxy(
-      SplitterFactory,
-      [facilitator.address, fixedFee],
-      {
-        initializer: "initialize",
-        kind: "uups",
-      }
-    );
+
+    const splitterProxy = await hre.upgrades.deployProxy(SplitterFactory, [facilitator.address, fixedFee], {
+      initializer: "initialize",
+      kind: "uups",
+    });
     await splitterProxy.waitForDeployment();
 
     const proxyAddress = await splitterProxy.getAddress();
@@ -47,7 +43,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   async function createTempConfig(options: SplitterV1ConfigOptions = {}) {
     const tempConfigPath = path.join(__dirname, "../scripts/deploy-splitter-v1.config-test.json");
     const [, facilitator] = await hre.ethers.getSigners();
-    
+
     const config = {
       parameters: {
         facilitatorWallet: facilitator.address,
@@ -144,9 +140,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
       const { splitterContract, facilitator } = await deploySplitterFixture();
 
       // Attempt to re-initialize should fail (already initialized)
-      await expect(
-        splitterContract.initialize(facilitator.address, "20000")
-      ).to.be.rejected;
+      await expect(splitterContract.initialize(facilitator.address, "20000")).to.be.rejected;
     });
   });
 
@@ -156,13 +150,15 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
       // Verify that executeSplit function signature accepts token as first parameter
       const executeSplitFragment = splitterContract.interface.getFunction("executeSplit");
-      expect(executeSplitFragment).to.not.be.undefined;
-      
-      // First parameter should be 'token'
-      if (executeSplitFragment) {
-        expect(executeSplitFragment.inputs[0].name).to.equal("token");
-        expect(executeSplitFragment.inputs[0].type).to.equal("address");
-      }
+
+      // Assert function exists and has correct first parameter
+      expect(executeSplitFragment).to.exist;
+      expect(executeSplitFragment).to.have.property("inputs");
+      expect(executeSplitFragment.inputs).to.have.lengthOf.at.least(1);
+      expect(executeSplitFragment.inputs[0]).to.deep.include({
+        name: "token",
+        type: "address",
+      });
     });
 
     it("Should accept token parameter in isAuthorizationUsed", async function () {
@@ -170,12 +166,15 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
       // Verify that isAuthorizationUsed accepts token as first parameter
       const isAuthUsedFragment = splitterContract.interface.getFunction("isAuthorizationUsed");
-      expect(isAuthUsedFragment).to.not.be.undefined;
-      
-      if (isAuthUsedFragment) {
-        expect(isAuthUsedFragment.inputs[0].name).to.equal("token");
-        expect(isAuthUsedFragment.inputs[0].type).to.equal("address");
-      }
+
+      // Assert function exists and has correct first parameter
+      expect(isAuthUsedFragment).to.exist;
+      expect(isAuthUsedFragment).to.have.property("inputs");
+      expect(isAuthUsedFragment.inputs).to.have.lengthOf.at.least(1);
+      expect(isAuthUsedFragment.inputs[0]).to.deep.include({
+        name: "token",
+        type: "address",
+      });
     });
   });
 
@@ -196,7 +195,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
           // Verify the deployed contract using ethers
           const splitter = await hre.ethers.getContractAt("EIP3009SplitterV1", result.address);
           expect(splitter).to.not.equal(null);
-          
+
           // Verify deployment info
           expect(result.deploymentInfo.network).to.equal("hardhat");
           expect(result.deploymentInfo.contractType).to.equal("EIP3009SplitterV1");
@@ -357,7 +356,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
     it("Should reject config with invalid fixed fee", async function () {
       const invalidConfigPath = path.join(__dirname, "../scripts/deploy-splitter-v1.config-invalid-fee.json");
       const [, facilitator] = await hre.ethers.getSigners();
-      
+
       const invalidConfig = {
         parameters: {
           facilitatorWallet: facilitator.address,
@@ -430,7 +429,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
       // UUPS proxies use zero address for admin (upgrade logic in implementation)
       const adminAddress = await hre.upgrades.erc1967.getAdminAddress(proxyAddress);
-      
+
       // For UUPS, admin should be zero address
       expect(adminAddress).to.equal("0x0000000000000000000000000000000000000000");
     });

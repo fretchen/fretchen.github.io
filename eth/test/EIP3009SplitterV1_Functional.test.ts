@@ -60,16 +60,16 @@ describe("EIP3009SplitterV1", function () {
 
   /**
    * Helper: Create EIP-3009 authorization signature with seller verification
-   * 
+   *
    * SECURITY: The nonce is computed as keccak256(seller, salt) to cryptographically
    * bind the intended seller to the buyer's signature. This prevents a malicious
    * facilitator from redirecting funds to a different address.
    */
   async function createAuthorization(
-    mockUSDC: any,
-    buyer: any,
+    mockUSDC: { read: { eip712Domain: () => Promise<unknown> }; address: `0x${string}` },
+    buyer: { account: { address: `0x${string}` }; signTypedData: (args: unknown) => Promise<`0x${string}`> },
     to: `0x${string}`,
-    seller: `0x${string}`,  // NEW: seller is now required for nonce computation
+    seller: `0x${string}`, // NEW: seller is now required for nonce computation
     amount: bigint,
     validAfter: bigint = 0n,
     validBefore: bigint = BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour from now
@@ -77,16 +77,11 @@ describe("EIP3009SplitterV1", function () {
     // Generate random salt
     const saltValue = Date.now() + Math.random();
     const salt = keccak256(toHex(saltValue.toString()));
-    
-    // Compute nonce as keccak256(abi.encode(seller, salt)) 
+
+    // Compute nonce as keccak256(abi.encode(seller, salt))
     // This binds seller to the signature - must match Solidity's abi.encode
     // Uses standard ABI encoding (address padded to 32 bytes + bytes32 = 64 bytes)
-    const nonce = keccak256(
-      encodeAbiParameters(
-        [{ type: "address" }, { type: "bytes32" }],
-        [seller, salt]
-      )
-    );
+    const nonce = keccak256(encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [seller, salt]));
 
     // Get domain separator from mock USDC
     const domain = await mockUSDC.read.eip712Domain();
@@ -132,8 +127,8 @@ describe("EIP3009SplitterV1", function () {
     return {
       from: buyer.account.address,
       to,
-      seller,  // Include seller in return for convenience
-      salt,    // Include salt for executeSplit call
+      seller, // Include seller in return for convenience
+      salt, // Include salt for executeSplit call
       value: amount,
       validAfter,
       validBefore,
@@ -149,9 +144,7 @@ describe("EIP3009SplitterV1", function () {
 
   describe("Split Execution", function () {
     it("Should execute split correctly with 1 cent fee", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00"); // 1.00 token
       const expectedSellerAmount = totalAmount - FEE_1_CENT; // 0.99 token
@@ -222,9 +215,7 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should emit SplitExecuted event", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -247,7 +238,7 @@ describe("EIP3009SplitterV1", function () {
       );
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+
       // Check for SplitExecuted event
       const logs = await publicClient.getLogs({
         address: splitter.address,
@@ -386,9 +377,7 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should allow different buyers to use same contract", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(deploySplitterFixture);
 
       // Mint tokens to second buyer
       const buyer2 = otherAccount;
@@ -464,9 +453,9 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject fee update from non-owner", async function () {
       const { splitter, otherAccount } = await loadFixture(deploySplitterFixture);
 
-      await expect(
-        splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account }),
-      ).to.be.rejectedWith("OwnableUnauthorizedAccount");
+      await expect(splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account })).to.be.rejectedWith(
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("Should reject fee update to zero", async function () {
@@ -589,7 +578,7 @@ describe("EIP3009SplitterV1", function () {
 
   describe("UUPS Upgradeability", function () {
     it("Should allow owner to authorize upgrade", async function () {
-      const { splitter, owner, implementation } = await loadFixture(deploySplitterFixture);
+      const { splitter, owner } = await loadFixture(deploySplitterFixture);
 
       // Deploy new implementation
       const newImplementation = await hre.viem.deployContract("EIP3009SplitterV1");
@@ -621,7 +610,7 @@ describe("EIP3009SplitterV1", function () {
 
       const totalAmount = parseToken("1.00");
       const now = BigInt(Math.floor(Date.now() / 1000));
-      
+
       // Create authorization that expired 1 hour ago
       const auth = await createAuthorization(
         mockUSDC,
@@ -658,7 +647,7 @@ describe("EIP3009SplitterV1", function () {
 
       const totalAmount = parseToken("1.00");
       const now = BigInt(Math.floor(Date.now() / 1000));
-      
+
       // Create authorization that becomes valid in 1 hour
       const auth = await createAuthorization(
         mockUSDC,
@@ -691,14 +680,18 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject authorization with wrong signer", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      
+
       // Create authorization signed by otherAccount but claiming to be from buyer
-      const auth = await createAuthorization(mockUSDC, otherAccount, splitter.address, seller.account.address, totalAmount);
+      const auth = await createAuthorization(
+        mockUSDC,
+        otherAccount,
+        splitter.address,
+        seller.account.address,
+        totalAmount,
+      );
 
       await expect(
         splitter.write.executeSplit(
@@ -786,7 +779,13 @@ describe("EIP3009SplitterV1", function () {
 
       const totalAmount = parseToken("1.00");
       // Seller is the facilitator wallet - nonce encodes facilitator as seller
-      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, facilitator.account.address, totalAmount);
+      const auth = await createAuthorization(
+        mockUSDC,
+        buyer,
+        splitter.address,
+        facilitator.account.address,
+        totalAmount,
+      );
 
       // Seller is the facilitator wallet
       const hash = await splitter.write.executeSplit(
@@ -816,12 +815,10 @@ describe("EIP3009SplitterV1", function () {
 
   describe("Seller Verification Security", function () {
     it("Should reject when facilitator tries to redirect funds to different seller", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      
+
       // Buyer authorizes payment to seller (nonce encodes seller)
       const auth = await createAuthorization(
         mockUSDC,
@@ -856,19 +853,13 @@ describe("EIP3009SplitterV1", function () {
       const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
-      
+
       // Buyer authorizes payment to seller
-      const auth = await createAuthorization(
-        mockUSDC,
-        buyer,
-        splitter.address,
-        seller.account.address,
-        totalAmount,
-      );
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Facilitator tries with correct seller but wrong salt
       const wrongSalt = keccak256(toHex("wrong-salt"));
-      
+
       await expect(
         splitter.write.executeSplit(
           [
@@ -890,28 +881,18 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject when facilitator swaps seller between two valid authorizations", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount, publicClient } =
+        await loadFixture(deploySplitterFixture);
 
       const amount1 = parseToken("1.00");
-      const amount2 = parseToken("2.00");
-      
-      // Buyer creates two authorizations for different sellers
+
+      // Buyer creates authorization for seller
       const authForSeller = await createAuthorization(
         mockUSDC,
         buyer,
         splitter.address,
         seller.account.address,
         amount1,
-      );
-      
-      const authForOther = await createAuthorization(
-        mockUSDC,
-        buyer,
-        splitter.address,
-        otherAccount.account.address,
-        amount2,
       );
 
       // Facilitator tries to use authForSeller's signature but with otherAccount as seller
@@ -957,28 +938,17 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should verify seller address is cryptographically bound to nonce", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("5.00");
-      
+
       // Create authorization with seller bound to nonce
-      const auth = await createAuthorization(
-        mockUSDC,
-        buyer,
-        splitter.address,
-        seller.account.address,
-        totalAmount,
-      );
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Verify that nonce = keccak256(abi.encode(seller, salt))
       // Uses standard ABI encoding matching Solidity's abi.encode
       const expectedNonce = keccak256(
-        encodeAbiParameters(
-          [{ type: "address" }, { type: "bytes32" }],
-          [seller.account.address, auth.salt]
-        )
+        encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [seller.account.address, auth.salt]),
       );
       expect(auth.nonce).to.equal(expectedNonce);
 
@@ -1013,15 +983,9 @@ describe("EIP3009SplitterV1", function () {
       const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("100.00");
-      
+
       // Buyer authorizes payment to legitimate seller
-      const auth = await createAuthorization(
-        mockUSDC,
-        buyer,
-        splitter.address,
-        seller.account.address,
-        totalAmount,
-      );
+      const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Malicious facilitator tries to set themselves as seller
       await expect(
@@ -1075,9 +1039,7 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should fail gracefully when fake token is provided (non-contract EOA)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -1105,16 +1067,14 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should prevent cross-token replay (signature bound to token domain)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator } = await loadFixture(deploySplitterFixture);
 
       // Deploy a second mock USDC (different contract = different EIP-712 domain)
       const mockUSDC2 = await hre.viem.deployContract("MockUSDC_EIP3009");
       await mockUSDC2.write.mint([buyer.account.address, parseToken("1000")]);
 
       const totalAmount = parseToken("1.00");
-      
+
       // Create authorization for mockUSDC (first token)
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
@@ -1141,9 +1101,7 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should work with multiple different tokens in sequence", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       // Deploy a second mock token
       const mockUSDC2 = await hre.viem.deployContract("MockUSDC_EIP3009");
@@ -1154,7 +1112,7 @@ describe("EIP3009SplitterV1", function () {
 
       // Authorization for first token
       const auth1 = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, amount1);
-      
+
       // Authorization for second token
       const auth2 = await createAuthorization(mockUSDC2, buyer, splitter.address, seller.account.address, amount2);
 
@@ -1214,16 +1172,14 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should not allow reusing nonce across different tokens", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       // Deploy a second mock token
       const mockUSDC2 = await hre.viem.deployContract("MockUSDC_EIP3009");
       await mockUSDC2.write.mint([buyer.account.address, parseToken("1000")]);
 
       const totalAmount = parseToken("1.00");
-      
+
       // Create authorization for first token
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
@@ -1272,9 +1228,7 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should verify contract has no persistent token balance after split", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(
-        deploySplitterFixture,
-      );
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("10.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);

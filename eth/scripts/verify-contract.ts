@@ -222,7 +222,12 @@ async function main() {
 
     const deploymentsDir = path.join(__dirname, "deployments");
     if (fs.existsSync(deploymentsDir)) {
-      const files = fs.readdirSync(deploymentsDir).filter((f) => f.endsWith(".json")).sort().reverse().slice(0, 5);
+      const files = fs
+        .readdirSync(deploymentsDir)
+        .filter((f) => f.endsWith(".json"))
+        .sort()
+        .reverse()
+        .slice(0, 5);
 
       if (files.length > 0) {
         console.error("\nRecent deployment files:");

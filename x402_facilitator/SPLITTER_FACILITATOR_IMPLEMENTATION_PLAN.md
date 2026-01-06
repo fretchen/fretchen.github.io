@@ -2,11 +2,105 @@
 
 ## Status: Ready for Implementation
 
-**Last Updated:** January 5, 2026
+**Last Updated:** January 6, 2026
 
 ## Overview
 
 Implementation eines öffentlichen x402 Facilitators ohne Whitelist, der den EIP3009SplitterV1 Contract nutzt. Der Facilitator verdient 0.01 USDC pro Settlement und bietet einen öffentlichen Service für beliebige Seller.
+
+## 🎯 Client-seitige Integration: ExactSplitEvmScheme
+
+### Das Problem: Seller-Adoption
+
+Das ursprüngliche Design erforderte, dass **Seller** ihre 402-Response anpassen mussten:
+- `payTo: splitterAddress` statt `payTo: sellerAddress`
+- `amount: totalAmount` (inkl. Fee)
+- `extra.seller` und `extra.salt` Felder
+
+Dies war ein **Dealbreaker für Adoption** - siehe [X402_SPLITTER_ADOPTION_ISSUE.md](./X402_SPLITTER_ADOPTION_ISSUE.md).
+
+### Die Lösung: Custom SchemeNetworkClient
+
+x402 v2 ist **scheme-agnostic** by design! Der `x402Client` erlaubt die Registration eigener Schemes:
+
+```typescript
+// Das SchemeNetworkClient Interface (aus @x402/core)
+interface SchemeNetworkClient {
+  readonly scheme: string;  // z.B. "exact-split"
+  
+  createPaymentPayload(
+    x402Version: number,
+    paymentRequirements: PaymentRequirements,
+  ): Promise<Pick<PaymentPayload, "x402Version" | "payload">>;
+}
+```
+
+### ExactSplitEvmScheme Klasse
+
+```typescript
+/**
+ * Custom x402 Scheme für Fee-basierte Facilitators.
+ * 
+ * Transformiert intern:
+ * - Seller's payTo → Splitter Contract
+ * - Seller's amount → amount + facilitatorFee
+ * - Fügt seller und salt zu extra hinzu
+ */
+class ExactSplitEvmScheme implements SchemeNetworkClient {
+  readonly scheme = "exact-split";
+  
+  constructor(
+    private signer: LocalAccount,
+    private facilitatorUrl: string,
+    private splitterConfig: Record<string, SplitterConfig>
+  ) {}
+
+  async createPaymentPayload(x402Version, requirements) {
+    // 1. Get splitter config for network
+    const config = this.splitterConfig[requirements.network];
+    
+    // 2. Transform requirements
+    const transformedRequirements = {
+      ...requirements,
+      payTo: config.splitterAddress,
+      amount: String(BigInt(requirements.amount) + BigInt(config.fixedFee)),
+      extra: {
+        ...requirements.extra,
+        seller: requirements.payTo,  // Original seller
+        salt: generateRandomSalt()
+      }
+    };
+    
+    // 3. Sign EIP-712 to splitter address
+    // (same logic as ExactEvmScheme but with transformed data)
+  }
+}
+```
+
+### Workflow Comparison
+
+**Vorher (Seller muss ändern):**
+```
+Seller → 402 { payTo: SPLITTER, amount: 30k, extra: {seller, salt} }
+Buyer  → Signs to SPLITTER
+```
+
+**Nachher (Seller bleibt standard):**
+```
+Seller → 402 { payTo: SELLER, amount: 20k, scheme: "exact-split" }
+Buyer  → x402Client mit ExactSplitEvmScheme
+       → Transformiert intern zu { to: SPLITTER, value: 30k }
+       → Signs to SPLITTER
+```
+
+### Vorteile
+
+| Aspekt | Vorher | Nachher |
+|--------|--------|---------|
+| Seller Code-Änderungen | Signifikant | Minimal (nur scheme string) |
+| x402 Spec-Änderung | Nicht nötig | Nicht nötig |
+| PR bei Coinbase nötig | Nein | Nein |
+| Buyer-seitige Integration | Standard | Custom Scheme-Klasse |
 
 ## Architektur-Entscheidungen
 

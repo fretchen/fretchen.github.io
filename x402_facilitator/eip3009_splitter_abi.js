@@ -2,10 +2,10 @@
 
 /**
  * EIP3009SplitterV1 Contract ABI
- * 
+ *
  * Minimal ABI containing only the functions needed by the x402 splitter facilitator.
  * Full ABI available in: ../eth/abi/contracts/EIP3009SplitterV1.json
- * 
+ *
  * Deployed Addresses:
  * - Optimism Sepolia: 0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946
  * - Optimism Mainnet: TBD
@@ -68,7 +68,8 @@ export const SPLITTER_ABI = [
  */
 export const SPLITTER_ADDRESSES = {
   "eip155:10": process.env.SPLITTER_ADDRESS_MAINNET || "", // Optimism Mainnet (TBD)
-  "eip155:11155420": process.env.SPLITTER_ADDRESS_SEPOLIA || "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946", // Optimism Sepolia
+  "eip155:11155420":
+    process.env.SPLITTER_ADDRESS_SEPOLIA || "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946", // Optimism Sepolia
 };
 
 /**

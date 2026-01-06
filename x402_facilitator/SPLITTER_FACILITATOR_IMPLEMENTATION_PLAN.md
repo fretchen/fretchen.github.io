@@ -8,7 +8,7 @@
 
 Implementation eines öffentlichen x402 Facilitators ohne Whitelist, der den EIP3009SplitterV1 Contract nutzt. Der Facilitator verdient 0.01 USDC pro Settlement und bietet einen öffentlichen Service für beliebige Seller.
 
-## 🎯 Client-seitige Integration: ExactSplitEvmScheme
+## 🎯 Client-seitige Integration: ExactSplitEvmScheme ✅ PROOF-OF-CONCEPT COMPLETE
 
 ### Das Problem: Seller-Adoption
 
@@ -19,7 +19,7 @@ Das ursprüngliche Design erforderte, dass **Seller** ihre 402-Response anpassen
 
 Dies war ein **Dealbreaker für Adoption** - siehe [X402_SPLITTER_ADOPTION_ISSUE.md](./X402_SPLITTER_ADOPTION_ISSUE.md).
 
-### Die Lösung: Custom SchemeNetworkClient
+### Die Lösung: Custom SchemeNetworkClient ✅
 
 x402 v2 ist **scheme-agnostic** by design! Der `x402Client` erlaubt die Registration eigener Schemes:
 
@@ -35,7 +35,7 @@ interface SchemeNetworkClient {
 }
 ```
 
-### ExactSplitEvmScheme Klasse
+### ExactSplitEvmScheme Klasse ✅ IMPLEMENTED IN NOTEBOOK
 
 ```typescript
 /**
@@ -93,14 +93,19 @@ Buyer  → x402Client mit ExactSplitEvmScheme
        → Signs to SPLITTER
 ```
 
-### Vorteile
+### Vorteile ✅ VALIDATED IN POC
 
 | Aspekt | Vorher | Nachher |
 |--------|--------|---------|
 | Seller Code-Änderungen | Signifikant | Minimal (nur scheme string) |
 | x402 Spec-Änderung | Nicht nötig | Nicht nötig |
 | PR bei Coinbase nötig | Nein | Nein |
-| Buyer-seitige Integration | Standard | Custom Scheme-Klasse |
+| Buyer-seitige Integration | Standard | **Custom Scheme-Klasse (170 LOC)** |
+
+**⚠️ KRITISCHE ERKENNTNIS:** Die Lösung hat die Komplexität nur von Seller zu Buyer verschoben! Für breite Adoption ist noch nötig:
+- Option A: PR zu Coinbase's @x402/evm mit `@x402/evm/exact-split/client` package
+- Option B: Separates npm Package `@x402-split/evm` veröffentlichen
+- Option C: PoC nur für eigene Nutzung (aktueller Stand)
 
 ## Architektur-Entscheidungen
 
@@ -179,22 +184,22 @@ x402_facilitator/
 
 ## Implementation Plan
 
-### Phase 1: Shared Infrastructure (1-2h)
+### Phase 1: Shared Infrastructure (1-2h) ✅ COMPLETE
 
-#### 1.1 Extract Shared Utilities
+#### 1.1 Extract Shared Utilities ✅
 
 **Status:** `chain_utils.js` bereits shared ✅
 
-**Task:** Refactor `facilitator_instance.js` für Splitter-Nutzung (falls nötig)
+**Task:** Refactor `facilitator_instance.js` für Splitter-Nutzung (falls nötig) ✅
 
 ```javascript
 // facilitator_instance.js - Check if usable for splitter
 // May need to add splitter contract address management
 ```
 
-#### 1.2 Create Splitter ABI File
+#### 1.2 Create Splitter ABI File ✅
 
-**File:** `eip3009_splitter_abi.js`
+**File:** `eip3009_splitter_abi.js` ✅
 
 ```javascript
 // @ts-check
@@ -259,11 +264,11 @@ export const SPLITTER_ADDRESSES = {
 
 ---
 
-### Phase 2: Splitter Service Core (3-4h)
+### Phase 2: Splitter Service Core (3-4h) ✅ COMPLETE
 
-#### 2.1 Create Verify Logic (No Whitelist!)
+#### 2.1 Create Verify Logic (No Whitelist!) ✅ DONE
 
-**File:** `x402_splitter_verify.js`
+**File:** `x402_splitter_verify.js` ✅
 
 **Key Differences from Whitelist Verify:**
 - ❌ NO `isAgentWhitelisted()` check
@@ -414,9 +419,18 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements,
 }
 ```
 
-#### 2.2 Create Settlement Logic (Via Splitter)
+#### 2.2 Create Settlement Logic (Via Splitter) ✅ DONE
 
-**File:** `x402_splitter_settle.js`
+**File:** `x402_splitter_settle.js` ✅
+
+**Implemented Features:**
+- ✅ Mandatory verification before settlement (gatekeeper)
+- ✅ Extraction of seller/salt from payload
+- ✅ Nonce computation: `keccak256(abi.encode(seller, salt))`
+- ✅ Signature parsing (v, r, s from 0x-prefixed hex)
+- ✅ Call to `splitter.executeSplit()` with all required params
+- ✅ Transaction confirmation with receipt
+- ✅ Comprehensive error handling with meaningful error reasons
 
 **Key Differences from Direct Settle:**
 - ✅ Calls `splitter.executeSplit()` not `token.transferWithAuthorization()`
@@ -581,9 +595,9 @@ export async function settleSplitterPayment(paymentPayload, paymentRequirements)
 }
 ```
 
-#### 2.3 Create Supported Capabilities (x402 v2 Compliant)
+#### 2.3 Create Supported Capabilities (x402 v2 Compliant) ❌ TODO
 
-**File:** `x402_splitter_supported.js`
+**File:** `x402_splitter_supported.js` ❌
 
 **Important:** x402 v2 spec requires `scheme: "exact"` for EIP-3009. Fee information goes into the `extra` field as facilitator-specific configuration.
 
@@ -648,9 +662,17 @@ export function getSplitterCapabilities() {
 }
 ```
 
-#### 2.4 Create Main Handler
+#### 2.4 Create Main Handler ✅ DONE (Settle integrated)
 
-**File:** `x402_splitter_facilitator.js`
+**File:** `x402_splitter_facilitator.js` ✅
+
+**Implemented:**
+- ✅ `/verify` endpoint with full error handling
+- ✅ `/settle` endpoint integrated with `settleSplitterPayment()`
+- ✅ Path-based routing (`/verify`, `/settle`, `/supported`)
+- ✅ CORS headers for all endpoints
+- ✅ Local development server on port 8081
+- ⚠️ `/supported` endpoint still returns 501 (next step)
 
 ```javascript
 // @ts-check
@@ -793,11 +815,11 @@ async function handleSupported(event, context) {
 
 ---
 
-### Phase 3: Configuration & Deployment (1h)
+### Phase 3: Configuration & Deployment (1h) ❌ TODO
 
-#### 3.1 Create Serverless Configuration
+#### 3.1 Create Serverless Configuration ❌
 
-**File:** `serverless_splitter.yml`
+**File:** `serverless_splitter.yml` ❌
 
 **Note:** Separate deployment config from legacy `serverless.yml` to allow independent deployments.
 
@@ -885,11 +907,11 @@ npx serverless deploy --config serverless_splitter.yml
 
 ---
 
-### Phase 4: Testing & Integration (2-3h)
+### Phase 4: Testing & Integration (2-3h) ❌ TODO
 
-#### 4.1 Unit Tests
+#### 4.1 Unit Tests ❌
 
-**File:** `test/x402_splitter_verify.test.js`
+**File:** `test/x402_splitter_verify.test.js` ❌
 
 **Test Cases:**
 - ✅ Valid EIP-3009 signature → `isValid: true`
@@ -900,7 +922,7 @@ npx serverless deploy --config serverless_splitter.yml
 - ✅ Any seller address accepted (no whitelist) → `isValid: true`
 - ✅ Rate limiting after 100 requests → `isValid: false`
 
-**File:** `test/x402_splitter_settle.test.js`
+**File:** `test/x402_splitter_settle.test.js` ❌
 
 **Test Cases:**
 - ✅ Mock splitter contract
@@ -910,7 +932,7 @@ npx serverless deploy --config serverless_splitter.yml
 - ✅ Handle transaction reverts gracefully
 - ✅ Return proper error reasons
 
-#### 4.2 Integration Tests
+#### 4.2 Integration Tests ❌
 
 **Test Script:** Manual testing via curl or Postman
 
@@ -941,9 +963,9 @@ curl -X POST https://splitter-facilitator.fretchen.eu/settle \
   }'
 ```
 
-#### 4.3 Frontend Integration (Optional - Later Phase)
+#### 4.3 Frontend Integration (Optional - Later Phase) ❌
 
-**File:** `scw_js/genimg_x402_splitter.js` (new file)
+**File:** `scw_js/genimg_x402_splitter.js` (new file) ❌
 
 **Changes needed:**
 - Copy `genimg_x402_token.js`
@@ -954,7 +976,7 @@ curl -X POST https://splitter-facilitator.fretchen.eu/settle \
 
 ---
 
-### Phase 5: Monitoring & Optimization (Ongoing)
+### Phase 5: Monitoring & Optimization (Ongoing) ❌ TODO
 
 #### 5.1 Logging & Metrics
 

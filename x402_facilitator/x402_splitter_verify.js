@@ -23,10 +23,10 @@ const FIXED_FEE = BigInt(process.env.FIXED_FEE || "10000"); // 0.01 USDC
 /**
  * Verify EIP-3009 payment without whitelist check
  * @param {Object} paymentPayload - Payment payload from client
- * @param {Object} paymentRequirements - Payment requirements from resource server
+ * @param {Object} _paymentRequirements - Payment requirements from resource server (unused in splitter verify)
  * @returns {Promise<{isValid: boolean, invalidReason?: string, payer?: string}>}
  */
-export async function verifySplitterPayment(paymentPayload, paymentRequirements) {
+export async function verifySplitterPayment(paymentPayload, _paymentRequirements) {
   try {
     // Extract authorization
     const auth = paymentPayload.payload?.authorization;
@@ -71,7 +71,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     let tokenInfo;
     try {
       tokenInfo = getTokenInfo(network, tokenAddress);
-    } catch (error) {
+    } catch (_error) {
       logger.warn({ tokenAddress, network }, "Unsupported token");
       return { isValid: false, invalidReason: "invalid_token_address" };
     }
@@ -84,7 +84,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     let splitterAddress;
     try {
       splitterAddress = getSplitterAddress(network);
-    } catch (error) {
+    } catch (_error) {
       logger.warn({ network }, "Splitter not deployed on network");
       return { isValid: false, invalidReason: "unsupported_network" };
     }
@@ -154,7 +154,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
       types,
       primaryType: "TransferWithAuthorization",
       message,
-      signature: signature, // Use signature directly (already in correct format)
+      signature, // Use signature directly (already in correct format)
     });
 
     if (!isValidSignature) {

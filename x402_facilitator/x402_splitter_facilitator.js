@@ -8,6 +8,7 @@
  */
 
 import { verifySplitterPayment } from "./x402_splitter_verify.js";
+import { settleSplitterPayment } from "./x402_splitter_settle.js";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -128,7 +129,6 @@ export async function handleVerify(event, _context) {
 
 /**
  * Handle /settle endpoint - on-chain execution
- * TODO: Implement settlement logic via splitter contract
  */
 export async function handleSettle(event, _context) {
   // Handle CORS preflight
@@ -140,15 +140,108 @@ export async function handleSettle(event, _context) {
     };
   }
 
-  return {
-    statusCode: 501,
-    headers: CORS_HEADERS,
-    body: JSON.stringify({
-      error: "Settlement not yet implemented",
-      success: false,
-      errorReason: "not_implemented",
-    }),
-  };
+  // Only accept POST requests
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Method not allowed. Use POST." }),
+    };
+  }
+
+  // Parse request body
+  let body;
+  try {
+    body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+  } catch (error) {
+    logger.error({ err: error }, "Failed to parse request body");
+    return {
+      statusCode: 400,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Invalid JSON in request body" }),
+    };
+  }
+
+  // Validate request structure
+  if (!body.paymentPayload || !body.paymentRequirements) {
+    return {
+      statusCode: 400,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        error: "Request must include both paymentPayload and paymentRequirements",
+      }),
+    };
+  }
+
+  const { paymentPayload, paymentRequirements } = body;
+
+  logger.info(
+    {
+      endpoint: "settle",
+      network: paymentPayload.accepted?.network,
+      amount: paymentPayload.payload?.authorization?.value,
+      seller: paymentPayload.payload?.seller,
+    },
+    "Processing settlement request",
+  );
+
+  try {
+    const result = await settleSplitterPayment(paymentPayload, paymentRequirements);
+
+    if (result.success) {
+      logger.info(
+        {
+          transaction: result.transaction,
+          payer: result.payer,
+          network: result.network,
+        },
+        "Settlement successful",
+      );
+
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          success: true,
+          payer: result.payer,
+          transaction: result.transaction,
+          network: result.network,
+        }),
+      };
+    } else {
+      logger.warn(
+        {
+          errorReason: result.errorReason,
+          payer: result.payer,
+          network: result.network,
+        },
+        "Settlement failed",
+      );
+
+      return {
+        statusCode: 200, // Still return 200, but with success: false
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          success: false,
+          errorReason: result.errorReason,
+          payer: result.payer,
+          transaction: result.transaction || "",
+          network: result.network,
+        }),
+      };
+    }
+  } catch (error) {
+    logger.error({ err: error, message: error.message }, "Unexpected error in settle handler");
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        error: "Internal server error",
+        success: false,
+        errorReason: "unexpected_settle_error",
+      }),
+    };
+  }
 }
 
 /**
@@ -225,7 +318,7 @@ if (process.env.NODE_ENV === "test") {
 
     logger.info("🚀 Splitter Facilitator local server started at http://localhost:8081");
     logger.info("   POST http://localhost:8081/verify");
-    logger.info("   POST http://localhost:8081/settle (not yet implemented)");
+    logger.info("   POST http://localhost:8081/settle");
     logger.info("   GET  http://localhost:8081/supported (not yet implemented)");
   })().catch((err) => logger.error({ err }, "Error starting local server"));
 }

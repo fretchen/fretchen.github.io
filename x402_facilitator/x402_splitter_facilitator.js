@@ -9,6 +9,7 @@
 
 import { verifySplitterPayment } from "./x402_splitter_verify.js";
 import { settleSplitterPayment } from "./x402_splitter_settle.js";
+import { getSplitterCapabilities } from "./x402_splitter_supported.js";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -246,7 +247,6 @@ export async function handleSettle(event, _context) {
 
 /**
  * Handle /supported endpoint - capability discovery
- * TODO: Implement capability discovery
  */
 export async function handleSupported(event, _context) {
   // Handle CORS preflight
@@ -266,13 +266,34 @@ export async function handleSupported(event, _context) {
     };
   }
 
-  return {
-    statusCode: 501,
-    headers: CORS_HEADERS,
-    body: JSON.stringify({
-      error: "Supported endpoint not yet implemented",
-    }),
-  };
+  logger.info({ endpoint: "supported" }, "Processing supported capabilities request");
+
+  try {
+    const capabilities = getSplitterCapabilities();
+
+    logger.info(
+      {
+        networks: capabilities.kinds.map((k) => k.network),
+        schemes: capabilities.kinds.map((k) => k.scheme),
+      },
+      "Returning supported capabilities",
+    );
+
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify(capabilities),
+    };
+  } catch (error) {
+    logger.error({ err: error, message: error.message }, "Unexpected error in supported handler");
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        error: "Internal server error",
+      }),
+    };
+  }
 }
 
 /**
@@ -319,6 +340,6 @@ if (process.env.NODE_ENV === "test") {
     logger.info("🚀 Splitter Facilitator local server started at http://localhost:8081");
     logger.info("   POST http://localhost:8081/verify");
     logger.info("   POST http://localhost:8081/settle");
-    logger.info("   GET  http://localhost:8081/supported (not yet implemented)");
+    logger.info("   GET  http://localhost:8081/supported");
   })().catch((err) => logger.error({ err }, "Error starting local server"));
 }

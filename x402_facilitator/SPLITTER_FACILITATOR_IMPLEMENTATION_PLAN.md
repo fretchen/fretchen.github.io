@@ -595,9 +595,17 @@ export async function settleSplitterPayment(paymentPayload, paymentRequirements)
 }
 ```
 
-#### 2.3 Create Supported Capabilities (x402 v2 Compliant) ❌ TODO
+#### 2.3 Create Supported Capabilities (x402 v2 Compliant) ✅ DONE
 
-**File:** `x402_splitter_supported.js` ❌
+**File:** `x402_splitter_supported.js` ✅
+
+**Implemented:**
+- ✅ Returns x402 v2 compliant `SupportedResponse`
+- ✅ `kinds` array with Optimism Mainnet + Sepolia
+- ✅ Standard `scheme: "exact"` (EIP-3009)
+- ✅ Fee info in `extra` field (facilitator-specific)
+- ✅ `extensions` array (empty)
+- ✅ `signers` map with facilitator wallet
 
 **Important:** x402 v2 spec requires `scheme: "exact"` for EIP-3009. Fee information goes into the `extra` field as facilitator-specific configuration.
 
@@ -662,17 +670,17 @@ export function getSplitterCapabilities() {
 }
 ```
 
-#### 2.4 Create Main Handler ✅ DONE (Settle integrated)
+#### 2.4 Create Main Handler ✅ COMPLETE
 
 **File:** `x402_splitter_facilitator.js` ✅
 
 **Implemented:**
 - ✅ `/verify` endpoint with full error handling
 - ✅ `/settle` endpoint integrated with `settleSplitterPayment()`
+- ✅ `/supported` endpoint integrated with `getSplitterCapabilities()`
 - ✅ Path-based routing (`/verify`, `/settle`, `/supported`)
 - ✅ CORS headers for all endpoints
 - ✅ Local development server on port 8081
-- ⚠️ `/supported` endpoint still returns 501 (next step)
 
 ```javascript
 // @ts-check

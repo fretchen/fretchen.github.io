@@ -23,11 +23,63 @@ const FIXED_FEE = BigInt(process.env.FIXED_FEE || "10000"); // 0.01 USDC
 /**
  * Verify EIP-3009 payment without whitelist check
  * @param {Object} paymentPayload - Payment payload from client
- * @param {Object} _paymentRequirements - Payment requirements from resource server (unused in splitter verify)
+ * @param {Object} paymentRequirements - Payment requirements from resource server
  * @returns {Promise<{isValid: boolean, invalidReason?: string, payer?: string}>}
  */
-export async function verifySplitterPayment(paymentPayload, _paymentRequirements) {
+export async function verifySplitterPayment(paymentPayload, paymentRequirements) {
   try {
+    // Validate payment payload matches requirements
+    const accepted = paymentPayload.accepted;
+    if (!accepted) {
+      logger.warn("Missing accepted field in payment payload");
+      return { isValid: false, invalidReason: "missing_accepted" };
+    }
+
+    // Check amount matches
+    if (accepted.amount !== paymentRequirements.amount) {
+      logger.warn(
+        { expected: paymentRequirements.amount, received: accepted.amount },
+        "Amount mismatch",
+      );
+      return { isValid: false, invalidReason: "amount_mismatch" };
+    }
+
+    // Check recipient (payTo) matches
+    if (accepted.payTo?.toLowerCase() !== paymentRequirements.payTo?.toLowerCase()) {
+      logger.warn(
+        { expected: paymentRequirements.payTo, received: accepted.payTo },
+        "Recipient mismatch",
+      );
+      return { isValid: false, invalidReason: "recipient_mismatch" };
+    }
+
+    // Check network matches
+    if (accepted.network !== paymentRequirements.network) {
+      logger.warn(
+        { expected: paymentRequirements.network, received: accepted.network },
+        "Network mismatch",
+      );
+      return { isValid: false, invalidReason: "network_mismatch" };
+    }
+
+    // Check asset matches
+    if (accepted.asset?.toLowerCase() !== paymentRequirements.asset?.toLowerCase()) {
+      logger.warn(
+        { expected: paymentRequirements.asset, received: accepted.asset },
+        "Asset mismatch",
+      );
+      return { isValid: false, invalidReason: "asset_mismatch" };
+    }
+
+    // Check scheme matches
+    if (accepted.scheme !== paymentRequirements.scheme) {
+      logger.warn(
+        { expected: paymentRequirements.scheme, received: accepted.scheme },
+        "Scheme mismatch",
+      );
+      return { isValid: false, invalidReason: "scheme_mismatch" };
+    }
+
     // Extract authorization
     const auth = paymentPayload.payload?.authorization;
     if (!auth) {

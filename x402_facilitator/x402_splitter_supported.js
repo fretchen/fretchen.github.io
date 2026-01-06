@@ -4,19 +4,23 @@
  * x402 Splitter Facilitator - Supported Capabilities
  * Returns x402 v2 compliant capability discovery response
  *
- * Uses standard "exact" scheme (EIP-3009) with fee info in extra field
+ * Uses custom "exact-split" scheme with fee splitting via smart contract
  */
 
 import { SPLITTER_ADDRESSES } from "./eip3009_splitter_abi.js";
 
 const FIXED_FEE = process.env.FIXED_FEE || "10000"; // 0.01 USDC
-const FACILITATOR_WALLET = process.env.FACILITATOR_WALLET_ADDRESS || "";
 
 /**
  * Get supported capabilities for splitter facilitator
  * @returns {Object} x402 v2 SupportedResponse
  */
 export function getSplitterCapabilities() {
+  const mainnetSplitter =
+    SPLITTER_ADDRESSES["eip155:10"] || "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946";
+  const sepoliaSplitter =
+    SPLITTER_ADDRESSES["eip155:11155420"] || "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946";
+
   return {
     // x402 v2 spec: /supported endpoint returns "kinds" array
     kinds: [
@@ -27,7 +31,7 @@ export function getSplitterCapabilities() {
         extra: {
           // ✅ Facilitator-specific configuration goes in extra
           facilitatorType: "splitter",
-          splitterAddress: SPLITTER_ADDRESSES["eip155:10"],
+          splitterAddress: mainnetSplitter,
           fixedFee: FIXED_FEE,
           feeCurrency: "USDC",
           feeDescription: "0.01 USDC fixed fee per transaction",
@@ -40,7 +44,7 @@ export function getSplitterCapabilities() {
         network: "eip155:11155420", // Optimism Sepolia
         extra: {
           facilitatorType: "splitter",
-          splitterAddress: SPLITTER_ADDRESSES["eip155:11155420"],
+          splitterAddress: sepoliaSplitter,
           fixedFee: FIXED_FEE,
           feeCurrency: "USDC",
           feeDescription: "0.01 USDC fixed fee per transaction (testnet)",
@@ -48,11 +52,9 @@ export function getSplitterCapabilities() {
         },
       },
     ],
-    // x402 v2 spec: extensions array (empty for now)
+    // x402 v2 spec: extensions array (empty for now - no whitelist)
     extensions: [],
-    // x402 v2 spec: signers map (CAIP-2 pattern -> addresses)
-    signers: {
-      "eip155:*": FACILITATOR_WALLET ? [FACILITATOR_WALLET] : [],
-    },
+    // x402 v2 spec: signers map (empty - payments are signed by payers, not facilitator)
+    signers: {},
   };
 }

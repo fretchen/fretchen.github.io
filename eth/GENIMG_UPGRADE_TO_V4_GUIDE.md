@@ -65,18 +65,18 @@ Create or edit `scripts/upgrade-genimg-v4.config.json`:
 
 ### Configuration Options
 
-| Field                         | Type    | Required | Description                                          |
-| ----------------------------- | ------- | -------- | ---------------------------------------------------- |
-| `proxyAddress`                | string  | Yes      | Address of your GenImNFTv3 proxy contract            |
-| `options.validateOnly`        | boolean | No       | Only validate compatibility, don't upgrade           |
-| `options.dryRun`              | boolean | No       | Preview changes without executing                    |
-| `options.verify`              | boolean | No       | Verify contract on block explorer after upgrade      |
-| `options.authorizeAgentWallet`| string  | No       | Auto-authorize this agent wallet after upgrade       |
-| `options.waitConfirmations`   | number  | No       | Number of confirmations to wait (default: 1)         |
-| `metadata.description`        | string  | No       | Deployment description                               |
-| `metadata.version`            | string  | No       | Version identifier                                   |
-| `metadata.environment`        | string  | No       | Environment (development/staging/production)         |
-| `metadata.securityFix`        | string  | No       | Security fix identifier (CVE-2025-11-26)             |
+| Field                          | Type    | Required | Description                                     |
+| ------------------------------ | ------- | -------- | ----------------------------------------------- |
+| `proxyAddress`                 | string  | Yes      | Address of your GenImNFTv3 proxy contract       |
+| `options.validateOnly`         | boolean | No       | Only validate compatibility, don't upgrade      |
+| `options.dryRun`               | boolean | No       | Preview changes without executing               |
+| `options.verify`               | boolean | No       | Verify contract on block explorer after upgrade |
+| `options.authorizeAgentWallet` | string  | No       | Auto-authorize this agent wallet after upgrade  |
+| `options.waitConfirmations`    | number  | No       | Number of confirmations to wait (default: 1)    |
+| `metadata.description`         | string  | No       | Deployment description                          |
+| `metadata.version`             | string  | No       | Version identifier                              |
+| `metadata.environment`         | string  | No       | Environment (development/staging/production)    |
+| `metadata.securityFix`         | string  | No       | Security fix identifier (CVE-2025-11-26)        |
 
 ## Upgrade Process
 
@@ -92,6 +92,7 @@ npx hardhat run scripts/upgrade-genimg-v4.ts --network optimism
 ```
 
 **What happens:**
+
 - ✅ Validates proxy address format and checksum
 - ✅ Checks current implementation is GenImNFTv3
 - ✅ Verifies storage layout compatibility
@@ -109,6 +110,7 @@ npx hardhat run scripts/upgrade-genimg-v4.ts --network optimism
 ```
 
 **What happens:**
+
 - ✅ All validation checks from Step 1
 - ✅ Simulates upgrade process
 - ✅ Estimates gas costs
@@ -125,6 +127,7 @@ npx hardhat run scripts/upgrade-genimg-v4.ts --network optimism
 ```
 
 **What happens:**
+
 - ✅ All validation checks from Step 1
 - ✅ Deploys new GenImNFTv4 implementation
 - ✅ Upgrades proxy to point to V4
@@ -264,6 +267,7 @@ npx hardhat run scripts/verify-genimg-v4.ts --network optimism
 ```
 
 **This script:**
+
 - Loads deployment info from JSON
 - Verifies implementation on Etherscan/block explorer
 - Tests `isAuthorizedAgent()` functionality
@@ -304,10 +308,7 @@ npx hardhat console --network optimism
 ```
 
 ```javascript
-const contract = await ethers.getContractAt(
-  "GenImNFTv4",
-  "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"
-);
+const contract = await ethers.getContractAt("GenImNFTv4", "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");
 
 // Authorize agent
 await contract.authorizeAgentWallet("0xAAEBC1441323B8ad6Bdf6793A8428166b510239C");
@@ -399,7 +400,9 @@ Example:
   "deployer": "0xYourDeployerAddress",
   "gasUsed": "1234567",
   "authorizedAgent": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-  "config": { /* your config */ }
+  "config": {
+    /* your config */
+  }
 }
 ```
 

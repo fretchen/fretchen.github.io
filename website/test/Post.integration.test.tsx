@@ -161,8 +161,8 @@ describe("Post Component Integration Tests", () => {
       // Act
       render(<Post {...postProps} />);
 
-      // Assert: Support button should be present
-      expect(screen.getByText(/supporters/)).toBeInTheDocument();
+      // Assert: Support button should be present (new text: "Support ~50¢")
+      expect(screen.getByText(/Support/)).toBeInTheDocument();
     });
   });
 

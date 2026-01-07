@@ -4,3 +4,6 @@ Allow: /
 # Block non-existent language paths
 Disallow: /en/
 Disallow: /pages/
+
+# Sitemap location
+Sitemap: https://www.fretchen.eu/sitemap.xml

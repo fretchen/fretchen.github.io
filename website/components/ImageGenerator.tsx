@@ -1,16 +1,15 @@
 import React, { useState } from "react";
-import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useConnect } from "wagmi";
-import { getChain, genAiNFTContractConfig } from "../utils/getChain";
+import { useAccount, useConnect, useSwitchChain, useChainId } from "wagmi";
 import { css } from "../styled-system/css";
-import { TransactionReceipt, MintingStatus } from "../types/blockchain";
+import { getChain } from "../utils/getChain";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
-
-const defaultImageUrl = "https://mypersonaljscloudivnad9dy-genimgbfl.functions.fnc.fr-par.scw.cloud";
+import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
+import { AgentInfoPanel } from "./AgentInfoPanel";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -81,40 +80,23 @@ const compressImage = (file: File, maxSizeKB: number = 1024): Promise<{ base64: 
   });
 };
 
-// Helper function to wait for transaction confirmation
-export const waitForTransaction = async (hash: `0x${string}`): Promise<TransactionReceipt> => {
-  return new Promise<TransactionReceipt>((resolve, reject) => {
-    const checkReceipt = async () => {
-      try {
-        const receipt = await window.ethereum.request({
-          method: "eth_getTransactionReceipt",
-          params: [hash],
-        });
-        if (receipt) {
-          resolve(receipt as TransactionReceipt);
-        } else {
-          setTimeout(checkReceipt, 2000);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    };
-    checkReceipt();
-  });
-};
-
-export function ImageGenerator({
-  apiUrl = import.meta.env.PUBLIC_ENV___IMAGE_URL || defaultImageUrl,
-  onSuccess,
-  onError,
-}: ImageGeneratorProps) {
+export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Feature flag - set if image generation is enabled
   const isImageGenEnabled = true;
 
   // Analytics hook
   const { trackEvent } = useUmami();
 
-  // Verwende die stabile genAiNFTContractConfig Konstante
+  // x402 Image Generation Hook
+  const {
+    generateImage,
+    status: x402Status,
+    error: x402Error,
+    paymentReceipt,
+    reset: resetX402,
+  } = useX402ImageGeneration();
+
+  // Local state
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
@@ -127,6 +109,13 @@ export function ImageGenerator({
 
   // Blockchain interaction
   const { address, isConnected } = useAccount();
+  const { connectors, connect } = useConnect();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  const currentChainId = useChainId();
+
+  // Determine target chain from centralized config (PUBLIC_ENV__CHAIN_NAME)
+  const targetChain = getChain();
+  const useTestnet = targetChain.id === 11155420; // optimismSepolia.id
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -136,43 +125,7 @@ export function ImageGenerator({
   const [size, setSize] = useState<"1024x1024" | "1792x1024">("1024x1024");
   const [isListed, setIsListed] = useState(false); // Default: not publicly listed
   const [isLoading, setIsLoading] = useState(false);
-  const [mintingStatus, setMintingStatus] = useState<MintingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const chain = getChain();
-  const currentChainId = useChainId();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
-  const { connectors, connect } = useConnect();
-
-  // Read mint price from contract
-  const { data: mintPrice } = useReadContract({
-    ...genAiNFTContractConfig,
-    functionName: "mintPrice",
-    args: [],
-    ...(chain?.id && { chainId: chain.id }),
-  });
-
-  // Contract write operations
-  const { writeContractAsync } = useWriteContract();
-
-  // Helper function to wait for chain switch completion
-  const waitForChainSwitch = async (targetChainId: number): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const checkChain = () => {
-        if (currentChainId === targetChainId) {
-          resolve();
-        } else {
-          setTimeout(checkChain, 100); // Check every 100ms
-        }
-      };
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        reject(new Error(chainSwitchTimeoutText));
-      }, 10000);
-
-      checkChain();
-    });
-  };
 
   // Handle wallet connection
   const handleWalletConnection = () => {
@@ -185,8 +138,6 @@ export function ImageGenerator({
   // Localized button texts
   const connectWalletButtonText = useLocale({ label: "imagegen.connectWalletButton" });
   const enterPromptText = useLocale({ label: "imagegen.enterPrompt" });
-  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
-  const creatingText = useLocale({ label: "imagegen.creating" });
   const generatingText = useLocale({ label: "imagegen.generating" });
   const createArtworkText = useLocale({ label: "imagegen.createArtwork" });
   const promptPlaceholderText = useLocale({ label: "imagegen.promptPlaceholder" });
@@ -195,12 +146,14 @@ export function ImageGenerator({
 
   // Error messages
   const connectAccountFirstText = useLocale({ label: "imagegen.connectAccountFirst" });
-  const switchToOptimismText = useLocale({ label: "imagegen.switchToOptimism" });
   const enterPromptErrorText = useLocale({ label: "imagegen.enterPromptError" });
-  const loadMintPriceText = useLocale({ label: "imagegen.loadMintPrice" });
-  const chainSwitchTimeoutText = useLocale({ label: "imagegen.chainSwitchTimeout" });
-  const extractTokenIdText = useLocale({ label: "imagegen.extractTokenId" });
   const unknownErrorText = useLocale({ label: "imagegen.unknownError" });
+  const chainSwitchFailedText = useLocale({ label: "imagegen.chainSwitchFailed" });
+  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
+
+  // x402 specific messages
+  const awaitingSignatureText = useLocale({ label: "imagegen.awaitingSignature" });
+  const processingPaymentText = useLocale({ label: "imagegen.processingPayment" });
 
   // File upload
   const uploadReferenceImageText = useLocale({ label: "imagegen.uploadReferenceImage" });
@@ -220,7 +173,6 @@ export function ImageGenerator({
   const failedToProcessImageText = useLocale({ label: "imagegen.failedToProcessImage" });
 
   // Status messages
-  const creatingArtworkText = useLocale({ label: "imagegen.creatingArtwork" });
   const generatingImageText = useLocale({ label: "imagegen.generatingImage" });
 
   // Collapsed state texts
@@ -234,18 +186,10 @@ export function ImageGenerator({
   const mintingInfoText = useLocale({ label: "imagegen.mintingInfo" });
   const artworkCreatedText = useLocale({ label: "imagegen.artworkCreated" });
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
-  const switchingToOptimismText = useLocale({ label: "imagegen.switchingToOptimism" });
 
-  // Links
-  const poweredByText = useLocale({ label: "imagegen.poweredBy" });
-  const viewContractText = useLocale({ label: "imagegen.viewContract" });
-  const learnMoreOptimismText = useLocale({ label: "imagegen.learnMoreOptimism" });
-  const viewContractEtherscanText = useLocale({ label: "imagegen.viewContractEtherscan" });
-
-  const getButtonState = () => {
+  const getButtonState = (): string => {
     if (isSwitchingChain) return "switching";
-    if (isLoading) return "loading";
-    // Note: !isConnected check removed - only reachable in connected state
+    if (isLoading || x402Status === "awaiting-signature" || x402Status === "processing") return "loading";
     if (!prompt.trim()) return "needsPrompt";
     return "ready";
   };
@@ -255,7 +199,9 @@ export function ImageGenerator({
       case "switching":
         return switchingNetworkText;
       case "loading":
-        return mintingStatus === "minting" ? creatingText : generatingText;
+        if (x402Status === "awaiting-signature") return awaitingSignatureText;
+        if (x402Status === "processing") return processingPaymentText;
+        return generatingText;
       case "connect":
         return connectWalletButtonText;
       case "needsPrompt":
@@ -281,9 +227,10 @@ export function ImageGenerator({
         promptLength: prompt.trim().length,
         isConnected: isConnected,
         imageSize: size,
+        paymentMethod: "x402-usdc",
       });
 
-      handleMintAndGenerate();
+      handleX402Generate();
     };
 
     return (
@@ -309,32 +256,12 @@ export function ImageGenerator({
     );
   };
 
-  const handleMintAndGenerate = async () => {
+  const handleX402Generate = async () => {
     if (!isConnected || !address) {
       const errorMsg = connectAccountFirstText;
       setError(errorMsg);
       onError?.(errorMsg);
       return;
-    }
-
-    // Check if connected to the correct chain
-    const expectedChainId = chain?.id;
-    if (expectedChainId && currentChainId !== expectedChainId) {
-      try {
-        setError(switchingToOptimismText);
-        await switchChain({ chainId: expectedChainId });
-
-        // Wait for the chain switch to complete using polling
-        await waitForChainSwitch(expectedChainId);
-
-        setError(null);
-      } catch (switchError) {
-        console.error("Failed to switch chain:", switchError);
-        const errorMsg = switchError instanceof Error ? switchError.message : switchToOptimismText;
-        setError(errorMsg);
-        onError?.(errorMsg);
-        return;
-      }
     }
 
     if (!prompt.trim()) {
@@ -343,90 +270,56 @@ export function ImageGenerator({
       onError?.(errorMsg);
       return;
     }
-    if (!mintPrice) {
-      const errorMsg = loadMintPriceText;
-      setError(errorMsg);
-      onError?.(errorMsg);
-      return;
+
+    // === Automatic Chain Switch ===
+    // Ensure user is on the correct chain before making payment
+    if (currentChainId !== targetChain.id) {
+      console.log(`[x402] Chain mismatch: current=${currentChainId}, target=${targetChain.id} (${targetChain.name})`);
+      try {
+        await switchChainAsync({ chainId: targetChain.id });
+        console.log(`[x402] Successfully switched to ${targetChain.name}`);
+      } catch (switchError) {
+        console.error("[x402] Chain switch failed:", switchError);
+        const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
+        setError(errorMsg);
+        onError?.(errorMsg);
+        return;
+      }
     }
 
     setIsLoading(true);
     setError(null);
-    setMintingStatus("minting");
 
     try {
-      // Start minting with empty URI - backend will update it with real metadata
-      const tempUri = "";
-      const txHash = await writeContractAsync({
-        ...genAiNFTContractConfig,
-        functionName: "safeMint",
-        args: [tempUri, isListed], // Use the new safeMint(uri, isListed) function
-        value: mintPrice as bigint,
-        ...(chain?.id && { chainId: chain.id }),
-      });
-
-      console.log("Minting transaction sent:", txHash);
-      const receipt = await waitForTransaction(txHash);
-
-      // Extract Token ID from transfer event
-      const transferEvent = receipt?.logs.find(
-        (log) => log.topics[0] === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-      );
-
-      if (!transferEvent || transferEvent.topics.length < 4) {
-        throw new Error(extractTokenIdText);
-      }
-
-      const tokenIdHex = transferEvent.topics[3];
-      const newTokenId = BigInt(tokenIdHex);
-      console.log("Created artwork ID:", newTokenId);
-      setTokenId(newTokenId);
-
-      // Proceed with image generation
-      setMintingStatus("generating");
-
-      // Determine mode and prepare request body
+      // Determine mode
       const isEditMode = referenceImageBase64 !== null;
       const mode = isEditMode ? "edit" : "generate";
 
-      // Prepare request body
-      const requestBody: {
-        prompt: string;
-        tokenId: string;
-        size: string;
-        mode: string;
-        referenceImage?: string;
-      } = {
+      // Use x402 to generate image with USDC payment
+      // The hook handles 402 response, signature, and retry automatically
+      const result = await generateImage({
         prompt,
-        tokenId: newTokenId.toString(),
         size,
         mode,
-      };
-
-      // If in edit mode, use the base64 reference image
-      if (isEditMode && referenceImageBase64) {
-        requestBody.referenceImage = referenceImageBase64;
-      }
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+        referenceImage: isEditMode ? referenceImageBase64 : undefined,
+        // Use testnet: derived from PUBLIC_ENV__CHAIN_NAME
+        sepoliaTest: useTestnet,
+        // Pass expected chain ID for validation in hook
+        expectedChainId: targetChain.id,
+        // Whether to list in public gallery
+        isListed,
       });
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
+      console.log("[x402] Image generation completed:", result);
 
-      const data = await response.json();
-      console.log("Image generation completed", data);
-      const imageUrl = data.image_url;
+      // Update state with results
+      const newTokenId = BigInt(result.tokenId);
+      const imageUrl = result.image_url;
+
+      setTokenId(newTokenId);
       setGeneratedImageUrl(imageUrl);
-      setCurrentPreviewImage(imageUrl); // Set preview image
-      setPreviewState("generated"); // Transition to generated state
-      setMintingStatus("idle");
+      setCurrentPreviewImage(imageUrl);
+      setPreviewState("generated");
 
       // Convert generated image to base64 for potential editing
       try {
@@ -438,49 +331,48 @@ export function ImageGenerator({
           reader.onerror = reject;
           reader.readAsDataURL(imageBlob);
         });
-        // Remove the data:image/jpeg;base64, prefix to get just the base64 data
         const base64Data = base64String.split(",")[1];
         setReferenceImageBase64(base64Data);
-      } catch (error) {
-        console.warn("Failed to convert generated image to base64:", error);
-        // Don't fail the whole operation if base64 conversion fails
+      } catch (fetchError) {
+        console.warn("Failed to convert generated image to base64:", fetchError);
       }
 
-      // Erstelle Metadaten-Objekt aus der API-Antwort
+      // Create metadata object
       const metadata = {
         name: `AI Generated Artwork #${newTokenId}`,
         description: `AI generated artwork based on the prompt: "${prompt}"`,
         image: imageUrl,
-        external_url: data.metadata_url || "",
+        external_url: result.metadata_url || "",
         attributes: [
-          {
-            trait_type: "Prompt",
-            value: prompt,
-          },
-          {
-            trait_type: "Generation Method",
-            value: "AI Generated",
-          },
+          { trait_type: "Prompt", value: prompt },
+          { trait_type: "Generation Method", value: "AI Generated" },
+          { trait_type: "Payment Method", value: "x402 USDC" },
         ],
       };
 
-      // Erfolgreich - rufe Callback auf mit erweiterten Daten
+      // Call success callback
       onSuccess?.(newTokenId, imageUrl, metadata);
 
-      // Reset form für nächste Erstellung (but keep preview visible)
+      // Track success with analytics
+      trackEvent("x402-image-generated", {
+        tokenId: result.tokenId,
+        mode,
+        hasTxReceipt: !!paymentReceipt,
+      });
+
+      // Reset form after delay
       setTimeout(() => {
         setPrompt("");
         setSize("1024x1024");
         setGeneratedImageUrl(undefined);
         setTokenId(undefined);
         setError(null);
-        // Don't clear currentPreviewImage or previewState - let it persist for editing
+        resetX402();
       }, 3000);
     } catch (err) {
-      console.error("Error:", err);
+      console.error("[x402] Error:", err);
       const errorMsg = err instanceof Error ? err.message : unknownErrorText;
       setError(errorMsg);
-      setMintingStatus("error");
       onError?.(errorMsg);
     } finally {
       setIsLoading(false);
@@ -917,7 +809,7 @@ export function ImageGenerator({
                               bg: "gray.700",
                             },
                           })}
-                          disabled={isLoading || mintingStatus !== "idle"}
+                          disabled={isLoading || x402Status !== "idle"}
                         >
                           ✕ {removeText}
                         </button>
@@ -953,7 +845,7 @@ export function ImageGenerator({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={previewState === "reference" ? editPromptPlaceholderText : promptPlaceholderText}
-                disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
+                disabled={isLoading || x402Status !== "idle"}
                 className={styles.imageGen.compactTextarea}
               />
 
@@ -963,7 +855,7 @@ export function ImageGenerator({
                     id="imageSizeSelect"
                     value={size}
                     onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
-                    disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
+                    disabled={isLoading || x402Status !== "idle"}
                     className={styles.imageGen.compactSelect}
                     aria-label="Select image format for your artwork"
                   >
@@ -983,7 +875,7 @@ export function ImageGenerator({
                       type="checkbox"
                       checked={isListed}
                       onChange={(e) => setIsListed(e.target.checked)}
-                      disabled={isLoading || mintingStatus !== "idle" || isSwitchingChain}
+                      disabled={isLoading || x402Status !== "idle"}
                       className={styles.nftCard.checkbox}
                     />
                     <LocaleText label="imagegen.listed" />
@@ -994,29 +886,8 @@ export function ImageGenerator({
               </div>
             </div>
 
-            {/* Contract details under Create Artwork button */}
-            <div className={css({ mt: "2", fontSize: "xs", color: "gray.600", textAlign: "center" })}>
-              {poweredByText}{" "}
-              <a
-                href="https://optimism.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={learnMoreOptimismText}
-                className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
-              >
-                Optimism
-              </a>{" "}
-              •{" "}
-              <a
-                href={`https://optimistic.etherscan.io/address/${genAiNFTContractConfig.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={viewContractEtherscanText}
-                className={css({ color: "blue.600", textDecoration: "underline", _hover: { color: "blue.800" } })}
-              >
-                {viewContractText} ↗
-              </a>
-            </div>
+            {/* Agent Info Panel - Expandable */}
+            <AgentInfoPanel service="genimg" />
 
             {/* Hidden accessible description used by aria-describedby for the Create Artwork button */}
             <span
@@ -1047,15 +918,46 @@ export function ImageGenerator({
               {mintingInfoLabel}
             </div>
 
-            {/* Status-Anzeige */}
-            {mintingStatus !== "idle" && (
+            {/* Status-Anzeige for x402 */}
+            {(x402Status === "awaiting-signature" || x402Status === "processing") && (
               <div className={styles.imageGen.compactStatus}>
                 <div className={styles.spinner}></div>
-                <span>{mintingStatus === "minting" ? creatingArtworkText : generatingImageText}</span>
+                <span>{x402Status === "awaiting-signature" ? awaitingSignatureText : generatingImageText}</span>
               </div>
             )}
 
-            {error && <div className={styles.imageGen.compactError}>{error}</div>}
+            {/* Error display - show x402 error or local error */}
+            {(error || x402Error) && <div className={styles.imageGen.compactError}>{error || x402Error}</div>}
+
+            {/* Payment receipt display */}
+            {paymentReceipt && (
+              <div
+                className={css({
+                  mt: "2",
+                  p: "2",
+                  fontSize: "xs",
+                  bg: "green.50",
+                  border: "1px solid",
+                  borderColor: "green.200",
+                  borderRadius: "md",
+                  color: "green.800",
+                })}
+              >
+                ✅ Payment confirmed •{" "}
+                <a
+                  href={`https://optimistic.etherscan.io/tx/${paymentReceipt.transaction}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: "green.600",
+                    textDecoration: "underline",
+                    _hover: { color: "green.700" },
+                  })}
+                >
+                  View transaction ↗
+                </a>
+              </div>
+            )}
 
             {/* Erfolgreiche Erstellung */}
             {tokenId && generatedImageUrl && (

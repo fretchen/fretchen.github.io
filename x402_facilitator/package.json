@@ -1,0 +1,52 @@
+{
+  "name": "x402-facilitator",
+  "version": "1.0.0",
+  "description": "x402 v2 Payment Facilitator for Optimism",
+  "type": "module",
+  "main": "x402_facilitator.js",
+  "scripts": {
+    "dev": "NODE_ENV=test node x402_facilitator.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,json,md}\"",
+    "check": "npm run lint && npm run format:check && npm run test",
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage production",
+    "info": "serverless info",
+    "logs": "serverless logs -f facilitator",
+    "remove": "serverless remove"
+  },
+  "keywords": [
+    "x402",
+    "payments",
+    "optimism",
+    "eip712",
+    "usdc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@coinbase/x402": "^2.0.0",
+    "@x402/core": "^2.0.0",
+    "@x402/evm": "^2.0.0",
+    "dotenv": "^16.0.0",
+    "pino": "^9.0.0",
+    "viem": "^2.38.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@scaleway/serverless-functions": "^1.1.2",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "serverless-scaleway-functions": ">=0.4.16",
+    "vitest": "^4.0.16"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -52,5 +52,5 @@ functions:
       - facilitator.fretchen.eu
 
   feefacilitator:
-    handler: x402_facilitator.handle
+    handler: x402_splitter_facilitator.handle
     description: Testnet facilitator with fee for x402 v2 payments

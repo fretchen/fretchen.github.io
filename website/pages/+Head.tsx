@@ -30,9 +30,10 @@ export default function HeadDefault() {
       {/* Canonical URL - points to current page in its current language */}
       <link rel="canonical" href={canonicalUrl} />
 
-      {/* Language variants for SEO (helps Google understand en is at root, not /en/) */}
-      <link rel="alternate" hrefLang="en" href={enUrl} />
-      <link rel="alternate" hrefLang="de" href={deUrl} />
+      {/* Language variants for SEO - only alternate languages (not self-reference) */}
+      {/* See: https://developers.google.com/search/docs/specialty/international/localized-versions */}
+      {locale !== "en" && <link rel="alternate" hrefLang="en" href={enUrl} />}
+      {locale !== "de" && <link rel="alternate" hrefLang="de" href={deUrl} />}
       <link rel="alternate" hrefLang="x-default" href={enUrl} />
 
       {/* rel="me" links for identity verification (IndieWeb, Mastodon, Bluesky, etc.) */}

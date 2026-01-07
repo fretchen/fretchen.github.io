@@ -14,7 +14,7 @@
 
 import { verifyTypedData, createPublicClient, http } from "viem";
 import pino from "pino";
-import { getChain, getTokenInfo } from "./chain_utils.js";
+import { getChain, getChainConfig, getTokenInfo } from "./chain_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -240,9 +240,10 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     // Check if authorization already used (requires splitter contract call)
     // For verify, we'll check this on-chain during settlement
     // The contract will revert if nonce is reused
+    const chainConfig = getChainConfig(network);
     const publicClient = createPublicClient({
       chain,
-      transport: http(),
+      transport: http(chainConfig.rpcUrl),
     });
 
     // Check buyer has sufficient balance
@@ -284,7 +285,15 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
       payer: from,
     };
   } catch (error) {
-    logger.error({ err: error, message: error.message }, "Verification error");
+    logger.error(
+      {
+        err: error,
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      },
+      "Verification error - check RPC connectivity and environment variables",
+    );
     return {
       isValid: false,
       invalidReason: "unexpected_verify_error",

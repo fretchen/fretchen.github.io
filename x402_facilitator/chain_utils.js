@@ -31,17 +31,21 @@ export function getChain(network) {
  */
 export function getChainConfig(network) {
   if (network === "eip155:10") {
+    // Use custom RPC URL or default, but ensure empty strings are treated as falsy
+    const customRpcUrl = process.env.OPTIMISM_RPC_URL?.trim();
     return {
       chain: optimism,
-      rpcUrl: process.env.OPTIMISM_RPC_URL || "https://mainnet.optimism.io",
+      rpcUrl: customRpcUrl || "https://mainnet.optimism.io",
       GENIMG_V4_ADDRESS: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
       LLMV1_ADDRESS: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1",
     };
   }
   if (network === "eip155:11155420") {
+    // Use custom RPC URL or default, but ensure empty strings are treated as falsy
+    const customRpcUrl = process.env.OPTIMISM_SEPOLIA_RPC_URL?.trim();
     return {
       chain: optimismSepolia,
-      rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC_URL || "https://sepolia.optimism.io",
+      rpcUrl: customRpcUrl || "https://sepolia.optimism.io",
       GENIMG_V4_ADDRESS: null,
       LLMV1_ADDRESS: null,
     };

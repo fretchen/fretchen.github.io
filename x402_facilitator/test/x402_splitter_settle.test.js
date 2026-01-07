@@ -11,7 +11,7 @@
  * - Computes nonce as keccak256(seller, salt)
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { settleSplitterPayment } from "../x402_splitter_settle.js";
 
 // Mock viem

@@ -35,14 +35,14 @@ describe("x402 Splitter /supported endpoint", () => {
     expect(Array.isArray(capabilities.extensions)).toBe(true);
   });
 
-  test("includes Optimism Mainnet support", () => {
+  test("excludes Optimism Mainnet when splitter not deployed", () => {
+    // Mainnet splitter is not yet deployed (SPLITTER_ADDRESS = null in chain_utils)
     const capabilities = getSplitterCapabilities();
 
     const mainnetSupport = capabilities.kinds.find((k) => k.network === "eip155:10");
 
-    expect(mainnetSupport).toBeDefined();
-    expect(mainnetSupport.x402Version).toBe(2);
-    expect(mainnetSupport.scheme).toBe("exact-split"); // Custom scheme
+    // Mainnet should NOT be included until splitter is deployed
+    expect(mainnetSupport).toBeUndefined();
   });
 
   test("includes Optimism Sepolia support", () => {
@@ -77,14 +77,11 @@ describe("x402 Splitter /supported endpoint", () => {
   test("includes splitterAddress in extra field", () => {
     const capabilities = getSplitterCapabilities();
 
-    const mainnet = capabilities.kinds.find((k) => k.network === "eip155:10");
     const sepolia = capabilities.kinds.find((k) => k.network === "eip155:11155420");
 
-    expect(mainnet.extra.splitterAddress).toBeDefined();
-    expect(mainnet.extra.splitterAddress).toMatch(/^0x[a-fA-F0-9]{40}$/); // Valid address format
-
     expect(sepolia.extra.splitterAddress).toBeDefined();
-    expect(sepolia.extra.splitterAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
+    expect(sepolia.extra.splitterAddress).toMatch(/^0x[a-fA-F0-9]{40}$/); // Valid address format
+    expect(sepolia.extra.splitterAddress).toBe("0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946");
   });
 
   test("includes fixedFee in extra field", () => {
@@ -149,25 +146,29 @@ describe("x402 Splitter /supported endpoint", () => {
     expect(whitelistExtension).toBeUndefined();
   });
 
-  test("Mainnet and Sepolia have different splitter addresses", () => {
+  test("only includes networks with deployed splitter contracts", () => {
     const capabilities = getSplitterCapabilities();
 
-    const mainnet = capabilities.kinds.find((k) => k.network === "eip155:10");
+    // Currently only Sepolia has a deployed splitter
     const sepolia = capabilities.kinds.find((k) => k.network === "eip155:11155420");
+    expect(sepolia).toBeDefined();
+    expect(sepolia.extra.splitterAddress).toBe("0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946");
 
-    // Addresses might be the same if deployed to same address via CREATE2
-    // But they should both be defined
-    expect(mainnet.extra.splitterAddress).toBeDefined();
-    expect(sepolia.extra.splitterAddress).toBeDefined();
+    // Mainnet should not be included (splitter not deployed)
+    const mainnet = capabilities.kinds.find((k) => k.network === "eip155:10");
+    expect(mainnet).toBeUndefined();
   });
 
-  test("Mainnet uses correct USDC asset", () => {
+  test("Mainnet will use correct USDC asset when deployed", () => {
+    // This test documents expected behavior once mainnet is deployed
+    // Currently mainnet is excluded because splitter is not deployed
     const capabilities = getSplitterCapabilities();
-
     const mainnet = capabilities.kinds.find((k) => k.network === "eip155:10");
 
-    // Optimism Mainnet USDC: 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85
-    expect(mainnet.extra.asset).toBe("eip155:10/erc20:0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
+    // Mainnet not included yet
+    expect(mainnet).toBeUndefined();
+
+    // When deployed, it should use: eip155:10/erc20:0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85
   });
 
   test("Sepolia uses correct USDC asset", () => {
@@ -190,15 +191,16 @@ describe("x402 Splitter /supported endpoint", () => {
     });
   });
 
-  test("includes exactly 2 supported networks (no more, no less)", () => {
+  test("includes only networks with deployed splitter contracts", () => {
     const capabilities = getSplitterCapabilities();
 
-    expect(capabilities.kinds.length).toBe(2);
+    // Currently only Sepolia has deployed splitter
+    expect(capabilities.kinds.length).toBe(1);
 
-    // Verify both networks
+    // Verify only Sepolia is included
     const networks = capabilities.kinds.map((k) => k.network);
-    expect(networks).toContain("eip155:10"); // Mainnet
-    expect(networks).toContain("eip155:11155420"); // Sepolia
+    expect(networks).not.toContain("eip155:10"); // Mainnet not deployed
+    expect(networks).toContain("eip155:11155420"); // Sepolia deployed
   });
 
   test("all kinds have x402Version 2", () => {

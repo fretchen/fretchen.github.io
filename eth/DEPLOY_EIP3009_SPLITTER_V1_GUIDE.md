@@ -97,17 +97,17 @@ Create or edit `scripts/deploy-splitter-v1.config.json`:
 
 ### Configuration Options
 
-| Field                       | Type    | Required | Description                                                |
-| --------------------------- | ------- | -------- | ---------------------------------------------------------- |
+| Field                          | Type    | Required | Description                                                |
+| ------------------------------ | ------- | -------- | ---------------------------------------------------------- |
 | `parameters.facilitatorWallet` | string  | Yes      | Address that receives the fixed fee                        |
-| `parameters.fixedFee`       | string  | Yes      | Fee amount in token base units (e.g., "10000" = 0.01 USDC) |
-| `options.validateOnly`      | boolean | No       | Only validate contract, don't deploy                       |
-| `options.dryRun`            | boolean | No       | Simulate deployment without executing                      |
-| `options.verify`            | boolean | No       | Verify contract on block explorer after deployment         |
-| `options.waitConfirmations` | number  | No       | Number of confirmations to wait (default: 1)               |
-| `metadata.description`      | string  | No       | Deployment description                                     |
-| `metadata.version`          | string  | No       | Version identifier                                         |
-| `metadata.environment`      | string  | No       | Environment (testnet/mainnet)                              |
+| `parameters.fixedFee`          | string  | Yes      | Fee amount in token base units (e.g., "10000" = 0.01 USDC) |
+| `options.validateOnly`         | boolean | No       | Only validate contract, don't deploy                       |
+| `options.dryRun`               | boolean | No       | Simulate deployment without executing                      |
+| `options.verify`               | boolean | No       | Verify contract on block explorer after deployment         |
+| `options.waitConfirmations`    | number  | No       | Number of confirmations to wait (default: 1)               |
+| `metadata.description`         | string  | No       | Deployment description                                     |
+| `metadata.version`             | string  | No       | Version identifier                                         |
+| `metadata.environment`         | string  | No       | Environment (testnet/mainnet)                              |
 
 ## Deployment Process
 
@@ -116,6 +116,7 @@ Create or edit `scripts/deploy-splitter-v1.config.json`:
 Edit `scripts/deploy-splitter-v1.config.json` with your parameters:
 
 **For Testnet (Optimism Sepolia):**
+
 ```json
 {
   "parameters": {
@@ -132,6 +133,7 @@ Edit `scripts/deploy-splitter-v1.config.json` with your parameters:
 ```
 
 **For Mainnet (Optimism):**
+
 ```json
 {
   "parameters": {
@@ -158,6 +160,7 @@ npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
 ```
 
 **What happens:**
+
 - ✅ Validates contract compiles successfully
 - ✅ Checks OpenZeppelin upgrade patterns
 - ✅ Verifies UUPS proxy compatibility
@@ -173,6 +176,7 @@ npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
 ```
 
 **What happens:**
+
 - ✅ Shows deployment parameters
 - ✅ Validates configuration
 - ✅ Simulates deployment flow
@@ -188,6 +192,7 @@ npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
 ```
 
 **What happens:**
+
 1. ✅ Pre-deployment validation
 2. ✅ Deploys UUPS proxy and implementation
 3. ✅ Calls `initialize()` function
@@ -294,7 +299,7 @@ const paymentRequirements = {
   type: "EIP-3009",
   token: "USDC", // or "EURC"
   splitterAddress: "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946",
-  fixedFee: "10000" // 0.01 USDC
+  fixedFee: "10000", // 0.01 USDC
 };
 ```
 
@@ -306,11 +311,8 @@ const paymentRequirements = {
 const { ethers } = require("hardhat");
 
 async function testSplit() {
-  const splitter = await ethers.getContractAt(
-    "EIP3009SplitterV1",
-    "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946"
-  );
-  
+  const splitter = await ethers.getContractAt("EIP3009SplitterV1", "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946");
+
   const token = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7"; // USDC on Optimism Sepolia
   const buyer = "0xBuyerAddress";
   const seller = "0xSellerAddress";
@@ -318,10 +320,10 @@ async function testSplit() {
   const validAfter = 0;
   const validBefore = Math.floor(Date.now() / 1000) + 3600; // 1 hour
   const nonce = ethers.hexlify(ethers.randomBytes(32));
-  
+
   // Buyer signs EIP-3009 authorization (off-chain)
   // ... (see EIP-3009 documentation)
-  
+
   // Facilitator submits transaction
   const tx = await splitter.executeSplit(
     token,
@@ -331,9 +333,11 @@ async function testSplit() {
     validAfter,
     validBefore,
     nonce,
-    v, r, s // Signature components
+    v,
+    r,
+    s, // Signature components
   );
-  
+
   await tx.wait();
   console.log("Split executed successfully!");
 }
@@ -377,11 +381,11 @@ await splitter.setFixedFee("20000"); // 0.02 USDC
 
 Any ERC-20 token implementing EIP-3009 `transferWithAuthorization`:
 
-| Token | Network | Address | Decimals |
-|-------|---------|---------|----------|
-| USDC  | Optimism | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | 6 |
-| USDC  | Optimism Sepolia | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` | 6 |
-| EURC  | Base | Check Circle documentation | 6 |
+| Token | Network          | Address                                      | Decimals |
+| ----- | ---------------- | -------------------------------------------- | -------- |
+| USDC  | Optimism         | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | 6        |
+| USDC  | Optimism Sepolia | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` | 6        |
+| EURC  | Base             | Check Circle documentation                   | 6        |
 
 ### Token Parameter
 
@@ -403,6 +407,7 @@ function executeSplit(
 ```
 
 **Benefits:**
+
 - Same contract works with multiple tokens
 - No redeployment needed for new tokens
 - Cross-chain compatible (USDC on Optimism, EURC on Base)
@@ -424,17 +429,20 @@ The facilitator wallet automatically receives the fixed fee for each split. Ensu
 ### Fixed Fee
 
 Set appropriate fees based on:
+
 - Token decimals (6 for USDC/EURC)
 - Business model (typical: 0.01-0.02 USD)
 - Network economics
 
 **Examples:**
+
 - 0.01 USDC: `fixedFee: "10000"`
 - 0.02 USDC: `fixedFee: "20000"`
 
 ### Owner Key Management
 
 The deployment account becomes the contract owner with critical privileges:
+
 - Upgrade the contract
 - Change fixed fee
 - Change facilitator wallet
@@ -490,6 +498,7 @@ Check that the address in config is a valid checksummed Ethereum address (0x...)
 ### "Insufficient funds"
 
 Ensure deployer wallet has enough ETH for:
+
 - Gas costs (~$1-5 on Optimism)
 - Multiple transactions (deploy + initialization)
 
@@ -504,6 +513,7 @@ This warning indicates the deployed contract has a different facilitator wallet 
 ### Deployment file not created
 
 If deployment succeeds but no file is created, check:
+
 - `scripts/deployments/` directory exists (auto-created)
 - Write permissions on directory
 - Deployment logs for errors
@@ -589,6 +599,7 @@ The EIP3009SplitterV1 is designed to work with the x402 payment facilitator:
 ### Whitelist Integration
 
 The x402 facilitator validates sellers before executing splits:
+
 - Manual whitelist
 - NFT holder check (GenImNFTv4, LLMv1)
 - Test wallets (Sepolia only)
@@ -605,6 +616,7 @@ See `x402_facilitator/x402_whitelist.js` for implementation.
 ## Support
 
 For issues or questions:
+
 1. Check the deployment output logs
 2. Review the saved deployment JSON file
 3. Verify configuration matches this guide

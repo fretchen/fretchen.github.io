@@ -1,6 +1,6 @@
 // @ts-check
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { settlePayment } from "../x402_settle.js";
 
 // Mock viem

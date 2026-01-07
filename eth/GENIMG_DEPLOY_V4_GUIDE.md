@@ -71,17 +71,17 @@ Create or edit `scripts/deploy-genimg-v4.config.json`:
 
 ### Configuration Options
 
-| Field                      | Type    | Required | Description                                          |
-| -------------------------- | ------- | -------- | ---------------------------------------------------- |
-| `parameters.mintPrice`     | string  | Yes      | Price in ETH for minting (e.g., "0.01")              |
-| `parameters.agentWallet`   | string  | No       | Agent wallet to authorize immediately after deploy   |
-| `options.validateOnly`     | boolean | No       | Only validate contract, don't deploy                 |
-| `options.dryRun`           | boolean | No       | Simulate deployment without executing                |
-| `options.verify`           | boolean | No       | Verify contract on block explorer after deployment   |
-| `options.waitConfirmations`| number  | No       | Number of confirmations to wait (default: 1)         |
-| `metadata.description`     | string  | No       | Deployment description                               |
-| `metadata.version`         | string  | No       | Version identifier                                   |
-| `metadata.environment`     | string  | No       | Environment (testnet/mainnet)                        |
+| Field                       | Type    | Required | Description                                        |
+| --------------------------- | ------- | -------- | -------------------------------------------------- |
+| `parameters.mintPrice`      | string  | Yes      | Price in ETH for minting (e.g., "0.01")            |
+| `parameters.agentWallet`    | string  | No       | Agent wallet to authorize immediately after deploy |
+| `options.validateOnly`      | boolean | No       | Only validate contract, don't deploy               |
+| `options.dryRun`            | boolean | No       | Simulate deployment without executing              |
+| `options.verify`            | boolean | No       | Verify contract on block explorer after deployment |
+| `options.waitConfirmations` | number  | No       | Number of confirmations to wait (default: 1)       |
+| `metadata.description`      | string  | No       | Deployment description                             |
+| `metadata.version`          | string  | No       | Version identifier                                 |
+| `metadata.environment`      | string  | No       | Environment (testnet/mainnet)                      |
 
 ## Deployment Process
 
@@ -90,6 +90,7 @@ Create or edit `scripts/deploy-genimg-v4.config.json`:
 Edit `scripts/deploy-genimg-v4.config.json` with your parameters:
 
 **For Testnet (Optimism Sepolia):**
+
 ```json
 {
   "parameters": {
@@ -106,6 +107,7 @@ Edit `scripts/deploy-genimg-v4.config.json` with your parameters:
 ```
 
 **For Mainnet (Optimism):**
+
 ```json
 {
   "parameters": {
@@ -132,6 +134,7 @@ npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
 ```
 
 **What happens:**
+
 - ✅ Validates contract compiles successfully
 - ✅ Checks OpenZeppelin upgrade patterns
 - ✅ Verifies UUPS proxy compatibility
@@ -147,6 +150,7 @@ npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
 ```
 
 **What happens:**
+
 - ✅ Shows deployment parameters
 - ✅ Validates configuration
 - ✅ Simulates deployment flow
@@ -162,6 +166,7 @@ npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
 ```
 
 **What happens:**
+
 1. ✅ Pre-deployment validation
 2. ✅ Deploys UUPS proxy and implementation
 3. ✅ Calls `initialize()` function
@@ -272,21 +277,16 @@ contract.revokeAgentWallet("0xAgentAddress");
 **Mint a test NFT:**
 
 ```javascript
-const tx = await contract.safeMint(
-  "0xRecipientAddress",
-  "ipfs://Qm.../metadata.json"
-);
+const tx = await contract.safeMint("0xRecipientAddress", "ipfs://Qm.../metadata.json");
 await tx.wait();
 ```
 
 **Request image update (as authorized agent):**
 
 ```javascript
-const tx = await contract.requestImageUpdate(
-  tokenId,
-  "https://image-service.example.com/image.png",
-  { value: ethers.parseEther("0.00003") }
-);
+const tx = await contract.requestImageUpdate(tokenId, "https://image-service.example.com/image.png", {
+  value: ethers.parseEther("0.00003"),
+});
 await tx.wait();
 ```
 
@@ -308,11 +308,7 @@ Update your frontend/backend with the new proxy address:
 const GENIMG_V4_ADDRESS = "0x1234...5678"; // Use proxy address
 const GENIMG_V4_ABI = require("./abi/GenImNFTv4.json");
 
-const contract = new ethers.Contract(
-  GENIMG_V4_ADDRESS,
-  GENIMG_V4_ABI,
-  signer
-);
+const contract = new ethers.Contract(GENIMG_V4_ADDRESS, GENIMG_V4_ABI, signer);
 ```
 
 ## Security Considerations
@@ -320,6 +316,7 @@ const contract = new ethers.Contract(
 ### Agent Authorization
 
 **Critical**: Only authorize trusted wallets as agents. Authorized agents can:
+
 - Call `requestImageUpdate()` and receive `mintPrice` payments
 - Update token images (but NOT steal tokens)
 
@@ -328,6 +325,7 @@ const contract = new ethers.Contract(
 ### Mint Price
 
 Set appropriate mint prices based on:
+
 - Network gas costs
 - Image generation costs
 - Token economics
@@ -338,6 +336,7 @@ Set appropriate mint prices based on:
 ### Owner Key Management
 
 The deployment account becomes the contract owner with critical privileges:
+
 - Upgrade the contract
 - Change mint price
 - Authorize/revoke agents
@@ -358,6 +357,7 @@ Check that addresses in config are valid checksummed Ethereum addresses.
 ### "Insufficient funds"
 
 Ensure deployer wallet has enough ETH for:
+
 - Gas costs (~$5-20 depending on network)
 - Multiple transactions (deploy + configuration)
 
@@ -368,6 +368,7 @@ The contract may have upgrade safety issues. Review error message and contract c
 ### Deploy fails silently
 
 Check you have:
+
 - Correct network name in `--network` flag
 - Network configured in `hardhat.config.ts`
 - Valid RPC URL and private key
@@ -443,6 +444,7 @@ npx hardhat console --network optsepolia
 ## Support
 
 For issues or questions:
+
 1. Check the deployment output logs
 2. Review the saved deployment JSON file
 3. Verify configuration matches this guide

@@ -17,10 +17,17 @@ provider:
   # Secrets (set via Scaleway Console or CLI)
   secret:
     FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}
-    # Optional: Custom RPC endpoints (defaults in chain_utils.js)
-    # Set these for production to use dedicated RPC providers (Infura, Alchemy, etc.)
-    OPTIMISM_RPC_URL: ${env:OPTIMISM_RPC_URL, ""}
-    OPTIMISM_SEPOLIA_RPC_URL: ${env:OPTIMISM_SEPOLIA_RPC_URL, ""}
+    # Optional: Custom RPC endpoints
+    # RPC URL fallback behavior (handled by getRpcUrl() in chain_utils.js):
+    #   - Not set/undefined → Uses default public endpoint
+    #   - Empty string "" → Treated as not set (via .trim())
+    #   - Whitespace " " → Treated as not set (via .trim())
+    #   - Valid URL → Uses custom endpoint
+    # 
+    # For production: Set custom RPC URLs to avoid rate limits on public endpoints
+    # Default fallbacks: https://mainnet.optimism.io and https://sepolia.optimism.io
+    # OPTIMISM_RPC_URL: ${env:OPTIMISM_RPC_URL, ""}
+    # OPTIMISM_SEPOLIA_RPC_URL: ${env:OPTIMISM_SEPOLIA_RPC_URL, ""}
 
 plugins:
   - serverless-scaleway-functions
@@ -49,3 +56,7 @@ functions:
     # Custom domain for x402 standard compliance
     custom_domains:
       - facilitator.fretchen.eu
+
+  feefacilitator:
+    handler: x402_splitter_facilitator.handle
+    description: Testnet facilitator with fee for x402 v2 payments

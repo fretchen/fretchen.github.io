@@ -107,14 +107,16 @@ function getLocaleInfo(urlPath: string): {
     canonicalPath += "/";
   }
 
-  // Generate alternates for all locales
-  const alternates = locales.map((l) => ({
-    hreflang: l,
-    href:
-      l === defaultLocale
-        ? `${SITE_URL}${canonicalPath}`
-        : `${SITE_URL}/${l}${canonicalPath === "/" ? "/" : canonicalPath}`,
-  }));
+  // Generate alternates for all locales EXCEPT the current one (avoid self-reference)
+  const alternates = locales
+    .filter((l) => l !== locale)
+    .map((l) => ({
+      hreflang: l,
+      href:
+        l === defaultLocale
+          ? `${SITE_URL}${canonicalPath}`
+          : `${SITE_URL}/${l}${canonicalPath === "/" ? "/" : canonicalPath}`,
+    }));
 
   // Add x-default pointing to the default locale version
   alternates.push({

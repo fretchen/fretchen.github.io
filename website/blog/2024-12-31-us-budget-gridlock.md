@@ -123,7 +123,16 @@ $$V_t^1(\rho^1, \rho^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\rh
 If parties only care about today ($\delta = 0$), then the payoff simplifies to:
 $$V_t^i(\rho^1, \rho^2, X_t) = U^i(\rho^i(X_t))$$
 
-If you want to maximize your payoff, you just maximize today's utility. This leads to the winner-takes-all outcome, as each party grabs everything when in power.
+If you want to maximize your payoff, you just maximize today's utility. This leads to the winner-takes-all outcome, as each party grabs everything when in power $\rho_0 = \bar{\rho}$.
+
+### Limiting case of first order in $\delta$ (slightly patient parties)
+
+
+For small but positive $\delta$, parties care a little about the future. The payoff expands to:
+
+$$V_t^i(\rho^1, \rho^2, X_t) \approx U^i(\rho^i(X_t)) + \delta \cdot E[U^i(\rho^i(X_{t+1})) \mid X_t]$$
+
+So we really also start to worry about the expected utility tomorrow. 
 
 
 # A few words on the winner takes all strategy

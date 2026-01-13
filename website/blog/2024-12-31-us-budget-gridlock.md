@@ -132,7 +132,50 @@ For small but positive $\delta$, parties care a little about the future. The pay
 
 $$V_t^i(\rho^1, \rho^2, X_t) \approx U^i(\rho^i(X_t)) + \delta \cdot E[U^i(\rho^i(X_{t+1})) \mid X_t]$$
 
-So we really also start to worry about the expected utility tomorrow. 
+So we really also start to worry about the expected utility tomorrow. We can now show that this creates incentives for cooperation, as parties recognize that giving a little today can lead to better outcomes tomorrow. We can basically write
+
+$$V_t \approx U(\rho(X_t)) + \delta \cdot E[U(\rho(X_{t+1}))]$$
+
+We can now write out the expectation value as:
+
+$$E[U(\rho(X_{t+1}))] = pU(\rho(X_t>0.5))+(1-p)U(\rho(X_t<0.5))$$
+
+And for the winner takes all strategy this becomes:
+
+$$E[U(\rho(X_{t+1}))] = pU(1)+(1-p)U(0) \leq U(p\cdot 1+ (1-p)\cdot 0)=U(p)$$
+
+the inequality comes from the concavity of U and is known as Jensen inequality.
+
+So for winner takes all we have:
+
+$$V_t^{WTA} \approx U(1) + \delta \cdot [pU(1)+(1-p)U(0)]$$
+
+**Can a moderate strategy beat WTA?** Consider a strategy where the party in power takes $1-\Delta$ instead of everything, and the opposition gets $\Delta$:
+
+$$V^{mod} = U(1-\Delta) + \delta \cdot [pU(1-\Delta)+(1-p)U(\Delta)]$$
+
+**The difference:**
+$$V^{mod} - V^{WTA} = \underbrace{[U(1-\Delta) - U(1)]}_{\text{cost today } < 0} + \delta \cdot \underbrace{[pU(1-\Delta) + (1-p)U(\Delta) - pU(1) - (1-p)U(0)]}_{\text{gain tomorrow}}$$
+
+**For small $\Delta$**, Taylor expansion gives:
+- $U(1-\Delta) - U(1) \approx -U'(1)\Delta$
+- $U(\Delta) - U(0) \approx U'(0)\Delta$
+
+The gain tomorrow becomes:
+$$p[-U'(1)\Delta] + (1-p)[U'(0)\Delta] = \Delta[(1-p)U'(0) - pU'(1)]$$
+
+**Therefore:**
+$$V^{mod} - V^{WTA} \approx \Delta\left[-U'(1) + \delta\left((1-p)U'(0) - pU'(1)\right)\right]$$
+
+**This is positive when:**
+$$\delta(1-p)U'(0) > U'(1)(1 + \delta p)$$
+
+Rearranging for $\delta$:
+$$\delta > \frac{U'(1)}{(1-p)U'(0) - pU'(1)} \equiv \delta_{min}$$
+
+So there exists a threshold $\delta_{min} > 0$ below which WTA cannot be beaten. Only sufficiently patient parties will cooperate.
+
+**Conclusion:** The party in power benefits from giving up a little today to reduce future risk.
 
 
 # A few words on the winner takes all strategy

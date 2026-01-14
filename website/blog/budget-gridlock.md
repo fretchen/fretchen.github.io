@@ -12,31 +12,46 @@ Interestingly, political economists have built models that can somehow rationali
 
 Let me walk through the model, which has surprisingly clear and logical conclusions.
 
-## The Model: Two Parties, One Pie
+## Setting up the problem: Owls vs. Hummingbirds
 
-Imagine two parties sharing a budget of size 1:
-- **Party A** is currently in power
-- **Party B** is in opposition
-- Together they must divide the budget: $Y^A + Y^B = 1$
+To set up the discussion, we imagine a country where two parties, named after their symbols, must negotiate the annual budget. The two parties have almost opposite priorities:
 
-The game repeats over time: $t = 0, 1, 2, \ldots$
+**The Owls 🦉** are patient long-term planners. They want to invest in:
+- Education and research (pays off in 20 years)
+- Climate infrastructure (renewable energy, flood protection)
+- Preventive healthcare and public health systems
+
+**The Hummingbirds 🐦** need immediate, visible results. They prioritize:
+- Tax cuts (more money in voters' pockets this year)
+- Emergency relief and direct payments
+- Quick fixes (pothole repairs, not highway reconstruction)
+
+So as the two parties negotiate the budget, they have very different preferences over how to allocate funds. For simplicity, we assume the total budget is fixed and normalized to 1. And the question is how to split it. The more money goes into the priorities of the owls, denoted by $Y^O$ , the less money goes into the priority of the hummingbirds, denoted by $Y^H = 1 - Y^O$.
+
+Assume now that the Owls are currently in power and they have to decide how to split the budget between their own priorities and those of the Hummingbirds.
+
+**The key question:** How much should the Owls give to the Hummingbirds? Take everything? Share fairly? Something in between?
 
 ## Political Strength as a Random Walk
 
-Political power fluctuates. We model party A's strength as $X_t \in [0, 1]$:
+As the Owls are really good at long-term planning, they model the political situation carefully. We know the Owls might win today's election, but lose the next. We model the Owls' political strength as a random process $X_t \in [0, 1]$:
 
 $$X_{t+1} = X_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma^2)$$
 
-- $X_t > 0.5$: Party A is in power
-- $X_t < 0.5$: Party B is in power
+**What this means:**
+- $X_t > 0.5$: Owls control the government
+- $X_t < 0.5$: Hummingbirds control the government
+- Random shocks $\epsilon_t$ capture elections, scandals, economic swings
 
-Today's strength influences tomorrow's, but random shocks (elections, scandals, economic conditions) create uncertainty. Let $p$ be the probability that the party currently in power stays in power tomorrow.
+Today's strength influences tomorrow's, but there's always uncertainty. Let $p$ be the probability that whoever is in power today stays in power tomorrow.
 
 ## The Allocation: Who Gets What?
 
-The **allocation** $Y_t$ is simply party A's share of the budget at time $t$. 
+The **allocation** $Y_t$ is simply the Owls' share of the budget at time $t$. The Hummingbirds get $1 - Y_t$.
 
 A **strategy** $\rho$ is a rule that maps each political state to an allocation: $\rho: X_t \mapsto Y_t$.
+
+**Example strategies for the Owls when they're in power:**
 
 ### Benchmark Strategies
 

@@ -32,52 +32,76 @@ Assume now that the Owls are currently in power and they have to decide how to s
 
 **The key question:** How much should the Owls give to the Hummingbirds? Take everything? Share fairly? Something in between?
 
-## Political Strength as a Random Walk
+## Political Strength Fluctuates
 
-As the Owls are really good at long-term planning, they model the political situation carefully. We know the Owls might win today's election, but lose the next. We model the Owls' political strength as a random process $X_t \in [0, 1]$:
+To give this question a quantitive answer, we first have quantify the political strength of the *Owls*, which we will call $X_t$. Here are some important properties of political strength:
+
+- Property 1: If the *Owls* are very strong, they have all the seats in the parliament. This is the regime of maximum power, which we will assoicate with $X_t = 1$. If they are weak and parliamentary seats, they cannot take anything. This is the regime of minimum power, which we will associate with $X_t = 0$.
+- Property 2: The Owls' political strength today matters for their strength tomorrow. If they are strong now, they are likely to be strong in the future too (and vice versa). But the precise strength changes in unpredictable ways over time. So, we can think of political strength as a stochastic process that evolves over time. Very importantly, we assume that the political strength is disconnected the decisons about the budget allocation. This might be a strong assumption, but it simplifies the analysis a lot.
+- Property 3: We assume that *Owls* and *Hummingbirds* work in a democratic system, where the absolute majority rules. If $X_t > 0.5$, the Owls are in power at time $t$. If $X_t < 0.5$, the Hummingbirds are in power.
+
+Taken together, we mathematically model political strength as a **random walk** a random walk of $X_t \in [0, 1]$:
 
 $$X_{t+1} = X_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma^2)$$
 
-**What this means:**
-- $X_t > 0.5$: Owls control the government
-- $X_t < 0.5$: Hummingbirds control the government
-- Random shocks $\epsilon_t$ capture elections, scandals, economic swings
+## The strategy: How does political strength connect to budget allocation?
 
-Today's strength influences tomorrow's, but there's always uncertainty. Let $p$ be the probability that whoever is in power today stays in power tomorrow.
+We can feel that the political strength today is unlikely to be the only factor that drives the budget negotiations. If you have a high chance of losing your majority, you might go into the negotiations very differently then in a situation where you are confortably in the drivers seat. And different parties might have different approaches to the negotiations as well. So there is a multitude of possible strategies that parties can follow. Each strategy maps the current political strength to a budget allocation.
 
-## The Allocation: Who Gets What?
+In mathematical terms, we will write that the **strategy** $\rho$ maps each political state to an allocation: $Y_t = \rho(X_t)$.
 
-The **allocation** $Y_t$ is simply the Owls' share of the budget at time $t$. The Hummingbirds get $1 - Y_t$.
+### Two Natural Strategies
 
-A **strategy** $\rho$ is a rule that maps each political state to an allocation: $\rho: X_t \mapsto Y_t$.
+The Owls must decide: how much of the budget should go to the Hummingbirds? Two strategies emerge:
 
-**Example strategies for the Owls when they're in power:**
+**Winner-Takes-All:** Whoever controls the government takes 100% of the budget.
+- When the Owls are in power ($X_t > 0.5$): they take everything for their priorities
+- When the Hummingbirds are in power ($X_t < 0.5$): they take everything for theirs
+- Maximum impact today, but high risk if power shifts
 
-### Benchmark Strategies
+**Proportional:** Split the budget based on political strength.
+- If the Owls have strength $X_t = 0.6$: they get 60% of the budget
+- Everyone gets their fair share based on $X_t$
+- Stable and fair, but less impact today
 
-| Strategy | Formula | Interpretation |
-|----------|---------|----------------|
-| **Winner-Takes-All** | $\bar{Y}(X_t) = \begin{cases} 1 & \text{if } X_t > 0.5 \\ 0 & \text{otherwise} \end{cases}$ | Majority takes everything |
-| **Proportional** | $Y(X_t) = X_t$ | Share reflects strength |
-| **Status Quo** | $Y_t = Y_{t-1}$ | Never change the allocation |
+In mathematical terms, these strategies are defined as:
+- **Winner-Takes-All:** $\rho_{WTA}(X_t) = \begin{cases} 1 & \text{if } X_t > 0.5 \\ 0 & \text{otherwise} \end{cases}$
+- **Proportional:** $\rho_{prop}(X_t) = X_t$
 
-## Utility: Why More Isn't Always Better
+### Choosing your strategy
 
-Here's a crucial insight: **doubling your budget share doesn't double your satisfaction**.
+Which strategy should the Owls choose? To answer this, consider what each strategy means:
 
-- Going from **10% to 20%**: Transformative! You can finally fund core priorities.
-- Going from **50% to 100%**: Nice, but diminishing returns—most important programs are already funded.
+**Winner-Takes-All is a gamble:**
+- Today: 100% goes to education, climate, research
+- Tomorrow: Either 100% again (if they stay in power) or 0% (if Hummingbirds win)
+- High rewards, but high risk
 
-The utility function $U(Y)$ captures this. We assume it's:
-- **Increasing**: More is always better
-- **Concave**: Diminishing marginal returns
+**Proportional is insurance:**
+- Today: 60% goes to Owl priorities (matching their current strength)
+- Tomorrow: Around 60% (strength changes gradually)
+- Lower peak, but stable
 
-A common choice is **power utility**: $U(Y) = Y^{1-\gamma}$, where $\gamma > 0$ controls risk aversion.
+**Which is better?** A guaranteed 60%, or a 50-50 gamble between 100% and 0%? The expected value is the same (50%), but they feel very different.
 
-**Why concavity matters:** Jensen's inequality tells us:
+Here's the key insight: **losing everything hurts more than gaining everything helps.** For the Owls:
+- Going from **10% to 20%**: Transformative! Now they can fund basic education programs.
+- Going from **50% to 100%**: Nice, but diminishing returns—core priorities are already funded.
+
+We capture this intuition with a **utility function** $U(Y)$ that measures how much the Owls value a budget allocation $Y$. It has the following properties:
+
+- The utility is **increasing**: More budget is always better. Mathematically: $U'(Y) > 0$.
+- The utility is **concave**: Each additional dollar provides less value than the last. Mathematically: $U''(Y) < 0$.
+
+This concavity let's us formulate the intuition that the winner-takes-all gamble of Winner-Takes-All is particularly risky in rigorous terms. Notably, the concavity leads to [Jensen's inequality](https://en.wikipedia.org/wiki/Jensen's_inequality):
+
+$$ p U(Y_1) + (1-p)U(Y_2) \leq U(p Y_1 + (1-p) Y_2) $$
+
+Applied to our 50-50 gamble between 0% and 100%:
+
 $$U(0.5) > \frac{1}{2}U(0) + \frac{1}{2}U(1)$$
 
-A guaranteed 50% is worth more than a coin flip between 0% and 100%. This *should* make compromise attractive.
+A guaranteed 50% is worth more than a coin flip between 0% and 100%. **Concave utility captures the Owls risk-aversion**—they prefer stable outcomes over gambles with the same average payoff.
 
 ## From utility to expected payoffs over time
 

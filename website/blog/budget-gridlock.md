@@ -151,116 +151,38 @@ The model's prediction is clear: when time horizons shrink, even risk-averse par
 
 ### Starting to think about tomorrow
 
-We have seen above that happens if we do not think abFor small but positive $\delta$, parties start caring about the future:
+But what happens if the Owls start caring about tomorrow—even a little bit? You might expect cooperation to emerge naturally: after all, the Owls are risk-averse, and WTA is risky. But here's the surprise: **caring about the future doesn't automatically make cooperation rational.**
 
-$$V_t \approx U(\rho(X_t)) + \delta \cdot E[U(\rho(X_{t+1}))]$$
+This is the same insight we encountered in the [Prisoner's Dilemma](/blog/13). In a single interrogation, Walter should always betray Jesse—even though mutual cooperation would be better for both. Repetition *can* change this, but only if future payoffs matter enough.
 
-Under winner-takes-all, tomorrow's expected utility is:
-$$E[U(\bar{\rho})] = p \cdot U(1) + (1-p) \cdot U(0)$$
+**The Owls face the same trade-off:**
 
-where $p$ is the probability of staying in power. **Jensen's inequality** tells us this is inefficient:
-$$p \cdot U(1) + (1-p) \cdot U(0) < U(p)$$
+$$V_t \approx \underbrace{U(\rho(X_t))}_{\text{today}} + \delta \cdot \underbrace{E[U(\rho(X_{t+1}))]}_{\text{tomorrow}}$$
 
-The WTA lottery creates **risk**, and concave utility **punishes risk**.
 
-**So when can a moderate strategy beat WTA?** Consider taking $1-\Delta$ instead of everything:
+**The cooperation trade-off:** Suppose the Owls share a small amount $C$ with the Hummingbirds. What do they gain and lose?
 
-$$V^{mod} = U(1-\Delta) + \delta \cdot [pU(1-\Delta)+(1-p)U(\Delta)]$$
+- **Cost today:** They give up $C$, reducing utility by approximately $C \cdot U'(1)$
+- **Gain tomorrow (if they lose power):** They get $C$ instead of $0$—worth approximately $C \cdot (1-p) \cdot U'(0)$
+- **Cost tomorrow (if they stay in power):** They get $1-C$ instead of $1$—costing approximately $C \cdot p \cdot U'(1)$
 
-The difference from WTA:
-$$V^{mod} - V^{WTA} = \underbrace{[U(1-\Delta) - U(1)]}_{\text{cost today}} + \delta \cdot \underbrace{[\text{reduced risk tomorrow}]}_{\text{gain}}$$
+The net benefit of cooperation is:
 
-Taylor expansion for small $\Delta$ gives:
-$$V^{mod} - V^{WTA} \approx \Delta\left[-U'(1) + \delta\left((1-p)U'(0) - pU'(1)\right)\right]$$
+$$V^{mod} - V^{WTA} \approx C \cdot \left[\underbrace{-U'(1)}_{\text{cost today}} + \delta \cdot \underbrace{\left((1-p)U'(0) - pU'(1)\right)}_{\text{net gain tomorrow}}\right]$$
 
-**This is positive when:**
+Notice that $C$ factors out completely! The *amount* of cooperation doesn't matter—only whether *any* cooperation is beneficial. This happens when:
+
 $$\delta > \frac{U'(1)}{(1-p)U'(0) - pU'(1)} \equiv \delta_{min}$$
 
-**The role of $p$:**
-- If $p \to 0$ (likely to lose power): Cooperation is easy—you want insurance for tomorrow
-- If $p \to 1$ (certain to stay in power): Cooperation is impossible—why share when you'll win anyway?
+**This is the patience threshold.** Just like in the Prisoner's Dilemma, cooperation requires sufficient weight on future payoffs. Below $\delta_{min}$, WTA remains the equilibrium—not because politicians are irrational, but because the future gain doesn't outweigh today's sacrifice.
 
-### Case 3: $\delta = 1$ — Infinite Patience
+**Why WTA is robust, not just an edge case:**
 
-When parties are infinitely patient:
-$$V_t = \sum_{\tau \geq t} E[U(\rho(X_\tau))]$$
+The formula reveals that $\delta_{min}$ depends on:
+- **The utility function:** If $U'(0)$ is very large (the first dollar is extremely valuable), then $\delta_{min} \to 0$—any patience enables cooperation
+- **The probability of staying in power ($p$):** Higher $p$ means less need for insurance, so $\delta_{min}$ increases
 
-Many cooperative equilibria become sustainable. The **Folk Theorem** from game theory tells us almost any reasonable outcome can be an equilibrium when players are patient enough.
-
-## Political Interpretation
-
-What determines $\delta$ and $p$ in real democracies?
-
-**What makes $\delta$ low (politicians focus on now)?**
-- Short electoral cycles
-- Term limits
-- Primaries that punish compromise
-- Media rewarding conflict over solutions
-- Career incentives: the next election matters more than long-term outcomes
-
-**What makes $p$ high (power is entrenched)?**
-- Gerrymandering and safe seats
-- Polarization reducing swing voters
-- Incumbency advantages
-- Money in politics favoring established players
-
-**The toxic combination:** When politicians are impatient ($\delta$ low) AND confident they'll stay in power ($p$ high), the model predicts:
-- No incentive to cooperate
-- Winner-takes-all behavior
-- Gridlock when power is divided
-
-This describes many modern democracies remarkably well.
-
-## What Would Help?
-
-The model suggests concrete interventions:
-
-**Increase $\delta$ (lengthen time horizons):**
-- Longer terms in office
-- Reduce primary pressure
-- Institutional memory (stronger civil service)
-- Crisis that raises cost of delay
-
-**Decrease $p$ (increase electoral uncertainty):**
-- Competitive districts
-- Reduce incumbency advantages
-- More swing voters
-
-**Create commitment mechanisms:**
-- Automatic budget processes
-- Bipartisan commissions with binding authority
-- Constitutional rules that require cooperation
-
-## Conclusion
-
-Political gridlock isn't irrational—it's the predictable outcome of a game where:
-1. Players discount the future heavily ($\delta$ small)
-2. Players expect to stay in power ($p$ large)
-3. Promises about future budgets aren't binding
-
-The mathematics is clear: small changes in patience or electoral uncertainty can shift the equilibrium from gridlock to cooperation. The question is whether political systems can evolve the institutions that make those changes possible.
-
----
-
-## Appendix: Mathematical Details
-
-### The Cooperation Threshold
-
-From the main text, cooperation beats WTA when:
-$$\delta > \delta_{min} = \frac{U'(1)}{(1-p)U'(0) - pU'(1)}$$
-
-For $U(Y) = Y^{1-\gamma}$:
-- $U'(Y) = (1-\gamma)Y^{-\gamma}$
-- $U'(1) = 1-\gamma$
-- $U'(0) = \infty$ for $\gamma > 0$
-
-Therefore $\delta_{min} = 0$ for any $\gamma > 0$.
-
-### Effect of $p$ on Cooperation
-
-The threshold $\delta_{min}$ increases with $p$. In the limit:
-- $p \to 0$: $\delta_{min} \to \frac{U'(1)}{U'(0)} = 0$
-- $p \to 1$: Denominator becomes negative, so **no $\delta$ works**—cooperation is impossible
+For realistic utility functions where $U'(0)$ is finite, $\delta_{min}$ is a positive number. WTA survives even when politicians care about the future—they just don't care *enough*.
 
 ## References
 

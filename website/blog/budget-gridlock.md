@@ -103,70 +103,67 @@ $$U(0.5) > \frac{1}{2}U(0) + \frac{1}{2}U(1)$$
 
 A guaranteed 50% is worth more than a coin flip between 0% and 100%. **Concave utility captures the Owls risk-aversion**—they prefer stable outcomes over gambles with the same average payoff.
 
-## From utility to expected payoffs over time
+## Why Would Risk-Averse Owls Ever Gamble?
 
-Now we have the pieces:
-- $X_t$ = political strength (the state)
-- $\rho^i(X_t)$ = strategy (state → allocation)
-- $U^i(\rho)$ = utility (how you value today's allocation)
+We've seen that quite naturally that the Owls have a risk aversion that is captured in the properties of the utility function. So why would they ever choose Winner-Takes-All over Proportional?
 
-But there's a crucial problem: **budget negotiations don't happen just once**. You're not choosing an allocation for today only—you're choosing a strategy that will govern allocations for years to come.
+The answer: **they might not care enough about the future.**
 
-The **payoff** $V^i$ captures the total value of a strategy over time. Think of it as:
-- Utility $U^i(\rho_t)$ = "How happy am I with this year's budget?"
-- Payoff $V^i$ = "How happy am I with the entire future stream of budgets?"
+Budget negotiations repeat every year. The Owls must weigh:
 
-Formally, party 1's payoff from strategies $(\rho^1, \rho^2)$ starting at state $X_t$ is:
+- **Today's gain** from taking everything now
+- **Tomorrow's risk** of losing everything if power shifts
 
-$$V_t^1(\rho^1, \rho^2, X_t) = E\left[\sum_{\tau \geq t} \delta^{\tau-t} U^1(\rho^1(X_\tau)) \mid X_t\right]$$
+They do this by summing up the expected utility over all future budgets, but **discounting** future payoffs. In mathematical terms, we write the **payoff** $V$ as:
 
-So this is the magic quantity that economists can analyze to determine whether cooperation is possible or even rational.
+$$V = \sum_{\tau} \delta^{\tau} E\left[U(\rho(X_\tau))\right]$$
 
-### On the role of the discount factor
-The parameter $\delta \in [0,1]$ is called the **discount factor**. It measures how much parties value future utility relative to present utility. So if $\delta$ is close to 1, parties care a lot about the future. If $\delta$ is close to 0, they only care about today. And this will turn out to be crucial for cooperation.
+Here $\delta \in [0,1]$ is the **discount factor**—how much the Owls value tomorrow compared to today:
 
-### The Discount Factor $\delta$
+- **$\delta = 0$**: "Only today matters" — the Owls are completely impatient
+- **$\delta = 1$**: "Tomorrow is as important as today" — the Owls are fully patient
+- **$\delta \in (0,1)$**: Most realistic — the future matters, but less than today
 
-The parameter $\delta \in [0, 1]$ is called the **discount factor**. It measures how much parties value the future relative to the present:
+Now we can state the Owls' problem precisely: **choose the strategy $\rho$ that maximizes the payoff $V$.** 
 
-- **$\delta = 0$**: "Only today matters" — parties are completely impatient
-- **$\delta = 1$**: "Tomorrow is as important as today" — parties are fully patient
-- **$\delta \in (0,1)$**: Most realistic — parties care about the future, but not as much as today
+This mathematical formulation transforms our intuitive question—"Should the Owls take everything or share?"—into a problem we can solve systematically. The answer will depend on just two parameters:
 
-**Why does $\delta$ matter?** 
-- High $\delta$ makes parties willing to compromise today to secure cooperation tomorrow
-- Low $\delta$ makes parties grab everything they can now, ignoring future consequences
+- **$\delta$**: How much do the Owls care about the future?
+- **$p$**: How likely are they to stay in power?
 
-Throughout our analysis, $\delta$ will be the key parameter determining whether cooperation is possible.
+Let's analyze the limiting cases.
 
-## The Three Limiting Cases
+## Only Today Matters: $\delta = 0$
 
-### Case 1: $\delta = 0$ — Only Today Matters
+If the Owls only care about today, $\delta = 0$. This dramatically simplifies the payoff into:
 
-If parties only care about today, the payoff is simply:
 $$V_t = U(\rho(X_t))$$
 
-To maximize this, the party in power grabs everything. **Winner-takes-all is the only equilibrium.**
+To maximize this, the Owls should grab everything—**winner-takes-all is the only equilibrium.** 
 
-No cooperation is possible. Why give anything to the opposition if you don't care about tomorrow?
+When is $\delta \approx 0$ a realistic assumption? Consider:
 
-### Case 2: Small $\delta$ — A Little Patience
+- **War and existential crises:** When survival is at stake, tomorrow becomes much less relevant. With the war in Ukraine the long term energy risks became much less central to European politicians than the defense. Seems quite natural right?
 
-For small but positive $\delta$, parties start caring about the future:
+- **Lame-duck politicians:** A president in their final term or a coalition on the verge of collapse has no electoral future to protect. Germany's Ampel coalition in late 2024 is a vivid example: once it became clear the coalition would fall, compromise evaporated overnight.
+
+The model's prediction is clear: when time horizons shrink, even risk-averse parties stop cooperating. If you don't care about tomorrow, why share today?
+
+### Starting to think about tomorrow
+
+We have seen above that happens if we do not think abFor small but positive $\delta$, parties start caring about the future:
 
 $$V_t \approx U(\rho(X_t)) + \delta \cdot E[U(\rho(X_{t+1}))]$$
 
 Under winner-takes-all, tomorrow's expected utility is:
 $$E[U(\bar{\rho})] = p \cdot U(1) + (1-p) \cdot U(0)$$
 
-where $p$ is the probability of staying in power.
-
-**Jensen's inequality** tells us this is inefficient:
+where $p$ is the probability of staying in power. **Jensen's inequality** tells us this is inefficient:
 $$p \cdot U(1) + (1-p) \cdot U(0) < U(p)$$
 
 The WTA lottery creates **risk**, and concave utility **punishes risk**.
 
-**Can a moderate strategy beat WTA?** Consider taking $1-\Delta$ instead of everything:
+**So when can a moderate strategy beat WTA?** Consider taking $1-\Delta$ instead of everything:
 
 $$V^{mod} = U(1-\Delta) + \delta \cdot [pU(1-\Delta)+(1-p)U(\Delta)]$$
 
@@ -178,8 +175,6 @@ $$V^{mod} - V^{WTA} \approx \Delta\left[-U'(1) + \delta\left((1-p)U'(0) - pU'(1)
 
 **This is positive when:**
 $$\delta > \frac{U'(1)}{(1-p)U'(0) - pU'(1)} \equiv \delta_{min}$$
-
-**Key insight:** For power utility with $\gamma > 0$, we have $U'(0) = \infty$, so $\delta_{min} = 0$. Any patience at all makes cooperation beneficial!
 
 **The role of $p$:**
 - If $p \to 0$ (likely to lose power): Cooperation is easy—you want insurance for tomorrow

@@ -54,6 +54,18 @@ Ferreira is a *Hummingbird*—he needs immediate, visible results. 🐦 His prio
 
 Ferreira checks his phone constantly. Polls, probably. His coalition is fragile, his timeline short.
 
+### 12:30 — Lunch Break
+
+As the delegations scatter for sandwiches and coffee, Sofia pulls out her phone. She types a message to Adam—the IT consultant she met on [the ferry to Tunis](/blog/cosmopol_democracy) months ago.
+
+*Stuck in trilog. Two reasonable people who can't agree. Is this somehow rational? 🤯*
+
+The reply comes after a minute:
+
+*Interesting question. Let me do some research. I'll get back to you.*
+
+Sofia pockets her phone. At least someone's thinking about it.
+
 ### The Core Question
 
 Sofia realizes she's watching the same drama that plays out in every democracy: **How do you split limited resources between competing priorities?**
@@ -98,35 +110,79 @@ So why are they gambling?
 
 ## Interlude: The Phone Call (18:20)
 
-Sofia steps into the corridor during a coffee break. The negotiations have stalled completely. She needs a different perspective.
+Sofia steps into the corridor during a coffee break. The negotiations have stalled completely. Her phone buzzes—Adam.
 
-She calls Adam—the IT consultant she met on [the ferry to Tunis](/blog/cosmopol_democracy) months ago. He's always available, and more importantly, he thinks in systems.
+*Found something. Call me when you have 10 minutes.*
 
-"Let me guess," Adam says when he picks up. "Your climate thing is stuck."
+She dials immediately.
 
-"Completely." Sofia leans against the wall. "I don't understand it. Both sides would benefit from a deal. Both are risk-averse. And yet..."
+"Okay," Adam says without preamble. "I've been reading up. Acemoglu, Dixit, a few others. Your problem is well-researched."
 
-"And yet they're playing winner-takes-all." Adam sounds unsurprised. "It's the Prisoner's Dilemma. Repeated version."
+"Explain it to me." Sofia leans against the wall. "Like I'm five."
 
-"Explain."
+"Alright. Imagine you're playing a game. Every year there's a budget to divide. You can cooperate—share fairly—or claim everything for yourself."
 
-"Okay. In a single interaction, defection always wins. Even if cooperation would be better for everyone." Adam pauses. "But in *repeated* games—like annual budget negotiations—cooperation can become rational. The threat of future punishment keeps people honest."
+"Winner-takes-all."
 
-"So why isn't it working here?"
+"Exactly. In a *one-shot* game, defection always wins. Even if cooperation would be better for everyone." Adam pauses. "But in *repeated* games—like annual budget negotiations—cooperation can become rational. The threat of future punishment keeps people honest."
 
-"Two reasons. First: **How much do they care about the future?** Call it *patience*, or *discount factor* if you want to be technical. If Ferreira only cares about the next eight months until his election, the future doesn't weigh much in his calculations."
+"That's the [Prisoner's Dilemma](/blog/13)."
+
+"Exactly. But here's the twist." Adam's voice takes on the tone Sofia remembers from the ferry—when he gets excited about a problem. "Cooperation needs two things. First: **How much do you care about the future?** Call it *patience*, or *discount factor* if you want to be technical. I use δ for that."
+
+"Delta."
+
+"Yes. If Ferreira only cares about the next eight months until his election, the future doesn't weigh much."
 
 Sofia thinks about Ferreira checking his phone every few minutes. "His δ is low."
 
-"Exactly. Second: **How secure is their power?** If Lindqvist is confident her coalition will survive regardless of this negotiation, she doesn't need insurance. She can afford to wait for a better deal next time."
+"Exactly. Second: **How secure is their power?** Call it *p*. If Lindqvist is confident her coalition will survive this negotiation, she doesn't need insurance. She can wait for a better deal."
 
 "Her *p* is high."
 
-"Right. And here's the thing—" Adam's voice takes on the tone Sofia remembers from the ferry, when he got excited about a problem. "Cooperation requires *enough* patience to outweigh the temptation to grab everything today. There's a threshold. Below it, winner-takes-all is the rational strategy—even if both sides would be better off cooperating."
+"Right. And here's the key—" Sofia hears him typing. "There's a threshold. Below it, winner-takes-all becomes rational—even if both sides would be better off cooperating. I built you something."
 
-Sofia stares at the fluorescent lights in the corridor. "So they're not being irrational."
+Her phone vibrates. A link.
 
-"No. They're being *perfectly* rational given their constraints. That's the tragedy."
+"What's this?"
+
+"A little tool. Three strategies to compare."
+
+Sofia opens it.
+
+{/* TODO: BudgetNegotiationWidget hier einfügen */}
+
+"Okay," she says. "Explain the strategies."
+
+"**Proportional** is the fair compromise. Each side gets half. Medium payoff, but guaranteed."
+
+"Like in a functioning democracy."
+
+"Theoretically, yes. **Winner-Takes-All** is the opposite. The winner implements 100% of their agenda. But next year you might lose."
+
+"And the third?"
+
+"**Partial Trade-Off**. A compromise, but asymmetric. 70/30 for the winner. Less risky than WTA, but you give something up."
+
+Sofia moves the sliders. "What happens if I set δ to 0.5 and p to 0.7?"
+
+"Look at the lines."
+
+"WTA wins."
+
+"Now slide p to 0.4."
+
+Sofia watches the lines cross. "Proportional becomes better."
+
+"That's δ_min in action. The threshold below which cooperation becomes irrational."
+
+Sofia stares at the screen. "Lindqvist sits securely in Parliament. High p value. Ferreira is in a fragile coalition..."
+
+"Different thresholds," Adam says. "They're literally playing different games."
+
+"They're not being irrational."
+
+"No. They're *perfectly* rational given their constraints." Adam sighs. "That's the tragedy."
 
 <details>
 <summary>🔬 Technical details: The patience threshold</summary>

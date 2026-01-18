@@ -75,7 +75,8 @@ const BudgetNegotiationWidget: React.FC = () => {
 
   // Analytical δ_min: threshold where cooperation becomes rational
   // δ_min = (1 - γ) / (1 - p·γ)
-  const deltaMin = (1 - GAMMA) / (1 - currentP * GAMMA);
+  const pWin = 1 - currentP;
+  const deltaMin = (1 - GAMMA) / (1 - pWin * GAMMA);
 
   // Simulate one trajectory of X values (power/majority)
   const simulateTrajectory = (): number[] => {
@@ -139,6 +140,9 @@ const BudgetNegotiationWidget: React.FC = () => {
 
   // Determine if cooperation is rational (using analytical δ_min)
   const cooperationWins = delta >= deltaMin;
+
+  // Determine which strategy has higher payoff (from MC simulation)
+  const coopPayoffHigher = results.cooperate.mean > results.wta.mean;
 
   return (
     <div
@@ -317,8 +321,8 @@ const BudgetNegotiationWidget: React.FC = () => {
       >
         <div
           className={css({
-            backgroundColor: cooperationWins ? "#f0fdf4" : "#f9fafb",
-            border: cooperationWins ? "2px solid #22c55e" : "1px solid #e5e7eb",
+            backgroundColor: coopPayoffHigher ? "#f0fdf4" : "#f9fafb",
+            border: coopPayoffHigher ? "2px solid #22c55e" : "1px solid #e5e7eb",
             borderRadius: "6px",
             padding: "1rem",
             textAlign: "center",
@@ -333,8 +337,8 @@ const BudgetNegotiationWidget: React.FC = () => {
 
         <div
           className={css({
-            backgroundColor: !cooperationWins ? "#fef2f2" : "#f9fafb",
-            border: !cooperationWins ? "2px solid #ef4444" : "1px solid #e5e7eb",
+            backgroundColor: !coopPayoffHigher ? "#fef2f2" : "#f9fafb",
+            border: !coopPayoffHigher ? "2px solid #ef4444" : "1px solid #e5e7eb",
             borderRadius: "6px",
             padding: "1rem",
             textAlign: "center",

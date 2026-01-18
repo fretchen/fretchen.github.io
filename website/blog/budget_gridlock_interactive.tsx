@@ -393,8 +393,6 @@ A small conference room—neutral ground. Sofia sits with the Commission delegat
 
 ### The Owl: MEP Lindqvist
 
-AUTHOR NOTE TO CLAUDE: The description is good and succeeded.
-
 "We cannot accept anything below 55% reduction by 2035." Lindqvist's voice is calm but firm. "The science is clear. The Parliament's position is clear. We've already compromised from 60%."
 
 Sofia watches her. Lindqvist is what she privately calls an *Owl*—a patient, long-term planner. 🦉 Her priorities are investments that pay off in twenty years:
@@ -406,8 +404,6 @@ Sofia watches her. Lindqvist is what she privately calls an *Owl*—a patient, l
 Lindqvist's coalition is secure. Her voters reward ambition, not compromise. She can afford to wait.
 
 ### The Hummingbird: Minister Ferreira
-
-AUTHOR NOTE TO CLAUDE: The description is good and succeeded.
 
 "With all respect due respect, but the Parliament doesn't have to explain to steelworkers why their plant is closing." Ferreira leans forward. "We need flexibility. Transition periods. Support for affected industries."
 
@@ -423,7 +419,6 @@ Ferreira checks his phone constantly. Polls, probably. His coalition is fragile,
 
 The morning passes in circles. Both sides restate their positions. Nothing moves.
 
-
 As the delegations scatter for sandwiches and coffee, Sofia pulls out her phone. She types a message to Adam—an old friend with a talent for making complicated things simple. They met [on a ferry to Tunis](/blog/20) months ago, arguing about democracy until 3 AM.
 
 *Stuck in trilog. Two reasonable people who can't agree. Is this somehow rational? 🤯*
@@ -434,13 +429,7 @@ The reply comes after a minute:
 
 Sofia pockets her phone. At least someone's thinking about it.
 
-*The same pattern*, she thinks, looking back at the conference room. *Every democracy, every budget, every treaty.* The climate package isn't so different from any national budget. Every euro spent on long-term transformation is a euro not spent on immediate relief.
-
-Both sides have legitimate concerns. Both are representing real constituencies. The question isn't who's right.
-
-*So why can't they find a middle ground?*
-
-## Afternoon: Why They Can't Compromise
+## Afternoon: The Impasse
 
 Five hours in. Lunch came and went—sandwiches eaten over position papers. Sofia has proposed two compromise packages. Both rejected.
 
@@ -448,31 +437,19 @@ Five hours in. Lunch came and went—sandwiches eaten over position papers. Sofi
 
 Lindqvist shakes her head. "And if we delay again, there won't be a long-term to worry about."
 
-Sofia watches the exchange with a growing sense of déjà vu. She's seen this pattern before—in budget negotiations, trade deals, treaty reforms. Two sides that could both benefit from cooperation, yet somehow unable to reach it.
-
-### Why Losing Hurts More Than Winning Helps
-
-During a brief recess, Sofia stands by the coffee machine, thinking.
-
-The strange thing is: both sides are *risk-averse*. Lindqvist would prefer a guaranteed 50% reduction over a coin flip between 60% and 40%. Ferreira would prefer stable employment over boom-and-bust cycles.
+Sofia watches the exchange with growing frustration. Both sides are *risk-averse*—Lindqvist would prefer a guaranteed 50% reduction over a coin flip between 60% and 40%. Ferreira would prefer stable employment over boom-and-bust cycles.
 
 And yet they're both choosing the risky path—all-or-nothing confrontation.
 
 *Why would risk-averse people choose to gamble?*
 
-She thinks about what each side actually values. Lindqvist's first billion for climate programs would be transformative—real infrastructure, real impact. Her tenth billion? Marginal improvements. The same applies to Ferreira: the first euros of industrial support are crucial, additional billions less so.
-
-A guaranteed 50% is better than flipping a coin between 0% and 100%. So why are they gambling?
-
-## The Phone Call
-
-Sofia steps into the corridor during a coffee break. The negotiations have stalled completely. Her phone buzzes—Adam.
+Her phone buzzes. Adam.
 
 *Found something. Call me when you have 10 minutes.*
 
-She dials immediately.
+Sofia steps into the corridor. She dials immediately.
 
-"Okay," Adam says without preamble. "I've been reading up. Acemoglu, Dixit, a few others. Your problem is well-researched."
+"Okay," Adam says without preamble. "I've been reading up. Your problem is well-researched."
 
 "Explain it to me." Sofia leans against the wall. "Like I'm five."
 
@@ -556,79 +533,63 @@ Lindqvist responds with equal honesty. "And I have a mandate from the European P
 
 Sofia suddenly sees the negotiation in a new light. It's not that the parties are stubborn or irrational. Given their constraints—Ferreira's short horizon, Lindqvist's secure position—winner-takes-all is the *optimal* strategy for each of them.
 
-The problem isn't the people. It's the structure.
+But then a thought strikes her. *We've been negotiating the wrong thing.*
 
-### The Toxic Combination
+They've been arguing about percentages—55% vs 45%, climate vs jobs. But Ferreira doesn't need Lindqvist to give up on climate. He needs something to announce before his election. And Lindqvist doesn't need Ferreira to sacrifice jobs. She needs guarantees that ambition won't be watered down later.
 
-She thinks about what makes δ low in democracies:
+*Different timelines*, Sofia realizes. *Not different goals.*
 
-- **Short electoral cycles** — two years in the US House, four in most European countries
-- **Primary systems** that punish compromise
-- **Media** that rewards conflict over solutions
-- **Term limits** that eliminate long-term thinking
+The clock shows 21:47. Too late for today—positions are hardened, tempers frayed. But maybe not too late to learn something.
 
-And what makes p high:
-
-- **Gerrymandering** and safe seats
-- **Polarization** that reduces swing voters
-- **Incumbency advantages**
-- **Coalition stability** that removes electoral pressure
-
-When δ is low *and* p is high, cooperation becomes nearly impossible. Each side rationally chooses confrontation.
-
-This, Sofia realizes, describes an alarming number of modern democracies.
-
----
+At 22:00, the Council presidency calls an end. No agreement. The climate package will wait.
 
 ## Epilogue: The Bar
 
-The trilog ends without agreement. The climate package will have to wait for the next legislative session—at least another year, probably longer.
+Sofia finds herself at a bar near Place Luxembourg—the kind of place where EU staffers go to decompress after days like this. She orders a glass of wine and pulls out her phone.
 
-Sofia finds herself at a bar near Place Luxembourg—the kind of place where EU staffers go to decompress after days like this. She orders a glass of wine and stares at the condensation on the glass.
+*It didn't work*, she types to Adam. *But I think I understand now.*
 
-Her phone buzzes. Adam: *How did it go?*
+His reply comes quickly: *And?*
 
-*It didn't*, she types back. *They were both rational. That's exactly the problem.*
+Sofia stares at the screen. The problem wasn't that they couldn't agree on a number. It was that they were negotiating the wrong thing.
 
-His response comes quickly: *Did you figure out what would help?*
+*Ferreira needs something before the election. Lindqvist needs guarantees for after. What if we stop asking 'how much' and start asking 'when'?*
 
-She takes a long sip of wine before answering.
+Adam: *Go on.*
 
-### What Would Help?
+She grabs a napkin and starts sketching. The bartender glances over, used to EU types scribbling policy on paper napkins.
 
+### The Dual-Track Approach
 
-AUTHOR NOTE TO CLAUDE: These points are tough. Because longer terms also increase security. Same for reduced primary pressure. In the end, I am not completely convinced about a single one. 
+**Track 1 — For the Hummingbirds 🐦 (Immediate)**
+- Quick wins: job training programs, transition funds, visible support for affected industries
+- Ferreira can announce this next week
+- Costs are front-loaded, benefits visible before the election
 
+**Track 2 — For the Owls 🦉 (Binding Future)**
+- Automatic climate targets that kick in after the election cycle
+- No annual negotiation needed—locked in by law
+- Lindqvist gets her ambition, protected from future backsliding
 
-**To increase patience (δ):**
-- Longer terms in office
-- Reduce primary pressure
-- Institutional memory through stronger civil service
-- Make the costs of delay more visible and immediate
+**The Bridge — Trust Mechanism**
+- Independent commission monitors both tracks
+- If Track 1 doesn't deliver jobs, Track 2 gets delayed
+- If Track 2 gets weakened, Track 1 funding stops
+- Neither side can defect without losing their own priority
 
-**To reduce power security (p):**
-- Competitive electoral districts
-- Reduce incumbency advantages
-- More swing voters through reduced polarization
+Sofia takes a photo of the napkin and sends it to Adam.
 
-**Create commitment mechanisms:**
-- Automatic budget processes (like debt ceilings with teeth)
-- Bipartisan commissions with binding authority
-- Constitutional rules that require supermajorities
+*It's not about making them patient or insecure*, she writes. *It's about designing deals where short-term wins enable long-term commitments.*
 
-None of these are easy. All of them require politicians to vote for reforms that reduce their own power. But without structural change, the same dynamics will produce the same gridlock, again and again.
+Adam: *That's... actually good. Will it work?*
 
-Sofia finally types her response to Adam: *I figured out what would help. The hard part is getting anyone to implement it.*
+Sofia looks up from her phone. A few tables away, she spots Ferreira—also alone, also staring at a drink. Their eyes meet briefly. He nods, a tired acknowledgment. No hard feelings. They both know today's game is over.
 
-She puts away her phone and looks around the bar. A few tables away, she spots Ferreira—also alone, also staring at a drink. Their eyes meet briefly. He nods, a tired acknowledgment. No hard feelings. They both know the game.
+But maybe next time, the game can be different.
 
-Somewhere in the Berlaymont, cleaners are tidying up the conference room, throwing away empty coffee cups and abandoned draft agreements. Tomorrow there will be press releases blaming the other side. Next year there will be another trilog—with the same constraints, the same incentives, the same predictable outcome.
+*I don't know*, she types back. *But it's better than asking them to be people they're not.*
 
-Unless something changes.
-
-Sofia finishes her wine and steps out into the Brussels night. The city doesn't care about failed negotiations. It never does.
-
----
+She finishes her wine, opens her laptop, and starts drafting an email to her director.
 
 ## Postscript: The Model
 

@@ -830,6 +830,282 @@ Diese Liste kombiniert Author Notes (A) und Leser-Perspektive (L) in einer prior
 
 ---
 
+## Phase 9: Neue Author Notes (18. Januar 2026)
+
+| Issue | Beschreibung | Status |
+|-------|--------------|--------|
+| 9.1 | Mäandernde Struktur nach Lunch | ✅ **ABGESCHLOSSEN** |
+| 9.2 | Sofia als passive Beobachterin | ✅ **ABGESCHLOSSEN** |
+| 9.3 | "What Would Help?" zu abstrakt | ✅ **ABGESCHLOSSEN** (mit 9.2) |
+
+---
+
+### 9.1 Mäandernde Struktur nach Lunch — ✅ ABGESCHLOSSEN
+
+**AUTHOR NOTE:**
+> "The part after Sofia pockets the phone until the phone call feels a bit meandering. It comes back to similar questions from different perspectives. Can this be straightened to be more to the point?"
+
+**LÖSUNG IMPLEMENTIERT:**
+
+Der Abschnitt wurde von 3 fragmentierten Teilen zu einem kohärenten "Afternoon: The Impasse" zusammengeführt:
+
+**Vorher (mäandernd):**
+1. "Lunch: Is This Rational?" → Sofia fragt sich warum
+2. "Afternoon: Why They Can't Compromise" → Wieder dieselbe Frage
+3. "Why Losing Hurts More Than Winning Helps" → Utility-Diskussion (Kaffeemaschine)
+4. "The Phone Call" → Adam erklärt
+
+**Nachher (straff):**
+1. "Lunch: Is This Rational?" → SMS an Adam, kurze Reflexion
+2. "Afternoon: The Impasse" → Dialog + Sofia's Beobachtung (risk-averse yet gambling)
+3. Phone Call → Adam erklärt (direkt anschließend)
+
+**Entfernt:**
+- Redundante innere Monologe ("The same pattern...", "Both sides have legitimate concerns...")
+- "Why Losing Hurts More Than Winning Helps" Unterabschnitt (Utility-Intuition jetzt in 2 Sätzen)
+- Doppelte Transition ("Her phone buzzes" erschien zweimal)
+
+**Ergebnis:** ~15 Zeilen kürzer, klarerer Gedankenfluss: Beobachtung → Frage → Anruf → Antwort
+
+**Problem:** 
+Der Abschnitt zwischen Lunch und Phone Call (~Zeile 435-479) behandelt:
+1. Sofia pockets phone → "The Core Question" (Ressourcenverteilung)
+2. "Why They Can't Compromise" (Breakdown mit Ferreira/Lindqvist)
+3. "Why Losing Hurts More Than Winning Helps" (Utility-Erklärung)
+
+Diese drei Blöcke kreisen um dasselbe Thema ("Warum kein Kompromiss?") aus verschiedenen Winkeln, ohne klare Progression.
+
+**Lösungsoptionen:**
+
+**A) Straffen: Core Question entfernen**
+- "The Core Question" ist redundant — wurde schon in der Einleitung gestellt
+- Direkt von Lunch zu Breakdown springen: "Back in the room, nothing has moved."
+- Utility-Diskussion bleibt bei Breakdown
+
+**B) Umstrukturieren: Zeitliche Progression**
+- 12:30 — Lunch + SMS
+- 15:15 — Breakdown + Sofia's Beobachtung (risk-averse yet gambling)
+- 17:00 — Utility-Diskussion während Kaffeepause
+- 18:20 — Phone Call mit Adam
+
+**C) Zusammenführen: Alles in einen Akt**
+- "Afternoon: The Impasse" (15:15-18:00)
+- Breakdown → Sofia fragt sich warum → Utility-Intuition → ruft Adam an
+- Linearer Gedankenfluss statt Sprünge
+
+**Empfehlung:** **Option C** — macht aus 3 fragmentierten Abschnitten einen kohärenten "Afternoon"-Akt mit klarer Gedankenkette:
+1. Verhandlung scheitert (Beobachtung)
+2. Warum? (Frage)
+3. Utility-Intuition (erste Hypothese)
+4. Adam anrufen (Antwort suchen)
+
+---
+
+### 9.2 Sofia als passive Beobachterin → Aktive Strategin
+
+**AUTHOR NOTE:**
+> "The part after the phone call is a bit anti-interesting. Now she simply continues to observe that things fail. Is there nothing more interesting that she might be able to do? Try to move the positions of the two by clarifying the perspectives?"
+
+**AUTHOR ERGÄNZUNG:**
+> "Es könnte so formuliert werden, dass sie jetzt einen Ansatz hat. Sie muss kurzfristige und langfristige Erfolge einbauen, um Hummingbirds und Owls an den Tisch zu kriegen. Sie nutzt das Gespräch, um eine neue Verhandlungsstrategie langfristig zu entwickeln."
+
+**Problem (ursprünglich):**
+Nach dem Phone Call ist Sofia nur Zuschauerin — sie "thinks", "realizes", beobachtet das Scheitern passiv.
+
+**Neue Richtung:**
+Sofia entwickelt durch Adams Erklärung eine **neue Verhandlungsstrategie**. Die heutige Verhandlung ist verloren, aber sie hat jetzt einen Ansatz für die Zukunft.
+
+**Kernidee: "Dual-Track Negotiation"**
+
+Sofia erkennt: Owls und Hummingbirds haben nicht unvereinbare Ziele — sie haben unterschiedliche **Zeithorizonte**. 
+
+Die Lösung ist nicht "Kompromiss auf 52%" (verliert beide), sondern:
+- **Track 1 (Hummingbirds):** Schnelle, sichtbare Erfolge vor der Wahl
+- **Track 2 (Owls):** Verbindliche langfristige Commitments
+
+**Konkrete Story-Umsetzung:**
+
+**Phase 1: Das Scheitern (20:15-22:00)**
+Die heutige Verhandlung scheitert — zu spät, Positionen zu verhärtet. Aber Sofia hat während der letzten Stunde nachgedacht.
+
+**Phase 2: Der Einfall (Bar-Szene)**
+Sofia realisiert:
+> *Ferreira braucht etwas für seine Wähler vor der Wahl. Lindqvist braucht Garantien für die Zukunft. Was wenn wir nicht mehr fragen 'Wieviel?', sondern 'Wann?'*
+
+**Phase 3: Der Ansatz (SMS an Adam oder Notizen)**
+Sofia skizziert:
+- **Immediate Package:** Job-Training, Transition-Fonds (Ferreiras Sieg)
+- **Binding Future Framework:** Automatische Klimaziele ab 2027 (Lindqvists Sieg)
+- **Trust Mechanism:** Unabhängige Kommission überwacht beide
+
+**Phase 4: Offenes Ende**
+Sofia schickt eine E-Mail an ihre Chefin: "Ich habe eine Idee für die nächste Runde..."
+
+**Vorteile dieser Version:**
+- ✅ Sofia hat Agency — sie ist nicht Opfer der Struktur
+- ✅ Positive Botschaft — Gridlock ist lösbar mit dem richtigen Design
+- ✅ Praktisch — Leser lernt eine echte Strategie
+- ✅ Owls/Hummingbirds werden zur Lösung genutzt, nicht nur zum Problem
+- ✅ Offenes Ende mit Hoffnung statt Resignation
+
+**Narrativer Fluss:**
+
+```
+MORNING: Die Positionen (Owl vs Hummingbird — scheinbar unvereinbar)
+    ↓
+AFTERNOON: Warum sie nicht kompromittieren können (Game Theory)
+    ↓
+PHONE CALL: Adam erklärt δ und p (Sofia versteht das Problem)
+    ↓
+LAST CHANCE: Verhandlung scheitert (aber Sofia denkt nach)
+    ↓
+EPILOGUE: Sofia entwickelt "Dual-Track Strategy" (Lösung!)
+    ↓
+WHAT WOULD HELP: Konkrete institutionelle Mechanismen
+```
+
+**Dialog-Skizze für Bar-Szene:**
+
+> *It didn't work*, she types to Adam. *But I think I understand now.*
+> 
+> His reply: *And?*
+> 
+> Sofia stares at her phone. The problem wasn't that they couldn't agree on a number. It was that they were negotiating the wrong thing.
+> 
+> *Ferreira needs something before the election. Lindqvist needs guarantees for after. What if we stop asking 'how much' and start asking 'when'?*
+> 
+> Adam: *Go on.*
+> 
+> She pulls out a napkin and starts sketching.
+> 
+> **Track 1 (Immediate):** Quick wins — job training, transition funds, visible support. Ferreira can announce this next week.
+> 
+> **Track 2 (Binding Future):** Automatic climate targets that kick in after the election. No annual negotiation needed. Lindqvist gets her ambition, locked in.
+> 
+> **The Bridge:** An independent commission that monitors both tracks. If Track 1 doesn't happen, Track 2 gets delayed. If Track 2 gets weakened, Track 1 funding stops.
+> 
+> *It's not about making them patient or insecure*, she writes. *It's about designing the deal so that short-term wins enable long-term commitments.*
+> 
+> Adam: *That's... actually good. Will it work?*
+> 
+> Sofia finishes her wine. *I don't know. But it's better than asking them to be people they're not.*
+> 
+> She opens her laptop and starts drafting an email to her director.
+
+---
+
+### 9.3 "What Would Help?" zu schwach — ✅ ABGESCHLOSSEN
+
+**AUTHOR NOTE:**
+> "This also brings me to the letdown in the end. The ideas in the bar are not deep/helpful or anything. Can we see something more practical? Any suggestions in the literature on this one?"
+
+**LÖSUNG IMPLEMENTIERT:**
+
+Der "What Would Actually Help?" Abschnitt wurde komplett umgeschrieben mit:
+
+1. **Konkrete Beispiele statt abstrakter Prinzipien:**
+   - EU Multi-Annual Financial Framework (7-Jahres-Budgets)
+   - Germany's "debt brake"
+   - UK Climate Change Act
+
+2. **Praktische Mechanismen:**
+   - Unabhängige Überwachung (Zentralbanken, Fiscal Councils)
+   - Commitment Devices (Sunset Clauses, Conditional Funding)
+   - Cross-party Commissions
+
+3. **Key Insight als Take-Away:**
+   > "You can't easily change how patient politicians are (δ) or how secure they feel (p). But you can change *what needs to be negotiated annually*."
+
+4. **Realistische Erwartungen:**
+   > "It won't work every time. But it's a better strategy than hoping Owls become Hummingbirds or vice versa."
+
+**Status:** ✅ Implementiert als Teil der 9.2-Änderungen
+
+---
+
+**Literatur-Recherche (für Referenz):**
+
+**Acemoglu & Robinson (2006):** "Economic Origins of Dictatorship and Democracy"
+- **Practical commitment devices:** Independent fiscal councils, constitutional rules
+- **Problem:** Require supermajorities → chicken-and-egg
+
+**Dixit, Grossman & Gul (2000):** "The Dynamics of Political Compromise"
+- **Reputation mechanisms:** Politicians who cooperate build trust
+- **Conditional cooperation:** "I'll cooperate if you did last time"
+- **Problem:** Needs repeated interactions with same players
+
+**Alesina & Tabellini (1990):** "A Positive Theory of Fiscal Deficits"
+- **Practical:** Automatic stabilizers (reduce need for annual negotiation)
+- **Budget rules:** X% must go to category Y (removes discretion)
+
+**Persson & Tabellini (2003):** "The Economic Effects of Constitutions"
+- **Electoral systems matter:** Proportional representation → more coalition bargaining
+- **Presidential vs Parliamentary:** Different patience structures
+
+**Lösungsoptionen:**
+
+**A) Konkrete institutionelle Fixes**
+- **Independent commissions:** Climate budgets set by expert panel (wie Geldpolitik)
+- **Multi-year frameworks:** Lock in 3-5 year budgets (UK did this)
+- **Automatic indexing:** Budgets adjust with GDP (reduces annual fights)
+
+**B) Behavioral/Cultural Changes**
+- **Voter education:** Show constituents the long-term costs of gridlock
+- **Cross-party working groups:** Build personal relationships (reduces p via trust)
+- **Rotating chairs:** Make parties alternate power (reduces winner-takes-all incentive)
+
+**C) Sofias pragmatische Einsichten**
+Sie erkennt:
+- **"We can't change δ or p directly. But we can change *what needs cooperation*."**
+- Weniger Dinge müssen verhandelt werden → weniger Gridlock
+- Delegation an Experten für unpolitische Fragen
+- Nur große trade-offs bleiben politisch
+
+**Empfehlung:** **Option C mit konkreten Beispielen aus A**
+
+Umschreiben zu:
+> Sofia types slowly. The problem isn't that politicians are bad. It's that they're playing a game where blocking is rational.
+> 
+> *What would help?*
+> 
+> She thinks about what Adam said. You can't easily change δ (patience) or p (security). But you can change *what needs cooperation*.
+> 
+> **Reduce the scope of politics:**
+> - Independent fiscal councils for long-term budgets (like central banks for monetary policy)
+> - Multi-year frameworks that lock in priorities beyond one election cycle
+> - Automatic mechanisms (budget indexing, rule-based transfers)
+> 
+> **Build commitment devices:**
+> - Supermajority requirements for certain changes (raises the cost of defection)
+> - Cross-party commissions with binding authority
+> - Conditional funding ("Climate budget unlocks if employment targets met")
+> 
+> **As citizens:**
+> - Vote for politicians who cooperate (build reputation for patience)
+> - Support institutions that remove issues from annual bargaining
+> - Demand transparency (higher p when voters watch closely)
+> 
+> None of this is easy. All of it requires politicians to vote for constraints on their own power. But without structural change, the same incentives produce the same gridlock.
+
+Das ist **praktischer, evidenzbasiert, und gibt Handlungsoptionen**.
+
+---
+
+### 9.4 Implementation-Priorität
+
+| # | Aufgabe | Aufwand | Wirkung |
+|---|---------|---------|---------|
+| **9.1** | Afternoon-Abschnitt straffen (Option C) | 15 min | Hoch — besserer Fluss |
+| **9.2** | Sofia aktive Rolle geben (Option A+C) | 30 min | Sehr hoch — macht Geschichte besser |
+| **9.3** | "What Would Help?" neu schreiben (Option C) | 20 min | Mittel — besseres Ende |
+
+**Empfohlene Reihenfolge:** 9.2 → 9.3 → 9.1
+- 9.2 ist der größte Qualitätssprung
+- 9.3 macht das Ende stark
+- 9.1 ist Polish (wichtig aber nicht essentiell)
+
+---
+
 ### Arbeitsreihenfolge
 
 **Empfohlen:** Von oben nach unten arbeiten.

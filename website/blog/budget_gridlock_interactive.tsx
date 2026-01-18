@@ -657,11 +657,11 @@ For more on repeated games and cooperation, see [Prisoner's Dilemma](/blog/13) o
 
 // Post metadata
 export const meta = {
-  title: "Why do a lot of politics feel so unconstructive? A Game Theory Perspective",
-  publishing_date: "2026-01-15",
-  description: "A simple model explains why budget negotiations fail across democracies",
-  tags: ["game-theory", "politics", "economics"],
-  draft: true,
+  title: "When political compromise becomes irrational",
+  publishing_date: "2026-01-18",
+  description: "A simple model explains why budget negotiations might fail in democracies",
+  category: "others",
+  tokenID: 177,
 };
 
 export default BudgetGridlockPost;

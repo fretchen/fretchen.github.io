@@ -774,11 +774,11 @@ Diese Liste kombiniert Author Notes (A) und Leser-Perspektive (L) in einer prior
 
 | # | Aufgabe | Quelle | Zeile | Status |
 |---|---------|--------|-------|--------|
-| 1.1 | **Prisoner's Dilemma inline erklären** — Adam erklärt PD in 2 Sätzen, nicht nur benennen | L1 | ~515 | [ ] |
-| 1.2 | **Adam als Person einführen** — "a friend who makes complex things simple" statt "IT consultant from ferry" | L3, A7 | ~437 | [ ] |
-| 1.3 | **Adams SMS natürlicher** — "Sounds like a game theory trap" statt "Let me do research" | A7 | ~443 | [ ] |
-| 1.4 | **EU-Struktur vereinfachen** — "elected MEPs, government ministers, and EU officials" | L2 | ~387 | [ ] |
-| 1.5 | **Widget-Ergebnis in Klartext** — "Blocking is rational" statt "δ < δ_min" | L4 | Widget | [ ] |
+| 1.1 | **Prisoner's Dilemma inline erklären** — Adam erklärt PD in 2 Sätzen, nicht nur benennen | L1 | ~515 | [x] ✅ |
+| 1.2 | **Adam als Person einführen** — "a friend who makes complex things simple" statt "IT consultant from ferry" | L3, A7 | ~437 | [x] ✅ |
+| 1.3 | **Adams SMS natürlicher** — "Sounds like a game theory trap" statt "Let me do research" | A7 | ~443 | [x] ✅ |
+| 1.4 | **EU-Struktur vereinfachen** — "elected MEPs, government ministers, and EU officials" | L2 | ~387 | [x] ✅ |
+| 1.5 | **Widget-Ergebnis in Klartext** — "Blocking is rational" statt "δ < δ_min" | L4 | Widget | [ ] (später) |
 
 ---
 
@@ -786,12 +786,12 @@ Diese Liste kombiniert Author Notes (A) und Leser-Perspektive (L) in einer prior
 
 | # | Aufgabe | Quelle | Zeile | Status |
 |---|---------|--------|-------|--------|
-| 2.1 | **Berlaymont erklären** — "the Commission's headquarters" im ersten Satz | A1 | ~384 | [ ] |
-| 2.2 | **"Act 1/2/3" entfernen** — nur Uhrzeiten als Titel | A2 | ~398, 462, 580 | [ ] |
-| 2.3 | **"---" Trennlinien reduzieren** — nur vor Epilog | A2 | mehrere | [ ] |
-| 2.4 | **Raumbeschreibung kürzen** — 1 Satz statt 2 | A3 | ~400 | [ ] |
-| 2.5 | **Überleitung vor Lunch** — "The morning passes in circles" | A6 | ~434 | [ ] |
-| 2.6 | **"Core Question" als Monolog** — *The same pattern*, Sofia thinks... | A8 | ~450 | [ ] |
+| 2.1 | **Berlaymont erklären** — "the Commission's headquarters" im ersten Satz | A1 | ~384 | [x] ✅ |
+| 2.2 | **"Act 1/2/3" entfernen** — nur Uhrzeiten als Titel | A2 | ~398, 462, 580 | [x] ✅ |
+| 2.3 | **"---" Trennlinien reduzieren** — nur vor Epilog | A2 | mehrere | [x] ✅ |
+| 2.4 | **Raumbeschreibung kürzen** — 1 Satz statt 2 | A3 | ~400 | [x] ✅ |
+| 2.5 | **Überleitung vor Lunch** — "The morning passes in circles" | A6 | ~434 | [x] ✅ |
+| 2.6 | **"Core Question" als Monolog** — *The same pattern*, Sofia thinks... | A8 | ~450 | [x] ✅ |
 
 ---
 
@@ -799,11 +799,10 @@ Diese Liste kombiniert Author Notes (A) und Leser-Perspektive (L) in einer prior
 
 | # | Aufgabe | Quelle | Zeile | Status |
 |---|---------|--------|-------|--------|
-| 3.1 | **"Concave utility" Satz streichen** | A11 | ~491 | [ ] |
-| 3.2 | **Utility-Paragraph kürzen** — konkreter, weniger abstrakt | A12 | ~480-495 | [ ] |
-| 3.3 | **Intro kürzen** — Acemoglu in Postscript verschieben | L7 | ~374-378 | [ ] |
-| 3.4 | **Sofia neu einführen** — nicht "we have already encountered her" | L9 | ~379 | [ ] |
-| 3.5 | **Externe Links reduzieren** — max 2, als optional markiert | L6 | mehrere | [ ] |
+| 3.1 | **"Concave utility" Satz streichen** | A11 | ~491 | [x] ✅ |
+| 3.2 | **Utility-Paragraph kürzen** — konkreter, weniger abstrakt | A12 | ~480-495 | [x] ✅ |
+| 3.3 | **Intro kürzen** — Acemoglu in Postscript verschieben | L7 | ~374-378 | [x] ✅ |
+| 3.4 | **Sofia neu einführen** — nicht "we have already encountered her" | L9 | ~379 | [x] ✅ |
 
 ---
 

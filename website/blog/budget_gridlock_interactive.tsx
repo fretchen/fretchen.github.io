@@ -373,17 +373,13 @@ const BudgetGridlockPost: React.FC = () => {
       <MarkdownWithLatex>{`
 In the current political climate, one thing really sticks out. Even for the most basic jobs of the government, it seems really hard to compromise. From an outsider's view it seems completely irrational that in some situations politicians flat out refuse to cooperate. We saw several failed budget negotiations in the US, Germany or France in recent years. So, what's going on here?
 
-Interestingly, political economists have built models that can somehow rationalize this behavior. I first stumbled upon this topic when reading Daron Acemoglu's excellent [lecture notes](https://economics.mit.edu/sites/default/files/inline-files/Lecture%20Notes.pdf) on political economy. But it was actually so dense that I decided to start with something simpler first. This inspired the blog post on the [Prisoner's Dilemma](/blog/13) a while ago. Now, we will take the ideas of games a step further and move to a repeated game setting, which applies nicely to budget negotiations. 
+To explore this question, I'll use a fictional story set in Brussels. We follow Sofia, a member of the European Commission, through a day of failed negotiations. Along the way, we'll discover why game theory suggests that gridlock isn't irrational at all—it's the predictable outcome of certain political structures.
 
-To make the theory tangible, I put it into a fictional context in Brussels where we will follow Sofia, a member of the European Commission. We have already encountered her in a [previous blog post](/blog/20), where she took a deeper dive into cosmopolitan democracy.
+## Prologue: A Long Day Ahead
 
-## Prologue: The Berlaymont, 09:47
+Sofia checks her watch as the elevator rises through the Berlaymont—the European Commission's headquarters. A long day ahead—twelve hours of negotiation, probably more. The EU Climate Package—three years in the making—comes down to today's trilog.
 
-AUTHOR NOTE TO CLAUDE: No one know what Berlaymont is. This title must become better.
-
-Sofia checks her watch as the elevator rises. A long day ahead—twelve hours of negotiation, probably more. The EU Climate Package—three years in the making—comes down to today's trilog.
-
-A trilog is where European laws actually get made: Parliament, Council, Commission locked in a room until they agree or admit defeat. Today's meeting is the last chance before the legislative session ends.
+A trilog is where European laws actually get made: elected members of Parliament, government ministers from member states, and Commission officials—locked in a room until they agree or admit defeat. Today's meeting is the last chance before the legislative session ends.
 
 *I've seen these negotiations before*, Sofia thinks. *They rarely end well.*
 
@@ -391,15 +387,9 @@ She knows both sides. MEP Lindqvist from Sweden—passionate, principled, convin
 
 In her mind, she's started calling them the Owls and the Hummingbirds.
 
----
+## Morning: The Owl and the Hummingbird
 
-## Act 1: The Positions (10:30)
-
-AUTHOR NOTE TO CLAUDE: I do not like the "---" or the "Act 1" styling. It is just "to stressed".
-
-The conference room is smaller than it should be for what's at stake. Morning light filters through the blinds, but soon the fluorescent lights will take over. Sofia takes her seat on the Commission side—officially neutral, practically desperate for a deal.
-
-AUTHOR NOTE TO CLAUDE: The description of the room is just "too much". Make it more down to earth. The focus is not to set the atmosphere, but to explain the problem, but to give nice context.
+A small conference room—neutral ground. Sofia sits with the Commission delegation, officially there to mediate, practically desperate for a deal.
 
 ### The Owl: MEP Lindqvist
 
@@ -429,40 +419,28 @@ Ferreira is a *Hummingbird*—he needs immediate, visible results. 🐦 His prio
 
 Ferreira checks his phone constantly. Polls, probably. His coalition is fragile, his timeline short.
 
-### 12:30 — Lunch Break
+### Lunch: Is This Rational?
 
-AUTHOR NOTE TO CLAUDE: The jump to the lunch break is quick. What happened for the first two hours ? Can we accelerate the story line ?
+The morning passes in circles. Both sides restate their positions. Nothing moves.
 
 
-As the delegations scatter for sandwiches and coffee, Sofia pulls out her phone. She types a message to Adam—the IT consultant she met on [the ferry to Tunis](/blog/20) months ago.
+As the delegations scatter for sandwiches and coffee, Sofia pulls out her phone. She types a message to Adam—an old friend with a talent for making complicated things simple. They met [on a ferry to Tunis](/blog/20) months ago, arguing about democracy until 3 AM.
 
 *Stuck in trilog. Two reasonable people who can't agree. Is this somehow rational? 🤯*
 
 The reply comes after a minute:
 
-*Interesting question. Let me do some research. I'll get back to you.*
-AUTHOR NOTE TO CLAUDE: This feels unnaturl. That Adam finds it interesting ok. But directly do research ? Other options ?
+*Ha, sounds like a classic game theory trap. Let me think about it.*
 
 Sofia pockets her phone. At least someone's thinking about it.
 
-### The Core Question
+*The same pattern*, she thinks, looking back at the conference room. *Every democracy, every budget, every treaty.* The climate package isn't so different from any national budget. Every euro spent on long-term transformation is a euro not spent on immediate relief.
 
-AUTHOR NOTE TO CLAUDE: This feels not normal and like a break. More narrative flow needed.
+Both sides have legitimate concerns. Both are representing real constituencies. The question isn't who's right.
 
-Sofia realizes she's watching the same drama that plays out in every democracy: **How do you split limited resources between competing priorities?**
+*So why can't they find a middle ground?*
 
-The climate budget isn't so different from any national budget. Every euro spent on long-term transformation is a euro not spent on immediate relief. Both sides have legitimate concerns. Both are representing real constituencies.
-
-The question isn't who's right. The question is: **Why can't they find a middle ground?**
-
----
-
-## Act 2: The First Breakdown (15:15)
-
-AUTHOR NOTE TO CLAUDE: I do not like the "---" or the "Act 1" styling. It is just "to stressed".
-
-
-AUTHOR NOTE TO CLAUDE: This part of failing should come much earlier. Already in the morning this is what is failing.
+## Afternoon: Why They Can't Compromise
 
 Five hours in. Lunch came and went—sandwiches eaten over position papers. Sofia has proposed two compromise packages. Both rejected.
 
@@ -482,23 +460,11 @@ And yet they're both choosing the risky path—all-or-nothing confrontation.
 
 *Why would risk-averse people choose to gamble?*
 
-She thinks about what each side actually values. For Lindqvist, going from 10% to 20% climate spending would be transformative—real programs, real infrastructure. But going from 50% to 100%? Diminishing returns. The core priorities are already funded.
+She thinks about what each side actually values. Lindqvist's first billion for climate programs would be transformative—real infrastructure, real impact. Her tenth billion? Marginal improvements. The same applies to Ferreira: the first euros of industrial support are crucial, additional billions less so.
 
-The same logic applies to Ferreira's industrial policy. The first euros of support are crucial. Additional billions help, but less so.
+A guaranteed 50% is better than flipping a coin between 0% and 100%. So why are they gambling?
 
-This is what economists call *concave utility*—each additional unit of what you want provides less satisfaction than the last. It's why people buy insurance: a guaranteed middle outcome is worth more than a gamble with the same average.
-
-AUTHOR NOTE TO CLAUDE: The sentance on concave utility is just strange. I think that this can go.
-AUTHOR NOTE TO CLAUDE: All together this paragraph feels a bit out of context. Can it be connected in a better way ?
-
-
-A guaranteed 50% is better than flipping a coin between 0% and 100%.
-
-So why are they gambling?
-
----
-
-## Interlude: The Phone Call (18:20)
+## The Phone Call
 
 Sofia steps into the corridor during a coffee break. The negotiations have stalled completely. Her phone buzzes—Adam.
 
@@ -514,9 +480,11 @@ She dials immediately.
 
 "Winner-takes-all."
 
-"Exactly. In a *one-shot* game, defection always wins. Even if cooperation would be better for everyone." Adam pauses. "But in *repeated* games—like annual budget negotiations—cooperation can become rational. The threat of future punishment keeps people honest."
+"Exactly. If you only play once, grabbing everything is the smart move—even if you'd both be better off sharing. That's the Prisoner's Dilemma. But here's the thing: budget negotiations aren't one-shot games. You face each other again next year. And the year after."
 
-"That's the [Prisoner's Dilemma](/blog/13)."
+"So cooperation can work?"
+
+"It *can*. The threat of future punishment keeps people honest. 'If you screw me today, I'll screw you tomorrow.' But—" Adam pauses.
 
 "Exactly. But here's the twist." Adam's voice takes on the tone Sofia remembers from the ferry—when he gets excited about a problem. "Cooperation needs two things. First: **How much do you care about the future?** Call it *patience*, or *discount factor* if you want to be technical. I use δ for that."
 
@@ -572,10 +540,7 @@ Sofia stares at the screen. "Lindqvist sits securely in Parliament. High securit
 
 "No. They're *perfectly* rational given their constraints." Adam sighs. "That's the tragedy."
 
-
----
-
-## Act 3: The Deadline (20:15)
+## Last Chance
 
 Sofia returns to the room. The atmosphere has shifted—desperation mixed with resignation. Outside, Brussels has gone dark.
 
@@ -615,7 +580,7 @@ This, Sofia realizes, describes an alarming number of modern democracies.
 
 ---
 
-## Epilogue: The Bar (22:30)
+## Epilogue: The Bar
 
 The trilog ends without agreement. The climate package will have to wait for the next legislative session—at least another year, probably longer.
 

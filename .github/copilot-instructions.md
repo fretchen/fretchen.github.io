@@ -121,6 +121,36 @@ npx hardhat verify --network optimisticEthereum <ADDRESS>
 - **Wagmi v2 + TanStack Query** for blockchain state management
 - **Build:** `npm run build` → `build/` directory (then run `postbuild` scripts for sitemap)
 
+### Blog Posts: Political Economics
+
+When writing or editing blog posts about political economics, game theory, or related topics, follow these guidelines:
+
+**Target Reader Profile:**
+- Akademiker (educated, but not necessarily in STEM)
+- Politically curious, follows current events
+- Does NOT know game theory concepts (Prisoner's Dilemma, Nash equilibrium)
+- Does NOT know EU institutions in detail
+- Weak at math — formulas are barriers, not features
+- Impatient reader — will skim, needs hooks
+- First time meeting recurring characters (e.g., Sofia)
+
+**Writing Principles:**
+1. **Math is supporting, not blocking** — formulas go in collapsible `<details>` boxes or postscripts
+2. **Natural language over notation** — use "patience" not "δ", "political security" not "p"
+3. **Explain concepts inline** — when introducing Prisoner's Dilemma, explain it in dialogue
+4. **Characters need fresh introductions** — even recurring characters get a one-line intro
+5. **Concrete before abstract** — start with story/example, then generalize
+6. **Interactive widgets should be simple** — sliders with natural labels, results in plain language
+7. **Technical details for interested readers** — use `<details>` with "🔬 Technical details" summary
+
+**Narrative Structure:**
+- Hook with concrete scenario (not abstract question)
+- Build to key insight through character dialogue
+- Widget/interactive element at moment of understanding
+- Practical implications ("What would help?")
+- Postscript for formal model (optional, for math readers)
+
+
 ### Python Notebooks (notebooks/)
 
 - **Poetry for dependency management** - `poetry install`, `poetry shell`, `poetry run jupyter notebook`

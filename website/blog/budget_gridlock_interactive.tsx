@@ -379,6 +379,8 @@ To make the theory tangible, I put it into a fictional context in Brussels where
 
 ## Prologue: The Berlaymont, 09:47
 
+AUTHOR NOTE TO CLAUDE: No one know what Berlaymont is. This title must become better.
+
 Sofia checks her watch as the elevator rises. A long day ahead—twelve hours of negotiation, probably more. The EU Climate Package—three years in the making—comes down to today's trilog.
 
 A trilog is where European laws actually get made: Parliament, Council, Commission locked in a room until they agree or admit defeat. Today's meeting is the last chance before the legislative session ends.
@@ -393,9 +395,15 @@ In her mind, she's started calling them the Owls and the Hummingbirds.
 
 ## Act 1: The Positions (10:30)
 
+AUTHOR NOTE TO CLAUDE: I do not like the "---" or the "Act 1" styling. It is just "to stressed".
+
 The conference room is smaller than it should be for what's at stake. Morning light filters through the blinds, but soon the fluorescent lights will take over. Sofia takes her seat on the Commission side—officially neutral, practically desperate for a deal.
 
+AUTHOR NOTE TO CLAUDE: The description of the room is just "too much". Make it more down to earth. The focus is not to set the atmosphere, but to explain the problem, but to give nice context.
+
 ### The Owl: MEP Lindqvist
+
+AUTHOR NOTE TO CLAUDE: The description is good and succeeded.
 
 "We cannot accept anything below 55% reduction by 2035." Lindqvist's voice is calm but firm. "The science is clear. The Parliament's position is clear. We've already compromised from 60%."
 
@@ -409,7 +417,9 @@ Lindqvist's coalition is secure. Her voters reward ambition, not compromise. She
 
 ### The Hummingbird: Minister Ferreira
 
-"With respect, the Parliament doesn't have to explain to steelworkers why their plant is closing." Ferreira leans forward. "We need flexibility. Transition periods. Support for affected industries."
+AUTHOR NOTE TO CLAUDE: The description is good and succeeded.
+
+"With all respect due respect, but the Parliament doesn't have to explain to steelworkers why their plant is closing." Ferreira leans forward. "We need flexibility. Transition periods. Support for affected industries."
 
 Ferreira is a *Hummingbird*—he needs immediate, visible results. 🐦 His priorities are different:
 
@@ -421,17 +431,23 @@ Ferreira checks his phone constantly. Polls, probably. His coalition is fragile,
 
 ### 12:30 — Lunch Break
 
-As the delegations scatter for sandwiches and coffee, Sofia pulls out her phone. She types a message to Adam—the IT consultant she met on [the ferry to Tunis](/blog/cosmopol_democracy) months ago.
+AUTHOR NOTE TO CLAUDE: The jump to the lunch break is quick. What happened for the first two hours ? Can we accelerate the story line ?
+
+
+As the delegations scatter for sandwiches and coffee, Sofia pulls out her phone. She types a message to Adam—the IT consultant she met on [the ferry to Tunis](/blog/20) months ago.
 
 *Stuck in trilog. Two reasonable people who can't agree. Is this somehow rational? 🤯*
 
 The reply comes after a minute:
 
 *Interesting question. Let me do some research. I'll get back to you.*
+AUTHOR NOTE TO CLAUDE: This feels unnaturl. That Adam finds it interesting ok. But directly do research ? Other options ?
 
 Sofia pockets her phone. At least someone's thinking about it.
 
 ### The Core Question
+
+AUTHOR NOTE TO CLAUDE: This feels not normal and like a break. More narrative flow needed.
 
 Sofia realizes she's watching the same drama that plays out in every democracy: **How do you split limited resources between competing priorities?**
 
@@ -442,6 +458,11 @@ The question isn't who's right. The question is: **Why can't they find a middle 
 ---
 
 ## Act 2: The First Breakdown (15:15)
+
+AUTHOR NOTE TO CLAUDE: I do not like the "---" or the "Act 1" styling. It is just "to stressed".
+
+
+AUTHOR NOTE TO CLAUDE: This part of failing should come much earlier. Already in the morning this is what is failing.
 
 Five hours in. Lunch came and went—sandwiches eaten over position papers. Sofia has proposed two compromise packages. Both rejected.
 
@@ -466,6 +487,10 @@ She thinks about what each side actually values. For Lindqvist, going from 10% t
 The same logic applies to Ferreira's industrial policy. The first euros of support are crucial. Additional billions help, but less so.
 
 This is what economists call *concave utility*—each additional unit of what you want provides less satisfaction than the last. It's why people buy insurance: a guaranteed middle outcome is worth more than a gamble with the same average.
+
+AUTHOR NOTE TO CLAUDE: The sentance on concave utility is just strange. I think that this can go.
+AUTHOR NOTE TO CLAUDE: All together this paragraph feels a bit out of context. Can it be connected in a better way ?
+
 
 A guaranteed 50% is better than flipping a coin between 0% and 100%.
 
@@ -547,20 +572,6 @@ Sofia stares at the screen. "Lindqvist sits securely in Parliament. High securit
 
 "No. They're *perfectly* rational given their constraints." Adam sighs. "That's the tragedy."
 
-<details>
-<summary>🔬 Technical details: The patience threshold</summary>
-
-The mathematics confirms Adam's intuition. If we denote patience by $\\delta$ (how much you value tomorrow vs. today) and power security by $p$ (probability of staying in power), cooperation becomes beneficial only when:
-
-$$\\delta > \\frac{U'(1)}{(1-p)U'(0) - pU'(1)} \\equiv \\delta_{min}$$
-
-This threshold depends on:
-- **The utility function:** If losing everything is catastrophic ($U'(0)$ very large), even a little patience enables cooperation
-- **Power security ($p$):** The more secure your power, the less you need insurance, the higher the threshold
-
-When $p \\to 1$ (certain to stay in power), the threshold becomes infinite—no amount of patience makes cooperation worthwhile. *Why share when you'll win anyway?*
-
-</details>
 
 ---
 
@@ -620,6 +631,10 @@ She takes a long sip of wine before answering.
 
 ### What Would Help?
 
+
+AUTHOR NOTE TO CLAUDE: These points are tough. Because longer terms also increase security. Same for reduced primary pressure. In the end, I am not completely convinced about a single one. 
+
+
 **To increase patience (δ):**
 - Longer terms in office
 - Reduce primary pressure
@@ -662,7 +677,7 @@ where $\\delta$ represents patience and $p$ represents power security. When this
 
 This isn't a failure of rationality. It's *exactly* what rational actors would do under these constraints. The implication is profound: if we want different outcomes, we need to change the constraints, not just appeal to better behavior.
 
-For more on the mathematics of cooperation in repeated games, see the [Prisoner's Dilemma](/blog/13) post, which explores similar dynamics in a simpler setting.
+For more on the mathematics of cooperation in repeated games, see the [Prisoner's Dilemma](/blog/13) or on the [Tragedy of the Commons](/blog/14) post, which explores similar dynamics in a simpler setting.
 
 ---
 

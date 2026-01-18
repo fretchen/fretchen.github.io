@@ -461,21 +461,19 @@ Sofia steps into the corridor. She dials immediately.
 
 "So cooperation can work?"
 
-"It *can*. The threat of future punishment keeps people honest. 'If you screw me today, I'll screw you tomorrow.' But—" Adam pauses.
+"It *can*. The threat of future punishment keeps people honest. 'If you screw me today, I'll screw you tomorrow.' But—" Adam pauses. "Cooperation needs two things."
 
-"Exactly. But here's the twist." Adam's voice takes on the tone Sofia remembers from the ferry—when he gets excited about a problem. "Cooperation needs two things. First: **How much do you care about the future?** Call it *patience*, or *discount factor* if you want to be technical. I use δ for that."
+"Go on."
 
-"Delta."
+"First: **How much do you care about the future?** Call it *patience*. If Ferreira only cares about the next eight months until his election, the future doesn't weigh much."
 
-"Yes. If Ferreira only cares about the next eight months until his election, the future doesn't weigh much."
+Sofia thinks about Ferreira checking his phone every few minutes. "He's impatient."
 
-Sofia thinks about Ferreira checking his phone every few minutes. "His δ is low."
+"Exactly. Second: **How secure is their power?** If Lindqvist is confident her coalition will survive, she doesn't need insurance. She can wait for a better deal."
 
-"Exactly. Second: **How secure is their power?** Call it *p*. If Lindqvist is confident her coalition will survive this negotiation, she doesn't need insurance. She can wait for a better deal."
+"She's secure."
 
-"Her *p* is high."
-
-"Right. And here's the key—" Sofia hears him typing. "There's a threshold. Below it, winner-takes-all becomes rational—even if both sides would be better off cooperating. I built you something."
+"Right. And here's the key—" Sofia hears him typing. "There's a threshold. When you're impatient *and* secure, winner-takes-all becomes rational—even if both sides would be better off cooperating. I built you something."
 
 Her phone vibrates. A link.
 
@@ -501,13 +499,13 @@ Sofia moves the sliders. "What happens if I increase the security?"
 
 "Try it."
 
-Sofia slides the *Political Security* higher. The WTA payoff climbs. "Winner-Takes-All becomes better."
+Sofia slides *Political Security* higher. The WTA payoff climbs. "Winner-Takes-All becomes better."
 
 "Now decrease the patience."
 
-Sofia slides δ down. The gap widens. "WTA wins even more clearly."
+Sofia slides *Patience* down. The gap widens. "WTA wins even more clearly."
 
-"That's δ_min in action—the threshold below which cooperation becomes irrational. When you feel secure and impatient, why compromise?"
+"That's the threshold in action. When you feel secure and impatient, why compromise?"
 
 Sofia stares at the screen. "Lindqvist sits securely in Parliament. High security. Ferreira is impatient with elections coming..."
 
@@ -525,11 +523,11 @@ Sofia returns to the room. The atmosphere has shifted—desperation mixed with r
 
 Ferreira clears his throat. "I want to explain something. It's not that I don't care about climate change. I do. But I have elections in eight months. If I go home with a deal that costs jobs, I won't be here next year to implement anything."
 
-*Short time horizon*, Sofia thinks. *Low δ.*
+*Short time horizon*, Sofia thinks. *Impatient.*
 
 Lindqvist responds with equal honesty. "And I have a mandate from the European Parliament. 55% or nothing. My voters would never forgive me for accepting less. And frankly—" she hesitates— "my coalition is stable. We can wait for a better deal."
 
-*Secure power. High p.*
+*Secure power.*
 
 Sofia suddenly sees the negotiation in a new light. It's not that the parties are stubborn or irrational. Given their constraints—Ferreira's short horizon, Lindqvist's secure position—winner-takes-all is the *optimal* strategy for each of them.
 

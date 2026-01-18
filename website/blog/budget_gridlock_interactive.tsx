@@ -511,7 +511,7 @@ Her phone vibrates. A link.
 
 "What's this?"
 
-"A little tool. Three strategies to compare."
+"A little tool. Two strategies to compare."
 
 Sofia opens it.
       `}</MarkdownWithLatex>
@@ -519,31 +519,27 @@ Sofia opens it.
       <BudgetNegotiationWidget />
 
       <MarkdownWithLatex>{`
-"Okay," she says. "Explain the strategies."
+"Okay," she says. "Explain."
 
-"**Proportional** is the fair compromise. Each side gets half. Medium payoff, but guaranteed."
+"**Cooperate** means both sides give something up. The winner gets 80%, the loser gets 20%. Less than total victory, but guaranteed."
 
-"Like in a functioning democracy."
+"And **Winner-Takes-All**?"
 
-"Theoretically, yes. **Winner-Takes-All** is the opposite. The winner implements 100% of their agenda. But next year you might lose."
+"The opposite. Whoever has power implements 100% of their agenda. But next year you might lose—and then you get nothing."
 
-"And the third?"
+Sofia moves the sliders. "What happens if I increase the security?"
 
-"**Partial Trade-Off**. A compromise, but asymmetric. 70/30 for the winner. Less risky than WTA, but you give something up."
+"Try it."
 
-Sofia moves the sliders. "What happens if I set δ to 0.5 and p to 0.7?"
+Sofia slides the *Political Security* higher. The WTA payoff climbs. "Winner-Takes-All becomes better."
 
-"Look at the lines."
+"Now decrease the patience."
 
-"WTA wins."
+Sofia slides δ down. The gap widens. "WTA wins even more clearly."
 
-"Now slide p to 0.4."
+"That's δ_min in action—the threshold below which cooperation becomes irrational. When you feel secure and impatient, why compromise?"
 
-Sofia watches the lines cross. "Proportional becomes better."
-
-"That's δ_min in action. The threshold below which cooperation becomes irrational."
-
-Sofia stares at the screen. "Lindqvist sits securely in Parliament. High p value. Ferreira is in a fragile coalition..."
+Sofia stares at the screen. "Lindqvist sits securely in Parliament. High security. Ferreira is impatient with elections coming..."
 
 "Different thresholds," Adam says. "They're literally playing different games."
 

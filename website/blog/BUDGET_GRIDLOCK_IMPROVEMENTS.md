@@ -192,13 +192,12 @@
 
 ## Verbleibende offene Punkte
 
-### Muss noch gemacht werden
-1. **Text-Widget Inkonsistenz:** Dialog erwähnt "three strategies", Widget hat nur 2
-   - **Empfehlung:** Text anpassen auf 2 Strategien
-
 ### Nice-to-have
-2. **Widget Labels dynamisch:** "Y = 0.8" sollte von COOP Variable abgeleitet werden
-3. **Unbenutzte Chart.js Imports entfernen:** Funktioniert, aber unnötiger Ballast
+1. **Widget Labels dynamisch:** "Y = 0.8" sollte von COOP Variable abgeleitet werden
+2. **Unbenutzte Chart.js Imports entfernen:** Funktioniert, aber unnötiger Ballast
+
+### Erledigte Punkte
+- ✅ **Text-Widget Inkonsistenz behoben:** Dialog jetzt mit 2 Strategien (Cooperate vs WTA)
 
 ---
 

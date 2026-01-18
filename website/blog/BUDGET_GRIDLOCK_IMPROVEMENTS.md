@@ -1,266 +1,219 @@
 # Budget Gridlock Blog Post - Verbesserungsplan
 
+**Letzte Aktualisierung:** 18. Januar 2026
+
 **Zielgruppe:** Politikinteressierte Leser, die keine mathematische Vorbildung brauchen
 **Ziel:** Mathe begleitend, nicht blockierend; klare politische Schlussfolgerungen
 
 ---
 
-## Schwachstellen-Übersicht
+## Status-Übersicht
 
-### Kritisch (🔴)
-1. Abruptes Ende - keine Conclusion, keine Handlungsempfehlungen
-2. δ_min Formel zu prominent - schreckt Nicht-Mathematiker ab
-3. Random Walk Gleichung unnötig für Hauptargument
-4. Utility-Eigenschaften zu abstrakt ($U'(Y) > 0$, $U''(Y) < 0$)
+| Phase | Beschreibung | Status |
+|-------|--------------|--------|
+| Phase 1 | Fehlende Struktur | ✅ ABGESCHLOSSEN |
+| Phase 2 | Mathe-Barrieren abbauen | ✅ GRÖßTENTEILS ABGESCHLOSSEN |
+| Phase 3 | Narrative Stärkung | ✅ ABGESCHLOSSEN (via Phase 5) |
+| Phase 4 | Interaktivität | ✅ ABGESCHLOSSEN |
+| Phase 5 | Narrative Restrukturierung | ✅ ABGESCHLOSSEN |
 
-### Strukturell (🟡)
-5. Fehlende politische Interpretation von δ und p
-6. Owls/Hummingbirds werden am Ende nicht wieder aufgegriffen
-7. p wird spät und abrupt eingeführt
+---
+
+## Schwachstellen-Übersicht (Original)
+
+### Kritisch (🔴) — BEHOBEN
+1. ~~Abruptes Ende~~ ✅ Epilog mit "What Would Help?" und Reflexion
+2. ~~δ_min Formel zu prominent~~ ✅ In Details-Box verschoben
+3. ~~Random Walk Gleichung unnötig~~ ✅ In Details-Box "🔬 Model parameters"
+4. ~~Utility-Eigenschaften zu abstrakt~~ ✅ Quadratische Utility verbal erklärt
+
+### Strukturell (🟡) — BEHOBEN
+5. ~~Fehlende politische Interpretation~~ ✅ Im Epilog und Akt 3
+6. ~~Owls/Hummingbirds am Ende nicht aufgegriffen~~ ✅ Durchgängig verwendet
+7. ~~p wird spät und abrupt eingeführt~~ ✅ Im Interlude (Telefongespräch mit Adam)
 
 ---
 
 ## Priorisierte Todo-Liste
 
-### Phase 1: Fehlende Struktur wiederherstellen (Priorität: HOCH)
+### Phase 1: Fehlende Struktur wiederherstellen (Priorität: HOCH) — ✅ ABGESCHLOSSEN
 
-- [ ] **1.1** "Political Interpretation" Abschnitt wiederherstellen
-  - Was macht δ niedrig in echten Demokratien?
-  - Was macht p hoch?
-  - Die "toxische Kombination" erklären
+- [x] **1.1** "Political Interpretation" Abschnitt wiederhergestellt
+  - "The Toxic Combination" in Akt 3
+  - Was macht δ niedrig / p hoch in echten Demokratien
   
-- [ ] **1.2** "What Would Help?" Abschnitt wiederherstellen
-  - Konkrete Interventionen für δ erhöhen
-  - Konkrete Interventionen für p senken
-  - Commitment-Mechanismen
+- [x] **1.2** "What Would Help?" Abschnitt wiederhergestellt
+  - Im Epilog mit konkreten Interventionen
+  - Längere Amtszeiten, weniger sichere Sitze, Commitment-Mechanismen
   
-- [ ] **1.3** Conclusion schreiben
-  - Zurück zu Owls vs Hummingbirds
-  - Kernbotschaft: Gridlock ist rational, nicht irrational
-  - Verbindung zu realen Beispielen (Ampel, US)
+- [x] **1.3** Conclusion geschrieben
+  - Sofia im Bar, reflektiert mit Adam via SMS
+  - "They were both rational. That's exactly the problem."
 
-### Phase 2: Mathe-Barrieren abbauen (Priorität: MITTEL)
+### Phase 2: Mathe-Barrieren abbauen (Priorität: MITTEL) — ✅ GRÖßTENTEILS ABGESCHLOSSEN
 
-- [ ] **2.1** Random Walk Gleichung entfernen
-  - Ersetze durch: "Political strength fluctuates unpredictably over time—strong today doesn't guarantee strong tomorrow"
-  - Keine Gausssche Notation nötig
+- [x] **2.1** Random Walk Gleichung in Details-Box verschoben
+  - Jetzt in "🔬 Model parameters" im Widget
   
-- [ ] **2.2** Utility-Eigenschaften verbalisieren
-  - Statt $U'(Y) > 0$: "More budget is always better"
-  - Statt $U''(Y) < 0$: "But each additional dollar helps less than the last"
-  - Jensen's inequality kann bleiben (mit Link)
+- [x] **2.2** Utility-Eigenschaften verbalisiert
+  - "Losing everything hurts more than winning helps"
+  - Konkave Utility verbal erklärt
   
-- [ ] **2.3** δ_min Formel in Details-Box verschieben
-  ```markdown
-  <details>
-  <summary>🔬 Technical details: The patience threshold formula</summary>
+- [x] **2.3** δ_min Formel in Details-Box verschoben
+  - "🔬 Technical details: The patience threshold"
   
-  [Formel und Erklärung hier]
-  
-  </details>
-  ```
+- [ ] **2.4** Strategie-Definitionen vereinfachen ⚠️ TEILWEISE
+  - Widget zeigt "Win: Y = 0.8, Lose: Y = 0.2"
+  - Die formale Definition könnte noch weiter vereinfacht werden
 
-- [ ] **2.4** Strategie-Definitionen vereinfachen
-  - Die mathematische Definition $\rho_{WTA}(X_t) = ...$ in Details-Box
-  - Haupttext bleibt verbal
+### Phase 3: Narrative Stärkung (Priorität: NIEDRIG) — ✅ ABGESCHLOSSEN (via Phase 5)
 
-### Phase 3: Narrative Stärkung (Priorität: NIEDRIG)
-
-- [ ] **3.1** Intro mit konkretem Hook starten
-  - Option A: Ampel 2024 als Einstieg
-  - Option B: US Government Shutdown
-  - Option C: Allgemeiner "Have you noticed..." Einstieg (aktuell)
+- [x] **3.1** Intro mit konkretem Hook
+  - Trilog in Brüssel als Setting
   
-- [ ] **3.2** p früher einführen
-  - Zusammen mit δ erklären, nicht separat
-  - Beide als "die zwei entscheidenden Parameter"
+- [x] **3.2** p früher einführen
+  - Zusammen mit δ im Telefongespräch mit Adam
   
-- [ ] **3.3** Ende: Rückkehr zum konkreten Beispiel
-  - "Now we understand why the Ampel coalition collapsed..."
-  - Verbindet Theorie mit Realität
+- [x] **3.3** Ende: Rückkehr zum konkreten Beispiel
+  - Sofia sieht Ferreira in der Bar, beide wissen das Spiel
 
-### Phase 4: Optional - Interaktivität
+### Phase 4: Interaktivität — ✅ ABGESCHLOSSEN
 
-- [ ] **4.1** Entscheidung: Interaktives Element ja/nein?
-  - Empfehlung: Ein fokussierter δ-p Slider
-  - Zeigt Kooperations-Region visuell
+- [x] **4.1** Interaktives Widget implementiert
+  - TSX-Komponente mit Two-Slider Design
+  - Political Security Slider (Ferreira ↔ Lindqvist)
+  - Patience (δ) Slider
   
-- [ ] **4.2** Falls ja: TSX-Komponente erstellen
-  - Analog zu ExpectedUtilityPlot im PD-Post
+- [x] **4.2** Monte Carlo Simulation
+  - 200 Trajektorien, 10 Perioden
+  - Payoff-Vergleich Cooperate vs WTA
+  - δ_min Threshold-Anzeige
 
 ---
 
-## Umsetzungsreihenfolge
+## NEUE ISSUES (während Implementierung entdeckt)
 
-```
-Phase 1 (1.1 → 1.2 → 1.3)
-    ↓
-Phase 2 (2.1 → 2.2 → 2.3 → 2.4)
-    ↓
-Phase 3 (3.1 → 3.2 → 3.3)
-    ↓
-Phase 4 (optional)
-```
+### Kritisch (🔴) — BEHOBEN
+1. ~~**δ_min Formel falsch angewandt**~~ ✅ BEHOBEN
+   - **Problem:** `p` im Widget = Verlustwahrscheinlichkeit, aber Formel erwartet Gewinnwahrscheinlichkeit
+   - **Fix:** `const pWin = 1 - currentP; const deltaMin = (1 - GAMMA) / (1 - pWin * GAMMA);`
+   
+2. ~~**Utility-Funktion inkonsistent**~~ ✅ BEHOBEN
+   - **Problem:** Widget verwendete `sqrt(x)`, Notebook verwendet quadratische Utility
+   - **Fix:** `utility = y - 0.5 * GAMMA * y * y`
+
+3. ~~**Monte Carlo Strategien inkonsistent**~~ ✅ BEHOBEN
+   - **Problem:** Cooperate war `Y = X` (proportional), sollte aber `Y = 1-COOP / COOP` sein
+   - **Fix:** `cooperate: (x) => (x > 0.5 ? 1 - COOP : COOP)`
+
+### Strukturell (🟡) — BEHOBEN
+4. ~~**Payoff-Box Highlighting basierte auf δ_min statt MC-Ergebnis**~~ ✅ BEHOBEN
+   - **Problem:** Boxes wurden nach analytischem Kriterium gefärbt, nicht nach simuliertem Payoff
+   - **Fix:** Neues `coopPayoffHigher = results.cooperate.mean > results.wta.mean`
+
+### Kleinere Issues (🟢) — OFFEN
+5. **Text im Post referenziert "three strategies"** ⚠️ OFFEN
+   - Sofias Dialog mit Adam erwähnt "Three strategies to compare"
+   - Widget hat nur 2 Strategien (Cooperate, WTA)
+   - **Mögliche Fixes:** 
+     - a) Text auf 2 Strategien anpassen
+     - b) Dritte Strategie (Partial) wieder hinzufügen
+   
+6. **Chart.js imports nicht verwendet** ⚠️ UNWICHTIG
+   - CategoryScale, LinearScale, etc. werden registriert aber kein Chart angezeigt
+   - Könnte bereinigt werden, funktioniert aber
+
+7. **Widget erwähnt COOP=0.2 fest** ⚠️ OFFEN
+   - Labels zeigen "Y = 0.8" und "Y = 0.2" hardcoded
+   - Sollte dynamisch von COOP abgeleitet werden
 
 ---
 
-## Notizen
+## Validierung (Notebook Tests)
 
-- **Mathe-Philosophie:** Formeln sind für Interessierte, nicht für das Hauptverständnis
-- **Collapsible Details:** Nutze `<details>` für technische Abschnitte
-- **Links:** Prisoner's Dilemma Post ist bereits verlinkt ✓
-- **Appendix:** Kann komplett entfernt werden wenn Details-Boxen genutzt werden
-
----
-
-## Geschätzter Aufwand
-
-| Phase | Zeit | Priorität |
-|-------|------|-----------|
-| Phase 1 | 30-45 min | HOCH |
-| Phase 2 | 30-45 min | MITTEL |
-| Phase 3 | 20-30 min | NIEDRIG |
-| Phase 4 | 1-2h | OPTIONAL |
-
-**Gesamt (ohne Phase 4):** ~1.5-2h
+✅ Python-Übersetzung des Widget-Codes in `gridlock_estimates.ipynb`
+✅ Monte Carlo vs analytische δ_min Vergleich
+✅ Bug in p-Definition identifiziert und korrigiert
+✅ Crossover-Punkt stimmt nach Korrektur mit Analytik überein
 
 ---
 
-## Phase 5: Narrative Restrukturierung — Das Trilog-Szenario
+## Phase 5: Narrative Restrukturierung — Das Trilog-Szenario — ✅ ABGESCHLOSSEN
 
-**Konzept:** Der Blog Post wird als Geschichte einer gescheiterten EU-Trilog-Verhandlung erzählt. Sofia (aus dem cosmopol_democracy Post) ist Kommissions-Vertreterin und erlebt die Dynamik von innen.
-
-### Setting
-
-- **Ort:** EU-Trilog — informelle Verhandlung zwischen Parlament, Rat und Kommission
-- **Zeit:** Eine Nacht, 22:00 bis 06:00
-- **Thema:** Klimapaket (oder anderes polarisierendes Thema)
-
-### Charaktere
-
-| Charakter | Rolle | Repräsentiert |
-|-----------|-------|---------------|
-| **Sofia** | Kommissions-Vertreterin | Erzählerin, versucht zu vermitteln |
-| **MEP Lindqvist** | Schwedische Grüne (Owl) | Langfristige Klimaziele, will ambitioniert |
-| **Minister Ferreira** | Portugiesischer Rat-Vertreter (Hummingbird) | Industrie-Flexibilität, denkt an nächste Wahl |
-| **Adam** | Per Video-Call (technischer Berater) | Außenseiter, stellt "naive" Fragen, bringt Theorie ein |
-
-### Struktur des Posts
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  PROLOG: Sofia auf dem Weg zum Trilog                       │
-│  → Setzt Szene, erklärt Stakes                              │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│  AKT 1: Die Positionen (22:00)                              │
-│  → Lindqvist (Owl) vs Ferreira (Hummingbird) werden klar    │
-│  → Sofia erklärt dem Leser die Spieler                      │
-│  → HIER: Owls/Hummingbirds Konzept einführen                │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│  AKT 2: Die erste Eskalation (00:00)                        │
-│  → Kurzer Durchbruch, dann Rückfall                         │
-│  → Sofia versteht: Beide handeln rational                   │
-│  → HIER: Utility-Konzept, Risikoaversion einführen          │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│  INTERLUDE: Sofia ruft Adam an (03:00)                      │
-│  → Sie erklärt ihm die Situation                            │
-│  → Adam: "Das klingt wie das Prisoner's Dilemma..."         │
-│  → HIER: δ und p einführen, Theorie erklären                │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│  AKT 3: Die Deadline naht (05:30)                           │
-│  → Letzte Versuche, Kompromiss zu finden                    │
-│  → Ferreira: "Meine Wähler werden das nicht verstehen"      │
-│  → HIER: Warum δ niedrig ist (Wahlzyklen, Karriere)         │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│  EPILOG: Nach dem Scheitern (06:30)                         │
-│  → Sofia im Taxi, reflektiert                               │
-│  → Was hätte helfen können?                                 │
-│  → HIER: Political Interpretation, What Would Help          │
-└─────────────────────────────────────────────────────────────┘
-```
+**Status:** Vollständig umgesetzt mit einigen Anpassungen:
+- Timeline geändert von 22:00-06:00 auf 10:00-22:00 (Tag statt Nacht)
+- Epilog in Bar statt Taxi
+- Adam sendet Link zum Widget per SMS statt Video-Call
 
 ### Detaillierte Todo-Liste für Phase 5
 
-#### 5.1 Prolog schreiben
-- [ ] **5.1.1** Sofia's Ankunft im Berlaymont um 21:30
-- [ ] **5.1.2** Innerer Monolog: "Ich kenne diese Verhandlungen. Sie enden selten gut."
-- [ ] **5.1.3** Kurze Erklärung was ein Trilog ist (für Nicht-EU-Kenner)
+#### 5.1 Prolog schreiben — ✅
+- [x] **5.1.1** Sofia's Ankunft im Berlaymont um 09:47
+- [x] **5.1.2** Innerer Monolog: "I've seen these negotiations before. They rarely end well."
+- [x] **5.1.3** Kurze Erklärung was ein Trilog ist
 
-#### 5.2 Akt 1: Die Positionen
-- [ ] **5.2.1** Lindqvist (Owl) vorstellen — ihre Ziele, ihre Motivation
-- [ ] **5.2.2** Ferreira (Hummingbird) vorstellen — seine Zwänge, sein Druck
-- [ ] **5.2.3** Sofia's Beobachtung: "Ich nenne sie in Gedanken Owls und Hummingbirds..."
-- [ ] **5.2.4** Die Kernfrage formulieren: Wie teilt man das Budget?
+#### 5.2 Akt 1: Die Positionen — ✅
+- [x] **5.2.1** Lindqvist (Owl 🦉) vorstellen — secure coalition, long-term priorities
+- [x] **5.2.2** Ferreira (Hummingbird 🐦) vorstellen — election in 8 months, immediate needs
+- [x] **5.2.3** Sofia's Beobachtung: "In her mind, she's started calling them Owls and Hummingbirds"
+- [x] **5.2.4** Die Kernfrage: "Why can't they find a middle ground?"
+- [x] **5.2.5** NEU: Lunch break SMS an Adam (12:30)
 
-#### 5.3 Akt 2: Die Eskalation
-- [ ] **5.3.1** Erster Kompromiss-Vorschlag von Sofia
-- [ ] **5.3.2** Lindqvist lehnt ab — "Das reicht nicht für das Klima"
-- [ ] **5.3.3** Ferreira lehnt ab — "Das können wir zuhause nicht verkaufen"
-- [ ] **5.3.4** Sofia realisiert: Beide haben Recht, aus ihrer Perspektive
-- [ ] **5.3.5** HIER: "Losing everything hurts more..." — Risikoaversion
+#### 5.3 Akt 2: Die Eskalation — ✅
+- [x] **5.3.1** Kompromiss-Vorschläge von Sofia abgelehnt
+- [x] **5.3.2** Lindqvist: "We cannot accept anything below 55%"
+- [x] **5.3.3** Ferreira: "My voters need to see results *now*"
+- [x] **5.3.4** Sofia realisiert: Beide sind risk-averse, aber wählen die riskante Option
+- [x] **5.3.5** "Why Losing Hurts More Than Winning Helps" — concave utility erklärt
 
-#### 5.4 Interlude: Der Anruf
-- [ ] **5.4.1** Sofia im Flur, ruft Adam an (03:00)
-- [ ] **5.4.2** Sie erklärt die Situation
-- [ ] **5.4.3** Adam: "Das erinnert mich an das Prisoner's Dilemma" (Link zum anderen Post)
-- [ ] **5.4.4** Adam skizziert δ und p — verbal, nicht formal
-- [ ] **5.4.5** Sofia: "Also ist Blockade rational?"
-- [ ] **5.4.6** OPTIONAL: Collapsible Box mit δ_min Formel
+#### 5.4 Interlude: Der Anruf — ✅
+- [x] **5.4.1** Sofia im Korridor, ruft Adam an (18:20)
+- [x] **5.4.2** Sie erklärt die Situation
+- [x] **5.4.3** Adam: "That's the Prisoner's Dilemma" (Link zum anderen Post)
+- [x] **5.4.4** Adam erklärt δ (patience) und p (power security)
+- [x] **5.4.5** Adam sendet Link zum Widget: "A little tool"
+- [x] **5.4.6** Details-Box mit δ_min Formel
 
-#### 5.5 Akt 3: Die Deadline
-- [ ] **5.5.1** Zurück im Raum, Druck steigt
-- [ ] **5.5.2** Ferreira: "Ich habe Wahlen in 8 Monaten" (→ niedriges δ)
-- [ ] **5.5.3** Lindqvist: "Wir sind sicher in unserer Koalition" (→ hohes p)
-- [ ] **5.5.4** Sofia versteht: Die toxische Kombination
-- [ ] **5.5.5** Die Verhandlung scheitert / oder: verwässerter Kompromiss
+#### 5.5 Akt 3: Die Deadline — ✅
+- [x] **5.5.1** Zurück im Raum, Deadline 22:00
+- [x] **5.5.2** Ferreira: "I have elections in eight months" (→ niedriges δ)
+- [x] **5.5.3** Lindqvist: "My coalition is stable. We can wait" (→ hohes p)
+- [x] **5.5.4** "The Toxic Combination" — was macht δ niedrig und p hoch
+- [x] **5.5.5** Die Verhandlung scheitert
 
-#### 5.6 Epilog: Reflexion
-- [ ] **5.6.1** Sofia im Taxi zum Hotel
-- [ ] **5.6.2** Sie schreibt Adam: "Du hattest Recht"
-- [ ] **5.6.3** Innerer Monolog: Was hätte geholfen?
-  - Längere Amtszeiten?
-  - Weniger sichere Mehrheiten?
-  - Automatische Mechanismen?
-- [ ] **5.6.4** Schluss: Offen, aber mit Einsicht
+#### 5.6 Epilog: Reflexion — ✅
+- [x] **5.6.1** Sofia in Bar near Place Luxembourg (22:30)
+- [x] **5.6.2** SMS-Austausch mit Adam: "They were both rational. That's exactly the problem."
+- [x] **5.6.3** "What Would Help?" — konkrete Interventionen
+- [x] **5.6.4** Sofia sieht Ferreira in der Bar, kurzer Blickkontakt
+- [x] **5.6.5** Offenes Ende: "Unless something changes"
 
-### Integration mit bestehenden Phasen
+---
 
-```
-Phase 5 (Narrative Restrukturierung)
-    ↓
-Phase 2 (Mathe in Details-Boxen — jetzt eingebettet in die Geschichte)
-    ↓
-Phase 1 (Political Interpretation — jetzt Teil des Epilogs)
-    ↓
-Phase 4 (Optional: Interaktivität)
-```
+## Verbleibende offene Punkte
 
-**Neue Reihenfolge:**
-1. Phase 5 zuerst — die Geschichte schreiben
-2. Phase 2 parallel — Mathe in Details-Boxen innerhalb der Geschichte
-3. Phase 1 ist jetzt Teil von 5.6 (Epilog)
-4. Phase 3 wird obsolet (Hook ist jetzt der Trilog)
+### Muss noch gemacht werden
+1. **Text-Widget Inkonsistenz:** Dialog erwähnt "three strategies", Widget hat nur 2
+   - **Empfehlung:** Text anpassen auf 2 Strategien
 
-### Geschätzter Aufwand für Phase 5
+### Nice-to-have
+2. **Widget Labels dynamisch:** "Y = 0.8" sollte von COOP Variable abgeleitet werden
+3. **Unbenutzte Chart.js Imports entfernen:** Funktioniert, aber unnötiger Ballast
 
-| Schritt | Zeit | Abhängigkeiten |
-|---------|------|----------------|
-| 5.1 Prolog | 20-30 min | — |
-| 5.2 Akt 1 | 30-45 min | 5.1 |
-| 5.3 Akt 2 | 30-45 min | 5.2 |
-| 5.4 Interlude | 30-45 min | 5.3 |
-| 5.5 Akt 3 | 30-45 min | 5.4 |
-| 5.6 Epilog | 20-30 min | 5.5 |
+---
+
+## Erledigte Aufgaben (Zusammenfassung)
+
+✅ Vollständige narrative Restrukturierung (Sofia's Trilog-Geschichte)
+✅ TSX-Komponente mit interaktivem Widget
+✅ Monte Carlo Simulation mit korrekten Strategien
+✅ Quadratische Utility-Funktion implementiert
+✅ δ_min Formel korrigiert (p_win statt p_lose)
+✅ Payoff-Box Highlighting basiert auf MC-Ergebnissen
+✅ Details-Boxen für technische Inhalte
+✅ Political interpretation im Epilog
+✅ "What Would Help?" Abschnitt
+✅ Python-Tests im Notebook zur Validierung
 
 **Gesamt Phase 5:** ~2.5-4h
 

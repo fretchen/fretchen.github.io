@@ -16,6 +16,7 @@
 | Phase 3 | Narrative Stärkung | ✅ ABGESCHLOSSEN (via Phase 5) |
 | Phase 4 | Interaktivität | ✅ ABGESCHLOSSEN |
 | Phase 5 | Narrative Restrukturierung | ✅ ABGESCHLOSSEN |
+| **Phase 10** | **Widget Vereinfachung** | ⏳ VORSCHLAG |
 
 ---
 
@@ -1130,4 +1131,175 @@ Das ist **praktischer, evidenzbasiert, und gibt Handlungsoptionen**.
 
 Nach jeder Änderung:
 - [ ] → [x] markieren
+
+---
+
+## Phase 10: Widget Vereinfachung (18. Januar 2026)
+
+### Kontext
+
+Der Dialog zwischen Sofia und Adam wurde vereinfacht — keine δ und p Symbole mehr, nur natürliche Sprache ("patience", "political security"). Das Widget verwendet aber noch:
+- δ und δ_min Notation
+- Mathematische Formeln
+- Technischen Jargon
+
+**Problem:** Inkonsistenz zwischen vereinfachtem Dialog und technischem Widget.
+
+---
+
+### Widget-Analyse aus Sofias Perspektive
+
+#### Was Sofia im Widget sieht (aktueller Zustand):
+
+| Element | Inhalt |
+|---------|--------|
+| Titel | "When is cooperation rational?" |
+| Details-Box | "🔬 Model parameters" (Random Walk Formel, X₀, σ, p, Simulation) |
+| Political Security Slider | Ferreira ↔ Lindqvist mit "Risk of losing majority: X%" |
+| Patience Slider | "Patience (δ): 0.70 — Threshold: δ_min = 0.45" |
+| Button | "🎲 Re-run Simulation" |
+| Hauptergebnis | "🤝 COOPERATE" oder "👊 WINNER-TAKES-ALL" mit "δ = 0.70 > δ_min = 0.45" |
+| Payoff-Box Links | 🤝 Cooperate: "Win: Y = 0.8, Lose: Y = 0.2" → 2.34 |
+| Payoff-Box Rechts | 👊 WTA: "Win: Y = 1, Lose: Y = 0" → 1.89 |
+| Fußzeile | "Payoff: Σ δᵗ · U(Yₜ) with U(Y) = Y − ½γY² (γ = 0.8)" |
+
+#### Probleme aus Sofias Perspektive:
+
+| Element | Problem |
+|---------|---------|
+| **Details-Box** | "Random walk: X_{t+1} = X_t + ε" — Sofia ist keine Mathematikerin. |
+| **"Patience (δ): 0.70"** | Wir haben gerade δ aus dem Dialog entfernt. Inkonsistent! |
+| **"Threshold: δ_min = 0.45"** | Technischer Jargon, den Sofia nicht braucht. |
+| **"δ = 0.70 > δ_min = 0.45"** | Formelsprache im Hauptergebnis. |
+| **Cooperate-Box** | "Win: Y = 0.8, Lose: Y = 0.2" — Was bedeutet das konkret? |
+| **Payoff-Fußzeile** | "Σ δᵗ · U(Yₜ)" — Komplett unverständlich für Sofia. |
+| **Zwei Payoff-Boxen** | Zeigen Zahlen (2.34 vs 1.89) — was bedeuten die? |
+
+---
+
+### Option A: Radikale Vereinfachung ⭐ EMPFOHLEN
+
+Sofia fragt Adam: "Was passiert wenn ich die Sicherheit erhöhe?" und "Was passiert wenn ich die Patience verringere?"
+
+Das Widget sollte **genau das beantworten** — nicht mehr.
+
+**Behalten:**
+- ✅ Political Security Slider (Ferreira ↔ Lindqvist)
+- ✅ Patience Slider (ohne δ-Symbol)
+- ✅ Hauptergebnis-Box ("Cooperate wins" / "WTA wins")
+
+**Entfernen:**
+- ❌ 🔬 Model parameters Box (komplett)
+- ❌ Cooperate-Payoff-Box (links)
+- ❌ "Win: Y = 0.8, Lose: Y = 0.2" Erklärungen
+- ❌ Payoff-Fußzeile mit Formel
+- ❌ "δ = 0.70 > δ_min = 0.45" im Hauptergebnis
+- ❌ Re-run Simulation Button (oder in Details verstecken)
+
+**Umformulieren:**
+- "Patience (δ): 0.70" → "Patience: Low ← → High"
+- Hauptergebnis: "With this patience and security, the rational choice is: **COOPERATE**"
+
+**Mockup:**
+
+```
+┌──────────────────────────────────────────────────┐
+│          When is cooperation rational?            │
+│                                                   │
+│  Political Security                               │
+│  🐦 Ferreira ─────●───── Lindqvist 🦉            │
+│                                                   │
+│  Patience                                         │
+│  Short-term ─────────●── Long-term               │
+│                                                   │
+│  ┌─────────────────────────────────────────┐     │
+│  │                                         │     │
+│  │         👊 WINNER-TAKES-ALL             │     │
+│  │                                         │     │
+│  │   With high security and low patience,  │     │
+│  │   refusing to compromise is rational.   │     │
+│  │                                         │     │
+│  └─────────────────────────────────────────┘     │
+│                                                   │
+│  [🔬 Show technical details]                      │
+└──────────────────────────────────────────────────┘
+```
+
+**Vorteile:**
+- ✅ Sofia versteht sofort, was passiert
+- ✅ Keine Zahlen, keine Formeln im Hauptbereich
+- ✅ Technische Details für Interessierte ausklappbar
+- ✅ Direkter Bezug zur Story ("high security", "low patience")
+- ✅ Konsistent mit vereinfachtem Dialog
+
+**Nachteile:**
+- ❌ Höherer Implementierungsaufwand
+- ❌ Verliert Monte Carlo Visualisierung
+
+---
+
+### Option B: Moderate Vereinfachung
+
+**Behalten:**
+- ✅ Beide Slider
+- ✅ Beide Payoff-Boxen (zeigen den Unterschied)
+- ✅ Hauptergebnis-Box
+
+**Entfernen:**
+- ❌ 🔬 Model parameters Box
+- ❌ Payoff-Fußzeile mit Formel
+- ❌ "δ_min" Erwähnungen
+
+**Umformulieren:**
+- "Patience (δ): 0.70 — Threshold: δ_min = 0.45" → "Patience: 70%"
+- "Win: Y = 0.8, Lose: Y = 0.2" → "Share 20% with loser"
+- "Win: Y = 1, Lose: Y = 0" → "Winner gets everything"
+- Hauptergebnis: "**WTA is rational** — the difference is X points"
+
+**Vorteile:**
+- ✅ Behält Payoff-Vergleich (zeigt *warum* eine Strategie besser ist)
+- ✅ Mittlerer Implementierungsaufwand
+
+**Nachteile:**
+- ⚠️ Immer noch zwei Boxen mit abstrakten Zahlen
+- ⚠️ "70%" für Patience ist nicht intuitiv
+
+---
+
+### Option C: Minimaler Eingriff
+
+**Nur Notation ändern:**
+- δ → "patience"
+- δ_min → "threshold"
+- Payoff-Fußzeile in Details verstecken
+
+**Vorteile:**
+- ✅ Schnell zu implementieren
+
+**Nachteile:**
+- ❌ Immer noch zwei Payoff-Boxen mit abstrakten Zahlen
+- ❌ Inkonsistenz bleibt teilweise
+
+---
+
+### Vergleichstabelle
+
+| Aspekt | Option A | Option B | Option C |
+|--------|----------|----------|----------|
+| **Komplexität für Leser** | ⭐ Minimal | ⭐⭐ Niedrig | ⭐⭐⭐ Mittel |
+| **Technische Tiefe** | Versteckt | Sichtbar | Voll sichtbar |
+| **Passt zu Dialog** | ✅ Perfekt | ⚠️ Teilweise | ❌ Inkonsistent |
+| **Sofia würde verstehen** | ✅ Ja | ⚠️ Meistens | ❌ Teilweise |
+| **Implementierungsaufwand** | ~45 min | ~20 min | ~10 min |
+| **Behält MC-Simulation** | Versteckt | ✅ Ja | ✅ Ja |
+
+---
+
+### Entscheidung
+
+- [ ] **Option A:** Radikale Vereinfachung (empfohlen)
+- [ ] **Option B:** Moderate Vereinfachung
+- [ ] **Option C:** Minimaler Eingriff
+
+**Status:** ⏳ Warte auf Entscheidung
 - Commit mit Referenz: "Fix 1.2: Adam als Person einführen"

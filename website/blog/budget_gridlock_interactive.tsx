@@ -51,13 +51,13 @@ const BudgetNegotiationWidget: React.FC = () => {
   // User-adjustable parameters
   const [delta, setDelta] = useState(0.7); // Patience / discount factor
   const [politicalSecurity, setPoliticalSecurity] = useState(0.5); // 0 = Ferreira (fragile), 1 = Lindqvist (secure)
-  
+
   // Derived parameters from political security slider
   // s=0 (Ferreira): X₀=0.52, σ=0.20 → high volatility, near 50%
   // s=1 (Lindqvist): X₀=0.70, σ=0.08 → low volatility, comfortable majority
   const X0 = 0.52 + 0.18 * politicalSecurity;
   const sigma = 0.2 - 0.12 * politicalSecurity;
-  
+
   // Fixed parameters
   const T = 10; // Number of periods to simulate
   const nSimulations = 200; // Number of Monte Carlo trajectories
@@ -138,11 +138,32 @@ const BudgetNegotiationWidget: React.FC = () => {
 
   const { results } = runSimulation;
 
-  // Determine if cooperation is rational (using analytical δ_min)
-  const cooperationWins = delta >= deltaMin;
-
   // Determine which strategy has higher payoff (from MC simulation)
   const coopPayoffHigher = results.cooperate.mean > results.wta.mean;
+
+  // Generate explanation text based on current settings
+  const getExplanationText = () => {
+    const securityLevel = politicalSecurity > 0.6 ? "high" : politicalSecurity < 0.4 ? "low" : "moderate";
+    const patienceLevel = delta > 0.7 ? "high" : delta < 0.5 ? "low" : "moderate";
+
+    if (coopPayoffHigher) {
+      if (patienceLevel === "high") {
+        return "With long-term thinking, cooperation pays off.";
+      } else if (securityLevel === "low") {
+        return "When power is fragile, sharing makes sense.";
+      }
+      return "Cooperation is the rational choice here.";
+    } else {
+      if (securityLevel === "high" && patienceLevel === "low") {
+        return "With high security and low patience, refusing to compromise is rational.";
+      } else if (securityLevel === "high") {
+        return "Secure in power, there's no need to compromise.";
+      } else if (patienceLevel === "low") {
+        return "With elections looming, short-term wins matter more.";
+      }
+      return "Winner-takes-all is the rational choice here.";
+    }
+  };
 
   return (
     <div
@@ -166,31 +187,6 @@ const BudgetNegotiationWidget: React.FC = () => {
         When is cooperation rational?
       </h4>
 
-      {/* Model parameters info - for interested users */}
-      <details
-        className={css({
-          backgroundColor: "#f9fafb",
-          padding: "0.75rem",
-          borderRadius: "4px",
-          marginBottom: "1rem",
-          fontSize: "0.8rem",
-          color: "#6b7280",
-        })}
-      >
-        <summary className={css({ cursor: "pointer", fontWeight: "medium" })}>🔬 Model parameters</summary>
-        <div className={css({ marginTop: "0.5rem" })}>
-          <strong>Random walk:</strong> X_{"{t+1}"} = X_t + ε, where ε ~ N(0, σ²), clamped to [0,1]
-          <br />
-          <strong>Starting power:</strong> X₀ = {X0.toFixed(2)}
-          <br />
-          <strong>Volatility:</strong> σ = {sigma.toFixed(2)}
-          <br />
-          <strong>Probability of losing majority:</strong> p = {(currentP * 100).toFixed(0)}%
-          <br />
-          <strong>Simulation:</strong> {T} periods, {nSimulations} trajectories
-        </div>
-      </details>
-
       {/* Political Security slider */}
       <div className={css({ marginBottom: "1.5rem" })}>
         <label
@@ -201,7 +197,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             marginBottom: "0.5rem",
           })}
         >
-          <strong>Political Security:</strong>
+          <strong>Political Security</strong>
         </label>
         <div
           className={css({
@@ -224,12 +220,9 @@ const BudgetNegotiationWidget: React.FC = () => {
           onChange={(e) => setPoliticalSecurity(parseFloat(e.target.value))}
           className={css({ width: "100%" })}
         />
-        <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", textAlign: "center" })}>
-          Risk of losing majority: <strong>{(currentP * 100).toFixed(0)}%</strong>
-        </p>
       </div>
 
-      {/* Delta slider */}
+      {/* Patience slider */}
       <div className={css({ marginBottom: "1.5rem" })}>
         <label
           className={css({
@@ -239,9 +232,20 @@ const BudgetNegotiationWidget: React.FC = () => {
             marginBottom: "0.5rem",
           })}
         >
-          <strong>Patience (δ):</strong> {delta.toFixed(2)} — Threshold: δ_min = {deltaMin.toFixed(2)}
+          <strong>Patience</strong>
         </label>
-
+        <div
+          className={css({
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "0.75rem",
+            color: "#6b7280",
+            marginBottom: "0.25rem",
+          })}
+        >
+          <span>Short-term</span>
+          <span>Long-term</span>
+        </div>
         <input
           type="range"
           min="0.1"
@@ -251,65 +255,19 @@ const BudgetNegotiationWidget: React.FC = () => {
           onChange={(e) => setDelta(parseFloat(e.target.value))}
           className={css({ width: "100%" })}
         />
-
-        {/* Zone labels */}
-        <div
-          className={css({
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "0.7rem",
-            marginTop: "0.25rem",
-          })}
-        >
-          <span className={css({ color: "#dc2626" })}>← WTA wins</span>
-          <span className={css({ color: "#16a34a" })}>Cooperate wins →</span>
-        </div>
       </div>
 
-      {/* Re-simulate button */}
-      <div className={css({ textAlign: "center", marginBottom: "1rem" })}>
-        <button
-          onClick={() => setSimKey((k) => k + 1)}
-          className={css({
-            padding: "0.5rem 1rem",
-            backgroundColor: "#3b82f6",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            _hover: { backgroundColor: "#2563eb" },
-          })}
-        >
-          🎲 Re-run Simulation
-        </button>
-      </div>
-
-      {/* Main result */}
-      <div
+      {/* Expected payoff label */}
+      <p
         className={css({
-          backgroundColor: cooperationWins ? "#f0fdf4" : "#fef2f2",
-          border: cooperationWins ? "2px solid #22c55e" : "2px solid #ef4444",
-          borderRadius: "6px",
-          padding: "1rem",
+          fontSize: "0.85rem",
+          color: "#374151",
           textAlign: "center",
-          marginBottom: "1rem",
+          marginBottom: "0.75rem",
         })}
       >
-        <div
-          className={css({
-            fontSize: "1.2rem",
-            fontWeight: "bold",
-            color: cooperationWins ? "#22c55e" : "#ef4444",
-            marginBottom: "0.5rem",
-          })}
-        >
-          {cooperationWins ? "🤝 COOPERATE" : "👊 WINNER-TAKES-ALL"}
-        </div>
-        <div className={css({ fontSize: "0.85rem", color: "#374151" })}>
-          δ = {delta.toFixed(2)} {cooperationWins ? ">" : "<"} δ_min = {deltaMin.toFixed(2)}
-        </div>
-      </div>
+        Expected payoff over 10 years:
+      </p>
 
       {/* Payoff comparison */}
       <div
@@ -317,6 +275,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: "1rem",
+          marginBottom: "1rem",
         })}
       >
         <div
@@ -328,11 +287,18 @@ const BudgetNegotiationWidget: React.FC = () => {
             textAlign: "center",
           })}
         >
-          <div className={css({ color: "#22c55e", fontWeight: "bold", fontSize: "0.9rem" })}>🤝 Cooperate</div>
-          <div className={css({ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem" })}>
-            Win: Y = 0.8, Lose: Y = 0.2
+          <div
+            className={css({
+              color: coopPayoffHigher ? "#22c55e" : "#6b7280",
+              fontWeight: "bold",
+              fontSize: "0.9rem",
+            })}
+          >
+            🤝 Cooperate {coopPayoffHigher && "⬅"}
           </div>
-          <div className={css({ fontSize: "1.3rem", fontWeight: "bold" })}>{results.cooperate.mean.toFixed(2)}</div>
+          <div className={css({ fontSize: "1.3rem", fontWeight: "bold", marginTop: "0.5rem" })}>
+            {results.cooperate.mean.toFixed(1)}
+          </div>
         </div>
 
         <div
@@ -344,25 +310,73 @@ const BudgetNegotiationWidget: React.FC = () => {
             textAlign: "center",
           })}
         >
-          <div className={css({ color: "#ef4444", fontWeight: "bold", fontSize: "0.9rem" })}>👊 Winner-Takes-All</div>
-          <div className={css({ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem" })}>
-            Win: Y = 1, Lose: Y = 0
+          <div
+            className={css({
+              color: !coopPayoffHigher ? "#ef4444" : "#6b7280",
+              fontWeight: "bold",
+              fontSize: "0.9rem",
+            })}
+          >
+            👊 Winner-Takes-All {!coopPayoffHigher && "⬅"}
           </div>
-          <div className={css({ fontSize: "1.3rem", fontWeight: "bold" })}>{results.wta.mean.toFixed(2)}</div>
+          <div className={css({ fontSize: "1.3rem", fontWeight: "bold", marginTop: "0.5rem" })}>
+            {results.wta.mean.toFixed(1)}
+          </div>
         </div>
       </div>
 
+      {/* Explanation text */}
       <p
         className={css({
-          fontSize: "0.75rem",
-          color: "#6b7280",
+          fontSize: "0.9rem",
+          color: "#374151",
           textAlign: "center",
-          marginTop: "1rem",
           fontStyle: "italic",
+          marginBottom: "1rem",
         })}
       >
-        Payoff: Σ δᵗ · U(Yₜ) with U(Y) = Y − ½γY² (γ = 0.8)
+        {getExplanationText()}
       </p>
+
+      {/* Technical details - collapsed */}
+      <details
+        className={css({
+          backgroundColor: "#f9fafb",
+          padding: "0.75rem",
+          borderRadius: "4px",
+          fontSize: "0.75rem",
+          color: "#6b7280",
+        })}
+      >
+        <summary className={css({ cursor: "pointer", fontWeight: "medium" })}>🔬 Technical details</summary>
+        <div className={css({ marginTop: "0.5rem" })}>
+          <strong>Model:</strong> Random walk X_{"{t+1}"} = X_t + ε, ε ~ N(0, σ²)
+          <br />
+          <strong>Parameters:</strong> X₀ = {X0.toFixed(2)}, σ = {sigma.toFixed(2)}, δ = {delta.toFixed(2)}
+          <br />
+          <strong>Threshold:</strong> δ_min = {deltaMin.toFixed(2)} (cooperation rational when δ {">"} δ_min)
+          <br />
+          <strong>Utility:</strong> U(Y) = Y − ½γY² with γ = {GAMMA}
+          <br />
+          <strong>Simulation:</strong> {nSimulations} trajectories, {T} periods
+          <br />
+          <button
+            onClick={() => setSimKey((k) => k + 1)}
+            className={css({
+              marginTop: "0.5rem",
+              padding: "0.25rem 0.5rem",
+              backgroundColor: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "0.7rem",
+            })}
+          >
+            🎲 Re-run simulation
+          </button>
+        </div>
+      </details>
     </div>
   );
 };
@@ -589,19 +603,45 @@ But maybe next time, the game can be different.
 
 She finishes her wine, opens her laptop, and starts drafting an email to her director.
 
+---
+
 ## Postscript: The Model
 
-For readers interested in the formal framework behind Sofia's observations, political economists have developed models that capture these dynamics precisely. The key insight is that budget negotiations are *repeated games*—the same parties face each other year after year.
+For readers interested in the formal framework, here's the mathematical skeleton.
 
-In such games, cooperation can emerge if players value the future enough. The condition for cooperation is:
+### Setup
 
-$$\\delta > \\delta_{min}(p)$$
+- **Power** $X_t \\in [0,1]$: Party A's political strength at time $t$ (e.g., vote share). Evolves as a random walk: $X_{t+1} = X_t + \\varepsilon_t$ with $\\varepsilon_t \\sim N(0, \\sigma^2)$.
+- **Budget allocation** $Y_t \\in [0,1]$: Share of resources going to Party A's priorities.
+- **Utility** $U(Y) = Y - \\frac{1}{2}\\gamma Y^2$ with $\\gamma \\in (0,1)$: Concave (risk-averse). Losses hurt more than gains help.
+- **Payoff**: Total discounted utility $V = \\sum_{t=0}^{\\infty} \\delta^t U(Y_t)$, where $\\delta \\in (0,1)$ is the discount factor (patience).
 
-where $\\delta$ represents patience and $p$ represents power security. When this condition fails—short time horizons, secure power—winner-takes-all becomes the equilibrium strategy.
+### Strategies
 
-This isn't a failure of rationality. It's *exactly* what rational actors would do under these constraints. The implication is profound: if we want different outcomes, we need to change the constraints, not just appeal to better behavior.
+- **Winner-Takes-All (WTA)**: If $X_t > 0.5$, set $Y = 1$; otherwise $Y = 0$.
+- **Cooperate**: If $X_t > 0.5$, set $Y = 1 - c$; otherwise $Y = c$. Both sides share.
 
-For more on the mathematics of cooperation in repeated games, see the [Prisoner's Dilemma](/blog/13) or on the [Tragedy of the Commons](/blog/14) post, which explores similar dynamics in a simpler setting.
+### The Threshold
+
+Let $p = P(X_{t+1} < 0.5 \\mid X_t > 0.5)$ be the probability of losing power next period.
+
+For small $\\delta$, we keep only the leading term. The expected payoff under WTA starting in power:
+
+$$V_{WTA} \\approx U(1) + \\delta \\left[ (1-p) \\cdot U(1) + p \\cdot U(0) \\right] + O(\\delta^2)$$
+
+Under cooperation:
+
+$$V_{Coop} \\approx U(1-c) + \\delta \\cdot U(1-c) + O(\\delta^2)$$
+
+Cooperation dominates when $V_{Coop} > V_{WTA}$. To leading order in $\\delta$, this yields:
+
+$$\\delta_{min} = \\frac{1 - \\gamma}{1 - p_{win} \\cdot \\gamma}$$
+
+where $p_{win} = 1 - p$ is the probability of staying in power.
+
+**Interpretation**: When $\\delta < \\delta_{min}$—impatient or secure—WTA dominates. When $\\delta > \\delta_{min}$—patient or vulnerable—cooperation becomes rational.
+
+For more on repeated games and cooperation, see [Prisoner's Dilemma](/blog/13) or [Tragedy of the Commons](/blog/14).
 
 ---
 

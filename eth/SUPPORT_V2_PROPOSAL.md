@@ -257,23 +257,23 @@ await writeContract({
 
 ## 5. Implementierungsplan
 
-### Phase 1: Contract (7h)
+### Phase 1: Contract ✅ ABGESCHLOSSEN
+
+| Schritt | Beschreibung | Status |
+|---------|--------------|--------|
+| 1.1 | `contracts/interfaces/IEIP3009.sol` | ✅ |
+| 1.2 | `contracts/SupportV2.sol` | ✅ |
+| 1.3 | `test/SupportV2.test.ts` (16 Tests) | ✅ |
+| 1.4 | `scripts/deploy-support-v2.ts` + Config | ✅ |
+
+### Phase 2: Multi-Chain & Testing (2h)
 
 | Schritt | Beschreibung |
 |---------|--------------|
-| 1.1 | `contracts/interfaces/IEIP3009.sol` (shared, für Splitter wiederverwendbar) |
-| 1.2 | `contracts/SupportV2.sol` |
-| 1.3 | `test/SupportV2.test.ts` |
-| 1.4 | `scripts/deploy-support-v2.ts` + Config |
-
-### Phase 2: Multi-Chain (2h)
-
-| Schritt | Beschreibung |
-|---------|--------------|
-| 2.1 | Base + Base Sepolia in `hardhat.config.ts` |
-| 2.2 | Deploy auf Testnets |
-| 2.3 | `setAllowedToken(USDC)` auf Testnets |
-| 2.4 | ABI Export |
+| 2.1 | Base + Base Sepolia zu `hardhat.config.ts` hinzufügen (Optimism bereits vorhanden) |
+| 2.2 | Deploy auf Optimism Sepolia + Base Sepolia |
+| 2.3 | ABI Export |
+| 2.4 | `notebooks/support_v2_demo.ipynb` — Deno TypeScript Notebook für Tests (wie x402_facilitator_demo_ts) |
 
 ### Phase 3: Frontend (5h)
 
@@ -289,9 +289,8 @@ await writeContract({
 | Schritt | Beschreibung |
 |---------|--------------|
 | 4.1 | Deploy auf Optimism + Base Mainnet |
-| 4.2 | `setAllowedToken(USDC)` |
-| 4.3 | Etherscan/Basescan Verification |
-| 4.4 | Frontend Deploy |
+| 4.2 | Etherscan/Basescan Verification |
+| 4.3 | Frontend Deploy |
 
 ---
 

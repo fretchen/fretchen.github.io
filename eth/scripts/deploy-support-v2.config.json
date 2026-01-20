@@ -4,7 +4,7 @@
   },
   "options": {
     "validateOnly": false,
-    "dryRun": true,
+    "dryRun": false,
     "verify": true,
     "waitConfirmations": 2
   },

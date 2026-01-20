@@ -1,8 +1,8 @@
-// Auto-generated ABI for EIP3009SplitterV1
-// EIP-3009 payment splitter with fixed facilitator fee
-// Generated on: 2026-01-20T20:33:28.418Z
+// Auto-generated ABI for SupportV2
+// Support contract V2 with ETH and EIP-3009 token donations
+// Generated on: 2026-01-20T20:33:28.419Z
 
-export const EIP3009SplitterV1ABI = [
+export const SupportV2ABI = [
   {
     inputs: [],
     stateMutability: "nonpayable",
@@ -73,14 +73,8 @@ export const EIP3009SplitterV1ABI = [
     type: "error",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "token",
-        type: "address",
-      },
-    ],
-    name: "SafeERC20FailedOperation",
+    inputs: [],
+    name: "ReentrancyGuardReentrantCall",
     type: "error",
   },
   {
@@ -105,36 +99,41 @@ export const EIP3009SplitterV1ABI = [
       {
         indexed: true,
         internalType: "address",
-        name: "oldWallet",
+        name: "from",
         type: "address",
       },
       {
         indexed: true,
         internalType: "address",
-        name: "newWallet",
+        name: "recipient",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "urlHash",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "url",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "token",
         type: "address",
       },
     ],
-    name: "FacilitatorWalletUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "oldFee",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newFee",
-        type: "uint256",
-      },
-    ],
-    name: "FixedFeeUpdated",
+    name: "Donation",
     type: "event",
   },
   {
@@ -167,49 +166,6 @@ export const EIP3009SplitterV1ABI = [
       },
     ],
     name: "OwnershipTransferred",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "buyer",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "seller",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "facilitator",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "totalAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "sellerAmount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "facilitatorFee",
-        type: "uint256",
-      },
-    ],
-    name: "SplitExecuted",
     type: "event",
   },
   {
@@ -254,82 +210,88 @@ export const EIP3009SplitterV1ABI = [
   {
     inputs: [
       {
+        internalType: "string",
+        name: "_url",
+        type: "string",
+      },
+      {
         internalType: "address",
-        name: "token",
+        name: "_recipient",
+        type: "address",
+      },
+    ],
+    name: "donate",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_url",
+        type: "string",
+      },
+      {
+        internalType: "address",
+        name: "_recipient",
         type: "address",
       },
       {
         internalType: "address",
-        name: "buyer",
+        name: "_token",
         type: "address",
       },
       {
-        internalType: "address",
-        name: "seller",
-        type: "address",
+        internalType: "uint256",
+        name: "_amount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_validAfter",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_validBefore",
+        type: "uint256",
       },
       {
         internalType: "bytes32",
-        name: "salt",
-        type: "bytes32",
-      },
-      {
-        internalType: "uint256",
-        name: "totalAmount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "validAfter",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "validBefore",
-        type: "uint256",
-      },
-      {
-        internalType: "bytes32",
-        name: "nonce",
+        name: "_nonce",
         type: "bytes32",
       },
       {
         internalType: "uint8",
-        name: "v",
+        name: "_v",
         type: "uint8",
       },
       {
         internalType: "bytes32",
-        name: "r",
+        name: "_r",
         type: "bytes32",
       },
       {
         internalType: "bytes32",
-        name: "s",
+        name: "_s",
         type: "bytes32",
       },
     ],
-    name: "executeSplit",
+    name: "donateToken",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [],
-    name: "facilitatorWallet",
-    outputs: [
+    inputs: [
       {
-        internalType: "address",
-        name: "",
-        type: "address",
+        internalType: "string",
+        name: "_url",
+        type: "string",
       },
     ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "fixedFee",
+    name: "getLikesForUrl",
     outputs: [
       {
         internalType: "uint256",
@@ -344,47 +306,13 @@ export const EIP3009SplitterV1ABI = [
     inputs: [
       {
         internalType: "address",
-        name: "_facilitatorWallet",
+        name: "_owner",
         type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_fixedFee",
-        type: "uint256",
       },
     ],
     name: "initialize",
     outputs: [],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "token",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "authorizer",
-        type: "address",
-      },
-      {
-        internalType: "bytes32",
-        name: "nonce",
-        type: "bytes32",
-      },
-    ],
-    name: "isAuthorizationUsed",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
     type: "function",
   },
   {
@@ -424,32 +352,6 @@ export const EIP3009SplitterV1ABI = [
     inputs: [
       {
         internalType: "address",
-        name: "_wallet",
-        type: "address",
-      },
-    ],
-    name: "setFacilitatorWallet",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_fixedFee",
-        type: "uint256",
-      },
-    ],
-    name: "setFixedFee",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
         name: "newOwner",
         type: "address",
       },
@@ -477,6 +379,25 @@ export const EIP3009SplitterV1ABI = [
     stateMutability: "payable",
     type: "function",
   },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    name: "urlLikes",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
 
-export type EIP3009SplitterV1ABI = typeof EIP3009SplitterV1ABI;
+export type SupportV2ABI = typeof SupportV2ABI;

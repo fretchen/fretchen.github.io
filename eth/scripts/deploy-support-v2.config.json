@@ -1,0 +1,16 @@
+{
+  "parameters": {
+    "owner": ""
+  },
+  "options": {
+    "validateOnly": false,
+    "dryRun": true,
+    "verify": true,
+    "waitConfirmations": 2
+  },
+  "metadata": {
+    "description": "SupportV2 deployment - Buy me a coffee with ETH/USDC",
+    "version": "1.0.0",
+    "environment": "testnet"
+  }
+}

@@ -3,7 +3,10 @@ import { ethers, upgrades, network } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
-import { getAddress } from "viem";
+import { getAddress, formatEther, parseEther } from "viem";
+
+// Minimum ETH balance required for deployment (0.03 ETH)
+const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
 
 // Zod Schema für Validierung
 const SupportV2DeployConfigSchema = z.object({
@@ -80,6 +83,10 @@ function loadConfig(): SupportV2DeployConfig {
 async function validateDeployment(): Promise<void> {
   console.log("🔍 Validating SupportV2 contract...");
 
+  // Check deployer balance
+  const [deployer] = await ethers.getSigners();
+  await checkDeployerBalance(deployer);
+
   try {
     const SupportV2Factory = await ethers.getContractFactory("SupportV2");
     console.log("✅ Contract compiles successfully");
@@ -100,6 +107,34 @@ async function validateDeployment(): Promise<void> {
 }
 
 /**
+ * Check if deployer has sufficient ETH balance for deployment
+ */
+async function checkDeployerBalance(deployer: { address: string; provider: { getBalance: (addr: string) => Promise<bigint> } }): Promise<void> {
+  const balance = await deployer.provider.getBalance(deployer.address);
+  const balanceFormatted = formatEther(balance);
+  const minFormatted = formatEther(MIN_DEPLOYMENT_BALANCE);
+
+  console.log(`💰 Deployer Balance: ${balanceFormatted} ETH`);
+  console.log(`📊 Minimum Required: ${minFormatted} ETH`);
+
+  if (balance < MIN_DEPLOYMENT_BALANCE) {
+    const deficit = MIN_DEPLOYMENT_BALANCE - balance;
+    throw new Error(
+      `Insufficient funds for deployment!\n` +
+      `   Balance: ${balanceFormatted} ETH\n` +
+      `   Required: ${minFormatted} ETH\n` +
+      `   Deficit: ${formatEther(deficit)} ETH\n\n` +
+      `   Please fund ${deployer.address} with at least ${formatEther(deficit)} ETH.\n` +
+      `   Faucets:\n` +
+      `   - Optimism Sepolia: https://www.alchemy.com/faucets/optimism-sepolia\n` +
+      `   - Base Sepolia: https://www.alchemy.com/faucets/base-sepolia`
+    );
+  }
+
+  console.log("✅ Sufficient balance for deployment");
+}
+
+/**
  * Simulate deployment (dry run)
  */
 async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> {
@@ -107,6 +142,9 @@ async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> 
 
   const [deployer] = await ethers.getSigners();
   const ownerAddress = config.parameters.owner || deployer.address;
+
+  // Check deployer balance
+  await checkDeployerBalance(deployer);
 
   console.log("");
   console.log("📋 Deployment parameters:");
@@ -158,6 +196,12 @@ async function deploySupportV2() {
 
   console.log(`👤 Deployer: ${deployer.address}`);
   console.log(`👑 Owner: ${ownerAddress}`);
+  console.log("");
+
+  // Check deployer balance before anything else
+  console.log("💰 Checking Deployer Balance");
+  console.log("-".repeat(40));
+  await checkDeployerBalance(deployer);
   console.log("");
 
   // Get contract factory

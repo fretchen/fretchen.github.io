@@ -57,6 +57,42 @@ npx serverless deploy  # Requires SCW_ACCESS_KEY, SCW_SECRET_KEY in .env
 
 All test files use `.test.js` or `.test.ts` extensions. Coverage reports generate in `coverage/`.
 
+### Smart Contract Test Structure (eth/)
+
+Tests are split into two categories with distinct purposes:
+
+**`*_Functional.ts` - Contract Logic Tests:**
+- Uses **Viem only** (no ethers, no OpenZeppelin Upgrades Plugin)
+- Manual proxy deployment via Viem's `deployContract` with compiled artifacts
+- Tests contract functionality: initialization, state changes, access control, events
+- Example: [SupportV2_Functional.ts](eth/test/SupportV2_Functional.ts), [EIP3009SplitterV1_Functional.test.ts](eth/test/EIP3009SplitterV1_Functional.test.ts)
+
+**`*_Deployment.ts` - Deployment Script Tests:**
+- Uses **ethers + OpenZeppelin Upgrades Plugin**
+- **Must import and test the actual deployment script** (e.g., `import { deploySupportV2 } from "../scripts/deploy-support-v2"`)
+- Uses `createTempConfig()` helper to create test config files
+- Uses `withTempConfig()` wrapper to backup/restore original config
+- Tests all script modes: `validateOnly`, `dryRun`, and real deployment
+- Tests config validation, balance checks, deployment file persistence
+- Example: [SupportV2_Deployment.ts](eth/test/SupportV2_Deployment.ts), [EIP3009SplitterV1_Deployment.test.ts](eth/test/EIP3009SplitterV1_Deployment.test.ts)
+
+**Deployment script requirements for testing:**
+```typescript
+// At end of deploy script, export function and guard execution:
+export { deployFunction, MIN_DEPLOYMENT_BALANCE, ConfigSchema };
+
+if (require.main === module) {
+  deployFunction()
+    .then(() => process.exit(0))
+    .catch((error) => { console.error(error); process.exit(1); });
+}
+```
+
+**Why this separation:**
+- Functional tests are fast, isolated, and test contract behavior
+- Deployment tests ensure the actual script works with config validation, balance checks, and file persistence
+- Deployment tests catch issues like missing config fields, invalid addresses, or insufficient funds before real deployments
+
 ## Essential Development Workflows
 
 ### Linting & Formatting

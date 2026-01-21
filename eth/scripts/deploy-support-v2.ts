@@ -276,10 +276,15 @@ async function deploySupportV2() {
   return { proxyAddress, implementationAddress };
 }
 
-// Execute
-deploySupportV2()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+// Export for testing
+export { deploySupportV2, MIN_DEPLOYMENT_BALANCE, SupportV2DeployConfigSchema };
+
+// Execute only when run directly (not imported)
+if (require.main === module) {
+  deploySupportV2()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

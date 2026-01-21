@@ -3,7 +3,13 @@ import { expect } from "chai";
 import hre from "hardhat";
 import { parseUnits, parseEther, keccak256, toHex, getAddress, encodeFunctionData } from "viem";
 
-describe("SupportV2", function () {
+/**
+ * SupportV2 Functional Tests
+ *
+ * Tests contract functionality using Viem only (no ethers, no OpenZeppelin Upgrades Plugin).
+ * Proxy is deployed manually via ERC1967Proxy contract.
+ */
+describe("SupportV2 - Functional Tests", function () {
   // Token decimals (USDC uses 6)
   const TOKEN_DECIMALS = 6;
   const parseToken = (amount: string) => parseUnits(amount, TOKEN_DECIMALS);
@@ -17,6 +23,7 @@ describe("SupportV2", function () {
 
   /**
    * Deploy fixture with SupportV2 proxy and mock USDC
+   * Uses manual proxy deployment (Viem only, no OpenZeppelin Upgrades Plugin)
    */
   async function deploySupportFixture() {
     const [owner, donor, recipient, otherAccount] = await hre.viem.getWalletClients();
@@ -39,7 +46,7 @@ describe("SupportV2", function () {
       args: [owner.account.address],
     });
 
-    // Deploy proxy
+    // Deploy proxy manually (Viem only)
     const proxy = await hre.viem.deployContract("ERC1967Proxy", [
       implementation.address,
       initializeData as `0x${string}`,
@@ -140,7 +147,7 @@ describe("SupportV2", function () {
     };
   }
 
-  describe("Deployment", function () {
+  describe("Initialization", function () {
     it("should initialize with correct owner", async function () {
       const { support, owner } = await loadFixture(deploySupportFixture);
       expect(await support.read.owner()).to.equal(getAddress(owner.account.address));
@@ -411,7 +418,7 @@ describe("SupportV2", function () {
     });
   });
 
-  describe("Upgrades", function () {
+  describe("UUPS Upgrade Authorization", function () {
     it("should only allow owner to upgrade", async function () {
       const { support, otherAccount } = await loadFixture(deploySupportFixture);
 

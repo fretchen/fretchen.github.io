@@ -2,7 +2,6 @@ import { sepolia, optimism, optimismSepolia, base, baseSepolia } from "wagmi/cha
 import type { Chain } from "wagmi/chains";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
-import SupportABI from "../../eth/abi/contracts/Support.json";
 import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
@@ -55,7 +54,7 @@ export function isSupportV2Chain(chainId: number): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Legacy Support Contract (will be deprecated)
+// Other Contract Configurations
 // ═══════════════════════════════════════════════════════════════
 
 // Create stable contract config references at module level - computed once when module loads
@@ -70,19 +69,6 @@ const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
       return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
     default:
       return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
-  }
-})();
-
-const STABLE_SUPPORT_CONTRACT_CONFIG = (() => {
-  switch (CHAIN_NAME) {
-    case "sepolia":
-      return { address: "0xf137ca5dc45e3d0336ac2daa26084b0eaf244684", abi: SupportABI } as const;
-    case "optimism":
-      return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: SupportABI } as const;
-    case "optimismSepolia":
-      return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: SupportABI } as const;
-    default:
-      return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: SupportABI } as const;
   }
 })();
 
@@ -121,7 +107,6 @@ const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
 
 // Export stable references directly - these objects never change reference
 export const genAiNFTContractConfig = STABLE_GENAI_NFT_CONTRACT_CONFIG;
-export const supportContractConfig = STABLE_SUPPORT_CONTRACT_CONFIG;
 export const collectorNFTContractConfig = STABLE_COLLECTOR_NFT_CONTRACT_CONFIG;
 export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
 

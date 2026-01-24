@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
 import { parseEther } from "viem";
 import { useReadContract } from "wagmi";
 import {
@@ -20,13 +20,21 @@ export function useSupportAction(url: string) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [fullUrl, setFullUrl] = React.useState(url);
 
-  // Wagmi hooks
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
+  // Wagmi hooks - compare both chainId sources for debugging
+  const { isConnected, chainId: accountChainId, connector } = useAccount();
+  const wagmiChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const donationAmount = parseEther("0.0002");
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Debug: Log chain IDs on every render
+  React.useEffect(() => {
+    console.log(`[Support] Chain debug - accountChainId: ${accountChainId}, wagmiChainId: ${wagmiChainId}, connector: ${connector?.name}`);
+  }, [accountChainId, wagmiChainId, connector]);
+
+  // Use wagmiChainId as it's more reliable for connected state
+  const chainId = accountChainId ?? wagmiChainId;
 
   // Set full URL after hydration
   React.useEffect(() => {
@@ -37,11 +45,11 @@ export function useSupportAction(url: string) {
     }
   }, [url]);
 
-  // Check if current chain is supported
-  const isSupported = isSupportV2Chain(chainId);
+  // Check if current chain is supported (chainId can be undefined if not connected)
+  const isSupported = chainId ? isSupportV2Chain(chainId) : false;
 
   // Chain for read operations: User's chain if supported, otherwise default
-  const readChainId = isSupported ? chainId : DEFAULT_SUPPORT_CHAIN.id;
+  const readChainId = isSupported && chainId ? chainId : DEFAULT_SUPPORT_CHAIN.id;
   const readConfig = getSupportV2Config(readChainId)!;
 
   // Read support data - always works (even if user on wrong chain)
@@ -66,14 +74,22 @@ export function useSupportAction(url: string) {
       return;
     }
 
-    // Automatic chain switch if not on supported chain
-    if (!isSupported) {
+    // Determine which chain to use for the transaction
+    // Check support status directly (not from closure) to avoid stale state
+    const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
+    let targetChainId = chainId ?? DEFAULT_SUPPORT_CHAIN.id;
+
+    console.log(`[Support] Current chain: ${chainId}, supported: ${currentlySupported}`);
+
+    // Automatic chain switch only if not on a supported chain
+    if (!currentlySupported) {
       console.log(
         `[Support] Chain mismatch: current=${chainId}, switching to ${DEFAULT_SUPPORT_CHAIN.name}`
       );
       try {
         await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
         console.log(`[Support] Successfully switched to ${DEFAULT_SUPPORT_CHAIN.name}`);
+        targetChainId = DEFAULT_SUPPORT_CHAIN.id;
       } catch (switchError) {
         console.error("[Support] Chain switch failed:", switchError);
         setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
@@ -81,14 +97,15 @@ export function useSupportAction(url: string) {
       }
     }
 
-    // Get contract config (use default chain after potential switch)
-    const activeConfig = getSupportV2Config(DEFAULT_SUPPORT_CHAIN.id);
+    // Get contract config for the target chain (user's chain if supported, otherwise default)
+    const activeConfig = getSupportV2Config(targetChainId);
     if (!activeConfig) {
       setErrorMessage("Konfigurationsfehler");
       return;
     }
 
     setIsLoading(true);
+    console.log(`[Support] Sending donation on chain ${targetChainId} to ${activeConfig.address}`);
 
     // SupportV2 has recipient parameter
     writeContract({
@@ -97,7 +114,7 @@ export function useSupportAction(url: string) {
       args: [fullUrl, SUPPORT_RECIPIENT_ADDRESS],
       value: donationAmount,
     });
-  }, [fullUrl, isSupported, chainId, switchChainAsync, writeContract, donationAmount]);
+  }, [fullUrl, chainId, switchChainAsync, writeContract, donationAmount]);
 
   // Update state after transaction
   React.useEffect(() => {

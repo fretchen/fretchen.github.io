@@ -1,6 +1,6 @@
 # SupportV2 Contract — Implementation Plan
 
-**Status:** 🚧 IN ENTWICKLUNG (Phase 2 abgeschlossen, Phase 3 offen)  
+**Status:** 🚧 IN ENTWICKLUNG (Phase 3 größtenteils abgeschlossen, Phase 4 offen)  
 **Letzte Aktualisierung:** 24. Januar 2026
 
 ---
@@ -11,7 +11,7 @@
 |-------|--------------|--------|
 | Phase 1 | Contract, Tests, Deployment Script | ✅ ABGESCHLOSSEN |
 | Phase 2 | Multi-Chain & Testing | ✅ ABGESCHLOSSEN |
-| Phase 3 | Frontend Integration | ⏳ OFFEN |
+| Phase 3 | Frontend Integration | ✅ ABGESCHLOSSEN (ETH only) |
 | Phase 4 | Production Deployment | ⏳ OFFEN |
 
 ### Deployment Adressen (Testnets)
@@ -293,14 +293,38 @@ await writeContract({
 | 2.3 | ABI Export (`abi/contracts/SupportV2.ts`) | ✅ |
 | 2.4 | `notebooks/support_v2_demo.ipynb` — Deno TypeScript Notebook | ✅ |
 
-### Phase 3: Frontend ⏳ OFFEN (5h geschätzt)
+### Phase 3: Frontend ✅ ABGESCHLOSSEN (ETH only)
 
 | Schritt | Beschreibung | Status |
 |---------|--------------|--------|
-| 3.1 | SupportV2 ABI + `getChain.ts` Update | ⏳ |
-| 3.2 | ~~EIP-3009 Signatur-Helper~~ (deprioritisiert) | ⏸️ |
-| 3.3 | ~~Token-Auswahl UI (ETH / USDC)~~ (deprioritisiert) | ⏸️ |
-| 3.4 | `useSupportAction.ts` für Multi-Chain | ⏳ |
+| 3.1 | `wagmi.config.ts` — Base + Base Sepolia Chains hinzufügen | ✅ |
+| 3.2 | `getChain.ts` — SupportV2 Multi-Chain Config | ✅ |
+| 3.3 | ~~EIP-3009 Signatur-Helper~~ (deprioritisiert) | ⏸️ |
+| 3.4 | ~~Token-Auswahl UI (ETH / USDC)~~ (deprioritisiert) | ⏸️ |
+| 3.5 | `useSupportAction.ts` — Multi-Chain Hook mit Auto-Switch | ✅ |
+| 3.6 | Legacy Support Config entfernt (`supportContractConfig`) | ✅ |
+| 3.7 | Unit Tests für `useSupportAction` | ✅ |
+
+**Frontend-Änderungen (24. Januar 2026):**
+
+- `website/wagmi.config.ts`: Base + Base Sepolia zu Chains hinzugefügt
+- `website/utils/getChain.ts`: 
+  - Neue Exports: `getSupportV2Config()`, `isSupportV2Chain()`, `DEFAULT_SUPPORT_CHAIN`, `SUPPORT_RECIPIENT_ADDRESS`
+  - Legacy `supportContractConfig` entfernt
+  - Legacy `SupportABI` Import entfernt
+- `website/utils/nodeChainUtils.ts`: Legacy `nodeSupportContractConfig` entfernt
+- `website/hooks/useSupportAction.ts`: Komplett refaktoriert für Multi-Chain mit automatischem Chain-Switch
+- `website/test/useSupportAction.test.ts`: 16 Unit Tests für Chain-Detection, Contract-Config, handleSupport, etc.
+
+### Phase 4: Production Deployment ⏳ OFFEN
+
+| Schritt | Beschreibung | Status |
+|---------|--------------|--------|
+| 4.1 | Deploy auf Optimism Mainnet | ⏳ |
+| 4.2 | Deploy auf Base Mainnet | ⏳ |
+| 4.3 | `getChain.ts` — Mainnet Adressen eintragen | ⏳ |
+| 4.4 | `DEFAULT_SUPPORT_CHAIN` auf Mainnet umstellen | ⏳ |
+| 4.5 | USDC Token-Whitelist konfigurieren (optional) | ⏳ |
 
 ---
 

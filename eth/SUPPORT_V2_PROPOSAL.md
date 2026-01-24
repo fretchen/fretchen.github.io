@@ -1,7 +1,25 @@
 # SupportV2 Contract — Implementation Plan
 
-**Status:** ✅ FREIGEGEBEN  
-**Letzte Aktualisierung:** 20. Januar 2026
+**Status:** 🚧 IN ENTWICKLUNG (Phase 2 abgeschlossen, Phase 3 offen)  
+**Letzte Aktualisierung:** 24. Januar 2026
+
+---
+
+## 0. Implementierungs-Übersicht
+
+| Phase | Beschreibung | Status |
+|-------|--------------|--------|
+| Phase 1 | Contract, Tests, Deployment Script | ✅ ABGESCHLOSSEN |
+| Phase 2 | Multi-Chain & Testing | ✅ ABGESCHLOSSEN |
+| Phase 3 | Frontend Integration | ⏳ OFFEN |
+| Phase 4 | Production Deployment | ⏳ OFFEN |
+
+### Deployment Adressen (Testnets)
+
+| Chain | Proxy Address | Deployed |
+|-------|---------------|----------|
+| Optimism Sepolia | `0x9859431b682e861b19e87Db14a04944BC747AB6d` | 20.01.2026 |
+| Base Sepolia | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | 21.01.2026 |
 
 ---
 
@@ -263,34 +281,34 @@ await writeContract({
 |---------|--------------|--------|
 | 1.1 | `contracts/interfaces/IEIP3009.sol` | ✅ |
 | 1.2 | `contracts/SupportV2.sol` | ✅ |
-| 1.3 | `test/SupportV2.test.ts` (16 Tests) | ✅ |
+| 1.3 | `test/SupportV2_Functional.ts` + `test/SupportV2_Deployment.ts` | ✅ |
 | 1.4 | `scripts/deploy-support-v2.ts` + Config | ✅ |
 
-### Phase 2: Multi-Chain & Testing (2h)
+### Phase 2: Multi-Chain & Testing ✅ ABGESCHLOSSEN
 
-| Schritt | Beschreibung |
-|---------|--------------|
-| 2.1 | Base + Base Sepolia zu `hardhat.config.ts` hinzufügen (Optimism bereits vorhanden) |
-| 2.2 | Deploy auf Optimism Sepolia + Base Sepolia |
-| 2.3 | ABI Export |
-| 2.4 | `notebooks/support_v2_demo.ipynb` — Deno TypeScript Notebook für Tests (wie x402_facilitator_demo_ts) |
+| Schritt | Beschreibung | Status |
+|---------|--------------|--------|
+| 2.1 | Base + Base Sepolia zu `hardhat.config.ts` hinzufügen | ✅ |
+| 2.2 | Deploy auf Optimism Sepolia + Base Sepolia | ✅ |
+| 2.3 | ABI Export (`abi/contracts/SupportV2.ts`) | ✅ |
+| 2.4 | `notebooks/support_v2_demo.ipynb` — Deno TypeScript Notebook | ✅ |
 
-### Phase 3: Frontend (5h)
+### Phase 3: Frontend ⏳ OFFEN (5h geschätzt)
 
-| Schritt | Beschreibung |
-|---------|--------------|
-| 3.1 | SupportV2 ABI + `getChain.ts` Update |
-| 3.2 | EIP-3009 Signatur-Helper |
-| 3.3 | Token-Auswahl UI (ETH / USDC) |
-| 3.4 | `useSupportAction.ts` refactoren |
+| Schritt | Beschreibung | Status |
+|---------|--------------|--------|
+| 3.1 | SupportV2 ABI + `getChain.ts` Update | ⏳ |
+| 3.2 | EIP-3009 Signatur-Helper | ⏳ |
+| 3.3 | Token-Auswahl UI (ETH / USDC) | ⏳ |
+| 3.4 | `useSupportAction.ts` refactoren | ⏳ |
 
-### Phase 4: Production (2h)
+### Phase 4: Production ⏳ OFFEN (2h geschätzt)
 
-| Schritt | Beschreibung |
-|---------|--------------|
-| 4.1 | Deploy auf Optimism + Base Mainnet |
-| 4.2 | Etherscan/Basescan Verification |
-| 4.3 | Frontend Deploy |
+| Schritt | Beschreibung | Status |
+|---------|--------------|--------|
+| 4.1 | Deploy auf Optimism + Base Mainnet | ⏳ |
+| 4.2 | Etherscan/Basescan Verification | ⏳ |
+| 4.3 | Frontend Deploy | ⏳ |
 
 ---
 

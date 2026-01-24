@@ -1,8 +1,9 @@
-import { sepolia, optimism, optimismSepolia } from "wagmi/chains";
+import { sepolia, optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
 import SupportABI from "../../eth/abi/contracts/Support.json";
+import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 /**
@@ -10,6 +11,52 @@ import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
  * Direct inline implementation for simplicity
  */
 const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
+
+// ═══════════════════════════════════════════════════════════════
+// SupportV2: Multi-Chain Configuration
+// ═══════════════════════════════════════════════════════════════
+
+/** SupportV2 contract addresses per chain */
+const SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
+  // Testnets
+  [optimismSepolia.id]: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
+  [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+  // Mainnets (Phase 4 - nach Deployment ausfüllen)
+  // [optimism.id]: "0x...",
+  // [base.id]: "0x...",
+};
+
+/** Default chain for read operations and auto-switch target */
+export const DEFAULT_SUPPORT_CHAIN = optimismSepolia;
+
+/** Recipient wallet for donations */
+export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
+
+/**
+ * Get SupportV2 contract config for a specific chain
+ * @param chainId - The chain ID to get config for
+ * @returns Contract config or null if chain not supported
+ */
+export function getSupportV2Config(chainId: number) {
+  const address = SUPPORT_V2_ADDRESSES[chainId];
+  if (!address) return null;
+
+  return {
+    address,
+    abi: SupportV2ABI,
+  } as const;
+}
+
+/**
+ * Check if a chain supports SupportV2
+ */
+export function isSupportV2Chain(chainId: number): boolean {
+  return chainId in SUPPORT_V2_ADDRESSES;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Legacy Support Contract (will be deprecated)
+// ═══════════════════════════════════════════════════════════════
 
 // Create stable contract config references at module level - computed once when module loads
 const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {

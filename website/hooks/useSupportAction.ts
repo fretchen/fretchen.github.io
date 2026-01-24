@@ -1,13 +1,18 @@
 import * as React from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
 import { parseEther } from "viem";
 import { useReadContract } from "wagmi";
-import { getChain, supportContractConfig } from "../utils/getChain";
+import {
+  getSupportV2Config,
+  isSupportV2Chain,
+  DEFAULT_SUPPORT_CHAIN,
+  SUPPORT_RECIPIENT_ADDRESS,
+} from "../utils/getChain";
 import { trackEvent } from "../utils/analytics";
 
 /**
- * Custom hook for handling support/like functionality
- * Separates Web3 logic from UI components
+ * Custom hook for SupportV2 with multi-chain support
+ * Automatic chain switch when user clicks "Support" (like ImageGenerator.tsx)
  */
 export function useSupportAction(url: string) {
   // States
@@ -18,6 +23,7 @@ export function useSupportAction(url: string) {
   // Wagmi hooks
   const { isConnected } = useAccount();
   const chainId = useChainId();
+  const { switchChainAsync } = useSwitchChain();
   const donationAmount = parseEther("0.0002");
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -31,24 +37,28 @@ export function useSupportAction(url: string) {
     }
   }, [url]);
 
-  // Chain and contract configuration
-  const chain = getChain();
-  const isCorrectNetwork = chainId === chain.id;
+  // Check if current chain is supported
+  const isSupported = isSupportV2Chain(chainId);
 
-  // Read support data
+  // Chain for read operations: User's chain if supported, otherwise default
+  const readChainId = isSupported ? chainId : DEFAULT_SUPPORT_CHAIN.id;
+  const readConfig = getSupportV2Config(readChainId)!;
+
+  // Read support data - always works (even if user on wrong chain)
   const {
     data: supportCount,
     error: readError,
     isPending: isReadPending,
     refetch,
   } = useReadContract({
-    ...supportContractConfig,
+    ...readConfig,
     functionName: "getLikesForUrl",
     args: [fullUrl],
-    chainId: chain.id,
+    chainId: readChainId,
+    query: { enabled: !!fullUrl },
   });
 
-  // Handle support action
+  // Handle support action with automatic chain switch
   const handleSupport = React.useCallback(async () => {
     setErrorMessage(null);
     if (!fullUrl) {
@@ -56,20 +66,38 @@ export function useSupportAction(url: string) {
       return;
     }
 
-    if (!isCorrectNetwork) {
-      setErrorMessage(`Bitte wechsle zum ${chain.name} Netzwerk`);
+    // Automatic chain switch if not on supported chain
+    if (!isSupported) {
+      console.log(
+        `[Support] Chain mismatch: current=${chainId}, switching to ${DEFAULT_SUPPORT_CHAIN.name}`
+      );
+      try {
+        await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
+        console.log(`[Support] Successfully switched to ${DEFAULT_SUPPORT_CHAIN.name}`);
+      } catch (switchError) {
+        console.error("[Support] Chain switch failed:", switchError);
+        setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
+        return;
+      }
+    }
+
+    // Get contract config (use default chain after potential switch)
+    const activeConfig = getSupportV2Config(DEFAULT_SUPPORT_CHAIN.id);
+    if (!activeConfig) {
+      setErrorMessage("Konfigurationsfehler");
       return;
     }
 
     setIsLoading(true);
 
+    // SupportV2 has recipient parameter
     writeContract({
-      ...supportContractConfig,
+      ...activeConfig,
       functionName: "donate",
-      args: [fullUrl],
+      args: [fullUrl, SUPPORT_RECIPIENT_ADDRESS],
       value: donationAmount,
     });
-  }, [fullUrl, isCorrectNetwork, chain.name, writeContract, donationAmount]);
+  }, [fullUrl, isSupported, chainId, switchChainAsync, writeContract, donationAmount]);
 
   // Update state after transaction
   React.useEffect(() => {
@@ -77,6 +105,7 @@ export function useSupportAction(url: string) {
       // Track successful support
       trackEvent("blog-support-success", {
         url: fullUrl,
+        chainId: readChainId,
       });
 
       setIsLoading(false);
@@ -89,18 +118,14 @@ export function useSupportAction(url: string) {
       setIsLoading(false);
       setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
     }
-  }, [isSuccess, writeError, refetch, fullUrl]);
-
-  // Warning message logic
-  const warningMessage =
-    errorMessage || (!isCorrectNetwork && isConnected ? `Bitte wechsle zum ${chain.name} Netzwerk` : null);
+  }, [isSuccess, writeError, refetch, fullUrl, readChainId]);
 
   return {
     // State
     supportCount: supportCount?.toString() || "0",
     isLoading: isLoading || isPending || isConfirming,
     isSuccess,
-    errorMessage: warningMessage,
+    errorMessage,
     isConnected,
     isReadPending,
     readError,

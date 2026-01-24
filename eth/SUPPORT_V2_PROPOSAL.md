@@ -298,21 +298,320 @@ await writeContract({
 | Schritt | Beschreibung | Status |
 |---------|--------------|--------|
 | 3.1 | SupportV2 ABI + `getChain.ts` Update | ⏳ |
-| 3.2 | EIP-3009 Signatur-Helper | ⏳ |
-| 3.3 | Token-Auswahl UI (ETH / USDC) | ⏳ |
-| 3.4 | `useSupportAction.ts` refactoren | ⏳ |
-
-### Phase 4: Production ⏳ OFFEN (2h geschätzt)
-
-| Schritt | Beschreibung | Status |
-|---------|--------------|--------|
-| 4.1 | Deploy auf Optimism + Base Mainnet | ⏳ |
-| 4.2 | Etherscan/Basescan Verification | ⏳ |
-| 4.3 | Frontend Deploy | ⏳ |
+| 3.2 | ~~EIP-3009 Signatur-Helper~~ (deprioritisiert) | ⏸️ |
+| 3.3 | ~~Token-Auswahl UI (ETH / USDC)~~ (deprioritisiert) | ⏸️ |
+| 3.4 | `useSupportAction.ts` für Multi-Chain | ⏳ |
 
 ---
 
-## 6. Referenzen
+## 7. Frontend Multi-Chain Architektur (ETH only, Phase 3.1 + 3.4)
+
+### 7.1 Aktuelles Problem
+
+Die aktuelle Architektur verwendet `PUBLIC_ENV__CHAIN_NAME` als Build-Zeit-Konstante:
+
+```typescript
+// website/utils/getChain.ts (aktuell)
+const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
+```
+
+Das bedeutet: **Eine Build → Ein Netzwerk**. Für Multi-Chain-Support muss der User zur Laufzeit das Netzwerk wählen können.
+
+### 7.2 SupportV2 Signatur-Änderung
+
+SupportV2 hat eine **neue `donate()` Signatur** mit `recipient` Parameter:
+
+```solidity
+// Alte Support.sol:
+function donate(string calldata _url) external payable
+
+// Neue SupportV2.sol:
+function donate(string calldata _url, address _recipient) external payable
+```
+
+### 7.3 Vorgeschlagene Lösung: Automatischer Chain-Switch (wie ImageGenerator)
+
+#### Ablauf-Diagramm
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    User öffnet Blog-Seite                        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Likes werden von DEFAULT_READ_CHAIN gelesen         │
+│              (z.B. optimismSepolia) – unabhängig von Wallet      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  User klickt "Support" ⭐                        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│     isSupportV2Chain(chainId) prüft ob Chain unterstützt        │
+│                                                                  │
+│   TRUE → Direkt donaten auf User's Chain                        │
+│                                                                  │
+│   FALSE → AUTOMATISCHER Chain-Switch zu DEFAULT_READ_CHAIN      │
+│           (Wallet-Popup erscheint, User bestätigt)              │
+│           Dann: Donation auf neuer Chain                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Kein zusätzliches UI-Element nötig!** Der Chain-Switch passiert automatisch beim Klick auf "Support", genau wie im `ImageGenerator.tsx`.
+
+#### Wo passiert was?
+
+| Aktion | Wo | Code |
+|--------|-----|------|
+| Likes lesen | `useSupportAction` Hook | `useReadContract` mit `DEFAULT_READ_CHAIN.id` |
+| Chain prüfen | `handleSupport()` | `if (!isSupported)` |
+| Chain wechseln | `handleSupport()` | `await switchChainAsync({ chainId: DEFAULT_READ_CHAIN.id })` |
+| Donation senden | `handleSupport()` | `writeContract({ ...activeConfig, ... })` |
+
+#### Schritt 1: `wagmi.config.ts` — Base Chains hinzufügen
+
+```typescript
+import { http, createConfig } from "wagmi";
+import { mainnet, optimism, sepolia, optimismSepolia, base, baseSepolia } from "wagmi/chains";
+
+export const config = createConfig({
+  chains: [mainnet, sepolia, optimism, optimismSepolia, base, baseSepolia],
+  connectors: [injected(), walletConnect({ projectId }), metaMask()],
+  transports: {
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+    [optimism.id]: http(),
+    [optimismSepolia.id]: http(),
+    [base.id]: http(),
+    [baseSepolia.id]: http(),
+  },
+});
+```
+
+#### Schritt 2: `getChain.ts` — Multi-Chain Contract Config
+
+```typescript
+import { optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
+import type { Chain } from "wagmi/chains";
+import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
+
+// SupportV2 Adressen pro Chain
+const SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
+  // Testnets
+  [optimismSepolia.id]: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
+  [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+  // Mainnets (Phase 4 - nach Deployment ausfüllen)
+  // [optimism.id]: "0x...",
+  // [base.id]: "0x...",
+};
+
+// Unterstützte Chains für SupportV2
+export const SUPPORTED_CHAINS: Chain[] = [optimismSepolia, baseSepolia];
+// Nach Phase 4: [optimism, base, optimismSepolia, baseSepolia]
+
+// Default Chain für Read-Operationen (wenn Wallet nicht verbunden)
+export const DEFAULT_READ_CHAIN = optimismSepolia;
+
+// Empfänger-Wallet (Owner)
+export const RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
+
+/**
+ * Get SupportV2 contract config for a specific chain
+ * @param chainId - The chain ID to get config for
+ * @returns Contract config or null if chain not supported
+ */
+export function getSupportV2Config(chainId: number) {
+  const address = SUPPORT_V2_ADDRESSES[chainId];
+  if (!address) return null;
+  
+  return {
+    address,
+    abi: SupportV2ABI,
+  } as const;
+}
+
+/**
+ * Check if a chain supports SupportV2
+ */
+export function isSupportV2Chain(chainId: number): boolean {
+  return chainId in SUPPORT_V2_ADDRESSES;
+}
+```
+
+#### Schritt 3: `useSupportAction.ts` — Multi-Chain Hook (mit automatischem Chain-Switch)
+
+```typescript
+import * as React from "react";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
+import { parseEther } from "viem";
+import { useReadContract } from "wagmi";
+import { 
+  getSupportV2Config, 
+  isSupportV2Chain, 
+  RECIPIENT_ADDRESS,
+  DEFAULT_READ_CHAIN 
+} from "../utils/getChain";
+import { trackEvent } from "../utils/analytics";
+
+/**
+ * Custom hook for SupportV2 with multi-chain support
+ * Automatic chain switch when user clicks "Support" (like ImageGenerator.tsx)
+ */
+export function useSupportAction(url: string) {
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [fullUrl, setFullUrl] = React.useState(url);
+
+  const { isConnected } = useAccount();
+  const chainId = useChainId();  // ← Aktuelle Chain des Users
+  const { switchChainAsync } = useSwitchChain();  // ← Async Version für await
+  const donationAmount = parseEther("0.0002");
+  
+  const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // URL nach Hydration setzen
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const rawUrl = window.location.origin + url;
+      const cleanUrl = rawUrl.replace(/\/+$/, "");
+      setFullUrl(cleanUrl);
+    }
+  }, [url]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // HIER WIRD GEPRÜFT: Ist die Chain unterstützt?
+  // ═══════════════════════════════════════════════════════════════
+  
+  // Contract Config für aktuelle Chain holen (null wenn nicht unterstützt)
+  const contractConfig = React.useMemo(() => getSupportV2Config(chainId), [chainId]);
+  
+  // Boolean: Ist die aktuelle Chain unterstützt?
+  const isSupported = isSupportV2Chain(chainId);
+  
+  // Chain für Read-Operationen: User's Chain wenn unterstützt, sonst Default
+  const readChainId = isSupported ? chainId : DEFAULT_READ_CHAIN.id;
+  const readConfig = getSupportV2Config(readChainId)!;
+
+  // ═══════════════════════════════════════════════════════════════
+
+  // Read support data - funktioniert immer (auch wenn User auf falscher Chain)
+  const {
+    data: supportCount,
+    error: readError,
+    isPending: isReadPending,
+    refetch,
+  } = useReadContract({
+    ...readConfig,
+    functionName: "getLikesForUrl",
+    args: [fullUrl],
+    chainId: readChainId,  // ← Liest von Default Chain wenn User's Chain nicht unterstützt
+    query: { enabled: !!fullUrl },
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTOMATISCHER CHAIN-SWITCH (wie in ImageGenerator.tsx)
+  // Kein UI-Element nötig - passiert im Hintergrund beim Klick
+  // ═══════════════════════════════════════════════════════════════
+  const handleSupport = React.useCallback(async () => {
+    setErrorMessage(null);
+    if (!fullUrl) {
+      setErrorMessage("URL ist erforderlich");
+      return;
+    }
+
+    // Automatischer Chain-Switch wenn nicht auf unterstützter Chain
+    if (!isSupported) {
+      console.log(`[Support] Chain mismatch: current=${chainId}, switching to ${DEFAULT_READ_CHAIN.name}`);
+      try {
+        await switchChainAsync({ chainId: DEFAULT_READ_CHAIN.id });
+        console.log(`[Support] Successfully switched to ${DEFAULT_READ_CHAIN.name}`);
+        // Nach Switch: contractConfig neu berechnen
+      } catch (switchError) {
+        console.error("[Support] Chain switch failed:", switchError);
+        setErrorMessage(`Chain-Wechsel zu ${DEFAULT_READ_CHAIN.name} fehlgeschlagen`);
+        return;
+      }
+    }
+
+    // Contract Config nach potentiellem Switch holen
+    const activeConfig = getSupportV2Config(DEFAULT_READ_CHAIN.id);
+    if (!activeConfig) {
+      setErrorMessage("Konfigurationsfehler");
+      return;
+    }
+
+    setIsLoading(true);
+
+    // SupportV2 has recipient parameter
+    writeContract({
+      ...activeConfig,
+      functionName: "donate",
+      args: [fullUrl, RECIPIENT_ADDRESS],  // ← Neuer recipient Parameter
+      value: donationAmount,
+    });
+  }, [fullUrl, isSupported, chainId, switchChainAsync, writeContract, donationAmount]);
+
+  // Update state after transaction
+  React.useEffect(() => {
+    if (isSuccess) {
+      trackEvent("blog-support-success", { url: fullUrl, chainId });
+      setIsLoading(false);
+      setErrorMessage(null);
+      setTimeout(() => refetch(), 2000);
+    }
+    if (writeError) {
+      setIsLoading(false);
+      setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
+    }
+  }, [isSuccess, writeError, refetch, fullUrl, chainId]);
+
+  // Warning message
+  const warningMessage = errorMessage || (!isSupported && isConnected 
+    ? `Wechsle zu ${SUPPORTED_CHAINS.map(c => c.name).join(" oder ")}` 
+    : null);
+
+  return {
+    supportCount: supportCount?.toString() || "0",
+    isLoading: isLoading || isPending || isConfirming,
+    isSuccess,
+    errorMessage: warningMessage,
+    isConnected,
+    isReadPending,
+    readError,
+    // Actions
+    handleSupport,
+  };
+}
+```
+
+### 7.4 Aggregierte Like-Counts (Optional, später)
+
+Da Likes jetzt auf mehreren Chains gespeichert werden, können sie aggregiert angezeigt werden:
+
+```typescript
+// Aggregiere Likes von allen Chains
+const allCounts = await Promise.all(
+  SUPPORTED_CHAINS.map(async (chain) => {
+    const config = getSupportV2Config(chain.id);
+    const count = await publicClient.readContract({
+      ...config,
+      functionName: "getLikesForUrl",
+      args: [fullUrl],
+    });
+    return count;
+  })
+);
+const totalLikes = allCounts.reduce((sum, c) => sum + c, 0n);
+```
+
+---
+
+## 8. Referenzen
 
 - [UUPS Pattern](https://docs.openzeppelin.com/contracts/5.x/api/proxy#UUPSUpgradeable)
 - [EIP-3009 Spec](https://eips.ethereum.org/EIPS/eip-3009)

@@ -109,7 +109,10 @@ async function validateDeployment(): Promise<void> {
 /**
  * Check if deployer has sufficient ETH balance for deployment
  */
-async function checkDeployerBalance(deployer: { address: string; provider: { getBalance: (addr: string) => Promise<bigint> } }): Promise<void> {
+async function checkDeployerBalance(deployer: {
+  address: string;
+  provider: { getBalance: (addr: string) => Promise<bigint> };
+}): Promise<void> {
   const balance = await deployer.provider.getBalance(deployer.address);
   const balanceFormatted = formatEther(balance);
   const minFormatted = formatEther(MIN_DEPLOYMENT_BALANCE);
@@ -121,13 +124,13 @@ async function checkDeployerBalance(deployer: { address: string; provider: { get
     const deficit = MIN_DEPLOYMENT_BALANCE - balance;
     throw new Error(
       `Insufficient funds for deployment!\n` +
-      `   Balance: ${balanceFormatted} ETH\n` +
-      `   Required: ${minFormatted} ETH\n` +
-      `   Deficit: ${formatEther(deficit)} ETH\n\n` +
-      `   Please fund ${deployer.address} with at least ${formatEther(deficit)} ETH.\n` +
-      `   Faucets:\n` +
-      `   - Optimism Sepolia: https://www.alchemy.com/faucets/optimism-sepolia\n` +
-      `   - Base Sepolia: https://www.alchemy.com/faucets/base-sepolia`
+        `   Balance: ${balanceFormatted} ETH\n` +
+        `   Required: ${minFormatted} ETH\n` +
+        `   Deficit: ${formatEther(deficit)} ETH\n\n` +
+        `   Please fund ${deployer.address} with at least ${formatEther(deficit)} ETH.\n` +
+        `   Faucets:\n` +
+        `   - Optimism Sepolia: https://www.alchemy.com/faucets/optimism-sepolia\n` +
+        `   - Base Sepolia: https://www.alchemy.com/faucets/base-sepolia`,
     );
   }
 

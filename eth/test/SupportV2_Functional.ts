@@ -69,6 +69,7 @@ describe("SupportV2 - Functional Tests", function () {
 
   /**
    * Helper: Create EIP-3009 authorization signature for token donation
+   * Note: Uses current block timestamp from Hardhat, not Date.now()
    */
   async function createTokenAuthorization(
     mockUSDC: {
@@ -82,8 +83,16 @@ describe("SupportV2 - Functional Tests", function () {
     recipient: `0x${string}`,
     amount: bigint,
     validAfter: bigint = 0n,
-    validBefore: bigint = BigInt(Math.floor(Date.now() / 1000) + 3600),
+    validBeforeOverride?: bigint,
   ) {
+    // Get current block timestamp from Hardhat (not Date.now()!)
+    const publicClient = await hre.viem.getPublicClient();
+    const block = await publicClient.getBlock();
+    const currentTimestamp = block.timestamp;
+
+    // Default: valid for 1 hour from current block time
+    const validBefore = validBeforeOverride ?? currentTimestamp + 3600n;
+
     // Generate random nonce
     const saltValue = Date.now() + Math.random();
     const nonce = keccak256(toHex(saltValue.toString()));

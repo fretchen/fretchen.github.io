@@ -4,9 +4,7 @@
   },
   "options": {
     "validateOnly": false,
-    "dryRun": false,
-    "verify": true,
-    "waitConfirmations": 5
+    "dryRun": false
   },
   "metadata": {
     "description": "Deployment configuration for SupportV2",

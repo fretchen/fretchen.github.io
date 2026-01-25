@@ -93,19 +93,19 @@ networks: {
 
 ## Current Deployment Status
 
-### Testnets (Already Deployed) ✅
+### Testnets ✅
 
-| Network | Proxy Address | Deployed |
-|---------|---------------|----------|
-| Optimism Sepolia | `0x9859431b682e861b19e87Db14a04944BC747AB6d` | 2026-01-20 |
-| Base Sepolia | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | 2026-01-21 |
+| Network | Proxy Address | Implementation | Verified |
+|---------|---------------|----------------|----------|
+| Optimism Sepolia | `0x9859431b682e861b19e87Db14a04944BC747AB6d` | - | ✅ |
+| Base Sepolia | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | - | ✅ |
 
-### Mainnets (To Deploy) ⏳
+### Mainnets ✅
 
-| Network | Proxy Address | Status |
-|---------|---------------|--------|
-| Optimism | TBD | ⏳ Pending |
-| Base | TBD | ⏳ Pending |
+| Network | Proxy Address | Implementation | Verified |
+|---------|---------------|----------------|----------|
+| Optimism | `0x4ca63f8A4Cd56287E854f53E18ca482D74391316` | `0x011881999565F10aB2C62912878050Fb5deC10ac` | ✅ |
+| Base | `0xB70EA4d714Fed01ce20E93F9033008BadA1c8694` | `0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1` | ✅ |
 
 ## Configuration File
 
@@ -120,9 +120,7 @@ Edit `scripts/deploy-support-v2.config.json`:
   },
   "options": {
     "validateOnly": false,
-    "dryRun": false,
-    "verify": false,
-    "waitConfirmations": 2
+    "dryRun": false
   },
   "metadata": {
     "description": "SupportV2 deployment to Optimism Sepolia",
@@ -141,13 +139,15 @@ Edit `scripts/deploy-support-v2.config.json`:
   },
   "options": {
     "validateOnly": false,
-    "dryRun": false,
-    "verify": true,
-    "waitConfirmations": 5
+    "dryRun": false
   },
   "metadata": {
     "description": "SupportV2 production deployment to Optimism Mainnet",
     "version": "1.0.0",
+    "environment": "mainnet"
+  }
+}
+```
     "environment": "mainnet"
   }
 }
@@ -160,8 +160,6 @@ Edit `scripts/deploy-support-v2.config.json`:
 | `parameters.owner` | string | No | Contract owner address. Defaults to deployer if empty. |
 | `options.validateOnly` | boolean | Yes | Only validate contract, don't deploy |
 | `options.dryRun` | boolean | Yes | Simulate deployment without executing |
-| `options.verify` | boolean | Yes | Verify contract on block explorer after deployment |
-| `options.waitConfirmations` | number | No | Number of confirmations to wait (default: 1) |
 | `metadata.description` | string | Yes | Deployment description |
 | `metadata.version` | string | Yes | Version identifier |
 | `metadata.environment` | string | Yes | Environment (testnet/mainnet) |
@@ -282,9 +280,27 @@ The deployment saves to `deployments/support-v2-{network}.json`:
 
 ### 2. Verify on Block Explorer
 
+Use the generic `verify-contract.ts` script for robust verification with multiple fallback strategies:
+
 ```bash
-# If verify: true was set, verification runs automatically
-# Otherwise, run manually:
+# Optimism Mainnet
+DEPLOYMENT_FILE=deployments/support-v2-optimisticEthereum.json \
+CONTRACT_PATH=contracts/SupportV2.sol:SupportV2 \
+npx hardhat run scripts/verify-contract.ts --network optimisticEthereum
+
+# Base Mainnet
+DEPLOYMENT_FILE=deployments/support-v2-base.json \
+CONTRACT_PATH=contracts/SupportV2.sol:SupportV2 \
+npx hardhat run scripts/verify-contract.ts --network base
+```
+
+The script will:
+1. Verify the implementation contract
+2. Attempt proxy verification with multiple strategies
+3. Handle "Already Verified" gracefully
+
+**Alternative (simple):**
+```bash
 npx hardhat verify --network optimisticEthereum <IMPLEMENTATION_ADDRESS>
 ```
 
@@ -394,38 +410,46 @@ Check the contract for:
 
 ### Verification fails
 
-Try manual verification:
+Use the robust `verify-contract.ts` script which handles multiple scenarios:
+
+```bash
+DEPLOYMENT_FILE=deployments/support-v2-optimisticEthereum.json \
+CONTRACT_PATH=contracts/SupportV2.sol:SupportV2 \
+npx hardhat run scripts/verify-contract.ts --network optimisticEthereum
+```
+
+If that fails, try direct Hardhat verification:
 
 ```bash
 npx hardhat verify --network optimisticEthereum <IMPLEMENTATION_ADDRESS>
 ```
 
-For proxies, you may need to verify the implementation separately.
+For proxies, the implementation is verified separately from the proxy.
 
 ## Complete Deployment Checklist
 
 ### Pre-Deployment
 
-- [ ] Deployer wallet funded with ≥0.1 ETH (mainnet)
-- [ ] `ALCHEMY_API_KEY` and `SEPOLIA_PRIVATE_KEY` set in Hardhat vars
-- [ ] Config file updated for mainnet (`environment: "mainnet"`, `waitConfirmations: 5`)
-- [ ] Validation passed (`validateOnly: true`)
-- [ ] Dry run completed (`dryRun: true`)
+- [x] Deployer wallet funded with ≥0.1 ETH (mainnet)
+- [x] `ALCHEMY_API_KEY` and `SEPOLIA_PRIVATE_KEY` set in Hardhat vars
+- [x] Config file updated for mainnet (`environment: "mainnet"`)
+- [x] Validation passed (`validateOnly: true`)
+- [x] Dry run completed (`dryRun: true`)
 
 ### Deployment
 
-- [ ] Deploy to Optimism Mainnet
-- [ ] Deploy to Base Mainnet
-- [ ] Save deployment JSON files
-- [ ] Verify contracts on block explorers
+- [x] Deploy to Optimism Mainnet (`0x4ca63f8A4Cd56287E854f53E18ca482D74391316`)
+- [x] Deploy to Base Mainnet (`0xB70EA4d714Fed01ce20E93F9033008BadA1c8694`)
+- [x] Save deployment JSON files
+- [x] Verify contracts on block explorers
 
 ### Post-Deployment
 
-- [ ] Update `website/utils/getChain.ts` with mainnet addresses
-- [ ] Update `DEFAULT_SUPPORT_CHAIN` to mainnet
+- [x] Update `website/utils/getChain.ts` with mainnet addresses
+- [x] Update `DEFAULT_SUPPORT_CHAIN` to mainnet
 - [ ] Test donation on each chain
 - [ ] (Optional) Whitelist USDC token for EIP-3009 donations
-- [ ] Update SUPPORT_V2_PROPOSAL.md with deployment status
+- [x] Update SUPPORT_V2_PROPOSAL.md with deployment status
 
 ## Network-Specific Notes
 
@@ -449,6 +473,8 @@ For proxies, you may need to verify the implementation separately.
 - [SupportV2.sol](./contracts/SupportV2.sol) — Contract source code
 - [SupportV2_Functional.ts](./test/SupportV2_Functional.ts) — Functional tests
 - [SupportV2_Deployment.ts](./test/SupportV2_Deployment.ts) — Deployment script tests
+- [verify-contract.ts](./scripts/verify-contract.ts) — Generic contract verification script
+- [validate-contract.ts](./scripts/validate-contract.ts) — Pre-deployment validation utilities
 - [GENIMG_DEPLOY_V4_GUIDE.md](./GENIMG_DEPLOY_V4_GUIDE.md) — Similar deployment pattern
 
 ## Support

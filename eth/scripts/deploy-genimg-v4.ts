@@ -26,6 +26,7 @@ const GenImV4DeployConfigSchema = z.object({
   options: z.object({
     validateOnly: z.boolean(),
     dryRun: z.boolean(),
+    // TODO: Remove verify flag - use scripts/verify-contract.ts instead (DRY principle)
     verify: z.boolean(),
     waitConfirmations: z.number().optional(),
   }),

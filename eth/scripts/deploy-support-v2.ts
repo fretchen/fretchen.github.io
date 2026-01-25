@@ -1,5 +1,5 @@
 #!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network, run } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
@@ -27,8 +27,6 @@ const SupportV2DeployConfigSchema = z.object({
   options: z.object({
     validateOnly: z.boolean(),
     dryRun: z.boolean(),
-    verify: z.boolean(),
-    waitConfirmations: z.number().optional(),
   }),
   metadata: z.object({
     description: z.string(),
@@ -265,44 +263,13 @@ async function deploySupportV2() {
   fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
   console.log(`📄 Deployment info saved to: ${deploymentPath}`);
 
-  // Contract verification on Etherscan
-  if (options.verify) {
-    console.log("");
-    console.log("🔍 Verifying contract on Etherscan...");
-    console.log("-".repeat(40));
-
-    // Wait for a few blocks to ensure the contract is indexed
-    const waitBlocks = options.waitConfirmations ?? 5;
-    console.log(`⏳ Waiting ${waitBlocks} blocks for indexing...`);
-
-    // Get current block and wait
-    const startBlock = await ethers.provider.getBlockNumber();
-    let currentBlock = startBlock;
-    while (currentBlock < startBlock + waitBlocks) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      currentBlock = await ethers.provider.getBlockNumber();
-    }
-
-    try {
-      await run("verify:verify", {
-        address: implementationAddress,
-        constructorArguments: [],
-      });
-      console.log("✅ Contract verified successfully!");
-    } catch (error: unknown) {
-      if (error instanceof Error && error.message.includes("Already Verified")) {
-        console.log("ℹ️  Contract already verified");
-      } else {
-        console.error("⚠️  Verification failed:", error instanceof Error ? error.message : error);
-        console.log("");
-        console.log("📋 Manual verification command:");
-        console.log(`npx hardhat verify --network ${network.name} ${implementationAddress}`);
-      }
-    }
-  }
-
   console.log("");
   console.log("🎉 Deployment complete!");
+  console.log("");
+  console.log("📋 To verify on Etherscan, run:");
+  console.log(`   DEPLOYMENT_FILE=deployments/support-v2-${network.name}.json \\`);
+  console.log(`   CONTRACT_PATH=contracts/SupportV2.sol:SupportV2 \\`);
+  console.log(`   npx hardhat run scripts/verify-contract.ts --network ${network.name}`);
 
   return { proxyAddress, implementationAddress };
 }

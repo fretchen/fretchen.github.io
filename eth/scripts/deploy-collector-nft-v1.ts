@@ -11,6 +11,7 @@ interface CollectorNFTv1Config {
   options?: {
     validateOnly?: boolean;
     dryRun?: boolean;
+    // TODO: Remove verify flag - use scripts/verify-contract.ts instead (DRY principle)
     verify?: boolean;
     waitConfirmations?: number;
   };

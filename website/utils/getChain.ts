@@ -15,18 +15,33 @@ const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
 // SupportV2: Multi-Chain Configuration
 // ═══════════════════════════════════════════════════════════════
 
-/** SupportV2 contract addresses per chain */
-const SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
-  // Mainnets
+/**
+ * Use testnet chains for SupportV2?
+ * Set VITE_USE_TESTNET=true in .env for local development
+ * Default: false (mainnet)
+ */
+const USE_TESTNET = import.meta.env?.VITE_USE_TESTNET === "true";
+
+/** SupportV2 contract addresses - mainnet */
+const MAINNET_SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
   [optimism.id]: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316",
   [base.id]: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694",
-  // Testnets
+};
+
+/** SupportV2 contract addresses - testnet */
+const TESTNET_SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
   [optimismSepolia.id]: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
   [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
 };
 
+/** Active SupportV2 addresses based on VITE_USE_TESTNET */
+const SUPPORT_V2_ADDRESSES = USE_TESTNET ? TESTNET_SUPPORT_V2_ADDRESSES : MAINNET_SUPPORT_V2_ADDRESSES;
+
+/** Active chains for SupportV2 (both reading and writing) */
+export const SUPPORT_V2_CHAINS = USE_TESTNET ? ([optimismSepolia, baseSepolia] as const) : ([optimism, base] as const);
+
 /** Default chain for read operations and auto-switch target */
-export const DEFAULT_SUPPORT_CHAIN = optimism;
+export const DEFAULT_SUPPORT_CHAIN = USE_TESTNET ? optimismSepolia : optimism;
 
 /** Recipient wallet for donations */
 export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
@@ -47,7 +62,7 @@ export function getSupportV2Config(chainId: number) {
 }
 
 /**
- * Check if a chain supports SupportV2
+ * Check if a chain supports SupportV2 (in current mode: mainnet or testnet)
  */
 export function isSupportV2Chain(chainId: number): boolean {
   return chainId in SUPPORT_V2_ADDRESSES;

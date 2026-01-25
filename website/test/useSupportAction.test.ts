@@ -9,25 +9,34 @@ import {
   SUPPORT_RECIPIENT_ADDRESS,
 } from "../utils/getChain";
 
-// Mock the getChain module
+// Mock wagmi/chains - needed for aggregated reads
+vi.mock("wagmi/chains", () => ({
+  optimism: { id: 10, name: "OP Mainnet" },
+  optimismSepolia: { id: 11155420, name: "OP Sepolia" },
+  base: { id: 8453, name: "Base" },
+  baseSepolia: { id: 84532, name: "Base Sepolia" },
+}));
+
+// Mock the getChain module - simulates mainnet mode (VITE_USE_TESTNET not set)
 vi.mock("../utils/getChain", async () => {
-  const optimismSepolia = { id: 11155420, name: "OP Sepolia" };
-  const baseSepolia = { id: 84532, name: "Base Sepolia" };
+  const optimism = { id: 10, name: "OP Mainnet" };
+  const base = { id: 8453, name: "Base" };
 
   return {
-    DEFAULT_SUPPORT_CHAIN: optimismSepolia,
+    DEFAULT_SUPPORT_CHAIN: optimism,
     SUPPORT_RECIPIENT_ADDRESS: "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+    SUPPORT_V2_CHAINS: [optimism, base],
     getSupportV2Config: vi.fn((chainId: number) => {
       const addresses: Record<number, string> = {
-        [optimismSepolia.id]: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
-        [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+        [optimism.id]: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316",
+        [base.id]: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694",
       };
       const address = addresses[chainId];
       if (!address) return null;
       return { address, abi: [] };
     }),
     isSupportV2Chain: vi.fn((chainId: number) => {
-      return chainId === optimismSepolia.id || chainId === baseSepolia.id;
+      return chainId === optimism.id || chainId === base.id;
     }),
   };
 });
@@ -46,15 +55,15 @@ describe("useSupportAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default mock implementations
+    // Default mock implementations - use Optimism Mainnet (10)
     vi.mocked(useAccount).mockReturnValue({
       isConnected: true,
-      chainId: 11155420, // OP Sepolia
+      chainId: 10, // Optimism Mainnet
       address: "0x1234567890abcdef1234567890abcdef12345678",
       connector: { name: "MetaMask" },
     } as ReturnType<typeof useAccount>);
 
-    vi.mocked(useChainId).mockReturnValue(11155420);
+    vi.mocked(useChainId).mockReturnValue(10);
 
     vi.mocked(useWriteContract).mockReturnValue({
       writeContract: mockWriteContract,
@@ -68,6 +77,8 @@ describe("useSupportAction", () => {
       chains: [],
     } as unknown as ReturnType<typeof useSwitchChain>);
 
+    // Mock useReadContract - called twice (Optimism + Base)
+    // Each call returns data for its respective chain
     vi.mocked(useReadContract).mockReturnValue({
       data: BigInt(5),
       error: null,
@@ -87,63 +98,77 @@ describe("useSupportAction", () => {
   });
 
   describe("Chain Detection", () => {
-    it("should detect OP Sepolia as supported chain", () => {
+    it("should initialize hook when on Optimism Mainnet", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
-        chainId: 11155420,
+        chainId: 10, // Optimism Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
-      // isSupportV2Chain should be called with OP Sepolia chain ID
-      expect(isSupportV2Chain).toHaveBeenCalledWith(11155420);
+      // Hook should initialize without errors
+      expect(result.current.isConnected).toBe(true);
+      expect(result.current.errorMessage).toBeNull();
     });
 
-    it("should detect Base Sepolia as supported chain", () => {
+    it("should initialize hook when on Base Mainnet", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
-        chainId: 84532, // Base Sepolia
+        chainId: 8453, // Base Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
-      expect(isSupportV2Chain).toHaveBeenCalledWith(84532);
+      expect(result.current.isConnected).toBe(true);
+      expect(result.current.errorMessage).toBeNull();
     });
 
-    it("should use default chain for reads when on unsupported chain", () => {
+    it("should initialize hook when on unsupported chain", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
-        chainId: 1, // Ethereum mainnet (unsupported)
+        chainId: 1, // Ethereum mainnet - not supported
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
 
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      // Hook should still initialize, chain check happens on handleSupport
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    it("should read from BOTH chains for aggregated count", () => {
       renderHook(() => useSupportAction("/blog/test"));
 
-      // useReadContract should be called with default chain
+      // useReadContract is called twice - once for Optimism, once for Base
       expect(useReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          chainId: DEFAULT_SUPPORT_CHAIN.id,
+          chainId: 10, // Optimism
+        })
+      );
+      expect(useReadContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chainId: 8453, // Base
         })
       );
     });
   });
 
   describe("Contract Config", () => {
-    it("should get correct contract config for OP Sepolia", () => {
-      const config = getSupportV2Config(11155420);
+    it("should get correct contract config for Optimism Mainnet", () => {
+      const config = getSupportV2Config(10);
       expect(config).not.toBeNull();
-      expect(config?.address).toBe("0x9859431b682e861b19e87Db14a04944BC747AB6d");
+      expect(config?.address).toBe("0x4ca63f8A4Cd56287E854f53E18ca482D74391316");
     });
 
-    it("should get correct contract config for Base Sepolia", () => {
-      const config = getSupportV2Config(84532);
+    it("should get correct contract config for Base Mainnet", () => {
+      const config = getSupportV2Config(8453);
       expect(config).not.toBeNull();
-      expect(config?.address).toBe("0xaB44BE78499721b593a0f4BE2099b246e9C53B57");
+      expect(config?.address).toBe("0xB70EA4d714Fed01ce20E93F9033008BadA1c8694");
     });
 
     it("should return null for unsupported chain", () => {
@@ -156,7 +181,7 @@ describe("useSupportAction", () => {
     it("should call writeContract with correct args on supported chain", async () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
-        chainId: 11155420,
+        chainId: 10, // Optimism Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
@@ -169,17 +194,17 @@ describe("useSupportAction", () => {
 
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
+          address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316", // Optimism Mainnet
           functionName: "donate",
           args: [expect.stringContaining("/blog/test"), SUPPORT_RECIPIENT_ADDRESS],
         })
       );
     });
 
-    it("should use Base Sepolia contract when on Base Sepolia", async () => {
+    it("should use Base Mainnet contract when on Base Mainnet", async () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
-        chainId: 84532, // Base Sepolia
+        chainId: 8453, // Base Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
@@ -192,7 +217,7 @@ describe("useSupportAction", () => {
 
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+          address: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694", // Base Mainnet
         })
       );
     });
@@ -221,7 +246,7 @@ describe("useSupportAction", () => {
     it("should NOT trigger chain switch on supported chain", async () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
-        chainId: 84532, // Base Sepolia (supported)
+        chainId: 8453, // Base Mainnet (supported)
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
@@ -256,10 +281,11 @@ describe("useSupportAction", () => {
     });
   });
 
-  describe("Support Count", () => {
-    it("should return support count as string", () => {
+  describe("Support Count (Aggregated from Mainnets)", () => {
+    it("should aggregate support counts from both Optimism and Base", () => {
+      // Mock returns BigInt(5) for each call, so aggregated should be 10
       vi.mocked(useReadContract).mockReturnValue({
-        data: BigInt(42),
+        data: BigInt(5),
         error: null,
         isPending: false,
         refetch: mockRefetch,
@@ -267,10 +293,11 @@ describe("useSupportAction", () => {
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
-      expect(result.current.supportCount).toBe("42");
+      // 5 from Optimism + 5 from Base = 10
+      expect(result.current.supportCount).toBe("10");
     });
 
-    it("should return '0' when no data", () => {
+    it("should return '0' when no data from either chain", () => {
       vi.mocked(useReadContract).mockReturnValue({
         data: undefined,
         error: null,

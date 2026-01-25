@@ -3,13 +3,13 @@
  */
 
 import { describe, test, expect, beforeAll } from "vitest";
+import { GenImNFTv4ABI } from "@fretchen/chain-utils";
 
 describe("NFT ABI Tests", () => {
   let nftAbi;
 
   beforeAll(async () => {
-    const module = await import("../nft_abi_v2.js");
-    nftAbi = module.nftAbi;
+    nftAbi = GenImNFTv4ABI;
   });
 
   describe("ABI Structure Tests", () => {

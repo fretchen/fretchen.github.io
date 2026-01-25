@@ -19,12 +19,15 @@ import {
 import {
   getGenAiNFTAddress,
   getCollectorNFTAddress,
+  getLLMv1Address,
   getSupportV2Address,
   getEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
   MAINNET_GENAI_NFT_ADDRESSES,
   TESTNET_GENAI_NFT_ADDRESSES,
+  MAINNET_LLM_V1_ADDRESSES,
+  TESTNET_LLM_V1_ADDRESSES,
   MAINNET_SUPPORT_V2_ADDRESSES,
   TESTNET_SUPPORT_V2_ADDRESSES,
   MAINNET_EIP3009_SPLITTER_ADDRESSES,
@@ -159,6 +162,31 @@ describe("@fretchen/chain-utils", () => {
       });
     });
 
+    describe("getLLMv1Address()", () => {
+      test("should return addresses for all deployed networks", () => {
+        // Mainnet
+        expect(getLLMv1Address("eip155:10")).toBe("0x7E8b7091a229B1004c4FBa25bB70d04595d3e848");
+        // Testnet
+        expect(getLLMv1Address("eip155:11155420")).toBe(
+          "0xA5b7f0A3f4104c97b46eafF2b0b4A457C5a73Bf4"
+        );
+      });
+
+      test("should throw for unsupported network", () => {
+        expect(() => getLLMv1Address("eip155:1")).toThrow("LLMv1 not deployed on eip155:1");
+        expect(() => getLLMv1Address("eip155:8453")).toThrow("LLMv1 not deployed on eip155:8453");
+      });
+
+      test("all addresses should be valid checksummed addresses", () => {
+        Object.entries(MAINNET_LLM_V1_ADDRESSES).forEach(([, address]) => {
+          expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
+        });
+        Object.entries(TESTNET_LLM_V1_ADDRESSES).forEach(([, address]) => {
+          expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
+        });
+      });
+    });
+
     describe("getSupportV2Address()", () => {
       test("should return addresses for all deployed networks", () => {
         // Mainnets
@@ -198,10 +226,10 @@ describe("@fretchen/chain-utils", () => {
       });
 
       test("all addresses should be valid checksummed addresses", () => {
-        Object.entries(MAINNET_EIP3009_SPLITTER_ADDRESSES).forEach(([network, address]) => {
+        Object.entries(MAINNET_EIP3009_SPLITTER_ADDRESSES).forEach(([_network, address]) => {
           expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
         });
-        Object.entries(TESTNET_EIP3009_SPLITTER_ADDRESSES).forEach(([network, address]) => {
+        Object.entries(TESTNET_EIP3009_SPLITTER_ADDRESSES).forEach(([_network, address]) => {
           expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
         });
       });

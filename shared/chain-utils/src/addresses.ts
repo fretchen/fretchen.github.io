@@ -136,6 +136,18 @@ export function getCollectorNFTAddress(network: string): `0x${string}` {
 }
 
 /**
+ * Get LLMv1 address for a network (mainnet or testnet).
+ * @throws Error if not deployed on that network
+ */
+export function getLLMv1Address(network: string): `0x${string}` {
+  const address = MAINNET_LLM_V1_ADDRESSES[network] || TESTNET_LLM_V1_ADDRESSES[network];
+  if (!address) {
+    throw new Error(`LLMv1 not deployed on ${network}`);
+  }
+  return address;
+}
+
+/**
  * Get SupportV2 address for a network (mainnet or testnet).
  * @throws Error if not deployed on that network
  */

@@ -11,7 +11,7 @@
 
 export const MAINNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
   "eip155:10": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", // Optimism
-  // "eip155:8453": "0x...", // Base - nach Deployment hinzufügen
+  // "eip155:8453": "0x...", // Base - add after Deployment
 };
 
 export const TESTNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
@@ -148,6 +148,19 @@ export function getSupportV2Address(network: string): `0x${string}` {
 }
 
 /**
+ * Get EIP3009 Splitter address for a network (mainnet or testnet).
+ * @throws Error if not deployed on that network
+ */
+export function getEIP3009SplitterAddress(network: string): `0x${string}` {
+  const address =
+    MAINNET_EIP3009_SPLITTER_ADDRESSES[network] || TESTNET_EIP3009_SPLITTER_ADDRESSES[network];
+  if (!address) {
+    throw new Error(`EIP3009 Splitter not deployed on ${network}`);
+  }
+  return address;
+}
+
+/**
  * Get USDC address for a network.
  * @throws Error if USDC not available on that network
  */
@@ -161,9 +174,14 @@ export function getUSDCAddress(network: string): `0x${string}` {
 
 /**
  * Get USDC name for a network.
+ * @throws Error if USDC not available on that network
  */
 export function getUSDCName(network: string): string {
-  return USDC_NAMES[network] || "USDC";
+  const name = USDC_NAMES[network];
+  if (!name) {
+    throw new Error(`USDC not available on ${network}`);
+  }
+  return name;
 }
 
 // ═══════════════════════════════════════════════════════════════

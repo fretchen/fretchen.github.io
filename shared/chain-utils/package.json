@@ -9,10 +9,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./addresses": {
-      "types": "./dist/addresses.d.ts",
-      "default": "./dist/addresses.js"
     }
   },
   "files": [
@@ -20,12 +16,11 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepare": "npm run build",
     "clean": "rm -rf dist",
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "check": "npm run lint && npm run format && npm run test",
+    "check": "npm run lint && npm run format && npm run test:coverage",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

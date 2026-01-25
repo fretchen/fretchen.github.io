@@ -20,12 +20,15 @@ import {
   getGenAiNFTAddress,
   getCollectorNFTAddress,
   getSupportV2Address,
+  getEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
   MAINNET_GENAI_NFT_ADDRESSES,
   TESTNET_GENAI_NFT_ADDRESSES,
   MAINNET_SUPPORT_V2_ADDRESSES,
   TESTNET_SUPPORT_V2_ADDRESSES,
+  MAINNET_EIP3009_SPLITTER_ADDRESSES,
+  TESTNET_EIP3009_SPLITTER_ADDRESSES,
   USDC_ADDRESSES,
 } from "../src/addresses";
 
@@ -170,6 +173,37 @@ describe("@fretchen/chain-utils", () => {
         expect(getSupportV2Address("eip155:84532")).toBe(
           "0xaB44BE78499721b593a0f4BE2099b246e9C53B57"
         );
+      });
+    });
+
+    describe("getEIP3009SplitterAddress()", () => {
+      test("should return addresses for all deployed networks", () => {
+        // Mainnet
+        expect(getEIP3009SplitterAddress("eip155:10")).toBe(
+          "0x4a0EA6E7A8B23C95Da07d59a8e36E9c5C5f6c5Bf"
+        );
+        // Testnet
+        expect(getEIP3009SplitterAddress("eip155:11155420")).toBe(
+          "0x7F2b5E60e26B31E32c40F48e0e7D1CA5E62C5b7a"
+        );
+      });
+
+      test("should throw for unsupported network", () => {
+        expect(() => getEIP3009SplitterAddress("eip155:1")).toThrow(
+          "EIP3009 Splitter not deployed on eip155:1"
+        );
+        expect(() => getEIP3009SplitterAddress("eip155:8453")).toThrow(
+          "EIP3009 Splitter not deployed on eip155:8453"
+        );
+      });
+
+      test("all addresses should be valid checksummed addresses", () => {
+        Object.entries(MAINNET_EIP3009_SPLITTER_ADDRESSES).forEach(([network, address]) => {
+          expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
+        });
+        Object.entries(TESTNET_EIP3009_SPLITTER_ADDRESSES).forEach(([network, address]) => {
+          expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
+        });
       });
     });
 

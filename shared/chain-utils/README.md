@@ -18,6 +18,8 @@ Or as a local dependency in the monorepo:
 }
 ```
 
+> **Note:** This package must be built before use. Run `npm install && npm run build` in `shared/chain-utils/` before installing consuming packages. The CI workflow handles this automatically.
+
 ## Usage
 
 ```typescript

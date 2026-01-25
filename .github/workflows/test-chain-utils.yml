@@ -36,13 +36,8 @@ jobs:
             - name: Install dependencies
               run: npm install
 
-            - name: Run quality checks (lint + format + test)
+            - name: Run quality checks (lint + format + test with coverage)
               run: npm run check
-              env:
-                  CI: true
-
-            - name: Run tests with coverage
-              run: npm run test:coverage
               env:
                   CI: true
 

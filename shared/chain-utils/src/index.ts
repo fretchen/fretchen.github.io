@@ -94,3 +94,38 @@ export function isTestnet(network: string): network is TestnetNetwork {
 
 // Re-export addresses
 export * from "./addresses";
+
+// ═══════════════════════════════════════════════════════════════
+// USDC Configuration
+// ═══════════════════════════════════════════════════════════════
+
+import { getUSDCAddress, getUSDCName, type USDCConfig } from "./addresses";
+
+/**
+ * Get complete USDC configuration for a CAIP-2 network ID.
+ * Used for EIP-712 / EIP-3009 payment verification and settlement.
+ *
+ * @throws Error if the network is not supported
+ * @example
+ * const config = getUSDCConfig("eip155:10");
+ * // { name: "OP Mainnet", chainId: 10, address: "0x...", decimals: 6, usdcName: "USD Coin", usdcVersion: "2" }
+ */
+export function getUSDCConfig(network: string): USDCConfig {
+  return {
+    name: getViemChain(network).name,
+    chainId: fromCAIP2(network),
+    address: getUSDCAddress(network),
+    decimals: 6,
+    usdcName: getUSDCName(network),
+    usdcVersion: "2",
+  };
+}
+
+// Re-export USDCConfig type
+export type { USDCConfig };
+
+// ═══════════════════════════════════════════════════════════════
+// Contract ABIs
+// ═══════════════════════════════════════════════════════════════
+
+export * from "./abi";

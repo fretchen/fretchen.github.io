@@ -1,7 +1,6 @@
 // @ts-check
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import { LLMv1ABI } from "./llmv1_abi.js";
-import { getViemChain, fromCAIP2, getUSDCAddress, getUSDCName } from "@fretchen/chain-utils";
+import { LLMv1ABI } from "@fretchen/chain-utils";
 
 /**
  * Get environment variable in both Node.js and Vite contexts
@@ -68,32 +67,6 @@ export function getLLMv1ContractConfig() {
     default:
       return { address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", abi: LLMv1ABI };
   }
-}
-
-/**
- * USDC configuration for supported networks
- * @typedef {Object} USDCConfig
- * @property {string} name - Human-readable network name
- * @property {number} chainId - EVM chain ID
- * @property {`0x${string}`} address - USDC contract address
- * @property {number} decimals - USDC decimals (always 6)
- * @property {string} usdcName - USDC permit name (for EIP-2612)
- * @property {string} usdcVersion - USDC permit version
- */
-
-/** returns the USDC configuration for a CAIP-2 network ID
- * @param {string} network - CAIP-2 network ID (e.g., "eip155:10", "eip155:11155420")
- * @returns {USDCConfig}
- */
-export function getUSDCConfig(network) {
-  return {
-    name: getViemChain(network).name,
-    chainId: fromCAIP2(network),
-    address: getUSDCAddress(network),
-    decimals: 6,
-    usdcName: getUSDCName(network),
-    usdcVersion: "2",
-  };
 }
 
 /**

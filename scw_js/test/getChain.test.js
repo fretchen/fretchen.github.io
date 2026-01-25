@@ -19,10 +19,10 @@ import { createPublicClient, http } from "viem";
 import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 
 // Import functions under test
-import { getUSDCConfig, getExpectedNetwork, validatePaymentNetwork } from "../getChain.js";
+import { getExpectedNetwork, validatePaymentNetwork } from "../getChain.js";
 
-// Import from chain-utils for consistency checks
-import { getViemChain } from "@fretchen/chain-utils";
+// Import from chain-utils
+import { getViemChain, getUSDCConfig } from "@fretchen/chain-utils";
 
 // USDC contracts expose name() and version() functions for EIP-712 domain
 // Note: They do NOT implement EIP-5267 eip712Domain(), so we read individual functions

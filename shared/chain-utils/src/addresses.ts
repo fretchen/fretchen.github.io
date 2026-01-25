@@ -169,3 +169,26 @@ export function getUSDCAddress(network: string): `0x${string}` {
 export function getUSDCName(network: string): string {
   return USDC_NAMES[network] || "USDC";
 }
+
+// ═══════════════════════════════════════════════════════════════
+// USDC Configuration
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Complete USDC configuration for EIP-712 / EIP-3009 payments.
+ * Critical for x402 payment verification and settlement.
+ */
+export interface USDCConfig {
+  /** Human-readable network name (e.g., "OP Mainnet") */
+  name: string;
+  /** EVM chain ID (e.g., 10 for Optimism) */
+  chainId: number;
+  /** USDC contract address */
+  address: `0x${string}`;
+  /** USDC decimals (always 6) */
+  decimals: 6;
+  /** USDC EIP-712 domain name - CRITICAL for signature verification */
+  usdcName: string;
+  /** USDC EIP-712 domain version */
+  usdcVersion: string;
+}

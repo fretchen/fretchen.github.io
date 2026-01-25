@@ -12,6 +12,7 @@ import {
   isNetworkSupported,
   isMainnet,
   isTestnet,
+  getUSDCConfig,
   MAINNET_NETWORKS,
   TESTNET_NETWORKS,
 } from "../src/index";
@@ -205,6 +206,52 @@ describe("@fretchen/chain-utils", () => {
         // Testnets use "USDC"
         expect(getUSDCName("eip155:11155420")).toBe("USDC");
         expect(getUSDCName("eip155:84532")).toBe("USDC");
+      });
+    });
+
+    describe("getUSDCConfig()", () => {
+      test("should return complete config for Optimism Mainnet", () => {
+        const config = getUSDCConfig("eip155:10");
+        expect(config.name).toBe("OP Mainnet");
+        expect(config.chainId).toBe(10);
+        expect(config.address).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
+        expect(config.decimals).toBe(6);
+        expect(config.usdcName).toBe("USD Coin");
+        expect(config.usdcVersion).toBe("2");
+      });
+
+      test("should return complete config for Optimism Sepolia", () => {
+        const config = getUSDCConfig("eip155:11155420");
+        expect(config.name).toBe("OP Sepolia");
+        expect(config.chainId).toBe(11155420);
+        expect(config.address).toBe("0x5fd84259d66Cd46123540766Be93DFE6D43130D7");
+        expect(config.decimals).toBe(6);
+        expect(config.usdcName).toBe("USDC");
+        expect(config.usdcVersion).toBe("2");
+      });
+
+      test("should return complete config for Base Mainnet", () => {
+        const config = getUSDCConfig("eip155:8453");
+        expect(config.name).toBe("Base");
+        expect(config.chainId).toBe(8453);
+        expect(config.address).toBe("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
+        expect(config.decimals).toBe(6);
+        expect(config.usdcName).toBe("USD Coin");
+        expect(config.usdcVersion).toBe("2");
+      });
+
+      test("should return complete config for Base Sepolia", () => {
+        const config = getUSDCConfig("eip155:84532");
+        expect(config.name).toBe("Base Sepolia");
+        expect(config.chainId).toBe(84532);
+        expect(config.address).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
+        expect(config.decimals).toBe(6);
+        expect(config.usdcName).toBe("USDC");
+        expect(config.usdcVersion).toBe("2");
+      });
+
+      test("should throw for unsupported network", () => {
+        expect(() => getUSDCConfig("eip155:1")).toThrow("Unsupported network: eip155:1");
       });
     });
   });

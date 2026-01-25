@@ -62,7 +62,7 @@ export function useSupportAction(url: string) {
           chainId: chain.id,
         };
       }),
-    [fullUrl]
+    [fullUrl],
   );
 
   // Single hook reads from ALL chains via multicall
@@ -105,7 +105,7 @@ export function useSupportAction(url: string) {
       try {
         await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
         targetChainId = DEFAULT_SUPPORT_CHAIN.id;
-      } catch (switchError) {
+      } catch {
         setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
         return;
       }

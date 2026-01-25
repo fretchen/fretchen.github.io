@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAccount, useWriteContract, useReadContract, useSwitchChain, useChainId } from "wagmi";
+import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId } from "wagmi";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
 
@@ -64,14 +64,17 @@ describe("useSupportAction", () => {
       chains: [],
     } as unknown as ReturnType<typeof useSwitchChain>);
 
-    // Mock useReadContract - called twice (Optimism + Base)
-    // Each call returns data for its respective chain
-    vi.mocked(useReadContract).mockReturnValue({
-      data: BigInt(5),
+    // Mock useReadContracts - returns array of results for all chains
+    // useReadContracts aggregates reads from multiple chains in one hook
+    vi.mocked(useReadContracts).mockReturnValue({
+      data: [
+        { status: "success", result: BigInt(5) }, // Optimism
+        { status: "success", result: BigInt(3) }, // Base
+      ],
       error: null,
       isPending: false,
       refetch: mockRefetch,
-    } as unknown as ReturnType<typeof useReadContract>);
+    } as unknown as ReturnType<typeof useReadContracts>);
 
     // Mock window.location
     Object.defineProperty(window, "location", {
@@ -128,18 +131,16 @@ describe("useSupportAction", () => {
       expect(result.current.isConnected).toBe(true);
     });
 
-    it("should read from BOTH chains for aggregated count", () => {
+    it("should read from ALL chains for aggregated count", () => {
       renderHook(() => useSupportAction("/blog/test"));
 
-      // useReadContract is called twice - once for Optimism, once for Base
-      expect(useReadContract).toHaveBeenCalledWith(
+      // useReadContracts is called once with contracts for all chains
+      expect(useReadContracts).toHaveBeenCalledWith(
         expect.objectContaining({
-          chainId: 10, // Optimism
-        }),
-      );
-      expect(useReadContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chainId: 8453, // Base
+          contracts: expect.arrayContaining([
+            expect.objectContaining({ chainId: 10 }), // Optimism
+            expect.objectContaining({ chainId: 8453 }), // Base
+          ]),
         }),
       );
     });
@@ -269,32 +270,52 @@ describe("useSupportAction", () => {
   });
 
   describe("Support Count (Aggregated from Mainnets)", () => {
-    it("should aggregate support counts from both Optimism and Base", () => {
-      // Mock returns BigInt(5) for each call, so aggregated should be 10
-      vi.mocked(useReadContract).mockReturnValue({
-        data: BigInt(5),
+    it("should aggregate support counts from all chains", () => {
+      // Mock returns 5 from Optimism + 3 from Base = 8
+      vi.mocked(useReadContracts).mockReturnValue({
+        data: [
+          { status: "success", result: BigInt(5) }, // Optimism
+          { status: "success", result: BigInt(3) }, // Base
+        ],
         error: null,
         isPending: false,
         refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useReadContract>);
+      } as unknown as ReturnType<typeof useReadContracts>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
-      // 5 from Optimism + 5 from Base = 10
-      expect(result.current.supportCount).toBe("10");
+      expect(result.current.supportCount).toBe("8");
     });
 
-    it("should return '0' when no data from either chain", () => {
-      vi.mocked(useReadContract).mockReturnValue({
+    it("should return '0' when no data from any chain", () => {
+      vi.mocked(useReadContracts).mockReturnValue({
         data: undefined,
         error: null,
         isPending: false,
         refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useReadContract>);
+      } as unknown as ReturnType<typeof useReadContracts>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
       expect(result.current.supportCount).toBe("0");
+    });
+
+    it("should handle partial failures gracefully", () => {
+      // Only Optimism succeeds, Base fails
+      vi.mocked(useReadContracts).mockReturnValue({
+        data: [
+          { status: "success", result: BigInt(5) },
+          { status: "failure", error: new Error("RPC error") },
+        ],
+        error: null,
+        isPending: false,
+        refetch: mockRefetch,
+      } as unknown as ReturnType<typeof useReadContracts>);
+
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      // Should still count successful chain
+      expect(result.current.supportCount).toBe("5");
     });
   });
 

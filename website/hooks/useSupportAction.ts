@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
 import { parseEther } from "viem";
-import { useReadContract } from "wagmi";
+import { useReadContracts } from "wagmi";
 import {
   getSupportV2Config,
   isSupportV2Chain,
@@ -23,20 +23,13 @@ export function useSupportAction(url: string) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [fullUrl, setFullUrl] = React.useState(url);
 
-  // Wagmi hooks - compare both chainId sources for debugging
-  const { isConnected, chainId: accountChainId, connector } = useAccount();
+  // Wagmi hooks
+  const { isConnected, chainId: accountChainId } = useAccount();
   const wagmiChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const donationAmount = parseEther("0.0002");
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-
-  // Debug: Log chain IDs on every render
-  React.useEffect(() => {
-    console.log(
-      `[Support] Chain debug - accountChainId: ${accountChainId}, wagmiChainId: ${wagmiChainId}, connector: ${connector?.name}`,
-    );
-  }, [accountChainId, wagmiChainId, connector]);
 
   // Use accountChainId as it reflects wallet state
   const chainId = accountChainId ?? wagmiChainId;
@@ -51,58 +44,48 @@ export function useSupportAction(url: string) {
   }, [url]);
 
   // ═══════════════════════════════════════════════════════════════
-  // AGGREGATED READS: Read likes from BOTH chains in current mode
-  // Uses SUPPORT_V2_CHAINS which is either [optimism, base] or
-  // [optimismSepolia, baseSepolia] based on VITE_USE_TESTNET
+  // AGGREGATED READS: Read likes from ALL chains in current mode
+  // Uses SUPPORT_V2_CHAINS which is either [optimism, base, ...] or
+  // [optimismSepolia, baseSepolia, ...] based on VITE_USE_TESTNET
+  // Scales automatically to any number of chains!
   // ═══════════════════════════════════════════════════════════════
 
-  const chain1Config = getSupportV2Config(SUPPORT_V2_CHAINS[0].id)!;
-  const chain2Config = getSupportV2Config(SUPPORT_V2_CHAINS[1].id)!;
+  // Build contract read configs for all supported chains
+  const readContracts = React.useMemo(
+    () =>
+      SUPPORT_V2_CHAINS.map((chain) => {
+        const config = getSupportV2Config(chain.id)!;
+        return {
+          ...config,
+          functionName: "getLikesForUrl" as const,
+          args: [fullUrl] as const,
+          chainId: chain.id,
+        };
+      }),
+    [fullUrl]
+  );
 
-  // Read from first chain (Optimism or OP Sepolia)
+  // Single hook reads from ALL chains via multicall
   const {
-    data: chain1Count,
-    error: chain1Error,
-    isPending: isChain1Pending,
-    refetch: refetchChain1,
-  } = useReadContract({
-    ...chain1Config,
-    functionName: "getLikesForUrl",
-    args: [fullUrl],
-    chainId: SUPPORT_V2_CHAINS[0].id,
+    data: chainResults,
+    error: readError,
+    isPending: isReadPending,
+    refetch,
+  } = useReadContracts({
+    contracts: readContracts,
     query: { enabled: !!fullUrl },
   });
 
-  // Read from second chain (Base or Base Sepolia)
-  const {
-    data: chain2Count,
-    error: chain2Error,
-    isPending: isChain2Pending,
-    refetch: refetchChain2,
-  } = useReadContract({
-    ...chain2Config,
-    functionName: "getLikesForUrl",
-    args: [fullUrl],
-    chainId: SUPPORT_V2_CHAINS[1].id,
-    query: { enabled: !!fullUrl },
-  });
-
-  // Aggregate counts from both chains
+  // Aggregate counts from all chains
   const aggregatedCount = React.useMemo(() => {
-    const count1 = typeof chain1Count === "bigint" ? chain1Count : 0n;
-    const count2 = typeof chain2Count === "bigint" ? chain2Count : 0n;
-    return count1 + count2;
-  }, [chain1Count, chain2Count]);
-
-  // Combined read state
-  const isReadPending = isChain1Pending || isChain2Pending;
-  const readError = chain1Error || chain2Error;
-
-  // Refetch both chains
-  const refetch = React.useCallback(() => {
-    refetchChain1();
-    refetchChain2();
-  }, [refetchChain1, refetchChain2]);
+    if (!chainResults) return 0n;
+    return chainResults.reduce((sum, result) => {
+      if (result.status === "success" && typeof result.result === "bigint") {
+        return sum + result.result;
+      }
+      return sum;
+    }, 0n);
+  }, [chainResults]);
 
   // Handle support action with automatic chain switch
   const handleSupport = React.useCallback(async () => {
@@ -117,17 +100,12 @@ export function useSupportAction(url: string) {
     const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
     let targetChainId = chainId ?? DEFAULT_SUPPORT_CHAIN.id;
 
-    console.log(`[Support] Current chain: ${chainId}, supported: ${currentlySupported}`);
-
     // Automatic chain switch only if not on a supported chain
     if (!currentlySupported) {
-      console.log(`[Support] Chain mismatch: current=${chainId}, switching to ${DEFAULT_SUPPORT_CHAIN.name}`);
       try {
         await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
-        console.log(`[Support] Successfully switched to ${DEFAULT_SUPPORT_CHAIN.name}`);
         targetChainId = DEFAULT_SUPPORT_CHAIN.id;
       } catch (switchError) {
-        console.error("[Support] Chain switch failed:", switchError);
         setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
         return;
       }
@@ -141,7 +119,6 @@ export function useSupportAction(url: string) {
     }
 
     setIsLoading(true);
-    console.log(`[Support] Sending donation on chain ${targetChainId} to ${activeConfig.address}`);
 
     // SupportV2 has recipient parameter
     writeContract({

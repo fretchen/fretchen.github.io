@@ -20,6 +20,12 @@ vi.mock("wagmi", () => ({
     isPending: false,
     refetch: vi.fn(),
   })),
+  useReadContracts: vi.fn(() => ({
+    data: undefined,
+    error: null,
+    isPending: false,
+    refetch: vi.fn(),
+  })),
   useWriteContract: vi.fn(() => ({
     writeContract: vi.fn(),
     writeContractAsync: vi.fn(),

@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
+import { builtinModules } from "module";
 
 export default defineConfig({
   entry: [
@@ -17,8 +18,12 @@ export default defineConfig({
   // Keep readable for debugging
   minify: false,
   sourcemap: true,
-  // Bundle all dependencies except these (they're provided by Scaleway runtime)
-  external: [],
-  // Ensure all imports are bundled
+  // Node.js built-ins must be external (async_hooks, fs, path, etc.)
+  external: [...builtinModules, ...builtinModules.map((m) => `node:${m}`)],
+  // Bundle all npm dependencies
   noExternal: [/.*/],
+  // Add createRequire banner for packages that use dynamic require() (like pino)
+  banner: {
+    js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+  },
 });

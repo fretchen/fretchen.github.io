@@ -17,16 +17,16 @@ const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
 
 /** SupportV2 contract addresses per chain */
 const SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
+  // Mainnets
+  [optimism.id]: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316",
+  [base.id]: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694",
   // Testnets
   [optimismSepolia.id]: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
   [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
-  // Mainnets (Phase 4 - nach Deployment ausfüllen)
-  // [optimism.id]: "0x...",
-  // [base.id]: "0x...",
 };
 
 /** Default chain for read operations and auto-switch target */
-export const DEFAULT_SUPPORT_CHAIN = optimismSepolia;
+export const DEFAULT_SUPPORT_CHAIN = optimism;
 
 /** Recipient wallet for donations */
 export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;

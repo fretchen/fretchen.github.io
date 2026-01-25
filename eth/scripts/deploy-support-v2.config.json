@@ -5,12 +5,12 @@
   "options": {
     "validateOnly": false,
     "dryRun": false,
-    "verify": false,
-    "waitConfirmations": 1
+    "verify": true,
+    "waitConfirmations": 5
   },
   "metadata": {
-    "description": "Test deployment configuration for SupportV2",
-    "version": "1.0.0-test",
-    "environment": "development"
+    "description": "Deployment configuration for SupportV2",
+    "version": "1.0.0",
+    "environment": "production"
   }
 }

@@ -1,7 +1,7 @@
 # SupportV2 Contract — Implementation Plan
 
-**Status:** 🚧 IN ENTWICKLUNG (Phase 3 größtenteils abgeschlossen, Phase 4 offen)  
-**Letzte Aktualisierung:** 24. Januar 2026
+**Status:** ✅ ABGESCHLOSSEN (Phase 4 Production Deployment fertig)  
+**Letzte Aktualisierung:** 25. Januar 2026
 
 ---
 
@@ -12,9 +12,18 @@
 | Phase 1 | Contract, Tests, Deployment Script | ✅ ABGESCHLOSSEN |
 | Phase 2 | Multi-Chain & Testing | ✅ ABGESCHLOSSEN |
 | Phase 3 | Frontend Integration | ✅ ABGESCHLOSSEN (ETH only) |
-| Phase 4 | Production Deployment | ⏳ OFFEN |
+| Phase 4 | Production Deployment | ✅ ABGESCHLOSSEN |
 
-### Deployment Adressen (Testnets)
+### Deployment Adressen
+
+#### Mainnets
+
+| Chain | Proxy Address | Deployed |
+|-------|---------------|----------|
+| Optimism | `0x4ca63f8A4Cd56287E854f53E18ca482D74391316` | 24.01.2026 |
+| Base | `0xB70EA4d714Fed01ce20E93F9033008BadA1c8694` | 25.01.2026 |
+
+#### Testnets
 
 | Chain | Proxy Address | Deployed |
 |-------|---------------|----------|

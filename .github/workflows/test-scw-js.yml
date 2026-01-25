@@ -39,7 +39,7 @@ jobs:
 
       - name: Install and build chain-utils
         working-directory: ./shared/chain-utils
-        run: npm install
+        run: npm install && npm run build
 
       - name: Install dependencies
         run: npm install

@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsup",
+    "deploy": "npm run build && npx serverless deploy",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
     "test:coverage": "NODE_ENV=test vitest run --coverage",
@@ -32,6 +34,7 @@
     "fastify": "^5.6.1",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.4.16",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.1"
   },

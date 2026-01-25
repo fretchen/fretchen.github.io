@@ -313,27 +313,32 @@ await writeContract({
 | 3.5 | `useSupportAction.ts` — Multi-Chain Hook mit Auto-Switch | ✅ |
 | 3.6 | Legacy Support Config entfernt (`supportContractConfig`) | ✅ |
 | 3.7 | Unit Tests für `useSupportAction` | ✅ |
+| 3.8 | `VITE_USE_TESTNET` Env-Variable für Testnet-Modus | ✅ |
+| 3.9 | Aggregierte Likes von beiden Chains | ✅ |
 
-**Frontend-Änderungen (24. Januar 2026):**
+**Frontend-Änderungen (25. Januar 2026):**
 
+- `website/.env`: `VITE_USE_TESTNET` Variable hinzugefügt (default: mainnet)
 - `website/wagmi.config.ts`: Base + Base Sepolia zu Chains hinzugefügt
 - `website/utils/getChain.ts`: 
-  - Neue Exports: `getSupportV2Config()`, `isSupportV2Chain()`, `DEFAULT_SUPPORT_CHAIN`, `SUPPORT_RECIPIENT_ADDRESS`
+  - `VITE_USE_TESTNET` steuert Mainnet/Testnet Modus
+  - `SUPPORT_V2_CHAINS` exportiert aktive Chains basierend auf Modus
+  - `getSupportV2Config()`, `isSupportV2Chain()`, `DEFAULT_SUPPORT_CHAIN`
   - Legacy `supportContractConfig` entfernt
-  - Legacy `SupportABI` Import entfernt
-- `website/utils/nodeChainUtils.ts`: Legacy `nodeSupportContractConfig` entfernt
-- `website/hooks/useSupportAction.ts`: Komplett refaktoriert für Multi-Chain mit automatischem Chain-Switch
-- `website/test/useSupportAction.test.ts`: 16 Unit Tests für Chain-Detection, Contract-Config, handleSupport, etc.
+- `website/hooks/useSupportAction.ts`: 
+  - Multi-Chain mit automatischem Chain-Switch
+  - Aggregierte Likes von beiden Chains im aktiven Modus
+- `website/test/useSupportAction.test.ts`: 17 Unit Tests
 
-### Phase 4: Production Deployment ⏳ OFFEN
+### Phase 4: Production Deployment ✅ ABGESCHLOSSEN
 
 | Schritt | Beschreibung | Status |
 |---------|--------------|--------|
-| 4.1 | Deploy auf Optimism Mainnet | ⏳ |
-| 4.2 | Deploy auf Base Mainnet | ⏳ |
-| 4.3 | `getChain.ts` — Mainnet Adressen eintragen | ⏳ |
-| 4.4 | `DEFAULT_SUPPORT_CHAIN` auf Mainnet umstellen | ⏳ |
-| 4.5 | USDC Token-Whitelist konfigurieren (optional) | ⏳ |
+| 4.1 | Deploy auf Optimism Mainnet | ✅ |
+| 4.2 | Deploy auf Base Mainnet | ✅ |
+| 4.3 | `getChain.ts` — Mainnet Adressen eintragen | ✅ |
+| 4.4 | `DEFAULT_SUPPORT_CHAIN` auf Mainnet umstellen | ✅ |
+| 4.5 | USDC Token-Whitelist konfigurieren (optional) | ⏸️ |
 
 ---
 

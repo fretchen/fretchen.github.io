@@ -66,7 +66,9 @@ const CHAIN_MAP: Record<string, Chain> = {
 export function getViemChain(network: string): Chain {
   const chain = CHAIN_MAP[network];
   if (!chain) {
-    throw new Error(`Unsupported network: ${network}. Supported: ${Object.keys(CHAIN_MAP).join(", ")}`);
+    throw new Error(
+      `Unsupported network: ${network}. Supported: ${Object.keys(CHAIN_MAP).join(", ")}`
+    );
   }
   return chain;
 }

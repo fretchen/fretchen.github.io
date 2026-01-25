@@ -31,10 +31,14 @@ export const LLMv1ABI = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "root", type: "bytes32" },
-      { name: "leaves", type: "tuple[]", components: [
-        { name: "user", type: "address" },
-        { name: "amount", type: "uint256" },
-      ]},
+      {
+        name: "leaves",
+        type: "tuple[]",
+        components: [
+          { name: "user", type: "address" },
+          { name: "amount", type: "uint256" },
+        ],
+      },
       { name: "proofs", type: "bytes32[][]" },
     ],
     outputs: [],

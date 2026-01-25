@@ -12,16 +12,11 @@ describe("GenImNFTv4ABI", () => {
   });
 
   test("should contain required read functions", () => {
-    const functionNames = GenImNFTv4ABI
-      .filter((item) => item.type === "function")
-      .map((item) => item.name);
+    const functionNames = GenImNFTv4ABI.filter((item) => item.type === "function").map(
+      (item) => item.name
+    );
 
-    const requiredFunctions = [
-      "ownerOf",
-      "mintPrice",
-      "isImageUpdated",
-      "isAuthorizedAgent",
-    ];
+    const requiredFunctions = ["ownerOf", "mintPrice", "isImageUpdated", "isAuthorizedAgent"];
 
     requiredFunctions.forEach((funcName) => {
       expect(functionNames).toContain(funcName);
@@ -29,15 +24,11 @@ describe("GenImNFTv4ABI", () => {
   });
 
   test("should contain required write functions", () => {
-    const functionNames = GenImNFTv4ABI
-      .filter((item) => item.type === "function")
-      .map((item) => item.name);
+    const functionNames = GenImNFTv4ABI.filter((item) => item.type === "function").map(
+      (item) => item.name
+    );
 
-    const requiredFunctions = [
-      "safeMint",
-      "requestImageUpdate",
-      "safeTransferFrom",
-    ];
+    const requiredFunctions = ["safeMint", "requestImageUpdate", "safeTransferFrom"];
 
     requiredFunctions.forEach((funcName) => {
       expect(functionNames).toContain(funcName);
@@ -83,9 +74,9 @@ describe("EIP3009SplitterV1ABI", () => {
   });
 
   test("should contain required functions", () => {
-    const functionNames = EIP3009SplitterV1ABI
-      .filter((item) => item.type === "function")
-      .map((item) => item.name);
+    const functionNames = EIP3009SplitterV1ABI.filter((item) => item.type === "function").map(
+      (item) => item.name
+    );
 
     const requiredFunctions = [
       "facilitatorWallet",
@@ -114,9 +105,9 @@ describe("LLMv1ABI", () => {
   });
 
   test("should contain required functions", () => {
-    const functionNames = LLMv1ABI
-      .filter((item) => item.type === "function")
-      .map((item) => item.name);
+    const functionNames = LLMv1ABI.filter((item) => item.type === "function").map(
+      (item) => item.name
+    );
 
     const requiredFunctions = ["checkBalance", "processBatch"];
 

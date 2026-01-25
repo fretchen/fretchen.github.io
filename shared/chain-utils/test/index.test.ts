@@ -126,9 +126,7 @@ describe("@fretchen/chain-utils", () => {
   describe("Contract Addresses", () => {
     describe("getGenAiNFTAddress()", () => {
       test("should return Mainnet contract address", () => {
-        expect(getGenAiNFTAddress("eip155:10")).toBe(
-          "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"
-        );
+        expect(getGenAiNFTAddress("eip155:10")).toBe("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");
       });
 
       test("should return Sepolia contract address", () => {
@@ -161,9 +159,7 @@ describe("@fretchen/chain-utils", () => {
     describe("getSupportV2Address()", () => {
       test("should return addresses for all deployed networks", () => {
         // Mainnets
-        expect(getSupportV2Address("eip155:10")).toBe(
-          "0x4ca63f8A4Cd56287E854f53E18ca482D74391316"
-        );
+        expect(getSupportV2Address("eip155:10")).toBe("0x4ca63f8A4Cd56287E854f53E18ca482D74391316");
         expect(getSupportV2Address("eip155:8453")).toBe(
           "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694"
         );
@@ -179,24 +175,16 @@ describe("@fretchen/chain-utils", () => {
 
     describe("USDC Addresses", () => {
       test("getUSDCAddress() returns valid addresses for all networks", () => {
-        expect(getUSDCAddress("eip155:10")).toBe(
-          "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"
-        );
+        expect(getUSDCAddress("eip155:10")).toBe("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
         expect(getUSDCAddress("eip155:11155420")).toBe(
           "0x5fd84259d66Cd46123540766Be93DFE6D43130D7"
         );
-        expect(getUSDCAddress("eip155:8453")).toBe(
-          "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-        );
-        expect(getUSDCAddress("eip155:84532")).toBe(
-          "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
-        );
+        expect(getUSDCAddress("eip155:8453")).toBe("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
+        expect(getUSDCAddress("eip155:84532")).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
       });
 
       test("getUSDCAddress() throws for unsupported network", () => {
-        expect(() => getUSDCAddress("eip155:1")).toThrow(
-          "USDC not available on eip155:1"
-        );
+        expect(() => getUSDCAddress("eip155:1")).toThrow("USDC not available on eip155:1");
       });
 
       test("getUSDCName() returns correct names for EIP-712 domain", () => {
@@ -276,7 +264,7 @@ describe("@fretchen/chain-utils", () => {
 
     test("chainId from viem matches fromCAIP2 for all networks", () => {
       const networks = ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
-      
+
       for (const network of networks) {
         const viemChain = getViemChain(network);
         const parsedChainId = fromCAIP2(network);

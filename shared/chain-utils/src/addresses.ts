@@ -115,8 +115,7 @@ export const TESTNET_EIP3009_SPLITTER_ADDRESSES: Record<string, `0x${string}`> =
  * @throws Error if not deployed on that network
  */
 export function getGenAiNFTAddress(network: string): `0x${string}` {
-  const address =
-    MAINNET_GENAI_NFT_ADDRESSES[network] || TESTNET_GENAI_NFT_ADDRESSES[network];
+  const address = MAINNET_GENAI_NFT_ADDRESSES[network] || TESTNET_GENAI_NFT_ADDRESSES[network];
   if (!address) {
     throw new Error(`GenAI NFT not deployed on ${network}`);
   }
@@ -129,8 +128,7 @@ export function getGenAiNFTAddress(network: string): `0x${string}` {
  */
 export function getCollectorNFTAddress(network: string): `0x${string}` {
   const address =
-    MAINNET_COLLECTOR_NFT_ADDRESSES[network] ||
-    TESTNET_COLLECTOR_NFT_ADDRESSES[network];
+    MAINNET_COLLECTOR_NFT_ADDRESSES[network] || TESTNET_COLLECTOR_NFT_ADDRESSES[network];
   if (!address) {
     throw new Error(`CollectorNFT not deployed on ${network}`);
   }
@@ -142,9 +140,7 @@ export function getCollectorNFTAddress(network: string): `0x${string}` {
  * @throws Error if not deployed on that network
  */
 export function getSupportV2Address(network: string): `0x${string}` {
-  const address =
-    MAINNET_SUPPORT_V2_ADDRESSES[network] ||
-    TESTNET_SUPPORT_V2_ADDRESSES[network];
+  const address = MAINNET_SUPPORT_V2_ADDRESSES[network] || TESTNET_SUPPORT_V2_ADDRESSES[network];
   if (!address) {
     throw new Error(`SupportV2 not deployed on ${network}`);
   }

@@ -50,14 +50,6 @@ vi.mock("wagmi", () => ({
   WagmiProvider: vi.fn(({ children }) => children),
 }));
 
-// Mock wagmi/chains
-vi.mock("wagmi/chains", () => ({
-  mainnet: { id: 1, name: "Ethereum" },
-  sepolia: { id: 11155111, name: "Sepolia" },
-  optimism: { id: 10, name: "Optimism" },
-  optimismSepolia: { id: 11155420, name: "Optimism Sepolia" },
-}));
-
 // Mock wagmi/connectors
 vi.mock("wagmi/connectors", () => ({
   injected: vi.fn(() => ({})),

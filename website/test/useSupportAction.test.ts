@@ -4,14 +4,6 @@ import { useAccount, useWriteContract, useReadContract, useSwitchChain, useChain
 import { useSupportAction } from "../hooks/useSupportAction";
 import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
 
-// Mock wagmi/chains - needed for aggregated reads
-vi.mock("wagmi/chains", () => ({
-  optimism: { id: 10, name: "OP Mainnet" },
-  optimismSepolia: { id: 11155420, name: "OP Sepolia" },
-  base: { id: 8453, name: "Base" },
-  baseSepolia: { id: 84532, name: "Base Sepolia" },
-}));
-
 // Mock the getChain module - simulates mainnet mode (VITE_USE_TESTNET not set)
 vi.mock("../utils/getChain", async () => {
   const optimism = { id: 10, name: "OP Mainnet" };

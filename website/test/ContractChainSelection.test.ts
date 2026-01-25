@@ -3,15 +3,6 @@ import { genAiNFTContractConfig, getChain } from "../utils/getChain";
 import { getPublicClient } from "@wagmi/core";
 import { config } from "../wagmi.config";
 
-vi.mock("wagmi/chains", async () => {
-  return {
-    mainnet: { id: 1, name: "mainnet" },
-    optimism: { id: 10, name: "optimism" },
-    optimismSepolia: { id: 11155420, name: "optimismSepolia" },
-    sepolia: { id: 11155111, name: "sepolia" },
-  };
-});
-
 vi.mock("../wagmi.config", () => ({
   config: {
     chains: [],

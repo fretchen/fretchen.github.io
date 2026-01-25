@@ -1,13 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useAccount, useWriteContract, useReadContract, useSwitchChain, useChainId } from "wagmi";
 import { useSupportAction } from "../hooks/useSupportAction";
-import {
-  getSupportV2Config,
-  isSupportV2Chain,
-  DEFAULT_SUPPORT_CHAIN,
-  SUPPORT_RECIPIENT_ADDRESS,
-} from "../utils/getChain";
+import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
 
 // Mock wagmi/chains - needed for aggregated reads
 vi.mock("wagmi/chains", () => ({
@@ -148,12 +143,12 @@ describe("useSupportAction", () => {
       expect(useReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chainId: 10, // Optimism
-        })
+        }),
       );
       expect(useReadContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chainId: 8453, // Base
-        })
+        }),
       );
     });
   });
@@ -197,7 +192,7 @@ describe("useSupportAction", () => {
           address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316", // Optimism Mainnet
           functionName: "donate",
           args: [expect.stringContaining("/blog/test"), SUPPORT_RECIPIENT_ADDRESS],
-        })
+        }),
       );
     });
 
@@ -218,7 +213,7 @@ describe("useSupportAction", () => {
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
           address: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694", // Base Mainnet
-        })
+        }),
       );
     });
 
@@ -322,7 +317,7 @@ describe("useSupportAction", () => {
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
           args: ["https://example.com/blog/my-post", expect.any(String)],
-        })
+        }),
       );
     });
 
@@ -336,7 +331,7 @@ describe("useSupportAction", () => {
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
           args: ["https://example.com/blog/my-post", expect.any(String)],
-        })
+        }),
       );
     });
 
@@ -353,7 +348,7 @@ describe("useSupportAction", () => {
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
           args: ["https://example.com", expect.any(String)],
-        })
+        }),
       );
     });
   });

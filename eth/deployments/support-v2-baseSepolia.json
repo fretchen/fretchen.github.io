@@ -1,0 +1,8 @@
+{
+  "network": "baseSepolia",
+  "proxyAddress": "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+  "implementationAddress": "0x28E8190602219767eF46d7c0ED8EF15a3A9E8b8A",
+  "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+  "deployedAt": "2026-01-21T00:00:00.000Z",
+  "version": "1.0.0"
+}

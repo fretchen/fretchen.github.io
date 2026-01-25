@@ -1,7 +1,12 @@
 // x402 v2 Token Payment Implementation for GenImg
 // Uses official @x402/core and @x402/evm packages for payment handling
 
-import { GenImNFTv4ABI as nftAbi } from "@fretchen/chain-utils";
+import {
+  GenImNFTv4ABI as nftAbi,
+  getViemChain,
+  getGenAiNFTAddress,
+  getUSDCConfig,
+} from "@fretchen/chain-utils";
 import { getContract, createWalletClient, createPublicClient, http, parseEther } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
@@ -12,7 +17,6 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
 } from "./x402_server.js";
-import { getViemChain, getGenAiNFTAddress, getUSDCConfig } from "@fretchen/chain-utils";
 import { validatePaymentNetwork } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests

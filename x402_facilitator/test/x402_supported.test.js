@@ -114,7 +114,7 @@ describe("x402 /supported endpoint", () => {
     expect(whitelistExtension.contracts).toBeDefined();
   });
 
-  test("whitelist extension includes contracts for mainnet only", () => {
+  test("whitelist extension includes contracts for both mainnet and sepolia", () => {
     const capabilities = getSupportedCapabilities();
 
     const whitelistExtension = capabilities.extensions.find(
@@ -126,8 +126,10 @@ describe("x402 /supported endpoint", () => {
     expect(Array.isArray(whitelistExtension.contracts["eip155:10"])).toBe(true);
     expect(whitelistExtension.contracts["eip155:10"].length).toBe(2);
 
-    // Sepolia has no contracts deployed
-    expect(whitelistExtension.contracts["eip155:11155420"]).toBeUndefined();
+    // Sepolia also has contracts deployed
+    expect(whitelistExtension.contracts["eip155:11155420"]).toBeDefined();
+    expect(Array.isArray(whitelistExtension.contracts["eip155:11155420"])).toBe(true);
+    expect(whitelistExtension.contracts["eip155:11155420"].length).toBe(2);
   });
 
   test("whitelist extension includes GenImNFTv4 and LLMv1 contracts on mainnet", () => {
@@ -147,6 +149,7 @@ describe("x402 /supported endpoint", () => {
     expect(genimgMainnet.method).toBe("isAuthorizedAgent(address)");
 
     expect(llmMainnet).toBeDefined();
+    // LLMv1 on Optimism Mainnet
     expect(llmMainnet.address).toBe("0x833F39D6e67390324796f861990ce9B7cf9F5dE1");
     expect(llmMainnet.method).toBe("isAuthorizedAgent(address)");
   });

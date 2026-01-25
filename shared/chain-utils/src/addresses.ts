@@ -67,11 +67,11 @@ export const SUPPORT_V2_NETWORKS = [
 // ═══════════════════════════════════════════════════════════════
 
 export const MAINNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x7E8b7091a229B1004c4FBa25bB70d04595d3e848", // Optimism
+  "eip155:10": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1", // Optimism
 };
 
 export const TESTNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0xA5b7f0A3f4104c97b46eafF2b0b4A457C5a73Bf4", // Optimism Sepolia
+  "eip155:11155420": "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", // Optimism Sepolia
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -99,11 +99,11 @@ export const USDC_NAMES: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════
 
 export const MAINNET_EIP3009_SPLITTER_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x4a0EA6E7A8B23C95Da07d59a8e36E9c5C5f6c5Bf", // Optimism
+  // "eip155:10": "0x...", // Optimism - not yet deployed
 };
 
 export const TESTNET_EIP3009_SPLITTER_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0x7F2b5E60e26B31E32c40F48e0e7D1CA5E62C5b7a", // Optimism Sepolia
+  "eip155:11155420": "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946", // Optimism Sepolia
 };
 
 // ═══════════════════════════════════════════════════════════════

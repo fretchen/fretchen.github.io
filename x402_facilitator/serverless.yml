@@ -34,6 +34,9 @@ plugins:
 
 package:
   patterns:
+    # Only include bundled output
+    - "dist/**"
+    # Exclude everything else
     - "!.gitignore"
     - "!.git/**"
     - "!test/**"
@@ -41,14 +44,17 @@ package:
     - "!.prettierrc"
     - "!eslint.config.js"
     - "!vitest.config.js"
+    - "!tsup.config.js"
     - "!README.md"
     - "!EIP712_VERIFICATION.md"
+    - "!*.js"
+    - "!node_modules/**"
 
 functions:
   # Single function with path-based routing
   # Handles /verify, /settle, and /supported endpoints
   facilitator:
-    handler: x402_facilitator.handle
+    handler: dist/x402_facilitator.handle
     description: x402 v2 payment facilitator with path-based routing
     # Memory and timeout for the combined function
     memoryLimit: 512
@@ -58,5 +64,5 @@ functions:
       - facilitator.fretchen.eu
 
   feefacilitator:
-    handler: x402_splitter_facilitator.handle
+    handler: dist/x402_splitter_facilitator.handle
     description: Testnet facilitator with fee for x402 v2 payments

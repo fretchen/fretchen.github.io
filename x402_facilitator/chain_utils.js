@@ -3,25 +3,23 @@
 /**
  * Chain Utilities for x402 Facilitator
  * Shared functions for network/chain handling
+ *
+ * Uses @fretchen/chain-utils for chain/address data,
+ * adds local RPC URL handling and facilitator-specific config.
  */
 
-import { optimism, optimismSepolia } from "viem/chains";
+import {
+  getViemChain,
+  fromCAIP2,
+  getGenAiNFTAddress,
+  getLLMv1Address,
+  getEIP3009SplitterAddress,
+  getUSDCAddress,
+  getUSDCName,
+} from "@fretchen/chain-utils";
 
-/**
- * Convert x402 network identifier to viem chain object
- * @param {string} network - Network ID (eip155:10 or eip155:11155420)
- * @returns {import("viem/chains").Chain} Viem chain object
- * @throws {Error} If network is not supported
- */
-export function getChain(network) {
-  if (network === "eip155:10") {
-    return optimism;
-  }
-  if (network === "eip155:11155420") {
-    return optimismSepolia;
-  }
-  throw new Error(`Unsupported network: ${network}`);
-}
+// Re-export getViemChain as getChain for backward compatibility
+export { getViemChain as getChain };
 
 /**
  * Get RPC URL for a network with fallback handling
@@ -54,35 +52,35 @@ export function getRpcUrl(network) {
 }
 
 /**
+ * Safely get an address, returning null if not deployed
+ * @param {function(string): string} getter - Address getter function
+ * @param {string} network - Network ID
+ * @returns {string|null} Address or null if not deployed
+ */
+function safeGetAddress(getter, network) {
+  try {
+    return getter(network);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get chain configuration including RPC URL and contract addresses
  * @param {string} network - Network ID (eip155:10 or eip155:11155420)
  * @returns {{chain: import("viem/chains").Chain, rpcUrl: string, GENIMG_V4_ADDRESS: string|null, LLMV1_ADDRESS: string|null, SPLITTER_ADDRESS: string|null, USDC_ADDRESS: string, USDC_NAME: string}} Chain config with RPC URL and contract addresses
  * @throws {Error} If network is not supported
  */
 export function getChainConfig(network) {
-  if (network === "eip155:10") {
-    return {
-      chain: optimism,
-      rpcUrl: getRpcUrl(network),
-      GENIMG_V4_ADDRESS: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-      LLMV1_ADDRESS: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1",
-      SPLITTER_ADDRESS: null, // Not yet deployed on mainnet
-      USDC_ADDRESS: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      USDC_NAME: "USD Coin",
-    };
-  }
-  if (network === "eip155:11155420") {
-    return {
-      chain: optimismSepolia,
-      rpcUrl: getRpcUrl(network),
-      GENIMG_V4_ADDRESS: null,
-      LLMV1_ADDRESS: null,
-      SPLITTER_ADDRESS: "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946",
-      USDC_ADDRESS: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-      USDC_NAME: "USDC",
-    };
-  }
-  throw new Error(`Unsupported network: ${network}`);
+  return {
+    chain: getViemChain(network),
+    rpcUrl: getRpcUrl(network),
+    GENIMG_V4_ADDRESS: safeGetAddress(getGenAiNFTAddress, network),
+    LLMV1_ADDRESS: safeGetAddress(getLLMv1Address, network),
+    SPLITTER_ADDRESS: safeGetAddress(getEIP3009SplitterAddress, network),
+    USDC_ADDRESS: getUSDCAddress(network),
+    USDC_NAME: getUSDCName(network),
+  };
 }
 
 /**
@@ -139,8 +137,7 @@ export function getTokenInfo(network, tokenAddress) {
  * @throws {Error} If network is not supported
  */
 export function getChainId(network) {
-  const chain = getChain(network);
-  return chain.id;
+  return fromCAIP2(network);
 }
 
 /**

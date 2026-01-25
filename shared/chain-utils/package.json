@@ -21,11 +21,15 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
-    "viem": "^2.0.0"
+    "viem": "^2.0.0",
+    "vitest": "^2.0.0"
   },
   "peerDependencies": {
     "viem": "^2.0.0"

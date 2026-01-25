@@ -20,13 +20,14 @@ import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 
 // Import functions under test
 import {
-  getViemChain,
   getChainNameFromEIP155,
   getUSDCConfig,
-  getGenImgContractConfig,
   getExpectedNetwork,
   validatePaymentNetwork,
 } from "../getChain.js";
+
+// Import from chain-utils for consistency checks
+import { getViemChain } from "@fretchen/chain-utils";
 
 // USDC contracts expose name() and version() functions for EIP-712 domain
 // Note: They do NOT implement EIP-5267 eip712Domain(), so we read individual functions
@@ -135,7 +136,7 @@ describe("getChain.js - Chain Configuration Tests", () => {
     });
 
     test("should throw for unconfigured network", () => {
-      expect(() => getUSDCConfig("eip155:1")).toThrow("USDC not configured for network: eip155:1");
+      expect(() => getUSDCConfig("eip155:1")).toThrow("USDC not available on eip155:1");
     });
 
     test("should have consistent chainId between viem chain and USDC config", () => {
@@ -163,7 +164,7 @@ describe("getChain.js - Chain Configuration Tests", () => {
 
     test("should throw for network without GenImg deployment", () => {
       expect(() => getGenImgContractConfig("eip155:8453")).toThrow(
-        "GenImg contract not deployed on network: eip155:8453",
+        "GenAI NFT not deployed on eip155:8453",
       );
     });
   });

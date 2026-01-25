@@ -12,13 +12,8 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
 } from "./x402_server.js";
-import {
-  getGenImgContractConfig,
-  getViemChain,
-  getUSDCConfig,
-  validatePaymentNetwork,
-  getChainNameFromEIP155,
-} from "./getChain.js";
+import { getViemChain, getGenAiNFTAddress } from "@fretchen/chain-utils";
+import { getUSDCConfig, validatePaymentNetwork, getChainNameFromEIP155 } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
@@ -475,7 +470,7 @@ async function handle(event, context, cb) {
 
   // Get configurations for validated network
   const usdcConfig = getUSDCConfig(clientNetwork);
-  const contractAddress = getGenImgContractConfig(clientNetwork).address;
+  const contractAddress = getGenAiNFTAddress(clientNetwork);
   console.log(`📍 Client selected network: ${usdcConfig.name} (${clientNetwork})`);
 
   // Build payment requirements for the selected network

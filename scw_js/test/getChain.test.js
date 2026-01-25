@@ -2,11 +2,11 @@
  * Tests for getChain.js - Chain Configuration and USDC Domain Validation
  *
  * This test file validates:
- * 1. Chain configuration functions (getViemChain, getChainNameFromEIP155)
- * 2. USDC configuration for all supported networks
- * 3. EIP-712 domain names match on-chain USDC contracts (CRITICAL)
- * 4. GenImg contract configuration
- * 5. Network validation functions
+ * 1. USDC configuration for all supported networks
+ * 2. EIP-712 domain names match on-chain USDC contracts (CRITICAL)
+ * 3. Network validation functions
+ *
+ * Note: Chain utilities (getViemChain, CAIP-2 conversion) are tested in @fretchen/chain-utils
  *
  * Background: CVE-2025-12-26 (USDC Domain Name Mismatch)
  * - USDC contracts use different EIP-712 domain names on different networks
@@ -19,12 +19,7 @@ import { createPublicClient, http } from "viem";
 import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 
 // Import functions under test
-import {
-  getChainNameFromEIP155,
-  getUSDCConfig,
-  getExpectedNetwork,
-  validatePaymentNetwork,
-} from "../getChain.js";
+import { getUSDCConfig, getExpectedNetwork, validatePaymentNetwork } from "../getChain.js";
 
 // Import from chain-utils for consistency checks
 import { getViemChain } from "@fretchen/chain-utils";
@@ -49,49 +44,8 @@ const USDC_ABI = [
 ];
 
 describe("getChain.js - Chain Configuration Tests", () => {
-  describe("getViemChain()", () => {
-    test("should return Optimism Mainnet for eip155:10", () => {
-      const chain = getViemChain("eip155:10");
-      expect(chain.id).toBe(10);
-      expect(chain.name).toBe("OP Mainnet");
-    });
-
-    test("should return Optimism Sepolia for eip155:11155420", () => {
-      const chain = getViemChain("eip155:11155420");
-      expect(chain.id).toBe(11155420);
-      expect(chain.name).toBe("OP Sepolia");
-    });
-
-    test("should return Base Mainnet for eip155:8453", () => {
-      const chain = getViemChain("eip155:8453");
-      expect(chain.id).toBe(8453);
-      expect(chain.name).toBe("Base");
-    });
-
-    test("should return Base Sepolia for eip155:84532", () => {
-      const chain = getViemChain("eip155:84532");
-      expect(chain.id).toBe(84532);
-      expect(chain.name).toBe("Base Sepolia");
-    });
-
-    test("should throw for unsupported network", () => {
-      expect(() => getViemChain("eip155:1")).toThrow("Unsupported network: eip155:1");
-    });
-  });
-
-  describe("getChainNameFromEIP155()", () => {
-    test("should return human-readable names for supported networks", () => {
-      expect(getChainNameFromEIP155("eip155:10")).toBe("OP Mainnet");
-      expect(getChainNameFromEIP155("eip155:11155420")).toBe("OP Sepolia");
-      expect(getChainNameFromEIP155("eip155:8453")).toBe("Base");
-      expect(getChainNameFromEIP155("eip155:84532")).toBe("Base Sepolia");
-    });
-
-    test("should return fallback for unsupported networks", () => {
-      expect(getChainNameFromEIP155("eip155:1")).toBe("Unknown (eip155:1)");
-      expect(getChainNameFromEIP155("invalid")).toBe("Unknown (invalid)");
-    });
-  });
+  // Note: getViemChain() tests moved to @fretchen/chain-utils
+  // Note: getChainNameFromEIP155() removed - use getViemChain(network).name directly
 
   describe("getUSDCConfig()", () => {
     test("should return valid config for Optimism Mainnet", () => {
@@ -136,7 +90,7 @@ describe("getChain.js - Chain Configuration Tests", () => {
     });
 
     test("should throw for unconfigured network", () => {
-      expect(() => getUSDCConfig("eip155:1")).toThrow("USDC not available on eip155:1");
+      expect(() => getUSDCConfig("eip155:1")).toThrow("Unsupported network: eip155:1");
     });
 
     test("should have consistent chainId between viem chain and USDC config", () => {
@@ -151,23 +105,8 @@ describe("getChain.js - Chain Configuration Tests", () => {
     });
   });
 
-  describe("getGenImgContractConfig()", () => {
-    test("should return Mainnet contract address", () => {
-      const config = getGenImgContractConfig("eip155:10");
-      expect(config.address).toBe("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");
-    });
-
-    test("should return Sepolia contract address", () => {
-      const config = getGenImgContractConfig("eip155:11155420");
-      expect(config.address).toBe("0x10827cC42a09D0BAD2d43134C69F0e776D853D85");
-    });
-
-    test("should throw for network without GenImg deployment", () => {
-      expect(() => getGenImgContractConfig("eip155:8453")).toThrow(
-        "GenAI NFT not deployed on eip155:8453",
-      );
-    });
-  });
+  // NOTE: getGenImgContractConfig() tests moved to @fretchen/chain-utils
+  // See shared/chain-utils/test/index.test.ts
 
   describe("getExpectedNetwork()", () => {
     test("should return Sepolia for test mode", () => {

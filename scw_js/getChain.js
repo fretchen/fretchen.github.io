@@ -71,20 +71,6 @@ export function getLLMv1ContractConfig() {
 }
 
 /**
- * Get human-readable chain name from CAIP-2 network ID
- * Uses viem chain names for consistency across the codebase
- * @param {string} network - CAIP-2 network ID (e.g., "eip155:10")
- * @returns {string} Human-readable chain name
- */
-export function getChainNameFromEIP155(network) {
-  try {
-    return getViemChain(network).name;
-  } catch {
-    return `Unknown (${network})`;
-  }
-}
-
-/**
  * USDC configuration for supported networks
  * @typedef {Object} USDCConfig
  * @property {string} name - Human-readable network name
@@ -101,7 +87,7 @@ export function getChainNameFromEIP155(network) {
  */
 export function getUSDCConfig(network) {
   return {
-    name: getChainNameFromEIP155(network),
+    name: getViemChain(network).name,
     chainId: fromCAIP2(network),
     address: getUSDCAddress(network),
     decimals: 6,

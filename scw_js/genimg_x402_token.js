@@ -13,7 +13,7 @@ import {
   createSettlementHeaders,
 } from "./x402_server.js";
 import { getViemChain, getGenAiNFTAddress } from "@fretchen/chain-utils";
-import { getUSDCConfig, validatePaymentNetwork, getChainNameFromEIP155 } from "./getChain.js";
+import { getUSDCConfig, validatePaymentNetwork } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
@@ -531,8 +531,7 @@ async function handle(event, context, cb) {
   try {
     // Get chain from payment network (buyer determines the chain!)
     const viemChain = getViemChain(clientNetwork);
-    const chainName = getChainNameFromEIP155(clientNetwork);
-    console.log(`🔗 Using chain: ${chainName} (${clientNetwork})`);
+    console.log(`🔗 Using chain: ${viemChain.name} (${clientNetwork})`);
 
     const publicClient = createPublicClient({
       chain: viemChain,
@@ -567,7 +566,7 @@ async function handle(event, context, cb) {
       publicClient,
       account.address,
       mintPrice,
-      chainName,
+      viemChain.name,
     );
 
     if (!preFlightResult.success) {

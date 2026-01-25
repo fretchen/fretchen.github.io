@@ -1,0 +1,8 @@
+{
+  "network": "base",
+  "proxyAddress": "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694",
+  "implementationAddress": "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1",
+  "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+  "deployedAt": "2026-01-25T07:25:00.000Z",
+  "version": "1.0.0"
+}

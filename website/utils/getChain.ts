@@ -1,8 +1,8 @@
-import { sepolia, optimism, optimismSepolia } from "wagmi/chains";
+import { sepolia, optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
-import SupportABI from "../../eth/abi/contracts/Support.json";
+import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 /**
@@ -10,6 +10,67 @@ import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
  * Direct inline implementation for simplicity
  */
 const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
+
+// ═══════════════════════════════════════════════════════════════
+// SupportV2: Multi-Chain Configuration
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Use testnet chains for SupportV2?
+ * Set VITE_USE_TESTNET=true in .env for local development
+ * Default: false (mainnet)
+ */
+const USE_TESTNET = import.meta.env?.VITE_USE_TESTNET === "true";
+
+/** SupportV2 contract addresses - mainnet */
+const MAINNET_SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
+  [optimism.id]: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316",
+  [base.id]: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694",
+};
+
+/** SupportV2 contract addresses - testnet */
+const TESTNET_SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
+  [optimismSepolia.id]: "0x9859431b682e861b19e87Db14a04944BC747AB6d",
+  [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
+};
+
+/** Active SupportV2 addresses based on VITE_USE_TESTNET */
+const SUPPORT_V2_ADDRESSES = USE_TESTNET ? TESTNET_SUPPORT_V2_ADDRESSES : MAINNET_SUPPORT_V2_ADDRESSES;
+
+/** Active chains for SupportV2 (both reading and writing) */
+export const SUPPORT_V2_CHAINS = USE_TESTNET ? ([optimismSepolia, baseSepolia] as const) : ([optimism, base] as const);
+
+/** Default chain for read operations and auto-switch target */
+export const DEFAULT_SUPPORT_CHAIN = USE_TESTNET ? optimismSepolia : optimism;
+
+/** Recipient wallet for donations */
+export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
+
+/**
+ * Get SupportV2 contract config for a specific chain
+ * @param chainId - The chain ID to get config for
+ * @returns Contract config or null if chain not supported
+ */
+export function getSupportV2Config(chainId: number) {
+  const address = SUPPORT_V2_ADDRESSES[chainId];
+  if (!address) return null;
+
+  return {
+    address,
+    abi: SupportV2ABI,
+  } as const;
+}
+
+/**
+ * Check if a chain supports SupportV2 (in current mode: mainnet or testnet)
+ */
+export function isSupportV2Chain(chainId: number): boolean {
+  return chainId in SUPPORT_V2_ADDRESSES;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Other Contract Configurations
+// ═══════════════════════════════════════════════════════════════
 
 // Create stable contract config references at module level - computed once when module loads
 const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
@@ -23,19 +84,6 @@ const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
       return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
     default:
       return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
-  }
-})();
-
-const STABLE_SUPPORT_CONTRACT_CONFIG = (() => {
-  switch (CHAIN_NAME) {
-    case "sepolia":
-      return { address: "0xf137ca5dc45e3d0336ac2daa26084b0eaf244684", abi: SupportABI } as const;
-    case "optimism":
-      return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: SupportABI } as const;
-    case "optimismSepolia":
-      return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: SupportABI } as const;
-    default:
-      return { address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1", abi: SupportABI } as const;
   }
 })();
 
@@ -74,7 +122,6 @@ const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
 
 // Export stable references directly - these objects never change reference
 export const genAiNFTContractConfig = STABLE_GENAI_NFT_CONTRACT_CONFIG;
-export const supportContractConfig = STABLE_SUPPORT_CONTRACT_CONFIG;
 export const collectorNFTContractConfig = STABLE_COLLECTOR_NFT_CONTRACT_CONFIG;
 export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
 

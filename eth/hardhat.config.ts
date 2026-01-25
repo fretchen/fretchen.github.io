@@ -40,6 +40,14 @@ const config = {
       url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
+    baseSepolia: {
+      url: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      accounts: [SEPOLIA_PRIVATE_KEY],
+    },
+    base: {
+      url: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      accounts: [SEPOLIA_PRIVATE_KEY],
+    },
   },
   etherscan: {
     apiKey: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
@@ -58,6 +66,22 @@ const config = {
         urls: {
           apiURL: "https://api.etherscan.io/v2/api?chainid=10",
           browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=84532",
+          browserURL: "https://sepolia.basescan.org/",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=8453",
+          browserURL: "https://basescan.org/",
         },
       },
     ],

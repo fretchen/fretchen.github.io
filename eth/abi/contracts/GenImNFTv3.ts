@@ -1,6 +1,6 @@
 // Auto-generated ABI for GenImNFTv3
 // GenImNFT Version 3 with listing functionality
-// Generated on: 2025-08-05T16:01:22.271Z
+// Generated on: 2026-01-20T20:33:28.405Z
 
 export const GenImNFTv3ABI = [
   {

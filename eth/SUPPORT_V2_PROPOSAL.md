@@ -38,10 +38,9 @@
 |---------|--------------|
 | 🔄 UUPS Upgradeable | Proxy-Architektur für spätere Updates |
 | 💰 ETH Donations | `donate(url, recipient)` |
-| 🪙 EIP-3009 Tokens | `donateToken(...)` für USDC und kompatible Tokens |
+| 🪙 EIP-3009 Tokens | `donateToken(...)` für USDC und kompatible Tokens (permissionless) |
 | 📊 Like-Counting | On-chain `urlLikes` Mapping |
 | 🌐 Multi-Chain | Optimism + Base |
-| ✅ Token Whitelist | Nur verifizierte EIP-3009 Tokens |
 
 ---
 
@@ -103,17 +102,33 @@ interface IEIP3009 {
 
 ```solidity
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./interfaces/IEIP3009.sol";
 
+/**
+ * @title SupportV2
+ * @notice "Buy me a coffee" contract with ETH and EIP-3009 token support
+ * @dev Uses UUPS proxy pattern for upgradeability
+ *
+ * Features:
+ * - ETH donations via donate(url, recipient)
+ * - EIP-3009 token donations via donateToken() (USDC, EURC, etc.)
+ * - On-chain like counting per URL
+ * - Flexible recipient (passed as parameter)
+ * - Permissionless: Any EIP-3009 token works (frontend controls which are offered)
+ *
+ * Multi-chain: Deploy on Optimism + Base
+ */
 contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     
+    /// @notice Contract version for upgrade tracking
+    uint256 public constant VERSION = 1;
+    
     mapping(bytes32 => uint256) public urlLikes;
-    mapping(address => bool) public allowedTokens;
     
     event Donation(
         address indexed from,
@@ -123,8 +138,6 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         uint256 amount,
         address token  // address(0) = ETH
     );
-    
-    event TokenAllowed(address indexed token, bool allowed);
     
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -154,7 +167,7 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         emit Donation(msg.sender, _recipient, urlHash, _url, msg.value, address(0));
     }
     
-    // EIP-3009 Token Donation (v,r,s format)
+    // EIP-3009 Token Donation (v,r,s format) - Permissionless
     function donateToken(
         string calldata _url,
         address _recipient,
@@ -169,7 +182,7 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
     ) external nonReentrant {
         require(_recipient != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
-        require(allowedTokens[_token], "Token not allowed");
+        require(_token != address(0), "Invalid token");
         
         IEIP3009(_token).transferWithAuthorization(
             msg.sender,
@@ -189,11 +202,6 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         emit Donation(msg.sender, _recipient, urlHash, _url, _amount, _token);
     }
     
-    function setAllowedToken(address _token, bool _allowed) external onlyOwner {
-        allowedTokens[_token] = _allowed;
-        emit TokenAllowed(_token, _allowed);
-    }
-    
     function getLikesForUrl(string calldata _url) external view returns (uint256) {
         return urlLikes[keccak256(bytes(_url))];
     }
@@ -201,6 +209,8 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }
 ```
+
+> **Design Note:** The contract is permissionless for EIP-3009 tokens. Any token that implements `transferWithAuthorization` can be used. The frontend controls which tokens are offered to users.
 
 ---
 
@@ -338,7 +348,6 @@ await writeContract({
 | 4.2 | Deploy auf Base Mainnet | ✅ |
 | 4.3 | `getChain.ts` — Mainnet Adressen eintragen | ✅ |
 | 4.4 | `DEFAULT_SUPPORT_CHAIN` auf Mainnet umstellen | ✅ |
-| 4.5 | USDC Token-Whitelist konfigurieren (optional) | ⏸️ |
 
 ---
 

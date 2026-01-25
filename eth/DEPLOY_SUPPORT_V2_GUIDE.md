@@ -5,9 +5,10 @@
 This guide explains how to deploy the SupportV2 contract to Optimism and Base mainnets using the deployment script at `scripts/deploy-support-v2.ts`. SupportV2 is an upgradeable donation contract that:
 
 - Accepts **ETH donations** with URL-based like counting
-- Supports **EIP-3009 token donations** (USDC, EURC) - prepared but UI deprioritized
 - Uses **UUPS proxy pattern** for future upgradeability
 - Works **cross-chain** (Optimism + Base)
+
+> **Note:** The contract includes `donateToken()` for EIP-3009 token donations, but this is not currently used in the frontend.
 
 ## What is SupportV2?
 
@@ -16,7 +17,7 @@ SupportV2 is an evolution of the original Support contract with these key change
 | Feature | Support (v1) | SupportV2 |
 |---------|--------------|-----------|
 | `donate()` signature | `donate(url)` | `donate(url, recipient)` |
-| Token support | ETH only | ETH + EIP-3009 tokens |
+
 | Upgradeability | None | UUPS proxy |
 | Multi-chain | Single chain | Optimism + Base |
 
@@ -25,20 +26,6 @@ SupportV2 is an evolution of the original Support contract with these key change
 ```solidity
 // ETH Donation - recipient receives ETH directly
 function donate(string calldata _url, address _recipient) external payable;
-
-// EIP-3009 Token Donation - gasless USDC/EURC via signature
-function donateToken(
-    string calldata _url,
-    address _recipient,
-    address _token,
-    uint256 _amount,
-    uint256 _validAfter,
-    uint256 _validBefore,
-    bytes32 _nonce,
-    uint8 _v,
-    bytes32 _r,
-    bytes32 _s
-) external;
 
 // Get like count for URL
 function getLikesForUrl(string calldata _url) external view returns (uint256);
@@ -337,28 +324,6 @@ cast send <PROXY_ADDRESS> \
   --private-key $PRIVATE_KEY
 ```
 
-### 5. Configure Token Whitelist (Optional)
-
-For USDC donations (EIP-3009), whitelist the token:
-
-```bash
-cast send <PROXY_ADDRESS> \
-  "setAllowedToken(address,bool)" \
-  "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85" \
-  true \
-  --rpc-url https://mainnet.optimism.io \
-  --private-key $OWNER_PRIVATE_KEY
-```
-
-**USDC Addresses:**
-
-| Network | USDC Address |
-|---------|--------------|
-| Optimism | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
-| Base | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| Optimism Sepolia | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
-| Base Sepolia | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
-
 ## Security Considerations
 
 ### Owner Key Management
@@ -366,7 +331,6 @@ cast send <PROXY_ADDRESS> \
 The deployment account becomes the contract owner with these privileges:
 
 - **Upgrade the contract** via UUPS
-- **Whitelist/blacklist tokens** for EIP-3009 donations
 - **No funds custody** — donations go directly to recipients
 
 **⚠️ For mainnet: Use a hardware wallet or multisig.**
@@ -448,7 +412,6 @@ For proxies, the implementation is verified separately from the proxy.
 - [x] Update `website/utils/getChain.ts` with mainnet addresses
 - [x] Update `DEFAULT_SUPPORT_CHAIN` to mainnet
 - [ ] Test donation on each chain
-- [ ] (Optional) Whitelist USDC token for EIP-3009 donations
 - [x] Update SUPPORT_V2_PROPOSAL.md with deployment status
 
 ## Network-Specific Notes

@@ -28,9 +28,13 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
+import { EIP3009SplitterV1ABI, getEIP3009SplitterAddress } from "@fretchen/chain-utils";
 import { getChain, getTokenInfo } from "./chain_utils.js";
 import { verifySplitterPayment } from "./x402_splitter_verify.js";
-import { SPLITTER_ABI, getSplitterAddress } from "./eip3009_splitter_abi.js";
+
+// Alias for backward compatibility
+const SPLITTER_ABI = EIP3009SplitterV1ABI;
+const getSplitterAddress = getEIP3009SplitterAddress;
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 

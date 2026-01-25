@@ -131,11 +131,11 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     // Validate recipient address matches splitter contract
     // For splitter facilitator: to = splitter address (not token address!)
     // The splitter contract will receive the funds and split them
-    const { getSplitterAddress } = await import("./eip3009_splitter_abi.js");
+    const { getEIP3009SplitterAddress } = await import("@fretchen/chain-utils");
 
     let splitterAddress;
     try {
-      splitterAddress = getSplitterAddress(network);
+      splitterAddress = getEIP3009SplitterAddress(network);
     } catch (_error) {
       logger.warn({ network }, "Splitter not deployed on network");
       return { isValid: false, invalidReason: "unsupported_network" };

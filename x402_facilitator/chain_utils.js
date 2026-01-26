@@ -38,5 +38,5 @@ export function getChainConfig(network) {
  * @returns {string[]} Array of supported network identifiers
  */
 export function getSupportedNetworks() {
-  return ["eip155:10", "eip155:11155420"];
+  return ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
 }

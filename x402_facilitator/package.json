@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "x402 v2 Payment Facilitator for Optimism",
   "type": "module",
-  "main": "x402_facilitator.js",
+  "main": "dist/x402_facilitator.js",
   "scripts": {
     "build": "tsup",
-    "dev": "NODE_ENV=test node x402_facilitator.js",
+    "dev": "NODE_ENV=test node dist/x402_facilitator.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -43,11 +43,13 @@
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@scaleway/serverless-functions": "^1.1.2",
+    "@types/node": "^25.0.10",
     "@vitest/coverage-v8": "^4.0.16",
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
     "serverless-scaleway-functions": ">=0.4.16",
     "tsup": "^8.3.5",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },
   "engines": {

@@ -2,7 +2,7 @@ import { defineConfig } from "tsup";
 import { builtinModules } from "module";
 
 export default defineConfig({
-  entry: ["x402_facilitator.js", "x402_splitter_facilitator.js"],
+  entry: ["x402_facilitator.ts", "x402_splitter_facilitator.js"],
   format: ["esm"],
   platform: "node",
   target: "node22",

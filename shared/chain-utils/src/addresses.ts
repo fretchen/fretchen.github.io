@@ -123,6 +123,13 @@ export function getGenAiNFTAddress(network: string): `0x${string}` {
 }
 
 /**
+ * Try to get GenAI NFT address, returns null if not deployed.
+ */
+export function tryGetGenAiNFTAddress(network: string): `0x${string}` | null {
+  return MAINNET_GENAI_NFT_ADDRESSES[network] || TESTNET_GENAI_NFT_ADDRESSES[network] || null;
+}
+
+/**
  * Get CollectorNFT address for a network (mainnet or testnet).
  * @throws Error if not deployed on that network
  */
@@ -133,6 +140,13 @@ export function getCollectorNFTAddress(network: string): `0x${string}` {
     throw new Error(`CollectorNFT not deployed on ${network}`);
   }
   return address;
+}
+
+/**
+ * Try to get CollectorNFT address, returns null if not deployed.
+ */
+export function tryGetCollectorNFTAddress(network: string): `0x${string}` | null {
+  return MAINNET_COLLECTOR_NFT_ADDRESSES[network] || TESTNET_COLLECTOR_NFT_ADDRESSES[network] || null;
 }
 
 /**
@@ -148,6 +162,13 @@ export function getLLMv1Address(network: string): `0x${string}` {
 }
 
 /**
+ * Try to get LLMv1 address, returns null if not deployed.
+ */
+export function tryGetLLMv1Address(network: string): `0x${string}` | null {
+  return MAINNET_LLM_V1_ADDRESSES[network] || TESTNET_LLM_V1_ADDRESSES[network] || null;
+}
+
+/**
  * Get SupportV2 address for a network (mainnet or testnet).
  * @throws Error if not deployed on that network
  */
@@ -157,6 +178,13 @@ export function getSupportV2Address(network: string): `0x${string}` {
     throw new Error(`SupportV2 not deployed on ${network}`);
   }
   return address;
+}
+
+/**
+ * Try to get SupportV2 address, returns null if not deployed.
+ */
+export function tryGetSupportV2Address(network: string): `0x${string}` | null {
+  return MAINNET_SUPPORT_V2_ADDRESSES[network] || TESTNET_SUPPORT_V2_ADDRESSES[network] || null;
 }
 
 /**
@@ -170,6 +198,13 @@ export function getEIP3009SplitterAddress(network: string): `0x${string}` {
     throw new Error(`EIP3009 Splitter not deployed on ${network}`);
   }
   return address;
+}
+
+/**
+ * Try to get EIP3009 Splitter address, returns null if not deployed.
+ */
+export function tryGetEIP3009SplitterAddress(network: string): `0x${string}` | null {
+  return MAINNET_EIP3009_SPLITTER_ADDRESSES[network] || TESTNET_EIP3009_SPLITTER_ADDRESSES[network] || null;
 }
 
 /**

@@ -404,12 +404,12 @@ describe("x402_settle with mocked facilitator", () => {
         transaction: "0xabc123def456",
       }),
     };
-    
+
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    
+
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
@@ -427,12 +427,12 @@ describe("x402_settle with mocked facilitator", () => {
         errorReason: "insufficient_allowance",
       }),
     };
-    
+
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    
+
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
@@ -448,7 +448,7 @@ describe("x402_settle with mocked facilitator", () => {
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    
+
     vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
       throw new Error("Transaction failed: insufficient funds for gas");
     });
@@ -464,7 +464,7 @@ describe("x402_settle with mocked facilitator", () => {
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    
+
     vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
       throw new Error("nonce already used");
     });
@@ -480,7 +480,7 @@ describe("x402_settle with mocked facilitator", () => {
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    
+
     vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
       throw new Error("authorization expired");
     });
@@ -496,7 +496,7 @@ describe("x402_settle with mocked facilitator", () => {
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    
+
     vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
       throw new Error("Unknown blockchain error");
     });

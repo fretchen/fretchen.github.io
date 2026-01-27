@@ -54,6 +54,26 @@ describe("x402 /supported endpoint", () => {
     // x402 v2 getSupported() does NOT include assets in kinds
   });
 
+  test("includes Base Mainnet support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const baseSupport = capabilities.kinds.find((k) => k.network === "eip155:8453");
+
+    expect(baseSupport).toBeDefined();
+    expect(baseSupport.x402Version).toBe(2);
+    expect(baseSupport.scheme).toBe("exact");
+  });
+
+  test("includes Base Sepolia support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const baseSepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:84532");
+
+    expect(baseSepoliaSupport).toBeDefined();
+    expect(baseSepoliaSupport.x402Version).toBe(2);
+    expect(baseSepoliaSupport.scheme).toBe("exact");
+  });
+
   // Note: x402 v2 getSupported() does not include asset details (USDC, USDT, etc.)
   // Asset information is not provided in the kinds array by the facilitator
   // If needed, asset details would need to be added separately in the response

@@ -74,6 +74,12 @@ export const TESTNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
   "eip155:11155420": "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", // Optimism Sepolia
 };
 
+/** All networks where LLMv1 is deployed */
+export const LLM_V1_NETWORKS = [
+  ...Object.keys(MAINNET_LLM_V1_ADDRESSES),
+  ...Object.keys(TESTNET_LLM_V1_ADDRESSES),
+] as const;
+
 // ═══════════════════════════════════════════════════════════════
 // USDC (available on all chains)
 // ═══════════════════════════════════════════════════════════════

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { genAiNFTContractConfig } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
@@ -7,7 +8,9 @@ import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
 
 export function PublicNFTList() {
-  // Use the stable genAiNFTContractConfig constant
+  // Get network and contract address from chain-utils
+  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const contractAddress = getGenAiNFTAddress(network);
 
   // Public NFTs state - now just store token IDs
   const [publicTokenIds, setPublicTokenIds] = useState<bigint[]>([]);
@@ -15,7 +18,7 @@ export function PublicNFTList() {
   const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
   // Use the custom hook for a stable public client reference
-  const publicClient = useConfiguredPublicClient();
+  const publicClient = useConfiguredPublicClient(network);
 
   // Load all public token IDs using getAllPublicTokens
   const loadPublicTokenIds = useCallback(async () => {
@@ -24,8 +27,8 @@ export function PublicNFTList() {
     try {
       // Get all public token IDs using the public client
       const tokenIds = (await publicClient.readContract({
-        address: genAiNFTContractConfig.address,
-        abi: genAiNFTContractConfig.abi,
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
         functionName: "getAllPublicTokens",
       })) as bigint[];
 

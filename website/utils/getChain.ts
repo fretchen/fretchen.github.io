@@ -110,10 +110,18 @@ export function isSupportV2Chain(chainId: number): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Other Contract Configurations
+// Legacy Contract Configurations
+//
+// NOTE: genAiNFTContractConfig is DEPRECATED - use chain-utils instead:
+//   import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+//   const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+//   const address = getGenAiNFTAddress(network);
+//
+// collectorNFTContractConfig and llmV1ContractConfig will be migrated in Phase 3
 // ═══════════════════════════════════════════════════════════════
 
 // Create stable contract config references at module level - computed once when module loads
+/** @deprecated Use chain-utils getGenAiNFTAddress() instead */
 const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
   switch (CHAIN_NAME) {
     case "sepolia":
@@ -162,11 +170,17 @@ const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
 })();
 
 // Export stable references directly - these objects never change reference
+/** @deprecated Use chain-utils getGenAiNFTAddress() + GenImNFTv4ABI instead */
 export const genAiNFTContractConfig = STABLE_GENAI_NFT_CONTRACT_CONFIG;
+/** Phase 3: Will be migrated to chain-utils */
 export const collectorNFTContractConfig = STABLE_COLLECTOR_NFT_CONTRACT_CONFIG;
+/** Out of scope: LLMv1 stays in legacy config */
 export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
 
 /**
+ * @deprecated Use useAutoNetwork() + fromCAIP2() instead for GenImNFT components.
+ * This function is still used by CollectorNFT and LLMv1 components.
+ *
  * Gibt das entsprechende Chain-Objekt basierend auf der CHAIN-Umgebungsvariable zurück
  * @returns Das Chain-Objekt aus wagmi/chains
  */

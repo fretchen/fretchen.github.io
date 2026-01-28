@@ -18,7 +18,8 @@ import React, { useState } from "react";
 import { css } from "../styled-system/css";
 import { useAgentInfo } from "../hooks/useAgentInfo";
 import { useLocale } from "../hooks/useLocale";
-import { genAiNFTContractConfig, llmV1ContractConfig } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, getLLMv1Address, GENAI_NFT_NETWORKS, LLM_V1_NETWORKS } from "@fretchen/chain-utils";
 
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
@@ -68,7 +69,11 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
 
   const serviceEndpoint = service === "genimg" ? agent.genimgEndpoint : agent.llmEndpoint;
   const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
-  const contractAddress = service === "genimg" ? genAiNFTContractConfig.address : llmV1ContractConfig.address;
+
+  // Get contract address based on service - use appropriate network list
+  const genimgNetwork = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const llmNetwork = useAutoNetwork(LLM_V1_NETWORKS);
+  const contractAddress = service === "genimg" ? getGenAiNFTAddress(genimgNetwork) : getLLMv1Address(llmNetwork);
 
   // Sidebar variant - vertical layout
   if (isSidebar) {

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
-import { genAiNFTContractConfig, getChain } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2, isMainnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
@@ -43,8 +44,13 @@ export function NFTCard({
 
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
+  // Get network and contract address from chain-utils
+  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const chainId = fromCAIP2(network);
+  const contractAddress = getGenAiNFTAddress(network);
+
   // Use the custom hook for a stable public client reference
-  const publicClient = useConfiguredPublicClient();
+  const publicClient = useConfiguredPublicClient(network);
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -76,8 +82,8 @@ export function NFTCard({
 
         // Get token URI using public client
         const tokenURIResult = await publicClient.readContract({
-          address: genAiNFTContractConfig.address,
-          abi: genAiNFTContractConfig.abi,
+          address: contractAddress,
+          abi: GenImNFTv4ABI,
           functionName: "tokenURI",
           args: [tokenId],
         });
@@ -98,8 +104,8 @@ export function NFTCard({
         let nftOwner = "";
         if (isPublicView) {
           const ownerResult = await publicClient.readContract({
-            address: genAiNFTContractConfig.address,
-            abi: genAiNFTContractConfig.abi,
+            address: contractAddress,
+            abi: GenImNFTv4ABI,
             functionName: "ownerOf",
             args: [tokenId],
           });
@@ -111,12 +117,12 @@ export function NFTCard({
         let isListed: boolean | undefined;
         if (!isPublicView) {
           try {
-            const chain = getChain();
             const isListedResult = await readContract(config, {
-              ...genAiNFTContractConfig,
+              address: contractAddress,
+              abi: GenImNFTv4ABI,
               functionName: "isTokenListed",
               args: [tokenId],
-              chainId: chain.id,
+              chainId,
             });
             isListed = isListedResult as boolean;
           } catch (error) {
@@ -224,8 +230,9 @@ export function NFTCard({
    * Uses the Optimism network OpenSea URL format
    */
   const handleShare = async () => {
-    const contractAddress = genAiNFTContractConfig.address;
-    const openSeaUrl = `https://opensea.io/item/optimism/${contractAddress}/${nft.tokenId}`;
+    // Determine OpenSea network based on mainnet/testnet
+    const openSeaNetwork = isMainnet(network) ? "optimism" : "optimism-sepolia";
+    const openSeaUrl = `https://opensea.io/item/${openSeaNetwork}/${contractAddress}/${nft.tokenId}`;
 
     try {
       await navigator.clipboard.writeText(openSeaUrl);
@@ -260,7 +267,8 @@ export function NFTCard({
 
     try {
       await writeContract({
-        ...genAiNFTContractConfig,
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
         functionName: "burn",
         args: [nft.tokenId],
       });
@@ -282,7 +290,8 @@ export function NFTCard({
 
       // Call contract
       await writeListingContract({
-        ...genAiNFTContractConfig,
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
         functionName: "setTokenListed",
         args: [nft.tokenId, newListedStatus],
       });

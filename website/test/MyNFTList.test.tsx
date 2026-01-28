@@ -25,14 +25,17 @@ vi.mock("wagmi/actions", () => ({
   readContract: (...args: unknown[]) => mockReadContract(...args),
 }));
 
-// Mock getChain to provide the stable constant
-vi.mock("../utils/getChain", () => ({
-  getChain: vi.fn(() => ({ id: 10 })),
-  // Stable constant that our components now use
-  genAiNFTContractConfig: {
-    address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-    abi: [], // Simplified for test
-  },
+// Mock useAutoNetwork hook
+vi.mock("../hooks/useAutoNetwork", () => ({
+  useAutoNetwork: vi.fn(() => "eip155:10"), // Default to Optimism mainnet
+}));
+
+// Mock chain-utils
+vi.mock("@fretchen/chain-utils", () => ({
+  getGenAiNFTAddress: vi.fn(() => "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"),
+  GenImNFTv4ABI: [],
+  GENAI_NFT_NETWORKS: ["eip155:10", "eip155:11155420"],
+  fromCAIP2: vi.fn((network: string) => parseInt(network.split(":")[1])),
 }));
 
 // Mock config
@@ -124,55 +127,47 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     console.log(`Contract config calls: ${contractConfigCallCount}`);
   });
 
-  it("should show that stable constant has consistent reference", async () => {
-    // Import the new stable constant
-    const { genAiNFTContractConfig } = await import("../utils/getChain");
+  it("should show that chain-utils provides consistent addresses", async () => {
+    // Import from chain-utils
+    const { getGenAiNFTAddress } = await import("@fretchen/chain-utils");
 
-    // Multiple imports should return the same reference
-    const config1 = genAiNFTContractConfig;
-    const config2 = genAiNFTContractConfig;
+    // Multiple calls with same network should return the same address
+    const address1 = getGenAiNFTAddress("eip155:10");
+    const address2 = getGenAiNFTAddress("eip155:10");
 
-    // They should be exactly the same object (same content AND reference)
-    expect(config1).toEqual(config2); // Content is the same
-    expect(config1).toBe(config2); // And references are the same - THIS IS THE FIX!
-
-    // This proves why the useEffect with contract config in dependencies
-    // causes infinite re-renders
+    // They should be exactly the same
+    expect(address1).toEqual(address2);
+    expect(address1).toBe(address2);
   });
 
-  it("should demonstrate stable dependency with fixed implementation", async () => {
+  it("should demonstrate stable useAutoNetwork hook", async () => {
     let effectRunCount = 0;
 
-    // Create a component that uses the stable constant
-    function FixedComponent() {
-      const [contractConfig, setContractConfig] = React.useState<Record<string, unknown> | null>(null);
+    // Import useAutoNetwork at the top of the test
+    const { useAutoNetwork } = await import("../hooks/useAutoNetwork");
 
-      React.useEffect(() => {
-        import("../utils/getChain").then(({ genAiNFTContractConfig }) => {
-          setContractConfig(genAiNFTContractConfig);
-        });
-      }, []);
+    // Create a component that uses the useAutoNetwork hook
+    function FixedComponent() {
+      const network = useAutoNetwork(["eip155:10", "eip155:11155420"]);
 
       React.useEffect(() => {
         effectRunCount++;
-        console.log(`Effect run #${effectRunCount}`);
-        // Simulate loading token IDs
-      }, [contractConfig]); // This dependency causes the loop!
+        console.log(`Effect run #${effectRunCount}, network: ${network}`);
+      }, [network]);
 
-      return <div>Component</div>;
+      return <div>Component on {network}</div>;
     }
 
     render(<FixedComponent />);
 
     await waitFor(
       () => {
-        // With stable constants, the effect only runs 2 times
-        // (once initial, once after the first useEffect update)
+        // With useAutoNetwork, the effect only runs once
         expect(effectRunCount).toBeLessThanOrEqual(2);
       },
       { timeout: 1000 },
     );
 
-    console.log(`Effect ran ${effectRunCount} times with stable dependency`);
+    console.log(`Effect ran ${effectRunCount} times with useAutoNetwork`);
   });
 });

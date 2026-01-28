@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useAccount, useConnect, useSwitchChain, useChainId } from "wagmi";
 import { css } from "../styled-system/css";
-import { getChain } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { GENAI_NFT_NETWORKS, fromCAIP2, isTestnet, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
@@ -113,9 +114,11 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const currentChainId = useChainId();
 
-  // Determine target chain from centralized config (PUBLIC_ENV__CHAIN_NAME)
-  const targetChain = getChain();
-  const useTestnet = targetChain.id === 11155420; // optimismSepolia.id
+  // Determine target chain from useAutoNetwork
+  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const targetChainId = fromCAIP2(network);
+  const targetChain = getViemChain(network);
+  const useTestnetFlag = isTestnet(network);
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -273,10 +276,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
     // === Automatic Chain Switch ===
     // Ensure user is on the correct chain before making payment
-    if (currentChainId !== targetChain.id) {
-      console.log(`[x402] Chain mismatch: current=${currentChainId}, target=${targetChain.id} (${targetChain.name})`);
+    if (currentChainId !== targetChainId) {
+      console.log(`[x402] Chain mismatch: current=${currentChainId}, target=${targetChainId} (${targetChain.name})`);
       try {
-        await switchChainAsync({ chainId: targetChain.id });
+        await switchChainAsync({ chainId: targetChainId });
         console.log(`[x402] Successfully switched to ${targetChain.name}`);
       } catch (switchError) {
         console.error("[x402] Chain switch failed:", switchError);
@@ -302,10 +305,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         size,
         mode,
         referenceImage: isEditMode ? referenceImageBase64 : undefined,
-        // Use testnet: derived from PUBLIC_ENV__CHAIN_NAME
-        sepoliaTest: useTestnet,
+        // Use testnet: derived from useAutoNetwork
+        sepoliaTest: useTestnetFlag,
         // Pass expected chain ID for validation in hook
-        expectedChainId: targetChain.id,
+        expectedChainId: targetChainId,
         // Whether to list in public gallery
         isListed,
       });

@@ -14,7 +14,12 @@
 
 import { verifyTypedData, createPublicClient, http } from "viem";
 import pino from "pino";
-import { getViemChain, getUSDCName, getUSDCAddress } from "@fretchen/chain-utils";
+import {
+  getViemChain,
+  getUSDCName,
+  getUSDCAddress,
+  getEIP3009SplitterAddress,
+} from "@fretchen/chain-utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -140,8 +145,6 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     // Validate recipient address matches splitter contract
     // For splitter facilitator: to = splitter address (not token address!)
     // The splitter contract will receive the funds and split them
-    const { getEIP3009SplitterAddress } = await import("@fretchen/chain-utils");
-
     let splitterAddress;
     try {
       splitterAddress = getEIP3009SplitterAddress(network);

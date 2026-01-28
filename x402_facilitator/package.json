@@ -1,7 +1,7 @@
 {
   "name": "x402-facilitator",
   "version": "1.0.0",
-  "description": "x402 v2 Payment Facilitator for Optimism",
+  "description": "x402 v2 Payment Facilitator for Optimism and Base",
   "type": "module",
   "main": "dist/x402_facilitator.js",
   "scripts": {

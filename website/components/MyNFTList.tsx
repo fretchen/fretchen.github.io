@@ -20,7 +20,7 @@ interface MyNFTListProps {
 
 export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps) {
   const { address, isConnected } = useAccount();
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
 

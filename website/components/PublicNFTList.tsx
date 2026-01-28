@@ -9,7 +9,7 @@ import { ImageModal } from "./ImageModal";
 
 export function PublicNFTList() {
   // Get network and contract address from chain-utils
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const contractAddress = getGenAiNFTAddress(network);
 
   // Public NFTs state - now just store token IDs

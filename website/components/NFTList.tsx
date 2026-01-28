@@ -25,7 +25,7 @@ export function NFTList({
   const setActiveTab = onTabChange ?? setLocalActiveTab;
 
   // Get network from useAutoNetwork
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
 

@@ -71,8 +71,8 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
 
   // Get contract address based on service - use appropriate network list
-  const genimgNetwork = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const llmNetwork = useAutoNetwork(LLM_V1_NETWORKS);
+  const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network: llmNetwork } = useAutoNetwork(LLM_V1_NETWORKS);
   const contractAddress = service === "genimg" ? getGenAiNFTAddress(genimgNetwork) : getLLMv1Address(llmNetwork);
 
   // Sidebar variant - vertical layout

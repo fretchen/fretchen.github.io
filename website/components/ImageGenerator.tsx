@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAccount, useConnect, useSwitchChain, useChainId } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { GENAI_NFT_NETWORKS, fromCAIP2, isTestnet, getViemChain } from "@fretchen/chain-utils";
@@ -111,11 +111,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
-  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
-  const currentChainId = useChainId();
 
-  // Determine target chain from useAutoNetwork
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  // Determine target chain from useAutoNetwork (no auto-switch, switch at interaction)
+  const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const targetChainId = fromCAIP2(network);
   const targetChain = getViemChain(network);
   const useTestnetFlag = isTestnet(network);
@@ -274,20 +272,15 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       return;
     }
 
-    // === Automatic Chain Switch ===
+    // === Chain Switch at Interaction ===
     // Ensure user is on the correct chain before making payment
-    if (currentChainId !== targetChainId) {
-      console.log(`[x402] Chain mismatch: current=${currentChainId}, target=${targetChainId} (${targetChain.name})`);
-      try {
-        await switchChainAsync({ chainId: targetChainId });
-        console.log(`[x402] Successfully switched to ${targetChain.name}`);
-      } catch (switchError) {
-        console.error("[x402] Chain switch failed:", switchError);
-        const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
-        setError(errorMsg);
-        onError?.(errorMsg);
-        return;
-      }
+    const switched = await switchIfNeeded();
+    if (!switched) {
+      console.error("[x402] Chain switch rejected by user");
+      const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
+      setError(errorMsg);
+      onError?.(errorMsg);
+      return;
     }
 
     setIsLoading(true);

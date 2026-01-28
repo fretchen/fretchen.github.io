@@ -45,7 +45,7 @@ export function NFTCard({
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
   // Get network and contract address from chain-utils
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
 
@@ -266,6 +266,13 @@ export function NFTCard({
     setShowDeleteConfirmation(false);
 
     try {
+      // Switch chain if needed before transaction
+      const switched = await switchIfNeeded();
+      if (!switched) {
+        showToast("Please switch to the correct network.", "error");
+        return;
+      }
+
       await writeContract({
         address: contractAddress,
         abi: GenImNFTv4ABI,
@@ -285,6 +292,13 @@ export function NFTCard({
     const statusText = newListedStatus ? "public" : "private";
 
     try {
+      // Switch chain if needed before transaction
+      const switched = await switchIfNeeded();
+      if (!switched) {
+        showToast("Please switch to the correct network.", "error");
+        return;
+      }
+
       // Update UI optimistically
       onListedStatusChanged(nft.tokenId, newListedStatus);
 

@@ -17,7 +17,7 @@ interface EntryNftImageProps {
 export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackImageUrl, nftName }) => {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const contractAddress = getGenAiNFTAddress(network);
   const publicClient = useConfiguredPublicClient(network);
 

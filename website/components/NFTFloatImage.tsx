@@ -19,7 +19,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Get network and contract address from chain-utils
-  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const contractAddress = getGenAiNFTAddress(network);
 
   // Extract prompt from description for display (reusing utility function)

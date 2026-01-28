@@ -67,11 +67,11 @@ export const SUPPORT_V2_NETWORKS = [
 // ═══════════════════════════════════════════════════════════════
 
 export const MAINNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x7E8b7091a229B1004c4FBa25bB70d04595d3e848", // Optimism
+  "eip155:10": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1", // Optimism
 };
 
 export const TESTNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0xA5b7f0A3f4104c97b46eafF2b0b4A457C5a73Bf4", // Optimism Sepolia
+  "eip155:11155420": "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", // Optimism Sepolia
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -99,11 +99,11 @@ export const USDC_NAMES: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════
 
 export const MAINNET_EIP3009_SPLITTER_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x4a0EA6E7A8B23C95Da07d59a8e36E9c5C5f6c5Bf", // Optimism
+  // "eip155:10": "0x...", // Optimism - not yet deployed
 };
 
 export const TESTNET_EIP3009_SPLITTER_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0x7F2b5E60e26B31E32c40F48e0e7D1CA5E62C5b7a", // Optimism Sepolia
+  "eip155:11155420": "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946", // Optimism Sepolia
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -123,6 +123,13 @@ export function getGenAiNFTAddress(network: string): `0x${string}` {
 }
 
 /**
+ * Try to get GenAI NFT address, returns null if not deployed.
+ */
+export function tryGetGenAiNFTAddress(network: string): `0x${string}` | null {
+  return MAINNET_GENAI_NFT_ADDRESSES[network] || TESTNET_GENAI_NFT_ADDRESSES[network] || null;
+}
+
+/**
  * Get CollectorNFT address for a network (mainnet or testnet).
  * @throws Error if not deployed on that network
  */
@@ -133,6 +140,15 @@ export function getCollectorNFTAddress(network: string): `0x${string}` {
     throw new Error(`CollectorNFT not deployed on ${network}`);
   }
   return address;
+}
+
+/**
+ * Try to get CollectorNFT address, returns null if not deployed.
+ */
+export function tryGetCollectorNFTAddress(network: string): `0x${string}` | null {
+  return (
+    MAINNET_COLLECTOR_NFT_ADDRESSES[network] || TESTNET_COLLECTOR_NFT_ADDRESSES[network] || null
+  );
 }
 
 /**
@@ -148,6 +164,13 @@ export function getLLMv1Address(network: string): `0x${string}` {
 }
 
 /**
+ * Try to get LLMv1 address, returns null if not deployed.
+ */
+export function tryGetLLMv1Address(network: string): `0x${string}` | null {
+  return MAINNET_LLM_V1_ADDRESSES[network] || TESTNET_LLM_V1_ADDRESSES[network] || null;
+}
+
+/**
  * Get SupportV2 address for a network (mainnet or testnet).
  * @throws Error if not deployed on that network
  */
@@ -157,6 +180,13 @@ export function getSupportV2Address(network: string): `0x${string}` {
     throw new Error(`SupportV2 not deployed on ${network}`);
   }
   return address;
+}
+
+/**
+ * Try to get SupportV2 address, returns null if not deployed.
+ */
+export function tryGetSupportV2Address(network: string): `0x${string}` | null {
+  return MAINNET_SUPPORT_V2_ADDRESSES[network] || TESTNET_SUPPORT_V2_ADDRESSES[network] || null;
 }
 
 /**
@@ -170,6 +200,17 @@ export function getEIP3009SplitterAddress(network: string): `0x${string}` {
     throw new Error(`EIP3009 Splitter not deployed on ${network}`);
   }
   return address;
+}
+
+/**
+ * Try to get EIP3009 Splitter address, returns null if not deployed.
+ */
+export function tryGetEIP3009SplitterAddress(network: string): `0x${string}` | null {
+  return (
+    MAINNET_EIP3009_SPLITTER_ADDRESSES[network] ||
+    TESTNET_EIP3009_SPLITTER_ADDRESSES[network] ||
+    null
+  );
 }
 
 /**

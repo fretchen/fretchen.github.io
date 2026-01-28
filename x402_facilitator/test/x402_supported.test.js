@@ -54,6 +54,26 @@ describe("x402 /supported endpoint", () => {
     // x402 v2 getSupported() does NOT include assets in kinds
   });
 
+  test("includes Base Mainnet support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const baseSupport = capabilities.kinds.find((k) => k.network === "eip155:8453");
+
+    expect(baseSupport).toBeDefined();
+    expect(baseSupport.x402Version).toBe(2);
+    expect(baseSupport.scheme).toBe("exact");
+  });
+
+  test("includes Base Sepolia support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const baseSepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:84532");
+
+    expect(baseSepoliaSupport).toBeDefined();
+    expect(baseSepoliaSupport.x402Version).toBe(2);
+    expect(baseSepoliaSupport.scheme).toBe("exact");
+  });
+
   // Note: x402 v2 getSupported() does not include asset details (USDC, USDT, etc.)
   // Asset information is not provided in the kinds array by the facilitator
   // If needed, asset details would need to be added separately in the response
@@ -114,7 +134,7 @@ describe("x402 /supported endpoint", () => {
     expect(whitelistExtension.contracts).toBeDefined();
   });
 
-  test("whitelist extension includes contracts for mainnet only", () => {
+  test("whitelist extension includes contracts for both mainnet and sepolia", () => {
     const capabilities = getSupportedCapabilities();
 
     const whitelistExtension = capabilities.extensions.find(
@@ -126,8 +146,10 @@ describe("x402 /supported endpoint", () => {
     expect(Array.isArray(whitelistExtension.contracts["eip155:10"])).toBe(true);
     expect(whitelistExtension.contracts["eip155:10"].length).toBe(2);
 
-    // Sepolia has no contracts deployed
-    expect(whitelistExtension.contracts["eip155:11155420"]).toBeUndefined();
+    // Sepolia also has contracts deployed
+    expect(whitelistExtension.contracts["eip155:11155420"]).toBeDefined();
+    expect(Array.isArray(whitelistExtension.contracts["eip155:11155420"])).toBe(true);
+    expect(whitelistExtension.contracts["eip155:11155420"].length).toBe(2);
   });
 
   test("whitelist extension includes GenImNFTv4 and LLMv1 contracts on mainnet", () => {
@@ -147,6 +169,7 @@ describe("x402 /supported endpoint", () => {
     expect(genimgMainnet.method).toBe("isAuthorizedAgent(address)");
 
     expect(llmMainnet).toBeDefined();
+    // LLMv1 on Optimism Mainnet
     expect(llmMainnet.address).toBe("0x833F39D6e67390324796f861990ce9B7cf9F5dE1");
     expect(llmMainnet.method).toBe("isAuthorizedAgent(address)");
   });

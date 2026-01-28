@@ -14,7 +14,12 @@
 
 import { verifyTypedData, createPublicClient, http } from "viem";
 import pino from "pino";
-import { getChain, getChainConfig, getTokenInfo } from "./chain_utils.js";
+import {
+  getViemChain,
+  getUSDCName,
+  getUSDCAddress,
+  getEIP3009SplitterAddress,
+} from "@fretchen/chain-utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -111,7 +116,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     }
 
     // Get chain config
-    const chain = getChain(network);
+    const chain = getViemChain(network);
 
     // Validate token is USDC
     const tokenAddress = paymentPayload.accepted?.asset;
@@ -120,22 +125,29 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
       return { isValid: false, invalidReason: "invalid_payload" };
     }
 
-    let tokenInfo;
+    // Validate token is USDC on this network
+    let usdcAddress;
     try {
-      tokenInfo = getTokenInfo(network, tokenAddress);
+      usdcAddress = getUSDCAddress(network);
     } catch (_error) {
-      logger.warn({ tokenAddress, network }, "Unsupported token");
+      logger.warn({ network }, "Unsupported network");
+      return { isValid: false, invalidReason: "unsupported_network" };
+    }
+
+    if (tokenAddress.toLowerCase() !== usdcAddress.toLowerCase()) {
+      logger.warn(
+        { tokenAddress, expected: usdcAddress, network },
+        "Unsupported token - only USDC accepted",
+      );
       return { isValid: false, invalidReason: "invalid_token_address" };
     }
 
     // Validate recipient address matches splitter contract
     // For splitter facilitator: to = splitter address (not token address!)
     // The splitter contract will receive the funds and split them
-    const { getSplitterAddress } = await import("./eip3009_splitter_abi.js");
-
     let splitterAddress;
     try {
-      splitterAddress = getSplitterAddress(network);
+      splitterAddress = getEIP3009SplitterAddress(network);
     } catch (_error) {
       logger.warn({ network }, "Splitter not deployed on network");
       return { isValid: false, invalidReason: "unsupported_network" };
@@ -157,9 +169,10 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     }
 
     // Verify EIP-712 signature
+    // USDC version is always "2" across all supported chains
     const domain = {
-      name: tokenInfo.name,
-      version: tokenInfo.version,
+      name: getUSDCName(network),
+      version: "2",
       chainId: chain.id,
       verifyingContract: tokenAddress,
     };
@@ -240,10 +253,9 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     // Check if authorization already used (requires splitter contract call)
     // For verify, we'll check this on-chain during settlement
     // The contract will revert if nonce is reused
-    const chainConfig = getChainConfig(network);
     const publicClient = createPublicClient({
       chain,
-      transport: http(chainConfig.rpcUrl),
+      transport: http(),
     });
 
     // Check buyer has sufficient balance

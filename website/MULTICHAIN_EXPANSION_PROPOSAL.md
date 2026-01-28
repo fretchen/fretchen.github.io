@@ -7,9 +7,10 @@
 | Contract | Optimism | Base | Multi-Chain Ready |
 |----------|:--------:|:----:|:-----------------:|
 | **SupportV2** | ✅ | ✅ | ✅ Ja |
-| **GenImNFTv4** | ✅ | ❌ | ❌ Nein |
+| **GenImNFTv4** | ✅ | ❌ | ✅ Ja (Backend ready) |
 | **CollectorNFTv1** | ✅ | ❌ | ❌ Nein |
 | **LLMv1** | ✅ | ❌ | ❌ (out of scope) |
+| **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja |
 
 ---
 
@@ -17,9 +18,9 @@
 
 | Phase | Was | Projekte | Status |
 |-------|-----|----------|--------|
-| **1a** | `@fretchen/chain-utils` erstellen | shared/ | 🔜 Next |
-| **1b** | scw_js auf chain-utils migrieren | scw_js/ | ⬜ |
-| **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ⬜ |
+| **1a** | `@fretchen/chain-utils` erstellen | shared/ | ✅ Fertig |
+| **1b** | scw_js auf chain-utils migrieren | scw_js/ | ✅ Fertig |
+| **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ⬜ Next |
 | **2** | GenImNFT-Komponenten migrieren | website/ | ⬜ |
 | **3** | CollectorNFT-Komponenten migrieren | website/ | ⬜ |
 | **4** | GenImNFTv4 auf Base deployen | eth/, shared/ | ⬜ Später |
@@ -27,7 +28,7 @@
 
 ---
 
-## Phase 1a: @fretchen/chain-utils erstellen
+## Phase 1a: @fretchen/chain-utils ✅ FERTIG
 
 **Struktur:**
 ```
@@ -36,118 +37,61 @@ fretchen.github.io/
 │   └── chain-utils/
 │       ├── package.json
 │       ├── tsconfig.json
-│       └── src/
-│           ├── index.ts      # Core utilities
-│           └── addresses.ts  # Contract address maps
+│       ├── vitest.config.ts
+│       ├── eslint.config.js
+│       ├── README.md
+│       ├── src/
+│       │   ├── index.ts      # Core utilities + re-exports
+│       │   ├── addresses.ts  # Contract address maps + getters
+│       │   └── abi/
+│       │       ├── index.ts
+│       │       ├── GenImNFTv4.ts
+│       │       ├── LLMv1.ts
+│       │       └── EIP3009SplitterV1.ts
+│       └── test/
+│           ├── index.test.ts
+│           └── abi.test.ts
 ```
 
-**package.json:**
-```json
-{
-  "name": "@fretchen/chain-utils",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./addresses": { "types": "./dist/addresses.d.ts", "default": "./dist/addresses.js" }
-  },
-  "scripts": {
-    "build": "tsc",
-    "prepare": "npm run build"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "viem": "^2.0.0"
-  }
-}
-```
+**Implementiert:**
+- CAIP-2 Utilities: `toCAIP2()`, `fromCAIP2()`, `isMainnet()`, `isTestnet()`
+- Chain Mapping: `getViemChain()`
+- Contract Adressen: Separate Maps für Mainnet/Testnet
+- Getter Funktionen: `getGenAiNFTAddress()`, `getCollectorNFTAddress()`, `getLLMv1Address()`, `getSupportV2Address()`, `getEIP3009SplitterAddress()`, `getUSDCAddress()`, `getUSDCConfig()`
+- ABIs: `GenImNFTv4ABI`, `LLMv1ABI`, `EIP3009SplitterV1ABI`
+- 46 Tests mit 98.75% Coverage
+- CI/CD Pipeline: `.github/workflows/test-chain-utils.yml`
 
-**src/index.ts:**
-```typescript
-import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
-import type { Chain } from "viem";
+**Wichtig:** Kein `prepare` Script - muss manuell mit `npm run build` gebaut werden. CI Workflows bauen chain-utils vor Installation der Consumer.
 
-// ═══════════════════════════════════════════════════════════════
-// CAIP-2 Utilities
-// ═══════════════════════════════════════════════════════════════
+---
 
-export const toCAIP2 = (chainId: number): string => `eip155:${chainId}`;
+## Phase 1b: scw_js Migration ✅ FERTIG
 
-export const fromCAIP2 = (network: string): number => {
-  const match = network.match(/^eip155:(\d+)$/);
-  if (!match) throw new Error(`Invalid CAIP-2: ${network}`);
-  return parseInt(match[1], 10);
-};
+**Änderungen:**
+- `package.json`: Dependency `"@fretchen/chain-utils": "file:../shared/chain-utils"`
+- `tsup.config.js`: Bundling mit tsup für Scaleway Deployment
+- ABIs: Importiert aus `@fretchen/chain-utils` statt lokaler Kopien
+- `getChain.js`, `genimg_bfl.js`, `genimg_x402_token.js`, `x402_server.js`: Nutzen `getViemChain()`, `getGenAiNFTAddress()`, `getUSDCConfig()`
 
-export function getViemChain(network: string): Chain {
-  switch (network) {
-    case "eip155:10": return optimism;
-    case "eip155:11155420": return optimismSepolia;
-    case "eip155:8453": return base;
-    case "eip155:84532": return baseSepolia;
-    default: throw new Error(`Unsupported network: ${network}`);
-  }
-}
+**tsup Bundling:**
+- Löst das Symlink-Problem für Scaleway Deployment
+- `createRequire` Banner für pino ESM Kompatibilität
+- Node.js Builtins als external
+- 175 Tests bestanden
 
-export * from "./addresses";
-```
+**Entfernte Dateien:**
+- `nft_abi.js` → importiert aus chain-utils
+- `nft_abi.test.js` → verschoben nach chain-utils
 
-**src/addresses.ts:**
-```typescript
-// ═══════════════════════════════════════════════════════════════
-// Contract Adressen (CAIP-2 als Key, getrennt nach Mainnet/Testnet)
-// ═══════════════════════════════════════════════════════════════
+---
 
-// GenImNFT
-export const MAINNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-  // "eip155:8453": "0x...",  // Base - nach Deployment
-};
+## Phase 1c: x402_facilitator Migration ⬜ NEXT
 
-export const TESTNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0x10827cC42a09D0BAD2d43134C69F0e776D853D85",
-};
-
-// CollectorNFT
-export const MAINNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea",
-};
-
-export const TESTNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {};
-
-// SupportV2
-export const MAINNET_SUPPORT_V2_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x4ca63f8A4Cd56287E854f53E18ca482D74391316",
-  "eip155:8453": "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694",
-};
-
-export const TESTNET_SUPPORT_V2_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0x9859431b682e861b19e87Db14a04944BC747AB6d",
-  "eip155:84532": "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
-};
-
-// USDC
-export const USDC_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-  "eip155:11155420": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-  "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  "eip155:84532": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-};
-
-export const USDC_NAMES: Record<string, string> = {
-  "eip155:10": "USD Coin",
-  "eip155:11155420": "USDC",
-  "eip155:8453": "USD Coin",
-  "eip155:84532": "USDC",
-};
-```
-
-**Konsumenten installieren via file: Link:**
-```json
-{
-  "dependencies": {
+**Geplant:**
+- `chain_utils.js` durch Imports aus `@fretchen/chain-utils` ersetzen
+- tsup Bundling hinzufügen (gleiches Pattern wie scw_js)
+- ABIs aus chain-utils importieren {
     "@fretchen/chain-utils": "file:../shared/chain-utils"
   }
 }
@@ -221,7 +165,7 @@ export function getChainConfig(network) {
 
 ---
 
-## Phase 2: GenImNFT-Komponenten migrieren
+## Phase 2: GenImNFT-Komponenten migrieren (Website)
 
 **Betroffene Dateien:**
 - `MyNFTList.tsx` (4 Stellen)
@@ -243,23 +187,13 @@ const { data } = useReadContract({
 
 // NACHHER
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { getGenAiNFTConfig, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 
 const network = useAutoNetwork(GENAI_NFT_NETWORKS);
-const config = getGenAiNFTConfig(network);
-const { data } = useReadContract({ ...config });
-```
-
-**useAutoNetwork Hook (website/hooks/):**
-```typescript
-export function useAutoNetwork(supportedNetworks: string[]): string {
-  const { chain } = useAccount();
-  if (chain) {
-    const userNetwork = toCAIP2(chain.id);
-    if (supportedNetworks.includes(userNetwork)) return userNetwork;
-  }
-  return supportedNetworks[0];  // Fallback: Optimism
-}
+const { data } = useReadContract({
+  address: getGenAiNFTAddress(network),
+  abi: GenImNFTv4ABI,
+});
 ```
 
 ---
@@ -278,8 +212,15 @@ Gleiches Pattern wie Phase 2.
 1. Deploy-Script für Base erweitern
 2. Deploy + Verify auf Base Mainnet
 3. Agent-Wallet autorisieren
-4. Adresse in `@fretchen/chain-utils/src/addresses.ts` hinzufügen
-5. `npm install` in allen Projekten
+4. Adresse in `@fretchen/chain-utils/src/addresses.ts` hinzufügen:
+   ```typescript
+   export const MAINNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
+     "eip155:10": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+     "eip155:8453": "0x...",  // Base
+   };
+   ```
+5. `npm run build` in chain-utils
+6. `npm install` in allen Projekten
 
 ---
 
@@ -300,8 +241,15 @@ Voraussetzung: GenImNFT muss auf Base existieren.
 - Getrennte Maps für Mainnet/Testnet
 - Kein Chain-Selector - automatische Wahl basierend auf User-Wallet
 - Eine Quelle für Adressen: `@fretchen/chain-utils`
+- tsup Bundling für Serverless Deployment
 
 **Vorteile:**
 - Neue Chains: Adresse nur an einer Stelle hinzufügen
 - Konsistenz: Gleiches Pattern in website, scw_js, x402_facilitator
 - Weniger Code: ~140 Zeilen duplizierter Switch-Statements entfernt
+- Zuverlässiges Deployment: Symlink-Problem durch Bundling gelöst
+
+**Tests:**
+- chain-utils: 46 Tests, 98.75% Coverage
+- scw_js: 175 Tests
+- CI Pipelines für alle Packages

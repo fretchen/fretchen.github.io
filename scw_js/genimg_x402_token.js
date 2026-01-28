@@ -1,7 +1,12 @@
 // x402 v2 Token Payment Implementation for GenImg
 // Uses official @x402/core and @x402/evm packages for payment handling
 
-import { nftAbi } from "./nft_abi.js";
+import {
+  GenImNFTv4ABI as nftAbi,
+  getViemChain,
+  getGenAiNFTAddress,
+  getUSDCConfig,
+} from "@fretchen/chain-utils";
 import { getContract, createWalletClient, createPublicClient, http, parseEther } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
@@ -12,13 +17,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
 } from "./x402_server.js";
-import {
-  getGenImgContractConfig,
-  getViemChain,
-  getUSDCConfig,
-  validatePaymentNetwork,
-  getChainNameFromEIP155,
-} from "./getChain.js";
+import { validatePaymentNetwork } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
@@ -475,7 +474,7 @@ async function handle(event, context, cb) {
 
   // Get configurations for validated network
   const usdcConfig = getUSDCConfig(clientNetwork);
-  const contractAddress = getGenImgContractConfig(clientNetwork).address;
+  const contractAddress = getGenAiNFTAddress(clientNetwork);
   console.log(`📍 Client selected network: ${usdcConfig.name} (${clientNetwork})`);
 
   // Build payment requirements for the selected network
@@ -536,8 +535,7 @@ async function handle(event, context, cb) {
   try {
     // Get chain from payment network (buyer determines the chain!)
     const viemChain = getViemChain(clientNetwork);
-    const chainName = getChainNameFromEIP155(clientNetwork);
-    console.log(`🔗 Using chain: ${chainName} (${clientNetwork})`);
+    console.log(`🔗 Using chain: ${viemChain.name} (${clientNetwork})`);
 
     const publicClient = createPublicClient({
       chain: viemChain,
@@ -572,7 +570,7 @@ async function handle(event, context, cb) {
       publicClient,
       account.address,
       mintPrice,
-      chainName,
+      viemChain.name,
     );
 
     if (!preFlightResult.success) {

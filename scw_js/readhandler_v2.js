@@ -1,4 +1,4 @@
-import { nftAbi } from "./nft_abi.js";
+import { GenImNFTv4ABI as nftAbi } from "@fretchen/chain-utils";
 import { getContract, createWalletClient, createPublicClient, http } from "viem";
 import { optimism } from "viem/chains";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";

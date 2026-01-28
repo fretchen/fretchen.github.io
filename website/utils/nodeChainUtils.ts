@@ -8,7 +8,6 @@ import { sepolia, optimism, optimismSepolia } from "viem/chains";
 import type { Chain, PublicClient } from "viem";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
-import SupportABI from "../../eth/abi/contracts/Support.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 /**
@@ -72,31 +71,6 @@ const NODE_GENAI_NFT_CONTRACT_CONFIG = (() => {
   }
 })();
 
-const NODE_SUPPORT_CONTRACT_CONFIG = (() => {
-  switch (NODE_CHAIN_NAME) {
-    case "sepolia":
-      return {
-        address: "0xf137ca5dc45e3d0336ac2daa26084b0eaf244684" as `0x${string}`,
-        abi: SupportABI,
-      } as const;
-    case "optimism":
-      return {
-        address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1" as `0x${string}`,
-        abi: SupportABI,
-      } as const;
-    case "optimismSepolia":
-      return {
-        address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1" as `0x${string}`,
-        abi: SupportABI,
-      } as const;
-    default:
-      return {
-        address: "0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1" as `0x${string}`,
-        abi: SupportABI,
-      } as const;
-  }
-})();
-
 const NODE_COLLECTOR_NFT_CONTRACT_CONFIG = (() => {
   switch (NODE_CHAIN_NAME) {
     case "sepolia":
@@ -145,13 +119,11 @@ const NODE_LLM_V1_CONTRACT_CONFIG = (() => {
 // Export stable contract configurations for Node.js
 export const nodeContractConfigs = {
   genAiNFT: NODE_GENAI_NFT_CONTRACT_CONFIG,
-  support: NODE_SUPPORT_CONTRACT_CONFIG,
   collectorNFT: NODE_COLLECTOR_NFT_CONTRACT_CONFIG,
   llmV1: NODE_LLM_V1_CONTRACT_CONFIG,
 } as const;
 
 // Convenience exports for backward compatibility
 export const nodeGenAiNFTContractConfig = NODE_GENAI_NFT_CONTRACT_CONFIG;
-export const nodeSupportContractConfig = NODE_SUPPORT_CONTRACT_CONFIG;
 export const nodeCollectorNFTContractConfig = NODE_COLLECTOR_NFT_CONTRACT_CONFIG;
 export const nodeLlmV1ContractConfig = NODE_LLM_V1_CONTRACT_CONFIG;

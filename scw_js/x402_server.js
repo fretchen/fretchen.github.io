@@ -7,7 +7,7 @@
 
 import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { getUSDCConfig } from "./getChain.js";
+import { getUSDCConfig } from "@fretchen/chain-utils";
 
 // Facilitator configuration
 const FACILITATOR_URL = process.env.FACILITATOR_URL || "https://facilitator.fretchen.eu";

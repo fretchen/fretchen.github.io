@@ -20,6 +20,12 @@ vi.mock("wagmi", () => ({
     isPending: false,
     refetch: vi.fn(),
   })),
+  useReadContracts: vi.fn(() => ({
+    data: undefined,
+    error: null,
+    isPending: false,
+    refetch: vi.fn(),
+  })),
   useWriteContract: vi.fn(() => ({
     writeContract: vi.fn(),
     writeContractAsync: vi.fn(),
@@ -48,14 +54,6 @@ vi.mock("wagmi", () => ({
   createConfig: vi.fn(() => ({})),
   http: vi.fn(),
   WagmiProvider: vi.fn(({ children }) => children),
-}));
-
-// Mock wagmi/chains
-vi.mock("wagmi/chains", () => ({
-  mainnet: { id: 1, name: "Ethereum" },
-  sepolia: { id: 11155111, name: "Sepolia" },
-  optimism: { id: 10, name: "Optimism" },
-  optimismSepolia: { id: 11155420, name: "Optimism Sepolia" },
 }));
 
 // Mock wagmi/connectors

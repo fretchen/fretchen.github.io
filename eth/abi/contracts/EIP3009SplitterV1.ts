@@ -1,6 +1,6 @@
 // Auto-generated ABI for EIP3009SplitterV1
 // EIP-3009 payment splitter with fixed facilitator fee
-// Generated on: 2026-01-05T19:09:05.761Z
+// Generated on: 2026-01-20T20:33:28.418Z
 
 export const EIP3009SplitterV1ABI = [
   {

@@ -1,0 +1,51 @@
+name: Test Chain Utils
+
+permissions:
+    contents: read
+
+on:
+    pull_request:
+        paths:
+            - "shared/chain-utils/**"
+            - ".github/workflows/test-chain-utils.yml"
+    push:
+        branches:
+            - main
+        paths:
+            - "shared/chain-utils/**"
+
+jobs:
+    test-chain-utils:
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                working-directory: ./shared/chain-utils
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "npm"
+                  cache-dependency-path: shared/chain-utils/package-lock.json
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Run quality checks (lint + format + test with coverage)
+              run: npm run check
+              env:
+                  CI: true
+
+            - name: Upload coverage reports to Codecov (optional)
+              uses: codecov/codecov-action@v3
+              with:
+                  directory: ./shared/chain-utils/coverage
+                  flags: chain-utils
+                  name: chain-utils-coverage
+                  fail_ci_if_error: false
+              continue-on-error: true

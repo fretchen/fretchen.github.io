@@ -169,6 +169,40 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
   const skipRpcTests = process.env.SKIP_RPC_TESTS === "true";
 
   /**
+   * Helper to wait for a specified time
+   * @param {number} ms - Milliseconds to wait
+   */
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  /**
+   * Helper to retry an async function with exponential backoff
+   * Useful for handling rate limits from public RPCs
+   * @param {Function} fn - Async function to retry
+   * @param {number} maxRetries - Maximum number of retries
+   * @param {number} baseDelay - Base delay in ms (doubles each retry)
+   */
+  async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        // Check if it's a rate limit error (429)
+        if (error.message?.includes("429") || error.message?.includes("rate limit")) {
+          if (attempt < maxRetries) {
+            const waitTime = baseDelay * Math.pow(2, attempt);
+            await delay(waitTime);
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+    throw lastError;
+  }
+
+  /**
    * Helper to read EIP-712 domain (name + version) from a USDC contract
    * @param {import("viem/chains").Chain} chain
    * @param {string} contractAddress
@@ -180,17 +214,24 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
       transport: http(),
     });
 
-    const name = await client.readContract({
-      address: contractAddress,
-      abi: USDC_ABI,
-      functionName: "name",
-    });
+    const name = await withRetry(() =>
+      client.readContract({
+        address: contractAddress,
+        abi: USDC_ABI,
+        functionName: "name",
+      }),
+    );
 
-    const version = await client.readContract({
-      address: contractAddress,
-      abi: USDC_ABI,
-      functionName: "version",
-    });
+    // Small delay between calls to avoid hitting rate limits
+    await delay(200);
+
+    const version = await withRetry(() =>
+      client.readContract({
+        address: contractAddress,
+        abi: USDC_ABI,
+        functionName: "version",
+      }),
+    );
 
     return { name, version };
   }
@@ -280,6 +321,8 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
             valid: false,
           });
         }
+        // Small delay between networks to avoid rate limiting
+        await delay(300);
       }
 
       // Log results for debugging

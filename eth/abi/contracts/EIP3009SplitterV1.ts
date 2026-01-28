@@ -1,8 +1,8 @@
-// Auto-generated ABI for LLMv1
-// LLM Version 1 to interact with LLMs
-// Generated on: 2025-08-05T16:01:22.279Z
+// Auto-generated ABI for EIP3009SplitterV1
+// EIP-3009 payment splitter with fixed facilitator fee
+// Generated on: 2026-01-20T20:33:28.418Z
 
-export const LLMv1ABI = [
+export const EIP3009SplitterV1ABI = [
   {
     inputs: [],
     stateMutability: "nonpayable",
@@ -73,6 +73,17 @@ export const LLMv1ABI = [
     type: "error",
   },
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "token",
+        type: "address",
+      },
+    ],
+    name: "SafeERC20FailedOperation",
+    type: "error",
+  },
+  {
     inputs: [],
     name: "UUPSUnauthorizedCallContext",
     type: "error",
@@ -93,18 +104,18 @@ export const LLMv1ABI = [
     inputs: [
       {
         indexed: true,
-        internalType: "bytes32",
-        name: "root",
-        type: "bytes32",
+        internalType: "address",
+        name: "oldWallet",
+        type: "address",
       },
       {
-        indexed: false,
-        internalType: "uint256",
-        name: "totalCost",
-        type: "uint256",
+        indexed: true,
+        internalType: "address",
+        name: "newWallet",
+        type: "address",
       },
     ],
-    name: "BatchProcessed",
+    name: "FacilitatorWalletUpdated",
     type: "event",
   },
   {
@@ -113,17 +124,17 @@ export const LLMv1ABI = [
       {
         indexed: false,
         internalType: "uint256",
-        name: "index",
+        name: "oldFee",
         type: "uint256",
       },
       {
         indexed: false,
-        internalType: "bytes32",
-        name: "hash",
-        type: "bytes32",
+        internalType: "uint256",
+        name: "newFee",
+        type: "uint256",
       },
     ],
-    name: "DebugLeafHash",
+    name: "FixedFeeUpdated",
     type: "event",
   },
   {
@@ -137,44 +148,6 @@ export const LLMv1ABI = [
       },
     ],
     name: "Initialized",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "LLMDeposit",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "LLMWithdraw",
     type: "event",
   },
   {
@@ -202,37 +175,41 @@ export const LLMv1ABI = [
       {
         indexed: true,
         internalType: "address",
-        name: "provider",
+        name: "buyer",
         type: "address",
       },
-    ],
-    name: "ServiceProviderAdded",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
       {
         indexed: true,
         internalType: "address",
-        name: "newProvider",
+        name: "seller",
         type: "address",
       },
-    ],
-    name: "ServiceProviderChanged",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
       {
         indexed: true,
         internalType: "address",
-        name: "provider",
+        name: "facilitator",
         type: "address",
       },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "totalAmount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "sellerAmount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "facilitatorFee",
+        type: "uint256",
+      },
     ],
-    name: "ServiceProviderRemoved",
+    name: "SplitExecuted",
     type: "event",
   },
   {
@@ -262,46 +239,8 @@ export const LLMv1ABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "provider",
-        type: "address",
-      },
-    ],
-    name: "addServiceProvider",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    name: "authorizedProviders",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-    ],
-    name: "checkBalance",
+    inputs: [],
+    name: "VERSION",
     outputs: [
       {
         internalType: "uint256",
@@ -313,8 +252,71 @@ export const LLMv1ABI = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "token",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
+      {
+        internalType: "bytes32",
+        name: "salt",
+        type: "bytes32",
+      },
+      {
+        internalType: "uint256",
+        name: "totalAmount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "validAfter",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "validBefore",
+        type: "uint256",
+      },
+      {
+        internalType: "bytes32",
+        name: "nonce",
+        type: "bytes32",
+      },
+      {
+        internalType: "uint8",
+        name: "v",
+        type: "uint8",
+      },
+      {
+        internalType: "bytes32",
+        name: "r",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "s",
+        type: "bytes32",
+      },
+    ],
+    name: "executeSplit",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
-    name: "defaultServiceProvider",
+    name: "facilitatorWallet",
     outputs: [
       {
         internalType: "address",
@@ -327,13 +329,30 @@ export const LLMv1ABI = [
   },
   {
     inputs: [],
-    name: "depositForLLM",
-    outputs: [],
-    stateMutability: "payable",
+    name: "fixedFee",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: "address",
+        name: "_facilitatorWallet",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "_fixedFee",
+        type: "uint256",
+      },
+    ],
     name: "initialize",
     outputs: [],
     stateMutability: "nonpayable",
@@ -343,35 +362,26 @@ export const LLMv1ABI = [
     inputs: [
       {
         internalType: "address",
-        name: "provider",
+        name: "token",
         type: "address",
       },
+      {
+        internalType: "address",
+        name: "authorizer",
+        type: "address",
+      },
+      {
+        internalType: "bytes32",
+        name: "nonce",
+        type: "bytes32",
+      },
     ],
-    name: "isAuthorizedProvider",
+    name: "isAuthorizationUsed",
     outputs: [
       {
         internalType: "bool",
         name: "",
         type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    name: "llmBalance",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -391,80 +401,6 @@ export const LLMv1ABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "merkleRoot",
-        type: "bytes32",
-      },
-      {
-        components: [
-          {
-            internalType: "int256",
-            name: "id",
-            type: "int256",
-          },
-          {
-            internalType: "address",
-            name: "user",
-            type: "address",
-          },
-          {
-            internalType: "address",
-            name: "serviceProvider",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "tokenCount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "cost",
-            type: "uint256",
-          },
-          {
-            internalType: "string",
-            name: "timestamp",
-            type: "string",
-          },
-        ],
-        internalType: "struct LLMv1.LLMLeaf[]",
-        name: "leaves",
-        type: "tuple[]",
-      },
-      {
-        internalType: "bytes32[][]",
-        name: "proofs",
-        type: "bytes32[][]",
-      },
-    ],
-    name: "processBatch",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    name: "processedBatches",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "proxiableUUID",
     outputs: [
@@ -478,19 +414,6 @@ export const LLMv1ABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "provider",
-        type: "address",
-      },
-    ],
-    name: "removeServiceProvider",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "renounceOwnership",
     outputs: [],
@@ -501,11 +424,24 @@ export const LLMv1ABI = [
     inputs: [
       {
         internalType: "address",
-        name: "newProvider",
+        name: "_wallet",
         type: "address",
       },
     ],
-    name: "setDefaultServiceProvider",
+    name: "setFacilitatorWallet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_fixedFee",
+        type: "uint256",
+      },
+    ],
+    name: "setFixedFee",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -541,46 +477,6 @@ export const LLMv1ABI = [
     stateMutability: "payable",
     type: "function",
   },
-  {
-    inputs: [
-      {
-        internalType: "bytes32[]",
-        name: "proof",
-        type: "bytes32[]",
-      },
-      {
-        internalType: "bytes32",
-        name: "root",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes32",
-        name: "leaf",
-        type: "bytes32",
-      },
-    ],
-    name: "verifyMerkleProof",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "pure",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "withdrawBalance",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-];
+] as const;
+
+export type EIP3009SplitterV1ABI = typeof EIP3009SplitterV1ABI;

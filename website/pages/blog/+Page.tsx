@@ -17,10 +17,16 @@ const App: React.FC = function () {
   // Filter State
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | null>(null);
 
-  // Filter Logic
+  // Add originalIndex to each blog for consistent link generation after filtering
+  const blogsWithIndex = blogs.map((blog, index) => ({
+    ...blog,
+    originalIndex: index,
+  }));
+
+  // Filter Logic - uses blogsWithIndex to preserve original indices
   const filteredBlogs = selectedCategory
-    ? blogs.filter((blog) => blog.category === selectedCategory || blog.secondaryCategory === selectedCategory)
-    : blogs;
+    ? blogsWithIndex.filter((blog) => blog.category === selectedCategory || blog.secondaryCategory === selectedCategory)
+    : blogsWithIndex;
 
   return (
     <div className={styles.container}>

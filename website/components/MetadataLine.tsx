@@ -84,25 +84,44 @@ export default function MetadataLine({
     if (!showSupport) return null;
 
     if (isReadPending) {
-      return "☕ Loading...";
+      return (
+        <div className={metadataLine.supportWrapper}>
+          <span className={metadataLine.supportButton} style={{ opacity: 0.7 }}>
+            ☕ Loading...
+          </span>
+        </div>
+      );
     }
 
     if (readError) {
-      return "☕ Error";
+      return null; // Don't show broken state
     }
 
     const count = parseInt(supportCount) || 0;
-    const supportText = count === 1 ? "supporter" : "supporters";
+
+    // Dynamic button text based on state
+    const getButtonText = () => {
+      if (isLoading) return "☕ Supporting...";
+      if (isSuccess) return `☕ Thank you! (${count})`;
+      if (!isConnected) return "☕ Support ~50¢";
+      return count > 0 ? `☕ Support ~50¢ (${count})` : "☕ Support ~50¢";
+    };
+
+    const getTooltip = () => {
+      if (errorMessage) return errorMessage;
+      if (!isConnected) return "Connect wallet to buy me a coffee (~$0.50 via Optimism)";
+      return "Buy me a coffee! Secure donation via Optimism (~$0.50)";
+    };
 
     return (
       <div onMouseEnter={handleSupportHover} className={metadataLine.supportWrapper}>
         <button
           onClick={handleSupportClick}
-          disabled={isLoading || !isConnected}
+          disabled={isLoading}
           className={metadataLine.supportButton}
-          title={errorMessage || (isConnected ? "Support this content" : "Connect wallet to support")}
+          title={getTooltip()}
         >
-          {isLoading ? "☕ Supporting..." : isSuccess ? `★ ${count} ${supportText}` : `☕ ${count} ${supportText}`}
+          {getButtonText()}
         </button>
       </div>
     );

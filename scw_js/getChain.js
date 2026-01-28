@@ -1,6 +1,7 @@
 // @ts-check
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import { LLMv1ABI } from "./llmv1_abi.js";
+import { LLMv1ABI } from "@fretchen/chain-utils";
+
 /**
  * Get environment variable in both Node.js and Vite contexts
  * @param {string} key
@@ -30,7 +31,13 @@ function getEnvironmentVariable(key, defaultValue) {
 }
 
 /**
- * Gibt das entsprechende Chain-Objekt basierend auf der CHAIN-Umgebungsvariable zurück
+ * Gibt das entsprechende Chain-Objekt basierend auf der CHAIN-Umgebungsvariable zurück.
+ *
+ * @deprecated TODO: Migrate to CAIP-2 pattern when LLMv1 gets multi-chain support.
+ * Currently used by:
+ * - llm_service.js: checkWalletBalance() (line ~454)
+ * - llm_service.js: processMerkleTree() (line ~572)
+ *
  * @returns {import("viem/chains").Chain}
  */
 export function getChain() {
@@ -60,4 +67,37 @@ export function getLLMv1ContractConfig() {
     default:
       return { address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", abi: LLMv1ABI };
   }
+}
+
+/**
+ * Get the expected network for a given mode
+ * @param {boolean} sepoliaTest - Whether test mode is enabled
+ * @returns {string} CAIP-2 network ID
+ */
+export function getExpectedNetwork(sepoliaTest) {
+  return sepoliaTest ? "eip155:11155420" : "eip155:10";
+}
+
+/**
+ * Validate that a client-selected network matches the expected mode
+ * @param {string|undefined} clientNetwork - Network from payment payload
+ * @param {boolean} sepoliaTest - Whether test mode is enabled
+ * @returns {{ valid: boolean, reason?: string, expected?: string, received?: string }}
+ */
+export function validatePaymentNetwork(clientNetwork, sepoliaTest) {
+  if (!clientNetwork) {
+    return { valid: false, reason: "missing_network" };
+  }
+
+  const expectedNetwork = getExpectedNetwork(sepoliaTest);
+  if (clientNetwork !== expectedNetwork) {
+    return {
+      valid: false,
+      reason: sepoliaTest ? "invalid_network_for_test_mode" : "invalid_network_for_production",
+      expected: expectedNetwork,
+      received: clientNetwork,
+    };
+  }
+
+  return { valid: true };
 }

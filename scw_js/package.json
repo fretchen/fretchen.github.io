@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsup",
+    "deploy": "npm run build && npx serverless deploy",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
     "test:coverage": "NODE_ENV=test vitest run --coverage",
@@ -11,7 +13,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run format:check && npm run test"
+    "check": "npm run lint && npm run format:check && npm run test:coverage",
+    "dev:x402": "NODE_ENV=test node genimg_x402_token.js",
+    "dev:bfl": "NODE_ENV=test node genimg_bfl.js"
   },
   "keywords": [],
   "author": "",
@@ -30,12 +34,16 @@
     "fastify": "^5.6.1",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.4.16",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.1"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.914.0",
+    "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@openzeppelin/merkle-tree": "^1.0.8",
+    "@x402/core": "^2.0.0",
+    "@x402/evm": "^2.0.0",
     "dotenv": "^17.2.3",
     "pino": "^10.1.0",
     "tsx": "^4.20.6",

@@ -1,0 +1,368 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fretchen AI Services",
+    "description": "AI image generation and LLM services with blockchain integration on Optimism L2",
+    "version": "1.0.0",
+    "contact": {
+      "name": "fretchen",
+      "url": "https://www.fretchen.eu"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://my-personal-js-cloudfr-parzqjl2-genimgbfl.functions.fnc.fr-par.scw.cloud",
+      "description": "Image Generation Service (Scaleway)"
+    },
+    {
+      "url": "https://my-personal-js-cloudfr-parzqjl2-llm.functions.fnc.fr-par.scw.cloud",
+      "description": "LLM Service (Scaleway)"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "generateNftImage",
+        "summary": "Generate AI Image and Update NFT",
+        "description": "Generates an AI image using Black Forest Labs (BFL) API, uploads to S3, and updates the NFT token URI on Optimism. Requires the token to exist and not have an image yet (for generate mode).",
+        "tags": ["Image Generation"],
+        "x-server": "https://my-personal-js-cloudfr-parzqjl2-genimgbfl.functions.fnc.fr-par.scw.cloud",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageGenerationRequest"
+              },
+              "examples": {
+                "generate": {
+                  "summary": "Generate new image",
+                  "value": {
+                    "prompt": "A beautiful sunset over mountains",
+                    "tokenId": 42,
+                    "mode": "generate",
+                    "size": "1024x1024"
+                  }
+                },
+                "edit": {
+                  "summary": "Edit existing image",
+                  "value": {
+                    "prompt": "Add a castle on the hill",
+                    "tokenId": 42,
+                    "mode": "edit",
+                    "size": "1024x1024",
+                    "referenceImage": "base64-encoded-image-data"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image generated and NFT updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageGenerationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing parameters or image already updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Token does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-blockchain": {
+          "chain": "optimism",
+          "chainId": 10,
+          "contract": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+          "method": "requestImageUpdate"
+        }
+      }
+    },
+    "/llm": {
+      "post": {
+        "operationId": "chatWithLLM",
+        "summary": "Chat with LLM using wallet authentication",
+        "description": "Sends a prompt to the LLM and returns a response. Requires wallet signature for authentication and deducts from user's prepaid balance. Usage is tracked via Merkle-tree for on-chain verification.",
+        "tags": ["LLM"],
+        "x-server": "https://my-personal-js-cloudfr-parzqjl2-llm.functions.fnc.fr-par.scw.cloud",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMRequest"
+              },
+              "examples": {
+                "basic": {
+                  "summary": "Basic LLM request",
+                  "value": {
+                    "data": {
+                      "prompt": "What is the capital of France?"
+                    },
+                    "auth": {
+                      "address": "0x1234567890abcdef1234567890abcdef12345678",
+                      "signature": "0x...",
+                      "message": "Sign this message to authenticate"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LLM response generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing parameters or invalid signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient balance - user needs to deposit more ETH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-blockchain": {
+          "chain": "optimism",
+          "chainId": 10,
+          "contract": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1",
+          "method": "updateLeaf"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ImageGenerationRequest": {
+        "type": "object",
+        "required": ["prompt", "tokenId"],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "The text prompt for AI image generation",
+            "example": "A beautiful sunset over mountains"
+          },
+          "tokenId": {
+            "type": "integer",
+            "description": "The NFT token ID to update",
+            "example": 42
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["generate", "edit"],
+            "default": "generate",
+            "description": "generate: create new image, edit: modify existing image"
+          },
+          "size": {
+            "type": "string",
+            "enum": ["1024x1024", "1792x1024"],
+            "default": "1024x1024",
+            "description": "Output image dimensions"
+          },
+          "referenceImage": {
+            "type": "string",
+            "format": "byte",
+            "description": "Base64-encoded reference image (required for edit mode)"
+          }
+        }
+      },
+      "ImageGenerationResponse": {
+        "type": "object",
+        "properties": {
+          "metadata_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the NFT metadata JSON"
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the generated image"
+          },
+          "size": {
+            "type": "string",
+            "description": "Image dimensions used"
+          },
+          "mintPrice": {
+            "type": "string",
+            "description": "Mint price in wei"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable status message"
+          },
+          "transaction_hash": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "description": "Blockchain transaction hash"
+          }
+        }
+      },
+      "LLMRequest": {
+        "type": "object",
+        "required": ["data", "auth"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["prompt"],
+            "properties": {
+              "prompt": {
+                "type": "string",
+                "description": "The prompt to send to the LLM"
+              },
+              "useDummyData": {
+                "type": "boolean",
+                "default": false,
+                "description": "Use dummy data for testing"
+              }
+            }
+          },
+          "auth": {
+            "$ref": "#/components/schemas/WalletAuth"
+          }
+        }
+      },
+      "WalletAuth": {
+        "type": "object",
+        "required": ["address", "signature", "message"],
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Ethereum wallet address"
+          },
+          "signature": {
+            "type": "string",
+            "description": "EIP-191 signature of the message"
+          },
+          "message": {
+            "type": "string",
+            "description": "The signed message"
+          }
+        },
+        "description": "Wallet signature authentication for LLM access"
+      },
+      "LLMResponse": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "string",
+            "description": "The LLM's response text"
+          },
+          "leaf": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "description": "Merkle leaf hash for usage verification"
+          },
+          "remainingBalance": {
+            "type": "string",
+            "description": "User's remaining balance in wei"
+          },
+          "cost": {
+            "type": "string",
+            "description": "Cost of this request in wei"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "mintPrice": {
+            "type": "string",
+            "description": "Mint price in wei (included in some errors)"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "walletSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Wallet-Signature",
+        "description": "EIP-191 signed message for authentication"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Image Generation",
+      "description": "AI-powered image generation with NFT minting on Optimism"
+    },
+    {
+      "name": "LLM",
+      "description": "Blockchain-authenticated LLM service with Merkle-tree usage tracking"
+    }
+  ],
+  "externalDocs": {
+    "description": "Full documentation and source code",
+    "url": "https://github.com/fretchen/fretchen.github.io"
+  }
+}

@@ -1,0 +1,57 @@
+service: x402-facilitator
+
+# Read environment variables from a .env file
+useDotenv: true
+
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: node22
+  # Environment variables for production
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+    # Whitelist configuration (all sources checked automatically)
+    # Manual whitelist (comma-separated addresses, works on all networks)
+    MANUAL_WHITELIST: ""
+  # Secrets (set via Scaleway Console or CLI)
+  secret:
+    FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    # Only include bundled output
+    - "dist/**"
+    # Exclude everything else
+    - "!.gitignore"
+    - "!.git/**"
+    - "!test/**"
+    - "!coverage/**"
+    - "!.prettierrc"
+    - "!eslint.config.js"
+    - "!vitest.config.js"
+    - "!tsup.config.js"
+    - "!README.md"
+    - "!EIP712_VERIFICATION.md"
+    - "!*.js"
+    - "!node_modules/**"
+
+functions:
+  # Single function with path-based routing
+  # Handles /verify, /settle, and /supported endpoints
+  facilitator:
+    handler: dist/x402_facilitator.handle
+    description: x402 v2 payment facilitator with path-based routing
+    # Memory and timeout for the combined function
+    memoryLimit: 512
+    timeout: 60s
+    # Custom domain for x402 standard compliance
+    custom_domains:
+      - facilitator.fretchen.eu
+
+  feefacilitator:
+    handler: dist/x402_splitter_facilitator.handle
+    description: Testnet facilitator with fee for x402 v2 payments

@@ -14,21 +14,34 @@ provider:
     BFL_API_TOKEN: ${env:BFL_API_TOKEN}
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
+    USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
 
 plugins:
   - serverless-scaleway-functions
 
 package:
   patterns:
-    - "!.gitignore"
+    - "dist/**"
+    - "!node_modules/**"
+    - "!test/**"
+    - "!coverage/**"
     - "!.git/**"
+    - "!*.test.js"
+    - "!tsup.config.js"
+    - "!vitest.config.js"
+    - "!eslint.config.js"
 
 functions:
   readnftv2:
-    handler: readhandler_v2.handle
+    handler: dist/readhandler_v2.handle
   genimgbfl:
-    handler: genimg_bfl.handle
+    handler: dist/genimg_bfl.handle
+  genimgx402token:
+    handler: dist/genimg_x402_token.handle
+    description: "x402 v2 Token Payment - Paid image generation with USDC"
+    custom_domains:
+      - imagegen-agent.fretchen.eu
   llm:
-    handler: sc_llm.handle
+    handler: dist/sc_llm.handle
   leafhistory:
-    handler: leaf_history.handle
+    handler: dist/leaf_history.handle

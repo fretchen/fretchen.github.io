@@ -58,6 +58,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
         ...genAiNFTContractConfig,
         functionName: "balanceOf",
         args: [address],
+        chainId: chain.id,
       });
 
       if (!freshBalance || freshBalance === 0n) {
@@ -76,6 +77,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
               ...genAiNFTContractConfig,
               functionName: "tokenOfOwnerByIndex",
               args: [address, BigInt(i)],
+              chainId: chain.id,
             });
 
             return tokenIdResult as bigint;

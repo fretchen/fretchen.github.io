@@ -14,7 +14,19 @@ const SEPOLIA_PRIVATE_KEY: string = vars.get(
 const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
 
 const config = {
-  solidity: "0.8.28",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.27",
+      },
+      {
+        version: "0.8.33",
+      },
+    ],
+  },
+  gasReporter: {
+    enabled: false,
+  },
   networks: {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
@@ -28,13 +40,17 @@ const config = {
       url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
+    baseSepolia: {
+      url: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      accounts: [SEPOLIA_PRIVATE_KEY],
+    },
+    base: {
+      url: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      accounts: [SEPOLIA_PRIVATE_KEY],
+    },
   },
   etherscan: {
-    apiKey: {
-      sepolia: ETHERSCAN_API_KEY,
-      optsepolia: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
-      optimisticEthereum: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
-    },
+    apiKey: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
     customChains: [
       {
         network: "optsepolia",
@@ -50,6 +66,22 @@ const config = {
         urls: {
           apiURL: "https://api.etherscan.io/v2/api?chainid=10",
           browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=84532",
+          browserURL: "https://sepolia.basescan.org/",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=8453",
+          browserURL: "https://basescan.org/",
         },
       },
     ],

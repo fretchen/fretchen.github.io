@@ -55,6 +55,18 @@ const contracts: ContractConfig[] = [
     contractName: "LLMv1",
     description: "LLM Version 1 to interact with LLMs",
   },
+  {
+    name: "EIP3009SplitterV1",
+    contractFile: "EIP3009SplitterV1.sol",
+    contractName: "EIP3009SplitterV1",
+    description: "EIP-3009 payment splitter with fixed facilitator fee",
+  },
+  {
+    name: "SupportV2",
+    contractFile: "SupportV2.sol",
+    contractName: "SupportV2",
+    description: "Support contract V2 with ETH and EIP-3009 token donations",
+  },
 ];
 
 async function exportContractABI(config: ContractConfig) {

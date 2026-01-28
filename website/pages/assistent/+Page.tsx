@@ -3,6 +3,7 @@ import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitF
 import { formatEther, parseEther } from "viem";
 import { getChain, llmV1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
+import { AgentInfoPanel } from "../../components/AgentInfoPanel";
 import * as styles from "../../layouts/styles";
 import { useLocale } from "../../hooks/useLocale";
 import { useConnect } from "wagmi";
@@ -456,6 +457,12 @@ export default function Page() {
                 </button>
               </div>
             </div>
+
+            {/* Agent Info Section */}
+            <div className={styles.sidebarSection}>
+              <h4 className={styles.sidebarHeading}>Agent</h4>
+              <AgentInfoPanel service="llm" variant="sidebar" />
+            </div>
           </div>
         )}
 
@@ -532,6 +539,9 @@ export default function Page() {
               {getButtonText(buttonState)}
             </button>
           </div>
+
+          {/* Agent Info - Mobile Footer */}
+          {isMobile && <AgentInfoPanel service="llm" variant="sidebar" />}
         </div>
       </div>
 

@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * x402 v2 Facilitator - Main Handler
  * Handles POST /verify and POST /settle endpoints
@@ -13,9 +11,56 @@ import pino from "pino";
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
+ * Scaleway Functions event object
+ */
+export interface ScalewayEvent {
+  httpMethod: string;
+  path?: string;
+  rawUrl?: string;
+  body?: string | Record<string, unknown>;
+  headers?: Record<string, string>;
+  queryStringParameters?: Record<string, string>;
+}
+
+/**
+ * Scaleway Functions context object
+ */
+export interface ScalewayContext {
+  memoryLimitInMb?: number;
+  functionName?: string;
+  functionVersion?: string;
+}
+
+/**
+ * Scaleway Functions response object
+ */
+export interface ScalewayResponse {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/**
+ * Payment request body structure
+ */
+interface PaymentRequestBody {
+  paymentPayload?: {
+    accepted?: {
+      network?: string;
+      scheme?: string;
+    };
+    [key: string]: unknown;
+  };
+  paymentRequirements?: {
+    amount?: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
  * Common headers for all responses
  */
-const CORS_HEADERS = {
+const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "*",
   "Access-Control-Allow-Methods": "*",
@@ -25,21 +70,30 @@ const CORS_HEADERS = {
 /**
  * Handle /verify endpoint - off-chain verification
  */
-export async function handleVerify(event, _context) {
+export async function handleVerify(
+  event: ScalewayEvent,
+  _context: ScalewayContext,
+): Promise<ScalewayResponse> {
   return handlePaymentRequest(event, _context, false);
 }
 
 /**
  * Handle /settle endpoint - on-chain execution
  */
-export async function handleSettle(event, _context) {
+export async function handleSettle(
+  event: ScalewayEvent,
+  _context: ScalewayContext,
+): Promise<ScalewayResponse> {
   return handlePaymentRequest(event, _context, true);
 }
 
 /**
  * Handle /supported endpoint - capability discovery
  */
-export async function handleSupported(event, _context) {
+export async function handleSupported(
+  event: ScalewayEvent,
+  _context: ScalewayContext,
+): Promise<ScalewayResponse> {
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -67,12 +121,12 @@ export async function handleSupported(event, _context) {
 
 /**
  * Unified handler for verify and settle endpoints
- * @param {Object} event - The event object
- * @param {Object} _context - The invocation context
- * @param {boolean} isSettle - Whether this is a settle request
- * @returns {Promise<{body: string, statusCode: number, headers: Record<string, string>}>}
  */
-async function handlePaymentRequest(event, _context, isSettle) {
+async function handlePaymentRequest(
+  event: ScalewayEvent,
+  _context: ScalewayContext,
+  isSettle: boolean,
+): Promise<ScalewayResponse> {
   // Handle CORS preflight requests
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -91,9 +145,12 @@ async function handlePaymentRequest(event, _context, isSettle) {
     };
   }
 
-  let body;
+  let body: PaymentRequestBody;
   try {
-    body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    body =
+      typeof event.body === "string"
+        ? (JSON.parse(event.body) as PaymentRequestBody)
+        : (event.body as PaymentRequestBody);
   } catch (error) {
     logger.error({ err: error }, "Failed to parse request body");
     return {
@@ -221,7 +278,10 @@ async function handlePaymentRequest(event, _context, isSettle) {
  * Local development server with routing
  * This simulates the separate Scaleway Functions deployment locally
  */
-export async function handle(event, context) {
+export async function handle(
+  event: ScalewayEvent,
+  context: ScalewayContext,
+): Promise<ScalewayResponse> {
   const path = event.path || event.rawUrl || "";
 
   if (path.includes("/supported")) {
@@ -257,5 +317,5 @@ if (process.env.NODE_ENV === "test") {
     logger.info("   POST http://localhost:8080/verify");
     logger.info("   POST http://localhost:8080/settle");
     logger.info("   GET  http://localhost:8080/supported");
-  })().catch((err) => logger.error({ err }, "Error starting local server"));
+  })().catch((err: Error) => logger.error({ err }, "Error starting local server"));
 }

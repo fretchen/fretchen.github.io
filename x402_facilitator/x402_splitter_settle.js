@@ -28,9 +28,17 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
-import { getChain, getTokenInfo } from "./chain_utils.js";
+import {
+  EIP3009SplitterV1ABI,
+  getEIP3009SplitterAddress,
+  getViemChain,
+  getUSDCAddress,
+} from "@fretchen/chain-utils";
 import { verifySplitterPayment } from "./x402_splitter_verify.js";
-import { SPLITTER_ABI, getSplitterAddress } from "./eip3009_splitter_abi.js";
+
+// Alias for backward compatibility
+const SPLITTER_ABI = EIP3009SplitterV1ABI;
+const getSplitterAddress = getEIP3009SplitterAddress;
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -59,7 +67,7 @@ export async function settleSplitterPayment(paymentPayload, paymentRequirements)
 
     // Step 2: Extract data from payload
     const network = paymentPayload.accepted?.network;
-    const chain = getChain(network);
+    const chain = getViemChain(network);
 
     const auth = paymentPayload.payload.authorization;
     const { from: buyer, value: totalAmountStr, validAfter, validBefore } = auth;
@@ -116,12 +124,12 @@ export async function settleSplitterPayment(paymentPayload, paymentRequirements)
 
     // Get contract addresses
     const splitterAddress = getSplitterAddress(network);
-    const tokenInfo = getTokenInfo(network, paymentPayload.accepted?.asset);
+    const usdcAddress = getUSDCAddress(network);
 
     logger.info(
       {
         splitter: splitterAddress,
-        token: tokenInfo.address,
+        token: usdcAddress,
         network,
       },
       "Settlement contract addresses",

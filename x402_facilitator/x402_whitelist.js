@@ -7,7 +7,7 @@
 
 import { createPublicClient, http, getContract } from "viem";
 import pino from "pino";
-import { getChain, getChainConfig } from "./chain_utils.js";
+import { getChainConfig } from "./chain_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -107,9 +107,9 @@ async function checkGenImgV4(address, network) {
       logger.warn({ network }, "GenImNFTv4 contract address not configured");
       return false;
     }
-    const chain = getChain(network);
+
     const publicClient = createPublicClient({
-      chain,
+      chain: chainConfig.chain,
       transport: http(),
     });
 
@@ -161,9 +161,9 @@ async function checkLLMv1(address, network) {
       logger.debug({ network }, "LLMv1 contract address not configured");
       return false;
     }
-    const chain = getChain(network);
+
     const publicClient = createPublicClient({
-      chain,
+      chain: chainConfig.chain,
       transport: http(),
     });
 

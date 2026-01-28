@@ -31,13 +31,13 @@ function createSignerForNetwork(account, network) {
 
   const publicClient = createPublicClient({
     chain: config.chain,
-    transport: http(config.rpcUrl),
+    transport: http(),
   });
 
   const walletClient = createWalletClient({
     account,
     chain: config.chain,
-    transport: http(config.rpcUrl),
+    transport: http(),
   });
 
   // Create signer bound to this specific chain
@@ -74,7 +74,7 @@ export function createReadOnlyFacilitator() {
 
     const publicClient = createPublicClient({
       chain: config.chain,
-      transport: http(config.rpcUrl),
+      transport: http(),
     });
 
     // Read-only signer (no wallet operations)

@@ -7,21 +7,19 @@ on:
   pull_request:
     paths:
       - "x402_facilitator/**"
+      - "shared/chain-utils/**"
       - ".github/workflows/test-facilitator.yml"
   push:
     branches:
       - main
     paths:
       - "x402_facilitator/**"
+      - "shared/chain-utils/**"
       - ".github/workflows/test-facilitator.yml"
 
 jobs:
   test-facilitator:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./x402_facilitator
 
     steps:
       - name: Checkout code
@@ -34,10 +32,16 @@ jobs:
           cache: "npm"
           cache-dependency-path: x402_facilitator/package.json
 
+      - name: Build chain-utils dependency
+        working-directory: ./shared/chain-utils
+        run: npm install && npm run build
+
       - name: Install dependencies
+        working-directory: ./x402_facilitator
         run: npm install
 
       - name: Run quality checks (lint + format + test with coverage)
+        working-directory: ./x402_facilitator
         run: npm run check
         env:
           NODE_ENV: test

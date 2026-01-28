@@ -7,12 +7,14 @@ on:
   pull_request:
     paths:
       - "scw_js/**"
+      - "shared/chain-utils/**"
       - ".github/workflows/test-scw-js.yml"
   push:
     branches:
       - main
     paths:
       - "scw_js/**"
+      - "shared/chain-utils/**"
 
 jobs:
   test-scw-js:
@@ -31,19 +33,19 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: scw_js/package.json
+          cache-dependency-path: |
+            scw_js/package-lock.json
+            shared/chain-utils/package-lock.json
+
+      - name: Install and build chain-utils
+        working-directory: ./shared/chain-utils
+        run: npm install && npm run build
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run quality checks (lint + format + test)
+      - name: Run quality checks (lint + format + test with coverage)
         run: npm run check
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
         env:
           NODE_ENV: test
           CI: true

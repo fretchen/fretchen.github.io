@@ -2,6 +2,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { settlePayment } from "../x402_settle.js";
+import * as facilitatorInstance from "../facilitator_instance.js";
+import * as verifyModule from "../x402_verify.js";
 
 // Mock viem
 vi.mock("viem", async () => {
@@ -344,4 +346,164 @@ describe("x402_settle", () => {
   // 1. Mainnet signatures are validated with chain-bound Mainnet clients
   // 2. The facilitator uses separate ExactEvmScheme per network
   // Since settlePayment() calls verifyPayment() internally, the same security applies.
+});
+
+describe("x402_settle with mocked facilitator", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0x1234567890123456789012345678901234567890123456789012345678901234";
+    process.env.TEST_WALLETS =
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0xDifferentAddress000000000000000000000000";
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
+  });
+
+  const paymentAmount = "100000";
+  const tokenAddress = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+
+  const validPaymentPayload = {
+    x402Version: 2,
+    accepted: {
+      scheme: "exact",
+      network: "eip155:11155420",
+      amount: paymentAmount,
+      asset: tokenAddress,
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    },
+    payload: {
+      signature: "0x" + "ab".repeat(65),
+      authorization: {
+        from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+        value: paymentAmount,
+        validAfter: "0",
+        validBefore: "9999999999",
+        nonce: "0xf374661300000000000000000000000000000000000000000000000000000000",
+      },
+    },
+  };
+
+  const validPaymentRequirements = {
+    scheme: "exact",
+    network: "eip155:11155420",
+    amount: paymentAmount,
+    asset: tokenAddress,
+    payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+  };
+
+  it("returns success when verification and settlement succeed", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xabc123def456",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    expect(result.transaction).toBe("0xabc123def456");
+    expect(result.network).toBe("eip155:11155420");
+  });
+
+  it("returns failure when facilitator settle returns failure", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: false,
+        errorReason: "insufficient_allowance",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("insufficient_allowance");
+    expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    expect(result.transaction).toBe("");
+  });
+
+  it("extracts insufficient_funds error reason from exception", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Transaction failed: insufficient funds for gas");
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("insufficient_funds");
+  });
+
+  it("extracts authorization_already_used error reason from nonce error", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("nonce already used");
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("authorization_already_used");
+  });
+
+  it("extracts authorization_expired error reason from expired error", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("authorization expired");
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("authorization_expired");
+  });
+
+  it("returns generic settlement_failed for unknown errors", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Unknown blockchain error");
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("settlement_failed");
+  });
 });

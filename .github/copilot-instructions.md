@@ -57,6 +57,42 @@ npx serverless deploy  # Requires SCW_ACCESS_KEY, SCW_SECRET_KEY in .env
 
 All test files use `.test.js` or `.test.ts` extensions. Coverage reports generate in `coverage/`.
 
+### Smart Contract Test Structure (eth/)
+
+Tests are split into two categories with distinct purposes:
+
+**`*_Functional.ts` - Contract Logic Tests:**
+- Uses **Viem only** (no ethers, no OpenZeppelin Upgrades Plugin)
+- Manual proxy deployment via Viem's `deployContract` with compiled artifacts
+- Tests contract functionality: initialization, state changes, access control, events
+- Example: [SupportV2_Functional.ts](eth/test/SupportV2_Functional.ts), [EIP3009SplitterV1_Functional.test.ts](eth/test/EIP3009SplitterV1_Functional.test.ts)
+
+**`*_Deployment.ts` - Deployment Script Tests:**
+- Uses **ethers + OpenZeppelin Upgrades Plugin**
+- **Must import and test the actual deployment script** (e.g., `import { deploySupportV2 } from "../scripts/deploy-support-v2"`)
+- Uses `createTempConfig()` helper to create test config files
+- Uses `withTempConfig()` wrapper to backup/restore original config
+- Tests all script modes: `validateOnly`, `dryRun`, and real deployment
+- Tests config validation, balance checks, deployment file persistence
+- Example: [SupportV2_Deployment.ts](eth/test/SupportV2_Deployment.ts), [EIP3009SplitterV1_Deployment.test.ts](eth/test/EIP3009SplitterV1_Deployment.test.ts)
+
+**Deployment script requirements for testing:**
+```typescript
+// At end of deploy script, export function and guard execution:
+export { deployFunction, MIN_DEPLOYMENT_BALANCE, ConfigSchema };
+
+if (require.main === module) {
+  deployFunction()
+    .then(() => process.exit(0))
+    .catch((error) => { console.error(error); process.exit(1); });
+}
+```
+
+**Why this separation:**
+- Functional tests are fast, isolated, and test contract behavior
+- Deployment tests ensure the actual script works with config validation, balance checks, and file persistence
+- Deployment tests catch issues like missing config fields, invalid addresses, or insufficient funds before real deployments
+
 ## Essential Development Workflows
 
 ### Linting & Formatting
@@ -120,6 +156,36 @@ npx hardhat verify --network optimisticEthereum <ADDRESS>
 - **MDX blog posts** - configured with remark-math for LaTeX (client-side KaTeX rendering)
 - **Wagmi v2 + TanStack Query** for blockchain state management
 - **Build:** `npm run build` → `build/` directory (then run `postbuild` scripts for sitemap)
+
+### Blog Posts: Political Economics
+
+When writing or editing blog posts about political economics, game theory, or related topics, follow these guidelines:
+
+**Target Reader Profile:**
+- Akademiker (educated, but not necessarily in STEM)
+- Politically curious, follows current events
+- Does NOT know game theory concepts (Prisoner's Dilemma, Nash equilibrium)
+- Does NOT know EU institutions in detail
+- Weak at math — formulas are barriers, not features
+- Impatient reader — will skim, needs hooks
+- First time meeting recurring characters (e.g., Sofia)
+
+**Writing Principles:**
+1. **Math is supporting, not blocking** — formulas go in collapsible `<details>` boxes or postscripts
+2. **Natural language over notation** — use "patience" not "δ", "political security" not "p"
+3. **Explain concepts inline** — when introducing Prisoner's Dilemma, explain it in dialogue
+4. **Characters need fresh introductions** — even recurring characters get a one-line intro
+5. **Concrete before abstract** — start with story/example, then generalize
+6. **Interactive widgets should be simple** — sliders with natural labels, results in plain language
+7. **Technical details for interested readers** — use `<details>` with "🔬 Technical details" summary
+
+**Narrative Structure:**
+- Hook with concrete scenario (not abstract question)
+- Build to key insight through character dialogue
+- Widget/interactive element at moment of understanding
+- Practical implications ("What would help?")
+- Postscript for formal model (optional, for math readers)
+
 
 ### Python Notebooks (notebooks/)
 

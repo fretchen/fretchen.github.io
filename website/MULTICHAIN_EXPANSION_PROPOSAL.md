@@ -20,8 +20,8 @@
 |-------|-----|----------|--------|
 | **1a** | `@fretchen/chain-utils` erstellen | shared/ | ✅ Fertig |
 | **1b** | scw_js auf chain-utils migrieren | scw_js/ | ✅ Fertig |
-| **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ⬜ Next |
-| **2** | GenImNFT-Komponenten migrieren | website/ | ⬜ |
+| **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ✅ Fertig |
+| **2** | GenImNFT-Komponenten migrieren | website/ | ⬜ Next |
 | **3** | CollectorNFT-Komponenten migrieren | website/ | ⬜ |
 | **4** | GenImNFTv4 auf Base deployen | eth/, shared/ | ⬜ Später |
 | **5** | CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ Später |
@@ -86,16 +86,24 @@ fretchen.github.io/
 
 ---
 
-## Phase 1c: x402_facilitator Migration ⬜ NEXT
+## Phase 1c: x402_facilitator Migration ✅ FERTIG
 
-**Geplant:**
-- `chain_utils.js` durch Imports aus `@fretchen/chain-utils` ersetzen
-- tsup Bundling hinzufügen (gleiches Pattern wie scw_js)
-- ABIs aus chain-utils importieren {
-    "@fretchen/chain-utils": "file:../shared/chain-utils"
-  }
-}
-```
+**Änderungen:**
+- `package.json`: Dependency `"@fretchen/chain-utils": "file:../shared/chain-utils"`
+- `tsup.config.js`: Bundling mit tsup für Scaleway Deployment
+- `chain_utils.js`: Nutzt `getViemChain()`, `tryGetGenAiNFTAddress()`, `tryGetLLMv1Address()`, `getUSDCAddress()`, `getUSDCName()` aus chain-utils
+- `x402_splitter_verify.js`: Importiert `getViemChain`, `getUSDCName`, `getUSDCAddress`, `getEIP3009SplitterAddress` aus chain-utils
+- `x402_splitter_settle.js`: Importiert `EIP3009SplitterV1ABI`, `getEIP3009SplitterAddress`, `getViemChain`, `getUSDCAddress` aus chain-utils
+- `x402_whitelist.js`: Nutzt `getChainConfig()` für Contract-Adressen
+- `facilitator_instance.js`: Nutzt `getSupportedNetworks()` aus chain_utils.js
+
+**Unterstützte Netzwerke:**
+- Optimism Mainnet (`eip155:10`)
+- Optimism Sepolia (`eip155:11155420`)
+- Base Mainnet (`eip155:8453`)
+- Base Sepolia (`eip155:84532`)
+
+**Tests:** 153 Tests bestanden, 73.47% Coverage
 
 ---
 
@@ -165,36 +173,293 @@ export function getChainConfig(network) {
 
 ---
 
-## Phase 2: GenImNFT-Komponenten migrieren (Website)
+## Phase 2: GenImNFT Website Components Migration ⬜ NEXT
 
-**Betroffene Dateien:**
-- `MyNFTList.tsx` (4 Stellen)
-- `NFTCard.tsx` (8 Stellen)
-- `NFTList.tsx` (1 Stelle)
-- `EntryNftImage.tsx` (2 Stellen)
-- `PublicNFTList.tsx` (1 Stelle)
-- `nftLoader.ts` (2 Stellen)
+This phase performs a **clean break** from the existing `utils/getChain.ts` to consistently use `@fretchen/chain-utils`. The goal is simplicity over backward compatibility.
 
-**Pattern-Änderung:**
-```tsx
-// VORHER
-import { getChain, genAiNFTContractConfig } from "../utils/getChain";
-const chain = getChain();
-const { data } = useReadContract({
-  ...genAiNFTContractConfig,
-  chainId: chain.id,
-});
+### Implementation Strategy: Two PRs
 
-// NACHHER
-import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+Phase 2 is split into two PRs to minimize risk and allow staged deployment:
 
-const network = useAutoNetwork(GENAI_NFT_NETWORKS);
-const { data } = useReadContract({
-  address: getGenAiNFTAddress(network),
-  abi: GenImNFTv4ABI,
-});
+| PR | Name | Content | Breaking? | Deployable? |
+|----|------|---------|-----------|-------------|
+| **2a** | Add chain-utils infrastructure | Dependency + `useAutoNetwork` hook + re-exports (keep old) | ❌ No | ✅ Yes |
+| **2b** | Migrate GenImNFT components | All component migrations + remove old exports | ⚠️ Yes | ✅ Yes |
+
+**Why two PRs:**
+1. **PR 2a is low-risk:** Adds foundation without changing behavior. Verifiable via build + tests.
+2. **PR 2b is atomic:** Components are tightly coupled — can't have half on old API, half on new.
+3. **Clear rollback point:** If PR 2b causes issues, revert to PR 2a state.
+
+---
+
+### PR 2a: Add chain-utils Infrastructure
+
+**Files to create/modify:**
+- `package.json` — Add @fretchen/chain-utils dependency
+- `hooks/useAutoNetwork.ts` — **CREATE NEW**
+- `utils/getChain.ts` — Add re-exports (keep old exports)
+- `utils/nodeChainUtils.ts` — Add `getDefaultNetwork()`
+
+**Acceptance criteria:**
+- [ ] `npm run build` passes
+- [ ] `npm test` passes
+- [ ] No behavior change in production
+
+---
+
+### PR 2b: Migrate GenImNFT Components
+
+**Files to modify:**
+- `utils/getChain.ts` — Remove old exports
+- `utils/nftLoader.ts` — Use chain-utils
+- `utils/nodeNftLoader.ts` — Use chain-utils
+- `components/MyNFTList.tsx` — Use `useAutoNetwork()`
+- `components/NFTCard.tsx` — Use `useAutoNetwork()` + `getGenAiNFTAddress()`
+- `components/NFTList.tsx` — Add network prop
+- `components/PublicNFTList.tsx` — Add network prop
+- `components/EntryNftImage.tsx` — Use `getDefaultNetwork()` for SSR
+- `components/NFTFloatImage.tsx` — Update to use network
+- `components/ImageGenerator.tsx` — Remove hardcoded chain ID
+- `components/AgentInfoPanel.tsx` — Use `useAutoNetwork()`
+- `test/*.test.tsx` — Update mocks
+
+**Acceptance criteria:**
+- [ ] `npm run build` passes
+- [ ] `npm test` passes
+- [ ] Manual test: Connect wallet on Optimism → NFTs load
+- [ ] Manual test: Connect wallet on unsupported chain → Auto-switches to Optimism
+
+---
+
+### Step 0: Add chain-utils Dependency
+
+**File:** `website/package.json`
+
+```bash
+npm install @fretchen/chain-utils@file:../shared/chain-utils
 ```
+
+### Step 1: Create `useAutoNetwork` Hook (NEW)
+
+**File:** `website/hooks/useAutoNetwork.ts`
+
+This hook replaces the scattered chain detection logic with a centralized, reusable pattern.
+
+**Behavior:**
+- Detects user's connected wallet chain
+- If chain is in `supportedNetworks` → return CAIP-2 network string
+- If chain is NOT supported → automatically switch to default chain (first in list)
+- If no wallet connected → return default network
+
+```typescript
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { useEffect, useMemo } from "react";
+import { toCAIP2, fromCAIP2 } from "@fretchen/chain-utils";
+
+/**
+ * Returns the current CAIP-2 network if supported, otherwise switches to default.
+ * @param supportedNetworks - Array of CAIP-2 network strings (e.g., ["eip155:10", "eip155:11155420"])
+ * @returns Current CAIP-2 network string
+ */
+export function useAutoNetwork(supportedNetworks: string[]): string {
+  const chainId = useChainId();
+  const { isConnected } = useAccount();
+  const { switchChain } = useSwitchChain();
+  
+  const defaultNetwork = supportedNetworks[0];
+  const currentNetwork = toCAIP2(chainId);
+  const isSupported = supportedNetworks.includes(currentNetwork);
+
+  useEffect(() => {
+    if (isConnected && !isSupported && switchChain) {
+      switchChain({ chainId: fromCAIP2(defaultNetwork) });
+    }
+  }, [isConnected, isSupported, switchChain, defaultNetwork]);
+
+  return isSupported ? currentNetwork : defaultNetwork;
+}
+```
+
+### Step 2: Replace `utils/getChain.ts` (BREAKING CHANGE)
+
+**File:** `website/utils/getChain.ts`
+
+Delete all legacy code and replace with thin re-exports from chain-utils. This is a **clean break** - components must be updated to use the new pattern.
+
+```typescript
+// Re-export everything from chain-utils for convenience
+export { 
+  toCAIP2, 
+  fromCAIP2, 
+  getViemChain,
+  isMainnet,
+  isTestnet,
+  getGenAiNFTAddress,
+  getCollectorNFTAddress,
+  GenImNFTv4ABI,
+  GENAI_NFT_NETWORKS,
+  COLLECTOR_NFT_NETWORKS,
+} from "@fretchen/chain-utils";
+
+// REMOVED: getChain(), genAiNFTContractConfig, collectorNFTContractConfig
+// Use useAutoNetwork() + getGenAiNFTAddress(network) instead
+```
+
+### Step 3: Update `utils/nodeChainUtils.ts` (Server-Side)
+
+**File:** `website/utils/nodeChainUtils.ts`
+
+For SSR/server-side rendering, we need a non-hook version:
+
+```typescript
+import { 
+  getViemChain, 
+  getGenAiNFTAddress, 
+  isMainnet 
+} from "@fretchen/chain-utils";
+
+/**
+ * Get default network for server-side rendering.
+ * Uses mainnet for production, testnet for development.
+ */
+export function getDefaultNetwork(): string {
+  const isProd = process.env.NODE_ENV === "production";
+  return isProd ? "eip155:10" : "eip155:11155420";
+}
+
+// Re-export chain-utils functions for server use
+export { getViemChain, getGenAiNFTAddress, isMainnet };
+```
+
+### Step 4: Update `utils/nftLoader.ts` (Viem-only)
+
+**File:** `website/utils/nftLoader.ts`
+
+```typescript
+// BEFORE
+import { getChain, genAiNFTContractConfig } from "./getChain";
+const chain = getChain();
+
+// AFTER
+import { getViemChain, getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
+
+export async function loadNFT(network: string, tokenId: bigint) {
+  const chain = getViemChain(network);
+  const client = createPublicClient({ chain, transport: http() });
+  
+  return client.readContract({
+    address: getGenAiNFTAddress(network),
+    abi: GenImNFTv4ABI,
+    functionName: "tokenURI",
+    args: [tokenId],
+  });
+}
+```
+
+### Step 5: Update `utils/nodeNftLoader.ts` (SSR)
+
+**File:** `website/utils/nodeNftLoader.ts`
+
+Same pattern as nftLoader.ts but with explicit network parameter for SSR context.
+
+### Step 6: Migrate Components (8 files)
+
+Each component follows the same pattern:
+
+| File | Changes |
+|------|---------|
+| `components/MyNFTList.tsx` | Replace `getChain()` with `useAutoNetwork(GENAI_NFT_NETWORKS)` |
+| `components/NFTCard.tsx` | Replace `genAiNFTContractConfig` with `getGenAiNFTAddress(network)` + ABI |
+| `components/NFTList.tsx` | Add network parameter, use chain-utils |
+| `components/PublicNFTList.tsx` | Add network parameter |
+| `components/EntryNftImage.tsx` | Use `getDefaultNetwork()` for SSR |
+| `components/NFTFloatImage.tsx` | Update to use network prop |
+| `components/ImageGenerator.tsx` | **Remove hardcoded `11155420` check**, use `isTestnet(network)` |
+| `components/AgentInfoPanel.tsx` | Use `useAutoNetwork()` |
+
+**Example Migration (NFTCard.tsx):**
+
+```tsx
+// BEFORE
+import { getChain, genAiNFTContractConfig } from "../utils/getChain";
+
+function NFTCard({ tokenId }) {
+  const chain = getChain();
+  const { data } = useReadContract({
+    ...genAiNFTContractConfig,
+    chainId: chain.id,
+    functionName: "tokenURI",
+    args: [tokenId],
+  });
+}
+
+// AFTER
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
+
+function NFTCard({ tokenId }) {
+  const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { data } = useReadContract({
+    address: getGenAiNFTAddress(network),
+    abi: GenImNFTv4ABI,
+    chainId: fromCAIP2(network),
+    functionName: "tokenURI",
+    args: [tokenId],
+  });
+}
+```
+
+### Step 7: Update Tests
+
+**Files:**
+- `test/ContractChainSelection.test.ts`
+- `test/nftLoader.test.ts` (if exists)
+
+Update tests to use CAIP-2 networks and mock `useAutoNetwork`:
+
+```typescript
+import { vi } from "vitest";
+
+vi.mock("../hooks/useAutoNetwork", () => ({
+  useAutoNetwork: () => "eip155:11155420", // Mock testnet
+}));
+```
+
+---
+
+### Risk Assessment
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| **Breaking Change** | 🟡 Medium | All getChain() usages updated in PR 2b (atomic) |
+| **SSR Hydration Mismatch** | 🟡 Medium | Use `getDefaultNetwork()` for server, `useAutoNetwork()` for client |
+| **Hardcoded Chain IDs** | 🟢 Low | Grep for `11155420`, `10`, `8453`, `84532` and replace |
+| **Wagmi Hook Context** | 🟢 Low | `useAutoNetwork` only used in components with WagmiProvider |
+
+### Checklists by PR
+
+**PR 2a: Infrastructure (non-breaking)**
+- [ ] `package.json` - Add @fretchen/chain-utils dependency
+- [ ] `hooks/useAutoNetwork.ts` - **CREATE NEW**
+- [ ] `utils/getChain.ts` - Add re-exports (keep old exports)
+- [ ] `utils/nodeChainUtils.ts` - Add `getDefaultNetwork()`
+
+**PR 2b: Component Migration (breaking)**
+- [ ] `utils/getChain.ts` - Remove old exports (`getChain`, `genAiNFTContractConfig`)
+- [ ] `utils/nftLoader.ts` - Use chain-utils
+- [ ] `utils/nodeNftLoader.ts` - Use chain-utils
+- [ ] `components/MyNFTList.tsx` - Use `useAutoNetwork()`
+- [ ] `components/NFTCard.tsx` - Use `useAutoNetwork()` + `getGenAiNFTAddress()`
+- [ ] `components/NFTList.tsx` - Add network prop
+- [ ] `components/PublicNFTList.tsx` - Add network prop
+- [ ] `components/EntryNftImage.tsx` - Use `getDefaultNetwork()` for SSR
+- [ ] `components/NFTFloatImage.tsx` - Update to use network
+- [ ] `components/ImageGenerator.tsx` - Remove hardcoded chain ID
+- [ ] `components/AgentInfoPanel.tsx` - Use `useAutoNetwork()`
+- [ ] `test/ContractChainSelection.test.ts` - Update mocks
+- [ ] `test/MyNFTList.test.tsx` - Update mocks
+- [ ] `test/ImageGenerator.test.tsx` - Update if needed
 
 ---
 

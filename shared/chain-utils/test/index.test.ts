@@ -165,10 +165,10 @@ describe("@fretchen/chain-utils", () => {
     describe("getLLMv1Address()", () => {
       test("should return addresses for all deployed networks", () => {
         // Mainnet
-        expect(getLLMv1Address("eip155:10")).toBe("0x7E8b7091a229B1004c4FBa25bB70d04595d3e848");
+        expect(getLLMv1Address("eip155:10")).toBe("0x833F39D6e67390324796f861990ce9B7cf9F5dE1");
         // Testnet
         expect(getLLMv1Address("eip155:11155420")).toBe(
-          "0xA5b7f0A3f4104c97b46eafF2b0b4A457C5a73Bf4"
+          "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56"
         );
       });
 
@@ -206,19 +206,18 @@ describe("@fretchen/chain-utils", () => {
 
     describe("getEIP3009SplitterAddress()", () => {
       test("should return addresses for all deployed networks", () => {
-        // Mainnet
-        expect(getEIP3009SplitterAddress("eip155:10")).toBe(
-          "0x4a0EA6E7A8B23C95Da07d59a8e36E9c5C5f6c5Bf"
-        );
-        // Testnet
+        // Testnet only (Mainnet not yet deployed)
         expect(getEIP3009SplitterAddress("eip155:11155420")).toBe(
-          "0x7F2b5E60e26B31E32c40F48e0e7D1CA5E62C5b7a"
+          "0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946"
         );
       });
 
       test("should throw for unsupported network", () => {
         expect(() => getEIP3009SplitterAddress("eip155:1")).toThrow(
           "EIP3009 Splitter not deployed on eip155:1"
+        );
+        expect(() => getEIP3009SplitterAddress("eip155:10")).toThrow(
+          "EIP3009 Splitter not deployed on eip155:10"
         );
         expect(() => getEIP3009SplitterAddress("eip155:8453")).toThrow(
           "EIP3009 Splitter not deployed on eip155:8453"

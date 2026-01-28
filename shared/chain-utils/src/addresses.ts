@@ -146,7 +146,9 @@ export function getCollectorNFTAddress(network: string): `0x${string}` {
  * Try to get CollectorNFT address, returns null if not deployed.
  */
 export function tryGetCollectorNFTAddress(network: string): `0x${string}` | null {
-  return MAINNET_COLLECTOR_NFT_ADDRESSES[network] || TESTNET_COLLECTOR_NFT_ADDRESSES[network] || null;
+  return (
+    MAINNET_COLLECTOR_NFT_ADDRESSES[network] || TESTNET_COLLECTOR_NFT_ADDRESSES[network] || null
+  );
 }
 
 /**
@@ -204,7 +206,11 @@ export function getEIP3009SplitterAddress(network: string): `0x${string}` {
  * Try to get EIP3009 Splitter address, returns null if not deployed.
  */
 export function tryGetEIP3009SplitterAddress(network: string): `0x${string}` | null {
-  return MAINNET_EIP3009_SPLITTER_ADDRESSES[network] || TESTNET_EIP3009_SPLITTER_ADDRESSES[network] || null;
+  return (
+    MAINNET_EIP3009_SPLITTER_ADDRESSES[network] ||
+    TESTNET_EIP3009_SPLITTER_ADDRESSES[network] ||
+    null
+  );
 }
 
 /**

@@ -5,6 +5,47 @@ import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
 import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
+// ═══════════════════════════════════════════════════════════════
+// Re-exports from @fretchen/chain-utils (PR 2a: Infrastructure)
+// These are the new patterns - use these in new code
+// ═══════════════════════════════════════════════════════════════
+export {
+  // CAIP-2 utilities
+  toCAIP2,
+  fromCAIP2,
+  isMainnet,
+  isTestnet,
+  isNetworkSupported,
+  // Chain utilities
+  getViemChain,
+  // Contract addresses (GenAI NFT)
+  getGenAiNFTAddress,
+  tryGetGenAiNFTAddress,
+  GENAI_NFT_NETWORKS,
+  MAINNET_GENAI_NFT_ADDRESSES,
+  TESTNET_GENAI_NFT_ADDRESSES,
+  // Contract addresses (Collector NFT)
+  getCollectorNFTAddress,
+  tryGetCollectorNFTAddress,
+  COLLECTOR_NFT_NETWORKS,
+  MAINNET_COLLECTOR_NFT_ADDRESSES,
+  // Contract addresses (LLMv1)
+  getLLMv1Address,
+  tryGetLLMv1Address,
+  LLM_V1_NETWORKS,
+  // ABIs
+  GenImNFTv4ABI,
+  LLMv1ABI as ChainUtilsLLMv1ABI,
+  // Network lists
+  ALL_NETWORKS,
+  MAINNET_NETWORKS,
+  TESTNET_NETWORKS,
+} from "@fretchen/chain-utils";
+
+// ═══════════════════════════════════════════════════════════════
+// Legacy exports (PR 2b will remove these)
+// ═══════════════════════════════════════════════════════════════
+
 /**
  * Get PUBLIC_ENV__CHAIN_NAME in Vite context (Browser)
  * Direct inline implementation for simplicity

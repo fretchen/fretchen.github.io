@@ -10,6 +10,38 @@ import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
+// ═══════════════════════════════════════════════════════════════
+// Re-exports from @fretchen/chain-utils (PR 2a: Infrastructure)
+// ═══════════════════════════════════════════════════════════════
+export {
+  getViemChain,
+  getGenAiNFTAddress,
+  tryGetGenAiNFTAddress,
+  isMainnet,
+  isTestnet,
+  GenImNFTv4ABI,
+  GENAI_NFT_NETWORKS,
+} from "@fretchen/chain-utils";
+
+// ═══════════════════════════════════════════════════════════════
+// SSR/Node.js specific utilities
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get default CAIP-2 network for server-side rendering.
+ * Uses mainnet for production, testnet for development.
+ *
+ * @returns CAIP-2 network string (e.g., "eip155:10")
+ */
+export function getDefaultNetwork(): string {
+  const isProd = process.env.NODE_ENV === "production";
+  return isProd ? "eip155:10" : "eip155:11155420";
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Legacy exports (PR 2b may refactor these)
+// ═══════════════════════════════════════════════════════════════
+
 /**
  * Get environment variable in Node.js context
  */

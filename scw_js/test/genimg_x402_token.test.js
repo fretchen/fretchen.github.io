@@ -1193,7 +1193,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
   describe("Security: Payment Requirements", () => {
     test("should create payment requirements with all supported networks", async () => {
       const { createPaymentRequirements } = await import("../x402_server.js");
-      const { getUSDCConfig } = await import("../getChain.js");
+      const { getUSDCConfig } = await import("@fretchen/chain-utils");
 
       const requirements = createPaymentRequirements({
         resourceUrl: "/test",
@@ -1218,7 +1218,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
     test("should validate all supported networks are configured", async () => {
       const { getSupportedNetworks } = await import("../x402_server.js");
-      const { getUSDCConfig } = await import("../getChain.js");
+      const { getUSDCConfig } = await import("@fretchen/chain-utils");
 
       const supportedNetworks = getSupportedNetworks();
 
@@ -1252,7 +1252,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
      * - User loses money without receiving service!
      */
     test("should use correct EIP-712 domain names for USDC contracts", async () => {
-      const { getUSDCConfig } = await import("../getChain.js");
+      const { getUSDCConfig } = await import("@fretchen/chain-utils");
 
       // Optimism Mainnet uses "USD Coin" (official Circle USDC deployment)
       const mainnetConfig = getUSDCConfig("eip155:10");

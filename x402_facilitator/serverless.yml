@@ -17,23 +17,15 @@ provider:
   # Secrets (set via Scaleway Console or CLI)
   secret:
     FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}
-    # Optional: Custom RPC endpoints
-    # RPC URL fallback behavior (handled by getRpcUrl() in chain_utils.js):
-    #   - Not set/undefined → Uses default public endpoint
-    #   - Empty string "" → Treated as not set (via .trim())
-    #   - Whitespace " " → Treated as not set (via .trim())
-    #   - Valid URL → Uses custom endpoint
-    # 
-    # For production: Set custom RPC URLs to avoid rate limits on public endpoints
-    # Default fallbacks: https://mainnet.optimism.io and https://sepolia.optimism.io
-    # OPTIMISM_RPC_URL: ${env:OPTIMISM_RPC_URL, ""}
-    # OPTIMISM_SEPOLIA_RPC_URL: ${env:OPTIMISM_SEPOLIA_RPC_URL, ""}
 
 plugins:
   - serverless-scaleway-functions
 
 package:
   patterns:
+    # Only include bundled output
+    - "dist/**"
+    # Exclude everything else
     - "!.gitignore"
     - "!.git/**"
     - "!test/**"
@@ -41,14 +33,17 @@ package:
     - "!.prettierrc"
     - "!eslint.config.js"
     - "!vitest.config.js"
+    - "!tsup.config.js"
     - "!README.md"
     - "!EIP712_VERIFICATION.md"
+    - "!*.js"
+    - "!node_modules/**"
 
 functions:
   # Single function with path-based routing
   # Handles /verify, /settle, and /supported endpoints
   facilitator:
-    handler: x402_facilitator.handle
+    handler: dist/x402_facilitator.handle
     description: x402 v2 payment facilitator with path-based routing
     # Memory and timeout for the combined function
     memoryLimit: 512
@@ -58,5 +53,5 @@ functions:
       - facilitator.fretchen.eu
 
   feefacilitator:
-    handler: x402_splitter_facilitator.handle
+    handler: dist/x402_splitter_facilitator.handle
     description: Testnet facilitator with fee for x402 v2 payments

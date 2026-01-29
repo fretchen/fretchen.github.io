@@ -35,6 +35,10 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   // Localized texts
   const poweredByText = useLocale({ label: "imagegen.poweredBy" });
 
+  // Get contract address based on service - hooks must be called before early returns
+  const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network: llmNetwork } = useAutoNetwork(LLM_V1_NETWORKS);
+
   const isSidebar = variant === "sidebar";
 
   if (isLoading) {
@@ -70,9 +74,6 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   const serviceEndpoint = service === "genimg" ? agent.genimgEndpoint : agent.llmEndpoint;
   const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
 
-  // Get contract address based on service - use appropriate network list
-  const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const { network: llmNetwork } = useAutoNetwork(LLM_V1_NETWORKS);
   const contractAddress = service === "genimg" ? getGenAiNFTAddress(genimgNetwork) : getLLMv1Address(llmNetwork);
 
   // Sidebar variant - vertical layout

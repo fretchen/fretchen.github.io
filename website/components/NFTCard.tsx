@@ -120,7 +120,7 @@ export function NFTCard({
             const isListedResult = await readContract(config, {
               address: contractAddress,
               abi: GenImNFTv4ABI,
-              functionName: "isTokenListed",
+              functionName: "isListed",
               args: [tokenId],
               chainId,
             });

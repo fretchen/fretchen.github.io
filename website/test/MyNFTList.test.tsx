@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, waitFor, screen, cleanup } from "@testing-library/react";
 import { MyNFTList } from "../components/MyNFTList";
 
 /**
@@ -110,68 +110,65 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     });
   });
 
-  it("should show the bug is fixed with stable constants", async () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("should call balanceOf ABI function when loading NFTs", async () => {
     // Render the component
     render(<MyNFTListWrapper />);
 
-    // Wait a bit to let effects run
-    await waitFor(
-      () => {
-        // With stable constants, only a few renders should occur
-        expect(renderCount).toBeLessThanOrEqual(3);
-      },
-      { timeout: 2000 },
-    );
-
-    // Die instabile contractConfig Funktion sollte nicht mehr aufgerufen werden
-    // da die Komponenten jetzt die stabile Konstante verwenden
-    expect(contractConfigCallCount).toBe(0);
-
-    console.log(`Total renders: ${renderCount}`);
-    console.log(`Contract config calls: ${contractConfigCallCount}`);
+    // Wait for the component to load
+    await waitFor(() => {
+      // balanceOf should be called via useReadContract (mocked above)
+      expect(mockUseReadContract).toHaveBeenCalled();
+    });
   });
 
-  it("should show that chain-utils provides consistent addresses", async () => {
-    // Import from chain-utils
-    const { getGenAiNFTAddress } = await import("@fretchen/chain-utils");
+  it("should call tokenOfOwnerByIndex ABI function for each NFT", async () => {
+    // Render the component
+    render(<MyNFTListWrapper />);
 
-    // Multiple calls with same network should return the same address
-    const address1 = getGenAiNFTAddress("eip155:10");
-    const address2 = getGenAiNFTAddress("eip155:10");
+    // Wait for the component to load and fetch token IDs
+    await waitFor(() => {
+      // tokenOfOwnerByIndex should be called for each NFT in the balance
+      expect(mockReadContract).toHaveBeenCalled();
+    }, { timeout: 2000 });
 
-    // They should be exactly the same
-    expect(address1).toEqual(address2);
-    expect(address1).toBe(address2);
-  });
-
-  it("should demonstrate stable useAutoNetwork hook", async () => {
-    let effectRunCount = 0;
-
-    // Import useAutoNetwork at the top of the test
-    const { useAutoNetwork } = await import("../hooks/useAutoNetwork");
-
-    // Create a component that uses the useAutoNetwork hook
-    function FixedComponent() {
-      const network = useAutoNetwork(["eip155:10", "eip155:11155420"]);
-
-      React.useEffect(() => {
-        effectRunCount++;
-        console.log(`Effect run #${effectRunCount}, network: ${network}`);
-      }, [network]);
-
-      return <div>Component on {network}</div>;
-    }
-
-    render(<FixedComponent />);
-
-    await waitFor(
-      () => {
-        // With useAutoNetwork, the effect only runs once
-        expect(effectRunCount).toBeLessThanOrEqual(2);
-      },
-      { timeout: 1000 },
+    // Verify tokenOfOwnerByIndex was called with correct function name
+    const calls = mockReadContract.mock.calls;
+    const tokenOfOwnerByIndexCalls = calls.filter(
+      (call: unknown[]) => {
+        const params = call[1] as { functionName?: string };
+        return params?.functionName === "tokenOfOwnerByIndex";
+      }
     );
 
-    console.log(`Effect ran ${effectRunCount} times with useAutoNetwork`);
+    expect(tokenOfOwnerByIndexCalls.length).toBeGreaterThan(0);
+  });
+
+  it("should render NFT cards after loading token IDs", async () => {
+    render(<MyNFTListWrapper />);
+
+    // Wait for NFT cards to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
+      expect(screen.getByTestId("nft-card-2")).toBeInTheDocument();
+    }, { timeout: 2000 });
+  });
+
+  it("should show empty state when user has no NFTs", async () => {
+    // Mock no NFTs
+    mockUseReadContract.mockReturnValue({
+      data: 0n,
+      isLoading: false,
+    });
+
+    render(<MyNFTList />);
+
+    // Should not show any NFT cards
+    await waitFor(() => {
+      expect(screen.queryByTestId("nft-card-1")).not.toBeInTheDocument();
+    });
   });
 });

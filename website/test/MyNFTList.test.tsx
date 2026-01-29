@@ -25,9 +25,13 @@ vi.mock("wagmi/actions", () => ({
   readContract: (...args: unknown[]) => mockReadContract(...args),
 }));
 
-// Mock useAutoNetwork hook
+// Mock useAutoNetwork hook - returns object with network and switchIfNeeded
 vi.mock("../hooks/useAutoNetwork", () => ({
-  useAutoNetwork: vi.fn(() => "eip155:10"), // Default to Optimism mainnet
+  useAutoNetwork: vi.fn(() => ({
+    network: "eip155:10", // Default to Optimism mainnet
+    isOnCorrectNetwork: true,
+    switchIfNeeded: vi.fn(() => Promise.resolve(true)),
+  })),
 }));
 
 // Mock chain-utils

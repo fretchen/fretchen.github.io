@@ -150,7 +150,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const enterPromptErrorText = useLocale({ label: "imagegen.enterPromptError" });
   const unknownErrorText = useLocale({ label: "imagegen.unknownError" });
   const chainSwitchFailedText = useLocale({ label: "imagegen.chainSwitchFailed" });
-  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
 
   // x402 specific messages
   const awaitingSignatureText = useLocale({ label: "imagegen.awaitingSignature" });
@@ -189,7 +188,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
 
   const getButtonState = (): string => {
-    if (isSwitchingChain) return "switching";
     if (isLoading || x402Status === "awaiting-signature" || x402Status === "processing") return "loading";
     if (!prompt.trim()) return "needsPrompt";
     return "ready";
@@ -197,8 +195,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   const getButtonText = (state: string) => {
     switch (state) {
-      case "switching":
-        return switchingNetworkText;
       case "loading":
         if (x402Status === "awaiting-signature") return awaitingSignatureText;
         if (x402Status === "processing") return processingPaymentText;
@@ -219,7 +215,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Button Components
   const CreateArtworkButton = () => {
     const isDisabled = buttonState === "needsPrompt";
-    const isLoadingState = buttonState === "loading" || buttonState === "switching";
+    const isLoadingState = buttonState === "loading";
 
     const handleClick = () => {
       // Track create artwork attempt with context

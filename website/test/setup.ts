@@ -87,6 +87,15 @@ vi.mock("./hooks/useLocale", () => ({
   useLocale: vi.fn(({ label }: { label: string }) => label),
 }));
 
+// Mock useAutoNetwork hook - returns object with network and switchIfNeeded
+vi.mock("../hooks/useAutoNetwork", () => ({
+  useAutoNetwork: vi.fn(() => ({
+    network: "eip155:10", // Default to Optimism mainnet
+    isOnCorrectNetwork: true,
+    switchIfNeeded: vi.fn(() => Promise.resolve(true)),
+  })),
+}));
+
 // Import wagmi at top level for mock utilities
 import { useAccount } from "wagmi";
 

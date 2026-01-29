@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 // Mock wagmi hooks
-const mockSwitchChain = vi.fn();
+const mockSwitchChainAsync = vi.fn();
 vi.mock("wagmi", () => ({
   useChainId: vi.fn(() => 10), // Default: Optimism mainnet
   useAccount: vi.fn(() => ({ isConnected: true })),
-  useSwitchChain: vi.fn(() => ({ switchChain: mockSwitchChain })),
+  useSwitchChain: vi.fn(() => ({ switchChainAsync: mockSwitchChainAsync })),
 }));
 
 // Mock chain-utils
@@ -21,6 +21,19 @@ import { useChainId, useAccount } from "wagmi";
 describe("useAutoNetwork Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSwitchChainAsync.mockResolvedValue(undefined);
+  });
+
+  describe("return value structure", () => {
+    it("should return network, isOnCorrectNetwork, and switchIfNeeded", () => {
+      const supportedNetworks = ["eip155:10", "eip155:11155420"];
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
+
+      expect(result.current).toHaveProperty("network");
+      expect(result.current).toHaveProperty("isOnCorrectNetwork");
+      expect(result.current).toHaveProperty("switchIfNeeded");
+      expect(typeof result.current.switchIfNeeded).toBe("function");
+    });
   });
 
   describe("when on a supported network", () => {
@@ -31,8 +44,8 @@ describe("useAutoNetwork Hook", () => {
       const supportedNetworks = ["eip155:10", "eip155:11155420"];
       const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(result.current).toBe("eip155:10");
-      expect(mockSwitchChain).not.toHaveBeenCalled();
+      expect(result.current.network).toBe("eip155:10");
+      expect(result.current.isOnCorrectNetwork).toBe(true);
     });
 
     it("should return testnet network when on testnet", () => {
@@ -42,97 +55,109 @@ describe("useAutoNetwork Hook", () => {
       const supportedNetworks = ["eip155:10", "eip155:11155420"];
       const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(result.current).toBe("eip155:11155420");
-      expect(mockSwitchChain).not.toHaveBeenCalled();
+      expect(result.current.network).toBe("eip155:11155420");
+      expect(result.current.isOnCorrectNetwork).toBe(true);
+    });
+
+    it("should NOT auto-switch - no popups on connect", () => {
+      vi.mocked(useChainId).mockReturnValue(10);
+      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+
+      const supportedNetworks = ["eip155:10", "eip155:11155420"];
+      renderHook(() => useAutoNetwork(supportedNetworks));
+
+      // Key change: NO auto-switch on connect
+      expect(mockSwitchChainAsync).not.toHaveBeenCalled();
     });
   });
 
   describe("when on an unsupported network", () => {
-    it("should switch to default network when connected", () => {
+    it("should NOT auto-switch - deferred to interaction", () => {
       vi.mocked(useChainId).mockReturnValue(1); // Ethereum mainnet (unsupported)
       vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
 
       const supportedNetworks = ["eip155:10", "eip155:11155420"];
       renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 10 });
+      // Key change: NO auto-switch
+      expect(mockSwitchChainAsync).not.toHaveBeenCalled();
     });
 
-    it("should return default network while switching", () => {
-      vi.mocked(useChainId).mockReturnValue(1); // Ethereum mainnet (unsupported)
+    it("should return default network and isOnCorrectNetwork=false", () => {
+      vi.mocked(useChainId).mockReturnValue(1); // Unsupported
       vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
 
       const supportedNetworks = ["eip155:10", "eip155:11155420"];
       const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      // Returns default even though switch is pending
-      expect(result.current).toBe("eip155:10");
-    });
-
-    it("should switch to first network in list as default", () => {
-      vi.mocked(useChainId).mockReturnValue(137); // Polygon (unsupported)
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
-
-      // First network is testnet
-      const supportedNetworks = ["eip155:11155420", "eip155:10"];
-      renderHook(() => useAutoNetwork(supportedNetworks));
-
-      expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 11155420 });
+      expect(result.current.network).toBe("eip155:10"); // Default
+      expect(result.current.isOnCorrectNetwork).toBe(false);
     });
   });
 
-  describe("when wallet is not connected", () => {
-    it("should not attempt to switch chain", () => {
-      vi.mocked(useChainId).mockReturnValue(1); // Unsupported chain
-      vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
+  describe("switchIfNeeded() function", () => {
+    it("should return true immediately when already on correct network", async () => {
+      vi.mocked(useChainId).mockReturnValue(10); // Supported
+      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
 
-      const supportedNetworks = ["eip155:10", "eip155:11155420"];
-      renderHook(() => useAutoNetwork(supportedNetworks));
-
-      expect(mockSwitchChain).not.toHaveBeenCalled();
-    });
-
-    it("should return default network", () => {
-      vi.mocked(useChainId).mockReturnValue(1); // Unsupported chain
-      vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
-
-      const supportedNetworks = ["eip155:10", "eip155:11155420"];
+      const supportedNetworks = ["eip155:10"];
       const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(result.current).toBe("eip155:10");
-    });
-  });
+      let switched: boolean = false;
+      await act(async () => {
+        switched = await result.current.switchIfNeeded();
+      });
 
-  describe("chain switching behavior", () => {
-    it("should only switch once per render cycle", () => {
-      vi.mocked(useChainId).mockReturnValue(1);
+      expect(switched).toBe(true);
+      expect(mockSwitchChainAsync).not.toHaveBeenCalled();
+    });
+
+    it("should switch chain when on unsupported network", async () => {
+      vi.mocked(useChainId).mockReturnValue(1); // Unsupported
       vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
 
       const supportedNetworks = ["eip155:10"];
-      const { rerender } = renderHook(() => useAutoNetwork(supportedNetworks));
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      // Initial switch
-      expect(mockSwitchChain).toHaveBeenCalledTimes(1);
+      let switched: boolean = false;
+      await act(async () => {
+        switched = await result.current.switchIfNeeded();
+      });
 
-      // Re-render with same props should not trigger another switch
-      rerender();
-      expect(mockSwitchChain).toHaveBeenCalledTimes(1);
+      expect(switched).toBe(true);
+      expect(mockSwitchChainAsync).toHaveBeenCalledWith({ chainId: 10 });
     });
 
-    it("should switch when user connects wallet on unsupported chain", () => {
+    it("should return false when user rejects switch", async () => {
+      vi.mocked(useChainId).mockReturnValue(1); // Unsupported
+      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      mockSwitchChainAsync.mockRejectedValue(new Error("User rejected"));
+
+      const supportedNetworks = ["eip155:10"];
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
+
+      let switched: boolean = true;
+      await act(async () => {
+        switched = await result.current.switchIfNeeded();
+      });
+
+      expect(switched).toBe(false);
+    });
+
+    it("should return true when not connected (nothing to switch)", async () => {
       vi.mocked(useChainId).mockReturnValue(1);
       vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
 
       const supportedNetworks = ["eip155:10"];
-      const { rerender } = renderHook(() => useAutoNetwork(supportedNetworks));
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(mockSwitchChain).not.toHaveBeenCalled();
+      let switched: boolean = false;
+      await act(async () => {
+        switched = await result.current.switchIfNeeded();
+      });
 
-      // User connects wallet
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
-      rerender();
-
-      expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 10 });
+      expect(switched).toBe(true);
+      expect(mockSwitchChainAsync).not.toHaveBeenCalled();
     });
   });
 
@@ -144,7 +169,8 @@ describe("useAutoNetwork Hook", () => {
       const supportedNetworks = ["eip155:10"];
       const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(result.current).toBe("eip155:10");
+      expect(result.current.network).toBe("eip155:10");
+      expect(result.current.isOnCorrectNetwork).toBe(true);
     });
 
     it("should handle Base network", () => {
@@ -154,8 +180,19 @@ describe("useAutoNetwork Hook", () => {
       const supportedNetworks = ["eip155:10", "eip155:8453"];
       const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
 
-      expect(result.current).toBe("eip155:8453");
-      expect(mockSwitchChain).not.toHaveBeenCalled();
+      expect(result.current.network).toBe("eip155:8453");
+      expect(result.current.isOnCorrectNetwork).toBe(true);
+    });
+
+    it("should use first network as default when on unsupported", () => {
+      vi.mocked(useChainId).mockReturnValue(137); // Polygon (unsupported)
+      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+
+      const supportedNetworks = ["eip155:11155420", "eip155:10"];
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks));
+
+      // First network is testnet - that's the default
+      expect(result.current.network).toBe("eip155:11155420");
     });
   });
 });

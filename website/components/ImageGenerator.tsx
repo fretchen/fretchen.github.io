@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { useAccount, useConnect, useSwitchChain, useChainId } from "wagmi";
+import React, { useState, useEffect } from "react";
+import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
-import { getChain } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { GENAI_NFT_NETWORKS, fromCAIP2, isTestnet, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
@@ -100,6 +101,12 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
+  // Hydration safety: prevent SSR/client mismatch by showing collapsed state until mounted
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
 
@@ -110,12 +117,16 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
-  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
-  const currentChainId = useChainId();
 
-  // Determine target chain from centralized config (PUBLIC_ENV__CHAIN_NAME)
-  const targetChain = getChain();
-  const useTestnet = targetChain.id === 11155420; // optimismSepolia.id
+  // Effective connection state: only true after client has mounted
+  // This prevents hydration mismatch between SSR (always false) and client (may be true)
+  const isEffectivelyConnected = hasMounted && isConnected;
+
+  // Determine target chain from useAutoNetwork (no auto-switch, switch at interaction)
+  const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const targetChainId = fromCAIP2(network);
+  const targetChain = getViemChain(network);
+  const useTestnetFlag = isTestnet(network);
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -149,7 +160,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const enterPromptErrorText = useLocale({ label: "imagegen.enterPromptError" });
   const unknownErrorText = useLocale({ label: "imagegen.unknownError" });
   const chainSwitchFailedText = useLocale({ label: "imagegen.chainSwitchFailed" });
-  const switchingNetworkText = useLocale({ label: "imagegen.switchingNetwork" });
 
   // x402 specific messages
   const awaitingSignatureText = useLocale({ label: "imagegen.awaitingSignature" });
@@ -188,7 +198,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
 
   const getButtonState = (): string => {
-    if (isSwitchingChain) return "switching";
     if (isLoading || x402Status === "awaiting-signature" || x402Status === "processing") return "loading";
     if (!prompt.trim()) return "needsPrompt";
     return "ready";
@@ -196,8 +205,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   const getButtonText = (state: string) => {
     switch (state) {
-      case "switching":
-        return switchingNetworkText;
       case "loading":
         if (x402Status === "awaiting-signature") return awaitingSignatureText;
         if (x402Status === "processing") return processingPaymentText;
@@ -217,8 +224,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   // Button Components
   const CreateArtworkButton = () => {
-    const isDisabled = buttonState === "needsPrompt";
-    const isLoadingState = buttonState === "loading" || buttonState === "switching";
+    const isLoadingState = buttonState === "loading";
+    const isDisabled = buttonState === "needsPrompt" || isLoadingState;
 
     const handleClick = () => {
       // Track create artwork attempt with context
@@ -271,24 +278,21 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       return;
     }
 
-    // === Automatic Chain Switch ===
-    // Ensure user is on the correct chain before making payment
-    if (currentChainId !== targetChain.id) {
-      console.log(`[x402] Chain mismatch: current=${currentChainId}, target=${targetChain.id} (${targetChain.name})`);
-      try {
-        await switchChainAsync({ chainId: targetChain.id });
-        console.log(`[x402] Successfully switched to ${targetChain.name}`);
-      } catch (switchError) {
-        console.error("[x402] Chain switch failed:", switchError);
-        const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
-        setError(errorMsg);
-        onError?.(errorMsg);
-        return;
-      }
-    }
-
+    // Enter loading state immediately to prevent double-clicks
     setIsLoading(true);
     setError(null);
+
+    // === Chain Switch at Interaction ===
+    // Ensure user is on the correct chain before making payment
+    const switched = await switchIfNeeded();
+    if (!switched) {
+      console.error("[x402] Chain switch rejected by user");
+      const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
+      setError(errorMsg);
+      onError?.(errorMsg);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Determine mode
@@ -302,15 +306,13 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         size,
         mode,
         referenceImage: isEditMode ? referenceImageBase64 : undefined,
-        // Use testnet: derived from PUBLIC_ENV__CHAIN_NAME
-        sepoliaTest: useTestnet,
+        // Use testnet: derived from useAutoNetwork
+        sepoliaTest: useTestnetFlag,
         // Pass expected chain ID for validation in hook
-        expectedChainId: targetChain.id,
+        expectedChainId: targetChainId,
         // Whether to list in public gallery
         isListed,
       });
-
-      console.log("[x402] Image generation completed:", result);
 
       // Update state with results
       const newTokenId = BigInt(result.tokenId);
@@ -412,12 +414,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       setReferenceImageMimeType(compressedResult.mimeType);
       setPreviewState("reference");
 
-      // Zeige Erfolg-Feedback
-      const originalSizeKB = Math.round(file.size / 1024);
-      const compressedSizeKB = Math.round((compressedResult.base64.length * 0.75) / 1024);
-      console.log(
-        `Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB (${file.type} → ${compressedResult.mimeType})`,
-      );
+      // Image compression succeeded - no logging needed in production
     } catch (err) {
       console.error("Image compression failed:", err);
       const errorMsg = err instanceof Error ? err.message : failedToProcessImageText;
@@ -523,8 +520,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             AI Image Generation is currently under maintenance. Please check back later.
           </p>
         </div>
-      ) : !isConnected ? (
-        // Collapsed State - Clean & Simple
+      ) : !isEffectivelyConnected ? (
+        // Collapsed State - Clean & Simple (also shown during SSR before hydration)
         <div
           className={css({
             maxWidth: "500px",

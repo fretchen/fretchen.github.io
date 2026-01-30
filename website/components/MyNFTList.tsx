@@ -2,8 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
-import { getChain, genAiNFTContractConfig } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
+import type { config } from "../wagmi.config";
 import { NFTMetadata, ModalImageData } from "../types/components";
+
+type SupportedChainId = (typeof config)["chains"][number]["id"];
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
@@ -19,7 +23,9 @@ interface MyNFTListProps {
 
 export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps) {
   const { address, isConnected } = useAccount();
-  const chain = getChain();
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const chainId = fromCAIP2(network) as SupportedChainId;
+  const contractAddress = getGenAiNFTAddress(network);
 
   // My NFTs state - now just store token IDs
   const [tokenIds, setTokenIds] = useState<bigint[]>([]);
@@ -29,10 +35,11 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
 
   // Get user's NFT balance
   const { data: userBalance, isLoading: isLoadingBalance } = useReadContract({
-    ...genAiNFTContractConfig,
+    address: contractAddress,
+    abi: GenImNFTv4ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: chain.id,
+    chainId,
     query: {
       enabled: !!address && isConnected,
     },
@@ -55,10 +62,11 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     try {
       // Get fresh balance directly from contract to avoid stale state
       const freshBalance = await readContract(config, {
-        ...genAiNFTContractConfig,
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
         functionName: "balanceOf",
         args: [address],
-        chainId: chain.id,
+        chainId,
       });
 
       if (!freshBalance || freshBalance === 0n) {
@@ -74,10 +82,11 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
           try {
             // Get token ID at index using wagmi's readContract
             const tokenIdResult = await readContract(config, {
-              ...genAiNFTContractConfig,
+              address: contractAddress,
+              abi: GenImNFTv4ABI,
               functionName: "tokenOfOwnerByIndex",
               args: [address, BigInt(i)],
-              chainId: chain.id,
+              chainId,
             });
 
             return tokenIdResult as bigint;
@@ -111,7 +120,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     } finally {
       setIsLoadingTokenIds(false);
     }
-  }, [isConnected, address]); // Removed genAiNFTContractConfig as it's now stable
+  }, [isConnected, address, contractAddress, chainId]);
 
   // Handle newly created NFT - just add to token list
   const handleNewlyCreatedNFT = useCallback(
@@ -138,10 +147,9 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   );
 
   // Handle listing status changes
-  const handleListedStatusChanged = useCallback((tokenId: bigint, isListed: boolean) => {
-    // This function can be used to update local state if needed
+  const handleListedStatusChanged = useCallback((_tokenId: bigint, _isListed: boolean) => {
+    // This callback can be used to update local state if needed
     // For now, the NFTCard handles the blockchain state itself
-    console.log(`NFT ${tokenId} listing status changed to: ${isListed}`);
   }, []);
 
   // Load data when component mounts or dependencies change

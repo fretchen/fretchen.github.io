@@ -54,11 +54,7 @@ describe("SupportV2 - Deployment Tests", function () {
   /**
    * Helper: Run test with temporary config, then restore original
    */
-  async function withTempConfig(
-    options: SupportV2ConfigOptions,
-    testFn: () => Promise<void>,
-    owner?: string,
-  ) {
+  async function withTempConfig(options: SupportV2ConfigOptions, testFn: () => Promise<void>, owner?: string) {
     await createTempConfig(options, owner);
 
     try {
@@ -177,10 +173,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
   describe("Configuration Validation", function () {
     it("should reject invalid owner address format", async function () {
-      const invalidConfigPath = path.join(
-        __dirname,
-        "../scripts/deploy-support-v2.config-invalid.json",
-      );
+      const invalidConfigPath = path.join(__dirname, "../scripts/deploy-support-v2.config-invalid.json");
 
       const invalidConfig = {
         parameters: {
@@ -277,16 +270,10 @@ describe("SupportV2 - Deployment Tests", function () {
         expect(result).to.not.be.undefined;
 
         // Verify proxy implementation slot is set
-        const implementationSlot =
-          "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-        const implementation = await hre.ethers.provider.getStorage(
-          result!.proxyAddress,
-          implementationSlot,
-        );
+        const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        const implementation = await hre.ethers.provider.getStorage(result!.proxyAddress, implementationSlot);
 
-        expect(implementation).to.not.equal(
-          "0x0000000000000000000000000000000000000000000000000000000000000000",
-        );
+        expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
       });
     });
 

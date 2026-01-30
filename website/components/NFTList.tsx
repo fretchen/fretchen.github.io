@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAccount, useReadContract } from "wagmi";
-import { getChain, genAiNFTContractConfig } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
 import { NFTListProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import { Tab } from "./Tab";
@@ -23,12 +24,18 @@ export function NFTList({
   const activeTab = controlledActiveTab ?? localActiveTab;
   const setActiveTab = onTabChange ?? setLocalActiveTab;
 
+  // Get network from useAutoNetwork
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const chainId = fromCAIP2(network);
+  const contractAddress = getGenAiNFTAddress(network);
+
   // Get user's NFT balance for display in tab
   const userBalanceQuery = useReadContract({
-    ...genAiNFTContractConfig,
+    address: contractAddress,
+    abi: GenImNFTv4ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: getChain().id,
+    chainId,
     query: {
       enabled: !!address && isConnected,
     },

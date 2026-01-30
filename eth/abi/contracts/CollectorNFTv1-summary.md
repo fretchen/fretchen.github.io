@@ -2,8 +2,6 @@
 
 CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
 
-Generated on: 2026-01-20T20:33:28.415Z
-
 ## Contract Information
 
 - **Name**: CollectorNFTv1

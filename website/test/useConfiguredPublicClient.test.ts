@@ -2,11 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 
-// Mock the dependencies
-vi.mock("../utils/getChain", () => ({
-  getChain: vi.fn(() => ({
+// Mock the dependencies - no longer need getChain
+vi.mock("@fretchen/chain-utils", () => ({
+  fromCAIP2: vi.fn((network: string) => parseInt(network.split(":")[1])),
+  getViemChain: vi.fn(() => ({
     id: 10,
-    name: "optimism",
+    name: "OP Mainnet",
   })),
 }));
 
@@ -27,7 +28,8 @@ vi.mock("@wagmi/core", () => ({
 
 describe("useConfiguredPublicClient Hook", () => {
   it("should return a stable client reference", () => {
-    const { result, rerender } = renderHook(() => useConfiguredPublicClient());
+    // Now requires network parameter (CAIP-2 format)
+    const { result, rerender } = renderHook(() => useConfiguredPublicClient("eip155:10"));
 
     const firstClient = result.current;
 
@@ -46,7 +48,8 @@ describe("useConfiguredPublicClient Hook", () => {
     // Reset all mocks
     vi.clearAllMocks();
 
-    const { result, rerender } = renderHook(() => useConfiguredPublicClient());
+    // Now requires network parameter (CAIP-2 format)
+    const { result, rerender } = renderHook(() => useConfiguredPublicClient("eip155:10"));
 
     const initialClient = result.current;
 
@@ -61,7 +64,8 @@ describe("useConfiguredPublicClient Hook", () => {
   });
 
   it("should prevent infinite re-render loops in useEffect dependencies", () => {
-    const { result } = renderHook(() => useConfiguredPublicClient());
+    // Now requires network parameter (CAIP-2 format)
+    const { result } = renderHook(() => useConfiguredPublicClient("eip155:10"));
 
     const client1 = result.current;
     const client2 = result.current;

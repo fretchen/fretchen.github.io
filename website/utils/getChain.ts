@@ -1,13 +1,17 @@
 import { sepolia, optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
 import type { Chain } from "wagmi/chains";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
-import GenImNFTv3ABI from "../../eth/abi/contracts/GenImNFTv3.json";
 import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
+// ═══════════════════════════════════════════════════════════════
+// Chain utilities are now in @fretchen/chain-utils
+// Import directly where needed:
+//   import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+// ═══════════════════════════════════════════════════════════════
+
 /**
  * Get PUBLIC_ENV__CHAIN_NAME in Vite context (Browser)
- * Direct inline implementation for simplicity
  */
 const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
 
@@ -69,23 +73,15 @@ export function isSupportV2Chain(chainId: number): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Other Contract Configurations
+// Legacy Contract Configurations
+//
+// GenAI NFT: MIGRATED to chain-utils - use:
+//   import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+//   const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+//   const address = getGenAiNFTAddress(network);
+//
+// collectorNFTContractConfig and llmV1ContractConfig will be migrated in Phase 3
 // ═══════════════════════════════════════════════════════════════
-
-// Create stable contract config references at module level - computed once when module loads
-const STABLE_GENAI_NFT_CONTRACT_CONFIG = (() => {
-  switch (CHAIN_NAME) {
-    case "sepolia":
-      return { address: "0xf18E3901D91D8a08380E37A466E6F7f6AA4BD4a6", abi: GenImNFTv3ABI } as const;
-    case "optimismSepolia":
-      // GenImNFTv4 deployed on 2025-12-24
-      return { address: "0x10827cC42a09D0BAD2d43134C69F0e776D853D85", abi: GenImNFTv3ABI } as const;
-    case "optimism":
-      return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
-    default:
-      return { address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", abi: GenImNFTv3ABI } as const;
-  }
-})();
 
 const STABLE_COLLECTOR_NFT_CONTRACT_CONFIG = (() => {
   switch (CHAIN_NAME) {
@@ -121,11 +117,15 @@ const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
 })();
 
 // Export stable references directly - these objects never change reference
-export const genAiNFTContractConfig = STABLE_GENAI_NFT_CONTRACT_CONFIG;
+/** Phase 3: Will be migrated to chain-utils */
 export const collectorNFTContractConfig = STABLE_COLLECTOR_NFT_CONTRACT_CONFIG;
+/** Out of scope: LLMv1 stays in legacy config */
 export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
 
 /**
+ * @deprecated Use useAutoNetwork() + fromCAIP2() instead for GenImNFT components.
+ * This function is still used by CollectorNFT and LLMv1 components.
+ *
  * Gibt das entsprechende Chain-Objekt basierend auf der CHAIN-Umgebungsvariable zurück
  * @returns Das Chain-Objekt aus wagmi/chains
  */

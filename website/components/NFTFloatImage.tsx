@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { genAiNFTContractConfig } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
 import * as styles from "../layouts/styles";
@@ -17,8 +18,9 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   const [nftDescription, setNftDescription] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoize the contract config to prevent infinite re-renders
-  // The stable genAiNFTContractConfig constant is used directly
+  // Get network and contract address from chain-utils
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const contractAddress = getGenAiNFTAddress(network);
 
   // Extract prompt from description for display (reusing utility function)
   const getPromptPreview = (description: string | null): string => {
@@ -36,7 +38,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
   };
 
   // Use the custom hook for a stable public client reference
-  const publicClient = useConfiguredPublicClient();
+  const publicClient = useConfiguredPublicClient(network);
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -67,8 +69,8 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
 
         // Get token URI using public client
         const tokenURIResult = await publicClient.readContract({
-          address: genAiNFTContractConfig.address,
-          abi: genAiNFTContractConfig.abi,
+          address: contractAddress,
+          abi: GenImNFTv4ABI,
           functionName: "tokenURI",
           args: [BigInt(tokenId)],
         });

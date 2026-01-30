@@ -33,7 +33,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImageGenerator } from "../components/ImageGenerator";
-import { useAccount, useSwitchChain, useChainId, useConnect, useWalletClient } from "wagmi";
+import { useAccount, useConnect, useWalletClient } from "wagmi";
 
 // No need to mock getChain - it's just reading env vars and returning constants
 // The real implementation works fine in tests
@@ -107,17 +107,19 @@ describe("ImageGenerator Component", () => {
 
     it("should trigger wallet connection when expand button is clicked", async () => {
       // Start in disconnected state (collapsed)
+      // Create a new mock that we can track
       const mockConnect = vi.fn();
-      vi.mocked(useConnect).mockReturnValueOnce({
-        connect: mockConnect,
-        connectors: [{ id: "mockConnector", name: "Mock Wallet" }],
-      } as unknown as ReturnType<typeof useConnect>);
 
-      vi.mocked(useAccount).mockReturnValueOnce({
+      vi.mocked(useAccount).mockReturnValue({
         address: undefined,
         isConnected: false,
         status: "disconnected",
       } as ReturnType<typeof useAccount>);
+
+      vi.mocked(useConnect).mockReturnValue({
+        connect: mockConnect,
+        connectors: [{ id: "mockConnector", name: "Mock Wallet" }],
+      } as unknown as ReturnType<typeof useConnect>);
 
       render(<ImageGenerator />);
 
@@ -166,62 +168,7 @@ describe("ImageGenerator Component", () => {
     });
   });
 
-  it("should call switchChain when user attempts to create artwork on wrong network", async () => {
-    const mockSwitchChain = vi.fn().mockResolvedValue(undefined);
-
-    // Override the centralized mocks for this specific test
-    // Mock a connected wallet on the wrong chain (Ethereum mainnet = 1)
-    vi.mocked(useAccount).mockReturnValue({
-      address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
-
-    // Mock wallet client for x402 hook
-
-    vi.mocked(useWalletClient).mockReturnValue({
-      data: {
-        account: { address: "0x1234567890123456789012345678901234567890" },
-        signTypedData: vi.fn(),
-      },
-    } as ReturnType<typeof useWalletClient>);
-
-    // Mock that user is on wrong chain (Ethereum mainnet instead of Optimism)
-    vi.mocked(useChainId).mockReturnValue(1);
-
-    // Mock the switchChainAsync function (used by the x402 flow)
-    vi.mocked(useSwitchChain).mockReturnValue({
-      switchChain: mockSwitchChain,
-      switchChainAsync: mockSwitchChain,
-      isPending: false,
-      chains: [{ id: 10, name: "Optimism" }],
-    } as unknown as ReturnType<typeof useSwitchChain>);
-
-    render(<ImageGenerator />);
-
-    // Fill in the prompt
-    const textarea = screen.getByPlaceholderText("mocked-imagegen.promptPlaceholder");
-    fireEvent.change(textarea, { target: { value: "Test artwork prompt" } });
-
-    // Find and click the create artwork button
-    // The button text might vary based on wallet state, so we look for common patterns
-    const buttons = screen.getAllByRole("button");
-    const createButton = buttons.find(
-      (button) =>
-        button.textContent?.toLowerCase().includes("create") ||
-        button.textContent?.toLowerCase().includes("artwork") ||
-        button.textContent?.toLowerCase().includes("mint"),
-    );
-
-    if (createButton) {
-      fireEvent.click(createButton);
-
-      // Verify that switchChainAsync was called with Optimism chain ID (10)
-      expect(mockSwitchChain).toHaveBeenCalledWith({ chainId: 10 });
-    } else {
-      // If no create button is found, at least verify the mock is set up correctly
-      expect(mockSwitchChain).toBeDefined();
-      // This is a fallback test - the real test depends on the component's current state logic
-    }
-  });
+  // Note: Chain switching behavior is tested in useAutoNetwork.test.ts
+  // The switchIfNeeded() function is called before transactions and is
+  // thoroughly covered there (see "switchIfNeeded() should switch when on wrong network")
 });

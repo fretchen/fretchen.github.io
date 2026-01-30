@@ -1,9 +1,14 @@
-import React, { useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from "wagmi";
+import React, { useEffect, useState } from "react";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from "wagmi";
 import { formatEther } from "viem";
-import { collectorNFTContractConfig, getChain } from "../utils/getChain";
+import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { config } from "../utils/wagmi";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
+
+type SupportedChainId = (typeof config)["chains"][number]["id"];
+
 interface SimpleCollectButtonProps {
   genImTokenId: bigint;
 }
@@ -17,13 +22,13 @@ interface SimpleCollectButtonProps {
 export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) {
   // Wagmi hooks
   const { isConnected } = useAccount();
-  const chainId = useChainId();
+  const { network, switchIfNeeded } = useAutoNetwork(COLLECTOR_NFT_NETWORKS);
   const { writeContract, isPending, data: hash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Chain and contract configuration
-  const chain = getChain();
-  const isCorrectNetwork = chainId === chain.id;
+  // Chain ID for current network
+  const chainId = fromCAIP2(network) as SupportedChainId;
 
   const collectLabel = useLocale({ label: "imagegen.collect" });
 
@@ -34,26 +39,38 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     isPending: isReadPending,
     refetch,
   } = useReadContract({
-    ...collectorNFTContractConfig,
+    address: getCollectorNFTAddress(network),
+    abi: CollectorNFTv1ABI,
     functionName: "getMintStats",
     args: [genImTokenId],
-    chainId: chain.id,
+    chainId,
   });
 
   // Handle collect action
   const handleCollect = async () => {
     if (!isConnected) return;
-    if (!isCorrectNetwork) return;
     if (!mintStats || !Array.isArray(mintStats)) return;
+
+    setIsLoading(true);
+
+    // Ensure correct network before transaction
+    const switched = await switchIfNeeded();
+    if (!switched) {
+      setIsLoading(false);
+      return;
+    }
 
     const [, currentPrice] = mintStats as [bigint, bigint, bigint];
 
     writeContract({
-      ...collectorNFTContractConfig,
+      address: getCollectorNFTAddress(network),
+      abi: CollectorNFTv1ABI,
       functionName: "mintCollectorNFT",
       args: [genImTokenId], // CollectorNFTv1 doesn't need URI parameter
       value: currentPrice,
     });
+
+    setIsLoading(false);
   };
 
   // Update state after transaction
@@ -108,11 +125,15 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   return (
     <button
       onClick={handleCollect}
-      disabled={!isConnected || isPending || isConfirming || !isCorrectNetwork}
+      disabled={!isConnected || isPending || isConfirming || isLoading}
       className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
-      {isPending ? "📦 Collecting..." : isSuccess ? "✅ Collected!" : `📦 ${collectLabel} (${getMintCount()})`}
+      {isPending || isLoading
+        ? "📦 Collecting..."
+        : isSuccess
+          ? "✅ Collected!"
+          : `📦 ${collectLabel} (${getMintCount()})`}
     </button>
   );
 }

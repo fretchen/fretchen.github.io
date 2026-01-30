@@ -72,17 +72,9 @@ vi.mock("../hooks/useLocale", () => ({
   useLocale: vi.fn(() => "Mocked text"),
 }));
 
-// Create a wrapper component to count renders
-function MyNFTListWrapper(props: Record<string, unknown>) {
-  renderCount++;
-  return <MyNFTList {...props} />;
-}
-
 describe("MyNFTList Re-render Bug Reproduction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    renderCount = 0;
-    contractConfigCallCount = 0;
 
     // Setup default mock returns
     mockUseAccount.mockReturnValue({
@@ -113,7 +105,7 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
 
   it("should call balanceOf ABI function when loading NFTs", async () => {
     // Render the component
-    render(<MyNFTListWrapper />);
+    render(<MyNFTList />);
 
     // Wait for the component to load
     await waitFor(() => {
@@ -124,7 +116,7 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
 
   it("should call tokenOfOwnerByIndex ABI function for each NFT", async () => {
     // Render the component
-    render(<MyNFTListWrapper />);
+    render(<MyNFTList />);
 
     // Wait for the component to load and fetch token IDs
     await waitFor(
@@ -146,7 +138,7 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
   });
 
   it("should render NFT cards after loading token IDs", async () => {
-    render(<MyNFTListWrapper />);
+    render(<MyNFTList />);
 
     // Wait for NFT cards to appear
     await waitFor(

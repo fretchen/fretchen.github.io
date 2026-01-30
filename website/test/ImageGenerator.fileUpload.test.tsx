@@ -52,10 +52,10 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte ImageGenerator Component rendern können", () => {
       render(<ImageGenerator />);
 
-      // Prüfe dass wichtige Elemente vorhanden sind
+      // LocaleText zeigt echte übersetzte Texte, useLocale gibt Label-Keys zurück
       expect(screen.getByText("Create Collectible AI Art • 10¢")).toBeInTheDocument();
       expect(screen.getByTestId("reference-image-input")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("Describe your image in detail...")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("imagegen.promptPlaceholder")).toBeInTheDocument();
     });
 
     it("sollte File Input korrekt konfiguriert haben", () => {
@@ -72,9 +72,8 @@ describe("ImageGenerator Reference Image Integration", () => {
 
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
-      // Text is now split across elements, so check for parts
-      expect(screen.getByText(/Drag & drop an image here/)).toBeInTheDocument();
-      expect(screen.getByText(/click to browse/)).toBeInTheDocument();
+      // useLocale Mock gibt Label-Keys zurück
+      expect(screen.getByText("imagegen.uploadReferenceImage")).toBeInTheDocument();
     });
 
     it("sollte verschiedene Image Sizes unterstützen", () => {
@@ -83,8 +82,9 @@ describe("ImageGenerator Reference Image Integration", () => {
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
 
-      expect(screen.getByText("◼ Square")).toBeInTheDocument();
-      expect(screen.getByText("▬ Wide")).toBeInTheDocument();
+      // useLocale Mock gibt Label-Keys zurück
+      expect(screen.getByText("imagegen.square")).toBeInTheDocument();
+      expect(screen.getByText("imagegen.wide")).toBeInTheDocument();
     });
   });
 
@@ -134,14 +134,15 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte initial Create Artwork Button zeigen", () => {
       render(<ImageGenerator />);
 
-      const button = screen.getByRole("button", { name: /Enter a prompt to create/ });
+      // useLocale Mock gibt Label-Keys zurück
+      const button = screen.getByRole("button", { name: /imagegen.enterPrompt/ });
       expect(button).toBeInTheDocument();
     });
 
     it("sollte Textarea für Prompt haben", () => {
       render(<ImageGenerator />);
 
-      const textarea = screen.getByPlaceholderText("Describe your image in detail...");
+      const textarea = screen.getByPlaceholderText("imagegen.promptPlaceholder");
       expect(textarea).toBeInTheDocument();
       expect(textarea.tagName.toLowerCase()).toBe("textarea");
     });
@@ -171,31 +172,30 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte Standard-Placeholder zeigen wenn kein Reference Image hochgeladen ist", () => {
       render(<ImageGenerator />);
 
-      // Sollte Standard-Placeholder zeigen (tatsächlicher Text aus Locale)
-      const textarea = screen.getByPlaceholderText("Describe your image in detail...");
+      // useLocale Mock gibt Label-Keys zurück
+      const textarea = screen.getByPlaceholderText("imagegen.promptPlaceholder");
       expect(textarea).toBeInTheDocument();
 
       // Sollte NICHT Edit-Placeholder zeigen
       expect(
-        screen.queryByPlaceholderText("Describe changes you want to make to the image..."),
+        screen.queryByPlaceholderText("imagegen.editPromptPlaceholder"),
       ).not.toBeInTheDocument();
     });
 
     it("sollte Button Text korrekt ändern basierend auf previewState", () => {
       render(<ImageGenerator />);
 
-      // Initial: "Enter a prompt to create" Button (wenn previewState "empty" ist und kein prompt)
-      const button = screen.getByRole("button", { name: /Enter a prompt to create/ });
+      // useLocale Mock gibt Label-Keys zurück
+      const button = screen.getByRole("button", { name: /imagegen.enterPrompt/ });
       expect(button).toBeInTheDocument();
     });
 
     it("sollte Edit-Mode Locale Keys korrekt geladen haben", () => {
-      // Test dass die Locale Keys verfügbar sind durch tatsächliche Werte
       render(<ImageGenerator />);
 
-      // Verifiziere dass Standard-Placeholder korrekt geladen ist
-      const textarea = screen.getByPlaceholderText("Describe your image in detail...");
-      expect(textarea).toHaveAttribute("placeholder", "Describe your image in detail...");
+      // useLocale Mock gibt Label-Keys zurück
+      const textarea = screen.getByPlaceholderText("imagegen.promptPlaceholder");
+      expect(textarea).toHaveAttribute("placeholder", "imagegen.promptPlaceholder");
 
       // Die dynamische Placeholder-Logik ist implementiert (wird bei previewState === "reference" aktiv)
       expect(textarea).toBeInTheDocument();
@@ -210,7 +210,7 @@ describe("ImageGenerator Reference Image Integration", () => {
       expect(dropZone).toBeInTheDocument();
 
       // Referenz Image Upload Bereich sollte vorhanden sein
-      const uploadSection = screen.getByText("Upload Reference Image (Optional)");
+      const uploadSection = screen.getByText("imagegen.uploadReferenceImage");
       expect(uploadSection).toBeInTheDocument();
     });
   });

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { readContract } from "wagmi/actions";
-import { config } from "../wagmi.config";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2, isMainnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
@@ -48,6 +47,16 @@ export function NFTCard({
   const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
+
+  // Use the extracted hook for listing status (only in private view)
+  const {
+    isListed,
+    setOptimisticListed,
+  } = useNFTListedStatus({
+    tokenId,
+    network,
+    enabled: !isPublicView,
+  });
 
   // Use the custom hook for a stable public client reference
   const publicClient = useConfiguredPublicClient(network);
@@ -113,22 +122,7 @@ export function NFTCard({
           setOwner(nftOwner);
         }
 
-        // Get listing status if not public view
-        let isListed: boolean | undefined;
-        if (!isPublicView) {
-          try {
-            const isListedResult = await readContract(config, {
-              address: contractAddress,
-              abi: GenImNFTv4ABI,
-              functionName: "isListed",
-              args: [tokenId],
-              chainId,
-            });
-            isListed = isListedResult as boolean;
-          } catch (error) {
-            console.warn("Could not load listing status:", error);
-          }
-        }
+        // Note: isListed is now handled by useNFTListedStatus hook
 
         // Fetch metadata only if tokenURI is available
         let metadata = preloadedMetadata; // Keep preloaded metadata as fallback
@@ -148,7 +142,6 @@ export function NFTCard({
           metadata,
           imageUrl: finalImageUrl,
           isLoading: false,
-          isListed,
         });
       } catch (error) {
         console.error(`Error loading NFT ${tokenId}:`, error);
@@ -288,7 +281,7 @@ export function NFTCard({
   const handleToggleListing = async () => {
     if (!onListedStatusChanged) return;
 
-    const newListedStatus = !nft.isListed;
+    const newListedStatus = !isListed;
     const statusText = newListedStatus ? "public" : "private";
 
     try {
@@ -299,7 +292,8 @@ export function NFTCard({
         return;
       }
 
-      // Update UI optimistically
+      // Update UI optimistically (both local state and parent)
+      setOptimisticListed(newListedStatus);
       onListedStatusChanged(nft.tokenId, newListedStatus);
 
       // Call contract
@@ -312,6 +306,7 @@ export function NFTCard({
     } catch (error) {
       console.error("Failed to update listing status:", error);
       // Revert optimistic update on error
+      setOptimisticListed(!newListedStatus);
       onListedStatusChanged(nft.tokenId, !newListedStatus);
       showToast(`Failed to set artwork as ${statusText}. Please try again.`, "error");
     }
@@ -361,7 +356,7 @@ export function NFTCard({
           <div className={styles.nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
 
           {/* Listed Badge (nur wenn listed) */}
-          {!isPublicView && nft.isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
+          {!isPublicView && isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
 
           {/* Owner Badge (nur in Public View) */}
           {isPublicView && owner && (
@@ -415,7 +410,7 @@ export function NFTCard({
               </button>
 
               {/* Listed Toggle (nur private view) */}
-              {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
+              {!isPublicView && onListedStatusChanged && isListed !== undefined && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -423,9 +418,9 @@ export function NFTCard({
                   }}
                   disabled={isToggling || isListingConfirming}
                   className={styles.nftCard.compactSecondaryButton}
-                  title={`${nft.isListed ? "Make private" : "Make public"}`}
+                  title={`${isListed ? "Make private" : "Make public"}`}
                 >
-                  {nft.isListed ? "🔓" : "🔒"}
+                  {isListed ? "🔓" : "🔒"}
                 </button>
               )}
 

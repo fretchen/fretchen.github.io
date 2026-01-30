@@ -144,10 +144,9 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   );
 
   // Handle listing status changes
-  const handleListedStatusChanged = useCallback((tokenId: bigint, isListed: boolean) => {
-    // This function can be used to update local state if needed
+  const handleListedStatusChanged = useCallback((_tokenId: bigint, _isListed: boolean) => {
+    // This callback can be used to update local state if needed
     // For now, the NFTCard handles the blockchain state itself
-    console.log(`NFT ${tokenId} listing status changed to: ${isListed}`);
   }, []);
 
   // Load data when component mounts or dependencies change

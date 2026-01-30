@@ -312,8 +312,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         isListed,
       });
 
-      console.log("[x402] Image generation completed:", result);
-
       // Update state with results
       const newTokenId = BigInt(result.tokenId);
       const imageUrl = result.image_url;
@@ -414,12 +412,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       setReferenceImageMimeType(compressedResult.mimeType);
       setPreviewState("reference");
 
-      // Zeige Erfolg-Feedback
-      const originalSizeKB = Math.round(file.size / 1024);
-      const compressedSizeKB = Math.round((compressedResult.base64.length * 0.75) / 1024);
-      console.log(
-        `Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB (${file.type} → ${compressedResult.mimeType})`,
-      );
+      // Image compression succeeded - no logging needed in production
     } catch (err) {
       console.error("Image compression failed:", err);
       const errorMsg = err instanceof Error ? err.message : failedToProcessImageText;

@@ -1,6 +1,5 @@
 // Auto-generated ABI for CollectorNFT
 // NFT collection based on GenImNFT tokens
-// Generated on: 2026-01-20T20:33:28.413Z
 
 export const CollectorNFTABI = [
   {

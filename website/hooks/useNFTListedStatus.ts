@@ -2,7 +2,7 @@
  * Hook to fetch and manage the listing status of an NFT.
  *
  * This hook encapsulates the logic for checking if an NFT is publicly listed
- * via the smart contract's isListed function.
+ * via the smart contract's isTokenListed function.
  *
  * @example
  * ```tsx
@@ -61,7 +61,8 @@ export function useNFTListedStatus({
 
   const fetchListedStatus = useCallback(async () => {
     if (!enabled) {
-      setIsListed(undefined);
+      // Don't reset isListed when disabled - keep the last known value
+      // This prevents flickering when enabled toggles temporarily
       return;
     }
 
@@ -72,7 +73,7 @@ export function useNFTListedStatus({
       const result = await readContract(config, {
         address: contractAddress,
         abi: GenImNFTv4ABI,
-        functionName: "isListed",
+        functionName: "isTokenListed",
         args: [tokenId],
         chainId,
       });

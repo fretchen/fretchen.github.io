@@ -1,7 +1,7 @@
-// Auto-generated ABI for CollectorNFTv1
-// CollectorNFT Version 1 with upgraded features and UUPS proxy pattern
+// Auto-generated ABI for GenImNFTv4
+// GenImNFT Version 4 with EIP-8004 agent whitelist (CVE-2025-11-26 fix)
 
-export const CollectorNFTv1ABI = [
+export const GenImNFTv4ABI = [
   {
     inputs: [],
     stateMutability: "nonpayable",
@@ -164,49 +164,6 @@ export const CollectorNFTv1ABI = [
     type: "error",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "GenImTokenNotFound",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "GenImTokenNotListed",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "required",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "provided",
-        type: "uint256",
-      },
-    ],
-    name: "InsufficientPayment",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "InvalidGenImNFTContract",
-    type: "error",
-  },
-  {
     inputs: [],
     name: "InvalidInitialization",
     type: "error",
@@ -240,21 +197,6 @@ export const CollectorNFTv1ABI = [
   },
   {
     inputs: [],
-    name: "PaymentToCreatorFailed",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "ReentrancyGuardReentrantCall",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "RefundFailed",
-    type: "error",
-  },
-  {
-    inputs: [],
     name: "UUPSUnauthorizedCallContext",
     type: "error",
   },
@@ -268,6 +210,32 @@ export const CollectorNFTv1ABI = [
     ],
     name: "UUPSUnsupportedProxiableUUID",
     type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "agentWallet",
+        type: "address",
+      },
+    ],
+    name: "AgentWalletAuthorized",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "agentWallet",
+        type: "address",
+      },
+    ],
+    name: "AgentWalletRevoked",
+    type: "event",
   },
   {
     anonymous: false,
@@ -344,54 +312,23 @@ export const CollectorNFTv1ABI = [
       {
         indexed: true,
         internalType: "uint256",
-        name: "collectorTokenId",
-        type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "genImTokenId",
+        name: "tokenId",
         type: "uint256",
       },
       {
         indexed: true,
         internalType: "address",
-        name: "collector",
+        name: "updater",
         type: "address",
       },
       {
         indexed: false,
-        internalType: "uint256",
-        name: "price",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "mintNumber",
-        type: "uint256",
+        internalType: "string",
+        name: "imageUrl",
+        type: "string",
       },
     ],
-    name: "CollectorNFTMinted",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "genImNFTContract",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "baseMintPrice",
-        type: "uint256",
-      },
-    ],
-    name: "ContractInitialized",
+    name: "ImageUpdateRequested",
     type: "event",
   },
   {
@@ -445,23 +382,17 @@ export const CollectorNFTv1ABI = [
       {
         indexed: true,
         internalType: "uint256",
-        name: "genImTokenId",
+        name: "tokenId",
         type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "creator",
-        type: "address",
       },
       {
         indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
+        internalType: "bool",
+        name: "isListed",
+        type: "bool",
       },
     ],
-    name: "PaymentSentToCreator",
+    name: "TokenListingChanged",
     type: "event",
   },
   {
@@ -487,6 +418,31 @@ export const CollectorNFTv1ABI = [
       },
     ],
     name: "Transfer",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "updater",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+    ],
+    name: "UpdaterPaid",
     type: "event",
   },
   {
@@ -537,6 +493,19 @@ export const CollectorNFTv1ABI = [
     inputs: [
       {
         internalType: "address",
+        name: "agentWallet",
+        type: "address",
+      },
+    ],
+    name: "authorizeAgentWallet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
         name: "owner",
         type: "address",
       },
@@ -553,69 +522,26 @@ export const CollectorNFTv1ABI = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "baseMintPrice",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "tokenId",
         type: "uint256",
       },
     ],
-    name: "collectorToGenImToken",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "collectorTokensByGenImToken",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
+    name: "burn",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
     inputs: [],
-    name: "genImNFTContract",
+    name: "getAllPublicTokens",
     outputs: [
       {
-        internalType: "contract IGenImNFTWithListing",
+        internalType: "uint256[]",
         name: "",
-        type: "address",
+        type: "uint256[]",
       },
     ],
     stateMutability: "view",
@@ -643,12 +569,12 @@ export const CollectorNFTv1ABI = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "genImTokenId",
-        type: "uint256",
+        internalType: "address",
+        name: "owner",
+        type: "address",
       },
     ],
-    name: "getCollectorTokensForGenIm",
+    name: "getPublicTokensOfOwner",
     outputs: [
       {
         internalType: "uint256[]",
@@ -660,104 +586,7 @@ export const CollectorNFTv1ABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "genImTokenId",
-        type: "uint256",
-      },
-    ],
-    name: "getCurrentPrice",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "collectorTokenId",
-        type: "uint256",
-      },
-    ],
-    name: "getGenImTokenIdForCollector",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "genImTokenId",
-        type: "uint256",
-      },
-    ],
-    name: "getMintStats",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "mintCount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "currentPrice",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "nextPrice",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "collectorTokenId",
-        type: "uint256",
-      },
-    ],
-    name: "getOriginalGenImURI",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_genImNFTContract",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_baseMintPrice",
-        type: "uint256",
-      },
-    ],
+    inputs: [],
     name: "initialize",
     outputs: [],
     stateMutability: "nonpayable",
@@ -790,31 +619,63 @@ export const CollectorNFTv1ABI = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "genImTokenId",
-        type: "uint256",
+        internalType: "address",
+        name: "agentWallet",
+        type: "address",
       },
     ],
-    name: "mintCollectorNFT",
+    name: "isAuthorizedAgent",
     outputs: [
       {
-        internalType: "uint256",
+        internalType: "bool",
         name: "",
-        type: "uint256",
+        type: "bool",
       },
     ],
-    stateMutability: "payable",
+    stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "tokenId",
         type: "uint256",
       },
     ],
-    name: "mintCountPerGenImToken",
+    name: "isImageUpdated",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+    ],
+    name: "isTokenListed",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "mintPrice",
     outputs: [
       {
         internalType: "uint256",
@@ -885,9 +746,97 @@ export const CollectorNFTv1ABI = [
   },
   {
     inputs: [],
+    name: "reinitializeV3",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "reinitializeV4",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "renounceOwnership",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+      {
+        internalType: "string",
+        name: "imageUrl",
+        type: "string",
+      },
+    ],
+    name: "requestImageUpdate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "agentWallet",
+        type: "address",
+      },
+    ],
+    name: "revokeAgentWallet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "uri",
+        type: "string",
+      },
+      {
+        internalType: "bool",
+        name: "isListed",
+        type: "bool",
+      },
+    ],
+    name: "safeMint",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "uri",
+        type: "string",
+      },
+    ],
+    name: "safeMint",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "payable",
     type: "function",
   },
   {
@@ -963,11 +912,47 @@ export const CollectorNFTv1ABI = [
     inputs: [
       {
         internalType: "uint256",
-        name: "_baseMintPrice",
+        name: "newPrice",
         type: "uint256",
       },
     ],
-    name: "setBaseMintPrice",
+    name: "setMintPrice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256[]",
+        name: "tokenIds",
+        type: "uint256[]",
+      },
+      {
+        internalType: "bool",
+        name: "isListed",
+        type: "bool",
+      },
+    ],
+    name: "setMultipleTokensListed",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+      {
+        internalType: "bool",
+        name: "isListed",
+        type: "bool",
+      },
+    ],
+    name: "setTokenListed",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -1119,19 +1104,6 @@ export const CollectorNFTv1ABI = [
     inputs: [
       {
         internalType: "address",
-        name: "_genImNFTContract",
-        type: "address",
-      },
-    ],
-    name: "updateGenImNFTContract",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
         name: "newImplementation",
         type: "address",
       },
@@ -1146,6 +1118,13 @@ export const CollectorNFTv1ABI = [
     stateMutability: "payable",
     type: "function",
   },
+  {
+    inputs: [],
+    name: "withdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;
 
-export type CollectorNFTv1ABI = typeof CollectorNFTv1ABI;
+export type GenImNFTv4ABI = typeof GenImNFTv4ABI;

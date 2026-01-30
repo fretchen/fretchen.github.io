@@ -11,7 +11,7 @@
  * - x402_facilitator/x402_whitelist.js: isAuthorizedAgent
  * - website/components/PublicNFTList.tsx: getAllPublicTokens
  * - website/components/MyNFTList.tsx: balanceOf, tokenOfOwnerByIndex
- * - website/components/NFTCard.tsx: setListed, burn
+ * - website/components/NFTCard.tsx: setTokenListed, isTokenListed, burn
  */
 
 export const GenImNFTv4ABI = [
@@ -55,7 +55,7 @@ export const GenImNFTv4ABI = [
     outputs: [{ name: "", type: "string" }],
   },
   {
-    name: "isListed",
+    name: "isTokenListed",
     type: "function",
     stateMutability: "view",
     inputs: [{ name: "tokenId", type: "uint256" }],
@@ -86,7 +86,7 @@ export const GenImNFTv4ABI = [
     outputs: [{ name: "", type: "uint256" }],
   },
   {
-    name: "setListed",
+    name: "setTokenListed",
     type: "function",
     stateMutability: "nonpayable",
     inputs: [

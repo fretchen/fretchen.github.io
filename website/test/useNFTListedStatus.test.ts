@@ -27,7 +27,7 @@ vi.mock("@fretchen/chain-utils", () => ({
     if (network === "eip155:11155420") return "0xSepoliaContract";
     return "0xUnknownContract";
   }),
-  GenImNFTv4ABI: [{ name: "isListed", type: "function" }],
+  GenImNFTv4ABI: [{ name: "isTokenListed", type: "function" }],
   fromCAIP2: vi.fn((network: string) => {
     if (network === "eip155:10") return 10;
     if (network === "eip155:11155420") return 11155420;
@@ -57,7 +57,7 @@ describe("useNFTListedStatus", () => {
           expect.anything(), // config
           expect.objectContaining({
             address: "0xOptimismContract",
-            functionName: "isListed",
+            functionName: "isTokenListed",
             args: [BigInt(42)],
             chainId: 10,
           })
@@ -311,6 +311,35 @@ describe("useNFTListedStatus", () => {
           expect.objectContaining({ args: [BigInt(2)] })
         );
       });
+    });
+
+    it("should fetch when enabled changes from false to true", async () => {
+      mockReadContract.mockResolvedValue(true);
+
+      // Start with enabled=false (simulating isLoading state)
+      const { result, rerender } = renderHook(
+        ({ enabled }) =>
+          useNFTListedStatus({
+            tokenId: BigInt(42),
+            network: "eip155:10",
+            enabled,
+          }),
+        { initialProps: { enabled: false } }
+      );
+
+      // Should not have called contract yet
+      expect(mockReadContract).not.toHaveBeenCalled();
+      expect(result.current.isListed).toBeUndefined();
+
+      // Simulate NFT data loaded - enabled becomes true
+      rerender({ enabled: true });
+
+      // Should now fetch and return isListed
+      await waitFor(() => {
+        expect(result.current.isListed).toBe(true);
+      });
+
+      expect(mockReadContract).toHaveBeenCalledTimes(1);
     });
   });
 });

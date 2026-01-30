@@ -32,6 +32,12 @@ const contracts: ContractConfig[] = [
     description: "GenImNFT Version 3 with listing functionality",
   },
   {
+    name: "GenImNFTv4",
+    contractFile: "GenImNFTv4.sol",
+    contractName: "GenImNFTv4",
+    description: "GenImNFT Version 4 with EIP-8004 agent whitelist (CVE-2025-11-26 fix)",
+  },
+  {
     name: "CollectorNFT",
     contractFile: "CollectorNFT.sol",
     contractName: "CollectorNFT",
@@ -102,7 +108,6 @@ async function exportContractABI(config: ContractConfig) {
   const abiTsPath = path.join(exportDir, `${config.name}.ts`);
   const tsContent = `// Auto-generated ABI for ${config.name}
 // ${config.description}
-// Generated on: ${new Date().toISOString()}
 
 export const ${config.name}ABI = ${JSON.stringify(abi, null, 2)} as const;
 
@@ -170,8 +175,6 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
   const summaryContent = `# ${config.name} Contract Summary
 
 ${config.description}
-
-Generated on: ${new Date().toISOString()}
 
 ## Contract Information
 - **Name**: ${config.name}

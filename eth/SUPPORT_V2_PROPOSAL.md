@@ -7,40 +7,40 @@
 
 ## 0. Implementierungs-Übersicht
 
-| Phase | Beschreibung | Status |
-|-------|--------------|--------|
-| Phase 1 | Contract, Tests, Deployment Script | ✅ ABGESCHLOSSEN |
-| Phase 2 | Multi-Chain & Testing | ✅ ABGESCHLOSSEN |
-| Phase 3 | Frontend Integration | ✅ ABGESCHLOSSEN (ETH only) |
-| Phase 4 | Production Deployment | ✅ ABGESCHLOSSEN |
+| Phase   | Beschreibung                       | Status                      |
+| ------- | ---------------------------------- | --------------------------- |
+| Phase 1 | Contract, Tests, Deployment Script | ✅ ABGESCHLOSSEN            |
+| Phase 2 | Multi-Chain & Testing              | ✅ ABGESCHLOSSEN            |
+| Phase 3 | Frontend Integration               | ✅ ABGESCHLOSSEN (ETH only) |
+| Phase 4 | Production Deployment              | ✅ ABGESCHLOSSEN            |
 
 ### Deployment Adressen
 
 #### Mainnets
 
-| Chain | Proxy Address | Deployed |
-|-------|---------------|----------|
+| Chain    | Proxy Address                                | Deployed   |
+| -------- | -------------------------------------------- | ---------- |
 | Optimism | `0x4ca63f8A4Cd56287E854f53E18ca482D74391316` | 24.01.2026 |
-| Base | `0xB70EA4d714Fed01ce20E93F9033008BadA1c8694` | 25.01.2026 |
+| Base     | `0xB70EA4d714Fed01ce20E93F9033008BadA1c8694` | 25.01.2026 |
 
 #### Testnets
 
-| Chain | Proxy Address | Deployed |
-|-------|---------------|----------|
+| Chain            | Proxy Address                                | Deployed   |
+| ---------------- | -------------------------------------------- | ---------- |
 | Optimism Sepolia | `0x9859431b682e861b19e87Db14a04944BC747AB6d` | 20.01.2026 |
-| Base Sepolia | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | 21.01.2026 |
+| Base Sepolia     | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | 21.01.2026 |
 
 ---
 
 ## 1. Feature-Übersicht
 
-| Feature | Beschreibung |
-|---------|--------------|
-| 🔄 UUPS Upgradeable | Proxy-Architektur für spätere Updates |
-| 💰 ETH Donations | `donate(url, recipient)` |
-| 🪙 EIP-3009 Tokens | `donateToken(...)` für USDC und kompatible Tokens (permissionless) |
-| 📊 Like-Counting | On-chain `urlLikes` Mapping |
-| 🌐 Multi-Chain | Optimism + Base |
+| Feature             | Beschreibung                                                       |
+| ------------------- | ------------------------------------------------------------------ |
+| 🔄 UUPS Upgradeable | Proxy-Architektur für spätere Updates                              |
+| 💰 ETH Donations    | `donate(url, recipient)`                                           |
+| 🪙 EIP-3009 Tokens  | `donateToken(...)` für USDC und kompatible Tokens (permissionless) |
+| 📊 Like-Counting    | On-chain `urlLikes` Mapping                                        |
+| 🌐 Multi-Chain      | Optimism + Base                                                    |
 
 ---
 
@@ -124,12 +124,12 @@ import "./interfaces/IEIP3009.sol";
  * Multi-chain: Deploy on Optimism + Base
  */
 contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    
+
     /// @notice Contract version for upgrade tracking
     uint256 public constant VERSION = 1;
-    
+
     mapping(bytes32 => uint256) public urlLikes;
-    
+
     event Donation(
         address indexed from,
         address indexed recipient,
@@ -138,35 +138,35 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         uint256 amount,
         address token  // address(0) = ETH
     );
-    
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
-    
+
     function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
     }
-    
+
     // ETH Donation
     function donate(
-        string calldata _url, 
+        string calldata _url,
         address _recipient
     ) external payable nonReentrant {
         require(msg.value > 0, "No ETH sent");
         require(_recipient != address(0), "Invalid recipient");
-        
+
         bytes32 urlHash = keccak256(bytes(_url));
         urlLikes[urlHash]++;
-        
+
         (bool success, ) = payable(_recipient).call{value: msg.value}("");
         require(success, "Transfer failed");
-        
+
         emit Donation(msg.sender, _recipient, urlHash, _url, msg.value, address(0));
     }
-    
+
     // EIP-3009 Token Donation (v,r,s format) - Permissionless
     function donateToken(
         string calldata _url,
@@ -183,7 +183,7 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         require(_recipient != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
         require(_token != address(0), "Invalid token");
-        
+
         IEIP3009(_token).transferWithAuthorization(
             msg.sender,
             _recipient,
@@ -195,17 +195,17 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
             _r,
             _s
         );
-        
+
         bytes32 urlHash = keccak256(bytes(_url));
         urlLikes[urlHash]++;
-        
+
         emit Donation(msg.sender, _recipient, urlHash, _url, _amount, _token);
     }
-    
+
     function getLikesForUrl(string calldata _url) external view returns (uint256) {
         return urlLikes[keccak256(bytes(_url))];
     }
-    
+
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }
 ```
@@ -216,12 +216,12 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
 
 ## 3. Token-Adressen
 
-| Token | Chain | Adresse |
-|-------|-------|---------|
-| USDC | Optimism | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
-| USDC | Base | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| USDC | Optimism Sepolia | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
-| USDC | Base Sepolia | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+| Token | Chain            | Adresse                                      |
+| ----- | ---------------- | -------------------------------------------- |
+| USDC  | Optimism         | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
+| USDC  | Base             | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| USDC  | Optimism Sepolia | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
+| USDC  | Base Sepolia     | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
 ---
 
@@ -230,42 +230,37 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
 ### 4.1 EIP-3009 Signatur (v,r,s Format)
 
 ```typescript
-import { hexToSignature } from 'viem';
+import { hexToSignature } from "viem";
 
-async function signEIP3009(
-  token: Address,
-  recipient: Address,
-  amount: bigint,
-  chainId: number
-) {
-  const nonce = `0x${crypto.randomUUID().replace(/-/g, '')}` as `0x${string}`;
+async function signEIP3009(token: Address, recipient: Address, amount: bigint, chainId: number) {
+  const nonce = `0x${crypto.randomUUID().replace(/-/g, "")}` as `0x${string}`;
   const validAfter = 0n;
   const validBefore = BigInt(Math.floor(Date.now() / 1000) + 3600);
-  
+
   const signature = await walletClient.signTypedData({
     domain: {
-      name: 'USD Coin',
-      version: '2',
+      name: "USD Coin",
+      version: "2",
       chainId,
       verifyingContract: token,
     },
     types: {
       TransferWithAuthorization: [
-        { name: 'from', type: 'address' },
-        { name: 'to', type: 'address' },
-        { name: 'value', type: 'uint256' },
-        { name: 'validAfter', type: 'uint256' },
-        { name: 'validBefore', type: 'uint256' },
-        { name: 'nonce', type: 'bytes32' },
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" },
+        { name: "validBefore", type: "uint256" },
+        { name: "nonce", type: "bytes32" },
       ],
     },
-    primaryType: 'TransferWithAuthorization',
+    primaryType: "TransferWithAuthorization",
     message: { from: userAddress, to: recipient, value: amount, validAfter, validBefore, nonce },
   });
-  
+
   // Split signature into v, r, s for contract
   const { v, r, s } = hexToSignature(signature);
-  
+
   return { v: Number(v), r, s, nonce, validAfter, validBefore };
 }
 ```
@@ -276,7 +271,7 @@ async function signEIP3009(
 // ETH
 await writeContract({
   ...supportV2Config,
-  functionName: 'donate',
+  functionName: "donate",
   args: [url, recipient],
   value: amount,
 });
@@ -285,7 +280,7 @@ await writeContract({
 const sig = await signEIP3009(USDC_ADDRESS, recipient, amount, chainId);
 await writeContract({
   ...supportV2Config,
-  functionName: 'donateToken',
+  functionName: "donateToken",
   args: [url, recipient, USDC_ADDRESS, amount, sig.validAfter, sig.validBefore, sig.nonce, sig.v, sig.r, sig.s],
 });
 ```
@@ -296,58 +291,58 @@ await writeContract({
 
 ### Phase 1: Contract ✅ ABGESCHLOSSEN
 
-| Schritt | Beschreibung | Status |
-|---------|--------------|--------|
-| 1.1 | `contracts/interfaces/IEIP3009.sol` | ✅ |
-| 1.2 | `contracts/SupportV2.sol` | ✅ |
-| 1.3 | `test/SupportV2_Functional.ts` + `test/SupportV2_Deployment.ts` | ✅ |
-| 1.4 | `scripts/deploy-support-v2.ts` + Config | ✅ |
+| Schritt | Beschreibung                                                    | Status |
+| ------- | --------------------------------------------------------------- | ------ |
+| 1.1     | `contracts/interfaces/IEIP3009.sol`                             | ✅     |
+| 1.2     | `contracts/SupportV2.sol`                                       | ✅     |
+| 1.3     | `test/SupportV2_Functional.ts` + `test/SupportV2_Deployment.ts` | ✅     |
+| 1.4     | `scripts/deploy-support-v2.ts` + Config                         | ✅     |
 
 ### Phase 2: Multi-Chain & Testing ✅ ABGESCHLOSSEN
 
-| Schritt | Beschreibung | Status |
-|---------|--------------|--------|
-| 2.1 | Base + Base Sepolia zu `hardhat.config.ts` hinzufügen | ✅ |
-| 2.2 | Deploy auf Optimism Sepolia + Base Sepolia | ✅ |
-| 2.3 | ABI Export (`abi/contracts/SupportV2.ts`) | ✅ |
-| 2.4 | `notebooks/support_v2_demo.ipynb` — Deno TypeScript Notebook | ✅ |
+| Schritt | Beschreibung                                                 | Status |
+| ------- | ------------------------------------------------------------ | ------ |
+| 2.1     | Base + Base Sepolia zu `hardhat.config.ts` hinzufügen        | ✅     |
+| 2.2     | Deploy auf Optimism Sepolia + Base Sepolia                   | ✅     |
+| 2.3     | ABI Export (`abi/contracts/SupportV2.ts`)                    | ✅     |
+| 2.4     | `notebooks/support_v2_demo.ipynb` — Deno TypeScript Notebook | ✅     |
 
 ### Phase 3: Frontend ✅ ABGESCHLOSSEN (ETH only)
 
-| Schritt | Beschreibung | Status |
-|---------|--------------|--------|
-| 3.1 | `wagmi.config.ts` — Base + Base Sepolia Chains hinzufügen | ✅ |
-| 3.2 | `getChain.ts` — SupportV2 Multi-Chain Config | ✅ |
-| 3.3 | ~~EIP-3009 Signatur-Helper~~ (deprioritisiert) | ⏸️ |
-| 3.4 | ~~Token-Auswahl UI (ETH / USDC)~~ (deprioritisiert) | ⏸️ |
-| 3.5 | `useSupportAction.ts` — Multi-Chain Hook mit Auto-Switch | ✅ |
-| 3.6 | Legacy Support Config entfernt (`supportContractConfig`) | ✅ |
-| 3.7 | Unit Tests für `useSupportAction` | ✅ |
-| 3.8 | `VITE_USE_TESTNET` Env-Variable für Testnet-Modus | ✅ |
-| 3.9 | Aggregierte Likes von beiden Chains | ✅ |
+| Schritt | Beschreibung                                              | Status |
+| ------- | --------------------------------------------------------- | ------ |
+| 3.1     | `wagmi.config.ts` — Base + Base Sepolia Chains hinzufügen | ✅     |
+| 3.2     | `getChain.ts` — SupportV2 Multi-Chain Config              | ✅     |
+| 3.3     | ~~EIP-3009 Signatur-Helper~~ (deprioritisiert)            | ⏸️     |
+| 3.4     | ~~Token-Auswahl UI (ETH / USDC)~~ (deprioritisiert)       | ⏸️     |
+| 3.5     | `useSupportAction.ts` — Multi-Chain Hook mit Auto-Switch  | ✅     |
+| 3.6     | Legacy Support Config entfernt (`supportContractConfig`)  | ✅     |
+| 3.7     | Unit Tests für `useSupportAction`                         | ✅     |
+| 3.8     | `VITE_USE_TESTNET` Env-Variable für Testnet-Modus         | ✅     |
+| 3.9     | Aggregierte Likes von beiden Chains                       | ✅     |
 
 **Frontend-Änderungen (25. Januar 2026):**
 
 - `website/.env`: `VITE_USE_TESTNET` Variable hinzugefügt (default: mainnet)
 - `website/wagmi.config.ts`: Base + Base Sepolia zu Chains hinzugefügt
-- `website/utils/getChain.ts`: 
+- `website/utils/getChain.ts`:
   - `VITE_USE_TESTNET` steuert Mainnet/Testnet Modus
   - `SUPPORT_V2_CHAINS` exportiert aktive Chains basierend auf Modus
   - `getSupportV2Config()`, `isSupportV2Chain()`, `DEFAULT_SUPPORT_CHAIN`
   - Legacy `supportContractConfig` entfernt
-- `website/hooks/useSupportAction.ts`: 
+- `website/hooks/useSupportAction.ts`:
   - Multi-Chain mit automatischem Chain-Switch
   - Aggregierte Likes von beiden Chains im aktiven Modus
 - `website/test/useSupportAction.test.ts`: 17 Unit Tests
 
 ### Phase 4: Production Deployment ✅ ABGESCHLOSSEN
 
-| Schritt | Beschreibung | Status |
-|---------|--------------|--------|
-| 4.1 | Deploy auf Optimism Mainnet | ✅ |
-| 4.2 | Deploy auf Base Mainnet | ✅ |
-| 4.3 | `getChain.ts` — Mainnet Adressen eintragen | ✅ |
-| 4.4 | `DEFAULT_SUPPORT_CHAIN` auf Mainnet umstellen | ✅ |
+| Schritt | Beschreibung                                  | Status |
+| ------- | --------------------------------------------- | ------ |
+| 4.1     | Deploy auf Optimism Mainnet                   | ✅     |
+| 4.2     | Deploy auf Base Mainnet                       | ✅     |
+| 4.3     | `getChain.ts` — Mainnet Adressen eintragen    | ✅     |
+| 4.4     | `DEFAULT_SUPPORT_CHAIN` auf Mainnet umstellen | ✅     |
 
 ---
 
@@ -412,12 +407,12 @@ function donate(string calldata _url, address _recipient) external payable
 
 #### Wo passiert was?
 
-| Aktion | Wo | Code |
-|--------|-----|------|
-| Likes lesen | `useSupportAction` Hook | `useReadContract` mit `DEFAULT_READ_CHAIN.id` |
-| Chain prüfen | `handleSupport()` | `if (!isSupported)` |
-| Chain wechseln | `handleSupport()` | `await switchChainAsync({ chainId: DEFAULT_READ_CHAIN.id })` |
-| Donation senden | `handleSupport()` | `writeContract({ ...activeConfig, ... })` |
+| Aktion          | Wo                      | Code                                                         |
+| --------------- | ----------------------- | ------------------------------------------------------------ |
+| Likes lesen     | `useSupportAction` Hook | `useReadContract` mit `DEFAULT_READ_CHAIN.id`                |
+| Chain prüfen    | `handleSupport()`       | `if (!isSupported)`                                          |
+| Chain wechseln  | `handleSupport()`       | `await switchChainAsync({ chainId: DEFAULT_READ_CHAIN.id })` |
+| Donation senden | `handleSupport()`       | `writeContract({ ...activeConfig, ... })`                    |
 
 #### Schritt 1: `wagmi.config.ts` — Base Chains hinzufügen
 
@@ -474,7 +469,7 @@ export const RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as
 export function getSupportV2Config(chainId: number) {
   const address = SUPPORT_V2_ADDRESSES[chainId];
   if (!address) return null;
-  
+
   return {
     address,
     abi: SupportV2ABI,
@@ -496,12 +491,7 @@ import * as React from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
 import { parseEther } from "viem";
 import { useReadContract } from "wagmi";
-import { 
-  getSupportV2Config, 
-  isSupportV2Chain, 
-  RECIPIENT_ADDRESS,
-  DEFAULT_READ_CHAIN 
-} from "../utils/getChain";
+import { getSupportV2Config, isSupportV2Chain, RECIPIENT_ADDRESS, DEFAULT_READ_CHAIN } from "../utils/getChain";
 import { trackEvent } from "../utils/analytics";
 
 /**
@@ -514,10 +504,10 @@ export function useSupportAction(url: string) {
   const [fullUrl, setFullUrl] = React.useState(url);
 
   const { isConnected } = useAccount();
-  const chainId = useChainId();  // ← Aktuelle Chain des Users
-  const { switchChainAsync } = useSwitchChain();  // ← Async Version für await
+  const chainId = useChainId(); // ← Aktuelle Chain des Users
+  const { switchChainAsync } = useSwitchChain(); // ← Async Version für await
   const donationAmount = parseEther("0.0002");
-  
+
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
@@ -533,13 +523,13 @@ export function useSupportAction(url: string) {
   // ═══════════════════════════════════════════════════════════════
   // HIER WIRD GEPRÜFT: Ist die Chain unterstützt?
   // ═══════════════════════════════════════════════════════════════
-  
+
   // Contract Config für aktuelle Chain holen (null wenn nicht unterstützt)
   const contractConfig = React.useMemo(() => getSupportV2Config(chainId), [chainId]);
-  
+
   // Boolean: Ist die aktuelle Chain unterstützt?
   const isSupported = isSupportV2Chain(chainId);
-  
+
   // Chain für Read-Operationen: User's Chain wenn unterstützt, sonst Default
   const readChainId = isSupported ? chainId : DEFAULT_READ_CHAIN.id;
   const readConfig = getSupportV2Config(readChainId)!;
@@ -556,7 +546,7 @@ export function useSupportAction(url: string) {
     ...readConfig,
     functionName: "getLikesForUrl",
     args: [fullUrl],
-    chainId: readChainId,  // ← Liest von Default Chain wenn User's Chain nicht unterstützt
+    chainId: readChainId, // ← Liest von Default Chain wenn User's Chain nicht unterstützt
     query: { enabled: !!fullUrl },
   });
 
@@ -598,7 +588,7 @@ export function useSupportAction(url: string) {
     writeContract({
       ...activeConfig,
       functionName: "donate",
-      args: [fullUrl, RECIPIENT_ADDRESS],  // ← Neuer recipient Parameter
+      args: [fullUrl, RECIPIENT_ADDRESS], // ← Neuer recipient Parameter
       value: donationAmount,
     });
   }, [fullUrl, isSupported, chainId, switchChainAsync, writeContract, donationAmount]);
@@ -618,9 +608,9 @@ export function useSupportAction(url: string) {
   }, [isSuccess, writeError, refetch, fullUrl, chainId]);
 
   // Warning message
-  const warningMessage = errorMessage || (!isSupported && isConnected 
-    ? `Wechsle zu ${SUPPORTED_CHAINS.map(c => c.name).join(" oder ")}` 
-    : null);
+  const warningMessage =
+    errorMessage ||
+    (!isSupported && isConnected ? `Wechsle zu ${SUPPORTED_CHAINS.map((c) => c.name).join(" oder ")}` : null);
 
   return {
     supportCount: supportCount?.toString() || "0",
@@ -651,7 +641,7 @@ const allCounts = await Promise.all(
       args: [fullUrl],
     });
     return count;
-  })
+  }),
 );
 const totalLikes = allCounts.reduce((sum, c) => sum + c, 0n);
 ```

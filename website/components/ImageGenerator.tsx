@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
@@ -101,6 +101,12 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
+  // Hydration safety: prevent SSR/client mismatch by showing collapsed state until mounted
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
 
@@ -111,6 +117,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Blockchain interaction
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
+
+  // Effective connection state: only true after client has mounted
+  // This prevents hydration mismatch between SSR (always false) and client (may be true)
+  const isEffectivelyConnected = hasMounted && isConnected;
 
   // Determine target chain from useAutoNetwork (no auto-switch, switch at interaction)
   const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
@@ -515,8 +525,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             AI Image Generation is currently under maintenance. Please check back later.
           </p>
         </div>
-      ) : !isConnected ? (
-        // Collapsed State - Clean & Simple
+      ) : !isEffectivelyConnected ? (
+        // Collapsed State - Clean & Simple (also shown during SSR before hydration)
         <div
           className={css({
             maxWidth: "500px",

@@ -177,9 +177,7 @@ describe("ImageGenerator Reference Image Integration", () => {
       expect(textarea).toBeInTheDocument();
 
       // Sollte NICHT Edit-Placeholder zeigen
-      expect(
-        screen.queryByPlaceholderText("imagegen.editPromptPlaceholder"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("imagegen.editPromptPlaceholder")).not.toBeInTheDocument();
     });
 
     it("sollte Button Text korrekt ändern basierend auf previewState", () => {

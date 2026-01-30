@@ -109,7 +109,7 @@ describe("ImageGenerator Component", () => {
       // Start in disconnected state (collapsed)
       // Create a new mock that we can track
       const mockConnect = vi.fn();
-      
+
       vi.mocked(useAccount).mockReturnValue({
         address: undefined,
         isConnected: false,

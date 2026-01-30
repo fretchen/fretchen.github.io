@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { readContract } from "wagmi/actions";
-import { config } from "../wagmi.config";
-import { genAiNFTContractConfig, getChain } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isMainnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
@@ -43,8 +43,24 @@ export function NFTCard({
 
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
+  // Get network and contract address from chain-utils
+  const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const contractAddress = getGenAiNFTAddress(network);
+
+  // Use the extracted hook for listing status
+  // Only enabled when:
+  // 1. Not public view (owners can toggle listing)
+  // 2. Token data loaded successfully (no error, not loading)
+  // This prevents contract calls for non-existent/burned tokens
+  const tokenDataLoaded = !nft.isLoading && !nft.error;
+  const { isListed, setOptimisticListed } = useNFTListedStatus({
+    tokenId,
+    network,
+    enabled: !isPublicView && tokenDataLoaded,
+  });
+
   // Use the custom hook for a stable public client reference
-  const publicClient = useConfiguredPublicClient();
+  const publicClient = useConfiguredPublicClient(network);
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -76,8 +92,8 @@ export function NFTCard({
 
         // Get token URI using public client
         const tokenURIResult = await publicClient.readContract({
-          address: genAiNFTContractConfig.address,
-          abi: genAiNFTContractConfig.abi,
+          address: contractAddress,
+          abi: GenImNFTv4ABI,
           functionName: "tokenURI",
           args: [tokenId],
         });
@@ -98,8 +114,8 @@ export function NFTCard({
         let nftOwner = "";
         if (isPublicView) {
           const ownerResult = await publicClient.readContract({
-            address: genAiNFTContractConfig.address,
-            abi: genAiNFTContractConfig.abi,
+            address: contractAddress,
+            abi: GenImNFTv4ABI,
             functionName: "ownerOf",
             args: [tokenId],
           });
@@ -107,22 +123,7 @@ export function NFTCard({
           setOwner(nftOwner);
         }
 
-        // Get listing status if not public view
-        let isListed: boolean | undefined;
-        if (!isPublicView) {
-          try {
-            const chain = getChain();
-            const isListedResult = await readContract(config, {
-              ...genAiNFTContractConfig,
-              functionName: "isTokenListed",
-              args: [tokenId],
-              chainId: chain.id,
-            });
-            isListed = isListedResult as boolean;
-          } catch (error) {
-            console.warn("Could not load listing status:", error);
-          }
-        }
+        // Note: isListed is now handled by useNFTListedStatus hook
 
         // Fetch metadata only if tokenURI is available
         let metadata = preloadedMetadata; // Keep preloaded metadata as fallback
@@ -142,7 +143,6 @@ export function NFTCard({
           metadata,
           imageUrl: finalImageUrl,
           isLoading: false,
-          isListed,
         });
       } catch (error) {
         console.error(`Error loading NFT ${tokenId}:`, error);
@@ -224,8 +224,9 @@ export function NFTCard({
    * Uses the Optimism network OpenSea URL format
    */
   const handleShare = async () => {
-    const contractAddress = genAiNFTContractConfig.address;
-    const openSeaUrl = `https://opensea.io/item/optimism/${contractAddress}/${nft.tokenId}`;
+    // Determine OpenSea network based on mainnet/testnet
+    const openSeaNetwork = isMainnet(network) ? "optimism" : "optimism-sepolia";
+    const openSeaUrl = `https://opensea.io/item/${openSeaNetwork}/${contractAddress}/${nft.tokenId}`;
 
     try {
       await navigator.clipboard.writeText(openSeaUrl);
@@ -259,8 +260,16 @@ export function NFTCard({
     setShowDeleteConfirmation(false);
 
     try {
+      // Switch chain if needed before transaction
+      const switched = await switchIfNeeded();
+      if (!switched) {
+        showToast("Please switch to the correct network.", "error");
+        return;
+      }
+
       await writeContract({
-        ...genAiNFTContractConfig,
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
         functionName: "burn",
         args: [nft.tokenId],
       });
@@ -273,22 +282,32 @@ export function NFTCard({
   const handleToggleListing = async () => {
     if (!onListedStatusChanged) return;
 
-    const newListedStatus = !nft.isListed;
+    const newListedStatus = !isListed;
     const statusText = newListedStatus ? "public" : "private";
 
     try {
-      // Update UI optimistically
+      // Switch chain if needed before transaction
+      const switched = await switchIfNeeded();
+      if (!switched) {
+        showToast("Please switch to the correct network.", "error");
+        return;
+      }
+
+      // Update UI optimistically (both local state and parent)
+      setOptimisticListed(newListedStatus);
       onListedStatusChanged(nft.tokenId, newListedStatus);
 
       // Call contract
       await writeListingContract({
-        ...genAiNFTContractConfig,
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
         functionName: "setTokenListed",
         args: [nft.tokenId, newListedStatus],
       });
     } catch (error) {
       console.error("Failed to update listing status:", error);
       // Revert optimistic update on error
+      setOptimisticListed(!newListedStatus);
       onListedStatusChanged(nft.tokenId, !newListedStatus);
       showToast(`Failed to set artwork as ${statusText}. Please try again.`, "error");
     }
@@ -338,7 +357,7 @@ export function NFTCard({
           <div className={styles.nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
 
           {/* Listed Badge (nur wenn listed) */}
-          {!isPublicView && nft.isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
+          {!isPublicView && isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
 
           {/* Owner Badge (nur in Public View) */}
           {isPublicView && owner && (
@@ -392,7 +411,7 @@ export function NFTCard({
               </button>
 
               {/* Listed Toggle (nur private view) */}
-              {!isPublicView && onListedStatusChanged && nft.isListed !== undefined && (
+              {!isPublicView && onListedStatusChanged && isListed !== undefined && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -400,9 +419,9 @@ export function NFTCard({
                   }}
                   disabled={isToggling || isListingConfirming}
                   className={styles.nftCard.compactSecondaryButton}
-                  title={`${nft.isListed ? "Make private" : "Make public"}`}
+                  title={`${isListed ? "Make private" : "Make public"}`}
                 >
-                  {nft.isListed ? "🔓" : "🔒"}
+                  {isListed ? "🔓" : "🔒"}
                 </button>
               )}
 

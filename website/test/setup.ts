@@ -2,55 +2,61 @@ import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
-// Mock wagmi hooks that are used in components
+// =============================================================================
+// EXPORTABLE MOCK FUNCTIONS
+// Tests can import these and configure them per test/describe block
+// =============================================================================
+
+// Chain & Network Mocks
+export const mockChainId = vi.fn(() => 10); // Default: Optimism
+export const mockSwitchChainAsync = vi.fn().mockResolvedValue(undefined);
+
+// Account Mocks
+export const mockAccountData = vi.fn(() => ({
+  address: "0x123456789abcdef" as `0x${string}`,
+  isConnected: false,
+  status: "disconnected" as const,
+  isConnecting: false,
+  isDisconnected: true,
+  isReconnecting: false,
+}));
+
+// Contract Mocks
+export const mockReadContractData = vi.fn(() => ({
+  data: undefined,
+  error: null,
+  isPending: false,
+  refetch: vi.fn(),
+}));
+
+export const mockWriteContractData = vi.fn(() => ({
+  writeContract: vi.fn(),
+  writeContractAsync: vi.fn(),
+  isPending: false,
+  error: null,
+}));
+
+// =============================================================================
+// WAGMI MOCK SETUP - Uses the exportable functions above
+// =============================================================================
+
 vi.mock("wagmi", () => ({
-  useAccount: vi.fn(() => ({
-    address: "0x123456789abcdef",
-    isConnected: false,
-  })),
-  useWalletClient: vi.fn(() => ({
-    data: undefined,
-  })),
-  useSignMessage: vi.fn(() => ({
-    signMessageAsync: vi.fn(),
-  })),
-  useReadContract: vi.fn(() => ({
-    data: undefined,
-    error: null,
-    isPending: false,
-    refetch: vi.fn(),
-  })),
-  useReadContracts: vi.fn(() => ({
-    data: undefined,
-    error: null,
-    isPending: false,
-    refetch: vi.fn(),
-  })),
-  useWriteContract: vi.fn(() => ({
-    writeContract: vi.fn(),
-    writeContractAsync: vi.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useWaitForTransactionReceipt: vi.fn(() => ({
-    isLoading: false,
-    isSuccess: false,
-  })),
-  useChainId: vi.fn(() => 10),
+  useAccount: vi.fn(() => mockAccountData()),
+  useWalletClient: vi.fn(() => ({ data: undefined })),
+  useSignMessage: vi.fn(() => ({ signMessageAsync: vi.fn() })),
+  useReadContract: vi.fn(() => mockReadContractData()),
+  useReadContracts: vi.fn(() => mockReadContractData()),
+  useWriteContract: vi.fn(() => mockWriteContractData()),
+  useWaitForTransactionReceipt: vi.fn(() => ({ isLoading: false, isSuccess: false })),
+  useChainId: vi.fn(() => mockChainId()),
   useSwitchChain: vi.fn(() => ({
     switchChain: vi.fn(),
+    switchChainAsync: mockSwitchChainAsync,
     chains: [],
   })),
-  useConnect: vi.fn(() => ({
-    connectors: [],
-    connect: vi.fn(),
-  })),
-  useDisconnect: vi.fn(() => ({
-    disconnect: vi.fn(),
-  })),
-  useEnsName: vi.fn(() => ({
-    data: null,
-  })),
+  useConnect: vi.fn(() => ({ connectors: [], connect: vi.fn() })),
+  useDisconnect: vi.fn(() => ({ disconnect: vi.fn() })),
+  useEnsName: vi.fn(() => ({ data: null })),
   createConfig: vi.fn(() => ({})),
   http: vi.fn(),
   WagmiProvider: vi.fn(({ children }) => children),
@@ -79,18 +85,21 @@ vi.mock("vike-react/usePageContext", () => ({
   })),
 }));
 
-// No need to mock utils/getChain - it's just reading env vars and returning constants
-// The real implementation works fine in tests and ensures we test realistic configurations
-
 // Mock useLocale hook
-vi.mock("./hooks/useLocale", () => ({
+vi.mock("../hooks/useLocale", () => ({
   useLocale: vi.fn(({ label }: { label: string }) => label),
 }));
 
-// Import wagmi at top level for mock utilities
-import { useAccount } from "wagmi";
+// NOTE: useAutoNetwork is NOT mocked here anymore!
+// Tests that need specific useAutoNetwork behavior should:
+// 1. Configure mockChainId() for the desired chain
+// 2. Let the real hook run with mocked wagmi hooks
 
-// Reusable mock data for tests
+// =============================================================================
+// HELPER FUNCTIONS FOR TESTS
+// =============================================================================
+
+// Reusable mock data
 export const MOCK_CONNECTED_ACCOUNT = {
   address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
   isConnected: true,
@@ -98,7 +107,7 @@ export const MOCK_CONNECTED_ACCOUNT = {
   isConnecting: false,
   isDisconnected: false,
   isReconnecting: false,
-} as ReturnType<typeof useAccount>;
+};
 
 export const MOCK_DISCONNECTED_ACCOUNT = {
   address: undefined,
@@ -107,18 +116,34 @@ export const MOCK_DISCONNECTED_ACCOUNT = {
   isConnecting: false,
   isDisconnected: true,
   isReconnecting: false,
-} as ReturnType<typeof useAccount>;
+};
 
-// Reusable mock utilities for tests
+// Helper to set chain for a test
+export const mockChain = (chainId: number) => {
+  mockChainId.mockReturnValue(chainId);
+};
+
+// Helper to set connected wallet
 export const mockConnectedWallet = () => {
-  vi.mocked(useAccount).mockReturnValue(MOCK_CONNECTED_ACCOUNT);
+  mockAccountData.mockReturnValue(MOCK_CONNECTED_ACCOUNT);
 };
 
 export const mockDisconnectedWallet = () => {
-  vi.mocked(useAccount).mockReturnValue(MOCK_DISCONNECTED_ACCOUNT);
+  mockAccountData.mockReturnValue(MOCK_DISCONNECTED_ACCOUNT);
 };
 
 // Clean up after each test
 afterEach(() => {
   cleanup();
+  // Reset all mock return values to defaults
+  mockChainId.mockReturnValue(10);
+  mockAccountData.mockReturnValue({
+    address: "0x123456789abcdef" as `0x${string}`,
+    isConnected: false,
+    status: "disconnected" as const,
+    isConnecting: false,
+    isDisconnected: true,
+    isReconnecting: false,
+  });
+  mockSwitchChainAsync.mockResolvedValue(undefined);
 });

@@ -14,6 +14,12 @@ jobs:
 
       - name: Install and Build 🔧 # This example project is built using npm and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
         run: |
+          # Build shared chain-utils first (required by website)
+          cd shared/chain-utils
+          npm ci
+          npm run build
+          cd ../..
+          # Build website
           cd website
           npm ci
           npm run build

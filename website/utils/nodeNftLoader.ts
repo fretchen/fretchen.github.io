@@ -3,7 +3,9 @@
  * Used for build-time operations like blog generation
  */
 
-import { createNodePublicClient, nodeGenAiNFTContractConfig } from "./nodeChainUtils";
+import { createPublicClient, http } from "viem";
+import { getDefaultNetwork } from "./nodeChainUtils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, getViemChain } from "@fretchen/chain-utils";
 import { NFTMetadata } from "../types/BlogPost";
 
 interface NFTMetadataJSON {
@@ -13,19 +15,32 @@ interface NFTMetadataJSON {
 }
 
 /**
+ * Create a public client for the default network
+ */
+function createDefaultPublicClient() {
+  const network = getDefaultNetwork();
+  const chain = getViemChain(network);
+  return createPublicClient({
+    chain,
+    transport: http(),
+  });
+}
+
+/**
  * Node.js-specific NFT metadata loader using pure viem
  */
 export async function loadNFTMetadataNode(tokenID: number): Promise<NFTMetadata | null> {
   try {
     console.log(`Loading NFT metadata for token ${tokenID}...`);
 
-    // Create pure viem public client
-    const publicClient = createNodePublicClient();
+    const network = getDefaultNetwork();
+    const contractAddress = getGenAiNFTAddress(network);
+    const publicClient = createDefaultPublicClient();
 
     // Get token URI from contract using pure viem
     const tokenURIResult = await publicClient.readContract({
-      address: nodeGenAiNFTContractConfig.address,
-      abi: nodeGenAiNFTContractConfig.abi,
+      address: contractAddress,
+      abi: GenImNFTv4ABI,
       functionName: "tokenURI",
       args: [BigInt(tokenID)],
     });

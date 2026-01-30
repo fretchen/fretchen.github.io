@@ -14,8 +14,8 @@ This guide explains how to deploy the SupportV2 contract to Optimism and Base ma
 
 SupportV2 is an evolution of the original Support contract with these key changes:
 
-| Feature | Support (v1) | SupportV2 |
-|---------|--------------|-----------|
+| Feature              | Support (v1)  | SupportV2                |
+| -------------------- | ------------- | ------------------------ |
 | `donate()` signature | `donate(url)` | `donate(url, recipient)` |
 
 | Upgradeability | None | UUPS proxy |
@@ -82,17 +82,17 @@ networks: {
 
 ### Testnets ✅
 
-| Network | Proxy Address | Implementation | Verified |
-|---------|---------------|----------------|----------|
-| Optimism Sepolia | `0x9859431b682e861b19e87Db14a04944BC747AB6d` | - | ✅ |
-| Base Sepolia | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | - | ✅ |
+| Network          | Proxy Address                                | Implementation | Verified |
+| ---------------- | -------------------------------------------- | -------------- | -------- |
+| Optimism Sepolia | `0x9859431b682e861b19e87Db14a04944BC747AB6d` | -              | ✅       |
+| Base Sepolia     | `0xaB44BE78499721b593a0f4BE2099b246e9C53B57` | -              | ✅       |
 
 ### Mainnets ✅
 
-| Network | Proxy Address | Implementation | Verified |
-|---------|---------------|----------------|----------|
-| Optimism | `0x4ca63f8A4Cd56287E854f53E18ca482D74391316` | `0x011881999565F10aB2C62912878050Fb5deC10ac` | ✅ |
-| Base | `0xB70EA4d714Fed01ce20E93F9033008BadA1c8694` | `0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1` | ✅ |
+| Network  | Proxy Address                                | Implementation                               | Verified |
+| -------- | -------------------------------------------- | -------------------------------------------- | -------- |
+| Optimism | `0x4ca63f8A4Cd56287E854f53E18ca482D74391316` | `0x011881999565F10aB2C62912878050Fb5deC10ac` | ✅       |
+| Base     | `0xB70EA4d714Fed01ce20E93F9033008BadA1c8694` | `0x314B07fBd33A7343479e99E6682D5Ee1da7F17c1` | ✅       |
 
 ## Configuration File
 
@@ -135,10 +135,13 @@ Edit `scripts/deploy-support-v2.config.json`:
   }
 }
 ```
+
     "environment": "mainnet"
-  }
+
 }
-```
+}
+
+````
 
 ### Configuration Options
 
@@ -175,9 +178,10 @@ cd eth
 
 # Edit config: set validateOnly: true
 npx hardhat run scripts/deploy-support-v2.ts --network optimisticEthereum
-```
+````
 
 **What happens:**
+
 - ✅ Validates contract compiles successfully
 - ✅ Checks OpenZeppelin upgrade patterns
 - ✅ Verifies UUPS proxy compatibility
@@ -192,6 +196,7 @@ npx hardhat run scripts/deploy-support-v2.ts --network optimisticEthereum
 ```
 
 **What happens:**
+
 - ✅ Shows deployment parameters
 - ✅ Validates configuration
 - ✅ Simulates deployment flow
@@ -205,6 +210,7 @@ npx hardhat run scripts/deploy-support-v2.ts --network optimisticEthereum
 ```
 
 **For Base Mainnet:**
+
 ```bash
 npx hardhat run scripts/deploy-support-v2.ts --network base
 ```
@@ -282,11 +288,13 @@ npx hardhat run scripts/verify-contract.ts --network base
 ```
 
 The script will:
+
 1. Verify the implementation contract
 2. Attempt proxy verification with multiple strategies
 3. Handle "Already Verified" gracefully
 
 **Alternative (simple):**
+
 ```bash
 npx hardhat verify --network optimisticEthereum <IMPLEMENTATION_ADDRESS>
 ```
@@ -302,7 +310,7 @@ const SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {
   [baseSepolia.id]: "0xaB44BE78499721b593a0f4BE2099b246e9C53B57",
   // Mainnets - ADD THESE AFTER DEPLOYMENT
   [optimism.id]: "0x...", // ← Optimism Mainnet proxy address
-  [base.id]: "0x...",     // ← Base Mainnet proxy address
+  [base.id]: "0x...", // ← Base Mainnet proxy address
 };
 
 // Update default chain for production
@@ -369,6 +377,7 @@ Ensure `scripts/deploy-support-v2.config.json` exists.
 ### "OpenZeppelin upgrade validation failed"
 
 Check the contract for:
+
 - Missing `__gap` arrays in base contracts
 - Storage layout incompatibilities
 

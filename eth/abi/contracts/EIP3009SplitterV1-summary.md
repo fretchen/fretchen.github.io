@@ -2,8 +2,6 @@
 
 EIP-3009 payment splitter with fixed facilitator fee
 
-Generated on: 2026-01-20T20:33:28.418Z
-
 ## Contract Information
 
 - **Name**: EIP3009SplitterV1

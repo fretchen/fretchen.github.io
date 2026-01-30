@@ -1,6 +1,7 @@
 import * as React from "react";
 import { entryList } from "../layouts/styles";
-import { genAiNFTContractConfig } from "../utils/getChain";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTMetadata } from "../types/components";
 
@@ -16,7 +17,9 @@ interface EntryNftImageProps {
 export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackImageUrl, nftName }) => {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const publicClient = useConfiguredPublicClient();
+  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const contractAddress = getGenAiNFTAddress(network);
+  const publicClient = useConfiguredPublicClient(network);
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -53,8 +56,8 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
         if (tokenId && publicClient) {
           // Get token URI using public client (same as NFTFloatImage)
           const tokenURIResult = await publicClient.readContract({
-            address: genAiNFTContractConfig.address,
-            abi: genAiNFTContractConfig.abi,
+            address: contractAddress,
+            abi: GenImNFTv4ABI,
             functionName: "tokenURI",
             args: [BigInt(tokenId)],
           });

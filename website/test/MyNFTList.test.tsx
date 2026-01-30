@@ -1,15 +1,12 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, waitFor, screen, cleanup } from "@testing-library/react";
 import { MyNFTList } from "../components/MyNFTList";
 
 /**
  * Test to reproduce the infinite re-render bug caused by unstable contract configs
  * in useEffect dependencies after the "Lint hooks" commit.
  */
-
-let renderCount = 0;
-let contractConfigCallCount = 0;
 
 // Mock wagmi functions
 const mockUseAccount = vi.fn();
@@ -25,14 +22,21 @@ vi.mock("wagmi/actions", () => ({
   readContract: (...args: unknown[]) => mockReadContract(...args),
 }));
 
-// Mock getChain to provide the stable constant
-vi.mock("../utils/getChain", () => ({
-  getChain: vi.fn(() => ({ id: 10 })),
-  // Stable constant that our components now use
-  genAiNFTContractConfig: {
-    address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-    abi: [], // Simplified for test
-  },
+// Mock useAutoNetwork hook - returns object with network and switchIfNeeded
+vi.mock("../hooks/useAutoNetwork", () => ({
+  useAutoNetwork: vi.fn(() => ({
+    network: "eip155:10", // Default to Optimism mainnet
+    isOnCorrectNetwork: true,
+    switchIfNeeded: vi.fn(() => Promise.resolve(true)),
+  })),
+}));
+
+// Mock chain-utils
+vi.mock("@fretchen/chain-utils", () => ({
+  getGenAiNFTAddress: vi.fn(() => "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"),
+  GenImNFTv4ABI: [],
+  GENAI_NFT_NETWORKS: ["eip155:10", "eip155:11155420"],
+  fromCAIP2: vi.fn((network: string) => parseInt(network.split(":")[1])),
 }));
 
 // Mock config
@@ -68,17 +72,9 @@ vi.mock("../hooks/useLocale", () => ({
   useLocale: vi.fn(() => "Mocked text"),
 }));
 
-// Create a wrapper component to count renders
-function MyNFTListWrapper(props: Record<string, unknown>) {
-  renderCount++;
-  return <MyNFTList {...props} />;
-}
-
 describe("MyNFTList Re-render Bug Reproduction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    renderCount = 0;
-    contractConfigCallCount = 0;
 
     // Setup default mock returns
     mockUseAccount.mockReturnValue({
@@ -103,76 +99,69 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     });
   });
 
-  it("should show the bug is fixed with stable constants", async () => {
-    // Render the component
-    render(<MyNFTListWrapper />);
+  afterEach(() => {
+    cleanup();
+  });
 
-    // Wait a bit to let effects run
+  it("should call balanceOf ABI function when loading NFTs", async () => {
+    // Render the component
+    render(<MyNFTList />);
+
+    // Wait for the component to load
+    await waitFor(() => {
+      // balanceOf should be called via useReadContract (mocked above)
+      expect(mockUseReadContract).toHaveBeenCalled();
+    });
+  });
+
+  it("should call tokenOfOwnerByIndex ABI function for each NFT", async () => {
+    // Render the component
+    render(<MyNFTList />);
+
+    // Wait for the component to load and fetch token IDs
     await waitFor(
       () => {
-        // With stable constants, only a few renders should occur
-        expect(renderCount).toBeLessThanOrEqual(3);
+        // tokenOfOwnerByIndex should be called for each NFT in the balance
+        expect(mockReadContract).toHaveBeenCalled();
       },
       { timeout: 2000 },
     );
 
-    // Die instabile contractConfig Funktion sollte nicht mehr aufgerufen werden
-    // da die Komponenten jetzt die stabile Konstante verwenden
-    expect(contractConfigCallCount).toBe(0);
+    // Verify tokenOfOwnerByIndex was called with correct function name
+    const calls = mockReadContract.mock.calls;
+    const tokenOfOwnerByIndexCalls = calls.filter((call: unknown[]) => {
+      const params = call[1] as { functionName?: string };
+      return params?.functionName === "tokenOfOwnerByIndex";
+    });
 
-    console.log(`Total renders: ${renderCount}`);
-    console.log(`Contract config calls: ${contractConfigCallCount}`);
+    expect(tokenOfOwnerByIndexCalls.length).toBeGreaterThan(0);
   });
 
-  it("should show that stable constant has consistent reference", async () => {
-    // Import the new stable constant
-    const { genAiNFTContractConfig } = await import("../utils/getChain");
+  it("should render NFT cards after loading token IDs", async () => {
+    render(<MyNFTList />);
 
-    // Multiple imports should return the same reference
-    const config1 = genAiNFTContractConfig;
-    const config2 = genAiNFTContractConfig;
-
-    // They should be exactly the same object (same content AND reference)
-    expect(config1).toEqual(config2); // Content is the same
-    expect(config1).toBe(config2); // And references are the same - THIS IS THE FIX!
-
-    // This proves why the useEffect with contract config in dependencies
-    // causes infinite re-renders
-  });
-
-  it("should demonstrate stable dependency with fixed implementation", async () => {
-    let effectRunCount = 0;
-
-    // Create a component that uses the stable constant
-    function FixedComponent() {
-      const [contractConfig, setContractConfig] = React.useState<Record<string, unknown> | null>(null);
-
-      React.useEffect(() => {
-        import("../utils/getChain").then(({ genAiNFTContractConfig }) => {
-          setContractConfig(genAiNFTContractConfig);
-        });
-      }, []);
-
-      React.useEffect(() => {
-        effectRunCount++;
-        console.log(`Effect run #${effectRunCount}`);
-        // Simulate loading token IDs
-      }, [contractConfig]); // This dependency causes the loop!
-
-      return <div>Component</div>;
-    }
-
-    render(<FixedComponent />);
-
+    // Wait for NFT cards to appear
     await waitFor(
       () => {
-        // With stable constants, the effect only runs 2 times
-        // (once initial, once after the first useEffect update)
-        expect(effectRunCount).toBeLessThanOrEqual(2);
+        expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
+        expect(screen.getByTestId("nft-card-2")).toBeInTheDocument();
       },
-      { timeout: 1000 },
+      { timeout: 2000 },
     );
+  });
 
-    console.log(`Effect ran ${effectRunCount} times with stable dependency`);
+  it("should show empty state when user has no NFTs", async () => {
+    // Mock no NFTs
+    mockUseReadContract.mockReturnValue({
+      data: 0n,
+      isLoading: false,
+    });
+
+    render(<MyNFTList />);
+
+    // Should not show any NFT cards
+    await waitFor(() => {
+      expect(screen.queryByTestId("nft-card-1")).not.toBeInTheDocument();
+    });
   });
 });

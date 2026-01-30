@@ -1,4 +1,4 @@
-import { genAiNFTContractConfig } from "./getChain";
+import { getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
 import { NFTMetadata } from "../types/BlogPost";
 import type { PublicClient } from "viem";
 
@@ -10,15 +10,22 @@ interface NFTMetadataJSON {
 
 /**
  * Simple NFT loader that fetches metadata for a single token
+ * @param tokenID The token ID to load
+ * @param publicClient The public client to use for contract calls
+ * @param network CAIP-2 network string (e.g., "eip155:10")
  */
-export async function loadNFTMetadata(tokenID: number, publicClient: PublicClient): Promise<NFTMetadata | null> {
+export async function loadNFTMetadata(
+  tokenID: number,
+  publicClient: PublicClient,
+  network: string,
+): Promise<NFTMetadata | null> {
   try {
-    // Verwende die stabile genAiNFTContractConfig Konstante
+    const contractAddress = getGenAiNFTAddress(network);
 
     // Get token URI from contract
     const tokenURIResult = await publicClient.readContract({
-      address: genAiNFTContractConfig.address,
-      abi: genAiNFTContractConfig.abi,
+      address: contractAddress,
+      abi: GenImNFTv4ABI,
       functionName: "tokenURI",
       args: [BigInt(tokenID)],
     });
@@ -58,11 +65,13 @@ export async function loadNFTMetadata(tokenID: number, publicClient: PublicClien
  * Load multiple NFT metadata entries with controlled concurrency
  * @param tokenIDs Array of token IDs to load
  * @param publicClient The public client to use for contract calls
+ * @param network CAIP-2 network string (e.g., "eip155:10")
  * @param concurrency Maximum number of concurrent requests (default: 3)
  */
 export async function loadMultipleNFTMetadata(
   tokenIDs: number[],
   publicClient: PublicClient,
+  network: string,
   concurrency = 3,
 ): Promise<Record<number, NFTMetadata>> {
   const results: Record<number, NFTMetadata> = {};
@@ -71,7 +80,7 @@ export async function loadMultipleNFTMetadata(
   const processBatch = async (batch: number[]): Promise<void> => {
     const promises = batch.map(async (tokenID) => {
       console.log(`Loading NFT metadata for token ${tokenID}...`);
-      const metadata = await loadNFTMetadata(tokenID, publicClient);
+      const metadata = await loadNFTMetadata(tokenID, publicClient, network);
       if (metadata) {
         results[tokenID] = metadata;
       }

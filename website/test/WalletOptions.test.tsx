@@ -112,7 +112,7 @@ describe("WalletOptions Component", () => {
 
   it("always shows 'Connect Account' initially (hydration safety)", () => {
     render(<WalletOptions />);
-    expect(screen.getByRole("button")).toHaveTextContent("Connect Account");
+    expect(screen.getByRole("button")).toHaveTextContent("walletoptions.connectAccount");
   });
 
   it("prevents hydration mismatch when wallet is connected", async () => {

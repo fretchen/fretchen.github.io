@@ -2,8 +2,6 @@
 
 NFT collection based on GenImNFT tokens
 
-Generated on: 2026-01-20T20:33:28.414Z
-
 ## Contract Information
 
 - **Name**: CollectorNFT

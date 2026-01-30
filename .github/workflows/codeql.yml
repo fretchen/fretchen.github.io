@@ -39,8 +39,15 @@ jobs:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: |
+            shared/chain-utils/package-lock.json
             website/package-lock.json
             scw_js/package-lock.json
+
+      - name: Build chain-utils (local dependency)
+        working-directory: ./shared/chain-utils
+        run: |
+          npm ci
+          npm run build
 
       - name: Install dependencies (website)
         working-directory: ./website

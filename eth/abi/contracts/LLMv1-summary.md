@@ -2,8 +2,6 @@
 
 LLM Version 1 to interact with LLMs
 
-Generated on: 2026-01-20T20:33:28.417Z
-
 ## Contract Information
 
 - **Name**: LLMv1

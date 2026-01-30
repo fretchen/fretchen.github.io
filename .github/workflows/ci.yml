@@ -30,6 +30,13 @@ jobs:
         with:
           node-version: "22"
 
+      # Build shared chain-utils first (required by website)
+      - name: Build chain-utils
+        run: |
+          cd shared/chain-utils
+          npm ci
+          npm run build
+
       # Install website dependencies
       - name: Install website dependencies
         run: |

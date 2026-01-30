@@ -1,6 +1,5 @@
 // Auto-generated ABI for SupportV2
 // Support contract V2 with ETH and EIP-3009 token donations
-// Generated on: 2026-01-20T20:33:28.419Z
 
 export const SupportV2ABI = [
   {

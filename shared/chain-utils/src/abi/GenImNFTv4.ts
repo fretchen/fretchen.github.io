@@ -1,7 +1,7 @@
 /**
  * GenImNFTv4 Minimal ABI
  *
- * Contains only the functions used by scw_js and x402_facilitator.
+ * Contains the functions used by scw_js, x402_facilitator, and website frontend.
  * Full ABI available in: eth/abi/contracts/GenImNFTv4.ts (after export)
  *
  * Used by:
@@ -9,6 +9,9 @@
  * - scw_js/genimg_x402_token.js: safeMint, safeTransferFrom, mintPrice
  * - scw_js/readhandler_v2.js: ownerOf, requestImageUpdate, mintPrice, isImageUpdated
  * - x402_facilitator/x402_whitelist.js: isAuthorizedAgent
+ * - website/components/PublicNFTList.tsx: getAllPublicTokens
+ * - website/components/MyNFTList.tsx: balanceOf, tokenOfOwnerByIndex
+ * - website/components/NFTCard.tsx: setTokenListed, isTokenListed, burn
  */
 
 export const GenImNFTv4ABI = [
@@ -52,11 +55,52 @@ export const GenImNFTv4ABI = [
     outputs: [{ name: "", type: "string" }],
   },
   {
-    name: "isListed",
+    name: "isTokenListed",
     type: "function",
     stateMutability: "view",
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "getAllPublicTokens",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256[]" }],
+  },
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "tokenOfOwnerByIndex",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "index", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "setTokenListed",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "_isListed", type: "bool" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "burn",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [],
   },
 
   // ═══════════════════════════════════════════════════════════════

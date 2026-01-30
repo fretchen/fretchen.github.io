@@ -79,9 +79,23 @@ export function useNFTListedStatus({
 
       setIsListed(result as boolean);
     } catch (err) {
-      console.warn("Could not load listing status:", err);
-      setError(err instanceof Error ? err.message : "Failed to load listing status");
-      // Keep isListed as undefined on error
+      // Distinguish between contract reverts (legacy tokens) and real errors
+      const isContractRevert =
+        err instanceof Error &&
+        (err.message.includes("reverted") ||
+          err.name.includes("ContractFunctionRevertedError") ||
+          err.name.includes("ContractFunctionExecutionError"));
+
+      if (isContractRevert) {
+        // Legacy tokens minted before isListed feature - not an error, just not supported
+        // Keep isListed as undefined - UI will hide the toggle for these tokens
+        setError("isListed not available for this token");
+      } else {
+        // Real errors (network issues, etc.) - log and set error
+        console.error("Failed to load listing status:", err);
+        setError(err instanceof Error ? err.message : "Failed to load listing status");
+      }
+      // In both cases, isListed remains undefined
     } finally {
       setIsLoading(false);
     }

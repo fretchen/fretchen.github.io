@@ -48,14 +48,19 @@ export function NFTCard({
   const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
 
-  // Use the extracted hook for listing status (only in private view)
+  // Use the extracted hook for listing status
+  // Only enabled when:
+  // 1. Not public view (owners can toggle listing)
+  // 2. Token data loaded successfully (no error, not loading)
+  // This prevents contract calls for non-existent/burned tokens
+  const tokenDataLoaded = !nft.isLoading && !nft.error;
   const {
     isListed,
     setOptimisticListed,
   } = useNFTListedStatus({
     tokenId,
     network,
-    enabled: !isPublicView,
+    enabled: !isPublicView && tokenDataLoaded,
   });
 
   // Use the custom hook for a stable public client reference

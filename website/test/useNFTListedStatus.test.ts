@@ -181,6 +181,36 @@ describe("useNFTListedStatus", () => {
       });
     });
 
+    it("should handle legacy tokens (contract reverts) gracefully without console.error", async () => {
+      // Simulate a contract revert error (legacy token without isListed support)
+      const revertError = new Error("The contract function \"isListed\" reverted.");
+      revertError.name = "ContractFunctionExecutionError";
+      mockReadContract.mockRejectedValue(revertError);
+
+      // Spy on console.error to verify it's NOT called for reverts
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const { result } = renderHook(() =>
+        useNFTListedStatus({
+          tokenId: BigInt(2), // Legacy token ID
+          network: "eip155:10",
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should set specific error message for legacy tokens
+      expect(result.current.error).toBe("isListed not available for this token");
+      // isListed should remain undefined (not an error state, just not supported)
+      expect(result.current.isListed).toBeUndefined();
+      // Should NOT log to console.error for expected contract reverts
+      expect(consoleSpy).not.toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
     it("should return undefined isListed when disabled", async () => {
       const { result } = renderHook(() =>
         useNFTListedStatus({

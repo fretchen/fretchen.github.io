@@ -53,7 +53,7 @@ export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNet
   const defaultNetwork = supportedNetworks[0];
   const currentNetwork = toCAIP2(chainId);
   const isSupported = supportedNetworks.includes(currentNetwork);
-  
+
   // Return the current network if supported, otherwise the default
   const network = isSupported ? currentNetwork : defaultNetwork;
 

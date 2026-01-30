@@ -8,9 +8,6 @@ import { MyNFTList } from "../components/MyNFTList";
  * in useEffect dependencies after the "Lint hooks" commit.
  */
 
-let renderCount = 0;
-let contractConfigCallCount = 0;
-
 // Mock wagmi functions
 const mockUseAccount = vi.fn();
 const mockUseReadContract = vi.fn();
@@ -130,19 +127,20 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     render(<MyNFTListWrapper />);
 
     // Wait for the component to load and fetch token IDs
-    await waitFor(() => {
-      // tokenOfOwnerByIndex should be called for each NFT in the balance
-      expect(mockReadContract).toHaveBeenCalled();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        // tokenOfOwnerByIndex should be called for each NFT in the balance
+        expect(mockReadContract).toHaveBeenCalled();
+      },
+      { timeout: 2000 },
+    );
 
     // Verify tokenOfOwnerByIndex was called with correct function name
     const calls = mockReadContract.mock.calls;
-    const tokenOfOwnerByIndexCalls = calls.filter(
-      (call: unknown[]) => {
-        const params = call[1] as { functionName?: string };
-        return params?.functionName === "tokenOfOwnerByIndex";
-      }
-    );
+    const tokenOfOwnerByIndexCalls = calls.filter((call: unknown[]) => {
+      const params = call[1] as { functionName?: string };
+      return params?.functionName === "tokenOfOwnerByIndex";
+    });
 
     expect(tokenOfOwnerByIndexCalls.length).toBeGreaterThan(0);
   });
@@ -151,10 +149,13 @@ describe("MyNFTList Re-render Bug Reproduction", () => {
     render(<MyNFTListWrapper />);
 
     // Wait for NFT cards to appear
-    await waitFor(() => {
-      expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
-      expect(screen.getByTestId("nft-card-2")).toBeInTheDocument();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
+        expect(screen.getByTestId("nft-card-2")).toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
   });
 
   it("should show empty state when user has no NFTs", async () => {

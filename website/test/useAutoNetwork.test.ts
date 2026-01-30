@@ -3,7 +3,7 @@
  *
  * Uses wagmi's mock connector to test with different chainIds in one file.
  * See: https://wagmi.sh/react/api/connectors/mock
- * 
+ *
  * IMPORTANT: The mock connector shares state between tests, so each test
  * must first reset to a known chain state before asserting.
  */
@@ -16,15 +16,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 vi.unmock("wagmi");
 vi.unmock("wagmi/connectors");
 
-import {
-  createConfig,
-  WagmiProvider,
-  http,
-  useChainId,
-  useSwitchChain,
-  useAccount,
-  useConnect,
-} from "wagmi";
+import { createConfig, WagmiProvider, http, useChainId, useSwitchChain, useAccount, useConnect } from "wagmi";
 import { optimism, optimismSepolia, base, mainnet } from "wagmi/chains";
 import { mock } from "wagmi/connectors";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
@@ -57,12 +49,14 @@ function createTestWrapper() {
     defaultOptions: { queries: { retry: false } },
   });
 
-  return ({ children }: { children: React.ReactNode }) =>
+  const TestWrapper = ({ children }: { children: React.ReactNode }) =>
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(WagmiProvider, { config: sharedConfig }, children)
+      createElement(WagmiProvider, { config: sharedConfig }, children),
     );
+  TestWrapper.displayName = "TestWrapper";
+  return TestWrapper;
 }
 
 describe("useAutoNetwork Hook", () => {
@@ -71,10 +65,7 @@ describe("useAutoNetwork Hook", () => {
       const wrapper = createTestWrapper();
       const supportedNetworks = [OPTIMISM_MAINNET, OPTIMISM_SEPOLIA];
 
-      const { result } = renderHook(
-        () => useAutoNetwork(supportedNetworks),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks), { wrapper });
 
       await waitFor(() => {
         expect(result.current.network).toBeDefined();
@@ -92,10 +83,7 @@ describe("useAutoNetwork Hook", () => {
       const wrapper = createTestWrapper();
       const supportedNetworks = [OPTIMISM_MAINNET, OPTIMISM_SEPOLIA];
 
-      const { result } = renderHook(
-        () => useAutoNetwork(supportedNetworks),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks), { wrapper });
 
       await waitFor(() => {
         expect(result.current.network).toBe(OPTIMISM_MAINNET);
@@ -108,10 +96,7 @@ describe("useAutoNetwork Hook", () => {
       const wrapper = createTestWrapper();
       const supportedNetworks = [OPTIMISM_MAINNET];
 
-      const { result } = renderHook(
-        () => useAutoNetwork(supportedNetworks),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAutoNetwork(supportedNetworks), { wrapper });
 
       await waitFor(() => {
         expect(result.current.network).toBeDefined();
@@ -137,7 +122,7 @@ describe("useAutoNetwork Hook", () => {
           chainId: useChainId(),
           switchChain: useSwitchChain(),
         }),
-        { wrapper }
+        { wrapper },
       );
 
       // Wait for initial render
@@ -168,7 +153,7 @@ describe("useAutoNetwork Hook", () => {
           autoNetwork: useAutoNetwork([BASE_MAINNET, OPTIMISM_MAINNET]),
           switchChain: useSwitchChain(),
         }),
-        { wrapper }
+        { wrapper },
       );
 
       await waitFor(() => {
@@ -196,7 +181,7 @@ describe("useAutoNetwork Hook", () => {
           autoNetwork: useAutoNetwork([OPTIMISM_MAINNET, OPTIMISM_SEPOLIA]),
           switchChain: useSwitchChain(),
         }),
-        { wrapper }
+        { wrapper },
       );
 
       await waitFor(() => {
@@ -226,7 +211,7 @@ describe("useAutoNetwork Hook", () => {
           account: useAccount(),
           connect: useConnect(),
         }),
-        { wrapper }
+        { wrapper },
       );
 
       await waitFor(() => {
@@ -280,7 +265,7 @@ describe("useAutoNetwork Hook", () => {
           switchChain: useSwitchChain(),
           chainId: useChainId(),
         }),
-        { wrapper }
+        { wrapper },
       );
 
       await waitFor(() => {
@@ -311,7 +296,7 @@ describe("useAutoNetwork Hook", () => {
           account: useAccount(),
           connect: useConnect(),
         }),
-        { wrapper }
+        { wrapper },
       );
 
       await waitFor(() => {

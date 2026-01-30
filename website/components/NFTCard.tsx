@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2, isMainnet } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isMainnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
@@ -45,7 +45,6 @@ export function NFTCard({
 
   // Get network and contract address from chain-utils
   const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
 
   // Use the extracted hook for listing status
@@ -54,10 +53,7 @@ export function NFTCard({
   // 2. Token data loaded successfully (no error, not loading)
   // This prevents contract calls for non-existent/burned tokens
   const tokenDataLoaded = !nft.isLoading && !nft.error;
-  const {
-    isListed,
-    setOptimisticListed,
-  } = useNFTListedStatus({
+  const { isListed, setOptimisticListed } = useNFTListedStatus({
     tokenId,
     network,
     enabled: !isPublicView && tokenDataLoaded,

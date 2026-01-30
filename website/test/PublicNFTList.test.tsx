@@ -27,9 +27,7 @@ vi.mock("../hooks/useConfiguredPublicClient", () => ({
 // Mock chain-utils
 vi.mock("@fretchen/chain-utils", () => ({
   getGenAiNFTAddress: vi.fn(() => "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"),
-  GenImNFTv4ABI: [
-    { name: "getAllPublicTokens", type: "function", inputs: [], outputs: [{ type: "uint256[]" }] },
-  ],
+  GenImNFTv4ABI: [{ name: "getAllPublicTokens", type: "function", inputs: [], outputs: [{ type: "uint256[]" }] }],
   GENAI_NFT_NETWORKS: ["eip155:10", "eip155:11155420"],
 }));
 
@@ -89,17 +87,17 @@ describe("PublicNFTList Component", () => {
     it("should render loading state initially", () => {
       // Don't resolve the promise immediately
       mockReadContract.mockReturnValue(new Promise(() => {}));
-      
+
       render(<PublicNFTList />);
-      
+
       expect(screen.getByText(/Loading public artworks/i)).toBeInTheDocument();
     });
 
     it("should render empty state when no public NFTs", async () => {
       mockReadContract.mockResolvedValue([]);
-      
+
       render(<PublicNFTList />);
-      
+
       // Wait for loading to finish
       await waitFor(() => {
         expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
@@ -108,9 +106,9 @@ describe("PublicNFTList Component", () => {
 
     it("should render NFT cards when public NFTs exist", async () => {
       mockReadContract.mockResolvedValue([1n, 2n, 3n]);
-      
+
       render(<PublicNFTList />);
-      
+
       // Wait for NFTs to load
       await waitFor(() => {
         expect(screen.getByTestId("nft-card-3")).toBeInTheDocument();
@@ -121,25 +119,25 @@ describe("PublicNFTList Component", () => {
 
     it("should call getAllPublicTokens ABI function", async () => {
       mockReadContract.mockResolvedValue([1n, 2n]);
-      
+
       render(<PublicNFTList />);
-      
+
       await waitFor(() => {
         // Verify the correct ABI function is called
         expect(mockReadContract).toHaveBeenCalledWith(
           expect.objectContaining({
             functionName: "getAllPublicTokens",
-          })
+          }),
         );
       });
     });
 
     it("should handle contract errors gracefully", async () => {
       mockReadContract.mockRejectedValue(new Error("Contract call failed"));
-      
+
       // Should not throw
       expect(() => render(<PublicNFTList />)).not.toThrow();
-      
+
       // Wait for error handling
       await waitFor(() => {
         expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
@@ -166,4 +164,3 @@ describe("PublicNFTList Component", () => {
     });
   });
 });
-

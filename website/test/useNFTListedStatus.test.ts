@@ -49,7 +49,7 @@ describe("useNFTListedStatus", () => {
           tokenId: BigInt(42),
           network: "eip155:10",
           enabled: true,
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -60,7 +60,7 @@ describe("useNFTListedStatus", () => {
             functionName: "isTokenListed",
             args: [BigInt(42)],
             chainId: 10,
-          })
+          }),
         );
       });
     });
@@ -71,7 +71,7 @@ describe("useNFTListedStatus", () => {
           tokenId: BigInt(42),
           network: "eip155:10",
           enabled: false,
-        })
+        }),
       );
 
       // Wait a tick to ensure no async calls are made
@@ -90,7 +90,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(1),
           network: "eip155:10",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -99,7 +99,7 @@ describe("useNFTListedStatus", () => {
           expect.objectContaining({
             address: "0xOptimismContract",
             chainId: 10,
-          })
+          }),
         );
       });
 
@@ -111,7 +111,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(1),
           network: "eip155:11155420",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -120,7 +120,7 @@ describe("useNFTListedStatus", () => {
           expect.objectContaining({
             address: "0xSepoliaContract",
             chainId: 11155420,
-          })
+          }),
         );
       });
     });
@@ -134,7 +134,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
-        })
+        }),
       );
 
       // Initially loading
@@ -155,7 +155,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -171,7 +171,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -183,7 +183,7 @@ describe("useNFTListedStatus", () => {
 
     it("should handle legacy tokens (contract reverts) gracefully without console.error", async () => {
       // Simulate a contract revert error (legacy token without isListed support)
-      const revertError = new Error("The contract function \"isListed\" reverted.");
+      const revertError = new Error('The contract function "isListed" reverted.');
       revertError.name = "ContractFunctionExecutionError";
       mockReadContract.mockRejectedValue(revertError);
 
@@ -194,7 +194,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(2), // Legacy token ID
           network: "eip155:10",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -217,7 +217,7 @@ describe("useNFTListedStatus", () => {
           tokenId: BigInt(42),
           network: "eip155:10",
           enabled: false,
-        })
+        }),
       );
 
       // Should immediately be undefined, not loading
@@ -234,7 +234,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -258,7 +258,7 @@ describe("useNFTListedStatus", () => {
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
-        })
+        }),
       );
 
       await waitFor(() => {
@@ -290,17 +290,14 @@ describe("useNFTListedStatus", () => {
             tokenId,
             network: "eip155:10",
           }),
-        { initialProps: { tokenId: BigInt(1) } }
+        { initialProps: { tokenId: BigInt(1) } },
       );
 
       await waitFor(() => {
         expect(result.current.isListed).toBe(true);
       });
 
-      expect(mockReadContract).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ args: [BigInt(1)] })
-      );
+      expect(mockReadContract).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ args: [BigInt(1)] }));
 
       // Change tokenId
       rerender({ tokenId: BigInt(2) });
@@ -308,7 +305,7 @@ describe("useNFTListedStatus", () => {
       await waitFor(() => {
         expect(mockReadContract).toHaveBeenCalledWith(
           expect.anything(),
-          expect.objectContaining({ args: [BigInt(2)] })
+          expect.objectContaining({ args: [BigInt(2)] }),
         );
       });
     });
@@ -324,7 +321,7 @@ describe("useNFTListedStatus", () => {
             network: "eip155:10",
             enabled,
           }),
-        { initialProps: { enabled: false } }
+        { initialProps: { enabled: false } },
       );
 
       // Should not have called contract yet

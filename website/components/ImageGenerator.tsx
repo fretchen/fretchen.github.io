@@ -224,8 +224,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   // Button Components
   const CreateArtworkButton = () => {
-    const isDisabled = buttonState === "needsPrompt";
     const isLoadingState = buttonState === "loading";
+    const isDisabled = buttonState === "needsPrompt" || isLoadingState;
 
     const handleClick = () => {
       // Track create artwork attempt with context
@@ -278,6 +278,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       return;
     }
 
+    // Enter loading state immediately to prevent double-clicks
+    setIsLoading(true);
+    setError(null);
+
     // === Chain Switch at Interaction ===
     // Ensure user is on the correct chain before making payment
     const switched = await switchIfNeeded();
@@ -286,11 +290,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       const errorMsg = `${chainSwitchFailedText}: ${targetChain.name}`;
       setError(errorMsg);
       onError?.(errorMsg);
+      setIsLoading(false);
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
 
     try {
       // Determine mode

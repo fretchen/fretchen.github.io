@@ -86,7 +86,7 @@ vi.mock("vike-react/usePageContext", () => ({
 }));
 
 // Mock useLocale hook
-vi.mock("./hooks/useLocale", () => ({
+vi.mock("../hooks/useLocale", () => ({
   useLocale: vi.fn(({ label }: { label: string }) => label),
 }));
 

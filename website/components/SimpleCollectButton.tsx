@@ -28,6 +28,10 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   const chainId = fromCAIP2(network);
 
   const collectLabel = useLocale({ label: "imagegen.collect" });
+  const collectingLabel = useLocale({ label: "imagegen.collecting" });
+  const collectedLabel = useLocale({ label: "imagegen.collected" });
+  const priceLoadingLabel = useLocale({ label: "imagegen.priceLoading" });
+  const currentPriceInfoLabel = useLocale({ label: "imagegen.currentPriceInfo" });
 
   // Read mint stats
   const {
@@ -66,9 +70,15 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
       args: [genImTokenId], // CollectorNFTv1 doesn't need URI parameter
       value: currentPrice,
     });
-
-    setIsLoading(false);
+    // Don't set isLoading(false) here - let useEffect handle it when isPending becomes true
   };
+
+  // Reset isLoading once wagmi takes over or transaction completes
+  useEffect(() => {
+    if (isPending || isSuccess) {
+      setIsLoading(false);
+    }
+  }, [isPending, isSuccess]);
 
   // Update state after transaction
   useEffect(() => {
@@ -90,7 +100,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   // Get price information for tooltip
   const getPriceInfo = () => {
     if (isReadPending || readError || !mintStats || !Array.isArray(mintStats)) {
-      return "Price loading...";
+      return priceLoadingLabel;
     }
 
     const [mintCount, currentPrice] = mintStats as [bigint, bigint, bigint];
@@ -116,7 +126,10 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     const nextTierPrice = baseMintPrice * BigInt(2 ** Math.floor(nextTierBoundary / 5));
     const formattedNextTier = formatPrice(formatEther(nextTierPrice));
 
-    return `Current price: ${formattedCurrent} ETH | Price after ${nextTierBoundary} mints: ${formattedNextTier} ETH`;
+    return currentPriceInfoLabel
+      .replace("{currentPrice}", formattedCurrent)
+      .replace("{nextTier}", nextTierBoundary.toString())
+      .replace("{nextPrice}", formattedNextTier);
   };
 
   return (
@@ -127,9 +140,9 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
       {isPending || isLoading
-        ? "📦 Collecting..."
+        ? `📦 ${collectingLabel}`
         : isSuccess
-          ? "✅ Collected!"
+          ? `✅ ${collectedLabel}`
           : `📦 ${collectLabel} (${getMintCount()})`}
     </button>
   );

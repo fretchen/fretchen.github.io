@@ -1,17 +1,15 @@
 {
-  "proxyAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+  "proxyAddress": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
   "options": {
-    "validateOnly": true,
+    "validateOnly": false,
     "dryRun": false,
-    "verify": true,
-    "authorizeAgentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-    "waitConfirmations": 2
+    "verify": false,
+    "waitConfirmations": 1
   },
   "metadata": {
-    "description": "Upgrade GenImNFTv3 to v4 - CVE-2025-11-26 Security Fix",
-    "version": "4.0.0",
-    "environment": "production",
-    "securityFix": "CVE-2025-11-26",
-    "attackerAddress": "0x8B6B008A0073D34D04ff00210E7200Ab00003300"
+    "description": "Test upgrade configuration for GenImNFTv4",
+    "version": "4.0.0-test",
+    "environment": "development",
+    "securityFix": "CVE-2025-11-26"
   }
 }

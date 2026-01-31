@@ -4,10 +4,7 @@ import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
-import type { config } from "../wagmi.config";
 import { NFTMetadata, ModalImageData } from "../types/components";
-
-type SupportedChainId = (typeof config)["chains"][number]["id"];
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
@@ -24,7 +21,7 @@ interface MyNFTListProps {
 export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps) {
   const { address, isConnected } = useAccount();
   const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const chainId = fromCAIP2(network) as SupportedChainId;
+  const chainId = fromCAIP2(network);
   const contractAddress = getGenAiNFTAddress(network);
 
   // My NFTs state - now just store token IDs

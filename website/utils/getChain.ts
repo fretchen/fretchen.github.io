@@ -1,6 +1,4 @@
-import { sepolia, optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
-import type { Chain } from "wagmi/chains";
-import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
+import { optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
 import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
@@ -8,6 +6,7 @@ import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 // Chain utilities are now in @fretchen/chain-utils
 // Import directly where needed:
 //   import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+//   import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS } from "@fretchen/chain-utils";
 // ═══════════════════════════════════════════════════════════════
 
 /**
@@ -75,29 +74,18 @@ export function isSupportV2Chain(chainId: number): boolean {
 // ═══════════════════════════════════════════════════════════════
 // Legacy Contract Configurations
 //
-// GenAI NFT: MIGRATED to chain-utils - use:
+// GenAI NFT: MIGRATED to chain-utils (Phase 2):
 //   import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
-//   const network = useAutoNetwork(GENAI_NFT_NETWORKS);
+//   const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
 //   const address = getGenAiNFTAddress(network);
 //
-// collectorNFTContractConfig and llmV1ContractConfig will be migrated in Phase 3
+// CollectorNFT: MIGRATED to chain-utils (Phase 3):
+//   import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS } from "@fretchen/chain-utils";
+//   const { network, switchIfNeeded } = useAutoNetwork(COLLECTOR_NFT_NETWORKS);
+//   const address = getCollectorNFTAddress(network);
+//
+// LLMv1: Stays in legacy config (out of scope for multi-chain)
 // ═══════════════════════════════════════════════════════════════
-
-const STABLE_COLLECTOR_NFT_CONTRACT_CONFIG = (() => {
-  switch (CHAIN_NAME) {
-    case "sepolia":
-      // Sepolia testnet address (if deployed)
-      return { address: "0x0000000000000000000000000000000000000000", abi: CollectorNFTv1ABI } as const;
-    case "optimism":
-      // Production Optimism address - CollectorNFTv1 deployed on 2025-06-15
-      return { address: "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea", abi: CollectorNFTv1ABI } as const;
-    case "optimismSepolia":
-      // Optimism Sepolia testnet address (if deployed)
-      return { address: "0x0000000000000000000000000000000000000000", abi: CollectorNFTv1ABI } as const;
-    default:
-      return { address: "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea", abi: CollectorNFTv1ABI } as const;
-  }
-})();
 
 const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
   switch (CHAIN_NAME) {
@@ -116,28 +104,26 @@ const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
   }
 })();
 
-// Export stable references directly - these objects never change reference
-/** Phase 3: Will be migrated to chain-utils */
-export const collectorNFTContractConfig = STABLE_COLLECTOR_NFT_CONTRACT_CONFIG;
 /** Out of scope: LLMv1 stays in legacy config */
 export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
 
+// ═══════════════════════════════════════════════════════════════
+// Legacy getChain() for LLMv1 (Phase 4 migration candidate)
+// Returns the chain object based on CHAIN_NAME environment variable
+// ═══════════════════════════════════════════════════════════════
+
+import type { Chain } from "wagmi/chains";
+
 /**
- * @deprecated Use useAutoNetwork() + fromCAIP2() instead for GenImNFT components.
- * This function is still used by CollectorNFT and LLMv1 components.
- *
- * Gibt das entsprechende Chain-Objekt basierend auf der CHAIN-Umgebungsvariable zurück
- * @returns Das Chain-Objekt aus wagmi/chains
+ * Get chain for LLMv1 contract based on environment variable
+ * @returns Chain object (optimism or optimismSepolia)
+ * @deprecated Use chain-utils for GenAI/CollectorNFT. LLMv1 migration is Phase 4.
  */
 export function getChain(): Chain {
-  // Chain-Objekt je nach Umgebungsvariable auswählen
   switch (CHAIN_NAME) {
-    case "sepolia":
-      return sepolia;
-    case "optimism":
-      return optimism;
     case "optimismSepolia":
       return optimismSepolia;
+    case "optimism":
     default:
       return optimism;
   }

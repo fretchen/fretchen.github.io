@@ -7,18 +7,31 @@ import * as wagmi from "wagmi";
 // Mock wagmi hooks
 vi.mock("wagmi", () => ({
   useAccount: vi.fn(),
-  useChainId: vi.fn(),
   useWriteContract: vi.fn(),
   useWaitForTransactionReceipt: vi.fn(),
   useReadContract: vi.fn(),
 }));
 
-// Mock utilities
-vi.mock("../utils/getChain", () => ({
-  getChain: vi.fn(() => ({ id: 10 })),
-  collectorNFTContractConfig: {
-    address: "0x123",
-    abi: [],
+// Mock useAutoNetwork
+vi.mock("../hooks/useAutoNetwork", () => ({
+  useAutoNetwork: vi.fn(() => ({
+    network: "eip155:10",
+    switchIfNeeded: vi.fn(() => Promise.resolve(true)),
+  })),
+}));
+
+// Mock chain-utils
+vi.mock("@fretchen/chain-utils", () => ({
+  getCollectorNFTAddress: vi.fn(() => "0x123"),
+  CollectorNFTv1ABI: [],
+  COLLECTOR_NFT_NETWORKS: ["eip155:10"],
+  fromCAIP2: vi.fn(() => 10),
+}));
+
+// Mock wagmi config
+vi.mock("../utils/wagmi", () => ({
+  config: {
+    chains: [{ id: 10 }, { id: 11155420 }],
   },
 }));
 
@@ -30,7 +43,16 @@ vi.mock("../layouts/styles", () => ({
 }));
 
 vi.mock("../hooks/useLocale", () => ({
-  useLocale: vi.fn(() => "Collect"),
+  useLocale: vi.fn(({ label }: { label: string }) => {
+    const labels: Record<string, string> = {
+      "imagegen.collect": "Collect",
+      "imagegen.collecting": "Collecting...",
+      "imagegen.collected": "Collected!",
+      "imagegen.priceLoading": "Price loading...",
+      "imagegen.currentPriceInfo": "Current price: {currentPrice} ETH",
+    };
+    return labels[label] || label;
+  }),
 }));
 
 vi.mock("viem", () => ({
@@ -45,7 +67,6 @@ describe("SimpleCollectButton", () => {
 
     // Default mock implementations
     vi.mocked(wagmi.useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof wagmi.useAccount>);
-    vi.mocked(wagmi.useChainId).mockReturnValue(10);
     vi.mocked(wagmi.useWriteContract).mockReturnValue({
       writeContract: vi.fn(),
       isPending: false,
@@ -138,15 +159,6 @@ describe("SimpleCollectButton", () => {
 
   it("should be disabled when wallet is not connected", () => {
     vi.mocked(wagmi.useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof wagmi.useAccount>);
-
-    render(<SimpleCollectButton genImTokenId={BigInt(1)} />);
-
-    const button = screen.getByRole("button");
-    expect(button).toHaveProperty("disabled", true);
-  });
-
-  it("should be disabled when on wrong network", () => {
-    vi.mocked(wagmi.useChainId).mockReturnValue(1); // Different from mocked chain.id of 10
 
     render(<SimpleCollectButton genImTokenId={BigInt(1)} />);
 

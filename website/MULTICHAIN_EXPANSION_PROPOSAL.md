@@ -8,7 +8,7 @@
 |----------|:--------:|:----:|:-----------------:|
 | **SupportV2** | ✅ | ✅ | ✅ Ja |
 | **GenImNFTv4** | ✅ | ❌ | ✅ Ja (Backend ready) |
-| **CollectorNFTv1** | ✅ | ❌ | ❌ Nein |
+| **CollectorNFTv1** | ✅ | ❌ | ✅ Ja (Frontend ready) |
 | **LLMv1** | ✅ | ❌ | ❌ (out of scope) |
 | **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja |
 
@@ -21,8 +21,8 @@
 | **1a** | `@fretchen/chain-utils` erstellen | shared/ | ✅ Fertig |
 | **1b** | scw_js auf chain-utils migrieren | scw_js/ | ✅ Fertig |
 | **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ✅ Fertig |
-| **2** | GenImNFT-Komponenten migrieren | website/ | ⬜ Next |
-| **3** | CollectorNFT-Komponenten migrieren | website/ | ⬜ |
+| **2** | GenImNFT-Komponenten migrieren | website/ | ✅ Fertig |
+| **3** | CollectorNFT-Komponenten migrieren | website/ | ✅ Fertig |
 | **4** | GenImNFTv4 auf Base deployen | eth/, shared/ | ⬜ Später |
 | **5** | CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ Später |
 
@@ -104,6 +104,39 @@ fretchen.github.io/
 - Base Sepolia (`eip155:84532`)
 
 **Tests:** 153 Tests bestanden, 73.47% Coverage
+
+---
+
+## Phase 2: GenImNFT Website Components Migration ✅ FERTIG
+
+**Status: VOLLSTÄNDIG ABGESCHLOSSEN**
+
+Alle GenImNFT-Komponenten wurden erfolgreich auf `@fretchen/chain-utils` migriert:
+
+| Datei | Status |
+|-------|--------|
+| `hooks/useAutoNetwork.ts` | ✅ Erstellt - zentraler Hook für Network-Detection |
+| `utils/nftLoader.ts` | ✅ Nutzt chain-utils |
+| `utils/nodeNftLoader.ts` | ✅ Nutzt chain-utils |
+| `components/MyNFTList.tsx` | ✅ `useAutoNetwork()` + chain-utils |
+| `components/NFTCard.tsx` | ✅ `useAutoNetwork()` + `getGenAiNFTAddress()` |
+| `components/NFTList.tsx` | ✅ `useAutoNetwork()` + chain-utils |
+| `components/PublicNFTList.tsx` | ✅ `useAutoNetwork()` + chain-utils |
+| `components/EntryNftImage.tsx` | ✅ `useAutoNetwork()` + chain-utils |
+| `components/NFTFloatImage.tsx` | ✅ chain-utils |
+| `components/ImageGenerator.tsx` | ✅ `useAutoNetwork()` + `isTestnet()` |
+| `components/AgentInfoPanel.tsx` | ✅ chain-utils Adressen |
+| `hooks/useNFTListedStatus.ts` | ✅ chain-utils (korrektes `isTokenListed` ABI) |
+| Tests | ✅ 303 Tests bestanden |
+
+**Wichtige Erkenntnisse aus Phase 2:**
+- `useAutoNetwork()` gibt `{ network, switchIfNeeded }` zurück
+- `switchIfNeeded()` muss vor schreibenden Operationen aufgerufen werden
+- Für wagmi `readContract` muss `chainId` als `SupportedChainId` gecastet werden:
+  ```typescript
+  const chainId = fromCAIP2(network) as SupportedChainId;
+  ```
+- GitHub Workflows brauchen `npm run build` für chain-utils vor website-Install
 
 ---
 
@@ -463,12 +496,176 @@ vi.mock("../hooks/useAutoNetwork", () => ({
 
 ---
 
-## Phase 3: CollectorNFT-Komponenten migrieren
+## Phase 3: CollectorNFT-Komponenten migrieren ✅ FERTIG
 
-**Betroffene Dateien:**
-- `SimpleCollectButton.tsx` (2 Stellen)
+**Status: VOLLSTÄNDIG ABGESCHLOSSEN**
 
-Gleiches Pattern wie Phase 2.
+Alle CollectorNFT-Komponenten wurden erfolgreich auf `@fretchen/chain-utils` migriert:
+
+| Datei | Status |
+|-------|--------|
+| `shared/chain-utils/src/abi/CollectorNFTv1.ts` | ✅ Erstellt - Minimal ABI |
+| `components/SimpleCollectButton.tsx` | ✅ `useAutoNetwork()` + chain-utils |
+| `test/SimpleCollectButton.test.tsx` | ✅ Mocks aktualisiert |
+| `utils/getChain.ts` | ✅ `collectorNFTContractConfig` entfernt, `getChain()` für LLMv1 erhalten |
+| Tests | ✅ 302 Tests bestanden |
+
+**Wichtige Änderungen:**
+- `CollectorNFTv1ABI` hinzugefügt mit `getMintStats` und `mintCollectorNFT`
+- `SimpleCollectButton` nutzt jetzt `useAutoNetwork(COLLECTOR_NFT_NETWORKS)`
+- `switchIfNeeded()` wird vor `writeContract` aufgerufen
+- `SupportedChainId` Type wurde entfernt (nicht notwendig)
+- `getChain()` bleibt für LLMv1 (Phase 4 Migration Kandidat)
+
+### Komplexitätsvergleich mit Phase 2
+
+| Aspekt | Phase 2 (GenImNFT) | Phase 3 (CollectorNFT) |
+|--------|-------------------|------------------------|
+| **Anzahl Dateien** | 12+ Komponenten + Tests | 1 Komponente + 1 Test |
+| **Hook-Erstellung** | `useAutoNetwork` musste erstellt werden | Hook existiert bereits ✅ |
+| **ABI in chain-utils** | GenImNFTv4ABI vorhanden | ⚠️ CollectorNFTv1ABI fehlt noch |
+| **Getter in chain-utils** | `getGenAiNFTAddress()` vorhanden | `getCollectorNFTAddress()` vorhanden ✅ |
+| **Netzwerk-Konstante** | `GENAI_NFT_NETWORKS` vorhanden | `COLLECTOR_NFT_NETWORKS` vorhanden ✅ |
+| **Testanpassungen** | Umfangreiche Mock-Updates | Minimal |
+| **Komplexität** | 🔴 Hoch | 🟢 Niedrig |
+| **Geschätzter Aufwand** | 4-6 Stunden | 30-60 Minuten |
+
+**Fazit: Phase 3 ist ~90% einfacher als Phase 2**, da:
+1. Die Infrastruktur (`useAutoNetwork`, chain-utils Dependency) bereits existiert
+2. Nur 1 Komponente zu migrieren ist
+3. Das Pattern aus Phase 2 einfach kopiert werden kann
+
+### Voraussetzung: CollectorNFTv1ABI zu chain-utils hinzufügen
+
+**Datei:** `shared/chain-utils/src/abi/CollectorNFTv1.ts`
+
+```typescript
+// Minimal ABI für CollectorNFTv1 - nur benötigte Funktionen
+export const CollectorNFTv1ABI = [
+  {
+    name: "getMintStats",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "genImTokenId", type: "uint256" }],
+    outputs: [
+      { name: "mintCount", type: "uint256" },
+      { name: "currentPrice", type: "uint256" },
+      { name: "lastMinter", type: "address" },
+    ],
+  },
+  {
+    name: "mintCollectorNFT",
+    type: "function",
+    stateMutability: "payable",
+    inputs: [{ name: "genImTokenId", type: "uint256" }],
+    outputs: [{ name: "tokenId", type: "uint256" }],
+  },
+] as const;
+```
+
+**Datei:** `shared/chain-utils/src/abi/index.ts` - Export hinzufügen:
+```typescript
+export { CollectorNFTv1ABI } from "./CollectorNFTv1";
+```
+
+### Implementierungsplan
+
+**Step 1: ABI zu chain-utils hinzufügen (5 min)**
+- [ ] `shared/chain-utils/src/abi/CollectorNFTv1.ts` erstellen
+- [ ] `shared/chain-utils/src/abi/index.ts` Export hinzufügen
+- [ ] `npm run build` in chain-utils
+- [ ] Tests hinzufügen (optional)
+
+**Step 2: SimpleCollectButton.tsx migrieren (15 min)**
+
+```tsx
+// VORHER
+import { collectorNFTContractConfig, getChain } from "../utils/getChain";
+
+const chain = getChain();
+const isCorrectNetwork = chainId === chain.id;
+
+useReadContract({
+  ...collectorNFTContractConfig,
+  functionName: "getMintStats",
+  args: [genImTokenId],
+  chainId: chain.id,
+});
+
+writeContract({
+  ...collectorNFTContractConfig,
+  functionName: "mintCollectorNFT",
+  args: [genImTokenId],
+  value: currentPrice,
+});
+
+// NACHHER
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { 
+  getCollectorNFTAddress, 
+  CollectorNFTv1ABI, 
+  COLLECTOR_NFT_NETWORKS, 
+  fromCAIP2 
+} from "@fretchen/chain-utils";
+import type { config } from "../wagmi.config";
+
+type SupportedChainId = (typeof config)["chains"][number]["id"];
+
+const { network, switchIfNeeded } = useAutoNetwork(COLLECTOR_NFT_NETWORKS);
+const contractAddress = getCollectorNFTAddress(network);
+const networkChainId = fromCAIP2(network) as SupportedChainId;
+
+useReadContract({
+  address: contractAddress,
+  abi: CollectorNFTv1ABI,
+  functionName: "getMintStats",
+  args: [genImTokenId],
+  chainId: networkChainId,
+});
+
+// Bei Schreiboperationen: erst switchIfNeeded() aufrufen
+const handleCollect = async () => {
+  if (!isConnected) return;
+  
+  const switched = await switchIfNeeded();
+  if (!switched) return;
+  
+  writeContract({
+    address: contractAddress,
+    abi: CollectorNFTv1ABI,
+    functionName: "mintCollectorNFT",
+    args: [genImTokenId],
+    value: currentPrice,
+  });
+};
+```
+
+**Step 3: Test aktualisieren (10 min)**
+- [ ] `test/SimpleCollectButton.test.tsx` - Mock für `useAutoNetwork` hinzufügen
+- [ ] Chain-utils Mocks analog zu anderen Tests
+
+**Step 4: getChain.ts aufräumen (5 min)**
+- [ ] `collectorNFTContractConfig` Export entfernen
+- [ ] Deprecation-Hinweis aktualisieren
+
+### Checkliste Phase 3
+
+- [x] `shared/chain-utils/src/abi/CollectorNFTv1.ts` - **CREATED**
+- [x] `shared/chain-utils/src/abi/index.ts` - Export hinzugefügt
+- [x] `shared/chain-utils` - `npm run build`
+- [x] `components/SimpleCollectButton.tsx` - Use `useAutoNetwork()` + chain-utils
+- [x] `test/SimpleCollectButton.test.tsx` - Update mocks
+- [x] `utils/getChain.ts` - `collectorNFTContractConfig` entfernt, `getChain()` für LLMv1 erhalten
+- [x] `npm run build` - Verifiziert
+- [x] `npm test` - 302 Tests grün
+
+### Risikobewertung
+
+| Risiko | Schwere | Mitigation |
+|--------|---------|------------|
+| **ABI-Inkompatibilität** | 🟢 Niedrig | Minimal ABI mit nur genutzten Funktionen |
+| **Network-Switch UX** | 🟢 Niedrig | Pattern bereits in NFTCard getestet |
+| **Breaking Change** | 🟢 Niedrig | Nur 1 Komponente betroffen |
 
 ---
 

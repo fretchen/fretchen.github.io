@@ -3,11 +3,8 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import { formatEther } from "viem";
 import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { config } from "../utils/wagmi";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
-
-type SupportedChainId = (typeof config)["chains"][number]["id"];
 
 interface SimpleCollectButtonProps {
   genImTokenId: bigint;
@@ -28,7 +25,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   const [isLoading, setIsLoading] = useState(false);
 
   // Chain ID for current network
-  const chainId = fromCAIP2(network) as SupportedChainId;
+  const chainId = fromCAIP2(network);
 
   const collectLabel = useLocale({ label: "imagegen.collect" });
 

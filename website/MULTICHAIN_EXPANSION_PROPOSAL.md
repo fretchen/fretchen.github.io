@@ -8,7 +8,7 @@
 |----------|:--------:|:----:|:-----------------:|
 | **SupportV2** | ✅ | ✅ | ✅ Ja |
 | **GenImNFTv4** | ✅ | ❌ | ✅ Ja (Backend ready) |
-| **CollectorNFTv1** | ✅ | ❌ | ❌ Nein |
+| **CollectorNFTv1** | ✅ | ❌ | ✅ Ja (Frontend ready) |
 | **LLMv1** | ✅ | ❌ | ❌ (out of scope) |
 | **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja |
 
@@ -22,7 +22,7 @@
 | **1b** | scw_js auf chain-utils migrieren | scw_js/ | ✅ Fertig |
 | **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ✅ Fertig |
 | **2** | GenImNFT-Komponenten migrieren | website/ | ✅ Fertig |
-| **3** | CollectorNFT-Komponenten migrieren | website/ | ⬜ Next |
+| **3** | CollectorNFT-Komponenten migrieren | website/ | ✅ Fertig |
 | **4** | GenImNFTv4 auf Base deployen | eth/, shared/ | ⬜ Später |
 | **5** | CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ Später |
 
@@ -496,7 +496,26 @@ vi.mock("../hooks/useAutoNetwork", () => ({
 
 ---
 
-## Phase 3: CollectorNFT-Komponenten migrieren ⬜ NEXT
+## Phase 3: CollectorNFT-Komponenten migrieren ✅ FERTIG
+
+**Status: VOLLSTÄNDIG ABGESCHLOSSEN**
+
+Alle CollectorNFT-Komponenten wurden erfolgreich auf `@fretchen/chain-utils` migriert:
+
+| Datei | Status |
+|-------|--------|
+| `shared/chain-utils/src/abi/CollectorNFTv1.ts` | ✅ Erstellt - Minimal ABI |
+| `components/SimpleCollectButton.tsx` | ✅ `useAutoNetwork()` + chain-utils |
+| `test/SimpleCollectButton.test.tsx` | ✅ Mocks aktualisiert |
+| `utils/getChain.ts` | ✅ `collectorNFTContractConfig` entfernt, `getChain()` für LLMv1 erhalten |
+| Tests | ✅ 302 Tests bestanden |
+
+**Wichtige Änderungen:**
+- `CollectorNFTv1ABI` hinzugefügt mit `getMintStats` und `mintCollectorNFT`
+- `SimpleCollectButton` nutzt jetzt `useAutoNetwork(COLLECTOR_NFT_NETWORKS)`
+- `switchIfNeeded()` wird vor `writeContract` aufgerufen
+- `SupportedChainId` Type wurde entfernt (nicht notwendig)
+- `getChain()` bleibt für LLMv1 (Phase 4 Migration Kandidat)
 
 ### Komplexitätsvergleich mit Phase 2
 
@@ -631,14 +650,14 @@ const handleCollect = async () => {
 
 ### Checkliste Phase 3
 
-- [ ] `shared/chain-utils/src/abi/CollectorNFTv1.ts` - **CREATE NEW**
-- [ ] `shared/chain-utils/src/abi/index.ts` - Export hinzufügen
-- [ ] `shared/chain-utils` - `npm run build`
-- [ ] `components/SimpleCollectButton.tsx` - Use `useAutoNetwork()` + chain-utils
-- [ ] `test/SimpleCollectButton.test.tsx` - Update mocks
-- [ ] `utils/getChain.ts` - Remove `collectorNFTContractConfig` export
-- [ ] `npm run build` - Verifizieren
-- [ ] `npm test` - Alle Tests grün
+- [x] `shared/chain-utils/src/abi/CollectorNFTv1.ts` - **CREATED**
+- [x] `shared/chain-utils/src/abi/index.ts` - Export hinzugefügt
+- [x] `shared/chain-utils` - `npm run build`
+- [x] `components/SimpleCollectButton.tsx` - Use `useAutoNetwork()` + chain-utils
+- [x] `test/SimpleCollectButton.test.tsx` - Update mocks
+- [x] `utils/getChain.ts` - `collectorNFTContractConfig` entfernt, `getChain()` für LLMv1 erhalten
+- [x] `npm run build` - Verifiziert
+- [x] `npm test` - 302 Tests grün
 
 ### Risikobewertung
 

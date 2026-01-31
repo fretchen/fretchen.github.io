@@ -43,7 +43,16 @@ vi.mock("../layouts/styles", () => ({
 }));
 
 vi.mock("../hooks/useLocale", () => ({
-  useLocale: vi.fn(() => "Collect"),
+  useLocale: vi.fn(({ label }: { label: string }) => {
+    const labels: Record<string, string> = {
+      "imagegen.collect": "Collect",
+      "imagegen.collecting": "Collecting...",
+      "imagegen.collected": "Collected!",
+      "imagegen.priceLoading": "Price loading...",
+      "imagegen.currentPriceInfo": "Current price: {currentPrice} ETH",
+    };
+    return labels[label] || label;
+  }),
 }));
 
 vi.mock("viem", () => ({

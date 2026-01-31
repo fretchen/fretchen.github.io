@@ -73,6 +73,11 @@ export default {
     viewContract: "Vertrag anzeigen",
     learnMoreOptimism: "Mehr über Optimism erfahren (öffnet in neuem Tab)",
     viewContractEtherscan: "Smart Contract auf Optimism Etherscan anzeigen (öffnet in neuem Tab)",
+    // Collector button
+    collecting: "Wird gesammelt...",
+    collected: "Gesammelt!",
+    priceLoading: "Preis wird geladen...",
+    currentPriceInfo: "Aktueller Preis: {currentPrice} ETH | Preis nach {nextTier} Mints: {nextPrice} ETH",
   },
   assistent: {
     title: "Chat-Assistent",

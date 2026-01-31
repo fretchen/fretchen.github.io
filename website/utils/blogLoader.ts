@@ -3,11 +3,113 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
-import { BlogPost, BlogPostMeta } from "../types/BlogPost";
+import { BlogPost, BlogPostMeta, NFTMetadata } from "../types/BlogPost";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
 // Global cache for build-time to prevent multiple loads during pre-rendering
 const buildTimeCache = new Map<string, BlogPost[]>();
+
+/**
+ * Extracts metadata from a loaded module (MDX or TSX).
+ * Pure function for easy testing.
+ *
+ * @param module - The loaded module object
+ * @param path - The file path (used to determine type and generate fallback title)
+ * @returns Partial BlogPost with extracted metadata, or null if invalid
+ */
+export function extractMetadataFromModule(module: unknown, path: string): Partial<BlogPost> | null {
+  if (!module || typeof module !== "object") {
+    return null;
+  }
+
+  const cleanPath = path.replace(/\?.*$/, "");
+  const isTsx = path.endsWith(".tsx");
+  const isMdx = path.endsWith(".md") || path.endsWith(".mdx");
+
+  let title: string | undefined;
+  let publishingDate: string | undefined;
+  let order: number | undefined;
+  let tokenID: number | undefined;
+  let description: string | undefined;
+  let category: string | undefined;
+  let secondaryCategory: string | undefined;
+
+  if (isMdx) {
+    const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
+    if (!frontmatter || typeof frontmatter !== "object") {
+      return null;
+    }
+
+    title = frontmatter.title as string | undefined;
+    publishingDate = frontmatter.publishing_date as string | undefined;
+    order = frontmatter.order as number | undefined;
+    tokenID = frontmatter.tokenID as number | undefined;
+    description = frontmatter.description as string | undefined;
+    category = frontmatter.category as string | undefined;
+    secondaryCategory = frontmatter.secondaryCategory as string | undefined;
+  } else if (isTsx) {
+    const meta = (module as { meta?: BlogPostMeta })?.meta || {};
+
+    title = meta.title;
+    publishingDate = meta.publishing_date;
+    tokenID = meta.tokenID;
+    description = meta.description;
+    category = meta.category;
+    secondaryCategory = meta.secondaryCategory;
+  } else {
+    return null;
+  }
+
+  // Generate fallback title from filename if needed
+  const fileName = cleanPath.split("/").pop() || "";
+  const fallbackTitle = isTsx
+    ? fileName
+        .replace(".tsx", "")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase())
+    : fileName.replace(/\.(md|mdx)$/, "");
+
+  return {
+    title: title || fallbackTitle,
+    content: "",
+    type: "react",
+    publishing_date: publishingDate,
+    order: order,
+    tokenID: tokenID,
+    description: description,
+    componentPath: path,
+    category: category,
+    secondaryCategory: secondaryCategory,
+  };
+}
+
+/**
+ * Attaches NFT metadata to blogs that have tokenIDs.
+ * Pure function for easy testing.
+ *
+ * @param blogs - Array of blog posts
+ * @param nftMetadataMap - Map of tokenID to NFTMetadata
+ * @returns New array with NFT metadata attached
+ */
+export function attachNFTMetadata(blogs: BlogPost[], nftMetadataMap: Record<number, NFTMetadata>): BlogPost[] {
+  return blogs.map((blog) => {
+    if (blog.tokenID && nftMetadataMap[blog.tokenID]) {
+      return { ...blog, nftMetadata: nftMetadataMap[blog.tokenID] };
+    }
+    return blog;
+  });
+}
+
+/**
+ * Extracts unique tokenIDs from an array of blogs.
+ * Pure function for easy testing.
+ *
+ * @param blogs - Array of blog posts
+ * @returns Array of unique tokenIDs
+ */
+export function extractTokenIDs(blogs: BlogPost[]): number[] {
+  return Array.from(new Set(blogs.flatMap((b) => (b.tokenID ? [b.tokenID] : []))));
+}
 
 /**
  * Sorts an array of blog posts according to specified criteria.
@@ -21,7 +123,7 @@ const buildTimeCache = new Map<string, BlogPost[]>();
  * - When sorting by "publishing_date", older posts appear first to ensure URL stability
  * - Posts without the specified sort field remain in their original order
  */
-function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "publishing_date"): BlogPost[] {
+export function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date" = "publishing_date"): BlogPost[] {
   const sortedBlogs = [...blogs];
 
   if (sortBy === "order") {
@@ -99,78 +201,18 @@ export async function loadBlogs(
   for (const [path, moduleOrLoader] of Object.entries(modules)) {
     try {
       const cleanPath = path.replace(/\?.*$/, "");
-      const isTsx = path.endsWith(".tsx");
-      const isMdx = path.endsWith(".md") || path.endsWith(".mdx");
 
       // Load the module (in production it's already loaded, in dev we need to await)
       const module = import.meta.env.PROD ? moduleOrLoader : await moduleOrLoader();
 
-      if (!module || typeof module !== "object") {
-        console.error(`[BlogLoader] Invalid module structure for ${cleanPath}`);
+      // Use pure function for metadata extraction
+      const metadata = extractMetadataFromModule(module, path);
+      if (!metadata) {
+        console.warn(`[BlogLoader] No valid metadata found in ${cleanPath}, skipping`);
         continue;
       }
 
-      // Extract metadata (different sources for MDX vs TSX)
-      let title: string | undefined;
-      let publishingDate: string | undefined;
-      let order: number | undefined;
-      let tokenID: number | undefined;
-      let description: string | undefined;
-      let category: string | undefined;
-      let secondaryCategory: string | undefined;
-
-      if (isMdx) {
-        // MDX files export frontmatter
-        const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
-
-        if (!frontmatter || typeof frontmatter !== "object") {
-          console.warn(`[BlogLoader] No frontmatter found in ${cleanPath}, skipping`);
-          continue;
-        }
-
-        title = frontmatter.title as string | undefined;
-        publishingDate = frontmatter.publishing_date as string | undefined;
-        order = frontmatter.order as number | undefined;
-        tokenID = frontmatter.tokenID as number | undefined;
-        description = frontmatter.description as string | undefined;
-        category = frontmatter.category as string | undefined;
-        secondaryCategory = frontmatter.secondaryCategory as string | undefined;
-      } else if (isTsx) {
-        // TSX files export meta object
-        const meta = (module as { meta?: BlogPostMeta })?.meta || {};
-
-        title = meta.title;
-        publishingDate = meta.publishing_date;
-        tokenID = meta.tokenID;
-        description = meta.description;
-        category = meta.category;
-        secondaryCategory = meta.secondaryCategory;
-      }
-
-      // Generate fallback title from filename if needed
-      const fileName = cleanPath.split("/").pop() || "";
-      const fallbackTitle = isTsx
-        ? fileName
-            .replace(".tsx", "")
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (l) => l.toUpperCase())
-        : fileName.replace(/\.(md|mdx)$/, "");
-
-      // Create blog post object
-      const blog: BlogPost = {
-        title: title || fallbackTitle,
-        content: "", // Content is rendered as React component
-        type: "react",
-        publishing_date: publishingDate,
-        order: order,
-        tokenID: tokenID,
-        description: description,
-        componentPath: path,
-        category: category,
-        secondaryCategory: secondaryCategory,
-      };
-
-      blogs.push(blog);
+      blogs.push(metadata as BlogPost);
     } catch (error) {
       console.warn(`[BlogLoader] Failed to process ${path}:`, error);
     }
@@ -180,7 +222,7 @@ export async function loadBlogs(
 
   // Load NFT metadata for blogs with tokenIDs (only during SSR/build)
   if (import.meta.env.SSR) {
-    const tokenIDs = Array.from(new Set(sortedBlogs.flatMap((b) => (b.tokenID ? [b.tokenID] : []))));
+    const tokenIDs = extractTokenIDs(sortedBlogs);
 
     if (tokenIDs.length > 0) {
       try {
@@ -190,14 +232,14 @@ export async function loadBlogs(
         const { loadMultipleNFTMetadataNode } = await import("./nodeNftLoader");
         const nftMetadataMap = await loadMultipleNFTMetadataNode(tokenIDs);
 
-        // Add NFT metadata to blogs
-        sortedBlogs.forEach((blog) => {
-          if (blog.tokenID && nftMetadataMap[blog.tokenID]) {
-            blog.nftMetadata = nftMetadataMap[blog.tokenID];
-          }
-        });
+        // Use pure function for attaching NFT metadata
+        const blogsWithNFT = attachNFTMetadata(sortedBlogs, nftMetadataMap);
 
         console.log(`[BlogLoader] Successfully loaded metadata for ${Object.keys(nftMetadataMap).length} NFTs`);
+
+        // Cache for build-time to prevent reloading
+        buildTimeCache.set(cacheKey, blogsWithNFT);
+        return blogsWithNFT;
       } catch (error) {
         console.warn("[BlogLoader] Failed to load NFT metadata:", error);
       }

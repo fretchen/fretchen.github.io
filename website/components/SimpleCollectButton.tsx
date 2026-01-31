@@ -1,9 +1,11 @@
-import React, { useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useChainId } from "wagmi";
+import React, { useEffect, useState } from "react";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from "wagmi";
 import { formatEther } from "viem";
-import { collectorNFTContractConfig, getChain } from "../utils/getChain";
+import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
+import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
+
 interface SimpleCollectButtonProps {
   genImTokenId: bigint;
 }
@@ -17,15 +19,19 @@ interface SimpleCollectButtonProps {
 export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) {
   // Wagmi hooks
   const { isConnected } = useAccount();
-  const chainId = useChainId();
+  const { network, switchIfNeeded } = useAutoNetwork(COLLECTOR_NFT_NETWORKS);
   const { writeContract, isPending, data: hash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Chain and contract configuration
-  const chain = getChain();
-  const isCorrectNetwork = chainId === chain.id;
+  // Chain ID for current network
+  const chainId = fromCAIP2(network);
 
   const collectLabel = useLocale({ label: "imagegen.collect" });
+  const collectingLabel = useLocale({ label: "imagegen.collecting" });
+  const collectedLabel = useLocale({ label: "imagegen.collected" });
+  const priceLoadingLabel = useLocale({ label: "imagegen.priceLoading" });
+  const currentPriceInfoLabel = useLocale({ label: "imagegen.currentPriceInfo" });
 
   // Read mint stats
   const {
@@ -34,27 +40,45 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     isPending: isReadPending,
     refetch,
   } = useReadContract({
-    ...collectorNFTContractConfig,
+    address: getCollectorNFTAddress(network),
+    abi: CollectorNFTv1ABI,
     functionName: "getMintStats",
     args: [genImTokenId],
-    chainId: chain.id,
+    chainId,
   });
 
   // Handle collect action
   const handleCollect = async () => {
     if (!isConnected) return;
-    if (!isCorrectNetwork) return;
     if (!mintStats || !Array.isArray(mintStats)) return;
+
+    setIsLoading(true);
+
+    // Ensure correct network before transaction
+    const switched = await switchIfNeeded();
+    if (!switched) {
+      setIsLoading(false);
+      return;
+    }
 
     const [, currentPrice] = mintStats as [bigint, bigint, bigint];
 
     writeContract({
-      ...collectorNFTContractConfig,
+      address: getCollectorNFTAddress(network),
+      abi: CollectorNFTv1ABI,
       functionName: "mintCollectorNFT",
       args: [genImTokenId], // CollectorNFTv1 doesn't need URI parameter
       value: currentPrice,
     });
+    // Don't set isLoading(false) here - let useEffect handle it when isPending becomes true
   };
+
+  // Reset isLoading once wagmi takes over or transaction completes
+  useEffect(() => {
+    if (isPending || isSuccess) {
+      setIsLoading(false);
+    }
+  }, [isPending, isSuccess]);
 
   // Update state after transaction
   useEffect(() => {
@@ -76,7 +100,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   // Get price information for tooltip
   const getPriceInfo = () => {
     if (isReadPending || readError || !mintStats || !Array.isArray(mintStats)) {
-      return "Price loading...";
+      return priceLoadingLabel;
     }
 
     const [mintCount, currentPrice] = mintStats as [bigint, bigint, bigint];
@@ -102,17 +126,24 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     const nextTierPrice = baseMintPrice * BigInt(2 ** Math.floor(nextTierBoundary / 5));
     const formattedNextTier = formatPrice(formatEther(nextTierPrice));
 
-    return `Current price: ${formattedCurrent} ETH | Price after ${nextTierBoundary} mints: ${formattedNextTier} ETH`;
+    return currentPriceInfoLabel
+      .replace("{currentPrice}", formattedCurrent)
+      .replace("{nextTier}", nextTierBoundary.toString())
+      .replace("{nextPrice}", formattedNextTier);
   };
 
   return (
     <button
       onClick={handleCollect}
-      disabled={!isConnected || isPending || isConfirming || !isCorrectNetwork}
+      disabled={!isConnected || isPending || isConfirming || isLoading}
       className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
-      {isPending ? "📦 Collecting..." : isSuccess ? "✅ Collected!" : `📦 ${collectLabel} (${getMintCount()})`}
+      {isPending || isLoading
+        ? `📦 ${collectingLabel}`
+        : isSuccess
+          ? `✅ ${collectedLabel}`
+          : `📦 ${collectLabel} (${getMintCount()})`}
     </button>
   );
 }

@@ -1,26 +1,54 @@
 /**
  * Test Suite for NFT Metadata Loading in blogLoader
  *
- * Tests the integration of NFT metadata loading with the blog loading system.
- * Mocks the blockchain calls and verifies that metadata is correctly attached to blogs.
- *
- * Note: These tests verify the NFT loading logic but may not trigger actual NFT loading
- * unless running in SSR mode (import.meta.env.SSR === true). The tests focus on verifying
- * the structure and error handling of the NFT loading system.
+ * These tests mock GLOB_REGISTRY to avoid loading real blog files,
+ * making tests fast and deterministic.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { NFTMetadata } from "../types/BlogPost";
+import type { NFTMetadata, BlogPost } from "../types/BlogPost";
 
-// Mock the nodeNftLoader module before importing blogLoader
+// Mock GLOB_REGISTRY with minimal test data
+vi.mock("../utils/globRegistry", () => ({
+  GLOB_REGISTRY: {
+    blog: {
+      lazy: {
+        "../blog/post_with_token.md": async () => ({
+          frontmatter: {
+            title: "Post With Token",
+            publishing_date: "2025-01-15",
+            tokenID: 26,
+          },
+        }),
+        "../blog/post_without_token.md": async () => ({
+          frontmatter: {
+            title: "Post Without Token",
+            publishing_date: "2025-01-10",
+          },
+        }),
+        "../blog/interactive.tsx": async () => ({
+          meta: {
+            title: "Interactive Post",
+            publishing_date: "2025-01-20",
+            tokenID: 42,
+          },
+        }),
+      },
+      eager: {},
+    },
+  },
+}));
+
+// Mock nodeNftLoader
 vi.mock("../utils/nodeNftLoader", () => ({
   loadMultipleNFTMetadataNode: vi.fn(),
 }));
 
-describe("blogLoader - NFT Metadata Loading", () => {
+describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
   beforeEach(() => {
-    // Clear all mocks before each test
     vi.clearAllMocks();
+    // Reset module cache to get fresh imports
+    vi.resetModules();
   });
 
   afterEach(() => {
@@ -28,94 +56,114 @@ describe("blogLoader - NFT Metadata Loading", () => {
   });
 
   it("should have NFT loader module available", async () => {
-    // Verify that the NFT loader module can be imported
     const { loadMultipleNFTMetadataNode } = await import("../utils/nodeNftLoader");
     expect(loadMultipleNFTMetadataNode).toBeDefined();
     expect(typeof loadMultipleNFTMetadataNode).toBe("function");
   });
 
-  it("should load blogs successfully", async () => {
-    // Arrange: Mock NFT metadata
-    const mockNFTMetadata: Record<number, NFTMetadata> = {
-      26: {
-        imageUrl: "https://example.com/image_26.png",
-        prompt: "Test prompt for token 26",
-        name: "Test NFT 26",
-        description: "Test description 26",
-      },
-    };
-
-    const { loadMultipleNFTMetadataNode } = await import("../utils/nodeNftLoader");
-    vi.mocked(loadMultipleNFTMetadataNode).mockResolvedValue(mockNFTMetadata);
-
-    // Act: Load blogs
+  it("should load blogs from mocked registry", async () => {
     const { loadBlogs } = await import("../utils/blogLoader");
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    // Assert: Blogs should be loaded successfully
     expect(blogs).toBeDefined();
     expect(Array.isArray(blogs)).toBe(true);
-    expect(blogs.length).toBeGreaterThan(0);
+    expect(blogs.length).toBe(3);
 
-    // Check if any blog has a tokenID
-    const blogsWithTokenID = blogs.filter((b) => b.tokenID);
-    console.log(`[Test] Found ${blogsWithTokenID.length} blogs with tokenID`);
-
-    // In SSR mode, if there are blogs with tokenIDs, NFT loader should be called
-    if (import.meta.env.SSR && blogsWithTokenID.length > 0) {
-      expect(loadMultipleNFTMetadataNode).toHaveBeenCalled();
-    }
+    const titles = blogs.map((b) => b.title);
+    expect(titles).toContain("Post With Token");
+    expect(titles).toContain("Post Without Token");
+    expect(titles).toContain("Interactive Post");
   });
 
-  it("should handle blogs without tokenID gracefully", async () => {
-    // Act: Load blogs
+  it("should sort blogs by publishing_date (oldest first)", async () => {
     const { loadBlogs } = await import("../utils/blogLoader");
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    // Assert: Blogs without tokenID should not cause errors
-    const blogsWithoutToken = blogs.filter((b) => !b.tokenID);
-
-    blogsWithoutToken.forEach((blog) => {
-      // Blogs without tokenID should not have nftMetadata
-      expect(blog.nftMetadata).toBeUndefined();
-    });
-
-    // Should still load blogs successfully
-    expect(blogs.length).toBeGreaterThan(0);
-  });
-
-  it("should handle NFT loading errors gracefully", async () => {
-    // Arrange: Mock NFT loader to throw error
-    const { loadMultipleNFTMetadataNode } = await import("../utils/nodeNftLoader");
-    vi.mocked(loadMultipleNFTMetadataNode).mockRejectedValue(new Error("Network error"));
-
-    // Act: Should not throw - should log warning and continue
-    const { loadBlogs } = await import("../utils/blogLoader");
-    await expect(loadBlogs("blog", "publishing_date")).resolves.toBeDefined();
-
-    const blogs = await loadBlogs("blog", "publishing_date");
-
-    // Assert: Blogs should still be loaded
-    expect(blogs.length).toBeGreaterThan(0);
+    expect(blogs[0].title).toBe("Post Without Token"); // 2025-01-10
+    expect(blogs[1].title).toBe("Post With Token"); // 2025-01-15
+    expect(blogs[2].title).toBe("Interactive Post"); // 2025-01-20
   });
 
   it("should correctly identify blogs with tokenIDs", async () => {
-    // Act: Load blogs
     const { loadBlogs } = await import("../utils/blogLoader");
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    // Assert: Check tokenID structure
-    blogs.forEach((blog) => {
-      if (blog.tokenID !== undefined) {
-        // TokenID should be a positive number
-        expect(typeof blog.tokenID).toBe("number");
-        expect(blog.tokenID).toBeGreaterThan(0);
-      }
-    });
+    const blogsWithToken = blogs.filter((b) => b.tokenID !== undefined);
+    expect(blogsWithToken.length).toBe(2);
+
+    const tokenIDs = blogsWithToken.map((b) => b.tokenID);
+    expect(tokenIDs).toContain(26);
+    expect(tokenIDs).toContain(42);
   });
 
-  it("should validate NFT metadata structure when present", async () => {
-    // Arrange: Mock NFT metadata with proper structure
+  it("should handle blogs without tokenID gracefully", async () => {
+    const { loadBlogs } = await import("../utils/blogLoader");
+    const blogs = await loadBlogs("blog", "publishing_date");
+
+    const blogsWithoutToken = blogs.filter((b) => !b.tokenID);
+    expect(blogsWithoutToken.length).toBe(1);
+    expect(blogsWithoutToken[0].title).toBe("Post Without Token");
+    expect(blogsWithoutToken[0].nftMetadata).toBeUndefined();
+  });
+
+  it("should extract unique tokenIDs", async () => {
+    const { extractTokenIDs } = await import("../utils/blogLoader");
+
+    const mockBlogs: BlogPost[] = [
+      { title: "A", content: "", type: "react", tokenID: 26 },
+      { title: "B", content: "", type: "react", tokenID: 42 },
+      { title: "C", content: "", type: "react", tokenID: 26 }, // Duplicate
+      { title: "D", content: "", type: "react" }, // No tokenID
+    ];
+
+    const tokenIDs = extractTokenIDs(mockBlogs);
+
+    expect(tokenIDs.length).toBe(2);
+    expect(tokenIDs).toContain(26);
+    expect(tokenIDs).toContain(42);
+  });
+
+  it("should attach NFT metadata correctly", async () => {
+    const { attachNFTMetadata } = await import("../utils/blogLoader");
+
+    const mockBlogs: BlogPost[] = [
+      { title: "A", content: "", type: "react", tokenID: 26 },
+      { title: "B", content: "", type: "react" },
+    ];
+
+    const mockNFTMetadata: Record<number, NFTMetadata> = {
+      26: {
+        imageUrl: "https://example.com/26.png",
+        prompt: "Test prompt",
+        name: "NFT 26",
+        description: "Test description",
+      },
+    };
+
+    const result = attachNFTMetadata(mockBlogs, mockNFTMetadata);
+
+    expect(result[0].nftMetadata).toBeDefined();
+    expect(result[0].nftMetadata?.name).toBe("NFT 26");
+    expect(result[1].nftMetadata).toBeUndefined();
+  });
+
+  it("should handle NFT loading errors gracefully", async () => {
+    const { loadMultipleNFTMetadataNode } = await import("../utils/nodeNftLoader");
+    vi.mocked(loadMultipleNFTMetadataNode).mockRejectedValue(new Error("Network error"));
+
+    const { loadBlogs } = await import("../utils/blogLoader");
+
+    // Should not throw
+    const blogs = await loadBlogs("blog", "publishing_date");
+
+    expect(blogs.length).toBe(3);
+  });
+
+  it("should validate NFT metadata structure", async () => {
+    const { attachNFTMetadata } = await import("../utils/blogLoader");
+
+    const mockBlogs: BlogPost[] = [{ title: "A", content: "", type: "react", tokenID: 123 }];
+
     const mockNFTMetadata: Record<number, NFTMetadata> = {
       123: {
         imageUrl: "https://example.com/image.png",
@@ -125,61 +173,34 @@ describe("blogLoader - NFT Metadata Loading", () => {
       },
     };
 
-    const { loadMultipleNFTMetadataNode } = await import("../utils/nodeNftLoader");
-    vi.mocked(loadMultipleNFTMetadataNode).mockResolvedValue(mockNFTMetadata);
+    const result = attachNFTMetadata(mockBlogs, mockNFTMetadata);
 
-    // Act: Load blogs
-    const { loadBlogs } = await import("../utils/blogLoader");
-    const blogs = await loadBlogs("blog", "publishing_date");
-
-    // Assert: Check NFT metadata structure if present
-    blogs.forEach((blog) => {
-      if (blog.nftMetadata) {
-        expect(blog.nftMetadata).toHaveProperty("imageUrl");
-        expect(blog.nftMetadata).toHaveProperty("prompt");
-        expect(blog.nftMetadata).toHaveProperty("name");
-        expect(blog.nftMetadata).toHaveProperty("description");
-
-        // ImageUrl should be a valid URL string
-        expect(typeof blog.nftMetadata.imageUrl).toBe("string");
-        expect(blog.nftMetadata.imageUrl.length).toBeGreaterThan(0);
-      }
-    });
-  });
-
-  it("should not duplicate tokenIDs when calling NFT loader", async () => {
-    // This test verifies the logic that tokenIDs are unique before calling the loader
-    const { loadBlogs } = await import("../utils/blogLoader");
-    const blogs = await loadBlogs("blog", "publishing_date");
-
-    // Extract tokenIDs manually
-    const tokenIDs = blogs.filter((blog) => blog.tokenID).map((blog) => blog.tokenID!);
-
-    // Check for uniqueness
-    const uniqueTokenIDs = [...new Set(tokenIDs)];
-    expect(tokenIDs.length).toBe(uniqueTokenIDs.length);
-
-    console.log(`[Test] Found ${tokenIDs.length} unique tokenIDs: ${tokenIDs.join(", ")}`);
+    const nft = result[0].nftMetadata;
+    expect(nft).toHaveProperty("imageUrl");
+    expect(nft).toHaveProperty("prompt");
+    expect(nft).toHaveProperty("name");
+    expect(nft).toHaveProperty("description");
+    expect(typeof nft?.imageUrl).toBe("string");
+    expect(nft?.imageUrl.length).toBeGreaterThan(0);
   });
 
   it("should maintain blog structure with or without NFT metadata", async () => {
-    // Act: Load blogs
     const { loadBlogs } = await import("../utils/blogLoader");
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    // Assert: All blogs should have required fields
     blogs.forEach((blog) => {
       expect(blog).toHaveProperty("title");
       expect(blog).toHaveProperty("content");
       expect(blog).toHaveProperty("type");
-
       expect(typeof blog.title).toBe("string");
       expect(blog.title.length).toBeGreaterThan(0);
-
-      // NFTMetadata is optional
-      if (blog.nftMetadata) {
-        expect(typeof blog.nftMetadata).toBe("object");
-      }
     });
+  });
+
+  it("should return empty array for unsupported directory", async () => {
+    const { loadBlogs } = await import("../utils/blogLoader");
+    const blogs = await loadBlogs("nonexistent", "publishing_date");
+
+    expect(blogs).toEqual([]);
   });
 });

@@ -7,10 +7,14 @@
 | Contract | Optimism | Base | Multi-Chain Ready | Script Status |
 |----------|:--------:|:----:|:-----------------:|:-------------:|
 | **SupportV2** | ✅ | ✅ | ✅ Ja | ✅ Modern |
-| **GenImNFTv4** | ✅ | ⬜ | ✅ Ja (Backend ready) | ⚠️ Veraltet |
-| **CollectorNFTv1** | ✅ | ⬜ | ✅ Ja (Frontend ready) | ⚠️ Veraltet |
+| **GenImNFTv4** | ✅ | ✅ | ✅ Ja | ✅ Modern |
+| **CollectorNFTv1** | ✅ | ⬜ | ✅ Ja | ✅ Modern |
 | **LLMv1** | ✅ | ❌ | ❌ (out of scope) | - |
 | **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja | ✅ Modern |
+
+**Base Addresses:**
+- GenImNFTv4: `0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68`
+- CollectorNFTv1: TBD (depends on GenImNFTv4)
 
 ---
 
@@ -23,9 +27,10 @@
 | **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ✅ Fertig |
 | **2** | GenImNFT-Komponenten migrieren | website/ | ✅ Fertig |
 | **3** | CollectorNFT-Komponenten migrieren | website/ | ✅ Fertig |
-| **4.1** | deploy-genimg-v4.ts modernisieren | eth/ | ⬜ Nächster Schritt |
-| **4.2** | deploy-collector-nft-v1.ts modernisieren | eth/ | ⬜ |
-| **4.3** | GenImNFTv4 + CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ |
+| **4.1** | deploy-genimg-v4.ts modernisieren | eth/ | ✅ Fertig |
+| **4.2** | deploy-collector-nft-v1.ts modernisieren | eth/ | ✅ Fertig |
+| **4.3** | GenImNFTv4 auf Base deployen | eth/, shared/ | ✅ Fertig |
+| **4.4** | CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ Nächster Schritt |
 
 ---
 

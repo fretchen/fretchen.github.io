@@ -131,8 +131,12 @@ describe("@fretchen/chain-utils", () => {
 
   describe("Contract Addresses", () => {
     describe("getGenAiNFTAddress()", () => {
-      test("should return Mainnet contract address", () => {
+      test("should return Optimism Mainnet contract address", () => {
         expect(getGenAiNFTAddress("eip155:10")).toBe("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");
+      });
+
+      test("should return Base Mainnet contract address", () => {
+        expect(getGenAiNFTAddress("eip155:8453")).toBe("0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68");
       });
 
       test("should return Sepolia contract address", () => {
@@ -142,8 +146,8 @@ describe("@fretchen/chain-utils", () => {
       });
 
       test("should throw for network without GenAI NFT deployment", () => {
-        expect(() => getGenAiNFTAddress("eip155:8453")).toThrow(
-          "GenAI NFT not deployed on eip155:8453"
+        expect(() => getGenAiNFTAddress("eip155:1")).toThrow(
+          "GenAI NFT not deployed on eip155:1"
         );
       });
     });

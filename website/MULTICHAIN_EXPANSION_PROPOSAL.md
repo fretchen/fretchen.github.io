@@ -8,13 +8,13 @@
 |----------|:--------:|:----:|:-----------------:|:-------------:|
 | **SupportV2** | ✅ | ✅ | ✅ Ja | ✅ Modern |
 | **GenImNFTv4** | ✅ | ✅ | ✅ Ja | ✅ Modern |
-| **CollectorNFTv1** | ✅ | ⬜ | ✅ Ja | ✅ Modern |
+| **CollectorNFTv1** | ✅ | ✅ | ✅ Ja | ✅ Modern |
 | **LLMv1** | ✅ | ❌ | ❌ (out of scope) | - |
 | **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja | ✅ Modern |
 
 **Base Addresses:**
-- GenImNFTv4: `0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68`
-- CollectorNFTv1: TBD (depends on GenImNFTv4)
+- GenImNFTv4: `0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68` ✅ Verified
+- CollectorNFTv1: `0x5D0103393DDcD988867437233c197c6A38b23360` ✅ Verified
 
 ---
 
@@ -29,8 +29,8 @@
 | **3** | CollectorNFT-Komponenten migrieren | website/ | ✅ Fertig |
 | **4.1** | deploy-genimg-v4.ts modernisieren | eth/ | ✅ Fertig |
 | **4.2** | deploy-collector-nft-v1.ts modernisieren | eth/ | ✅ Fertig |
-| **4.3** | GenImNFTv4 auf Base deployen | eth/, shared/ | ✅ Fertig |
-| **4.4** | CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ Nächster Schritt |
+| **4.3** | GenImNFTv4 auf Base deployen & verifizieren | eth/, shared/ | ✅ Fertig |
+| **4.4** | CollectorNFTv1 auf Base deployen & verifizieren | eth/, shared/ | ✅ Fertig |
 
 ---
 

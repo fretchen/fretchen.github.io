@@ -30,6 +30,7 @@ export const GENAI_NFT_NETWORKS = [
 
 export const MAINNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {
   "eip155:10": "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea", // Optimism
+  "eip155:8453": "0x5D0103393DDcD988867437233c197c6A38b23360", // Base
 };
 
 export const TESTNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {

@@ -159,9 +159,15 @@ describe("@fretchen/chain-utils", () => {
         );
       });
 
+      test("should return Base Mainnet address", () => {
+        expect(getCollectorNFTAddress("eip155:8453")).toBe(
+          "0x5D0103393DDcD988867437233c197c6A38b23360"
+        );
+      });
+
       test("should throw for network without CollectorNFT", () => {
-        expect(() => getCollectorNFTAddress("eip155:8453")).toThrow(
-          "CollectorNFT not deployed on eip155:8453"
+        expect(() => getCollectorNFTAddress("eip155:1")).toThrow(
+          "CollectorNFT not deployed on eip155:1"
         );
       });
     });

@@ -1,0 +1,28 @@
+{
+  "network": "base",
+  "timestamp": "2026-02-01T19:39:52.525Z",
+  "blockNumber": 41592722,
+  "proxyAddress": "0x5D0103393DDcD988867437233c197c6A38b23360",
+  "implementationAddress": "0xe8AB747e604873292a3f7a7Be31270720EEA9e04",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "genImNFTAddress": "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68",
+  "baseMintPrice": "0.00005",
+  "contractName": "CollectorNFTv1",
+  "contractSymbol": "COLLECTORv1",
+  "version": "1.0.0",
+  "config": {
+    "parameters": {
+      "genImNFTAddress": "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68",
+      "baseMintPrice": "0.00005"
+    },
+    "options": {
+      "validateOnly": false,
+      "dryRun": false
+    },
+    "metadata": {
+      "description": "CollectorNFTv1 deployment to Base Mainnet",
+      "version": "1.0.0",
+      "environment": "production"
+    }
+  }
+}

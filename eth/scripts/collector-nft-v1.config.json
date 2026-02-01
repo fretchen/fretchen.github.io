@@ -1,6 +1,6 @@
 {
   "parameters": {
-    "genImNFTAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+    "genImNFTAddress": "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68",
     "baseMintPrice": "0.00005"
   },
   "options": {
@@ -8,7 +8,7 @@
     "dryRun": false
   },
   "metadata": {
-    "description": "CollectorNFT v1 deployment configuration",
+    "description": "CollectorNFTv1 deployment to Base Mainnet",
     "version": "1.0.0",
     "environment": "production"
   }

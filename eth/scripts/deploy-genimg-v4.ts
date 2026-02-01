@@ -323,7 +323,6 @@ async function deployGenImV4() {
   // Verify proxy state
   console.log("🔍 Verifying proxy state...");
   const owner = await deployedContract.owner();
-  const [deployer] = await ethers.getSigners();
   console.log(`✅ Owner: ${owner}`);
   console.log(`✅ Deployer: ${deployer.address}`);
 

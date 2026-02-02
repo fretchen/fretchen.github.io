@@ -17,7 +17,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
 } from "./x402_server.js";
-import { validatePaymentNetwork } from "./getChain.js";
+import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
@@ -425,14 +425,15 @@ async function handle(event, context, cb) {
     console.log("❌ No payment provided → Returning 402");
 
     // 🎯 Network selection based on test mode
-    // Test mode: Only Sepolia testnet (no costs)
-    // Production: Only Optimism Mainnet (real payments)
-    const networks = sepoliaTest ? ["eip155:11155420"] : ["eip155:10"];
+    // Dynamically loaded from chain-utils deployment configuration
+    // Test mode: All testnet deployments (currently Sepolia)
+    // Production: All mainnet deployments (currently Optimism + Base)
+    const networks = getExpectedNetworks(sepoliaTest);
 
     if (sepoliaTest) {
-      console.log("   Restricting to Sepolia testnet");
+      console.log(`   Test mode: ${networks.join(", ")}`);
     } else {
-      console.log("   Production mode: Optimism Mainnet only");
+      console.log(`   Production mode: ${networks.join(", ")}`);
     }
 
     // Create payment requirements using x402 helper

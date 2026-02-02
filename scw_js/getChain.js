@@ -1,6 +1,10 @@
 // @ts-check
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import { LLMv1ABI } from "@fretchen/chain-utils";
+import { 
+  LLMv1ABI,
+  getGenAiNFTMainnetNetworks,
+  getGenAiNFTTestnetNetworks
+} from "@fretchen/chain-utils";
 
 /**
  * Get environment variable in both Node.js and Vite contexts
@@ -70,31 +74,44 @@ export function getLLMv1ContractConfig() {
 }
 
 /**
- * Get the expected network for a given mode
+ * Get the expected networks for a given mode
+ * Dynamically pulls from chain-utils deployment configuration
+ * @param {boolean} sepoliaTest - Whether test mode is enabled
+ * @returns {string[]} Array of CAIP-2 network IDs
+ */
+export function getExpectedNetworks(sepoliaTest) {
+  return sepoliaTest 
+    ? getGenAiNFTTestnetNetworks()
+    : getGenAiNFTMainnetNetworks();
+}
+
+/**
+ * Get the expected network for a given mode (legacy, returns first network)
+ * @deprecated Use getExpectedNetworks() instead
  * @param {boolean} sepoliaTest - Whether test mode is enabled
  * @returns {string} CAIP-2 network ID
  */
 export function getExpectedNetwork(sepoliaTest) {
-  return sepoliaTest ? "eip155:11155420" : "eip155:10";
+  return getExpectedNetworks(sepoliaTest)[0];
 }
 
 /**
  * Validate that a client-selected network matches the expected mode
  * @param {string|undefined} clientNetwork - Network from payment payload
  * @param {boolean} sepoliaTest - Whether test mode is enabled
- * @returns {{ valid: boolean, reason?: string, expected?: string, received?: string }}
+ * @returns {{ valid: boolean, reason?: string, expected?: string[], received?: string }}
  */
 export function validatePaymentNetwork(clientNetwork, sepoliaTest) {
   if (!clientNetwork) {
     return { valid: false, reason: "missing_network" };
   }
 
-  const expectedNetwork = getExpectedNetwork(sepoliaTest);
-  if (clientNetwork !== expectedNetwork) {
+  const expectedNetworks = getExpectedNetworks(sepoliaTest);
+  if (!expectedNetworks.includes(clientNetwork)) {
     return {
       valid: false,
       reason: sepoliaTest ? "invalid_network_for_test_mode" : "invalid_network_for_production",
-      expected: expectedNetwork,
+      expected: expectedNetworks,
       received: clientNetwork,
     };
   }

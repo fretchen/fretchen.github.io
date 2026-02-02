@@ -307,13 +307,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.accepts[0].network).toBe("eip155:11155420");
     });
 
-    test("should offer Mainnet only when sepoliaTest flag is false (production mode)", async () => {
+    test("should offer Optimism and Base when sepoliaTest flag is false (production mode)", async () => {
       const event = {
         httpMethod: "POST",
         headers: {},
         body: JSON.stringify({
           prompt: "Production image",
-          sepoliaTest: false, // Production: Mainnet only
+          sepoliaTest: false, // Production: Optimism + Base
         }),
         path: "/genimg",
       };
@@ -323,19 +323,20 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(402);
       const body = JSON.parse(response.body);
 
-      // Production mode: only Mainnet
+      // Production mode: Optimism + Base
       expect(body.accepts).toBeInstanceOf(Array);
-      expect(body.accepts.length).toBe(1);
+      expect(body.accepts.length).toBe(2);
       expect(body.accepts[0].network).toBe("eip155:10"); // Optimism Mainnet
+      expect(body.accepts[1].network).toBe("eip155:8453"); // Base Mainnet
     });
 
-    test("should offer Mainnet only when sepoliaTest flag is omitted (default: production)", async () => {
+    test("should offer Optimism and Base when sepoliaTest flag is omitted (default: production)", async () => {
       const event = {
         httpMethod: "POST",
         headers: {},
         body: JSON.stringify({
           prompt: "Default behavior",
-          // sepoliaTest omitted - default to production (Mainnet only)
+          // sepoliaTest omitted - default to production (Optimism + Base)
         }),
         path: "/genimg",
       };
@@ -345,10 +346,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(402);
       const body = JSON.parse(response.body);
 
-      // Default is production mode: only Mainnet
+      // Default is production mode: Optimism + Base
       expect(body.accepts).toBeInstanceOf(Array);
-      expect(body.accepts.length).toBe(1);
+      expect(body.accepts.length).toBe(2);
       expect(body.accepts[0].network).toBe("eip155:10"); // Optimism Mainnet
+      expect(body.accepts[1].network).toBe("eip155:8453"); // Base Mainnet
     });
 
     test("should handle OPTIONS request (CORS preflight)", async () => {
@@ -796,7 +798,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       );
     });
 
-    test("should reject unsupported network (production only accepts Mainnet)", async () => {
+    test("should reject unsupported network (production only accepts Optimism/Base)", async () => {
       const unsupportedPayment = {
         x402Version: 2,
         accepted: {
@@ -832,9 +834,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const body = JSON.parse(response.body);
       expect(body.error).toBe("Payment verification failed");
-      // Production mode rejects all networks except Mainnet
+      // Production mode rejects all networks except Optimism and Base
       expect(body.reason).toBe("invalid_network_for_production");
-      expect(body.expected).toBe("eip155:10");
+      expect(body.expected).toEqual(["eip155:10", "eip155:8453"]);
       expect(body.received).toBe("eip155:1");
     });
 

@@ -24,6 +24,22 @@ export const GENAI_NFT_NETWORKS = [
   ...Object.keys(TESTNET_GENAI_NFT_ADDRESSES),
 ] as const;
 
+/**
+ * Get all mainnet networks where GenImNFT is deployed
+ * Used by backend services for dynamic network configuration
+ */
+export function getGenAiNFTMainnetNetworks(): readonly string[] {
+  return Object.keys(MAINNET_GENAI_NFT_ADDRESSES);
+}
+
+/**
+ * Get all testnet networks where GenImNFT is deployed
+ * Used by backend services for dynamic network configuration
+ */
+export function getGenAiNFTTestnetNetworks(): readonly string[] {
+  return Object.keys(TESTNET_GENAI_NFT_ADDRESSES);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // CollectorNFT
 // ═══════════════════════════════════════════════════════════════

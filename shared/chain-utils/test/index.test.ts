@@ -24,6 +24,8 @@ import {
   getEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
+  getGenAiNFTMainnetNetworks,
+  getGenAiNFTTestnetNetworks,
   MAINNET_GENAI_NFT_ADDRESSES,
   TESTNET_GENAI_NFT_ADDRESSES,
   MAINNET_LLM_V1_ADDRESSES,
@@ -130,6 +132,42 @@ describe("@fretchen/chain-utils", () => {
   });
 
   describe("Contract Addresses", () => {
+    describe("GenAI NFT Network Helpers", () => {
+      test("getGenAiNFTMainnetNetworks() should return all mainnet deployments", () => {
+        const networks = getGenAiNFTMainnetNetworks();
+        
+        expect(Array.isArray(networks)).toBe(true);
+        expect(networks).toContain("eip155:10"); // Optimism
+        expect(networks).toContain("eip155:8453"); // Base
+        expect(networks).toEqual(Object.keys(MAINNET_GENAI_NFT_ADDRESSES));
+      });
+
+      test("getGenAiNFTTestnetNetworks() should return all testnet deployments", () => {
+        const networks = getGenAiNFTTestnetNetworks();
+        
+        expect(Array.isArray(networks)).toBe(true);
+        expect(networks).toContain("eip155:11155420"); // Optimism Sepolia
+        expect(networks).toEqual(Object.keys(TESTNET_GENAI_NFT_ADDRESSES));
+      });
+
+      test("mainnet and testnet networks should be disjoint", () => {
+        const mainnet = getGenAiNFTMainnetNetworks();
+        const testnet = getGenAiNFTTestnetNetworks();
+        
+        for (const network of mainnet) {
+          expect(testnet).not.toContain(network);
+        }
+      });
+
+      test("should have at least one mainnet deployment", () => {
+        expect(getGenAiNFTMainnetNetworks().length).toBeGreaterThanOrEqual(1);
+      });
+
+      test("should have at least one testnet deployment", () => {
+        expect(getGenAiNFTTestnetNetworks().length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
     describe("getGenAiNFTAddress()", () => {
       test("should return Optimism Mainnet contract address", () => {
         expect(getGenAiNFTAddress("eip155:10")).toBe("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");

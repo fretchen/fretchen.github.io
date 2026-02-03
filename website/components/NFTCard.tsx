@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isMainnet } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, isMainnet, fromCAIP2 } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
+import { ChainBadge } from "./ChainBadge";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 // NFT Card Component
 export function NFTCard({
   tokenId,
+  network,
   onImageClick,
   onNftBurned,
   onListedStatusChanged,
@@ -22,6 +23,7 @@ export function NFTCard({
 }: NFTCardProps) {
   const { writeContract, isPending: isBurning, data: hash } = useWriteContract();
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
+  const { switchChainAsync } = useSwitchChain();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   // NFT state - initialize with preloaded data if available
@@ -43,9 +45,20 @@ export function NFTCard({
 
   const deleteLabel = useLocale({ label: "imagegen.delete" });
 
-  // Get network and contract address from chain-utils
-  const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  // Get contract address from the network prop
   const contractAddress = getGenAiNFTAddress(network);
+  const chainId = fromCAIP2(network);
+
+  // Helper to switch to the correct chain before transactions
+  const switchToCorrectChain = async (): Promise<boolean> => {
+    try {
+      await switchChainAsync({ chainId });
+      return true;
+    } catch (err) {
+      console.error("Failed to switch chain:", err);
+      return false;
+    }
+  };
 
   // Use the extracted hook for listing status
   // Only enabled when:
@@ -195,6 +208,8 @@ export function NFTCard({
         alt: nft.metadata?.name || `Artwork #${nft.tokenId}`,
         title: nft.metadata?.name,
         description: nft.metadata?.description,
+        network,
+        tokenId: nft.tokenId,
       });
     }
   };
@@ -221,11 +236,20 @@ export function NFTCard({
 
   /**
    * Copies the OpenSea marketplace URL to clipboard for easy sharing
-   * Uses the Optimism network OpenSea URL format
+   * Supports Optimism and Base networks
    */
   const handleShare = async () => {
-    // Determine OpenSea network based on mainnet/testnet
-    const openSeaNetwork = isMainnet(network) ? "optimism" : "optimism-sepolia";
+    // Determine OpenSea network based on chain
+    let openSeaNetwork: string;
+    if (network === "eip155:10") {
+      openSeaNetwork = "optimism";
+    } else if (network === "eip155:8453") {
+      openSeaNetwork = "base";
+    } else if (network === "eip155:11155420") {
+      openSeaNetwork = "optimism-sepolia";
+    } else {
+      openSeaNetwork = "base-sepolia";
+    }
     const openSeaUrl = `https://opensea.io/item/${openSeaNetwork}/${contractAddress}/${nft.tokenId}`;
 
     try {
@@ -261,7 +285,7 @@ export function NFTCard({
 
     try {
       // Switch chain if needed before transaction
-      const switched = await switchIfNeeded();
+      const switched = await switchToCorrectChain();
       if (!switched) {
         showToast("Please switch to the correct network.", "error");
         return;
@@ -287,7 +311,7 @@ export function NFTCard({
 
     try {
       // Switch chain if needed before transaction
-      const switched = await switchIfNeeded();
+      const switched = await switchToCorrectChain();
       if (!switched) {
         showToast("Please switch to the correct network.", "error");
         return;
@@ -355,6 +379,9 @@ export function NFTCard({
 
           {/* Corner Badge - Token ID */}
           <div className={styles.nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
+
+          {/* Chain Badge - shows which network this NFT is on */}
+          <ChainBadge network={network} size="sm" position="bottom-right" />
 
           {/* Listed Badge (nur wenn listed) */}
           {!isPublicView && isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}

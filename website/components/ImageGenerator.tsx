@@ -351,8 +351,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         ],
       };
 
-      // Call success callback
-      onSuccess?.(newTokenId, imageUrl, metadata);
+      // Call success callback with network info
+      onSuccess?.(newTokenId, imageUrl, metadata, network);
 
       // Track success with analytics
       trackEvent("x402-image-generated", {

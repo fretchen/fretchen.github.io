@@ -965,3 +965,87 @@ if (require.main === module) {
 - chain-utils: 46 Tests, 98.75% Coverage
 - scw_js: 175 Tests
 - CI Pipelines für alle Packages
+
+---
+
+## Phase 5: Website Notebook-Pattern Migration 🔄 IN PROGRESS
+
+### Änderungen
+
+Backend erwartet jetzt `network` Parameter (CAIP-2) statt `sepoliaTest` Boolean. Website muss angepasst werden.
+
+**Breaking Change:** `X402GenImgRequest.sepoliaTest` → `X402GenImgRequest.network`
+
+### Code-Änderungen
+
+**1. Type Definition** (`website/types/x402.ts`):
+```typescript
+export interface X402GenImgRequest {
+  prompt: string;
+  size?: "1024x1024" | "1792x1024";
+  mode?: "generate" | "edit";
+  referenceImage?: string;
+  sepoliaTest?: boolean;  // ❌ Remove
+  network: string;        // ✅ Add (CAIP-2, z.B. "eip155:8453")
+  expectedChainId?: number;
+  isListed?: boolean;
+}
+```
+
+**2. ImageGenerator** (`website/components/ImageGenerator.tsx`):
+```tsx
+// VORHER (Line ~308)
+const result = await generateImage({
+  prompt,
+  size,
+  mode,
+  referenceImage: isEditMode ? referenceImageBase64 : undefined,
+  sepoliaTest: useTestnetFlag,  // ❌
+  expectedChainId: targetChainId,
+  isListed,
+});
+
+// NACHHER
+const result = await generateImage({
+  prompt,
+  size,
+  mode,
+  referenceImage: isEditMode ? referenceImageBase64 : undefined,
+  network,  // ✅ Von useAutoNetwork
+  expectedChainId: targetChainId,
+  isListed,
+});
+```
+
+**3. useAutoNetwork Hook** - Bleibt unverändert:
+- Verwendet bereits wallet-connected chain
+- Fällt zurück auf erste supported chain wenn wallet nicht verbunden
+- Keine UI für manuelle Network-Auswahl (bereits verworfen)
+
+**4. x402 Hook Validation** (`website/hooks/useX402ImageGeneration.ts`):
+```typescript
+// Update: Validate gegen network statt expectedChainId
+const { expectedChainId, network, ...requestBody } = request;
+
+if (response.status === 402 && network) {
+  const decoded = JSON.parse(atob(response.headers.get("Payment-Required")));
+  if (decoded.accepts?.[0]?.network !== network) {
+    throw new Error(`Network mismatch: expected ${network}`);
+  }
+}
+```
+
+### Deployment
+
+**Backend First:**
+- [x] Facilitator deployed (Base support)
+- [ ] scw_js deployment: `cd scw_js && npm run deploy`
+
+**Website:**
+- [ ] Remove `sepoliaTest` references
+- [ ] Add `network` parameter
+- [ ] Update tests
+- [ ] Deploy
+
+**Status:** Ready for Implementation  
+**Blocking:** scw_js deployment

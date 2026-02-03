@@ -65,6 +65,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
 
         // === Make the paid request ===
         // Remove expectedChainId from request body (it's only for client-side validation)
+        // Keep network in the body - backend uses it to filter 402 response
         const { expectedChainId, ...requestBody } = request;
 
         // === Create a validating fetch wrapper ===
@@ -74,22 +75,21 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
           const response = await fetch(input, init);
 
           // Validate chain from 402 response before x402 SDK triggers signing
-          if (response.status === 402 && expectedChainId) {
+          if (response.status === 402 && request.network) {
             const paymentRequiredHeader = response.headers.get("Payment-Required");
             if (paymentRequiredHeader) {
               try {
                 const decoded = JSON.parse(atob(paymentRequiredHeader));
                 const serverNetwork = decoded.accepts?.[0]?.network;
-                const expectedNetwork = `eip155:${expectedChainId}`;
 
-                if (serverNetwork && serverNetwork !== expectedNetwork) {
+                if (serverNetwork && serverNetwork !== request.network) {
                   throw new Error(
-                    `Chain mismatch! Expected ${expectedNetwork} but server requires ${serverNetwork}. ` +
-                      `This could indicate a configuration error.`,
+                    `Network mismatch! Selected ${request.network} but server requires ${serverNetwork}. ` +
+                      `This could indicate a backend configuration error.`,
                   );
                 }
               } catch (parseError) {
-                if (parseError instanceof Error && parseError.message.includes("Chain mismatch")) {
+                if (parseError instanceof Error && parseError.message.includes("Network mismatch")) {
                   throw parseError;
                 }
                 // Silently continue if header parsing fails - the request will proceed

@@ -1,9 +1,10 @@
 // @ts-check
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import { 
+import {
   LLMv1ABI,
   getGenAiNFTMainnetNetworks,
-  getGenAiNFTTestnetNetworks
+  getGenAiNFTTestnetNetworks,
+  isTestnet,
 } from "@fretchen/chain-utils";
 
 /**
@@ -80,9 +81,7 @@ export function getLLMv1ContractConfig() {
  * @returns {string[]} Array of CAIP-2 network IDs
  */
 export function getExpectedNetworks(sepoliaTest) {
-  return sepoliaTest 
-    ? getGenAiNFTTestnetNetworks()
-    : getGenAiNFTMainnetNetworks();
+  return sepoliaTest ? getGenAiNFTTestnetNetworks() : getGenAiNFTMainnetNetworks();
 }
 
 /**
@@ -96,22 +95,22 @@ export function getExpectedNetwork(sepoliaTest) {
 }
 
 /**
- * Validate that a client-selected network matches the expected mode
+ * Validate that a client-selected network is supported
  * @param {string|undefined} clientNetwork - Network from payment payload
- * @param {boolean} sepoliaTest - Whether test mode is enabled
  * @returns {{ valid: boolean, reason?: string, expected?: string[], received?: string }}
  */
-export function validatePaymentNetwork(clientNetwork, sepoliaTest) {
+export function validatePaymentNetwork(clientNetwork) {
   if (!clientNetwork) {
     return { valid: false, reason: "missing_network" };
   }
 
-  const expectedNetworks = getExpectedNetworks(sepoliaTest);
-  if (!expectedNetworks.includes(clientNetwork)) {
+  // Check against all supported networks (mainnet + testnet)
+  const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
+  if (!allNetworks.includes(clientNetwork)) {
     return {
       valid: false,
-      reason: sepoliaTest ? "invalid_network_for_test_mode" : "invalid_network_for_production",
-      expected: expectedNetworks,
+      reason: "unsupported_network",
+      expected: allNetworks,
       received: clientNetwork,
     };
   }

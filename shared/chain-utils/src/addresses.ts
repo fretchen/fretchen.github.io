@@ -40,6 +40,15 @@ export function getGenAiNFTTestnetNetworks(): readonly string[] {
   return Object.keys(TESTNET_GENAI_NFT_ADDRESSES);
 }
 
+/**
+ * Check if a given network is a testnet
+ * @param network CAIP-2 network identifier (e.g., "eip155:8453")
+ * @returns true if the network is a testnet, false otherwise
+ */
+export function isTestnetNetwork(network: string): boolean {
+  return Object.keys(TESTNET_GENAI_NFT_ADDRESSES).includes(network);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // CollectorNFT
 // ═══════════════════════════════════════════════════════════════

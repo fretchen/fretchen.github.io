@@ -6,6 +6,7 @@ import {
   getViemChain,
   getGenAiNFTAddress,
   getUSDCConfig,
+  isTestnet,
 } from "@fretchen/chain-utils";
 import { getContract, createWalletClient, createPublicClient, http, parseEther } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
@@ -378,6 +379,7 @@ async function handle(event, context, cb) {
   // Get optional parameters
   const mode = body.mode || "generate";
   const size = body.size || "1024x1024";
+  const requestedNetwork = body.network || null; // Optional: Client can request specific network
   const isListed = body.isListed === true; // Default: false (not listed in public gallery)
 
   // Validate size parameter
@@ -412,10 +414,14 @@ async function handle(event, context, cb) {
     console.log("🖼️  Reference image provided for editing");
   }
 
-  // Extract test mode flag from body
-  const sepoliaTest = body.sepoliaTest === true;
-  if (sepoliaTest) {
-    console.log("🧪 Test mode enabled: Sepolia only, mock image generation");
+  // Determine network and test mode from network parameter
+  // If no network specified, default to mainnet networks
+  if (requestedNetwork) {
+    const isTestnetMode = isTestnet(requestedNetwork);
+    console.log(`🌐 Network: ${requestedNetwork} (${isTestnetMode ? "testnet" : "mainnet"})`);
+    if (isTestnetMode) {
+      console.log("🧪 Test mode: Using mock image generation");
+    }
   }
 
   // ====== x402 v2 TOKEN PAYMENT FLOW ======
@@ -424,16 +430,24 @@ async function handle(event, context, cb) {
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
-    // 🎯 Network selection based on test mode
-    // Dynamically loaded from chain-utils deployment configuration
-    // Test mode: All testnet deployments (currently Sepolia)
-    // Production: All mainnet deployments (currently Optimism + Base)
-    const networks = getExpectedNetworks(sepoliaTest);
-
-    if (sepoliaTest) {
-      console.log(`   Test mode: ${networks.join(", ")}`);
+    // 🎯 Network selection
+    // If client specified network, use only that one (if supported)
+    // Otherwise, return all mainnet networks by default
+    let networks;
+    if (requestedNetwork) {
+      const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
+      if (allNetworks.includes(requestedNetwork)) {
+        networks = [requestedNetwork];
+        console.log(`   Client requested network: ${requestedNetwork}`);
+      } else {
+        console.log(`   ⚠️  Client requested unsupported network: ${requestedNetwork}`);
+        console.log(`   Falling back to all mainnet networks`);
+        networks = getExpectedNetworks(false);
+      }
     } else {
-      console.log(`   Production mode: ${networks.join(", ")}`);
+      // Default: offer all mainnet networks
+      networks = getExpectedNetworks(false);
+      console.log(`   Default mode: ${networks.join(", ")}`);
     }
 
     // Create payment requirements using x402 helper
@@ -455,7 +469,7 @@ async function handle(event, context, cb) {
   const clientNetwork = paymentPayload?.accepted?.network;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
 
-  const networkValidation = validatePaymentNetwork(clientNetwork, sepoliaTest);
+  const networkValidation = validatePaymentNetwork(clientNetwork);
   if (!networkValidation.valid) {
     console.error(`❌ Network validation failed: ${networkValidation.reason}`);
     return {
@@ -601,7 +615,7 @@ async function handle(event, context, cb) {
       size,
       mode,
       referenceImageBase64,
-      sepoliaTest, // useMockImage in test mode
+      isTestnet(clientNetwork), // useMockImage in test mode
       mintPrice,
       isListed,
     );
@@ -760,8 +774,9 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
               `     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85 (Test)`,
             );
             console.log(`   Network Policy:`);
-            console.log(`     - Production: Optimism Mainnet only`);
-            console.log(`     - Test mode (sepoliaTest=true): Sepolia only + mock images`);
+            console.log(`     - Default: All mainnet networks (Optimism + Base)`);
+            console.log(`     - With network parameter: Requested network only`);
+            console.log(`     - Testnet networks: Mock images + Sepolia`);
           });
         });
       });

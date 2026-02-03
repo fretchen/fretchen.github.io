@@ -175,8 +175,20 @@ async function mintNFTToClient(
         error.message?.includes("ERC721NonexistentToken") ||
         error.shortMessage?.includes("ERC721NonexistentToken");
 
+      // Check if this is a nonce error (race condition with parallel requests)
+      const isNonceError =
+        error.message?.includes("nonce too low") ||
+        error.message?.includes("Nonce provided for the transaction is lower") ||
+        error.shortMessage?.includes("nonce too low");
+
       if (isNonExistentTokenError && attempt < MAX_TRANSFER_RETRIES) {
         console.log(`⏳ RPC state lag detected, waiting ${RETRY_DELAY_MS}ms before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+
+      if (isNonceError && attempt < MAX_TRANSFER_RETRIES) {
+        console.log(`⏳ Nonce conflict detected, waiting ${RETRY_DELAY_MS}ms before retry with fresh nonce...`);
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }
@@ -469,7 +481,11 @@ async function handle(event, context, cb) {
   const clientNetwork = paymentPayload?.accepted?.network;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
 
-  const networkValidation = validatePaymentNetwork(clientNetwork);
+  // Determine if client is requesting a testnet payment
+  // Security: Validate against the correct mode to prevent testnet payments in production
+  const clientIsTestnet = clientNetwork ? isTestnet(clientNetwork) : false;
+
+  const networkValidation = validatePaymentNetwork(clientNetwork, clientIsTestnet);
   if (!networkValidation.valid) {
     console.error(`❌ Network validation failed: ${networkValidation.reason}`);
     return {

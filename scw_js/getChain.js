@@ -95,22 +95,39 @@ export function getExpectedNetwork(sepoliaTest) {
 }
 
 /**
- * Validate that a client-selected network is supported
+ * Validate that a client-selected network is supported for the current mode
  * @param {string|undefined} clientNetwork - Network from payment payload
+ * @param {boolean} sepoliaTest - Whether test mode is enabled
  * @returns {{ valid: boolean, reason?: string, expected?: string[], received?: string }}
  */
-export function validatePaymentNetwork(clientNetwork) {
+export function validatePaymentNetwork(clientNetwork, sepoliaTest = false) {
   if (!clientNetwork) {
     return { valid: false, reason: "missing_network" };
   }
 
-  // Check against all supported networks (mainnet + testnet)
-  const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
-  if (!allNetworks.includes(clientNetwork)) {
+  // Get expected networks for the current mode
+  const expectedNetworks = getExpectedNetworks(sepoliaTest);
+  
+  // Check if the client network matches the expected mode
+  if (!expectedNetworks.includes(clientNetwork)) {
+    // Determine if it's an unsupported network or wrong mode
+    const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
+    
+    if (allNetworks.includes(clientNetwork)) {
+      // Network exists but wrong mode
+      return {
+        valid: false,
+        reason: sepoliaTest ? "invalid_network_for_test_mode" : "invalid_network_for_production",
+        expected: expectedNetworks,
+        received: clientNetwork,
+      };
+    }
+    
+    // Completely unsupported network
     return {
       valid: false,
       reason: "unsupported_network",
-      expected: allNetworks,
+      expected: expectedNetworks,
       received: clientNetwork,
     };
   }

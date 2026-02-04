@@ -135,7 +135,7 @@ describe("@fretchen/chain-utils", () => {
     describe("GenAI NFT Network Helpers", () => {
       test("getGenAiNFTMainnetNetworks() should return all mainnet deployments", () => {
         const networks = getGenAiNFTMainnetNetworks();
-        
+
         expect(Array.isArray(networks)).toBe(true);
         expect(networks).toContain("eip155:10"); // Optimism
         expect(networks).toContain("eip155:8453"); // Base
@@ -144,7 +144,7 @@ describe("@fretchen/chain-utils", () => {
 
       test("getGenAiNFTTestnetNetworks() should return all testnet deployments", () => {
         const networks = getGenAiNFTTestnetNetworks();
-        
+
         expect(Array.isArray(networks)).toBe(true);
         expect(networks).toContain("eip155:11155420"); // Optimism Sepolia
         expect(networks).toEqual(Object.keys(TESTNET_GENAI_NFT_ADDRESSES));
@@ -153,7 +153,7 @@ describe("@fretchen/chain-utils", () => {
       test("mainnet and testnet networks should be disjoint", () => {
         const mainnet = getGenAiNFTMainnetNetworks();
         const testnet = getGenAiNFTTestnetNetworks();
-        
+
         for (const network of mainnet) {
           expect(testnet).not.toContain(network);
         }
@@ -174,7 +174,9 @@ describe("@fretchen/chain-utils", () => {
       });
 
       test("should return Base Mainnet contract address", () => {
-        expect(getGenAiNFTAddress("eip155:8453")).toBe("0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68");
+        expect(getGenAiNFTAddress("eip155:8453")).toBe(
+          "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68"
+        );
       });
 
       test("should return Sepolia contract address", () => {
@@ -184,9 +186,7 @@ describe("@fretchen/chain-utils", () => {
       });
 
       test("should throw for network without GenAI NFT deployment", () => {
-        expect(() => getGenAiNFTAddress("eip155:1")).toThrow(
-          "GenAI NFT not deployed on eip155:1"
-        );
+        expect(() => getGenAiNFTAddress("eip155:1")).toThrow("GenAI NFT not deployed on eip155:1");
       });
     });
 

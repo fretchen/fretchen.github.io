@@ -42,9 +42,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
 
       // Add to top of token list if not already present
       setLocalTokens((prev) => {
-        const exists = prev.some(
-          (t) => t.tokenId === newToken.tokenId && t.network === newToken.network
-        );
+        const exists = prev.some((t) => t.tokenId === newToken.tokenId && t.network === newToken.network);
         if (exists) {
           return prev;
         }
@@ -57,7 +55,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
         onNewNFTDisplayed?.();
       }, 5000);
     },
-    [onNewNFTDisplayed]
+    [onNewNFTDisplayed],
   );
 
   // Handle listing status changes (NFTCard handles blockchain state itself)
@@ -114,15 +112,12 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
         {localTokens.map((token, index) => {
           // Check if this is the newly created NFT with preloaded data
           const isNewlyCreated =
-            newlyCreatedNFT?.tokenId === token.tokenId &&
-            newlyCreatedNFT?.network === token.network;
+            newlyCreatedNFT?.tokenId === token.tokenId && newlyCreatedNFT?.network === token.network;
           const preloadedImageUrl = isNewlyCreated ? newlyCreatedNFT.imageUrl : undefined;
           const preloadedMetadata = isNewlyCreated ? newlyCreatedNFT.metadata : undefined;
 
           // Check if this token should be highlighted
-          const isHighlighted =
-            highlightedNFT?.tokenId === token.tokenId &&
-            highlightedNFT?.network === token.network;
+          const isHighlighted = highlightedNFT?.tokenId === token.tokenId && highlightedNFT?.network === token.network;
 
           return (
             <NFTCard

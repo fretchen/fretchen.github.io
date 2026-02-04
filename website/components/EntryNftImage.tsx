@@ -1,6 +1,6 @@
 import * as React from "react";
 import { entryList } from "../layouts/styles";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
+import { GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTMetadata } from "../types/components";
 
@@ -15,14 +15,14 @@ const MAINNET_NETWORKS = GENAI_NFT_NETWORKS.filter((n) => !isTestnet(n));
 
 /**
  * Larger NFT image that spans both date and title rows
- * 
- * Blog NFTs may be minted on any mainnet (Optimism, Base). 
+ *
+ * Blog NFTs may be minted on any mainnet (Optimism, Base).
  * This component tries each mainnet until it finds the token.
  */
 export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackImageUrl, nftName }) => {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  
+
   // Default to first mainnet for public client (we'll try all networks anyway)
   const defaultNetwork = MAINNET_NETWORKS[0];
   const publicClient = useConfiguredPublicClient(defaultNetwork);

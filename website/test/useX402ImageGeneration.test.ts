@@ -169,6 +169,7 @@ describe("useX402ImageGeneration", () => {
         expectedChainId: 8453,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { expectedChainId, ...requestBody } = request;
 
       expect(requestBody.network).toBe("eip155:8453");
@@ -183,6 +184,7 @@ describe("useX402ImageGeneration", () => {
         expectedChainId: 10,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { expectedChainId, ...requestBody } = request;
 
       expect(requestBody.network).toBe("eip155:10");

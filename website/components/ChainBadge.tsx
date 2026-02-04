@@ -99,23 +99,20 @@ const positionTopLeft = css({
 
 /**
  * Small chain indicator badge
- * 
+ *
  * Shows the chain name (OP/Base) with appropriate brand colors.
  * Used on NFT cards to indicate which chain the NFT is on.
  */
 export function ChainBadge({ network, size = "sm", position = "bottom-right" }: ChainBadgeProps) {
   const chainInfo = CHAIN_INFO[network];
-  
+
   if (!chainInfo) {
     return null;
   }
 
   const sizeClass = size === "sm" ? badgeSm : badgeMd;
-  const positionClass = position === "bottom-right" 
-    ? positionBottomRight 
-    : position === "top-left" 
-      ? positionTopLeft 
-      : "";
+  const positionClass =
+    position === "bottom-right" ? positionBottomRight : position === "top-left" ? positionTopLeft : "";
 
   return (
     <span
@@ -151,7 +148,7 @@ const infoLabel = css({
 
 export function ChainInfoDisplay({ network, tokenId }: ChainInfoDisplayProps) {
   const chainInfo = CHAIN_INFO[network];
-  
+
   if (!chainInfo) {
     return null;
   }
@@ -162,7 +159,9 @@ export function ChainInfoDisplay({ network, tokenId }: ChainInfoDisplayProps) {
       <ChainBadge network={network} size="md" position="inline" />
       {tokenId !== undefined && (
         <>
-          <span className={infoLabel} style={{ marginLeft: "12px" }}>Token:</span>
+          <span className={infoLabel} style={{ marginLeft: "12px" }}>
+            Token:
+          </span>
           <span>#{tokenId.toString()}</span>
         </>
       )}

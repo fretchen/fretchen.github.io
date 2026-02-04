@@ -5,7 +5,7 @@ import { MyNFTList } from "../components/MyNFTList";
 
 /**
  * Tests for MyNFTList component with multi-chain support.
- * 
+ *
  * The component now uses useMultiChainUserNFTs hook which fetches NFTs
  * from all configured chains in parallel. We mock this hook directly
  * for cleaner, faster tests.
@@ -66,8 +66,8 @@ describe("MyNFTList Multi-Chain Support", () => {
     // Default: some NFTs from multiple chains
     mockUseMultiChainUserNFTs.mockReturnValue({
       tokens: [
-        { tokenId: 26n, network: "eip155:10" },   // Optimism
-        { tokenId: 1n, network: "eip155:8453" },  // Base
+        { tokenId: 26n, network: "eip155:10" }, // Optimism
+        { tokenId: 1n, network: "eip155:8453" }, // Base
       ],
       isLoading: false,
       error: null,
@@ -211,7 +211,7 @@ describe("MyNFTList callback behavior", () => {
 
   it("should call onNewNFTDisplayed after highlighting timeout", async () => {
     vi.useFakeTimers();
-    
+
     const onNewNFTDisplayed = vi.fn();
     const newNFT = {
       tokenId: 1n,

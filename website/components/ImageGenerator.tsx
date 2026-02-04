@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { GENAI_NFT_NETWORKS, fromCAIP2, isTestnet, getViemChain } from "@fretchen/chain-utils";
+import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";

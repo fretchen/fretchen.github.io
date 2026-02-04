@@ -2,13 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config } from "../wagmi.config";
-import {
-  getGenAiNFTAddress,
-  GenImNFTv4ABI,
-  GENAI_NFT_NETWORKS,
-  fromCAIP2,
-  isTestnet,
-} from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2, isTestnet } from "@fretchen/chain-utils";
 
 /**
  * NFT with chain information for multi-chain display
@@ -42,22 +36,20 @@ interface UseMultiChainUserNFTsResult {
 
 /**
  * Hook to fetch user's NFTs across all configured chains in parallel.
- * 
+ *
  * @example
  * const { tokens, isLoading, error, reload } = useMultiChainUserNFTs();
- * 
+ *
  * // tokens = [
  * //   { tokenId: 26n, network: "eip155:10" },
  * //   { tokenId: 1n, network: "eip155:8453" },
  * //   ...
  * // ]
  */
-export function useMultiChainUserNFTs(
-  options: UseMultiChainUserNFTsOptions = {}
-): UseMultiChainUserNFTsResult {
+export function useMultiChainUserNFTs(options: UseMultiChainUserNFTsOptions = {}): UseMultiChainUserNFTsResult {
   const { includeTestnets = false } = options;
   const { address, isConnected } = useAccount();
-  
+
   const [tokens, setTokens] = useState<MultiChainNFTToken[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +101,7 @@ export function useMultiChainUserNFTs(
                 console.error(`Error fetching token at index ${i} on ${network}:`, err);
                 return null;
               }
-            })()
+            })(),
           );
         }
 
@@ -120,7 +112,7 @@ export function useMultiChainUserNFTs(
         return [];
       }
     },
-    [address]
+    [address],
   );
 
   /**
@@ -137,9 +129,7 @@ export function useMultiChainUserNFTs(
 
     try {
       // Fetch from all networks in parallel
-      const networkResults = await Promise.all(
-        networks.map((network) => fetchUserTokensOnNetwork(network))
-      );
+      const networkResults = await Promise.all(networks.map((network) => fetchUserTokensOnNetwork(network)));
 
       // Flatten and sort by tokenId (descending - newest first)
       const allTokens = networkResults.flat().sort((a, b) => {
@@ -198,11 +188,9 @@ interface UseMultiChainPublicNFTsResult {
 /**
  * Hook to fetch public (listed) NFTs across all configured chains in parallel.
  */
-export function useMultiChainPublicNFTs(
-  options: UseMultiChainPublicNFTsOptions = {}
-): UseMultiChainPublicNFTsResult {
+export function useMultiChainPublicNFTs(options: UseMultiChainPublicNFTsOptions = {}): UseMultiChainPublicNFTsResult {
   const { includeTestnets = false } = options;
-  
+
   const [tokens, setTokens] = useState<MultiChainNFTToken[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -215,31 +203,28 @@ export function useMultiChainPublicNFTs(
   /**
    * Fetch all public token IDs on a single network
    */
-  const fetchPublicTokensOnNetwork = useCallback(
-    async (network: string): Promise<MultiChainNFTToken[]> => {
-      const contractAddress = getGenAiNFTAddress(network);
-      const chainId = fromCAIP2(network);
+  const fetchPublicTokensOnNetwork = useCallback(async (network: string): Promise<MultiChainNFTToken[]> => {
+    const contractAddress = getGenAiNFTAddress(network);
+    const chainId = fromCAIP2(network);
 
-      try {
-        const tokenIds = await readContract(config, {
-          address: contractAddress,
-          abi: GenImNFTv4ABI,
-          functionName: "getAllPublicTokens",
-          chainId,
-        }) as bigint[];
+    try {
+      const tokenIds = (await readContract(config, {
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
+        functionName: "getAllPublicTokens",
+        chainId,
+      })) as bigint[];
 
-        if (!tokenIds || tokenIds.length === 0) {
-          return [];
-        }
-
-        return tokenIds.map((tokenId) => ({ tokenId, network }));
-      } catch (err) {
-        console.error(`Error fetching public NFTs on ${network}:`, err);
+      if (!tokenIds || tokenIds.length === 0) {
         return [];
       }
-    },
-    []
-  );
+
+      return tokenIds.map((tokenId) => ({ tokenId, network }));
+    } catch (err) {
+      console.error(`Error fetching public NFTs on ${network}:`, err);
+      return [];
+    }
+  }, []);
 
   /**
    * Fetch public NFTs from all networks in parallel
@@ -250,9 +235,7 @@ export function useMultiChainPublicNFTs(
 
     try {
       // Fetch from all networks in parallel
-      const networkResults = await Promise.all(
-        networks.map((network) => fetchPublicTokensOnNetwork(network))
-      );
+      const networkResults = await Promise.all(networks.map((network) => fetchPublicTokensOnNetwork(network)));
 
       // Flatten and sort by tokenId (descending - newest first)
       const allTokens = networkResults.flat().sort((a, b) => {

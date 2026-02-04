@@ -5,7 +5,7 @@ import { PublicNFTList } from "../components/PublicNFTList";
 
 /**
  * Tests for PublicNFTList component with multi-chain support.
- * 
+ *
  * The component now uses useMultiChainPublicNFTs hook which fetches
  * public NFTs from all configured chains in parallel.
  */
@@ -48,8 +48,8 @@ describe("PublicNFTList Multi-Chain Support", () => {
     // Default: some public NFTs from multiple chains
     mockUseMultiChainPublicNFTs.mockReturnValue({
       tokens: [
-        { tokenId: 26n, network: "eip155:10" },   // Optimism
-        { tokenId: 1n, network: "eip155:8453" },  // Base
+        { tokenId: 26n, network: "eip155:10" }, // Optimism
+        { tokenId: 1n, network: "eip155:8453" }, // Base
       ],
       isLoading: false,
       error: null,

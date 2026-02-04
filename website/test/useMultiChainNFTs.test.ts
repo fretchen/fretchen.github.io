@@ -3,7 +3,7 @@ import { renderHook, waitFor, cleanup } from "@testing-library/react";
 
 /**
  * Tests for useMultiChainNFTs hooks.
- * 
+ *
  * These hooks fetch NFTs from multiple chains in parallel.
  * We mock the wagmi dependencies to test the hook logic.
  */
@@ -80,7 +80,7 @@ describe("useMultiChainUserNFTs", () => {
       }
       if (params.functionName === "tokenOfOwnerByIndex") {
         // Return different token IDs per chain
-        if (params.chainId === 10) return 26n;  // Optimism
+        if (params.chainId === 10) return 26n; // Optimism
         if (params.chainId === 8453) return 1n; // Base
       }
       return 0n;
@@ -175,8 +175,8 @@ describe("useMultiChainPublicNFTs", () => {
   it("should fetch public NFTs from multiple chains", async () => {
     mockReadContract.mockImplementation(async (_config, params) => {
       if (params.functionName === "getAllPublicTokens") {
-        if (params.chainId === 10) return [1n, 2n, 3n];  // Optimism
-        if (params.chainId === 8453) return [5n, 6n];    // Base
+        if (params.chainId === 10) return [1n, 2n, 3n]; // Optimism
+        if (params.chainId === 8453) return [5n, 6n]; // Base
       }
       return [];
     });

@@ -66,6 +66,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         // === Make the paid request ===
         // Remove expectedChainId from request body (it's only for client-side validation)
         // Keep network in the body - backend uses it to filter 402 response
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { expectedChainId, ...requestBody } = request;
 
         // === Create a validating fetch wrapper ===

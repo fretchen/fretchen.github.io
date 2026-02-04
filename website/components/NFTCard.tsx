@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
-import { getGenAiNFTAddress, GenImNFTv4ABI, isMainnet, fromCAIP2 } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, fromCAIP2 } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";

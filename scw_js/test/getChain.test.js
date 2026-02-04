@@ -19,11 +19,15 @@ import { createPublicClient, http } from "viem";
 import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 
 // Import functions under test
-import { getExpectedNetwork, getExpectedNetworks, validatePaymentNetwork } from "../getChain.js";
-import { getGenAiNFTMainnetNetworks, getGenAiNFTTestnetNetworks } from "@fretchen/chain-utils";
+import { getExpectedNetworks, validatePaymentNetwork } from "../getChain.js";
 
 // Import from chain-utils
-import { getViemChain, getUSDCConfig } from "@fretchen/chain-utils";
+import {
+  getGenAiNFTMainnetNetworks,
+  getGenAiNFTTestnetNetworks,
+  getViemChain,
+  getUSDCConfig,
+} from "@fretchen/chain-utils";
 
 // USDC contracts expose name() and version() functions for EIP-712 domain
 // Note: They do NOT implement EIP-5267 eip712Domain(), so we read individual functions
@@ -130,16 +134,6 @@ describe("getChain.js - Chain Configuration Tests", () => {
     test("mainnet should have multiple networks (multi-chain support)", () => {
       const result = getExpectedNetworks(false);
       expect(result.length).toBeGreaterThanOrEqual(2); // At least Optimism + Base
-    });
-  });
-
-  describe("getExpectedNetwork() - legacy", () => {
-    test("should return first testnet for sepoliaTest=true", () => {
-      expect(getExpectedNetwork(true)).toBe("eip155:11155420");
-    });
-
-    test("should return first mainnet for sepoliaTest=false", () => {
-      expect(getExpectedNetwork(false)).toBe("eip155:10");
     });
   });
 

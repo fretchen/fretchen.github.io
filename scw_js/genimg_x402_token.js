@@ -188,7 +188,9 @@ async function mintNFTToClient(
       }
 
       if (isNonceError && attempt < MAX_TRANSFER_RETRIES) {
-        console.log(`⏳ Nonce conflict detected, waiting ${RETRY_DELAY_MS}ms before retry with fresh nonce...`);
+        console.log(
+          `⏳ Nonce conflict detected, waiting ${RETRY_DELAY_MS}ms before retry with fresh nonce...`,
+        );
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }

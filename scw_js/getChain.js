@@ -4,7 +4,6 @@ import {
   LLMv1ABI,
   getGenAiNFTMainnetNetworks,
   getGenAiNFTTestnetNetworks,
-  isTestnet,
 } from "@fretchen/chain-utils";
 
 /**
@@ -85,16 +84,6 @@ export function getExpectedNetworks(sepoliaTest) {
 }
 
 /**
- * Get the expected network for a given mode (legacy, returns first network)
- * @deprecated Use getExpectedNetworks() instead
- * @param {boolean} sepoliaTest - Whether test mode is enabled
- * @returns {string} CAIP-2 network ID
- */
-export function getExpectedNetwork(sepoliaTest) {
-  return getExpectedNetworks(sepoliaTest)[0];
-}
-
-/**
  * Validate that a client-selected network is supported for the current mode
  * @param {string|undefined} clientNetwork - Network from payment payload
  * @param {boolean} sepoliaTest - Whether test mode is enabled
@@ -107,12 +96,12 @@ export function validatePaymentNetwork(clientNetwork, sepoliaTest = false) {
 
   // Get expected networks for the current mode
   const expectedNetworks = getExpectedNetworks(sepoliaTest);
-  
+
   // Check if the client network matches the expected mode
   if (!expectedNetworks.includes(clientNetwork)) {
     // Determine if it's an unsupported network or wrong mode
     const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
-    
+
     if (allNetworks.includes(clientNetwork)) {
       // Network exists but wrong mode
       return {
@@ -122,7 +111,7 @@ export function validatePaymentNetwork(clientNetwork, sepoliaTest = false) {
         received: clientNetwork,
       };
     }
-    
+
     // Completely unsupported network
     return {
       valid: false,

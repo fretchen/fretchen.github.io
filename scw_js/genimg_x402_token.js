@@ -188,8 +188,9 @@ async function mintNFTToClient(
       }
 
       if (isNonceError && attempt < MAX_TRANSFER_RETRIES) {
+        // Viem automatically fetches fresh nonce on each write call
         console.log(
-          `⏳ Nonce conflict detected, waiting ${RETRY_DELAY_MS}ms before retry with fresh nonce...`,
+          `⏳ Nonce conflict detected, waiting ${RETRY_DELAY_MS}ms before retry (Viem auto-manages nonce)...`,
         );
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;

@@ -24,6 +24,8 @@ import {
   getEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
+  getGenAiNFTMainnetNetworks,
+  getGenAiNFTTestnetNetworks,
   MAINNET_GENAI_NFT_ADDRESSES,
   TESTNET_GENAI_NFT_ADDRESSES,
   MAINNET_LLM_V1_ADDRESSES,
@@ -130,9 +132,51 @@ describe("@fretchen/chain-utils", () => {
   });
 
   describe("Contract Addresses", () => {
+    describe("GenAI NFT Network Helpers", () => {
+      test("getGenAiNFTMainnetNetworks() should return all mainnet deployments", () => {
+        const networks = getGenAiNFTMainnetNetworks();
+
+        expect(Array.isArray(networks)).toBe(true);
+        expect(networks).toContain("eip155:10"); // Optimism
+        expect(networks).toContain("eip155:8453"); // Base
+        expect(networks).toEqual(Object.keys(MAINNET_GENAI_NFT_ADDRESSES));
+      });
+
+      test("getGenAiNFTTestnetNetworks() should return all testnet deployments", () => {
+        const networks = getGenAiNFTTestnetNetworks();
+
+        expect(Array.isArray(networks)).toBe(true);
+        expect(networks).toContain("eip155:11155420"); // Optimism Sepolia
+        expect(networks).toEqual(Object.keys(TESTNET_GENAI_NFT_ADDRESSES));
+      });
+
+      test("mainnet and testnet networks should be disjoint", () => {
+        const mainnet = getGenAiNFTMainnetNetworks();
+        const testnet = getGenAiNFTTestnetNetworks();
+
+        for (const network of mainnet) {
+          expect(testnet).not.toContain(network);
+        }
+      });
+
+      test("should have at least one mainnet deployment", () => {
+        expect(getGenAiNFTMainnetNetworks().length).toBeGreaterThanOrEqual(1);
+      });
+
+      test("should have at least one testnet deployment", () => {
+        expect(getGenAiNFTTestnetNetworks().length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
     describe("getGenAiNFTAddress()", () => {
-      test("should return Mainnet contract address", () => {
+      test("should return Optimism Mainnet contract address", () => {
         expect(getGenAiNFTAddress("eip155:10")).toBe("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");
+      });
+
+      test("should return Base Mainnet contract address", () => {
+        expect(getGenAiNFTAddress("eip155:8453")).toBe(
+          "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68"
+        );
       });
 
       test("should return Sepolia contract address", () => {
@@ -142,9 +186,7 @@ describe("@fretchen/chain-utils", () => {
       });
 
       test("should throw for network without GenAI NFT deployment", () => {
-        expect(() => getGenAiNFTAddress("eip155:8453")).toThrow(
-          "GenAI NFT not deployed on eip155:8453"
-        );
+        expect(() => getGenAiNFTAddress("eip155:1")).toThrow("GenAI NFT not deployed on eip155:1");
       });
     });
 
@@ -155,9 +197,15 @@ describe("@fretchen/chain-utils", () => {
         );
       });
 
+      test("should return Base Mainnet address", () => {
+        expect(getCollectorNFTAddress("eip155:8453")).toBe(
+          "0x5D0103393DDcD988867437233c197c6A38b23360"
+        );
+      });
+
       test("should throw for network without CollectorNFT", () => {
-        expect(() => getCollectorNFTAddress("eip155:8453")).toThrow(
-          "CollectorNFT not deployed on eip155:8453"
+        expect(() => getCollectorNFTAddress("eip155:1")).toThrow(
+          "CollectorNFT not deployed on eip155:1"
         );
       });
     });

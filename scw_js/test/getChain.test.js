@@ -19,10 +19,15 @@ import { createPublicClient, http } from "viem";
 import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 
 // Import functions under test
-import { getExpectedNetwork, validatePaymentNetwork } from "../getChain.js";
+import { getExpectedNetworks, validatePaymentNetwork } from "../getChain.js";
 
 // Import from chain-utils
-import { getViemChain, getUSDCConfig } from "@fretchen/chain-utils";
+import {
+  getGenAiNFTMainnetNetworks,
+  getGenAiNFTTestnetNetworks,
+  getViemChain,
+  getUSDCConfig,
+} from "@fretchen/chain-utils";
 
 // USDC contracts expose name() and version() functions for EIP-712 domain
 // Note: They do NOT implement EIP-5267 eip712Domain(), so we read individual functions
@@ -108,13 +113,27 @@ describe("getChain.js - Chain Configuration Tests", () => {
   // NOTE: getGenImgContractConfig() tests moved to @fretchen/chain-utils
   // See shared/chain-utils/test/index.test.ts
 
-  describe("getExpectedNetwork()", () => {
-    test("should return Sepolia for test mode", () => {
-      expect(getExpectedNetwork(true)).toBe("eip155:11155420");
+  describe("getExpectedNetworks()", () => {
+    test("should return mainnet networks from chain-utils", () => {
+      const result = getExpectedNetworks(false);
+      const expected = getGenAiNFTMainnetNetworks();
+      expect(result).toEqual(expected);
+      // Verify actual networks (these should match chain-utils deployment)
+      expect(result).toContain("eip155:10"); // Optimism
+      expect(result).toContain("eip155:8453"); // Base
     });
 
-    test("should return Mainnet for production mode", () => {
-      expect(getExpectedNetwork(false)).toBe("eip155:10");
+    test("should return testnet networks from chain-utils", () => {
+      const result = getExpectedNetworks(true);
+      const expected = getGenAiNFTTestnetNetworks();
+      expect(result).toEqual(expected);
+      // Verify actual networks (these should match chain-utils deployment)
+      expect(result).toContain("eip155:11155420"); // Optimism Sepolia
+    });
+
+    test("mainnet should have multiple networks (multi-chain support)", () => {
+      const result = getExpectedNetworks(false);
+      expect(result.length).toBeGreaterThanOrEqual(2); // At least Optimism + Base
     });
   });
 
@@ -139,8 +158,13 @@ describe("getChain.js - Chain Configuration Tests", () => {
       const result = validatePaymentNetwork("eip155:11155420", false);
       expect(result.valid).toBe(false);
       expect(result.reason).toBe("invalid_network_for_production");
-      expect(result.expected).toBe("eip155:10");
+      expect(result.expected).toEqual(["eip155:10", "eip155:8453"]);
       expect(result.received).toBe("eip155:11155420");
+    });
+
+    test("should accept Base network for production", () => {
+      const result = validatePaymentNetwork("eip155:8453", false);
+      expect(result.valid).toBe(true);
     });
 
     test("should reject wrong network for test mode", () => {

@@ -1,6 +1,10 @@
 // @ts-check
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import { LLMv1ABI } from "@fretchen/chain-utils";
+import {
+  LLMv1ABI,
+  getGenAiNFTMainnetNetworks,
+  getGenAiNFTTestnetNetworks,
+} from "@fretchen/chain-utils";
 
 /**
  * Get environment variable in both Node.js and Vite contexts
@@ -70,31 +74,49 @@ export function getLLMv1ContractConfig() {
 }
 
 /**
- * Get the expected network for a given mode
+ * Get the expected networks for a given mode
+ * Dynamically pulls from chain-utils deployment configuration
  * @param {boolean} sepoliaTest - Whether test mode is enabled
- * @returns {string} CAIP-2 network ID
+ * @returns {string[]} Array of CAIP-2 network IDs
  */
-export function getExpectedNetwork(sepoliaTest) {
-  return sepoliaTest ? "eip155:11155420" : "eip155:10";
+export function getExpectedNetworks(sepoliaTest) {
+  return sepoliaTest ? getGenAiNFTTestnetNetworks() : getGenAiNFTMainnetNetworks();
 }
 
 /**
- * Validate that a client-selected network matches the expected mode
+ * Validate that a client-selected network is supported for the current mode
  * @param {string|undefined} clientNetwork - Network from payment payload
  * @param {boolean} sepoliaTest - Whether test mode is enabled
- * @returns {{ valid: boolean, reason?: string, expected?: string, received?: string }}
+ * @returns {{ valid: boolean, reason?: string, expected?: string[], received?: string }}
  */
-export function validatePaymentNetwork(clientNetwork, sepoliaTest) {
+export function validatePaymentNetwork(clientNetwork, sepoliaTest = false) {
   if (!clientNetwork) {
     return { valid: false, reason: "missing_network" };
   }
 
-  const expectedNetwork = getExpectedNetwork(sepoliaTest);
-  if (clientNetwork !== expectedNetwork) {
+  // Get expected networks for the current mode
+  const expectedNetworks = getExpectedNetworks(sepoliaTest);
+
+  // Check if the client network matches the expected mode
+  if (!expectedNetworks.includes(clientNetwork)) {
+    // Determine if it's an unsupported network or wrong mode
+    const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
+
+    if (allNetworks.includes(clientNetwork)) {
+      // Network exists but wrong mode
+      return {
+        valid: false,
+        reason: sepoliaTest ? "invalid_network_for_test_mode" : "invalid_network_for_production",
+        expected: expectedNetworks,
+        received: clientNetwork,
+      };
+    }
+
+    // Completely unsupported network
     return {
       valid: false,
-      reason: sepoliaTest ? "invalid_network_for_test_mode" : "invalid_network_for_production",
-      expected: expectedNetwork,
+      reason: "unsupported_network",
+      expected: expectedNetworks,
       received: clientNetwork,
     };
   }

@@ -153,7 +153,7 @@ export interface ImageGeneratorProps extends BaseComponentProps {
   /** API URL for image generation service */
   apiUrl?: string;
   /** Callback when image generation and NFT creation succeeds */
-  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => void;
+  onSuccess?: (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata, network?: string) => void;
   /** Callback when image generation or NFT creation fails */
   onError?: (error: string) => void;
 }
@@ -185,6 +185,8 @@ export interface NFT {
   isLoading?: boolean;
   error?: string;
   isListed?: boolean;
+  /** CAIP-2 network identifier (e.g., "eip155:10" for Optimism) */
+  network?: string;
 }
 
 /**
@@ -193,8 +195,10 @@ export interface NFT {
 export interface NFTCardProps extends BaseComponentProps {
   /** Token ID of the NFT to display */
   tokenId: bigint;
+  /** CAIP-2 network identifier where this NFT exists (e.g., "eip155:10" for Optimism) */
+  network: string;
   /** Callback when image is clicked for modal display */
-  onImageClick: (image: { src: string; alt: string; title?: string; description?: string }) => void;
+  onImageClick: (image: ModalImageData) => void;
   /** Callback when NFT is burned (only for private NFTs) */
   onNftBurned: () => void;
   /** Whether this card should be highlighted (e.g., newly created) */
@@ -226,6 +230,8 @@ export interface NFTListProps extends BaseComponentProps {
     imageUrl: string;
     /** Optional metadata containing name, description, and attributes from the ImageGenerator */
     metadata?: NFTMetadata;
+    /** CAIP-2 network identifier where the NFT was minted */
+    network: string;
   };
   /** Callback fired when the newly created NFT has been displayed and highlighting is removed */
   onNewNFTDisplayed?: () => void;
@@ -255,6 +261,10 @@ export interface ModalImageData {
   alt: string;
   title?: string;
   description?: string;
+  /** CAIP-2 network identifier (e.g., "eip155:10" for Optimism) */
+  network?: string;
+  /** Token ID for display purposes */
+  tokenId?: bigint;
 }
 
 /**

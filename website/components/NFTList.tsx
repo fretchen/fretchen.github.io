@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { useAccount, useReadContract } from "wagmi";
-import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
+import { useAccount } from "wagmi";
+import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTListProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import { Tab } from "./Tab";
 import { MyNFTList } from "./MyNFTList";
 import { PublicNFTList } from "./PublicNFTList";
 import { useLocale } from "../hooks/useLocale";
+
 export function NFTList({
   newlyCreatedNFT,
   onNewNFTDisplayed,
   activeTab: controlledActiveTab,
   onTabChange,
 }: NFTListProps = {}) {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
 
   // Use controlled tab state if provided, otherwise use local state
   const [localActiveTab, setLocalActiveTab] = useState<"my" | "public">(() => {
@@ -24,31 +24,16 @@ export function NFTList({
   const activeTab = controlledActiveTab ?? localActiveTab;
   const setActiveTab = onTabChange ?? setLocalActiveTab;
 
-  // Get network from useAutoNetwork
-  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const chainId = fromCAIP2(network);
-  const contractAddress = getGenAiNFTAddress(network);
+  // Use multi-chain hook to get total NFT count across all chains
+  const { tokens, reload: reloadTokens } = useMultiChainUserNFTs();
+  const totalNFTCount = tokens.length;
 
-  // Get user's NFT balance for display in tab
-  const userBalanceQuery = useReadContract({
-    address: contractAddress,
-    abi: GenImNFTv4ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    chainId,
-    query: {
-      enabled: !!address && isConnected,
-    },
-  });
-
-  const { data: userBalance, refetch: refetchUserBalance } = userBalanceQuery;
-
-  // Refetch balance when a new NFT is created to update the tab count
+  // Refetch when a new NFT is created to update the tab count
   useEffect(() => {
-    if (newlyCreatedNFT && refetchUserBalance) {
-      refetchUserBalance();
+    if (newlyCreatedNFT) {
+      reloadTokens();
     }
-  }, [newlyCreatedNFT, refetchUserBalance]);
+  }, [newlyCreatedNFT, reloadTokens]);
 
   // Move useLocale calls to top level to avoid conditional hook calls
   const myArtworksLabel = useLocale({ label: "imagegen.myArtworks" });
@@ -60,7 +45,7 @@ export function NFTList({
       <div className={styles.tabs.container}>
         <div className={styles.tabs.tabList}>
           <Tab
-            label={isConnected ? `${myArtworksLabel} (${userBalance?.toString() || "0"})` : myArtworksLabel}
+            label={isConnected ? `${myArtworksLabel} (${totalNFTCount})` : myArtworksLabel}
             isActive={activeTab === "my"}
             onClick={() => setActiveTab("my")}
           />

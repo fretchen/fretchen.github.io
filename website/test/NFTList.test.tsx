@@ -1,9 +1,9 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
-import { useReadContract } from "wagmi";
 import { NFTList } from "../components/NFTList";
 import { NFTListProps } from "../types/components";
+import * as useMultiChainNFTsModule from "../hooks/useMultiChainNFTs";
 
 /**
  * Mock complex dependencies to focus on component logic
@@ -257,16 +257,16 @@ describe("NFTList Component", () => {
    * Balance Update Bug Documentation and Validation
    */
   describe("Balance Update Bug", () => {
-    it("validates that refetch is called when newlyCreatedNFT prop changes", () => {
-      const mockRefetch = vi.fn();
+    it("validates that reload is called when newlyCreatedNFT prop changes", () => {
+      const mockReload = vi.fn();
 
-      // Override the global mock for this specific test
-      const mockUseReadContract = vi.mocked(useReadContract);
-      mockUseReadContract.mockReturnValue({
-        data: 2n,
+      // Override the useMultiChainUserNFTs hook for this specific test
+      vi.spyOn(useMultiChainNFTsModule, "useMultiChainUserNFTs").mockReturnValue({
+        tokens: [],
         isLoading: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useReadContract>);
+        error: null,
+        reload: mockReload,
+      });
 
       const TestComponent = ({ newlyCreatedNFT }: { newlyCreatedNFT?: NFTListProps["newlyCreatedNFT"] }) => (
         <NFTList newlyCreatedNFT={newlyCreatedNFT} />
@@ -275,8 +275,8 @@ describe("NFTList Component", () => {
       // Initial render without newlyCreatedNFT
       const { rerender } = render(<TestComponent />);
 
-      // refetch should not be called initially
-      expect(mockRefetch).not.toHaveBeenCalled();
+      // reload should not be called initially
+      expect(mockReload).not.toHaveBeenCalled();
 
       // Now provide a newlyCreatedNFT
       const newNFT = {
@@ -287,8 +287,8 @@ describe("NFTList Component", () => {
 
       rerender(<TestComponent newlyCreatedNFT={newNFT} />);
 
-      // Now refetch should have been called because of our useEffect
-      expect(mockRefetch).toHaveBeenCalledTimes(1);
+      // Now reload should have been called because of our useEffect
+      expect(mockReload).toHaveBeenCalledTimes(1);
     });
   });
 });

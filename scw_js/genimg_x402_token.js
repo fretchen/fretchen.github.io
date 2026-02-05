@@ -6,6 +6,7 @@ import {
   getViemChain,
   getGenAiNFTAddress,
   getUSDCConfig,
+  isTestnet,
 } from "@fretchen/chain-utils";
 import { getContract, createWalletClient, createPublicClient, http, parseEther } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
@@ -17,7 +18,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
 } from "./x402_server.js";
-import { validatePaymentNetwork } from "./getChain.js";
+import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 
 // Re-export x402 functions for backward compatibility with tests
 export { handle, create402Response };
@@ -174,8 +175,23 @@ async function mintNFTToClient(
         error.message?.includes("ERC721NonexistentToken") ||
         error.shortMessage?.includes("ERC721NonexistentToken");
 
+      // Check if this is a nonce error (race condition with parallel requests)
+      const isNonceError =
+        error.message?.includes("nonce too low") ||
+        error.message?.includes("Nonce provided for the transaction is lower") ||
+        error.shortMessage?.includes("nonce too low");
+
       if (isNonExistentTokenError && attempt < MAX_TRANSFER_RETRIES) {
         console.log(`⏳ RPC state lag detected, waiting ${RETRY_DELAY_MS}ms before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+
+      if (isNonceError && attempt < MAX_TRANSFER_RETRIES) {
+        // Viem automatically fetches fresh nonce on each write call
+        console.log(
+          `⏳ Nonce conflict detected, waiting ${RETRY_DELAY_MS}ms before retry (Viem auto-manages nonce)...`,
+        );
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }
@@ -378,6 +394,7 @@ async function handle(event, context, cb) {
   // Get optional parameters
   const mode = body.mode || "generate";
   const size = body.size || "1024x1024";
+  const requestedNetwork = body.network || null; // Optional: Client can request specific network
   const isListed = body.isListed === true; // Default: false (not listed in public gallery)
 
   // Validate size parameter
@@ -412,10 +429,14 @@ async function handle(event, context, cb) {
     console.log("🖼️  Reference image provided for editing");
   }
 
-  // Extract test mode flag from body
-  const sepoliaTest = body.sepoliaTest === true;
-  if (sepoliaTest) {
-    console.log("🧪 Test mode enabled: Sepolia only, mock image generation");
+  // Determine network and test mode from network parameter
+  // If no network specified, default to mainnet networks
+  if (requestedNetwork) {
+    const isTestnetMode = isTestnet(requestedNetwork);
+    console.log(`🌐 Network: ${requestedNetwork} (${isTestnetMode ? "testnet" : "mainnet"})`);
+    if (isTestnetMode) {
+      console.log("🧪 Test mode: Using mock image generation");
+    }
   }
 
   // ====== x402 v2 TOKEN PAYMENT FLOW ======
@@ -424,15 +445,24 @@ async function handle(event, context, cb) {
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
-    // 🎯 Network selection based on test mode
-    // Test mode: Only Sepolia testnet (no costs)
-    // Production: Only Optimism Mainnet (real payments)
-    const networks = sepoliaTest ? ["eip155:11155420"] : ["eip155:10"];
-
-    if (sepoliaTest) {
-      console.log("   Restricting to Sepolia testnet");
+    // 🎯 Network selection
+    // If client specified network, use only that one (if supported)
+    // Otherwise, return all mainnet networks by default
+    let networks;
+    if (requestedNetwork) {
+      const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
+      if (allNetworks.includes(requestedNetwork)) {
+        networks = [requestedNetwork];
+        console.log(`   Client requested network: ${requestedNetwork}`);
+      } else {
+        console.log(`   ⚠️  Client requested unsupported network: ${requestedNetwork}`);
+        console.log(`   Falling back to all mainnet networks`);
+        networks = getExpectedNetworks(false);
+      }
     } else {
-      console.log("   Production mode: Optimism Mainnet only");
+      // Default: offer all mainnet networks
+      networks = getExpectedNetworks(false);
+      console.log(`   Default mode: ${networks.join(", ")}`);
     }
 
     // Create payment requirements using x402 helper
@@ -454,7 +484,11 @@ async function handle(event, context, cb) {
   const clientNetwork = paymentPayload?.accepted?.network;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
 
-  const networkValidation = validatePaymentNetwork(clientNetwork, sepoliaTest);
+  // Determine if client is requesting a testnet payment
+  // Security: Validate against the correct mode to prevent testnet payments in production
+  const clientIsTestnet = clientNetwork ? isTestnet(clientNetwork) : false;
+
+  const networkValidation = validatePaymentNetwork(clientNetwork, clientIsTestnet);
   if (!networkValidation.valid) {
     console.error(`❌ Network validation failed: ${networkValidation.reason}`);
     return {
@@ -600,7 +634,7 @@ async function handle(event, context, cb) {
       size,
       mode,
       referenceImageBase64,
-      sepoliaTest, // useMockImage in test mode
+      isTestnet(clientNetwork), // useMockImage in test mode
       mintPrice,
       isListed,
     );
@@ -759,8 +793,9 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
               `     - Optimism Sepolia: 0x10827cC42a09D0BAD2d43134C69F0e776D853D85 (Test)`,
             );
             console.log(`   Network Policy:`);
-            console.log(`     - Production: Optimism Mainnet only`);
-            console.log(`     - Test mode (sepoliaTest=true): Sepolia only + mock images`);
+            console.log(`     - Default: All mainnet networks (Optimism + Base)`);
+            console.log(`     - With network parameter: Requested network only`);
+            console.log(`     - Testnet networks: Mock images + Sepolia`);
           });
         });
       });

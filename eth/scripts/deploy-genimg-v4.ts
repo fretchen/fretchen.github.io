@@ -4,7 +4,10 @@ import { validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
-import { getAddress } from "viem";
+import { getAddress, formatEther, parseEther } from "viem";
+
+// Minimum ETH balance required for deployment (0.03 ETH)
+const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
 
 // Zod Schema für Validierung
 const GenImV4DeployConfigSchema = z.object({
@@ -82,10 +85,45 @@ function loadConfig(): GenImV4DeployConfig {
 }
 
 /**
+ * Check if deployer has sufficient ETH balance for deployment
+ */
+async function checkDeployerBalance(deployer: {
+  address: string;
+  provider: { getBalance: (addr: string) => Promise<bigint> };
+}): Promise<void> {
+  const balance = await deployer.provider.getBalance(deployer.address);
+  const balanceFormatted = formatEther(balance);
+  const minFormatted = formatEther(MIN_DEPLOYMENT_BALANCE);
+
+  console.log(`💰 Deployer Balance: ${balanceFormatted} ETH`);
+  console.log(`📊 Minimum Required: ${minFormatted} ETH`);
+
+  if (balance < MIN_DEPLOYMENT_BALANCE) {
+    const deficit = MIN_DEPLOYMENT_BALANCE - balance;
+    throw new Error(
+      `Insufficient funds for deployment!\n` +
+        `   Balance: ${balanceFormatted} ETH\n` +
+        `   Required: ${minFormatted} ETH\n` +
+        `   Deficit: ${formatEther(deficit)} ETH\n\n` +
+        `   Please fund ${deployer.address} with at least ${formatEther(deficit)} ETH.\n` +
+        `   Faucets:\n` +
+        `   - Optimism Sepolia: https://www.alchemy.com/faucets/optimism-sepolia\n` +
+        `   - Base Sepolia: https://www.alchemy.com/faucets/base-sepolia`,
+    );
+  }
+
+  console.log("✅ Sufficient balance for deployment");
+}
+
+/**
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
   console.log("🔍 Validating GenImNFTv4 contract...");
+
+  // Check deployer balance
+  const [deployer] = await ethers.getSigners();
+  await checkDeployerBalance(deployer);
 
   try {
     const GenImNFTv4Factory = await ethers.getContractFactory("GenImNFTv4");
@@ -116,11 +154,26 @@ async function validateDeployment(): Promise<void> {
 async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
   console.log("🧪 Simulating GenImNFTv4 deployment...");
 
+  const [deployer] = await ethers.getSigners();
+
+  // Check deployer balance
+  await checkDeployerBalance(deployer);
+
+  console.log("");
   console.log("📋 Deployment parameters:");
+  console.log(`  - Network: ${network.name}`);
   console.log(`  - Mint Price: ${config.parameters.mintPrice} ETH`);
   console.log(`  - Agent Wallet: ${config.parameters.agentWallet || "Not specified (can be set after deployment)"}`);
   console.log("");
-
+  console.log("📦 What would happen:");
+  console.log("  1. Deploy GenImNFTv4 implementation");
+  console.log("  2. Deploy ERC1967 proxy");
+  console.log("  3. Initialize contract");
+  console.log("  4. Set mint price");
+  if (config.parameters.agentWallet) {
+    console.log("  5. Authorize agent wallet");
+  }
+  console.log("");
   console.log("✅ Simulation complete (no actual deployment)");
 }
 
@@ -159,6 +212,17 @@ async function deployGenImV4() {
     console.log("🧪 Dry Run Mode - Simulation only");
     return await simulateDeployment(config);
   }
+
+  // Get deployer
+  const [deployer] = await ethers.getSigners();
+  console.log(`👤 Deployer: ${deployer.address}`);
+  console.log("");
+
+  // Check deployer balance before anything else
+  console.log("💰 Checking Deployer Balance");
+  console.log("-".repeat(40));
+  await checkDeployerBalance(deployer);
+  console.log("");
 
   // Get contract factory
   console.log("📦 Getting GenImNFTv4 contract factory...");
@@ -259,7 +323,6 @@ async function deployGenImV4() {
   // Verify proxy state
   console.log("🔍 Verifying proxy state...");
   const owner = await deployedContract.owner();
-  const [deployer] = await ethers.getSigners();
   console.log(`✅ Owner: ${owner}`);
   console.log(`✅ Deployer: ${deployer.address}`);
 
@@ -302,13 +365,12 @@ async function deployGenImV4() {
   console.log(JSON.stringify(deploymentInfo, null, 2));
 
   // Save deployment information to file
-  const deploymentsDir = path.join(__dirname, "deployments");
+  const deploymentsDir = path.join(__dirname, "../deployments");
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-  const deploymentFileName = `genimg-v4-${network.name}-${timestamp}.json`;
+  const deploymentFileName = `genimg-v4-${network.name}.json`;
   const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -343,10 +405,19 @@ async function deployGenImV4() {
   }
   console.log("3. Test minting: safeMint(address, uri)");
   console.log("4. Verify contracts on Etherscan if needed");
+
+  return { proxyAddress, implementationAddress: deploymentInfo.implementationAddress };
 }
 
-// Execute deployment
-deployGenImV4().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Export for testing
+export { deployGenImV4, MIN_DEPLOYMENT_BALANCE, GenImV4DeployConfigSchema };
+
+// Execute only when run directly (not imported)
+if (require.main === module) {
+  deployGenImV4()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

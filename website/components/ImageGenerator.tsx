@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { GENAI_NFT_NETWORKS, fromCAIP2, isTestnet, getViemChain } from "@fretchen/chain-utils";
+import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
 import InfoIcon from "./InfoIcon";
@@ -126,7 +126,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const targetChainId = fromCAIP2(network);
   const targetChain = getViemChain(network);
-  const useTestnetFlag = isTestnet(network);
 
   // Preview area state machine
   type PreviewState = "empty" | "reference" | "generated";
@@ -306,8 +305,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         size,
         mode,
         referenceImage: isEditMode ? referenceImageBase64 : undefined,
-        // Use testnet: derived from useAutoNetwork
-        sepoliaTest: useTestnetFlag,
+        // CAIP-2 network from useAutoNetwork (wallet-connected or default)
+        network,
         // Pass expected chain ID for validation in hook
         expectedChainId: targetChainId,
         // Whether to list in public gallery
@@ -352,8 +351,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         ],
       };
 
-      // Call success callback
-      onSuccess?.(newTokenId, imageUrl, metadata);
+      // Call success callback with network info
+      onSuccess?.(newTokenId, imageUrl, metadata, network);
 
       // Track success with analytics
       trackEvent("x402-image-generated", {

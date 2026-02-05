@@ -96,6 +96,7 @@ export function isTestnet(network: string): network is TestnetNetwork {
 
 // Re-export addresses
 export * from "./addresses";
+export { getGenAiNFTMainnetNetworks, getGenAiNFTTestnetNetworks } from "./addresses";
 
 // ═══════════════════════════════════════════════════════════════
 // USDC Configuration

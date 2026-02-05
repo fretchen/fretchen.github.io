@@ -12,6 +12,7 @@ export default function Page() {
     tokenId: bigint;
     imageUrl: string;
     metadata?: NFTMetadata;
+    network: string;
   } | null>(null);
 
   // Tab state - start with "public" if wallet not connected, otherwise "my"
@@ -19,14 +20,15 @@ export default function Page() {
     return isConnected ? "my" : "public";
   });
 
-  const handleSuccess = (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata) => {
-    console.log("Image generation succeeded:", { tokenId, imageUrl, metadata });
+  const handleSuccess = (tokenId: bigint, imageUrl: string, metadata?: NFTMetadata, network?: string) => {
+    console.log("Image generation succeeded:", { tokenId, imageUrl, metadata, network });
 
     // Set the newly created NFT for highlighting in the gallery
     setNewlyCreatedNFT({
       tokenId,
       imageUrl,
       metadata,
+      network: network ?? "eip155:10", // Fallback to Optimism
     });
 
     // Auto-switch to "my" tab if user is connected

@@ -1,0 +1,36 @@
+{
+  "network": "hardhat",
+  "timestamp": "2026-01-31T22:27:40.481Z",
+  "blockNumber": 153,
+  "upgradeType": "GenImNFTv3 → GenImNFTv4",
+  "proxyAddress": "0x07882Ae1ecB7429a84f1D53048d35c4bB2056877",
+  "implementationAddress": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "securityFix": "CVE-2025-11-26",
+  "preUpgradeState": {
+    "totalSupply": "7",
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "mintPrice": "0.01"
+  },
+  "postUpgradeState": {
+    "totalSupply": "7",
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "mintPrice": "0.01",
+    "authorizedAgent": null
+  },
+  "config": {
+    "proxyAddress": "0x07882Ae1ecB7429a84f1D53048d35c4bB2056877",
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": false,
+      "waitConfirmations": 1
+    },
+    "metadata": {
+      "description": "Test upgrade configuration for GenImNFTv4",
+      "version": "4.0.0-test",
+      "environment": "development",
+      "securityFix": "CVE-2025-11-26"
+    }
+  }
+}

@@ -4,13 +4,17 @@
 
 ## Aktueller Zustand
 
-| Contract | Optimism | Base | Multi-Chain Ready |
-|----------|:--------:|:----:|:-----------------:|
-| **SupportV2** | ✅ | ✅ | ✅ Ja |
-| **GenImNFTv4** | ✅ | ❌ | ✅ Ja (Backend ready) |
-| **CollectorNFTv1** | ✅ | ❌ | ✅ Ja (Frontend ready) |
-| **LLMv1** | ✅ | ❌ | ❌ (out of scope) |
-| **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja |
+| Contract | Optimism | Base | Multi-Chain Ready | Script Status |
+|----------|:--------:|:----:|:-----------------:|:-------------:|
+| **SupportV2** | ✅ | ✅ | ✅ Ja | ✅ Modern |
+| **GenImNFTv4** | ✅ | ✅ | ✅ Ja | ✅ Modern |
+| **CollectorNFTv1** | ✅ | ✅ | ✅ Ja | ✅ Modern |
+| **LLMv1** | ✅ | ❌ | ❌ (out of scope) | - |
+| **EIP3009SplitterV1** | ✅ | ❌ | ✅ Ja | ✅ Modern |
+
+**Base Addresses:**
+- GenImNFTv4: `0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68` ✅ Verified
+- CollectorNFTv1: `0x5D0103393DDcD988867437233c197c6A38b23360` ✅ Verified
 
 ---
 
@@ -23,8 +27,10 @@
 | **1c** | x402_facilitator auf chain-utils migrieren | x402_facilitator/ | ✅ Fertig |
 | **2** | GenImNFT-Komponenten migrieren | website/ | ✅ Fertig |
 | **3** | CollectorNFT-Komponenten migrieren | website/ | ✅ Fertig |
-| **4** | GenImNFTv4 auf Base deployen | eth/, shared/ | ⬜ Später |
-| **5** | CollectorNFTv1 auf Base deployen | eth/, shared/ | ⬜ Später |
+| **4.1** | deploy-genimg-v4.ts modernisieren | eth/ | ✅ Fertig |
+| **4.2** | deploy-collector-nft-v1.ts modernisieren | eth/ | ✅ Fertig |
+| **4.3** | GenImNFTv4 auf Base deployen & verifizieren | eth/, shared/ | ✅ Fertig |
+| **4.4** | CollectorNFTv1 auf Base deployen & verifizieren | eth/, shared/ | ✅ Fertig |
 
 ---
 
@@ -669,30 +675,274 @@ const handleCollect = async () => {
 
 ---
 
-## Phase 4: GenImNFTv4 auf Base deployen
+## Phase 4 & 5: GenImNFTv4 + CollectorNFTv1 auf Base deployen ⬜ NEXT
 
-1. Deploy-Script für Base erweitern
-2. Deploy + Verify auf Base Mainnet
-3. Agent-Wallet autorisieren
-4. Adresse in `@fretchen/chain-utils/src/addresses.ts` hinzufügen:
+> **Status:** Deployment-Skripte müssen auf SupportV2-Standard aktualisiert werden
+
+### Übersicht
+
+| Contract | Optimism | Base | Deployment Script Status |
+|----------|:--------:|:----:|:------------------------:|
+| **GenImNFTv4** | ✅ `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` | ⬜ | ⚠️ Veraltet |
+| **CollectorNFTv1** | ✅ `0x1234...` | ⬜ | ⚠️ Veraltet |
+
+### Gap-Analyse: Deployment-Skripte vs. SupportV2 (Gold Standard)
+
+| Feature | SupportV2 ✅ | GenImNFTv4 ⚠️ | CollectorNFTv1 ⚠️ |
+|---------|:------------:|:-------------:|:-----------------:|
+| **Zod Schema** | ✅ | ✅ | ❌ Manuelles Interface |
+| **Balance-Check** | ✅ `MIN_DEPLOYMENT_BALANCE` | ❌ | ❌ |
+| **checkDeployerBalance()** | ✅ Mit Faucet-Links | ❌ | ❌ |
+| **Deployment Path** | ✅ `deployments/` | ⚠️ `scripts/deployments/` | ⚠️ `scripts/deployments/` |
+| **Export für Tests** | ✅ `deploySupportV2, Schema` | ❌ Kein Export | ⚠️ Ohne Schema |
+| **require.main Guard** | ✅ | ❌ | ✅ |
+| **Dry Run Balance Check** | ✅ | ❌ | ❌ |
+
+### Modernisierungsplan (3 PRs)
+
+#### PR 4.1: deploy-genimg-v4.ts modernisieren
+
+**Ziel:** GenImNFTv4 Deployment-Skript auf SupportV2-Standard bringen
+
+**Änderungen:**
+1. `MIN_DEPLOYMENT_BALANCE` Konstante hinzufügen (0.03 ETH)
+2. `checkDeployerBalance()` Funktion hinzufügen (mit Faucet-Links)
+3. Balance-Check in `validateDeployment()` und `simulateDeployment()` hinzufügen
+4. Deployment-Pfad von `scripts/deployments/` auf `deployments/` ändern
+5. Export Pattern für Tests hinzufügen:
    ```typescript
-   export const MAINNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
-     "eip155:10": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-     "eip155:8453": "0x...",  // Base
-   };
+   export { deployGenImV4, MIN_DEPLOYMENT_BALANCE, GenImV4DeployConfigSchema };
+   
+   if (require.main === module) {
+     deployGenImV4()
+       .then(() => process.exit(0))
+       .catch((error) => { console.error(error); process.exit(1); });
+   }
    ```
-5. `npm run build` in chain-utils
-6. `npm install` in allen Projekten
+
+**Datei:** `eth/scripts/deploy-genimg-v4.ts`
+
+```typescript
+// NEU: Importieren
+import { formatEther, parseEther } from "viem";
+
+// NEU: Balance-Konstante
+const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
+
+// NEU: Balance-Check Funktion (kopiert von deploy-support-v2.ts)
+async function checkDeployerBalance(deployer: {
+  address: string;
+  provider: { getBalance: (addr: string) => Promise<bigint> };
+}): Promise<void> {
+  const balance = await deployer.provider.getBalance(deployer.address);
+  const balanceFormatted = formatEther(balance);
+  const minFormatted = formatEther(MIN_DEPLOYMENT_BALANCE);
+
+  console.log(`💰 Deployer Balance: ${balanceFormatted} ETH`);
+  console.log(`📊 Minimum Required: ${minFormatted} ETH`);
+
+  if (balance < MIN_DEPLOYMENT_BALANCE) {
+    const deficit = MIN_DEPLOYMENT_BALANCE - balance;
+    throw new Error(
+      `Insufficient funds for deployment!\n` +
+        `   Balance: ${balanceFormatted} ETH\n` +
+        `   Required: ${minFormatted} ETH\n` +
+        `   Deficit: ${formatEther(deficit)} ETH\n\n` +
+        `   Please fund ${deployer.address} with at least ${formatEther(deficit)} ETH.\n` +
+        `   Faucets:\n` +
+        `   - Optimism Sepolia: https://www.alchemy.com/faucets/optimism-sepolia\n` +
+        `   - Base Sepolia: https://www.alchemy.com/faucets/base-sepolia`,
+    );
+  }
+
+  console.log("✅ Sufficient balance for deployment");
+}
+```
+
+**Acceptance Criteria:**
+- [ ] `npx hardhat run scripts/deploy-genimg-v4.ts --network hardhat` funktioniert
+- [ ] Deployment-Tests bestehen (wenn erstellt)
+- [ ] Deployment-File wird nach `deployments/` geschrieben
 
 ---
 
-## Phase 5: CollectorNFTv1 auf Base deployen
+#### PR 4.2: deploy-collector-nft-v1.ts modernisieren
 
-Voraussetzung: GenImNFT muss auf Base existieren.
+**Ziel:** CollectorNFTv1 Deployment-Skript auf SupportV2-Standard bringen
 
-1. Deploy mit Base GenImNFT Adresse
-2. Verify
-3. Adresse in chain-utils hinzufügen
+**Änderungen:**
+1. Interface durch Zod Schema ersetzen
+2. `MIN_DEPLOYMENT_BALANCE` + `checkDeployerBalance()` hinzufügen
+3. Deployment-Pfad auf `deployments/` ändern
+4. Export Pattern für Tests anpassen
+
+**Datei:** `eth/scripts/deploy-collector-nft-v1.ts`
+
+```typescript
+// NEU: Zod Schema statt Interface
+import { z } from "zod";
+import { formatEther, parseEther, getAddress } from "viem";
+
+const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
+
+const CollectorNFTv1ConfigSchema = z.object({
+  parameters: z.object({
+    genImNFTAddress: z.string().refine((addr) => {
+      try { getAddress(addr); return true; } catch { return false; }
+    }, "Invalid genImNFTAddress format"),
+    baseMintPrice: z.string(), // in ETH, e.g., "0.00005"
+  }),
+  options: z.object({
+    validateOnly: z.boolean(),
+    dryRun: z.boolean(),
+  }),
+  metadata: z.object({
+    description: z.string(),
+    version: z.string(),
+    environment: z.string(),
+  }),
+});
+
+type CollectorNFTv1Config = z.infer<typeof CollectorNFTv1ConfigSchema>;
+
+// NEU: Export für Tests
+export { deployCollectorNFT, MIN_DEPLOYMENT_BALANCE, CollectorNFTv1ConfigSchema };
+
+if (require.main === module) {
+  deployCollectorNFT()
+    .then(() => process.exit(0))
+    .catch((error) => { console.error(error); process.exit(1); });
+}
+```
+
+**Config-Format-Änderung:** `collector-nft-v1.config.json`
+```json
+{
+  "parameters": {
+    "genImNFTAddress": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+    "baseMintPrice": "0.00005"
+  },
+  "options": {
+    "validateOnly": false,
+    "dryRun": false
+  },
+  "metadata": {
+    "description": "CollectorNFT v1 deployment configuration",
+    "version": "1.0.0",
+    "environment": "production"
+  }
+}
+```
+
+---
+
+#### PR 4.3: Deploy auf Base Mainnet
+
+**Voraussetzung:** PR 4.1 und PR 4.2 gemergt
+
+**Schritte:**
+
+1. **GenImNFTv4 auf Base Sepolia testen**
+   ```bash
+   cd eth/
+   # Config für Base Sepolia anpassen
+   npx hardhat run scripts/deploy-genimg-v4.ts --network baseSepolia
+   ```
+
+2. **GenImNFTv4 auf Base Mainnet deployen**
+   ```bash
+   npx hardhat run scripts/deploy-genimg-v4.ts --network base
+   npx hardhat run scripts/verify-genimg-v4.ts --network base
+   ```
+
+3. **Agent-Wallet autorisieren**
+   ```bash
+   # Via Hardhat Console oder separates Script
+   npx hardhat console --network base
+   > const contract = await ethers.getContractAt("GenImNFTv4", "0x...")
+   > await contract.authorizeAgentWallet("0xAAEBC1441323B8ad6Bdf6793A8428166b510239C")
+   ```
+
+4. **CollectorNFTv1 auf Base deployen**
+   - Config mit neuer GenImNFT Adresse anpassen
+   ```bash
+   npx hardhat run scripts/deploy-collector-nft-v1.ts --network base
+   ```
+
+5. **Adressen in chain-utils hinzufügen**
+   
+   **Datei:** `shared/chain-utils/src/addresses.ts`
+   ```typescript
+   export const MAINNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
+     "eip155:10": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", // Optimism
+     "eip155:8453": "0x...",  // Base - NEU
+   };
+   
+   export const MAINNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {
+     "eip155:10": "0x...",  // Optimism (bestehend)
+     "eip155:8453": "0x...",  // Base - NEU
+   };
+   ```
+
+6. **chain-utils rebuilden und Consumer updaten**
+   ```bash
+   cd shared/chain-utils && npm run build
+   cd ../../website && npm install
+   cd ../scw_js && npm install  
+   cd ../x402_facilitator && npm install
+   ```
+
+---
+
+### Deployment Checkliste Phase 4 & 5
+
+**PR 4.1: GenImNFTv4 Script modernisieren**
+- [ ] `MIN_DEPLOYMENT_BALANCE` hinzufügen
+- [ ] `checkDeployerBalance()` hinzufügen
+- [ ] Balance-Check in validate/simulate einfügen
+- [ ] Deployment-Pfad auf `deployments/` ändern
+- [ ] Export Pattern für Tests hinzufügen
+- [ ] Tests ausführen
+
+**PR 4.2: CollectorNFTv1 Script modernisieren**
+- [ ] Zod Schema erstellen
+- [ ] Config-Format aktualisieren
+- [ ] `MIN_DEPLOYMENT_BALANCE` + `checkDeployerBalance()` hinzufügen
+- [ ] Deployment-Pfad auf `deployments/` ändern
+- [ ] Export Pattern für Tests hinzufügen
+
+**PR 4.3: Base Deployment**
+- [ ] GenImNFTv4 auf Base Sepolia testen
+- [ ] GenImNFTv4 auf Base Mainnet deployen
+- [ ] GenImNFTv4 auf Etherscan verifizieren
+- [ ] Agent-Wallet autorisieren
+- [ ] CollectorNFTv1 auf Base deployen
+- [ ] CollectorNFTv1 auf Etherscan verifizieren
+- [ ] Adressen in chain-utils hinzufügen
+- [ ] chain-utils rebuilden
+- [ ] Consumer-Projekte updaten
+- [ ] E2E Test auf Base
+
+---
+
+### Risikobewertung Phase 4 & 5
+
+| Risiko | Schwere | Mitigation |
+|--------|---------|------------|
+| **Deployment fehlschlägt** | 🟡 Mittel | Erst auf Base Sepolia testen |
+| **Agent-Wallet falsch** | 🔴 Hoch | Gleiche Wallet wie Optimism nutzen |
+| **Config-Format Bruch** | 🟡 Mittel | Alte Config-Files backuppen |
+| **Balance zu niedrig** | 🟢 Niedrig | Balance-Check schützt |
+| **Verify fehlschlägt** | 🟢 Niedrig | Kann später nachgeholt werden |
+
+### Geschätzter Aufwand
+
+| PR | Aufwand | Komplexität |
+|----|---------|-------------|
+| **4.1:** GenImNFTv4 Script | 1-2 Stunden | 🟡 Mittel |
+| **4.2:** CollectorNFTv1 Script | 1-2 Stunden | 🟡 Mittel |
+| **4.3:** Base Deployment | 2-3 Stunden | 🔴 Hoch (echtes Geld) |
+| **Gesamt** | 4-7 Stunden | |
 
 ---
 
@@ -715,3 +965,87 @@ Voraussetzung: GenImNFT muss auf Base existieren.
 - chain-utils: 46 Tests, 98.75% Coverage
 - scw_js: 175 Tests
 - CI Pipelines für alle Packages
+
+---
+
+## Phase 5: Website Notebook-Pattern Migration 🔄 IN PROGRESS
+
+### Änderungen
+
+Backend erwartet jetzt `network` Parameter (CAIP-2) statt `sepoliaTest` Boolean. Website muss angepasst werden.
+
+**Breaking Change:** `X402GenImgRequest.sepoliaTest` → `X402GenImgRequest.network`
+
+### Code-Änderungen
+
+**1. Type Definition** (`website/types/x402.ts`):
+```typescript
+export interface X402GenImgRequest {
+  prompt: string;
+  size?: "1024x1024" | "1792x1024";
+  mode?: "generate" | "edit";
+  referenceImage?: string;
+  sepoliaTest?: boolean;  // ❌ Remove
+  network: string;        // ✅ Add (CAIP-2, z.B. "eip155:8453")
+  expectedChainId?: number;
+  isListed?: boolean;
+}
+```
+
+**2. ImageGenerator** (`website/components/ImageGenerator.tsx`):
+```tsx
+// VORHER (Line ~308)
+const result = await generateImage({
+  prompt,
+  size,
+  mode,
+  referenceImage: isEditMode ? referenceImageBase64 : undefined,
+  sepoliaTest: useTestnetFlag,  // ❌
+  expectedChainId: targetChainId,
+  isListed,
+});
+
+// NACHHER
+const result = await generateImage({
+  prompt,
+  size,
+  mode,
+  referenceImage: isEditMode ? referenceImageBase64 : undefined,
+  network,  // ✅ Von useAutoNetwork
+  expectedChainId: targetChainId,
+  isListed,
+});
+```
+
+**3. useAutoNetwork Hook** - Bleibt unverändert:
+- Verwendet bereits wallet-connected chain
+- Fällt zurück auf erste supported chain wenn wallet nicht verbunden
+- Keine UI für manuelle Network-Auswahl (bereits verworfen)
+
+**4. x402 Hook Validation** (`website/hooks/useX402ImageGeneration.ts`):
+```typescript
+// Update: Validate gegen network statt expectedChainId
+const { expectedChainId, network, ...requestBody } = request;
+
+if (response.status === 402 && network) {
+  const decoded = JSON.parse(atob(response.headers.get("Payment-Required")));
+  if (decoded.accepts?.[0]?.network !== network) {
+    throw new Error(`Network mismatch: expected ${network}`);
+  }
+}
+```
+
+### Deployment
+
+**Backend First:**
+- [x] Facilitator deployed (Base support)
+- [ ] scw_js deployment: `cd scw_js && npm run deploy`
+
+**Website:**
+- [ ] Remove `sepoliaTest` references
+- [ ] Add `network` parameter
+- [ ] Update tests
+- [ ] Deploy
+
+**Status:** Ready for Implementation  
+**Blocking:** scw_js deployment

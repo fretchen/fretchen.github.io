@@ -56,16 +56,16 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
   }
 
   // Helper function to create a temporary config file for testing
-  async function createTempConfig(genImAddress: string, options: any = {}) {
+  async function createTempConfig(genImAddress: string, options: { validateOnly?: boolean; dryRun?: boolean } = {}) {
     const tempConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-test.json");
     const config = {
-      genImNFTAddress: genImAddress,
-      baseMintPrice: "0.001",
+      parameters: {
+        genImNFTAddress: genImAddress,
+        baseMintPrice: "0.001",
+      },
       options: {
         validateOnly: false,
         dryRun: false,
-        verify: false,
-        waitConfirmations: 1,
         ...options,
       },
       metadata: {
@@ -80,7 +80,11 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
   }
 
   // Helper function to backup and restore config
-  async function withTempConfig(genImAddress: string, options: any, testFn: () => Promise<void>) {
+  async function withTempConfig(
+    genImAddress: string,
+    options: { validateOnly?: boolean; dryRun?: boolean },
+    testFn: () => Promise<void>,
+  ) {
     const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
     const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
     const tempConfigPath = await createTempConfig(genImAddress, options);
@@ -178,12 +182,12 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
         expect(result).to.not.be.a("boolean");
 
         if (typeof result === "object" && result !== null) {
-          expect(result).to.have.property("contract");
-          expect(result).to.have.property("address");
+          expect(result).to.have.property("proxyAddress");
+          expect(result).to.have.property("implementationAddress");
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", result.address);
+          const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", result.proxyAddress);
           expect(await collectorNFTv1.name()).to.equal("CollectorNFTv1");
           expect(await collectorNFTv1.symbol()).to.equal("COLLECTORv1");
           expect(await collectorNFTv1.genImNFTContract()).to.equal(genImAddress);
@@ -230,15 +234,24 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
     });
 
     it("Should validate config file schema", async function () {
-      const { genImAddress } = await deployGenImNFTv3Fixture();
+      // genImAddress is intentionally unused - we're testing invalid config parsing
+      await deployGenImNFTv3Fixture();
 
       // Create a config with invalid data
       const invalidConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-invalid.json");
       const invalidConfig = {
-        genImNFTAddress: "invalid-address", // Invalid address format
-        baseMintPrice: "invalid-price", // Invalid price format
+        parameters: {
+          genImNFTAddress: "invalid-address", // Invalid address format
+          baseMintPrice: "0.001",
+        },
         options: {
-          validateOnly: "not-boolean", // Invalid type
+          validateOnly: false,
+          dryRun: false,
+        },
+        metadata: {
+          description: "Invalid test config",
+          version: "1.0.0",
+          environment: "test",
         },
       };
 
@@ -285,11 +298,10 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
         if (typeof result === "object" && result !== null) {
           // Check that deployment file was created
-          const deploymentsDir = path.join(__dirname, "../scripts/deployments");
+          const deploymentsDir = path.join(__dirname, "../deployments");
           expect(fs.existsSync(deploymentsDir)).to.be.true;
 
-          const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `collector-nft-v1-hardhat-${timestamp}.json`;
+          const deploymentFileName = `collector-nft-v1-hardhat.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.be.true;
@@ -297,7 +309,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
           expect(deploymentData.network).to.equal("hardhat");
-          expect(deploymentData.proxyAddress).to.equal(result.address);
+          expect(deploymentData.proxyAddress).to.equal(result.proxyAddress);
           expect(deploymentData.genImNFTAddress).to.equal(genImAddress);
           expect(deploymentData.baseMintPrice).to.equal("0.001");
 

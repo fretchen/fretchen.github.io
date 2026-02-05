@@ -1,0 +1,34 @@
+{
+  "network": "base",
+  "timestamp": "2026-02-01T19:22:18.042Z",
+  "blockNumber": 41592195,
+  "proxyAddress": "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68",
+  "implementationAddress": "0x1CDb5F39C51F4E3b269F557Df6734b83e19aed8C",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "GenImNFTv4",
+  "owner": "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+  "mintPrice": "0.00003",
+  "agentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+  "deploymentOptions": {
+    "verify": true,
+    "waitConfirmations": 2,
+    "configUsed": "deploy-genimg-v4.config.json"
+  },
+  "config": {
+    "parameters": {
+      "mintPrice": "0.00003",
+      "agentWallet": "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C"
+    },
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": true,
+      "waitConfirmations": 2
+    },
+    "metadata": {
+      "description": "GenImNFTv4 deployment to Base",
+      "version": "4.0.0",
+      "environment": "mainnet"
+    }
+  }
+}

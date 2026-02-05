@@ -4,163 +4,169 @@ import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { PublicNFTList } from "../components/PublicNFTList";
 
 /**
- * Mock complex dependencies to focus on component logic
+ * Tests for PublicNFTList component with multi-chain support.
+ *
+ * The component now uses useMultiChainPublicNFTs hook which fetches
+ * public NFTs from all configured chains in parallel.
  */
 
-// Mock useAutoNetwork - must return object with network
-vi.mock("../hooks/useAutoNetwork", () => ({
-  useAutoNetwork: vi.fn(() => ({
-    network: "eip155:10",
-    isOnCorrectNetwork: true,
-    switchIfNeeded: vi.fn(() => Promise.resolve(true)),
-  })),
+// Mock the multi-chain public NFT hook
+const mockUseMultiChainPublicNFTs = vi.fn();
+vi.mock("../hooks/useMultiChainNFTs", () => ({
+  useMultiChainPublicNFTs: () => mockUseMultiChainPublicNFTs(),
 }));
 
-// Mock useConfiguredPublicClient - returns a mock client
-const mockReadContract = vi.fn();
-vi.mock("../hooks/useConfiguredPublicClient", () => ({
-  useConfiguredPublicClient: vi.fn(() => ({
-    readContract: mockReadContract,
-  })),
-}));
-
-// Mock chain-utils
-vi.mock("@fretchen/chain-utils", () => ({
-  getGenAiNFTAddress: vi.fn(() => "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"),
-  GenImNFTv4ABI: [{ name: "getAllPublicTokens", type: "function", inputs: [], outputs: [{ type: "uint256[]" }] }],
-  GENAI_NFT_NETWORKS: ["eip155:10", "eip155:11155420"],
-}));
-
+// Mock NFTCard - now requires network prop
 vi.mock("../components/NFTCard", () => ({
-  NFTCard: vi.fn(({ tokenId }) => <div data-testid={`nft-card-${tokenId}`}>NFT {tokenId.toString()}</div>),
+  NFTCard: vi.fn(({ tokenId, network }) => (
+    <div data-testid={`nft-card-${tokenId}`} data-network={network}>
+      NFT {tokenId.toString()} on {network}
+    </div>
+  )),
 }));
 
+// Mock ImageModal
 vi.mock("../components/ImageModal", () => ({
   ImageModal: vi.fn(() => <div data-testid="image-modal">Mock Image Modal</div>),
 }));
 
+// Mock styles
 vi.mock("../layouts/styles", () => ({
   nftList: {
-    container: "nft-list-container",
     loadingContainer: "loading-container",
     emptyStateContainer: "empty-state-container",
     emptyStateText: "empty-state-text",
-    galleryGrid: "gallery-grid",
     grid: "nft-grid",
   },
   spinner: "spinner",
 }));
 
-vi.mock("../hooks/useLocale", () => ({
-  useLocale: vi.fn(() => "Mocked text"),
-}));
-
-global.fetch = vi.fn();
-
-/**
- * Tests for the PublicNFTList component
- * Focuses on component structure, props handling, and architecture
- */
-describe("PublicNFTList Component", () => {
+describe("PublicNFTList Multi-Chain Support", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: return empty array (no public NFTs)
-    mockReadContract.mockResolvedValue([]);
+
+    // Default: some public NFTs from multiple chains
+    mockUseMultiChainPublicNFTs.mockReturnValue({
+      tokens: [
+        { tokenId: 26n, network: "eip155:10" }, // Optimism
+        { tokenId: 1n, network: "eip155:8453" }, // Base
+      ],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  /**
-   * Tests component importability
-   */
   it("should be importable", () => {
     expect(typeof PublicNFTList).toBe("function");
   });
 
-  /**
-   * CRITICAL: Tests that component actually renders without errors
-   * This catches ABI mismatches like missing getAllPublicTokens function
-   */
-  describe("Rendering (Bug Prevention)", () => {
-    it("should render loading state initially", () => {
-      // Don't resolve the promise immediately
-      mockReadContract.mockReturnValue(new Promise(() => {}));
+  it("should render NFT cards from multiple chains", async () => {
+    render(<PublicNFTList />);
 
-      render(<PublicNFTList />);
-
-      expect(screen.getByText(/Loading public artworks/i)).toBeInTheDocument();
-    });
-
-    it("should render empty state when no public NFTs", async () => {
-      mockReadContract.mockResolvedValue([]);
-
-      render(<PublicNFTList />);
-
-      // Wait for loading to finish
-      await waitFor(() => {
-        expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
-      });
-    });
-
-    it("should render NFT cards when public NFTs exist", async () => {
-      mockReadContract.mockResolvedValue([1n, 2n, 3n]);
-
-      render(<PublicNFTList />);
-
-      // Wait for NFTs to load
-      await waitFor(() => {
-        expect(screen.getByTestId("nft-card-3")).toBeInTheDocument();
-        expect(screen.getByTestId("nft-card-2")).toBeInTheDocument();
-        expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
-      });
-    });
-
-    it("should call getAllPublicTokens ABI function", async () => {
-      mockReadContract.mockResolvedValue([1n, 2n]);
-
-      render(<PublicNFTList />);
-
-      await waitFor(() => {
-        // Verify the correct ABI function is called
-        expect(mockReadContract).toHaveBeenCalledWith(
-          expect.objectContaining({
-            functionName: "getAllPublicTokens",
-          }),
-        );
-      });
-    });
-
-    it("should handle contract errors gracefully", async () => {
-      mockReadContract.mockRejectedValue(new Error("Contract call failed"));
-
-      // Should not throw
-      expect(() => render(<PublicNFTList />)).not.toThrow();
-
-      // Wait for error handling
-      await waitFor(() => {
-        expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  /**
-   * Tests component structure and React element creation
-   */
-  it("should be a React component", () => {
-    expect(PublicNFTList).toBeDefined();
-    expect(typeof PublicNFTList).toBe("function");
-  });
-
-  /**
-   * Tests className prop from BaseComponentProps
-   */
-  it("should accept className prop", async () => {
-    render(<PublicNFTList className="custom-class" />);
-    // Wait for async operations to complete
     await waitFor(() => {
-      expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId("nft-card-26")).toBeInTheDocument();
+      expect(screen.getByTestId("nft-card-1")).toBeInTheDocument();
+    });
+
+    // Verify chain information is passed to cards
+    expect(screen.getByTestId("nft-card-26")).toHaveAttribute("data-network", "eip155:10");
+    expect(screen.getByTestId("nft-card-1")).toHaveAttribute("data-network", "eip155:8453");
+  });
+
+  it("should show loading state while fetching", () => {
+    mockUseMultiChainPublicNFTs.mockReturnValue({
+      tokens: [],
+      isLoading: true,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(<PublicNFTList />);
+
+    expect(screen.getByText(/loading public artworks/i)).toBeInTheDocument();
+  });
+
+  it("should show empty state when no public NFTs", async () => {
+    mockUseMultiChainPublicNFTs.mockReturnValue({
+      tokens: [],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(<PublicNFTList />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/no public artworks available/i)).toBeInTheDocument();
+    });
+  });
+
+  it("should display NFTs from Optimism only when hook returns only Optimism NFTs", async () => {
+    mockUseMultiChainPublicNFTs.mockReturnValue({
+      tokens: [
+        { tokenId: 1n, network: "eip155:10" },
+        { tokenId: 2n, network: "eip155:10" },
+        { tokenId: 3n, network: "eip155:10" },
+      ],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(<PublicNFTList />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("nft-card-1")).toHaveAttribute("data-network", "eip155:10");
+      expect(screen.getByTestId("nft-card-2")).toHaveAttribute("data-network", "eip155:10");
+      expect(screen.getByTestId("nft-card-3")).toHaveAttribute("data-network", "eip155:10");
+    });
+  });
+
+  it("should display NFTs from Base only when hook returns only Base NFTs", async () => {
+    mockUseMultiChainPublicNFTs.mockReturnValue({
+      tokens: [
+        { tokenId: 1n, network: "eip155:8453" },
+        { tokenId: 2n, network: "eip155:8453" },
+      ],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(<PublicNFTList />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("nft-card-1")).toHaveAttribute("data-network", "eip155:8453");
+      expect(screen.getByTestId("nft-card-2")).toHaveAttribute("data-network", "eip155:8453");
+    });
+  });
+
+  it("should render NFTs sorted by tokenId descending (newest first)", async () => {
+    mockUseMultiChainPublicNFTs.mockReturnValue({
+      tokens: [
+        { tokenId: 100n, network: "eip155:10" },
+        { tokenId: 50n, network: "eip155:8453" },
+        { tokenId: 1n, network: "eip155:10" },
+      ],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(<PublicNFTList />);
+
+    await waitFor(() => {
+      const cards = screen.getAllByTestId(/nft-card-/);
+      expect(cards).toHaveLength(3);
+      // Verify order matches what the hook returns (hook handles sorting)
+      expect(cards[0]).toHaveAttribute("data-testid", "nft-card-100");
+      expect(cards[1]).toHaveAttribute("data-testid", "nft-card-50");
+      expect(cards[2]).toHaveAttribute("data-testid", "nft-card-1");
     });
   });
 });

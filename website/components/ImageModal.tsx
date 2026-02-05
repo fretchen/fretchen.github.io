@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { ImageModalProps } from "../types/components";
 import { useToast } from "./Toast";
+import { ChainInfoDisplay } from "./ChainBadge";
 import * as styles from "../layouts/styles";
 
 // Bildvergrößerungs-Modal Komponente
@@ -47,10 +48,11 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
           ✕
         </button>
         <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} />
-        {(image.title || image.description) && (
+        {(image.title || image.description || image.network) && (
           <div className={styles.nftCard.modalInfo}>
             {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}
             {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
+            {image.network && <ChainInfoDisplay network={image.network} tokenId={image.tokenId} />}
             <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
               <button onClick={handleDownload} className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}>
                 ⬇️ Download Full Size

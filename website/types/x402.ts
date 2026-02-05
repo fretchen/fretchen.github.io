@@ -7,7 +7,8 @@ export interface X402GenImgRequest {
   size?: "1024x1024" | "1792x1024";
   mode?: "generate" | "edit";
   referenceImage?: string; // base64 encoded
-  sepoliaTest?: boolean;
+  /** CAIP-2 network identifier (e.g., "eip155:8453" for Base) */
+  network: string;
   /** Expected chain ID for validation - prevents signing on wrong network */
   expectedChainId?: number;
   /** Whether to list the NFT in the public gallery (default: false) */

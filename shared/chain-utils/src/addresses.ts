@@ -11,7 +11,7 @@
 
 export const MAINNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
   "eip155:10": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", // Optimism
-  // "eip155:8453": "0x...", // Base - add after Deployment
+  "eip155:8453": "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68", // Base
 };
 
 export const TESTNET_GENAI_NFT_ADDRESSES: Record<string, `0x${string}`> = {
@@ -24,12 +24,38 @@ export const GENAI_NFT_NETWORKS = [
   ...Object.keys(TESTNET_GENAI_NFT_ADDRESSES),
 ] as const;
 
+/**
+ * Get all mainnet networks where GenImNFT is deployed
+ * Used by backend services for dynamic network configuration
+ */
+export function getGenAiNFTMainnetNetworks(): readonly string[] {
+  return Object.keys(MAINNET_GENAI_NFT_ADDRESSES);
+}
+
+/**
+ * Get all testnet networks where GenImNFT is deployed
+ * Used by backend services for dynamic network configuration
+ */
+export function getGenAiNFTTestnetNetworks(): readonly string[] {
+  return Object.keys(TESTNET_GENAI_NFT_ADDRESSES);
+}
+
+/**
+ * Check if a given network is a testnet
+ * @param network CAIP-2 network identifier (e.g., "eip155:8453")
+ * @returns true if the network is a testnet, false otherwise
+ */
+export function isTestnetNetwork(network: string): boolean {
+  return Object.keys(TESTNET_GENAI_NFT_ADDRESSES).includes(network);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // CollectorNFT
 // ═══════════════════════════════════════════════════════════════
 
 export const MAINNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {
   "eip155:10": "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea", // Optimism
+  "eip155:8453": "0x5D0103393DDcD988867437233c197c6A38b23360", // Base
 };
 
 export const TESTNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {

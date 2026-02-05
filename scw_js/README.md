@@ -9,39 +9,44 @@ Serverless functions for AI image generation and LLM services with blockchain in
 
 ### Quick Links
 
-| Service          | Endpoint      | Description                       |
-| ---------------- | ------------- | --------------------------------- |
-| Image Generation | `genimgbfl`   | AI image generation + NFT minting |
-| LLM              | `llm`         | Blockchain-authenticated LLM      |
-| Leaf History     | `leafhistory` | Merkle tree leaf queries          |
-| NFT Reader       | `readnftv2`   | Read NFT metadata                 |
+| Service          | Endpoint          | Description                                           |
+| ---------------- | ----------------- | ----------------------------------------------------- |
+| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment) |
+| LLM              | `llm`             | Blockchain-authenticated LLM                          |
+| Leaf History     | `leafhistory`     | Merkle tree leaf queries                              |
 
 ## Functions
 
-### `genimg_bfl.js` - AI Image Generation
+### `genimg_x402_token.js` - AI Image Generation (x402 Payment)
 
-Generates AI images using Black Forest Labs API and updates NFT tokens on Optimism.
+Generates AI images using Black Forest Labs API with USDC payment via x402 protocol. Mints new NFT tokens on Optimism or Base.
 
-**Endpoint:** POST
+**Endpoint:** POST to `imagegen-agent.fretchen.eu`
 
 **Parameters:**
 
-| Field            | Type   | Required | Description                          |
-| ---------------- | ------ | -------- | ------------------------------------ |
-| `prompt`         | string | ✅       | Text prompt for AI image generation  |
-| `tokenId`        | number | ✅       | NFT token ID to update               |
-| `mode`           | string | ❌       | `generate` (default) or `edit`       |
-| `size`           | string | ❌       | `1024x1024` (default) or `1792x1024` |
-| `referenceImage` | base64 | ❌       | Required for `edit` mode             |
+| Field            | Type   | Required | Description                           |
+| ---------------- | ------ | -------- | ------------------------------------- |
+| `prompt`         | string | ✅       | Text prompt for AI image generation   |
+| `network`        | string | ✅       | CAIP-2 network ID (e.g., `eip155:10`) |
+| `mode`           | string | ❌       | `generate` (default) or `edit`        |
+| `size`           | string | ❌       | `1024x1024` (default) or `1792x1024`  |
+| `referenceImage` | base64 | ❌       | Required for `edit` mode              |
+| `payment`        | object | ✅       | x402 USDC payment authorization       |
 
-**Example:**
+**Payment Authorization (EIP-3009):**
 
 ```json
 {
-  "prompt": "A beautiful sunset over mountains",
-  "tokenId": 42,
-  "mode": "generate",
-  "size": "1024x1024"
+  "from": "0xBuyerAddress",
+  "to": "0xFacilitatorAddress",
+  "value": "70000",
+  "validAfter": "0",
+  "validBefore": "...",
+  "nonce": "0x...",
+  "v": 28,
+  "r": "0x...",
+  "s": "0x..."
 }
 ```
 
@@ -51,8 +56,10 @@ Generates AI images using Black Forest Labs API and updates NFT tokens on Optimi
 {
   "metadata_url": "https://...",
   "image_url": "https://...",
-  "transaction_hash": "0x...",
-  "mintPrice": "500000000000000"
+  "mint_tx_hash": "0x...",
+  "transfer_tx_hash": "0x...",
+  "token_id": "42",
+  "network": "eip155:10"
 }
 ```
 
@@ -83,10 +90,6 @@ LLM service with wallet signature authentication and Merkle-tree based usage tra
 - Wallet must have minimum balance of 0.00001 ETH
 - Valid EIP-191 signature required
 
-### `readhandler_v2.js`
-
-NFT metadata reader.
-
 ### `leaf_history.js`
 
 Query Merkle tree leaves for usage tracking.
@@ -100,8 +103,8 @@ Query Merkle tree leaves for usage tracking.
 ## Local Testing
 
 ```bash
-# Image Generation
-NODE_ENV=test node genimg_bfl.js
+# Image Generation (x402)
+npm run dev:x402
 
 # LLM Service
 NODE_ENV=test node sc_llm.js

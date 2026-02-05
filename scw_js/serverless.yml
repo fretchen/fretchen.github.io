@@ -32,10 +32,6 @@ package:
     - "!eslint.config.js"
 
 functions:
-  readnftv2:
-    handler: dist/readhandler_v2.handle
-  genimgbfl:
-    handler: dist/genimg_bfl.handle
   genimgx402token:
     handler: dist/genimg_x402_token.handle
     description: "x402 v2 Token Payment - Paid image generation with USDC"

@@ -2,13 +2,7 @@ import { defineConfig } from "tsup";
 import { builtinModules } from "module";
 
 export default defineConfig({
-  entry: [
-    "genimg_bfl.js",
-    "genimg_x402_token.js",
-    "sc_llm.js",
-    "readhandler_v2.js",
-    "leaf_history.js",
-  ],
+  entry: ["genimg_x402_token.js", "sc_llm.js", "leaf_history.js"],
   format: ["esm"],
   platform: "node",
   target: "node22",

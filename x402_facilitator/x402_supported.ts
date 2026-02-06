@@ -5,6 +5,7 @@
 
 import { createReadOnlyFacilitator } from "./facilitator_instance.js";
 import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
+import { getFeeAmount, getFacilitatorAddress } from "./x402_fee.js";
 
 interface ContractInfo {
   name: string;
@@ -18,6 +19,25 @@ interface WhitelistExtension {
   contracts: Record<string, ContractInfo[]>;
 }
 
+interface FeeExtension {
+  name: string;
+  description: string;
+  fee: {
+    amount: string;
+    asset: string;
+    decimals: number;
+    description: string;
+    collection: string;
+    recipient: string | null;
+  };
+  setup: {
+    description: string;
+    function: string;
+    spender: string | null;
+    recommended_amount: string;
+  };
+}
+
 interface SupportedCapabilities {
   kinds: Array<{
     x402Version: number;
@@ -25,7 +45,7 @@ interface SupportedCapabilities {
     network: string;
     extra?: Record<string, unknown>;
   }>;
-  extensions: Array<WhitelistExtension | Record<string, unknown>>;
+  extensions: Array<WhitelistExtension | FeeExtension | Record<string, unknown>>;
   signers: Record<string, string[]>;
 }
 
@@ -80,6 +100,34 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       contracts,
     },
   ];
+
+  // Add fee extension for public access
+  const feeAmount = getFeeAmount();
+  const facilitatorAddress = getFacilitatorAddress();
+
+  if (feeAmount > 0n) {
+    const feeExtension: FeeExtension = {
+      name: "facilitator_fee",
+      description:
+        "Public access with per-transaction fee. Non-whitelisted merchants must approve USDC spending for the facilitator address. Fee is collected post-settlement via ERC-20 transferFrom.",
+      fee: {
+        amount: feeAmount.toString(),
+        asset: "USDC",
+        decimals: 6,
+        description: `${Number(feeAmount) / 1_000_000} USDC per settlement`,
+        collection: "post_settlement_transferFrom",
+        recipient: facilitatorAddress,
+      },
+      setup: {
+        description:
+          "One-time USDC approval required. Call approve() on the USDC contract for the facilitator's address.",
+        function: "approve(address spender, uint256 amount)",
+        spender: facilitatorAddress,
+        recommended_amount: "100000000", // 100 USDC = 10,000 settlements
+      },
+    };
+    supported.extensions.push(feeExtension);
+  }
 
   return supported;
 }

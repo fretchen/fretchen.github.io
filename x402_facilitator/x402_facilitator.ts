@@ -193,15 +193,19 @@ async function handlePaymentRequest(
           { payer: result.payer, transaction: result.transaction },
           "Settlement successful",
         );
+        const responseBody: Record<string, unknown> = {
+          success: true,
+          payer: result.payer,
+          transaction: result.transaction,
+          network: result.network,
+        };
+        if (result.fee) {
+          responseBody.fee = result.fee;
+        }
         return {
           statusCode: 200,
           headers: CORS_HEADERS,
-          body: JSON.stringify({
-            success: true,
-            payer: result.payer,
-            transaction: result.transaction,
-            network: result.network,
-          }),
+          body: JSON.stringify(responseBody),
         };
       } else {
         logger.warn(

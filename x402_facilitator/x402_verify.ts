@@ -13,6 +13,8 @@ export interface VerifyResult {
   invalidReason?: string;
   payer?: string;
   recipient?: string;
+  /** Whether fee collection is required at settle time */
+  feeRequired?: boolean;
 }
 
 /**
@@ -80,7 +82,13 @@ export async function verifyPayment(
       );
     }
 
-    return result;
+    // Pass through fee status from onAfterVerify hook
+    const resultWithExtras = result as Record<string, unknown>;
+    return {
+      ...result,
+      feeRequired: resultWithExtras.feeRequired as boolean | undefined,
+      recipient: (resultWithExtras.recipient as string | undefined) || result.recipient,
+    };
   } catch (error) {
     const err = error as Error;
     logger.error(

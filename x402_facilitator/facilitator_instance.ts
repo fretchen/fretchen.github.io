@@ -14,6 +14,7 @@ import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import pino from "pino";
 import { isAgentWhitelisted } from "./x402_whitelist.js";
+import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee.js";
 import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -144,7 +145,7 @@ export function createFacilitator(
     facilitator.register(network, new ExactEvmScheme(signer));
   }
 
-  // Add whitelist check AFTER verification
+  // Add whitelist + fee allowance check AFTER verification (dual auth model)
   facilitator.onAfterVerify(async ({ paymentPayload, result }) => {
     if (!result.isValid) {
       return;
@@ -160,22 +161,77 @@ export function createFacilitator(
       return;
     }
 
+    // Path 1: Whitelisted recipients pass without fee (backwards compatible)
     const whitelistCheck = await isAgentWhitelisted(recipient, network);
-    if (!whitelistCheck.isWhitelisted) {
-      logger.warn(
-        { recipient, network },
-        "Payment verification failed: Recipient not whitelisted",
+    if (whitelistCheck.isWhitelisted) {
+      logger.info(
+        { recipient, network, source: whitelistCheck.source },
+        "Recipient whitelist check passed (no fee required)",
       );
-      result.isValid = false;
-      result.invalidReason = "unauthorized_agent";
-      (result as Record<string, unknown>).recipient = recipient;
+      (result as Record<string, unknown>).feeRequired = false;
       return;
     }
 
-    logger.info(
-      { recipient, network, source: whitelistCheck.source },
-      "Recipient whitelist check passed",
+    // Path 2: Non-whitelisted recipients must have sufficient fee allowance
+    const feeAmount = getFeeAmount();
+    if (feeAmount === 0n) {
+      // Fees disabled — allow all recipients
+      logger.info(
+        { recipient, network },
+        "Fees disabled, allowing non-whitelisted recipient",
+      );
+      (result as Record<string, unknown>).feeRequired = false;
+      return;
+    }
+
+    const facilitatorAddress = getFacilitatorAddress();
+    if (!facilitatorAddress) {
+      logger.warn(
+        { recipient, network },
+        "Cannot check fee allowance: facilitator address not configured",
+      );
+      result.isValid = false;
+      result.invalidReason = "facilitator_not_configured";
+      return;
+    }
+
+    // Check merchant's USDC allowance for fee payment
+    const allowanceInfo = await checkMerchantAllowance(
+      recipient as `0x${string}`,
+      network,
     );
+
+    if (!allowanceInfo.sufficient) {
+      logger.warn(
+        {
+          recipient,
+          network,
+          allowance: allowanceInfo.allowance.toString(),
+          feeAmount: feeAmount.toString(),
+          facilitatorAddress,
+        },
+        "Insufficient fee allowance — merchant must approve USDC for facilitator",
+      );
+      result.isValid = false;
+      result.invalidReason = "insufficient_fee_allowance";
+      (result as Record<string, unknown>).recipient = recipient;
+      (result as Record<string, unknown>).requiredAllowance = feeAmount.toString();
+      (result as Record<string, unknown>).currentAllowance = allowanceInfo.allowance.toString();
+      (result as Record<string, unknown>).facilitatorAddress = facilitatorAddress;
+      return;
+    }
+
+    // Fee allowance sufficient — mark for fee collection at settle time
+    logger.info(
+      {
+        recipient,
+        network,
+        remainingSettlements: allowanceInfo.remainingSettlements,
+      },
+      "Non-whitelisted recipient approved via fee allowance",
+    );
+    (result as Record<string, unknown>).feeRequired = true;
+    (result as Record<string, unknown>).recipient = recipient;
   });
 
   logger.info(

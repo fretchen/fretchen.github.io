@@ -35,6 +35,36 @@ Our x402 facilitator currently only serves **whitelisted recipients** (GenImNFTv
 
 **Key constraint:** The `onAfterVerify` hook in `facilitator_instance.js` (line ~170) rejects any `payTo` address that isn't whitelisted. This is the gate we need to open.
 
+## TypeScript Migration Strategy
+
+The facilitator is currently a **mixed JS/TS** codebase. Only `x402_facilitator.ts` and its test are TypeScript. All other modules (`x402_settle.js`, `x402_verify.js`, `x402_supported.js`, `facilitator_instance.js`, `x402_whitelist.js`, `chain_utils.js`) and their tests remain JavaScript.
+
+**Goal:** As part of this implementation, migrate to **TypeScript throughout**. New code is written in TypeScript, and modified files are migrated during modification.
+
+### Current State
+
+| File | Language | Action |
+|---|---|---|
+| `x402_facilitator.ts` | ✅ TS | Already migrated |
+| `x402_settle.js` | ❌ JS | **Migrate → `.ts`** (modified for fee collection) |
+| `x402_verify.js` | ❌ JS | **Migrate → `.ts`** (modified for fee status passthrough) |
+| `x402_supported.js` | ❌ JS | **Migrate → `.ts`** (modified for fee discovery) |
+| `facilitator_instance.js` | ❌ JS | **Migrate → `.ts`** (modified for dual auth model) |
+| `x402_whitelist.js` | ❌ JS | **Migrate → `.ts`** (unchanged logic, but dependency of modified files) |
+| `chain_utils.js` | ❌ JS | **Migrate → `.ts`** (adding ERC-20 ABI types) |
+| `x402_splitter_*.js` | ❌ JS | Migrate separately (not in scope for this proposal) |
+| `eslint.config.js` | JS | Keep as JS (config file) |
+| `vitest.config.js` | JS | Keep as JS (config file) |
+| `tsup.config.js` | JS | Keep as JS (config file) |
+
+### Tooling Changes Required
+
+1. **`tsconfig.json`** — Expand `include` from `["*.ts"]` to `["*.ts", "test/**/*.ts"]`
+2. **`eslint.config.js`** — Add `typescript-eslint` parser + rules for `**/*.ts` files (alongside existing JS rules for remaining config files)
+3. **`package.json`** — Add `typescript` + `typescript-eslint` to devDependencies
+4. **`tsup.config.js`** — Update entry points from `.js` to `.ts` (splitter entry stays `.js` until migrated separately)
+5. **`vitest.config.js`** — No change needed (Vitest handles `.ts` natively)
+
 ## Proposed Approach: Post-Settlement Fee via ERC-20 `transferFrom`
 
 Following the 0xmeta.ai pattern (merged in [x402 #899](https://github.com/coinbase/x402/pull/899)), which was accepted by the x402 maintainers as a pragmatic solution while the spec evolves.
@@ -104,25 +134,53 @@ The splitter approach (our own [#937](https://github.com/coinbase/x402/issues/93
 
 ## Implementation Plan
 
+### Phase 0: TypeScript Migration
+
+Before implementing fee logic, migrate existing JS modules to TypeScript. This ensures all new code integrates cleanly with typed imports and avoids mixed-language friction.
+
+**Order of migration** (dependencies first):
+1. `chain_utils.js` → `chain_utils.ts` (no internal dependencies)
+2. `x402_whitelist.js` → `x402_whitelist.ts` (depends on chain_utils)
+3. `facilitator_instance.js` → `facilitator_instance.ts` (depends on whitelist)
+4. `x402_verify.js` → `x402_verify.ts` (depends on facilitator_instance)
+5. `x402_supported.js` → `x402_supported.ts` (depends on facilitator_instance)
+6. `x402_settle.js` → `x402_settle.ts` (depends on verify + facilitator_instance)
+7. Migrate corresponding test files to `.test.ts`
+8. Update `tsconfig.json`, `eslint.config.js`, `tsup.config.js`, `package.json`
+
+**Migration approach:** Strict TypeScript from the start — `strict: true` is already set in `tsconfig.json`. Add explicit types for all function signatures, use Viem's built-in types (`Address`, `Hash`, `Chain`), and export typed interfaces where modules are consumed by others.
+
 ### Phase 1: Core Fee Logic
 
-#### 1.1 New Module: `x402_fee.js`
+#### 1.1 New Module: `x402_fee.ts`
 
-```
-x402_fee.js
-├── collectFee(merchantAddress, network) → {success, txHash}
-├── checkMerchantAllowance(merchantAddress, network) → {allowance, settlements}
-├── getFeeAmount() → bigint  (from FACILITATOR_FEE_AMOUNT env, default 10000)
-└── Treasury = facilitator signer address (from FACILITATOR_WALLET_PRIVATE_KEY)
+```typescript
+// x402_fee.ts
+export interface FeeResult {
+  success: boolean;
+  txHash?: `0x${string}`;
+  error?: string;
+}
+
+export interface AllowanceInfo {
+  allowance: bigint;
+  remainingSettlements: number;
+  sufficient: boolean;
+}
+
+export function collectFee(merchantAddress: `0x${string}`, network: string): Promise<FeeResult>;
+export function checkMerchantAllowance(merchantAddress: `0x${string}`, network: string): Promise<AllowanceInfo>;
+export function getFeeAmount(): bigint; // from FACILITATOR_FEE_AMOUNT env, default 10000n
+// Facilitator address derived from FACILITATOR_WALLET_PRIVATE_KEY
 ```
 
 **Responsibilities:**
 - Call `USDC.transferFrom(merchant, facilitator, feeAmount)` on the correct network
 - Check merchant's remaining allowance before verify (to give early feedback)
-- Return clear error messages for insufficient allowance
+- Return typed error messages for insufficient allowance
 - Fee amount configurable via `FACILITATOR_FEE_AMOUNT` env var (default: `10000` = 0.01 USDC)
 
-#### 1.2 Modify `facilitator_instance.js` → Dual Authorization Model
+#### 1.2 Migrate & Modify `facilitator_instance.js` → `facilitator_instance.ts` (Dual Authorization Model)
 
 Change the `onAfterVerify` hook from "reject non-whitelisted" to "whitelist OR paid":
 
@@ -137,7 +195,7 @@ onAfterVerify():
 
 **Critical:** Fee collection happens at **settle time**, not verify time. Verify only checks that fee collection is *possible*.
 
-#### 1.3 Modify `x402_settle.js` → Post-Settlement Fee Collection
+#### 1.3 Migrate & Modify `x402_settle.js` → `x402_settle.ts` (Post-Settlement Fee Collection)
 
 ```
 settlePayment():
@@ -204,11 +262,11 @@ Provide scripts or documentation for merchants:
 
 | Test | Description | File |
 |---|---|---|
-| Fee collection unit tests | Mock USDC.transferFrom, test success/failure | `test/x402_fee.test.js` |
-| Dual auth model tests | Whitelisted passes without fee, non-whitelisted requires fee | `test/facilitator_instance.test.js` |
-| Settlement with fee tests | Settlement executes first, fee collected after success | `test/x402_settle.test.js` |
+| Fee collection unit tests | Mock USDC.transferFrom, test success/failure | `test/x402_fee.test.ts` |
+| Dual auth model tests | Whitelisted passes without fee, non-whitelisted requires fee | `test/facilitator_instance.test.ts` |
+| Settlement with fee tests | Settlement executes first, fee collected after success | `test/x402_settle.test.ts` |
 | E2E Sepolia test | Full flow with real USDC on Optimism Sepolia | Manual |
-| Supported endpoint tests | Fee info included in response | `test/x402_supported.test.js` |
+| Supported endpoint tests | Fee info included in response | `test/x402_supported.test.ts` |
 
 #### 3.2 Deployment Steps
 
@@ -229,18 +287,39 @@ Once x402 [#937](https://github.com/coinbase/x402/issues/937) / [#1087](https://
 
 ## Files to Create/Modify
 
+### New Files (TypeScript)
+
+| File | Description |
+|---|---|
+| `x402_fee.ts` | Fee collection logic with typed interfaces (transferFrom, allowance check) |
+| `test/x402_fee.test.ts` | Fee module tests |
+
+### Migrate JS → TS + Modify
+
+| Old File | New File | Description |
+|---|---|---|
+| `facilitator_instance.js` | `facilitator_instance.ts` | Dual auth model: whitelist OR fee-approved |
+| `x402_settle.js` | `x402_settle.ts` | Post-settlement fee collection |
+| `x402_supported.js` | `x402_supported.ts` | Add fee info to /supported |
+| `x402_verify.js` | `x402_verify.ts` | Pass fee status through to settle |
+| `x402_whitelist.js` | `x402_whitelist.ts` | Type-safe whitelist (logic unchanged) |
+| `chain_utils.js` | `chain_utils.ts` | Add ERC-20 ABI types |
+| `test/x402_settle.test.js` | `test/x402_settle.test.ts` | Migrate tests |
+| `test/x402_verify.test.js` | `test/x402_verify.test.ts` | Migrate tests |
+| `test/x402_supported.test.js` | `test/x402_supported.test.ts` | Migrate tests |
+| `test/x402_whitelist.test.js` | `test/x402_whitelist.test.ts` | Migrate tests |
+
+### Modify Only (already TS or config)
+
 | File | Action | Description |
 |---|---|---|
-| `x402_fee.js` | **Create** | Fee collection logic (transferFrom, allowance check) |
-| `facilitator_instance.js` | **Modify** | Dual auth: whitelist OR fee-approved |
-| `x402_settle.js` | **Modify** | Post-settlement fee collection |
-| `x402_supported.js` | **Modify** | Add fee info to /supported |
-| `x402_facilitator.ts` | **No change** | Routing unchanged |
-| `x402_verify.js` | **Minor** | Pass fee status through to settle |
-| `x402_whitelist.js` | **No change** | Whitelist logic preserved |
+| `x402_facilitator.ts` | **Update imports** | Change `.js` imports to `.ts` module references |
 | `@fretchen/chain-utils` | **Minor** | Add ERC-20 ABI (transferFrom, allowance, approve) |
-| `test/x402_fee.test.js` | **Create** | Fee module tests |
-| `README.md` | **Update** | Document public access and fee structure |
+| `tsconfig.json` | **Expand** | Include `test/**/*.ts` |
+| `eslint.config.js` | **Add TS rules** | Add `typescript-eslint` parser for `.ts` files |
+| `tsup.config.js` | **Update entries** | Change `.js` entry points to `.ts` |
+| `package.json` | **Add deps** | `typescript`, `typescript-eslint` devDependencies |
+| `README.md` | **Update** | Document public access, fee structure, TS migration |
 
 ## Trust Model & Security Considerations
 
@@ -289,14 +368,17 @@ Once x402 [#937](https://github.com/coinbase/x402/issues/937) / [#1087](https://
 
 8. **No compliance concerns for MVP** — We operate as a technical relay, not a custodian. No client funds are held, no KYC performed. The fee is an infrastructure service charge (comparable to an RPC provider). Regulatory review (EU MiCA, Money Transmitter classification) becomes relevant at scale or with institutional merchants.
 
+9. **TypeScript throughout** — All new code in TypeScript, all modified JS files migrated to `.ts` during modification. Strict mode enabled. Uses Viem's native types (`Address`, `Hash`, `Chain`) for blockchain primitives. Config files (`eslint.config.js`, `vitest.config.js`, `tsup.config.js`) remain JS as per convention. Splitter files (`x402_splitter_*.js`) migrated separately (out of scope).
+
 ## Estimated Timeline
 
 | Phase | Effort | Description |
 |---|---|---|
-| Phase 1: Core fee logic | ~3-4 days | `x402_fee.js`, modify settle + verify, tests |
+| Phase 0: TS migration | ~2 days | Migrate 6 source + 4 test files to `.ts`, update tooling (tsconfig, eslint, tsup) |
+| Phase 1: Core fee logic | ~3-4 days | `x402_fee.ts`, modify settle + verify, tests |
 | Phase 2: Discovery & docs | ~2 days | Update /supported, merchant scripts, README |
 | Phase 3: Testing | ~2-3 days | Sepolia E2E, edge cases, deployment |
-| **Total** | **~1-2 weeks** | |
+| **Total** | **~1.5-2 weeks** | |
 
 ## References
 
@@ -305,4 +387,4 @@ Once x402 [#937](https://github.com/coinbase/x402/issues/937) / [#1087](https://
 - [x402 #937](https://github.com/coinbase/x402/issues/937) — Our exact-split proposal (long-term)
 - [x402 #1087](https://github.com/coinbase/x402/pull/1087) — Split scheme spec PR by 0xAxiom (2 days ago)
 - [x402 #1016](https://github.com/coinbase/x402/issues/1016) — Fee disclosure standardization
-- Current facilitator: `facilitator_instance.js` (onAfterVerify whitelist hook)
+- Current facilitator: `facilitator_instance.js` → `facilitator_instance.ts` (onAfterVerify whitelist hook)

@@ -1,14 +1,13 @@
-// @ts-check
-
 /**
  * x402 v2 Facilitator Instance
- * Centralized facilitator configuration with Optimism support
+ * Centralized facilitator configuration with multi-chain support
  *
  * Architecture: One ExactEvmScheme per network (following x402 best practices)
  * Each network has its own dedicated viem client, eliminating chain selection issues
  */
 
 import { createPublicClient, createWalletClient, http } from "viem";
+import type { Account } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
@@ -20,13 +19,10 @@ import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
- * Create a FacilitatorEvmSigner for a specific network
- * The signer is bound to a single chain - no dynamic chain selection needed
- * @param {import("viem").Account} account - The account to use for signing
- * @param {string} network - The network identifier (e.g., "eip155:10")
- * @returns {Object} FacilitatorEvmSigner bound to the specified network
+ * Create a FacilitatorEvmSigner for a specific network.
+ * The signer is bound to a single chain — no dynamic chain selection needed.
  */
-function createSignerForNetwork(account, network) {
+function createSignerForNetwork(account: Account, network: string) {
   const config = getChainConfig(network);
 
   const publicClient = createPublicClient({
@@ -40,8 +36,6 @@ function createSignerForNetwork(account, network) {
     transport: http(),
   });
 
-  // Create signer bound to this specific chain
-  // No dynamic chain selection needed - the viem clients are already configured
   return toFacilitatorEvmSigner({
     address: account.address,
     readContract: (args) =>
@@ -63,12 +57,10 @@ function createSignerForNetwork(account, network) {
 
 /**
  * Create read-only facilitator (without signer, for getSupported() only)
- * @returns {x402Facilitator} Read-only facilitator instance
  */
-export function createReadOnlyFacilitator() {
+export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator> {
   const facilitator = new x402Facilitator();
 
-  // Register each network with a read-only scheme
   for (const network of getSupportedNetworks()) {
     const config = getChainConfig(network);
 
@@ -77,7 +69,6 @@ export function createReadOnlyFacilitator() {
       transport: http(),
     });
 
-    // Read-only signer (no wallet operations)
     const readOnlySigner = toFacilitatorEvmSigner({
       address: "0x0000000000000000000000000000000000000000",
       readContract: (args) =>
@@ -110,13 +101,12 @@ export function createReadOnlyFacilitator() {
 }
 
 /**
- * Create the facilitator instance with Optimism support
- * Uses separate ExactEvmScheme per network (x402 best practice)
- * @param {boolean} requirePrivateKey - Whether to require private key (default: true)
- * @returns {x402Facilitator} Configured facilitator instance
+ * Create the facilitator instance with multi-chain support.
+ * Uses separate ExactEvmScheme per network (x402 best practice).
  */
-export function createFacilitator(requirePrivateKey = true) {
-  // Get facilitator private key
+export function createFacilitator(
+  requirePrivateKey = true,
+): InstanceType<typeof x402Facilitator> {
   let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
   if (!privateKey) {
     if (requirePrivateKey) {
@@ -142,13 +132,12 @@ export function createFacilitator(requirePrivateKey = true) {
   }
 
   // Create account from private key
-  const account = privateKeyToAccount(privateKey);
+  const account = privateKeyToAccount(privateKey as `0x${string}`);
 
   // Create and configure facilitator
   const facilitator = new x402Facilitator();
 
   // Register a separate ExactEvmScheme for each network
-  // This follows x402 best practices: one signer per network
   const supportedNetworks = getSupportedNetworks();
   for (const network of supportedNetworks) {
     const signer = createSignerForNetwork(account, network);
@@ -162,7 +151,7 @@ export function createFacilitator(requirePrivateKey = true) {
     }
 
     const network = paymentPayload.accepted?.network;
-    const recipient = paymentPayload.payload?.authorization?.to;
+    const recipient = paymentPayload.payload?.authorization?.to as string | undefined;
 
     if (!network || !recipient) {
       logger.warn("Missing network or recipient after verification");
@@ -173,10 +162,13 @@ export function createFacilitator(requirePrivateKey = true) {
 
     const whitelistCheck = await isAgentWhitelisted(recipient, network);
     if (!whitelistCheck.isWhitelisted) {
-      logger.warn({ recipient, network }, "Payment verification failed: Recipient not whitelisted");
+      logger.warn(
+        { recipient, network },
+        "Payment verification failed: Recipient not whitelisted",
+      );
       result.isValid = false;
       result.invalidReason = "unauthorized_agent";
-      result.recipient = recipient;
+      (result as Record<string, unknown>).recipient = recipient;
       return;
     }
 
@@ -198,14 +190,14 @@ export function createFacilitator(requirePrivateKey = true) {
 }
 
 // Singleton instance
-let facilitatorInstance = null;
+let facilitatorInstance: InstanceType<typeof x402Facilitator> | null = null;
 
 /**
  * Get or create the facilitator instance
- * @param {boolean} requirePrivateKey - Whether to require private key (default: true)
- * @returns {x402Facilitator} The facilitator instance
  */
-export function getFacilitator(requirePrivateKey = true) {
+export function getFacilitator(
+  requirePrivateKey = true,
+): InstanceType<typeof x402Facilitator> {
   if (!facilitatorInstance) {
     facilitatorInstance = createFacilitator(requirePrivateKey);
   }
@@ -215,6 +207,6 @@ export function getFacilitator(requirePrivateKey = true) {
 /**
  * Reset the facilitator instance (for testing)
  */
-export function resetFacilitator() {
+export function resetFacilitator(): void {
   facilitatorInstance = null;
 }

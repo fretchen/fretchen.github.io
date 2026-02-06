@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * x402 v2 Facilitator - Settlement Logic
  * Uses centralized x402Facilitator instance
@@ -11,17 +9,27 @@ import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
+export interface SettleResult {
+  success: boolean;
+  payer?: string;
+  transaction?: string;
+  network?: string;
+  errorReason?: string;
+}
+
 /**
  * Settle a payment by executing transferWithAuthorization on-chain
- * @param {Object} paymentPayload - The payment payload from the request
- * @param {Object} paymentRequirements - The payment requirements
- * @returns {Promise<{success: boolean, payer?: string, transaction?: string, network?: string, errorReason?: string}>}
  */
-export async function settlePayment(paymentPayload, paymentRequirements) {
+export async function settlePayment(
+  paymentPayload: Record<string, unknown>,
+  paymentRequirements: Record<string, unknown>,
+): Promise<SettleResult> {
   try {
     // First verify the payment
     logger.info("Verifying payment before settlement");
     const verifyResult = await verifyPayment(paymentPayload, paymentRequirements);
+
+    const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     if (!verifyResult.isValid) {
       logger.warn({ invalidReason: verifyResult.invalidReason }, "Payment verification failed");
@@ -30,24 +38,25 @@ export async function settlePayment(paymentPayload, paymentRequirements) {
         errorReason: verifyResult.invalidReason,
         payer: verifyResult.payer,
         transaction: "",
-        network: paymentPayload.accepted.network,
+        network: accepted?.network as string,
       };
     }
 
     // Use x402 Facilitator for settlement
     const facilitator = getFacilitator();
-    const result = await facilitator.settle(paymentPayload, paymentRequirements);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
 
     if (result.success) {
       logger.info(
-        { hash: result.transaction, network: paymentPayload.accepted.network },
+        { hash: result.transaction, network: accepted?.network },
         "Transaction confirmed",
       );
       return {
         success: true,
         payer: verifyResult.payer,
         transaction: result.transaction,
-        network: paymentPayload.accepted.network,
+        network: accepted?.network as string,
       };
     } else {
       logger.warn({ errorReason: result.errorReason }, "Settlement failed");
@@ -56,28 +65,33 @@ export async function settlePayment(paymentPayload, paymentRequirements) {
         errorReason: result.errorReason,
         payer: verifyResult.payer,
         transaction: "",
-        network: paymentPayload.accepted.network,
+        network: accepted?.network as string,
       };
     }
   } catch (error) {
-    logger.error({ err: error }, "Settlement failed");
+    const err = error as Error;
+    logger.error({ err }, "Settlement failed");
 
     // Try to extract meaningful error reason
     let errorReason = "settlement_failed";
-    if (error.message?.includes("insufficient")) {
+    if (err.message?.includes("insufficient")) {
       errorReason = "insufficient_funds";
-    } else if (error.message?.includes("nonce")) {
+    } else if (err.message?.includes("nonce")) {
       errorReason = "authorization_already_used";
-    } else if (error.message?.includes("expired")) {
+    } else if (err.message?.includes("expired")) {
       errorReason = "authorization_expired";
     }
+
+    const payload = paymentPayload.payload as Record<string, unknown> | undefined;
+    const authorization = payload?.authorization as Record<string, unknown> | undefined;
+    const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     return {
       success: false,
       errorReason,
-      payer: paymentPayload.payload?.authorization?.from,
+      payer: authorization?.from as string | undefined,
       transaction: "",
-      network: paymentPayload.accepted?.network,
+      network: accepted?.network as string | undefined,
     };
   }
 }

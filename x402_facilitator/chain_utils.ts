@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * Chain Utilities for x402 Facilitator
  * Shared functions for network/chain handling
@@ -7,6 +5,7 @@
  * Uses @fretchen/chain-utils for chain/address data.
  */
 
+import type { Chain } from "viem";
 import {
   getViemChain,
   tryGetGenAiNFTAddress,
@@ -16,13 +15,22 @@ import {
   getUSDCName,
 } from "@fretchen/chain-utils";
 
+export interface ChainConfig {
+  chain: Chain;
+  GENIMG_V4_ADDRESS: string | null;
+  LLMV1_ADDRESS: string | null;
+  SPLITTER_ADDRESS: string | null;
+  USDC_ADDRESS: string;
+  USDC_NAME: string;
+}
+
 /**
  * Get chain configuration including contract addresses
- * @param {string} network - Network ID (eip155:10 or eip155:11155420)
- * @returns {{chain: import("viem/chains").Chain, GENIMG_V4_ADDRESS: string|null, LLMV1_ADDRESS: string|null, SPLITTER_ADDRESS: string|null, USDC_ADDRESS: string, USDC_NAME: string}} Chain config with contract addresses
- * @throws {Error} If network is not supported
+ * @param network - Network ID (e.g. "eip155:10" or "eip155:11155420")
+ * @returns Chain config with contract addresses
+ * @throws If network is not supported
  */
-export function getChainConfig(network) {
+export function getChainConfig(network: string): ChainConfig {
   return {
     chain: getViemChain(network),
     GENIMG_V4_ADDRESS: tryGetGenAiNFTAddress(network),
@@ -35,8 +43,8 @@ export function getChainConfig(network) {
 
 /**
  * Get all supported networks
- * @returns {string[]} Array of supported network identifiers
+ * @returns Array of supported CAIP-2 network identifiers
  */
-export function getSupportedNetworks() {
+export function getSupportedNetworks(): string[] {
   return ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
 }

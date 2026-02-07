@@ -1,7 +1,7 @@
 /**
  * x402 v2 Facilitator - Settlement Logic
  * Uses centralized x402Facilitator instance
- * Includes post-settlement fee collection for non-whitelisted merchants
+ * Includes post-settlement fee collection
  */
 
 import { getFacilitator } from "./facilitator_instance.js";
@@ -18,7 +18,7 @@ export interface SettleResult {
   transaction?: string;
   network?: string;
   errorReason?: string;
-  /** Fee collection info (only for non-whitelisted merchants) */
+  /** Fee collection info (present when fee is configured) */
   fee?: {
     collected: boolean;
     txHash?: string;
@@ -28,14 +28,14 @@ export interface SettleResult {
 
 /**
  * Settle a payment by executing transferWithAuthorization on-chain.
- * If the recipient is not whitelisted (fee required), collect fee after successful settlement.
+ * If fee is configured, collect fee after successful settlement.
  */
 export async function settlePayment(
   paymentPayload: Record<string, unknown>,
   paymentRequirements: Record<string, unknown>,
 ): Promise<SettleResult> {
   try {
-    // First verify the payment (includes whitelist/fee allowance check)
+    // First verify the payment (includes fee allowance check)
     logger.info("Verifying payment before settlement");
     const verifyResult = await verifyPayment(paymentPayload, paymentRequirements);
 
@@ -82,7 +82,7 @@ export async function settlePayment(
       // Post-settlement fee collection
       logger.info(
         { recipient, network },
-        "Settlement succeeded, collecting fee from non-whitelisted merchant",
+        "Settlement succeeded, collecting fee",
       );
 
       const feeResult = await collectFee(recipient as Address, network);
@@ -114,7 +114,7 @@ export async function settlePayment(
       };
     }
 
-    // Whitelisted recipient — no fee needed
+    // No fee required (fee=0 or feeRequired not set)
     return {
       success: true,
       payer: verifyResult.payer,

@@ -120,57 +120,14 @@ describe("x402 /supported endpoint", () => {
     ]);
   });
 
-  test("includes recipient whitelist extension", () => {
+  test("includes facilitator_fee extension", () => {
     const capabilities = getSupportedCapabilities();
 
     expect(capabilities.extensions).toBeDefined();
     expect(capabilities.extensions.length).toBeGreaterThan(0);
 
-    const whitelistExtension = capabilities.extensions.find(
-      (e) => e.name === "recipient_whitelist",
-    );
-    expect(whitelistExtension).toBeDefined();
-    expect(whitelistExtension.description).toBeDefined();
-    expect(whitelistExtension.contracts).toBeDefined();
-  });
-
-  test("whitelist extension includes contracts for both mainnet and sepolia", () => {
-    const capabilities = getSupportedCapabilities();
-
-    const whitelistExtension = capabilities.extensions.find(
-      (e) => e.name === "recipient_whitelist",
-    );
-
-    // Mainnet contracts
-    expect(whitelistExtension.contracts["eip155:10"]).toBeDefined();
-    expect(Array.isArray(whitelistExtension.contracts["eip155:10"])).toBe(true);
-    expect(whitelistExtension.contracts["eip155:10"].length).toBe(2);
-
-    // Sepolia also has contracts deployed
-    expect(whitelistExtension.contracts["eip155:11155420"]).toBeDefined();
-    expect(Array.isArray(whitelistExtension.contracts["eip155:11155420"])).toBe(true);
-    expect(whitelistExtension.contracts["eip155:11155420"].length).toBe(2);
-  });
-
-  test("whitelist extension includes GenImNFTv4 and LLMv1 contracts on mainnet", () => {
-    const capabilities = getSupportedCapabilities();
-
-    const whitelistExtension = capabilities.extensions.find(
-      (e) => e.name === "recipient_whitelist",
-    );
-
-    // Check Mainnet
-    const mainnetContracts = whitelistExtension.contracts["eip155:10"];
-    const genimgMainnet = mainnetContracts.find((c) => c.name === "GenImNFTv4");
-    const llmMainnet = mainnetContracts.find((c) => c.name === "LLMv1");
-
-    expect(genimgMainnet).toBeDefined();
-    expect(genimgMainnet.address).toBe("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb");
-    expect(genimgMainnet.method).toBe("isAuthorizedAgent(address)");
-
-    expect(llmMainnet).toBeDefined();
-    // LLMv1 on Optimism Mainnet
-    expect(llmMainnet.address).toBe("0x833F39D6e67390324796f861990ce9B7cf9F5dE1");
-    expect(llmMainnet.method).toBe("isAuthorizedAgent(address)");
+    const feeExtension = capabilities.extensions.find((e) => e.name === "facilitator_fee");
+    expect(feeExtension).toBeDefined();
+    expect(feeExtension.description).toBeDefined();
   });
 });

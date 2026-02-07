@@ -13,9 +13,8 @@ import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import pino from "pino";
-import { isAgentWhitelisted } from "./x402_whitelist.js";
-import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee.js";
-import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
+import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
+import { getChainConfig, getSupportedNetworks } from "./chain_utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -145,7 +144,7 @@ export function createFacilitator(
     facilitator.register(network, new ExactEvmScheme(signer));
   }
 
-  // Add whitelist + fee allowance check AFTER verification (dual auth model)
+  // Add fee allowance check AFTER verification
   facilitator.onAfterVerify(async ({ paymentPayload, result }) => {
     if (!result.isValid) {
       return;
@@ -161,25 +160,10 @@ export function createFacilitator(
       return;
     }
 
-    // Path 1: Whitelisted recipients pass without fee (backwards compatible)
-    const whitelistCheck = await isAgentWhitelisted(recipient, network);
-    if (whitelistCheck.isWhitelisted) {
-      logger.info(
-        { recipient, network, source: whitelistCheck.source },
-        "Recipient whitelist check passed (no fee required)",
-      );
-      (result as Record<string, unknown>).feeRequired = false;
-      return;
-    }
-
-    // Path 2: Non-whitelisted recipients must have sufficient fee allowance
+    // Check if fees are enabled
     const feeAmount = getFeeAmount();
     if (feeAmount === 0n) {
-      // Fees disabled — allow all recipients
-      logger.info(
-        { recipient, network },
-        "Fees disabled, allowing non-whitelisted recipient",
-      );
+      // Fees disabled — allow all recipients without fee
       (result as Record<string, unknown>).feeRequired = false;
       return;
     }
@@ -228,7 +212,7 @@ export function createFacilitator(
         network,
         remainingSettlements: allowanceInfo.remainingSettlements,
       },
-      "Non-whitelisted recipient approved via fee allowance",
+      "Recipient approved via fee allowance",
     );
     (result as Record<string, unknown>).feeRequired = true;
     (result as Record<string, unknown>).recipient = recipient;

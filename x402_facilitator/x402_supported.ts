@@ -3,21 +3,8 @@
  * Creates fresh read-only facilitator instance (no singleton caching)
  */
 
-import { createReadOnlyFacilitator } from "./facilitator_instance.js";
-import { getChainConfig, getSupportedNetworks } from "./chain_utils.js";
-import { getFeeAmount, getFacilitatorAddress } from "./x402_fee.js";
-
-interface ContractInfo {
-  name: string;
-  address: string;
-  method: string;
-}
-
-interface WhitelistExtension {
-  name: string;
-  description: string;
-  contracts: Record<string, ContractInfo[]>;
-}
+import { createReadOnlyFacilitator } from "./facilitator_instance";
+import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 
 interface FeeExtension {
   name: string;
@@ -45,7 +32,7 @@ interface SupportedCapabilities {
     network: string;
     extra?: Record<string, unknown>;
   }>;
-  extensions: Array<WhitelistExtension | FeeExtension | Record<string, unknown>>;
+  extensions: Array<FeeExtension | Record<string, unknown>>;
   signers: Record<string, string[]>;
 }
 
@@ -59,47 +46,8 @@ export function getSupportedCapabilities(): SupportedCapabilities {
   // Get base supported capabilities from facilitator
   const supported = facilitator.getSupported() as SupportedCapabilities;
 
-  // Add our custom extension information for all networks with smart contracts
-  const contracts: Record<string, ContractInfo[]> = {};
-
-  for (const network of getSupportedNetworks()) {
-    const config = getChainConfig(network);
-
-    // Only add networks that have smart contracts deployed
-    if (config.GENIMG_V4_ADDRESS || config.LLMV1_ADDRESS) {
-      const networkContracts: ContractInfo[] = [];
-
-      if (config.GENIMG_V4_ADDRESS) {
-        networkContracts.push({
-          name: "GenImNFTv4",
-          address: config.GENIMG_V4_ADDRESS,
-          method: "isAuthorizedAgent(address)",
-        });
-      }
-
-      if (config.LLMV1_ADDRESS) {
-        networkContracts.push({
-          name: "LLMv1",
-          address: config.LLMV1_ADDRESS,
-          method: "isAuthorizedAgent(address)",
-        });
-      }
-
-      if (networkContracts.length > 0) {
-        contracts[network] = networkContracts;
-      }
-    }
-  }
-
-  supported.extensions = [
-    ...(supported.extensions || []),
-    {
-      name: "recipient_whitelist",
-      description:
-        "Payment recipients must be authorized through smart contract whitelist. Clients can verify authorization by calling isAuthorizedAgent(address) on the contracts below.",
-      contracts,
-    },
-  ];
+  // Ensure extensions array exists
+  supported.extensions = supported.extensions || [];
 
   // Add fee extension for public access
   const feeAmount = getFeeAmount();
@@ -109,7 +57,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
     const feeExtension: FeeExtension = {
       name: "facilitator_fee",
       description:
-        "Public access with per-transaction fee. Non-whitelisted merchants must approve USDC spending for the facilitator address. Fee is collected post-settlement via ERC-20 transferFrom.",
+        "Per-transaction fee for facilitator operation. Merchants must approve USDC spending for the facilitator address. Fee is collected post-settlement via ERC-20 transferFrom.",
       fee: {
         amount: feeAmount.toString(),
         asset: "USDC",

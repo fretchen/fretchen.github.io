@@ -14,7 +14,7 @@ import { createPublicClient, createWalletClient, http, getContract } from "viem"
 import type { Address, Abi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
-import { getChainConfig } from "./chain_utils.js";
+import { getChainConfig } from "./chain_utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 

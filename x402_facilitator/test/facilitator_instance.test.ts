@@ -1,10 +1,9 @@
 /**
- * Tests for facilitator_instance dual authorization model (onAfterVerify hook)
+ * Tests for facilitator_instance onAfterVerify hook (fee model)
  *
- * The hook implements the core access control logic:
- * - Whitelisted recipients pass without fee (backwards compatible)
- * - Non-whitelisted recipients with sufficient USDC allowance pass (fee collected at settle)
- * - Non-whitelisted recipients without allowance are rejected
+ * The hook implements the fee access control logic:
+ * - Recipients with sufficient USDC allowance pass (fee collected at settle)
+ * - Recipients without sufficient allowance are rejected
  * - When fees are disabled (fee=0), all recipients pass
  *
  * We test the hook by capturing the callback registered via facilitator.onAfterVerify()
@@ -66,11 +65,7 @@ vi.mock("viem/accounts", () => ({
   })),
 }));
 
-// Mock whitelist and fee modules — these are the hook's dependencies
-vi.mock("../x402_whitelist.js", () => ({
-  isAgentWhitelisted: vi.fn(),
-}));
-
+// Mock fee module — the hook's dependency
 vi.mock("../x402_fee.js", () => ({
   checkMerchantAllowance: vi.fn(),
   getFeeAmount: vi.fn(),
@@ -78,7 +73,6 @@ vi.mock("../x402_fee.js", () => ({
 }));
 
 import { createFacilitator, resetFacilitator } from "../facilitator_instance.js";
-import { isAgentWhitelisted } from "../x402_whitelist.js";
 import {
   checkMerchantAllowance,
   getFeeAmount,
@@ -89,7 +83,7 @@ import {
 // Tests
 // ═══════════════════════════════════════════════════════════════
 
-describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
+describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
@@ -145,41 +139,15 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("invalid_signature");
-    expect(isAgentWhitelisted).not.toHaveBeenCalled();
     expect(checkMerchantAllowance).not.toHaveBeenCalled();
   });
 
   // ───────────────────────────────────────────────────────────
-  // Path 1: Whitelisted recipients
-  // ───────────────────────────────────────────────────────────
-
-  it("allows whitelisted recipients without fee", async () => {
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: true,
-      source: "manual_whitelist",
-    });
-
-    const args = hookArgs(
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
-      "eip155:11155420",
-    );
-    await hookHolder.current!(args);
-
-    expect(args.result.isValid).toBe(true);
-    expect(args.result.feeRequired).toBe(false);
-    // Should not check allowance for whitelisted recipients
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
-  });
-
-  // ───────────────────────────────────────────────────────────
-  // Path 2: Fees disabled
+  // Path 1: Fees disabled
   // ───────────────────────────────────────────────────────────
 
   it("allows all recipients when fee is 0 (fees disabled)", async () => {
     vi.mocked(getFeeAmount).mockReturnValue(0n);
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: false,
-    });
 
     const args = hookArgs(
       "0x1111111111111111111111111111111111111111",
@@ -193,13 +161,10 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // Path 3: Non-whitelisted with sufficient allowance
+  // Path 2: Sufficient fee allowance
   // ───────────────────────────────────────────────────────────
 
-  it("allows non-whitelisted recipient with sufficient fee allowance", async () => {
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: false,
-    });
+  it("allows recipient with sufficient fee allowance", async () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 100000n,
       remainingSettlements: 10,
@@ -222,13 +187,10 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // Path 4: Non-whitelisted with insufficient allowance
+  // Path 3: Insufficient fee allowance
   // ───────────────────────────────────────────────────────────
 
-  it("rejects non-whitelisted recipient without sufficient fee allowance", async () => {
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: false,
-    });
+  it("rejects recipient without sufficient fee allowance", async () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 5000n,
       remainingSettlements: 0,
@@ -250,10 +212,7 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
     );
   });
 
-  it("rejects non-whitelisted recipient with zero allowance", async () => {
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: false,
-    });
+  it("rejects recipient with zero allowance", async () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 0n,
       remainingSettlements: 0,
@@ -276,9 +235,6 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
   // ───────────────────────────────────────────────────────────
 
   it("rejects when facilitator address is not configured", async () => {
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: false,
-    });
     vi.mocked(getFacilitatorAddress).mockReturnValue(null);
 
     const args = hookArgs(
@@ -306,7 +262,6 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("invalid_payload");
-    expect(isAgentWhitelisted).not.toHaveBeenCalled();
   });
 
   it("rejects when recipient is missing from payload", async () => {
@@ -322,24 +277,5 @@ describe("facilitator_instance onAfterVerify hook (dual auth model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("invalid_payload");
-    expect(isAgentWhitelisted).not.toHaveBeenCalled();
-  });
-
-  it("checks whitelist before allowance (short-circuits)", async () => {
-    vi.mocked(isAgentWhitelisted).mockResolvedValue({
-      isWhitelisted: true,
-      source: "nft_genimg",
-    });
-
-    const args = hookArgs(
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
-      "eip155:10",
-    );
-    await hookHolder.current!(args);
-
-    // Whitelist passed — allowance check should be skipped entirely
-    expect(isAgentWhitelisted).toHaveBeenCalledTimes(1);
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
-    expect(args.result.feeRequired).toBe(false);
   });
 });

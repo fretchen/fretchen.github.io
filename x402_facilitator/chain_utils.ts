@@ -8,8 +8,6 @@
 import type { Chain } from "viem";
 import {
   getViemChain,
-  tryGetGenAiNFTAddress,
-  tryGetLLMv1Address,
   tryGetEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
@@ -17,8 +15,6 @@ import {
 
 export interface ChainConfig {
   chain: Chain;
-  GENIMG_V4_ADDRESS: string | null;
-  LLMV1_ADDRESS: string | null;
   SPLITTER_ADDRESS: string | null;
   USDC_ADDRESS: string;
   USDC_NAME: string;
@@ -33,8 +29,6 @@ export interface ChainConfig {
 export function getChainConfig(network: string): ChainConfig {
   return {
     chain: getViemChain(network),
-    GENIMG_V4_ADDRESS: tryGetGenAiNFTAddress(network),
-    LLMV1_ADDRESS: tryGetLLMv1Address(network),
     SPLITTER_ADDRESS: tryGetEIP3009SplitterAddress(network),
     USDC_ADDRESS: getUSDCAddress(network),
     USDC_NAME: getUSDCName(network),

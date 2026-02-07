@@ -40,9 +40,6 @@ describe("x402_settle", () => {
     // Set required environment variable
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    // Whitelist the test recipient addresses (valid one and different one for mismatch tests)
-    process.env.TEST_WALLETS =
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0xDifferentAddress000000000000000000000000";
   });
 
   afterEach(() => {
@@ -355,8 +352,6 @@ describe("x402_settle with mocked facilitator", () => {
   beforeEach(() => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    process.env.TEST_WALLETS =
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0xDifferentAddress000000000000000000000000";
     vi.clearAllMocks();
   });
 
@@ -512,7 +507,7 @@ describe("x402_settle with mocked facilitator", () => {
   // Fee collection tests
   // ═══════════════════════════════════════════════════════════
 
-  it("collects fee after settlement for non-whitelisted merchant", async () => {
+  it("collects fee after settlement when feeRequired is set", async () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({
         success: true,
@@ -579,7 +574,7 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee.error).toBe("insufficient_fee_allowance");
   });
 
-  it("does not collect fee for whitelisted merchant", async () => {
+  it("does not collect fee when feeRequired is not set", async () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({
         success: true,
@@ -587,7 +582,7 @@ describe("x402_settle with mocked facilitator", () => {
       }),
     };
 
-    // verifyPayment returns without feeRequired (whitelisted path)
+    // verifyPayment returns without feeRequired (no fee path)
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",

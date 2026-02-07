@@ -68,10 +68,7 @@ export async function settlePayment(
       };
     }
 
-    logger.info(
-      { hash: result.transaction, network: accepted?.network },
-      "Transaction confirmed",
-    );
+    logger.info({ hash: result.transaction, network: accepted?.network }, "Transaction confirmed");
 
     // Settlement succeeded — check if fee collection is needed
     const feeRequired = verifyResult.feeRequired;
@@ -80,10 +77,7 @@ export async function settlePayment(
 
     if (feeRequired && recipient && network) {
       // Post-settlement fee collection
-      logger.info(
-        { recipient, network },
-        "Settlement succeeded, collecting fee",
-      );
+      logger.info({ recipient, network }, "Settlement succeeded, collecting fee");
 
       const feeResult = await collectFee(recipient as Address, network);
 

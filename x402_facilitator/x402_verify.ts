@@ -91,10 +91,7 @@ export async function verifyPayment(
     };
   } catch (error) {
     const err = error as Error;
-    logger.error(
-      { err, message: err.message },
-      "Unexpected error during payment verification",
-    );
+    logger.error({ err, message: err.message }, "Unexpected error during payment verification");
     return {
       isValid: false,
       invalidReason: "unexpected_verify_error",

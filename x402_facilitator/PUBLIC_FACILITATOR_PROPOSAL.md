@@ -13,24 +13,26 @@
 
 All core facilitator modules have been migrated from JavaScript to TypeScript:
 
-| File | Status | Notes |
-|---|---|---|
-| `chain_utils.ts` | ✅ Complete | Exported `ChainConfig` interface, typed functions |
-| `x402_whitelist.ts` | ✅ Complete | Exported `WhitelistResult` interface, typed ABIs with `satisfies Abi` |
-| `facilitator_instance.ts` | ✅ Complete | Used `InstanceType<typeof x402Facilitator>` for return types |
-| `x402_verify.ts` | ✅ Complete | Exported `VerifyResult` interface |
-| `x402_supported.ts` | ✅ Complete | Exported `SupportedCapabilities` interface |
-| `x402_settle.ts` | ✅ Complete | Exported `SettleResult` interface |
-| `tsconfig.json` | ✅ Updated | Include expanded to `["*.ts", "test/**/*.ts"]` |
-| `eslint.config.js` | ✅ Updated | Added `typescript-eslint@latest` with recommended config |
-| `package.json` | ✅ Updated | Added `typescript-eslint` devDependency |
+| File                      | Status      | Notes                                                                 |
+| ------------------------- | ----------- | --------------------------------------------------------------------- |
+| `chain_utils.ts`          | ✅ Complete | Exported `ChainConfig` interface, typed functions                     |
+| `x402_whitelist.ts`       | ✅ Complete | Exported `WhitelistResult` interface, typed ABIs with `satisfies Abi` |
+| `facilitator_instance.ts` | ✅ Complete | Used `InstanceType<typeof x402Facilitator>` for return types          |
+| `x402_verify.ts`          | ✅ Complete | Exported `VerifyResult` interface                                     |
+| `x402_supported.ts`       | ✅ Complete | Exported `SupportedCapabilities` interface                            |
+| `x402_settle.ts`          | ✅ Complete | Exported `SettleResult` interface                                     |
+| `tsconfig.json`           | ✅ Updated  | Include expanded to `["*.ts", "test/**/*.ts"]`                        |
+| `eslint.config.js`        | ✅ Updated  | Added `typescript-eslint@latest` with recommended config              |
+| `package.json`            | ✅ Updated  | Added `typescript-eslint` devDependency                               |
 
 **Test Results:**
+
 - ✅ All 153 tests passing (9 test files, 2.93s duration)
 - ✅ Build successful (tsup 590ms, ESM bundles generated)
 - ✅ Linting passing (all errors resolved)
 
 **Notes:**
+
 - Old `.js` source files deleted (no duplication)
 - Test files remain `.test.js` (test migration deferred)
 - Splitter files (`x402_splitter_*.js`) migrated separately (out of scope)
@@ -42,22 +44,24 @@ All core facilitator modules have been migrated from JavaScript to TypeScript:
 
 All core fee collection logic implemented and integrated:
 
-| File | Status | Notes |
-|---|---|---|
-| `x402_fee.ts` | ✅ Complete | New module: `collectFee()`, `checkMerchantAllowance()`, `getFeeAmount()`, `getFacilitatorAddress()` |
-| `facilitator_instance.ts` | ✅ Complete | Dual auth model: whitelist OR fee-approved (backwards compatible) |
-| `x402_settle.ts` | ✅ Complete | Post-settlement fee collection (settlement-first design) |
-| `x402_verify.ts` | ✅ Complete | Fee status passthrough (`feeRequired` field) |
-| `x402_supported.ts` | ✅ Complete | Fee discovery via `facilitator_fee` extension in `/supported` response |
-| `x402_facilitator.ts` | ✅ Complete | Fee info included in settle response |
-| `test/x402_fee.test.ts` | ✅ Complete | 24 test cases covering all fee functions |
+| File                      | Status      | Notes                                                                                               |
+| ------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| `x402_fee.ts`             | ✅ Complete | New module: `collectFee()`, `checkMerchantAllowance()`, `getFeeAmount()`, `getFacilitatorAddress()` |
+| `facilitator_instance.ts` | ✅ Complete | Dual auth model: whitelist OR fee-approved (backwards compatible)                                   |
+| `x402_settle.ts`          | ✅ Complete | Post-settlement fee collection (settlement-first design)                                            |
+| `x402_verify.ts`          | ✅ Complete | Fee status passthrough (`feeRequired` field)                                                        |
+| `x402_supported.ts`       | ✅ Complete | Fee discovery via `facilitator_fee` extension in `/supported` response                              |
+| `x402_facilitator.ts`     | ✅ Complete | Fee info included in settle response                                                                |
+| `test/x402_fee.test.ts`   | ✅ Complete | 24 test cases covering all fee functions                                                            |
 
 **Test Results:**
+
 - ✅ All 177 tests passing (10 test files, 5.82s duration)
 - ✅ Build successful (tsup 2277ms, ESM bundles generated)
 - ✅ Linting passing (0 errors)
 
 **Key Design Decisions Implemented:**
+
 - ERC-20 ABI defined locally in `x402_fee.ts` (minimal: `allowance` + `transferFrom` only)
 - Fee amount configurable via `FACILITATOR_FEE_AMOUNT` env var, default 10000n (0.01 USDC)
 - Facilitator address derived from `FACILITATOR_WALLET_PRIVATE_KEY`
@@ -106,20 +110,20 @@ The facilitator is currently a **mixed JS/TS** codebase. Only `x402_facilitator.
 
 **Phase 0 Migration Complete** — All core source files are now TypeScript:
 
-| File | Language | Status |
-|---|---|---|
-| `x402_facilitator.ts` | ✅ TS | Already migrated (entry point) |
-| `x402_settle.ts` | ✅ TS | **Migrated** (ready for fee collection) |
-| `x402_verify.ts` | ✅ TS | **Migrated** (ready for fee status passthrough) |
-| `x402_supported.ts` | ✅ TS | **Migrated** (ready for fee discovery) |
-| `facilitator_instance.ts` | ✅ TS | **Migrated** (ready for dual auth model) |
-| `x402_whitelist.ts` | ✅ TS | **Migrated** (unchanged logic, now typed) |
-| `chain_utils.ts` | ✅ TS | **Migrated** (ready for ERC-20 ABI types) |
-| `x402_splitter_*.js` | ❌ JS | Migrate separately (not in scope for this proposal) |
-| `test/*.test.js` | ❌ JS | Test migration deferred (tests pass importing TS modules) |
-| `eslint.config.js` | JS | Keep as JS (config file convention) |
-| `vitest.config.js` | JS | Keep as JS (config file convention) |
-| `tsup.config.js` | JS | Keep as JS (config file convention) |
+| File                      | Language | Status                                                    |
+| ------------------------- | -------- | --------------------------------------------------------- |
+| `x402_facilitator.ts`     | ✅ TS    | Already migrated (entry point)                            |
+| `x402_settle.ts`          | ✅ TS    | **Migrated** (ready for fee collection)                   |
+| `x402_verify.ts`          | ✅ TS    | **Migrated** (ready for fee status passthrough)           |
+| `x402_supported.ts`       | ✅ TS    | **Migrated** (ready for fee discovery)                    |
+| `facilitator_instance.ts` | ✅ TS    | **Migrated** (ready for dual auth model)                  |
+| `x402_whitelist.ts`       | ✅ TS    | **Migrated** (unchanged logic, now typed)                 |
+| `chain_utils.ts`          | ✅ TS    | **Migrated** (ready for ERC-20 ABI types)                 |
+| `x402_splitter_*.js`      | ❌ JS    | Migrate separately (not in scope for this proposal)       |
+| `test/*.test.js`          | ❌ JS    | Test migration deferred (tests pass importing TS modules) |
+| `eslint.config.js`        | JS       | Keep as JS (config file convention)                       |
+| `vitest.config.js`        | JS       | Keep as JS (config file convention)                       |
+| `tsup.config.js`          | JS       | Keep as JS (config file convention)                       |
 
 ### Tooling Changes Required
 
@@ -137,11 +141,11 @@ Following the 0xmeta.ai pattern (merged in [x402 #899](https://github.com/coinba
 
 ### Why This Approach (Not Splitter)
 
-| Approach | Status | Pros | Cons |
-|---|---|---|---|
-| **Post-settlement `transferFrom`** | ✅ Works today | No smart contract, standard ERC-20, accepted by x402 maintainers | Requires merchant trust, two txs per settlement |
-| **Atomic splitter** ([#937](https://github.com/coinbase/x402/issues/937)) | 🔄 Spec in progress | Trustless, atomic, on-chain enforcement | x402 spec not ready ([#1087](https://github.com/coinbase/x402/pull/1087) under review), needs client-side changes |
-| **Separate x402 tx** (PayAI model) | 🔄 Proposed | No spec changes | Credit/account relationship, pre-funding |
+| Approach                                                                  | Status              | Pros                                                             | Cons                                                                                                              |
+| ------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Post-settlement `transferFrom`**                                        | ✅ Works today      | No smart contract, standard ERC-20, accepted by x402 maintainers | Requires merchant trust, two txs per settlement                                                                   |
+| **Atomic splitter** ([#937](https://github.com/coinbase/x402/issues/937)) | 🔄 Spec in progress | Trustless, atomic, on-chain enforcement                          | x402 spec not ready ([#1087](https://github.com/coinbase/x402/pull/1087) under review), needs client-side changes |
+| **Separate x402 tx** (PayAI model)                                        | 🔄 Proposed         | No spec changes                                                  | Credit/account relationship, pre-funding                                                                          |
 
 The splitter approach (our own [#937](https://github.com/coinbase/x402/issues/937) proposal) is the long-term goal, but x402 hasn't standardized fee support yet. The `transferFrom` approach lets us launch now.
 
@@ -182,6 +186,7 @@ The splitter approach (our own [#937](https://github.com/coinbase/x402/issues/93
 ```
 
 **Key points:**
+
 - Client authorizes payment to **merchant's address** (not facilitator)
 - Settlement executes **first**: `transferWithAuthorization(client → merchant)`
 - Fee is collected **after** successful settlement: `transferFrom(merchant → facilitator)`
@@ -190,13 +195,13 @@ The splitter approach (our own [#937](https://github.com/coinbase/x402/issues/93
 
 ### Fee Structure
 
-| Parameter | Value | Notes |
-|---|---|---|
-| Fee amount | **0.01 USDC** (10,000 wei) | Configurable via `FACILITATOR_FEE_AMOUNT` env var |
-| Minimum approval | 0.01 USDC (1 settlement) | Merchant controls |
-| Recommended approval | 100 USDC (10,000 settlements) | Standard ERC-20 approve |
-| Fee recipient | Facilitator signer wallet | Same as `FACILITATOR_WALLET_PRIVATE_KEY` — simplifies gas management |
-| Fee timing | **Post-settlement** | Fee only collected after successful settlement |
+| Parameter            | Value                         | Notes                                                                |
+| -------------------- | ----------------------------- | -------------------------------------------------------------------- |
+| Fee amount           | **0.01 USDC** (10,000 wei)    | Configurable via `FACILITATOR_FEE_AMOUNT` env var                    |
+| Minimum approval     | 0.01 USDC (1 settlement)      | Merchant controls                                                    |
+| Recommended approval | 100 USDC (10,000 settlements) | Standard ERC-20 approve                                              |
+| Fee recipient        | Facilitator signer wallet     | Same as `FACILITATOR_WALLET_PRIVATE_KEY` — simplifies gas management |
+| Fee timing           | **Post-settlement**           | Fee only collected after successful settlement                       |
 
 ## Implementation Plan
 
@@ -207,6 +212,7 @@ The splitter approach (our own [#937](https://github.com/coinbase/x402/issues/93
 All core facilitator modules migrated from JavaScript to TypeScript with strict mode enabled.
 
 **Completed Tasks:**
+
 1. ✅ `chain_utils.js` → `chain_utils.ts` (exported `ChainConfig` interface)
 2. ✅ `x402_whitelist.js` → `x402_whitelist.ts` (exported `WhitelistResult` interface, typed ABIs)
 3. ✅ `facilitator_instance.js` → `facilitator_instance.ts` (typed facilitator instances)
@@ -218,6 +224,7 @@ All core facilitator modules migrated from JavaScript to TypeScript with strict 
 9. ✅ All 153 tests passing, build successful (590ms), linting clean
 
 **Notes:**
+
 - Used Viem types (`Address`, `Chain`, `Account`, `Abi`) throughout
 - Used x402 library types (`x402Facilitator`, `FacilitatorEvmSigner`, `ExactEvmScheme`)
 - All modules export typed interfaces for external consumption
@@ -245,12 +252,16 @@ export interface AllowanceInfo {
 }
 
 export function collectFee(merchantAddress: `0x${string}`, network: string): Promise<FeeResult>;
-export function checkMerchantAllowance(merchantAddress: `0x${string}`, network: string): Promise<AllowanceInfo>;
+export function checkMerchantAllowance(
+  merchantAddress: `0x${string}`,
+  network: string,
+): Promise<AllowanceInfo>;
 export function getFeeAmount(): bigint; // from FACILITATOR_FEE_AMOUNT env, default 10000n
 // Facilitator address derived from FACILITATOR_WALLET_PRIVATE_KEY
 ```
 
 **Responsibilities:**
+
 - Call `USDC.transferFrom(merchant, facilitator, feeAmount)` on the correct network
 - Check merchant's remaining allowance before verify (to give early feedback)
 - Return typed error messages for insufficient allowance
@@ -271,7 +282,7 @@ onAfterVerify():
           └── No  → ❌ Reject with "insufficient_fee_allowance"
 ```
 
-**Critical:** Fee collection happens at **settle time**, not verify time. Verify only checks that fee collection is *possible*.
+**Critical:** Fee collection happens at **settle time**, not verify time. Verify only checks that fee collection is _possible_.
 
 #### 1.3 Modify `x402_settle.ts` (Post-Settlement Fee Collection)
 
@@ -333,6 +344,7 @@ Add fee information to the response:
 #### 2.2 Merchant Setup Scripts (Documentation/Tools)
 
 Provide scripts or documentation for merchants:
+
 - `approve-facilitator.mjs` — One-time USDC approval script
 - `check-allowance.mjs` — Monitor remaining settlements
 
@@ -340,13 +352,13 @@ Provide scripts or documentation for merchants:
 
 #### 3.1 Test Plan
 
-| Test | Description | File |
-|---|---|---|
-| Fee collection unit tests | Mock USDC.transferFrom, test success/failure | `test/x402_fee.test.ts` |
-| Dual auth model tests | Whitelisted passes without fee, non-whitelisted requires fee | `test/facilitator_instance.test.ts` |
-| Settlement with fee tests | Settlement executes first, fee collected after success | `test/x402_settle.test.ts` |
-| E2E Sepolia test | Full flow with real USDC on Optimism Sepolia | Manual |
-| Supported endpoint tests | Fee info included in response | `test/x402_supported.test.ts` |
+| Test                      | Description                                                  | File                                |
+| ------------------------- | ------------------------------------------------------------ | ----------------------------------- |
+| Fee collection unit tests | Mock USDC.transferFrom, test success/failure                 | `test/x402_fee.test.ts`             |
+| Dual auth model tests     | Whitelisted passes without fee, non-whitelisted requires fee | `test/facilitator_instance.test.ts` |
+| Settlement with fee tests | Settlement executes first, fee collected after success       | `test/x402_settle.test.ts`          |
+| E2E Sepolia test          | Full flow with real USDC on Optimism Sepolia                 | Manual                              |
+| Supported endpoint tests  | Fee info included in response                                | `test/x402_supported.test.ts`       |
 
 #### 3.2 Deployment Steps
 
@@ -369,37 +381,37 @@ Once x402 [#937](https://github.com/coinbase/x402/issues/937) / [#1087](https://
 
 ### New Files (TypeScript)
 
-| File | Description | Status |
-|---|---|---|
-| `x402_fee.ts` | Fee collection logic with typed interfaces (transferFrom, allowance check) | ✅ Complete |
-| `test/x402_fee.test.ts` | Fee module tests (24 test cases) | ✅ Complete |
+| File                    | Description                                                                | Status      |
+| ----------------------- | -------------------------------------------------------------------------- | ----------- |
+| `x402_fee.ts`           | Fee collection logic with typed interfaces (transferFrom, allowance check) | ✅ Complete |
+| `test/x402_fee.test.ts` | Fee module tests (24 test cases)                                           | ✅ Complete |
 
 ### Modify Existing TypeScript Files (Phase 0 Complete)
 
-| File | Description | Migration Status | Fee Implementation Status |
-|---|---|---|---|
-| `facilitator_instance.ts` | Dual auth model: whitelist OR fee-approved | ✅ Migrated | ✅ Complete |
-| `x402_settle.ts` | Post-settlement fee collection | ✅ Migrated | ✅ Complete |
-| `x402_supported.ts` | Add fee info to /supported | ✅ Migrated | ✅ Complete |
-| `x402_verify.ts` | Pass fee status through to settle | ✅ Migrated | ✅ Complete |
-| `x402_whitelist.ts` | Type-safe whitelist (logic unchanged) | ✅ Migrated | ✅ No changes needed |
-| `chain_utils.ts` | ERC-20 ABI types | ✅ Migrated | ✅ No changes needed (ABI in x402_fee.ts) |
-| `test/x402_settle.test.ts` | Migrate tests + fee test cases | ✅ Tests pass (still `.js`) | 🔄 Pending migration |
-| `test/x402_verify.test.ts` | Migrate tests + fee test cases | ✅ Tests pass (still `.js`) | 🔄 Pending migration |
-| `test/x402_supported.test.ts` | Migrate tests + fee test cases | ✅ Tests pass (still `.js`) | 🔄 Pending migration |
-| `test/x402_whitelist.test.ts` | Migrate tests | ✅ Tests pass (still `.js`) | 🔄 Pending migration |
+| File                          | Description                                | Migration Status            | Fee Implementation Status                 |
+| ----------------------------- | ------------------------------------------ | --------------------------- | ----------------------------------------- |
+| `facilitator_instance.ts`     | Dual auth model: whitelist OR fee-approved | ✅ Migrated                 | ✅ Complete                               |
+| `x402_settle.ts`              | Post-settlement fee collection             | ✅ Migrated                 | ✅ Complete                               |
+| `x402_supported.ts`           | Add fee info to /supported                 | ✅ Migrated                 | ✅ Complete                               |
+| `x402_verify.ts`              | Pass fee status through to settle          | ✅ Migrated                 | ✅ Complete                               |
+| `x402_whitelist.ts`           | Type-safe whitelist (logic unchanged)      | ✅ Migrated                 | ✅ No changes needed                      |
+| `chain_utils.ts`              | ERC-20 ABI types                           | ✅ Migrated                 | ✅ No changes needed (ABI in x402_fee.ts) |
+| `test/x402_settle.test.ts`    | Migrate tests + fee test cases             | ✅ Tests pass (still `.js`) | 🔄 Pending migration                      |
+| `test/x402_verify.test.ts`    | Migrate tests + fee test cases             | ✅ Tests pass (still `.js`) | 🔄 Pending migration                      |
+| `test/x402_supported.test.ts` | Migrate tests + fee test cases             | ✅ Tests pass (still `.js`) | 🔄 Pending migration                      |
+| `test/x402_whitelist.test.ts` | Migrate tests                              | ✅ Tests pass (still `.js`) | 🔄 Pending migration                      |
 
 ### Modify Only (already TS or config)
 
-| File | Action | Description | Status |
-|---|---|---|---|
-| `x402_facilitator.ts` | **Update imports** | Change `.js` imports to `.ts` module references | ✅ Complete (Phase 0) |
-| `@fretchen/chain-utils` | **N/A** | ERC-20 ABI defined locally in `x402_fee.ts` instead | ✅ Not needed |
-| `tsconfig.json` | **Expand** | Include `test/**/*.ts` | ✅ Complete (Phase 0) |
-| `eslint.config.js` | **Add TS rules** | Add `typescript-eslint` parser for `.ts` files | ✅ Complete (Phase 0) |
-| `tsup.config.js` | **Update entries** | Change `.js` entry points to `.ts` | ✅ Complete (Phase 0) |
-| `package.json` | **Add deps** | `typescript`, `typescript-eslint` devDependencies | ✅ Complete (Phase 0) |
-| `README.md` | **Update** | Document public access, fee structure, TS migration | 🔄 Pending |
+| File                    | Action             | Description                                         | Status                |
+| ----------------------- | ------------------ | --------------------------------------------------- | --------------------- |
+| `x402_facilitator.ts`   | **Update imports** | Change `.js` imports to `.ts` module references     | ✅ Complete (Phase 0) |
+| `@fretchen/chain-utils` | **N/A**            | ERC-20 ABI defined locally in `x402_fee.ts` instead | ✅ Not needed         |
+| `tsconfig.json`         | **Expand**         | Include `test/**/*.ts`                              | ✅ Complete (Phase 0) |
+| `eslint.config.js`      | **Add TS rules**   | Add `typescript-eslint` parser for `.ts` files      | ✅ Complete (Phase 0) |
+| `tsup.config.js`        | **Update entries** | Change `.js` entry points to `.ts`                  | ✅ Complete (Phase 0) |
+| `package.json`          | **Add deps**       | `typescript`, `typescript-eslint` devDependencies   | ✅ Complete (Phase 0) |
+| `README.md`             | **Update**         | Document public access, fee structure, TS migration | 🔄 Pending            |
 
 ## Trust Model & Security Considerations
 
@@ -411,21 +423,21 @@ Once x402 [#937](https://github.com/coinbase/x402/issues/937) / [#1087](https://
 
 ### Merchant Controls
 
-| Control | Mechanism |
-|---|---|
-| Limit exposure | Approve only small amounts (e.g., 1 USDC = 100 settlements) |
-| Revoke anytime | `USDC.approve(facilitatorAddress, 0)` |
-| Monitor on-chain | All `transferFrom` calls are public on Etherscan/Basescan |
-| Stop using | Just stop sending settlements; allowance sits unused |
+| Control          | Mechanism                                                   |
+| ---------------- | ----------------------------------------------------------- |
+| Limit exposure   | Approve only small amounts (e.g., 1 USDC = 100 settlements) |
+| Revoke anytime   | `USDC.approve(facilitatorAddress, 0)`                       |
+| Monitor on-chain | All `transferFrom` calls are public on Etherscan/Basescan   |
+| Stop using       | Just stop sending settlements; allowance sits unused        |
 
 ### Risk Mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Facilitator drains full allowance | Merchant limits approval amount; all txs auditable on-chain |
-| Settlement succeeds but fee fails | Log for retry; merchant served their customer regardless. Flag merchant for re-approval if persistent |
-| Merchant revokes allowance mid-use | Verify checks allowance at verify time; if allowance = 0 at settle time, settlement still completes but fee is logged as failed |
-| Nonce conflicts on fee tx | Use nonce management similar to genimg_x402_token.js retry pattern |
+| Risk                                 | Mitigation                                                                                                                                    |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Facilitator drains full allowance    | Merchant limits approval amount; all txs auditable on-chain                                                                                   |
+| Settlement succeeds but fee fails    | Log for retry; merchant served their customer regardless. Flag merchant for re-approval if persistent                                         |
+| Merchant revokes allowance mid-use   | Verify checks allowance at verify time; if allowance = 0 at settle time, settlement still completes but fee is logged as failed               |
+| Nonce conflicts on fee tx            | Use nonce management similar to genimg_x402_token.js retry pattern                                                                            |
 | Free-riding (settlement without fee) | Post-settlement model means brief free-riding possible if allowance exhausted. Mitigated by verify-time allowance check and merchant flagging |
 
 ## Design Decisions
@@ -452,13 +464,13 @@ Once x402 [#937](https://github.com/coinbase/x402/issues/937) / [#1087](https://
 
 ## Estimated Timeline
 
-| Phase | Effort | Description | Status |
-|---|---|---|---|
-| Phase 0: TS migration | ~2 days | Migrate 6 source files to `.ts`, update tooling (tsconfig, eslint, tsup) | ✅ Complete (2026-02-06) |
-| Phase 1: Core fee logic | ~3-4 days | `x402_fee.ts`, modify settle + verify, tests | ✅ Complete (2026-02-07) |
-| Phase 2: Discovery & docs | ~2 days | Update /supported, merchant scripts, README | 🔄 Pending |
-| Phase 3: Testing | ~2-3 days | Sepolia E2E, edge cases, deployment | 🔄 Pending |
-| **Total** | **~1.5-2 weeks** | **Phase 0: 1 day actual** | |
+| Phase                     | Effort           | Description                                                              | Status                   |
+| ------------------------- | ---------------- | ------------------------------------------------------------------------ | ------------------------ |
+| Phase 0: TS migration     | ~2 days          | Migrate 6 source files to `.ts`, update tooling (tsconfig, eslint, tsup) | ✅ Complete (2026-02-06) |
+| Phase 1: Core fee logic   | ~3-4 days        | `x402_fee.ts`, modify settle + verify, tests                             | ✅ Complete (2026-02-07) |
+| Phase 2: Discovery & docs | ~2 days          | Update /supported, merchant scripts, README                              | 🔄 Pending               |
+| Phase 3: Testing          | ~2-3 days        | Sepolia E2E, edge cases, deployment                                      | 🔄 Pending               |
+| **Total**                 | **~1.5-2 weeks** | **Phase 0: 1 day actual**                                                |                          |
 
 ## References
 

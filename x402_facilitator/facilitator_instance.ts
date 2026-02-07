@@ -104,9 +104,7 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
  * Create the facilitator instance with multi-chain support.
  * Uses separate ExactEvmScheme per network (x402 best practice).
  */
-export function createFacilitator(
-  requirePrivateKey = true,
-): InstanceType<typeof x402Facilitator> {
+export function createFacilitator(requirePrivateKey = true): InstanceType<typeof x402Facilitator> {
   let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
   if (!privateKey) {
     if (requirePrivateKey) {
@@ -180,10 +178,7 @@ export function createFacilitator(
     }
 
     // Check merchant's USDC allowance for fee payment
-    const allowanceInfo = await checkMerchantAllowance(
-      recipient as `0x${string}`,
-      network,
-    );
+    const allowanceInfo = await checkMerchantAllowance(recipient as `0x${string}`, network);
 
     if (!allowanceInfo.sufficient) {
       logger.warn(
@@ -235,9 +230,7 @@ let facilitatorInstance: InstanceType<typeof x402Facilitator> | null = null;
 /**
  * Get or create the facilitator instance
  */
-export function getFacilitator(
-  requirePrivateKey = true,
-): InstanceType<typeof x402Facilitator> {
+export function getFacilitator(requirePrivateKey = true): InstanceType<typeof x402Facilitator> {
   if (!facilitatorInstance) {
     facilitatorInstance = createFacilitator(requirePrivateKey);
   }

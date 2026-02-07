@@ -73,11 +73,7 @@ vi.mock("../x402_fee.js", () => ({
 }));
 
 import { createFacilitator, resetFacilitator } from "../facilitator_instance.js";
-import {
-  checkMerchantAllowance,
-  getFeeAmount,
-  getFacilitatorAddress,
-} from "../x402_fee.js";
+import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "../x402_fee.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Tests
@@ -96,9 +92,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     // Default fee configuration
     vi.mocked(getFeeAmount).mockReturnValue(10000n);
-    vi.mocked(getFacilitatorAddress).mockReturnValue(
-      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    );
+    vi.mocked(getFacilitatorAddress).mockReturnValue("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
     // Create facilitator — this registers the onAfterVerify hook
     createFacilitator();
@@ -128,10 +122,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   it("skips processing when verification already failed", async () => {
-    const args = hookArgs(
-      "0x1111111111111111111111111111111111111111",
-      "eip155:11155420",
-    );
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     args.result.isValid = false;
     args.result.invalidReason = "invalid_signature";
 
@@ -149,10 +140,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   it("allows all recipients when fee is 0 (fees disabled)", async () => {
     vi.mocked(getFeeAmount).mockReturnValue(0n);
 
-    const args = hookArgs(
-      "0x1111111111111111111111111111111111111111",
-      "eip155:11155420",
-    );
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(true);
@@ -171,10 +159,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
       sufficient: true,
     });
 
-    const args = hookArgs(
-      "0x1111111111111111111111111111111111111111",
-      "eip155:11155420",
-    );
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(true);
@@ -197,19 +182,14 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
       sufficient: false,
     });
 
-    const args = hookArgs(
-      "0x1111111111111111111111111111111111111111",
-      "eip155:11155420",
-    );
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("insufficient_fee_allowance");
     expect(args.result.requiredAllowance).toBe("10000");
     expect(args.result.currentAllowance).toBe("5000");
-    expect(args.result.facilitatorAddress).toBe(
-      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    );
+    expect(args.result.facilitatorAddress).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
   });
 
   it("rejects recipient with zero allowance", async () => {
@@ -219,10 +199,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
       sufficient: false,
     });
 
-    const args = hookArgs(
-      "0x2222222222222222222222222222222222222222",
-      "eip155:10",
-    );
+    const args = hookArgs("0x2222222222222222222222222222222222222222", "eip155:10");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(false);
@@ -237,10 +214,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   it("rejects when facilitator address is not configured", async () => {
     vi.mocked(getFacilitatorAddress).mockReturnValue(null);
 
-    const args = hookArgs(
-      "0x1111111111111111111111111111111111111111",
-      "eip155:11155420",
-    );
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(false);

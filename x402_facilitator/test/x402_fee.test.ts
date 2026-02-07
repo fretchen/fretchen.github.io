@@ -36,8 +36,7 @@ vi.mock("viem/accounts", () => ({
 
 describe("x402_fee", () => {
   const originalEnv = { ...process.env };
-  const VALID_PRIVATE_KEY =
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  const VALID_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
   beforeEach(() => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY = VALID_PRIVATE_KEY;
@@ -287,9 +286,7 @@ describe("x402_fee", () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue({
         write: {
-          transferFrom: vi
-            .fn()
-            .mockRejectedValue(new Error("ERC20InsufficientAllowance")),
+          transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientAllowance")),
         },
       });
 
@@ -303,9 +300,7 @@ describe("x402_fee", () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue({
         write: {
-          transferFrom: vi
-            .fn()
-            .mockRejectedValue(new Error("ERC20InsufficientBalance")),
+          transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientBalance")),
         },
       });
 

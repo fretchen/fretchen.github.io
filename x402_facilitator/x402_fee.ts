@@ -187,10 +187,7 @@ export async function checkMerchantAllowance(
  * @param network - The CAIP-2 network identifier
  * @returns FeeResult with success status and optional tx hash
  */
-export async function collectFee(
-  merchantAddress: Address,
-  network: string,
-): Promise<FeeResult> {
+export async function collectFee(merchantAddress: Address, network: string): Promise<FeeResult> {
   const feeAmount = getFeeAmount();
 
   // No fee configured — skip silently
@@ -242,11 +239,7 @@ export async function collectFee(
       "Collecting fee via transferFrom",
     );
 
-    const txHash = await usdc.write.transferFrom([
-      merchantAddress,
-      account.address,
-      feeAmount,
-    ]);
+    const txHash = await usdc.write.transferFrom([merchantAddress, account.address, feeAmount]);
 
     // Wait for confirmation
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -271,15 +264,18 @@ export async function collectFee(
     }
   } catch (error) {
     const err = error as Error;
-    logger.error(
-      { err, merchant: merchantAddress, network },
-      "Fee collection failed",
-    );
+    logger.error({ err, merchant: merchantAddress, network }, "Fee collection failed");
 
     let errorReason = "fee_collection_failed";
-    if (err.message?.includes("insufficient allowance") || err.message?.includes("ERC20InsufficientAllowance")) {
+    if (
+      err.message?.includes("insufficient allowance") ||
+      err.message?.includes("ERC20InsufficientAllowance")
+    ) {
       errorReason = "insufficient_fee_allowance";
-    } else if (err.message?.includes("insufficient balance") || err.message?.includes("ERC20InsufficientBalance")) {
+    } else if (
+      err.message?.includes("insufficient balance") ||
+      err.message?.includes("ERC20InsufficientBalance")
+    ) {
       errorReason = "insufficient_merchant_balance";
     }
 

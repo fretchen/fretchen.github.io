@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  handleVerify,
-  handleSettle,
-  handleSupported,
-  handle,
-} from "../x402_facilitator.ts";
+import { handleVerify, handleSettle, handleSupported, handle } from "../x402_facilitator.ts";
 
 // Mock the dependencies
 vi.mock("../x402_verify.js", () => ({

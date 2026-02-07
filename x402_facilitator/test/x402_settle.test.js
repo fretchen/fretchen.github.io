@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { settlePayment } from "../x402_settle.js";
 import * as facilitatorInstance from "../facilitator_instance.js";
 import * as verifyModule from "../x402_verify.js";
+import * as feeModule from "../x402_fee.js";
 
 // Mock viem
 vi.mock("viem", async () => {
@@ -39,9 +40,6 @@ describe("x402_settle", () => {
     // Set required environment variable
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    // Whitelist the test recipient addresses (valid one and different one for mismatch tests)
-    process.env.TEST_WALLETS =
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0xDifferentAddress000000000000000000000000";
   });
 
   afterEach(() => {
@@ -354,8 +352,6 @@ describe("x402_settle with mocked facilitator", () => {
   beforeEach(() => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    process.env.TEST_WALLETS =
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0xDifferentAddress000000000000000000000000";
     vi.clearAllMocks();
   });
 
@@ -505,5 +501,127 @@ describe("x402_settle with mocked facilitator", () => {
 
     expect(result.success).toBe(false);
     expect(result.errorReason).toBe("settlement_failed");
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Fee collection tests
+  // ═══════════════════════════════════════════════════════════
+
+  it("collects fee after settlement when feeRequired is set", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xsettletxhash",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: true,
+      txHash: "0xfeetxhash123",
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.transaction).toBe("0xsettletxhash");
+    expect(result.fee).toBeDefined();
+    expect(result.fee.collected).toBe(true);
+    expect(result.fee.txHash).toBe("0xfeetxhash123");
+    expect(feeModule.collectFee).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:11155420",
+    );
+  });
+
+  it("settlement succeeds even when fee collection fails", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xsettletxhash",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: false,
+      error: "insufficient_fee_allowance",
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    // Settlement still succeeds — settlement-first design
+    expect(result.success).toBe(true);
+    expect(result.transaction).toBe("0xsettletxhash");
+    expect(result.fee).toBeDefined();
+    expect(result.fee.collected).toBe(false);
+    expect(result.fee.error).toBe("insufficient_fee_allowance");
+  });
+
+  it("does not collect fee when feeRequired is not set", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xsettletxhash",
+      }),
+    };
+
+    // verifyPayment returns without feeRequired (no fee path)
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.fee).toBeUndefined();
+    expect(collectFeeSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not collect fee when feeRequired but recipient is missing", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xsettletxhash",
+      }),
+    };
+
+    // feeRequired=true but no recipient — should skip fee collection
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.fee).toBeUndefined();
+    expect(collectFeeSpy).not.toHaveBeenCalled();
   });
 });

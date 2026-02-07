@@ -121,6 +121,10 @@ describe("x402 /supported endpoint", () => {
   });
 
   test("includes facilitator_fee extension", () => {
+    // Ensure a valid private key is set
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
     const capabilities = getSupportedCapabilities();
 
     expect(capabilities.extensions).toBeDefined();
@@ -129,5 +133,16 @@ describe("x402 /supported endpoint", () => {
     const feeExtension = capabilities.extensions.find((e) => e.name === "facilitator_fee");
     expect(feeExtension).toBeDefined();
     expect(feeExtension.description).toBeDefined();
+    expect(feeExtension.fee.recipient).toBeDefined();
+    expect(feeExtension.fee.recipient).not.toBeNull();
+    expect(feeExtension.setup.spender).not.toBeNull();
+  });
+
+  test("omits facilitator_fee extension when private key is missing", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    const capabilities = getSupportedCapabilities();
+
+    const feeExtension = capabilities.extensions.find((e) => e.name === "facilitator_fee");
+    expect(feeExtension).toBeUndefined();
   });
 });

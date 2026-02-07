@@ -3,6 +3,7 @@
  * Creates fresh read-only facilitator instance (no singleton caching)
  */
 
+import { formatUnits } from "viem";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
 import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 
@@ -53,7 +54,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
   const feeAmount = getFeeAmount();
   const facilitatorAddress = getFacilitatorAddress();
 
-  if (feeAmount > 0n) {
+  if (feeAmount > 0n && facilitatorAddress) {
     const feeExtension: FeeExtension = {
       name: "facilitator_fee",
       description:
@@ -62,7 +63,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
         amount: feeAmount.toString(),
         asset: "USDC",
         decimals: 6,
-        description: `${Number(feeAmount) / 1_000_000} USDC per settlement`,
+        description: `${formatUnits(feeAmount, 6)} USDC per settlement`,
         collection: "post_settlement_transferFrom",
         recipient: facilitatorAddress,
       },

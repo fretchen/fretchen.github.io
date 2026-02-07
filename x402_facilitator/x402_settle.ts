@@ -4,9 +4,9 @@
  * Includes post-settlement fee collection
  */
 
-import { getFacilitator } from "./facilitator_instance.js";
-import { verifyPayment } from "./x402_verify.js";
-import { collectFee } from "./x402_fee.js";
+import { getFacilitator } from "./facilitator_instance";
+import { verifyPayment } from "./x402_verify";
+import { collectFee } from "./x402_fee";
 import type { Address } from "viem";
 import pino from "pino";
 

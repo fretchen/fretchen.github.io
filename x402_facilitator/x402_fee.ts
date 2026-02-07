@@ -76,12 +76,17 @@ const DEFAULT_FEE_AMOUNT = 10000n;
 export function getFeeAmount(): bigint {
   const envFee = process.env.FACILITATOR_FEE_AMOUNT;
   if (envFee) {
-    const parsed = BigInt(envFee);
-    if (parsed < 0n) {
-      logger.warn({ envFee }, "Invalid FACILITATOR_FEE_AMOUNT (negative), using default");
+    try {
+      const parsed = BigInt(envFee);
+      if (parsed < 0n) {
+        logger.warn({ envFee }, "Invalid FACILITATOR_FEE_AMOUNT (negative), using default");
+        return DEFAULT_FEE_AMOUNT;
+      }
+      return parsed;
+    } catch {
+      logger.warn({ envFee }, "Invalid FACILITATOR_FEE_AMOUNT (not a valid integer), using default");
       return DEFAULT_FEE_AMOUNT;
     }
-    return parsed;
   }
   return DEFAULT_FEE_AMOUNT;
 }
@@ -169,9 +174,10 @@ export async function checkMerchantAllowance(
       { err: error, merchant: merchantAddress, network },
       "Error checking merchant allowance",
     );
-    // On error, we fail open — don't block the payment over a read failure
-    // The actual fee collection will fail later if there's truly no allowance
-    return { allowance: 0n, remainingSettlements: 0, sufficient: false };
+    // Fail open on RPC/read errors — don't block otherwise-valid payments.
+    // If there's truly no allowance, fee collection will fail gracefully
+    // at settle time (settlement still succeeds, fee flagged for retry).
+    return { allowance: 0n, remainingSettlements: 0, sufficient: true };
   }
 }
 

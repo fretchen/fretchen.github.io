@@ -30,7 +30,7 @@
     "eslint": "^9.38.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-vitest": "^0.5.4",
-    "fastify": "^5.7.3",
+    "fastify": "^5.7.4",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.4.16",
     "tsup": "^8.5.1",

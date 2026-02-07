@@ -17,10 +17,6 @@ describe("x402 Verify", () => {
     // Set facilitator private key for tests (Hardhat test account #0)
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-
-    // Whitelist multiple addresses: the valid recipient and a different one for mismatch tests
-    process.env.TEST_WALLETS =
-      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C,0x0000000000000000000000000000000000000000";
   });
 
   afterEach(() => {
@@ -78,9 +74,9 @@ describe("x402 Verify", () => {
     },
   };
 
-  test("validates signature before checking whitelist", async () => {
+  test("validates signature before custom hooks run", async () => {
     // This test demonstrates that x402 v2 validates signatures BEFORE custom hooks run
-    // The unauthorized recipient will be caught by invalid signature, not whitelist
+    // The unauthorized recipient will be caught by invalid signature, not hooks
     const unauthorizedRecipient = "0x1111111111111111111111111111111111111111";
     const payload = {
       ...validPaymentPayload,

@@ -129,7 +129,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     let usdcAddress;
     try {
       usdcAddress = getUSDCAddress(network);
-    } catch (_error) {
+    } catch {
       logger.warn({ network }, "Unsupported network");
       return { isValid: false, invalidReason: "unsupported_network" };
     }
@@ -148,7 +148,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
     let splitterAddress;
     try {
       splitterAddress = getEIP3009SplitterAddress(network);
-    } catch (_error) {
+    } catch {
       logger.warn({ network }, "Splitter not deployed on network");
       return { isValid: false, invalidReason: "unsupported_network" };
     }

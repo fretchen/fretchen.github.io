@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
 export default [
   // Ignore patterns first
@@ -8,6 +9,7 @@ export default [
 
   // Base recommended configuration
   js.configs.recommended,
+  ...tseslint.configs.recommended,
 
   // Custom configuration for all JS files
   {
@@ -66,7 +68,7 @@ export default [
 
   // Test files configuration
   {
-    files: ["test/**/*.js", "**/*.test.js"],
+    files: ["test/**/*.js", "**/*.test.js", "test/**/*.ts", "**/*.test.ts"],
     languageOptions: {
       globals: {
         describe: "readonly",
@@ -81,6 +83,29 @@ export default [
     },
     rules: {
       "no-unused-expressions": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+
+  // TypeScript-specific configuration
+  {
+    files: ["**/*.ts"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: "./tsconfig.json",
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ];

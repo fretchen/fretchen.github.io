@@ -114,17 +114,6 @@ describe("EIP-712 Reference Tests", () => {
 
   test("Type encoding is deterministic", () => {
     // Test dass die Type-Kodierung deterministisch ist
-    const _types = {
-      TransferWithAuthorization: [
-        { name: "from", type: "address" },
-        { name: "to", type: "address" },
-        { name: "value", type: "uint256" },
-        { name: "validAfter", type: "uint256" },
-        { name: "validBefore", type: "uint256" },
-        { name: "nonce", type: "bytes32" },
-      ],
-    };
-
     // Encode den Type manuell (wie EIP-712 spec)
     const typeString =
       "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)";

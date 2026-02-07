@@ -3,9 +3,9 @@
  * Handles POST /verify and POST /settle endpoints
  */
 
-import { verifyPayment } from "./x402_verify.js";
-import { settlePayment } from "./x402_settle.js";
-import { getSupportedCapabilities } from "./x402_supported.js";
+import { verifyPayment } from "./x402_verify";
+import { settlePayment } from "./x402_settle";
+import { getSupportedCapabilities } from "./x402_supported";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -193,15 +193,19 @@ async function handlePaymentRequest(
           { payer: result.payer, transaction: result.transaction },
           "Settlement successful",
         );
+        const responseBody: Record<string, unknown> = {
+          success: true,
+          payer: result.payer,
+          transaction: result.transaction,
+          network: result.network,
+        };
+        if (result.fee) {
+          responseBody.fee = result.fee;
+        }
         return {
           statusCode: 200,
           headers: CORS_HEADERS,
-          body: JSON.stringify({
-            success: true,
-            payer: result.payer,
-            transaction: result.transaction,
-            network: result.network,
-          }),
+          body: JSON.stringify(responseBody),
         };
       } else {
         logger.warn(

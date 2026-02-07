@@ -50,6 +50,7 @@
     "serverless-scaleway-functions": ">=0.4.16",
     "tsup": "^8.3.5",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0",
     "vitest": "^4.0.16"
   },
   "engines": {

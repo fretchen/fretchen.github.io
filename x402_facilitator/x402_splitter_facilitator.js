@@ -27,7 +27,7 @@ const CORS_HEADERS = {
 /**
  * Handle /verify endpoint - off-chain verification
  */
-export async function handleVerify(event, _context) {
+export async function handleVerify(event) {
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -131,7 +131,7 @@ export async function handleVerify(event, _context) {
 /**
  * Handle /settle endpoint - on-chain execution
  */
-export async function handleSettle(event, _context) {
+export async function handleSettle(event) {
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -248,7 +248,7 @@ export async function handleSettle(event, _context) {
 /**
  * Handle /supported endpoint - capability discovery
  */
-export async function handleSupported(event, _context) {
+export async function handleSupported(event) {
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {

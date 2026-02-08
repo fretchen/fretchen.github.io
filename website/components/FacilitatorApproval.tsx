@@ -34,9 +34,8 @@ const USDC_DECIMALS = 6;
 
 // Preset approval amounts
 const PRESETS = [
+  { label: "1 USDC", value: "1" },
   { label: "10 USDC", value: "10" },
-  { label: "100 USDC", value: "100" },
-  { label: "1,000 USDC", value: "1000" },
 ];
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -246,7 +245,7 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
         </div>
         {facilitatorAddress && (
           <div>
-            <p className={label}>Facilitator address (Optimism)</p>
+            <p className={label}>Facilitator address</p>
             <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "#374151" })}>
               {facilitatorAddress}
             </p>

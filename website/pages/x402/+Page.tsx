@@ -294,16 +294,19 @@ export default function Page() {
 
         <ul className={valuePropList}>
           <li>
+            <strong>Only Optimism facilitator</strong> in the x402 ecosystem — if you sell on Optimism, this is your facilitator
+          </li>
+          <li>
             <strong>0.01 USDC flat fee</strong> per settlement — no percentage, no minimums
           </li>
           <li>
-            <strong>Optimism + Base</strong>, mainnet and testnet — 4 networks ready
+            <strong>Community-first experiment</strong> — can we make a sustainable, independent facilitator work? Join us and find out
           </li>
           <li>
             <strong>Open source</strong>, self-hostable, no vendor lock-in
           </li>
           <li>
-            <strong>EIP-3009</strong> — buyers pay no gas, you receive USDC directly
+            <strong>Other chains on request</strong> — Base support is ready, more can be added if there is interest
           </li>
         </ul>
 

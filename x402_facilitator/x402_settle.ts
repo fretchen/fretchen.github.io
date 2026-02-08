@@ -118,7 +118,7 @@ export async function settlePayment(
           info: {
             version: "1",
             facilitatorFeePaid: feeResult.success ? feeAmountStr : "0",
-            asset: chainConfig.USDC_ADDRESS,
+            asset: `${network}/erc20:${chainConfig.USDC_ADDRESS}`,
             model: "flat",
           },
         },

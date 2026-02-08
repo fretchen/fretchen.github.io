@@ -229,7 +229,7 @@ export async function settleSplitterPayment(paymentPayload, paymentRequirements)
             info: {
               version: "1",
               facilitatorFeePaid: FIXED_FEE,
-              asset: usdcAddress,
+              asset: `${network}/erc20:${usdcAddress}`,
               model: "flat",
             },
           },

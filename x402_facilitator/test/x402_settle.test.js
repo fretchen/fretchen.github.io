@@ -350,9 +350,11 @@ describe("x402_settle with mocked facilitator", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    vi.clearAllMocks();
+    // Pin fee amount for deterministic assertions on facilitatorFeePaid
+    vi.spyOn(feeModule, "getFeeAmount").mockReturnValue(10000n);
   });
 
   afterEach(() => {
@@ -541,7 +543,10 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.extensions.facilitatorFees).toBeDefined();
     expect(result.extensions.facilitatorFees.info.version).toBe("1");
     expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
-    expect(result.extensions.facilitatorFees.info.asset).toBeDefined();
+    // Asset uses CAIP-19 format: {network}/erc20:{address}
+    expect(result.extensions.facilitatorFees.info.asset).toBe(
+      "eip155:11155420/erc20:0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+    );
     expect(result.extensions.facilitatorFees.info.model).toBe("flat");
     expect(feeModule.collectFee).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",

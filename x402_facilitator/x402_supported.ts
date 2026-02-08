@@ -6,7 +6,6 @@
 import { formatUnits } from "viem";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
 import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
-import { getSupportedNetworks } from "./chain_utils";
 
 /** Facilitator fee model disclosure per x402 Fee Disclosure proposal (coinbase/x402#1016) */
 interface FacilitatorFeesExtension {
@@ -91,6 +90,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
 
     // Add facilitatorFees extension per x402 Fee Disclosure proposal (#1016)
     // Static fee model disclosure for fee-aware multi-facilitator routing
+    // Derive networks from supported.kinds to stay consistent with the response
     const facilitatorFeesExtension: FacilitatorFeesExtension = {
       name: "facilitatorFees",
       version: "1",
@@ -98,7 +98,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       asset: "USDC",
       flatFee: feeAmount.toString(),
       decimals: 6,
-      networks: getSupportedNetworks(),
+      networks: [...new Set(supported.kinds.map((k) => k.network))],
     };
     supported.extensions.push(facilitatorFeesExtension);
   }

@@ -15,6 +15,7 @@ import { getSplitterCapabilities } from "../x402_splitter_supported.js";
 
 describe("x402 Splitter /supported endpoint", () => {
   const originalEnv = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+  const originalFixedFee = process.env.FIXED_FEE;
 
   afterEach(() => {
     // Restore original env
@@ -22,6 +23,11 @@ describe("x402 Splitter /supported endpoint", () => {
       process.env.FACILITATOR_WALLET_PRIVATE_KEY = originalEnv;
     } else {
       delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    }
+    if (originalFixedFee) {
+      process.env.FIXED_FEE = originalFixedFee;
+    } else {
+      delete process.env.FIXED_FEE;
     }
   });
 
@@ -121,6 +127,8 @@ describe("x402 Splitter /supported endpoint", () => {
   });
 
   test("extensions includes facilitatorFees for fee-aware routing (#1016)", () => {
+    // FIXED_FEE is read at module-load time as a top-level const (default "10000").
+    // This assertion relies on that default; afterEach restores FIXED_FEE to prevent leaks.
     const capabilities = getSplitterCapabilities();
 
     expect(capabilities.extensions.length).toBeGreaterThan(0);

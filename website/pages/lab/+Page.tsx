@@ -14,7 +14,7 @@ const LabPage: React.FC = () => {
 
       <Card
         title="AI Image Generator"
-        description="Create AI-generated images and receive them as NFTs. 10¢ per image, paid with USDC."
+        description="Create AI-generated images and receive them as NFTs. 7¢ per image, paid with USDC."
         link="/imagegen"
       />
 

@@ -219,7 +219,12 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress, showTestn
 
   // Write approve
   const { writeContract, isPending: isApproving, data: txHash } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+  // Track the chain where the tx was sent so receipt polling stays on the correct chain
+  const [txChainId, setTxChainId] = useState<number | undefined>(undefined);
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
+    chainId: txChainId,
+  });
 
   // Refetch allowance after successful approval
   useEffect(() => {
@@ -240,6 +245,9 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress, showTestn
         return; // User rejected switch
       }
     }
+
+    // Record which chain the tx is sent on for receipt tracking
+    setTxChainId(targetChainId);
 
     writeContract({
       address: usdcConfig.address,

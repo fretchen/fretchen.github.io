@@ -676,7 +676,7 @@ app.post("/api/resource", async (req, res) => {
               <td>Optimism</td>
               <td>eip155:10</td>
               <td>
-                <code>0x0b2C…39C5</code>
+                <code>0x0b2C…Ff85</code>
               </td>
               <td>Production</td>
             </tr>
@@ -684,7 +684,7 @@ app.post("/api/resource", async (req, res) => {
               <td>Base</td>
               <td>eip155:8453</td>
               <td>
-                <code>0x833…89a6</code>
+                <code>0x8335…2913</code>
               </td>
               <td>Production</td>
             </tr>
@@ -692,7 +692,7 @@ app.post("/api/resource", async (req, res) => {
               <td>OP Sepolia</td>
               <td>eip155:11155420</td>
               <td>
-                <code>0x5fd…cE43</code>
+                <code>0x5fd8…30D7</code>
               </td>
               <td>Testnet</td>
             </tr>
@@ -700,7 +700,7 @@ app.post("/api/resource", async (req, res) => {
               <td>Base Sepolia</td>
               <td>eip155:84532</td>
               <td>
-                <code>0x03…6b31</code>
+                <code>0x036C…CF7e</code>
               </td>
               <td>Testnet</td>
             </tr>

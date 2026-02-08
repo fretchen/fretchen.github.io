@@ -13,7 +13,7 @@ export default function Head() {
   const pageSchema = {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    name: "x402 Payments & Facilitator",
+    name: "x402 Facilitator — Accept Crypto Payments",
     description,
     url,
     author: {
@@ -30,7 +30,7 @@ export default function Head() {
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "https://www.fretchen.eu" },
-    { name: "x402 Payments", url },
+    { name: "x402 Facilitator", url },
   ]);
 
   return (

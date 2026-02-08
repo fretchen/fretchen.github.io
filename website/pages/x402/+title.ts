@@ -1,3 +1,3 @@
 export function title() {
-  return "x402 Payments & Facilitator | fretchen.eu";
+  return "x402 Facilitator — Accept Crypto Payments | fretchen.eu";
 }

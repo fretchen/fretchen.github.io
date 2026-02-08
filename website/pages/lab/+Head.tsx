@@ -29,7 +29,7 @@ export default function Head() {
       },
       {
         "@type": "WebPage",
-        name: "AI Assistent",
+        name: "AI Assistant",
         url: "https://www.fretchen.eu/assistent",
       },
       {

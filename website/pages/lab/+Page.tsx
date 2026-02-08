@@ -19,7 +19,7 @@ const LabPage: React.FC = () => {
       />
 
       <Card
-        title="AI Assistent"
+        title="AI Assistant"
         description="Chat with an AI assistant. Pay per message with prepaid ETH on a smart contract."
         link="/assistent"
       />

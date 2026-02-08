@@ -144,9 +144,7 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
       })
       .then((json) => {
         // Extract facilitator address from fee extension
-        const feeExt = json.extensions?.find(
-          (ext: Record<string, unknown>) => ext.name === "facilitator_fee"
-        );
+        const feeExt = json.extensions?.find((ext: Record<string, unknown>) => ext.name === "facilitator_fee");
         const recipient = (feeExt as Record<string, Record<string, string>>)?.fee?.recipient;
         if (recipient) {
           setFacilitatorAddress(recipient as Address);
@@ -229,8 +227,7 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
     );
   }
 
-  const formattedAllowance =
-    allowance !== undefined ? formatUnits(allowance as bigint, USDC_DECIMALS) : "—";
+  const formattedAllowance = allowance !== undefined ? formatUnits(allowance as bigint, USDC_DECIMALS) : "—";
 
   const hasAllowance = allowance !== undefined && (allowance as bigint) > 0n;
 
@@ -246,9 +243,7 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
         {facilitatorAddress && (
           <div>
             <p className={label}>Facilitator address</p>
-            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "#374151" })}>
-              {facilitatorAddress}
-            </p>
+            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "#374151" })}>{facilitatorAddress}</p>
           </div>
         )}
       </div>

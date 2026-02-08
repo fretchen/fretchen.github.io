@@ -286,21 +286,22 @@ export default function Page() {
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}
 
         <p>
-          Accept crypto payments on your API or website with zero integration complexity.
-          This is an independent{" "}
-          <a href="https://github.com/coinbase/x402">x402</a> facilitator — it handles payment verification and
-          on-chain settlement so you don&apos;t have to. Status: <SupportedStatus />
+          Accept crypto payments on your API or website with zero integration complexity. This is an independent{" "}
+          <a href="https://github.com/coinbase/x402">x402</a> facilitator — it handles payment verification and on-chain
+          settlement so you don&apos;t have to. Status: <SupportedStatus />
         </p>
 
         <ul className={valuePropList}>
           <li>
-            <strong>Only Optimism facilitator</strong> in the x402 ecosystem — if you sell on Optimism, this is your facilitator
+            <strong>Only Optimism facilitator</strong> in the x402 ecosystem — if you sell on Optimism, this is your
+            facilitator
           </li>
           <li>
             <strong>0.01 USDC flat fee</strong> per settlement — no percentage, no minimums
           </li>
           <li>
-            <strong>Community-first experiment</strong> — can we make a sustainable, independent facilitator work? Join us and find out
+            <strong>Community-first experiment</strong> — can we make a sustainable, independent facilitator work? Join
+            us and find out
           </li>
           <li>
             <strong>Open source</strong>, self-hostable, no vendor lock-in
@@ -348,9 +349,8 @@ export default function Page() {
             <span className={stepNumber}>2</span> Approve the facilitator for fee collection
           </h3>
           <p>
-            The facilitator collects a 0.01 USDC fee per settlement via ERC-20 <code>transferFrom</code>.
-            You need a one-time USDC approval. Connect your seller wallet below to check your current approval
-            and set it:
+            The facilitator collects a 0.01 USDC fee per settlement via ERC-20 <code>transferFrom</code>. You need a
+            one-time USDC approval. Connect your seller wallet below to check your current approval and set it:
           </p>
           <FacilitatorApproval />
         </div>
@@ -398,8 +398,8 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <h2>Fee model</h2>
 
         <p>
-          The facilitator charges a <strong>flat 0.01 USDC per settlement</strong>, collected post-settlement
-          via ERC-20 <code>transferFrom</code>. There is no percentage fee, no monthly minimum, no hidden costs.
+          The facilitator charges a <strong>flat 0.01 USDC per settlement</strong>, collected post-settlement via ERC-20{" "}
+          <code>transferFrom</code>. There is no percentage fee, no monthly minimum, no hidden costs.
         </p>
 
         <h3>Cost comparison</h3>
@@ -441,8 +441,8 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         </table>
 
         <p>
-          The flat-fee model is especially competitive for micropayments — exactly the range where traditional
-          payment processors are prohibitively expensive or unavailable.
+          The flat-fee model is especially competitive for micropayments — exactly the range where traditional payment
+          processors are prohibitively expensive or unavailable.
         </p>
 
         <MermaidDiagram definition={feeFlowDiagram} title="Fee Collection Flow" />
@@ -458,11 +458,9 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
 
         <p>
           <a href="https://github.com/coinbase/x402">x402</a> implements the long-dormant{" "}
-          <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">
-            HTTP 402 Payment Required
-          </a>{" "}
-          status code. A resource server (you) responds with payment requirements, the client signs a payment, and
-          the facilitator handles verification and on-chain settlement.
+          <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">HTTP 402 Payment Required</a>{" "}
+          status code. A resource server (you) responds with payment requirements, the client signs a payment, and the
+          facilitator handles verification and on-chain settlement.
         </p>
 
         <MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
@@ -497,8 +495,8 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <h3>POST /verify</h3>
         <div className={endpointBox}>
           <p>
-            Validates a signed payment off-chain. Checks signature validity, sufficient balance, correct recipient,
-            and expiration. Call this <strong>before</strong> delivering your resource.
+            Validates a signed payment off-chain. Checks signature validity, sufficient balance, correct recipient, and
+            expiration. Call this <strong>before</strong> delivering your resource.
           </p>
           <pre>
             <code>{`curl -X POST https://facilitator.fretchen.eu/verify \\
@@ -518,8 +516,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
   }'`}</code>
           </pre>
           <p>
-            Response: <code>{`{ "valid": true }`}</code> or{" "}
-            <code>{`{ "valid": false, "invalidReason": "..." }`}</code>
+            Response: <code>{`{ "valid": true }`}</code> or <code>{`{ "valid": false, "invalidReason": "..." }`}</code>
           </p>
         </div>
 
@@ -558,17 +555,17 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
             <code>{`curl https://facilitator.fretchen.eu/supported`}</code>
           </pre>
           <p>
-            Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code>{" "}
-            (fee configuration), and <code>signers</code> (facilitator addresses per network).
+            Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code> (fee
+            configuration), and <code>signers</code> (facilitator addresses per network).
           </p>
         </div>
 
         <h3>Payment scheme</h3>
         <p>
           The facilitator supports the <strong>exact</strong> scheme with ERC-20 tokens (USDC) via{" "}
-          <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>{" "}
-          <code>transferWithAuthorization</code>. The buyer signs an off-chain authorization — no gas required from
-          the buyer. The facilitator submits the transaction on-chain.
+          <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a> <code>transferWithAuthorization</code>. The
+          buyer signs an off-chain authorization — no gas required from the buyer. The facilitator submits the
+          transaction on-chain.
         </p>
 
         {/* ── 6. Full integration example ──────────────────────────────── */}
@@ -606,9 +603,7 @@ console.log("NFT:", result.tokenId);`}</code>
         </pre>
 
         <h3>Your server (resource server)</h3>
-        <p>
-          Full example of a Node.js endpoint protected by x402. Adapt the resource generation to your use case:
-        </p>
+        <p>Full example of a Node.js endpoint protected by x402. Adapt the resource generation to your use case:</p>
         <pre>
           <code>{`// Express / Node.js example
 app.post("/api/resource", async (req, res) => {
@@ -713,17 +708,15 @@ app.post("/api/resource", async (req, res) => {
         </table>
 
         <p>
-          All wallets that support WalletConnect work — MetaMask, Coinbase Wallet, Rainbow, and others.
-          Your customers need a small amount of USDC on any supported network.
+          All wallets that support WalletConnect work — MetaMask, Coinbase Wallet, Rainbow, and others. Your customers
+          need a small amount of USDC on any supported network.
         </p>
 
         {/* ── 8. For your customers ────────────────────────────────────── */}
 
         <h2>What your customers experience</h2>
 
-        <p>
-          When a user interacts with your x402-protected service, the payment flow is invisible and instant:
-        </p>
+        <p>When a user interacts with your x402-protected service, the payment flow is invisible and instant:</p>
         <ol>
           <li>They make a request — your server responds with the price.</li>
           <li>Their wallet asks them to sign a payment authorization — no funds leave yet.</li>
@@ -733,10 +726,9 @@ app.post("/api/resource", async (req, res) => {
         </ol>
 
         <p>
-          Each payment is individually signed via{" "}
-          <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>. The authorization is bound to a specific
-          amount, recipient, and expiration. The protocol never has blanket access to your customer&apos;s funds.
-          See the <a href="/imagegen">AI Image Generator</a> for a live example.
+          Each payment is individually signed via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>. The
+          authorization is bound to a specific amount, recipient, and expiration. The protocol never has blanket access
+          to your customer&apos;s funds. See the <a href="/imagegen">AI Image Generator</a> for a live example.
         </p>
 
         {/* ── 9. Links ─────────────────────────────────────────────────── */}

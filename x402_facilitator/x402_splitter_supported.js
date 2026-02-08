@@ -47,8 +47,22 @@ export function getSplitterCapabilities() {
   return {
     // x402 v2 spec: /supported endpoint returns "kinds" array
     kinds,
-    // x402 v2 spec: extensions array (empty for now - no whitelist)
-    extensions: [],
+    // x402 v2 spec: extensions array
+    extensions:
+      kinds.length > 0
+        ? [
+            {
+              name: "facilitatorFees",
+              version: "1",
+              model: "flat",
+              asset: "USDC",
+              flatFee: FIXED_FEE,
+              decimals: 6,
+              collection: "on_chain_split",
+              networks: kinds.map((k) => k.network),
+            },
+          ]
+        : [],
     // x402 v2 spec: signers map (empty - payments are signed by payers, not facilitator)
     signers: {},
   };

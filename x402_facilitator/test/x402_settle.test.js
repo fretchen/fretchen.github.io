@@ -350,9 +350,11 @@ describe("x402_settle with mocked facilitator", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0x1234567890123456789012345678901234567890123456789012345678901234";
-    vi.clearAllMocks();
+    // Pin fee amount for deterministic assertions on facilitatorFeePaid
+    vi.spyOn(feeModule, "getFeeAmount").mockReturnValue(10000n);
   });
 
   afterEach(() => {
@@ -536,6 +538,16 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeDefined();
     expect(result.fee.collected).toBe(true);
     expect(result.fee.txHash).toBe("0xfeetxhash123");
+    // Verify facilitatorFees extension (per x402 Fee Disclosure proposal #1016)
+    expect(result.extensions).toBeDefined();
+    expect(result.extensions.facilitatorFees).toBeDefined();
+    expect(result.extensions.facilitatorFees.info.version).toBe("1");
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    // Asset uses CAIP-19 format: {network}/erc20:{address}
+    expect(result.extensions.facilitatorFees.info.asset).toBe(
+      "eip155:11155420/erc20:0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+    );
+    expect(result.extensions.facilitatorFees.info.model).toBe("flat");
     expect(feeModule.collectFee).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:11155420",
@@ -572,6 +584,10 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeDefined();
     expect(result.fee.collected).toBe(false);
     expect(result.fee.error).toBe("insufficient_fee_allowance");
+    // Verify facilitatorFees extension shows 0 when fee collection failed
+    expect(result.extensions).toBeDefined();
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("0");
+    expect(result.extensions.facilitatorFees.info.model).toBe("flat");
   });
 
   it("does not collect fee when feeRequired is not set", async () => {

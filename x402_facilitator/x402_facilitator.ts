@@ -202,6 +202,9 @@ async function handlePaymentRequest(
         if (result.fee) {
           responseBody.fee = result.fee;
         }
+        if (result.extensions) {
+          responseBody.extensions = result.extensions;
+        }
         return {
           statusCode: 200,
           headers: CORS_HEADERS,

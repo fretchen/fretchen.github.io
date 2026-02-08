@@ -6,11 +6,20 @@
 
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
-import { collectFee } from "./x402_fee";
+import { collectFee, getFeeAmount } from "./x402_fee";
+import { getChainConfig } from "./chain_utils";
 import type { Address } from "viem";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
+
+/** Facilitator fee receipt per x402 Fee Disclosure proposal (coinbase/x402#1016) */
+export interface FacilitatorFeePaid {
+  version: string;
+  facilitatorFeePaid: string;
+  asset: string;
+  model: string;
+}
 
 export interface SettleResult {
   success: boolean;
@@ -23,6 +32,12 @@ export interface SettleResult {
     collected: boolean;
     txHash?: string;
     error?: string;
+  };
+  /** x402 v2 extensions (facilitatorFees receipt per #1016 proposal) */
+  extensions?: {
+    facilitatorFees?: {
+      info: FacilitatorFeePaid;
+    };
   };
 }
 
@@ -95,6 +110,20 @@ export async function settlePayment(
         );
       }
 
+      // Build facilitatorFees receipt (per x402 Fee Disclosure proposal #1016)
+      const feeAmountStr = getFeeAmount().toString();
+      const chainConfig = getChainConfig(network);
+      const facilitatorFeesExtension: SettleResult["extensions"] = {
+        facilitatorFees: {
+          info: {
+            version: "1",
+            facilitatorFeePaid: feeResult.success ? feeAmountStr : "0",
+            asset: `${network}/erc20:${chainConfig.USDC_ADDRESS}`,
+            model: "flat",
+          },
+        },
+      };
+
       return {
         success: true,
         payer: verifyResult.payer,
@@ -105,6 +134,7 @@ export async function settlePayment(
           txHash: feeResult.txHash,
           error: feeResult.error,
         },
+        extensions: facilitatorFeesExtension,
       };
     }
 

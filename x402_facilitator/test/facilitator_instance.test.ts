@@ -72,7 +72,7 @@ vi.mock("../x402_fee.js", () => ({
   getFacilitatorAddress: vi.fn(),
 }));
 
-import { createFacilitator, resetFacilitator } from "../facilitator_instance.js";
+import { createFacilitator, resetFacilitator, getFacilitator } from "../facilitator_instance.js";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "../x402_fee.js";
 
 // ═══════════════════════════════════════════════════════════════
@@ -251,5 +251,99 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("invalid_payload");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Private key validation & error paths
+// ═══════════════════════════════════════════════════════════════
+
+describe("createFacilitator — private key validation", () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    resetFacilitator();
+  });
+
+  it("throws when private key is missing and requirePrivateKey=true", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+    expect(() => createFacilitator(true)).toThrow(
+      "FACILITATOR_WALLET_PRIVATE_KEY not configured",
+    );
+  });
+
+  it("returns read-only facilitator when private key is missing and requirePrivateKey=false", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+    const facilitator = createFacilitator(false);
+    expect(facilitator).toBeDefined();
+    // Read-only facilitator was created (no throw)
+  });
+
+  it("throws when private key has invalid length and requirePrivateKey=true", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = "0xdeadbeef"; // too short
+
+    expect(() => createFacilitator(true)).toThrow(
+      "Invalid FACILITATOR_WALLET_PRIVATE_KEY: Expected 64 hex characters",
+    );
+  });
+
+  it("returns read-only facilitator when private key has invalid length and requirePrivateKey=false", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = "0xdeadbeef";
+
+    const facilitator = createFacilitator(false);
+    expect(facilitator).toBeDefined();
+    // Falls back to read-only (no throw)
+  });
+
+  it("normalizes private key without 0x prefix", () => {
+    // Valid 64-char hex without 0x prefix
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const facilitator = createFacilitator(true);
+    expect(facilitator).toBeDefined();
+  });
+
+  it("trims whitespace from private key", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "  0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80  ";
+
+    const facilitator = createFacilitator(true);
+    expect(facilitator).toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Singleton pattern
+// ═══════════════════════════════════════════════════════════════
+
+describe("getFacilitator — singleton", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    resetFacilitator();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    resetFacilitator();
+  });
+
+  it("returns the same instance on subsequent calls", () => {
+    const first = getFacilitator();
+    const second = getFacilitator();
+    expect(first).toBe(second);
+  });
+
+  it("creates new instance after resetFacilitator", () => {
+    const first = getFacilitator();
+    resetFacilitator();
+    const second = getFacilitator();
+    expect(first).not.toBe(second);
   });
 });

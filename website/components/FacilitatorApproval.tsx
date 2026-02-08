@@ -158,7 +158,10 @@ interface FacilitatorApprovalProps {
   showTestnets?: boolean;
 }
 
-export function FacilitatorApproval({ facilitatorAddress: propAddress, showTestnets = false }: FacilitatorApprovalProps) {
+export function FacilitatorApproval({
+  facilitatorAddress: propAddress,
+  showTestnets = false,
+}: FacilitatorApprovalProps) {
   const { address, isConnected, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const [facilitatorAddress, setFacilitatorAddress] = useState<Address | null>(propAddress ?? null);
@@ -309,9 +312,7 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress, showTestn
       {/* Allowance display */}
       <div className={statusRow}>
         <div>
-          <p className={label}>
-            Your current USDC approval on {usdcConfig.name}
-          </p>
+          <p className={label}>Your current USDC approval on {usdcConfig.name}</p>
           <p className={`${valueText} ${hasAllowance ? css({ color: "#166534" }) : css({ color: "#6b7280" })}`}>
             {isReadingAllowance ? "Loading…" : `${formattedAllowance} USDC`}
           </p>

@@ -304,7 +304,7 @@ describe("FacilitatorApproval", () => {
           expect.objectContaining({
             address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
             chainId: 10,
-          })
+          }),
         );
       });
     });
@@ -329,7 +329,7 @@ describe("FacilitatorApproval", () => {
           expect.objectContaining({
             address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
             chainId: 8453,
-          })
+          }),
         );
       });
     });
@@ -345,7 +345,7 @@ describe("FacilitatorApproval", () => {
           expect.objectContaining({
             functionName: "approve",
             args: expect.arrayContaining([expect.anything(), 0n]),
-          })
+          }),
         );
       });
     });
@@ -370,7 +370,7 @@ describe("FacilitatorApproval", () => {
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
           "https://facilitator.fretchen.eu/supported",
-          expect.objectContaining({ signal: expect.any(AbortSignal) })
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
         );
       });
     });

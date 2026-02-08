@@ -752,9 +752,6 @@ app.post("/api/resource", async (req, res) => {
           <li>
             <a href="/agent-onboarding">Agent onboarding</a> — build your own x402-protected service
           </li>
-          <li>
-            <a href="/blog/x402_facilitator_imagegen">Blog post</a> — detailed write-up on building the facilitator
-          </li>
         </ul>
       </div>
     </div>

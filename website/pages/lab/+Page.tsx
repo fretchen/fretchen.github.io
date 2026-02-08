@@ -25,8 +25,8 @@ const LabPage: React.FC = () => {
       />
 
       <Card
-        title="How Payments Work"
-        description="Technical documentation on the x402 payment protocol and the facilitator service powering these experiments."
+        title="x402 Facilitator"
+        description="Accept crypto payments on your API. Independent facilitator on Optimism and Base — 0.01 USDC flat fee, open source, quick start guide."
         link="/x402"
       />
 

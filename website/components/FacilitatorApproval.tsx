@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { formatUnits, parseUnits, type Address } from "viem";
-import { optimism } from "wagmi/chains";
 import { css } from "../styled-system/css";
+import { getUSDCConfig, fromCAIP2, type USDCConfig } from "@fretchen/chain-utils";
 
 // Minimal ERC-20 ABI for allowance + approve
-const ERC20_ABI = [
+export const ERC20_ABI = [
   {
     name: "allowance",
     type: "function",
@@ -28,15 +28,32 @@ const ERC20_ABI = [
   },
 ] as const;
 
-// USDC on Optimism
-const USDC_ADDRESS = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85" as const;
-const USDC_DECIMALS = 6;
+// Supported networks for approval
+export const APPROVAL_NETWORKS = [
+  { network: "eip155:10", label: "Optimism" },
+  { network: "eip155:8453", label: "Base" },
+] as const;
+
+export const APPROVAL_NETWORKS_WITH_TESTNETS = [
+  ...APPROVAL_NETWORKS,
+  { network: "eip155:11155420", label: "OP Sepolia" },
+  { network: "eip155:84532", label: "Base Sepolia" },
+] as const;
 
 // Preset approval amounts
 const PRESETS = [
   { label: "1 USDC", value: "1" },
   { label: "10 USDC", value: "10" },
 ];
+
+/** Resolve the USDC config for a CAIP-2 network string. Returns null if unsupported. */
+export function getNetworkUSDCConfig(network: string): USDCConfig | null {
+  try {
+    return getUSDCConfig(network);
+  } catch {
+    return null;
+  }
+}
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +120,15 @@ const activeButton = css({
   },
 });
 
+const selectedNetworkButton = css({
+  backgroundColor: "#1e293b",
+  color: "white",
+  borderColor: "#1e293b",
+  _hover: {
+    backgroundColor: "#334155",
+  },
+});
+
 const txStatus = css({
   fontSize: "sm",
   marginTop: "3",
@@ -117,17 +143,32 @@ const connectHint = css({
   padding: "12px",
 });
 
+const networkRow = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  flexWrap: "wrap",
+  marginBottom: "4",
+});
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 interface FacilitatorApprovalProps {
   facilitatorAddress?: Address | null;
+  showTestnets?: boolean;
 }
 
-export function FacilitatorApproval({ facilitatorAddress: propAddress }: FacilitatorApprovalProps) {
+export function FacilitatorApproval({ facilitatorAddress: propAddress, showTestnets = false }: FacilitatorApprovalProps) {
   const { address, isConnected, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const [facilitatorAddress, setFacilitatorAddress] = useState<Address | null>(propAddress ?? null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const networks = showTestnets ? APPROVAL_NETWORKS_WITH_TESTNETS : APPROVAL_NETWORKS;
+  const [selectedNetwork, setSelectedNetwork] = useState(networks[0].network);
+
+  const usdcConfig = getNetworkUSDCConfig(selectedNetwork);
+  const targetChainId = usdcConfig ? usdcConfig.chainId : fromCAIP2(selectedNetwork);
 
   // Fetch facilitator address from /supported if not provided via props
   useEffect(() => {
@@ -160,19 +201,19 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
     return () => controller.abort();
   }, [propAddress]);
 
-  // Read current allowance
+  // Read current allowance — uses the correct USDC address for the selected network
   const {
     data: allowance,
     isLoading: isReadingAllowance,
     refetch: refetchAllowance,
   } = useReadContract({
-    address: USDC_ADDRESS,
+    address: usdcConfig?.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
     args: address && facilitatorAddress ? [address, facilitatorAddress] : undefined,
-    chainId: optimism.id,
+    chainId: targetChainId,
     query: {
-      enabled: !!address && !!facilitatorAddress,
+      enabled: !!address && !!facilitatorAddress && !!usdcConfig,
     },
   });
 
@@ -189,23 +230,23 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
   }, [isSuccess, refetchAllowance]);
 
   const handleApprove = async (amount: string) => {
-    if (!facilitatorAddress || !address) return;
+    if (!facilitatorAddress || !address || !usdcConfig) return;
 
-    // Switch to Optimism if needed
-    if (chainId !== optimism.id) {
+    // Switch chain if needed
+    if (chainId !== targetChainId) {
       try {
-        await switchChainAsync({ chainId: optimism.id });
+        await switchChainAsync({ chainId: targetChainId });
       } catch {
         return; // User rejected switch
       }
     }
 
     writeContract({
-      address: USDC_ADDRESS,
+      address: usdcConfig.address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [facilitatorAddress, parseUnits(amount, USDC_DECIMALS)],
-      chainId: optimism.id,
+      args: [facilitatorAddress, parseUnits(amount, usdcConfig.decimals)],
+      chainId: targetChainId,
     });
   };
 
@@ -227,15 +268,42 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
     );
   }
 
-  const formattedAllowance = allowance !== undefined ? formatUnits(allowance as bigint, USDC_DECIMALS) : "—";
+  if (!usdcConfig) {
+    return (
+      <div className={container}>
+        <p className={label}>USDC is not available on the selected network.</p>
+      </div>
+    );
+  }
+
+  const formattedAllowance = allowance !== undefined ? formatUnits(allowance as bigint, usdcConfig.decimals) : "—";
 
   const hasAllowance = allowance !== undefined && (allowance as bigint) > 0n;
 
   return (
     <div className={container}>
+      {/* Network selector */}
+      <p className={label} style={{ marginBottom: "8px" }}>
+        Network:
+      </p>
+      <div className={networkRow}>
+        {networks.map((net) => (
+          <button
+            key={net.network}
+            className={`${presetButton} ${selectedNetwork === net.network ? selectedNetworkButton : ""}`}
+            onClick={() => setSelectedNetwork(net.network)}
+          >
+            {net.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Allowance display */}
       <div className={statusRow}>
         <div>
-          <p className={label}>Your current USDC approval for the facilitator</p>
+          <p className={label}>
+            Your current USDC approval on {usdcConfig.name}
+          </p>
           <p className={`${valueText} ${hasAllowance ? css({ color: "#166534" }) : css({ color: "#6b7280" })}`}>
             {isReadingAllowance ? "Loading…" : `${formattedAllowance} USDC`}
           </p>
@@ -248,6 +316,12 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
         )}
       </div>
 
+      {/* USDC contract info */}
+      <p className={css({ fontSize: "xs", color: "#9ca3af", marginBottom: "3" })}>
+        USDC on {usdcConfig.name}: <code>{usdcConfig.address}</code>
+      </p>
+
+      {/* Approve buttons */}
       <p className={label} style={{ marginBottom: "8px" }}>
         Approve USDC spending:
       </p>
@@ -255,7 +329,7 @@ export function FacilitatorApproval({ facilitatorAddress: propAddress }: Facilit
         {PRESETS.map((preset) => (
           <button
             key={preset.value}
-            className={`${presetButton} ${isApproving || isConfirming ? "" : ""}`}
+            className={presetButton}
             disabled={isApproving || isConfirming || !facilitatorAddress}
             onClick={() => handleApprove(preset.value)}
           >

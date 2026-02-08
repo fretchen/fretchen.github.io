@@ -207,6 +207,7 @@ export async function handleSettle(event) {
           payer: result.payer,
           transaction: result.transaction,
           network: result.network,
+          ...(result.extensions ? { extensions: result.extensions } : {}),
         }),
       };
     } else {

@@ -536,6 +536,13 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeDefined();
     expect(result.fee.collected).toBe(true);
     expect(result.fee.txHash).toBe("0xfeetxhash123");
+    // Verify facilitatorFees extension (per x402 Fee Disclosure proposal #1016)
+    expect(result.extensions).toBeDefined();
+    expect(result.extensions.facilitatorFees).toBeDefined();
+    expect(result.extensions.facilitatorFees.info.version).toBe("1");
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions.facilitatorFees.info.asset).toBeDefined();
+    expect(result.extensions.facilitatorFees.info.model).toBe("flat");
     expect(feeModule.collectFee).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:11155420",
@@ -572,6 +579,10 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeDefined();
     expect(result.fee.collected).toBe(false);
     expect(result.fee.error).toBe("insufficient_fee_allowance");
+    // Verify facilitatorFees extension shows 0 when fee collection failed
+    expect(result.extensions).toBeDefined();
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("0");
+    expect(result.extensions.facilitatorFees.info.model).toBe("flat");
   });
 
   it("does not collect fee when feeRequired is not set", async () => {

@@ -138,6 +138,25 @@ describe("x402 /supported endpoint", () => {
     expect(feeExtension.setup.spender).not.toBeNull();
   });
 
+  test("includes facilitatorFees extension for fee-aware routing (#1016)", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const capabilities = getSupportedCapabilities();
+
+    const feesExtension = capabilities.extensions.find((e) => e.name === "facilitatorFees");
+    expect(feesExtension).toBeDefined();
+    expect(feesExtension.version).toBe("1");
+    expect(feesExtension.model).toBe("flat");
+    expect(feesExtension.asset).toBe("USDC");
+    expect(feesExtension.flatFee).toBe("10000");
+    expect(feesExtension.decimals).toBe(6);
+    expect(feesExtension.networks).toContain("eip155:10");
+    expect(feesExtension.networks).toContain("eip155:8453");
+    expect(feesExtension.networks).toContain("eip155:11155420");
+    expect(feesExtension.networks).toContain("eip155:84532");
+  });
+
   test("omits facilitator_fee extension when private key is missing", () => {
     delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
     const capabilities = getSupportedCapabilities();

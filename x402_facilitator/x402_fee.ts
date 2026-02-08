@@ -84,7 +84,10 @@ export function getFeeAmount(): bigint {
       }
       return parsed;
     } catch {
-      logger.warn({ envFee }, "Invalid FACILITATOR_FEE_AMOUNT (not a valid integer), using default");
+      logger.warn(
+        { envFee },
+        "Invalid FACILITATOR_FEE_AMOUNT (not a valid integer), using default",
+      );
       return DEFAULT_FEE_AMOUNT;
     }
   }

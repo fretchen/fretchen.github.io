@@ -223,6 +223,43 @@ describe("x402_facilitator handlers", () => {
       expect(body.transaction).toBe("0xabc123");
     });
 
+    it("should include extensions in settle response when present", async () => {
+      settlePayment.mockResolvedValue({
+        success: true,
+        payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        transaction: "0xabc123",
+        network: "eip155:10",
+        fee: { collected: true, txHash: "0xfee123" },
+        extensions: {
+          facilitatorFees: {
+            info: {
+              version: "1",
+              facilitatorFeePaid: "10000",
+              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+              model: "flat",
+            },
+          },
+        },
+      });
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: { accepted: { network: "eip155:10" } },
+          paymentRequirements: { amount: "1000000" },
+        }),
+      };
+      const result = await handleSettle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.success).toBe(true);
+      expect(body.extensions).toBeDefined();
+      expect(body.extensions.facilitatorFees.info.version).toBe("1");
+      expect(body.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+      expect(body.extensions.facilitatorFees.info.model).toBe("flat");
+    });
+
     it("should return failed settlement with error reason", async () => {
       settlePayment.mockResolvedValue({
         success: false,

@@ -39,6 +39,7 @@ import { verifySplitterPayment } from "./x402_splitter_verify.js";
 // Alias for backward compatibility
 const SPLITTER_ABI = EIP3009SplitterV1ABI;
 const getSplitterAddress = getEIP3009SplitterAddress;
+const FIXED_FEE = process.env.FIXED_FEE || "10000"; // 0.01 USDC
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -222,6 +223,17 @@ export async function settleSplitterPayment(paymentPayload, paymentRequirements)
         payer: buyer,
         transaction: hash,
         network,
+        // x402 Fee Disclosure receipt (coinbase/x402#1016)
+        extensions: {
+          facilitatorFees: {
+            info: {
+              version: "1",
+              facilitatorFeePaid: FIXED_FEE,
+              asset: `${network}/erc20:${usdcAddress}`,
+              model: "flat",
+            },
+          },
+        },
       };
     } else {
       logger.warn({ hash, status: receipt.status }, "Transaction failed on-chain");

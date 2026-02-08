@@ -15,6 +15,7 @@ import { getSplitterCapabilities } from "../x402_splitter_supported.js";
 
 describe("x402 Splitter /supported endpoint", () => {
   const originalEnv = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+  const originalFixedFee = process.env.FIXED_FEE;
 
   afterEach(() => {
     // Restore original env
@@ -22,6 +23,11 @@ describe("x402 Splitter /supported endpoint", () => {
       process.env.FACILITATOR_WALLET_PRIVATE_KEY = originalEnv;
     } else {
       delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    }
+    if (originalFixedFee) {
+      process.env.FIXED_FEE = originalFixedFee;
+    } else {
+      delete process.env.FIXED_FEE;
     }
   });
 
@@ -120,10 +126,21 @@ describe("x402 Splitter /supported endpoint", () => {
     });
   });
 
-  test("extensions array is empty (no whitelist extension)", () => {
+  test("extensions includes facilitatorFees for fee-aware routing (#1016)", () => {
+    // FIXED_FEE is read at module-load time as a top-level const (default "10000").
+    // This assertion relies on that default; afterEach restores FIXED_FEE to prevent leaks.
     const capabilities = getSplitterCapabilities();
 
-    expect(capabilities.extensions).toEqual([]);
+    expect(capabilities.extensions.length).toBeGreaterThan(0);
+    const feesExtension = capabilities.extensions.find((e) => e.name === "facilitatorFees");
+    expect(feesExtension).toBeDefined();
+    expect(feesExtension.version).toBe("1");
+    expect(feesExtension.model).toBe("flat");
+    expect(feesExtension.asset).toBe("USDC");
+    expect(feesExtension.flatFee).toBe("10000");
+    expect(feesExtension.decimals).toBe(6);
+    expect(feesExtension.collection).toBe("on_chain_split");
+    expect(feesExtension.networks).toContain("eip155:11155420");
   });
 
   test("signers is empty (payments signed by payers, not facilitator)", () => {
@@ -134,10 +151,11 @@ describe("x402 Splitter /supported endpoint", () => {
     expect(capabilities.signers).toEqual({});
   });
 
-  test("returns empty extensions (no recipient whitelist)", () => {
+  test("returns facilitatorFees extension (no recipient whitelist)", () => {
     const capabilities = getSplitterCapabilities();
 
-    expect(capabilities.extensions).toEqual([]);
+    // Has facilitatorFees but no whitelist
+    expect(capabilities.extensions.length).toBeGreaterThan(0);
 
     // Explicitly verify no whitelist extension exists
     const whitelistExtension = capabilities.extensions.find(

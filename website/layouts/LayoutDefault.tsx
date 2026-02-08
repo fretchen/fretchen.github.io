@@ -59,10 +59,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
                 <Link href="/quantum">Quantum</Link>
               </div>
               <div className={layout.navigationLink}>
-                <Link href="/imagegen">ImageGen</Link>
-              </div>
-              <div className={layout.navigationLink}>
-                <Link href="/assistent">AI Assistent</Link>
+                <Link href="/lab">Lab</Link>
               </div>
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>

@@ -26,9 +26,9 @@ export default function Page() {
           <Card title="Blog" description="My thoughts on various topics." link="/blog" />
           <Card title="Quantum" description="Tutorials and notes on quantum, AMO and more." link="/quantum" />
           <Card
-            title="AI Image Generator"
-            description="Create your own images with AI and receive them as NFTs on the blockchain."
-            link="/imagegen"
+            title="Lab"
+            description="AI image generation, chat assistant, and blockchain-based payments — experiments running on Optimism and Base."
+            link="/lab"
           />
         </div>
       </section>

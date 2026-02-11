@@ -672,6 +672,59 @@ export const walletOptions = {
 
 // Post component styles
 export const post = {
+  // 3-column grid layout for posts with ToC sidebar
+  // Uses "full-bleed" pattern to break out of parent container padding
+  articleLayout: css({
+    display: "grid",
+    gridTemplateColumns: "1fr minmax(0, 720px) 250px",
+    gap: "2rem",
+
+    // "Break out" of parent containers to use full viewport width
+    width: "100vw",
+    position: "relative",
+    left: "50%",
+    marginLeft: "-50vw",
+
+    // Add padding to maintain visual margins
+    // Uses max() to ensure minimum 2rem padding, or center content at 1400px max
+    paddingLeft: "max(2rem, calc((100vw - 1400px) / 2))",
+    paddingRight: "max(2rem, calc((100vw - 1400px) / 2))",
+
+    // Tablet: Center content, hide ToC, return to normal layout
+    "@media (max-width: 1200px)": {
+      // Reset break-out
+      width: "100%",
+      position: "static",
+      left: "auto",
+      marginLeft: "0",
+      paddingLeft: "0",
+      paddingRight: "0",
+      // Single centered column
+      gridTemplateColumns: "1fr",
+      maxWidth: "720px",
+      margin: "0 auto",
+    },
+
+    // Mobile: Single column, tighter spacing
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "1fr",
+      gap: "0",
+    },
+  }),
+
+  // Main content area (center column)
+  articleContent: css({
+    minWidth: 0, // Prevents grid blowout with long content
+  }),
+
+  // ToC sidebar (right column)
+  articleSidebar: css({
+    // Hidden on smaller screens (ToC component handles its own hiding too)
+    "@media (max-width: 1200px)": {
+      display: "none",
+    },
+  }),
+
   publishingDate: css({
     color: "gray.600",
     fontSize: "sm",

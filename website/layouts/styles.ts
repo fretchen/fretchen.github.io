@@ -672,23 +672,20 @@ export const walletOptions = {
 
 // Post component styles
 export const post = {
-  // 3-column grid layout for posts with ToC sidebar
-  // Uses "full-bleed" pattern to break out of parent container padding
+  // 3-column symmetric grid layout for posts with ToC sidebar
+  // Empty left column balances the ToC on the right for visual symmetry
   articleLayout: css({
     display: "grid",
-    gridTemplateColumns: "1fr minmax(0, 720px) 250px",
+    // Symmetric: empty left (250px) | content (720px) | ToC right (250px)
+    gridTemplateColumns: "250px minmax(0, 720px) 250px",
     gap: "2rem",
+    justifyContent: "center",
 
     // "Break out" of parent containers to use full viewport width
     width: "100vw",
     position: "relative",
     left: "50%",
     marginLeft: "-50vw",
-
-    // Add padding to maintain visual margins
-    // Uses max() to ensure minimum 2rem padding, or center content at 1400px max
-    paddingLeft: "max(2rem, calc((100vw - 1400px) / 2))",
-    paddingRight: "max(2rem, calc((100vw - 1400px) / 2))",
 
     // Tablet: Center content, hide ToC, return to normal layout
     "@media (max-width: 1200px)": {
@@ -697,8 +694,6 @@ export const post = {
       position: "static",
       left: "auto",
       marginLeft: "0",
-      paddingLeft: "0",
-      paddingRight: "0",
       // Single centered column
       gridTemplateColumns: "1fr",
       maxWidth: "720px",

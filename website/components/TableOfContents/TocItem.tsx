@@ -5,15 +5,20 @@ import { tocStyles } from "./styles";
 interface TocItemProps {
   heading: TocItemType;
   isActive: boolean;
+  /** Callback when item is clicked, used to immediately update active state */
+  onItemClick?: (id: string) => void;
 }
 
 /**
  * Individual Table of Contents entry
  * Handles click-to-scroll and active state styling
  */
-export function TocItem({ heading, isActive }: TocItemProps) {
+export function TocItem({ heading, isActive, onItemClick }: TocItemProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
+
+    // Immediately update active state on click
+    onItemClick?.(heading.id);
 
     const element = document.getElementById(heading.id);
     if (element) {

@@ -5,15 +5,18 @@ import { useState, useEffect } from "react";
  * Tracks which heading is currently in view
  *
  * @param headingIds - Array of heading IDs to observe
- * @returns The ID of the currently active heading
+ * @returns Object with activeId and setActiveId for manual updates (e.g., on click)
  *
  * @example
  * ```tsx
  * const headings = useTableOfContents(contentRef);
- * const activeId = useActiveHeading(headings.map(h => h.id));
+ * const { activeId, setActiveId } = useActiveHeading(headings.map(h => h.id));
  * ```
  */
-export function useActiveHeading(headingIds: string[]): string {
+export function useActiveHeading(headingIds: string[]): {
+  activeId: string;
+  setActiveId: (id: string) => void;
+} {
   const [activeId, setActiveId] = useState<string>("");
 
   useEffect(() => {
@@ -76,5 +79,5 @@ export function useActiveHeading(headingIds: string[]): string {
     };
   }, [headingIds, activeId]);
 
-  return activeId;
+  return { activeId, setActiveId };
 }

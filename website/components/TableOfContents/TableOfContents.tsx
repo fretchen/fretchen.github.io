@@ -35,19 +35,28 @@ interface TableOfContentsProps {
  */
 export function TableOfContents({ contentRef, minHeadings = 2, title = "On this page" }: TableOfContentsProps) {
   const headings = useTableOfContents(contentRef);
-  const activeId = useActiveHeading(headings.map((h) => h.id));
+  const { activeId, setActiveId } = useActiveHeading(headings.map((h) => h.id));
 
   // Don't render if not enough headings
   if (headings.length < minHeadings) {
     return null;
   }
 
+  const handleItemClick = (id: string) => {
+    setActiveId(id);
+  };
+
   return (
     <nav className={tocStyles.container} aria-label="Table of contents">
       <h2 className={tocStyles.title}>{title}</h2>
       <ul className={tocStyles.list}>
         {headings.map((heading) => (
-          <TocItem key={heading.id} heading={heading} isActive={activeId === heading.id} />
+          <TocItem
+            key={heading.id}
+            heading={heading}
+            isActive={activeId === heading.id}
+            onItemClick={handleItemClick}
+          />
         ))}
       </ul>
     </nav>

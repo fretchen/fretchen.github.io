@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Hook for scroll-spy functionality using Intersection Observer
@@ -17,8 +17,17 @@ export function useActiveHeading(headingIds: string[]): {
   activeId: string;
   setActiveId: (id: string) => void;
 } {
-  const [activeId, setActiveId] = useState<string>("");
-  const initializedRef = useRef(false);
+  // Initialize with the first visible heading or the first heading
+  const [activeId, setActiveId] = useState<string>(() => {
+    if (headingIds.length === 0) return "";
+    const firstVisible = headingIds.find((id) => {
+      const element = document.getElementById(id);
+      if (!element) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.top >= 0 && rect.top <= window.innerHeight * 0.5;
+    });
+    return firstVisible ?? headingIds[0];
+  });
 
   useEffect(() => {
     if (headingIds.length === 0) return;
@@ -56,19 +65,6 @@ export function useActiveHeading(headingIds: string[]): {
         observer.observe(element);
       }
     });
-
-    // Set initial active heading only once
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      const firstVisible = headingIds.find((id) => {
-        const element = document.getElementById(id);
-        if (!element) return false;
-        const rect = element.getBoundingClientRect();
-        return rect.top >= 0 && rect.top <= window.innerHeight * 0.5;
-      });
-
-      setActiveId(firstVisible ?? headingIds[0]);
-    }
 
     return () => {
       observer.disconnect();

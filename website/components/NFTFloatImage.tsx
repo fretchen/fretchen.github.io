@@ -95,7 +95,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     };
 
     loadNFTData();
-  }, [tokenId, publicClient]);
+  }, [tokenId, publicClient, contractAddress]);
 
   if (isLoading) {
     return (

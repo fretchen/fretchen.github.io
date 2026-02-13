@@ -220,6 +220,7 @@ export default function Page() {
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
   const youLabel = useLocale({ label: "assistent.you" });
   const assistantLabel = useLocale({ label: "assistent.assistant" });
+  const placeholderLabel = useLocale({ label: "assistent.placeholder" });
   // Mobile detection
   React.useEffect(() => {
     const checkMobile = () => {
@@ -521,7 +522,7 @@ export default function Page() {
               value={currentInput}
               onChange={(e) => setCurrentInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={useLocale({ label: "assistent.placeholder" })}
+              placeholder={placeholderLabel}
               disabled={isLoading}
               className={styles.messageInput}
             />

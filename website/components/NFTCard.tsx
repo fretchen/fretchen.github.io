@@ -171,7 +171,7 @@ export function NFTCard({
     };
 
     loadNFTData();
-  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, publicClient]);
+  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, publicClient, contractAddress]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({

@@ -63,6 +63,7 @@ export default tseslint.config(
       "react-hooks": reactHooks,
     },
     rules: {
+      ...react.rules,
       ...reactHooks.configs.recommended.rules,
     },
     settings: {

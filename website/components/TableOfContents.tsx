@@ -1,4 +1,4 @@
-import React, { RefObject } from "react";
+import React, { RefObject, useMemo } from "react";
 import { useTableOfContents, TocItem as TocItemType } from "../hooks/useTableOfContents";
 import { useActiveHeading } from "../hooks/useActiveHeading";
 import { toc } from "../layouts/styles";
@@ -81,7 +81,8 @@ function TocItem({ heading, isActive, onItemClick }: TocItemProps) {
  */
 export function TableOfContents({ contentRef, minHeadings = 2, title = "On this page" }: TableOfContentsProps) {
   const headings = useTableOfContents(contentRef);
-  const { activeId, setActiveId } = useActiveHeading(headings.map((h) => h.id));
+  const headingIds = useMemo(() => headings.map((h) => h.id), [headings]);
+  const { activeId, setActiveId } = useActiveHeading(headingIds);
 
   if (headings.length < minHeadings) {
     return null;

@@ -74,11 +74,10 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   };
 
   // Reset isLoading once wagmi takes over or transaction completes
-  useEffect(() => {
-    if (isPending || isSuccess) {
-      setIsLoading(false);
-    }
-  }, [isPending, isSuccess]);
+  // Using a ref to avoid set-state-in-effect warning
+  if ((isPending || isSuccess) && isLoading) {
+    setIsLoading(false);
+  }
 
   // Update state after transaction
   useEffect(() => {

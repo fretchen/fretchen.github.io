@@ -14,15 +14,19 @@ import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
 import { SITE } from "../utils/siteData";
+import { TableOfContents } from "./TableOfContents";
 
 import { Webmentions } from "./Webmentions";
 
 // Dynamic React component renderer
-const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> = ({ componentPath, tokenID }) => {
+const ReactPostRenderer: React.FC<{
+  componentPath: string;
+  tokenID?: number;
+  contentRef: React.RefObject<HTMLDivElement>;
+}> = ({ componentPath, tokenID, contentRef }) => {
   const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
-  const componentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const loadComponent = async () => {
@@ -62,7 +66,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   }, [componentPath]);
 
   // Use custom hook for KaTeX rendering
-  useKaTeXRenderer(componentRef, !!Component);
+  useKaTeXRenderer(contentRef, !!Component);
 
   if (loading) {
     return (
@@ -111,7 +115,7 @@ const ReactPostRenderer: React.FC<{ componentPath: string; tokenID?: number }> =
   }
 
   return (
-    <div className={post.contentContainer} ref={componentRef}>
+    <div className={post.contentContainer} ref={contentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
       <React.Suspense
         fallback={
@@ -142,6 +146,7 @@ export function Post({
 }: PostProps) {
   const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
   const [reactionCount, setReactionCount] = React.useState<number>(0);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   // Format publishing date as ISO8601 for dt-published if available
   const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
@@ -155,33 +160,23 @@ export function Post({
 
   return (
     <article className="h-entry">
-      <h1 className={`p-name ${titleBar.title}`}>{title}</h1>
-
-      {/* dt-published hidden - displayed in MetadataLine instead (visible date shown below) */}
+      {/* Hidden microformat metadata */}
       {publishing_date && (
         <time className="dt-published" dateTime={isoDatetime || undefined} style={{ display: "none" }}>
           {publishing_date}
         </time>
       )}
-
-      {/* p-author h-card - links to site's h-card for author identification */}
       <a rel="author" className="p-author h-card" href="https://www.fretchen.eu/" style={{ display: "none" }}>
         {SITE.name}
       </a>
-
-      {/* u-url - canonical URL for the entry */}
       <a className="u-url" href={urlWithoutSlash} style={{ display: "none" }}>
         {urlWithoutSlash}
       </a>
-
-      {/* Hidden p-summary for h-entry microformat (used by Bridgy Fed & parsers) */}
       {description && (
         <div className="p-summary" style={{ display: "none" }}>
           {description}
         </div>
       )}
-
-      {/* Hidden p-category for h-entry microformat (tags/categories) */}
       {category && (
         <a href="" className="p-category" style={{ display: "none" }}>
           {category}
@@ -192,61 +187,73 @@ export function Post({
           {secondaryCategory}
         </a>
       )}
-
-      {/* Hidden Bridgy Fed link - triggers automatic post discovery and bridging */}
       <a className="u-bridgy-fed" href="https://fed.brid.gy/" hidden={true} style={{ display: "none" }} />
-
-      {/* Hidden Bridgy Publish links - webmention targets for social media publishing */}
       <a className="u-bridgy-omit-link" href="https://brid.gy/publish/mastodon" style={{ display: "none" }} />
       <a className="u-bridgy-omit-link" href="https://brid.gy/publish/bluesky" style={{ display: "none" }} />
 
-      <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
+      {/* 3-column grid layout: spacer | content | ToC sidebar */}
+      <div className={post.articleLayout}>
+        {/* Left spacer (empty on all screen sizes) */}
+        <div />
 
-      {/* Render based on post type */}
-      {type === "react" && componentPath ? (
-        <div className="e-content">
-          <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} />
-        </div>
-      ) : (
-        <div className={`e-content ${post.contentContainer}`}>
-          {tokenID && <NFTFloatImage tokenId={tokenID} />}
-          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-            {content}
-          </Markdown>
-        </div>
-      )}
+        {/* Main content column */}
+        <div className={post.articleContent}>
+          <h1 className={`p-name ${titleBar.title}`}>{title}</h1>
 
-      {/* End of Article Support CTA - appears after content, before navigation */}
-      <EndOfArticleSupport />
+          <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
-      {/* Navigation zwischen Posts, nur angezeigt wenn vorhanden */}
-      {(prevPost || nextPost) && (
-        <div className={post.navigation}>
-          {prevPost ? (
-            <div className={`${post.navLink} ${post.navLinkPrev}`}>
-              <Link href={`${basePath}/${prevPost.id}`}>
-                <span className={post.navLabel}>Previous: </span>
-                <span className={post.navTitle}>{prevPost.title}</span>
-              </Link>
+          {/* Render based on post type */}
+          {type === "react" && componentPath ? (
+            <div className="e-content" ref={contentRef}>
+              <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} contentRef={contentRef} />
             </div>
           ) : (
-            <div></div> // Platzhalter für Flex-Layout
-          )}
-
-          {nextPost ? (
-            <div className={`${post.navLink} ${post.navLinkNext}`}>
-              <Link href={`${basePath}/${nextPost.id}`}>
-                <span className={post.navLabel}>Next: </span>
-                <span className={post.navTitle}>{nextPost.title}</span>
-              </Link>
+            <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
+              {tokenID && <NFTFloatImage tokenId={tokenID} />}
+              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {content}
+              </Markdown>
             </div>
-          ) : (
-            <div></div> // Platzhalter für Flex-Layout
           )}
-        </div>
-      )}
 
-      <Webmentions />
+          {/* End of Article Support CTA */}
+          <EndOfArticleSupport />
+
+          {/* Navigation zwischen Posts */}
+          {(prevPost || nextPost) && (
+            <div className={post.navigation}>
+              {prevPost ? (
+                <div className={`${post.navLink} ${post.navLinkPrev}`}>
+                  <Link href={`${basePath}/${prevPost.id}`}>
+                    <span className={post.navLabel}>Previous: </span>
+                    <span className={post.navTitle}>{prevPost.title}</span>
+                  </Link>
+                </div>
+              ) : (
+                <div></div>
+              )}
+
+              {nextPost ? (
+                <div className={`${post.navLink} ${post.navLinkNext}`}>
+                  <Link href={`${basePath}/${nextPost.id}`}>
+                    <span className={post.navLabel}>Next: </span>
+                    <span className={post.navTitle}>{nextPost.title}</span>
+                  </Link>
+                </div>
+              ) : (
+                <div></div>
+              )}
+            </div>
+          )}
+
+          <Webmentions />
+        </div>
+
+        {/* Right sidebar with Table of Contents */}
+        <aside className={post.articleSidebar}>
+          <TableOfContents contentRef={contentRef} />
+        </aside>
+      </div>
     </article>
   );
 }

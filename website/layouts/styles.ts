@@ -672,6 +672,54 @@ export const walletOptions = {
 
 // Post component styles
 export const post = {
+  // 3-column symmetric grid layout for posts with ToC sidebar
+  // Empty left column balances the ToC on the right for visual symmetry
+  articleLayout: css({
+    display: "grid",
+    // Symmetric: empty left (250px) | content (720px) | ToC right (250px)
+    gridTemplateColumns: "250px minmax(0, 720px) 250px",
+    gap: "2rem",
+    justifyContent: "center",
+
+    // "Break out" of parent containers to use full viewport width
+    width: "100vw",
+    position: "relative",
+    left: "50%",
+    marginLeft: "-50vw",
+
+    // Tablet: Center content, hide ToC, return to normal layout
+    "@media (max-width: 1200px)": {
+      // Reset break-out
+      width: "100%",
+      position: "static",
+      left: "auto",
+      marginLeft: "0",
+      // Single centered column
+      gridTemplateColumns: "1fr",
+      maxWidth: "720px",
+      margin: "0 auto",
+    },
+
+    // Mobile: Single column, tighter spacing
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "1fr",
+      gap: "0",
+    },
+  }),
+
+  // Main content area (center column)
+  articleContent: css({
+    minWidth: 0, // Prevents grid blowout with long content
+  }),
+
+  // ToC sidebar (right column)
+  articleSidebar: css({
+    // Hidden on smaller screens (ToC component handles its own hiding too)
+    "@media (max-width: 1200px)": {
+      display: "none",
+    },
+  }),
+
   publishingDate: css({
     color: "gray.600",
     fontSize: "sm",
@@ -706,6 +754,98 @@ export const post = {
   navTitle: css({
     fontWeight: "medium",
     color: "brand",
+  }),
+};
+
+// ===== TABLE OF CONTENTS STYLES =====
+export const toc = {
+  /** Main container - sticky positioning */
+  container: css({
+    position: "sticky",
+    top: "100px",
+    maxHeight: "calc(100vh - 120px)",
+    overflowY: "auto",
+    paddingRight: "sm",
+    paddingBottom: "lg",
+    scrollbarWidth: "thin",
+    scrollbarColor: "token(colors.gray.300) transparent",
+    "&::-webkit-scrollbar": {
+      width: "4px",
+    },
+    "&::-webkit-scrollbar-track": {
+      background: "transparent",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      background: "token(colors.gray.300)",
+      borderRadius: "2px",
+    },
+    "@media (max-width: 1200px)": {
+      display: "none",
+    },
+  }),
+
+  /** Title "On this page" */
+  title: css({
+    fontSize: "xs",
+    fontWeight: "semibold",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "gray.500",
+    marginBottom: "sm",
+    paddingLeft: "sm",
+  }),
+
+  /** List container */
+  list: css({
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+  }),
+
+  /** Individual list item */
+  listItem: css({
+    margin: 0,
+    padding: 0,
+  }),
+
+  /** Link styling - base state */
+  link: css({
+    display: "block",
+    padding: "xs sm",
+    fontSize: "sm",
+    lineHeight: "1.4",
+    color: "gray.600",
+    textDecoration: "none",
+    borderLeft: "2px solid transparent",
+    transition: "all 0.15s ease",
+    cursor: "pointer",
+    "&:hover": {
+      color: "gray.900",
+      backgroundColor: "gray.50",
+    },
+  }),
+
+  /** Link styling - active state */
+  linkActive: css({
+    display: "block",
+    padding: "xs sm",
+    fontSize: "sm",
+    lineHeight: "1.4",
+    color: "gray.900",
+    fontWeight: "medium",
+    textDecoration: "none",
+    borderLeft: "2px solid token(colors.blue.500)",
+    backgroundColor: "blue.50",
+    transition: "all 0.15s ease",
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: "blue.100",
+    },
+  }),
+
+  /** Indent for h3 headings */
+  indent: css({
+    paddingLeft: "lg",
   }),
 };
 

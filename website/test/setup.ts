@@ -3,6 +3,29 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
 // =============================================================================
+// GLOBAL BROWSER API MOCKS
+// =============================================================================
+
+// Mock IntersectionObserver for components using scroll-spy
+class MockIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = vi.fn(() => []);
+
+  constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {
+    // Constructor is called but we don't need to track instances for these tests
+  }
+}
+
+// Set globally before any tests run
+vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+
+// =============================================================================
 // EXPORTABLE MOCK FUNCTIONS
 // Tests can import these and configure them per test/describe block
 // =============================================================================

@@ -78,39 +78,38 @@ const BudgetNegotiationWidget: React.FC = () => {
   const pWin = 1 - currentP;
   const deltaMin = (1 - GAMMA) / (1 - pWin * GAMMA);
 
-  // Simulate one trajectory of X values (power/majority)
-  const simulateTrajectory = (): number[] => {
-    const trajectory: number[] = [X0];
-    let x = X0;
-    for (let t = 1; t < T; t++) {
-      x = x + sigma * gaussianRandom();
-      x = Math.max(0, Math.min(1, x)); // Clamp to [0, 1]
-      trajectory.push(x);
-    }
-    return trajectory;
-  };
-
-  // Strategy functions: X (power) -> Y (budget allocation for party A)
-  // Following notebook model:
-  // WTA: If I have majority (X > 0.5), I take everything (Y = 1), otherwise get nothing (Y = 0)
-  // Cooperate: If I have majority, I share (Y = 1 - COOP), otherwise I receive (Y = COOP)
-  const strategies = {
-    cooperate: (x: number) => (x > 0.5 ? 1 - COOP : COOP),
-    wta: (x: number) => (x > 0.5 ? 1 : 0),
-  };
-
-  // Calculate discounted utility for a trajectory under a strategy
-  const calculateDiscountedUtility = (trajectory: number[], strategyFn: (x: number) => number, d: number): number => {
-    let total = 0;
-    for (let t = 0; t < trajectory.length; t++) {
-      const y = strategyFn(trajectory[t]);
-      total += Math.pow(d, t) * utility(y);
-    }
-    return total;
-  };
-
   // Run Monte Carlo simulation for payoff calculation
   const runSimulation = React.useMemo(() => {
+    // Simulate one trajectory of X values (power/majority)
+    const simulateTrajectory = (): number[] => {
+      const trajectory: number[] = [X0];
+      let x = X0;
+      for (let t = 1; t < T; t++) {
+        x = x + sigma * gaussianRandom();
+        x = Math.max(0, Math.min(1, x)); // Clamp to [0, 1]
+        trajectory.push(x);
+      }
+      return trajectory;
+    };
+
+    // Strategy functions: X (power) -> Y (budget allocation for party A)
+    // WTA: If I have majority (X > 0.5), I take everything (Y = 1), otherwise get nothing (Y = 0)
+    // Cooperate: If I have majority, I share (Y = 1 - COOP), otherwise I receive (Y = COOP)
+    const strategies = {
+      cooperate: (x: number) => (x > 0.5 ? 1 - COOP : COOP),
+      wta: (x: number) => (x > 0.5 ? 1 : 0),
+    };
+
+    // Calculate discounted utility for a trajectory under a strategy
+    const calculateDiscountedUtility = (trajectory: number[], strategyFn: (x: number) => number, d: number): number => {
+      let total = 0;
+      for (let t = 0; t < trajectory.length; t++) {
+        const y = strategyFn(trajectory[t]);
+        total += Math.pow(d, t) * utility(y);
+      }
+      return total;
+    };
+
     const trajectories = Array.from({ length: nSimulations }, () => simulateTrajectory());
 
     // Calculate payoffs at current delta
@@ -134,7 +133,9 @@ const BudgetNegotiationWidget: React.FC = () => {
     }
 
     return { trajectories, results };
-  }, [delta, politicalSecurity, simKey]);
+    // simKey is included to allow manual re-simulation via button
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [X0, sigma, T, nSimulations, COOP, delta, simKey]);
 
   const { results } = runSimulation;
 

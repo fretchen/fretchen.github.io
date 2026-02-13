@@ -100,7 +100,7 @@ export function useNFTListedStatus({
     } finally {
       setIsLoading(false);
     }
-  }, [tokenId, network, enabled, contractAddress, chainId]);
+  }, [tokenId, enabled, contractAddress, chainId]);
 
   // Fetch on mount and when dependencies change
   useEffect(() => {

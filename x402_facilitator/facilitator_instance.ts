@@ -3,15 +3,17 @@
  * Centralized facilitator configuration with multi-chain support
  *
  * Architecture: One ExactEvmScheme per network (following x402 best practices)
- * Each network has its own dedicated viem client, eliminating chain selection issues
+ * Each network has its own dedicated viem client, eliminating chain selection issues.
+ * Supports both EIP-3009 and Permit2 payment flows (v2.3.1+).
  */
 
 import { createPublicClient, createWalletClient, http } from "viem";
 import type { Account } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { x402Facilitator } from "@x402/core/facilitator";
-import { toFacilitatorEvmSigner } from "@x402/evm";
-import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
+import { toFacilitatorEvmSigner, isPermit2Payload } from "@x402/evm";
+import { registerExactEvmScheme } from "@x402/evm/exact/facilitator";
+import type { ExactEvmPayloadV2 } from "@x402/evm";
 import pino from "pino";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 import { getChainConfig, getSupportedNetworks } from "./chain_utils";
@@ -89,7 +91,7 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
       getCode: (args) => publicClient.getCode(args),
     });
 
-    facilitator.register(network, new ExactEvmScheme(readOnlySigner));
+    registerExactEvmScheme(facilitator, { signer: readOnlySigner, networks: network });
   }
 
   logger.info({
@@ -135,11 +137,12 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
   // Create and configure facilitator
   const facilitator = new x402Facilitator();
 
-  // Register a separate ExactEvmScheme for each network
+  // Register a separate ExactEvmScheme per network (each with its own RPC client).
+  // registerExactEvmScheme also registers V1 schemes for backward compatibility.
   const supportedNetworks = getSupportedNetworks();
   for (const network of supportedNetworks) {
     const signer = createSignerForNetwork(account, network);
-    facilitator.register(network, new ExactEvmScheme(signer));
+    registerExactEvmScheme(facilitator, { signer, networks: network });
   }
 
   // Add fee allowance check AFTER verification
@@ -149,7 +152,17 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     }
 
     const network = paymentPayload.accepted?.network;
-    const recipient = paymentPayload.payload?.authorization?.to as string | undefined;
+
+    // Extract recipient from either EIP-3009 or Permit2 payload
+    const payload = paymentPayload.payload as ExactEvmPayloadV2 | undefined;
+    let recipient: string | undefined;
+    if (payload && isPermit2Payload(payload)) {
+      recipient = payload.permit2Authorization?.witness?.to;
+    } else {
+      recipient = (payload as Record<string, unknown> | undefined)?.authorization
+        ? ((payload as { authorization?: { to?: string } }).authorization?.to)
+        : undefined;
+    }
 
     if (!network || !recipient) {
       logger.warn("Missing network or recipient after verification");

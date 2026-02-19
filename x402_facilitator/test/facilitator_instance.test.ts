@@ -19,7 +19,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 type HookArgs = {
   paymentPayload: {
     accepted?: { network?: string };
-    payload?: { authorization?: { to?: string } };
+    payload?: {
+      authorization?: { to?: string };
+      permit2Authorization?: { witness?: { to?: string }; from?: string };
+      signature?: string;
+    };
   };
   result: Record<string, unknown>;
 };
@@ -44,10 +48,11 @@ vi.mock("@x402/core/facilitator", () => ({
 
 vi.mock("@x402/evm", () => ({
   toFacilitatorEvmSigner: vi.fn(() => ({})),
+  isPermit2Payload: vi.fn((payload: Record<string, unknown>) => !!payload?.permit2Authorization),
 }));
 
 vi.mock("@x402/evm/exact/facilitator", () => ({
-  ExactEvmScheme: vi.fn(),
+  registerExactEvmScheme: vi.fn(),
 }));
 
 vi.mock("viem", async () => {
@@ -102,12 +107,32 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     process.env = { ...originalEnv };
   });
 
-  /** Helper: create mock hook arguments simulating a valid payment */
+  /** Helper: create mock hook arguments simulating a valid EIP-3009 payment */
   function hookArgs(recipient: string, network: string): HookArgs {
     return {
       paymentPayload: {
         accepted: { network },
         payload: { authorization: { to: recipient } },
+      },
+      result: {
+        isValid: true,
+        payer: "0xSomePayer000000000000000000000000000000",
+      },
+    };
+  }
+
+  /** Helper: create mock hook arguments simulating a valid Permit2 payment */
+  function permit2HookArgs(recipient: string, network: string): HookArgs {
+    return {
+      paymentPayload: {
+        accepted: { network },
+        payload: {
+          permit2Authorization: {
+            witness: { to: recipient },
+            from: "0xSomePayer000000000000000000000000000000",
+          },
+          signature: "0xdeadbeef",
+        },
       },
       result: {
         isValid: true,
@@ -243,6 +268,73 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
       paymentPayload: {
         accepted: { network: "eip155:11155420" },
         payload: { authorization: {} },
+      },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("invalid_payload");
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Permit2 payload support
+  // ───────────────────────────────────────────────────────────
+
+  it("extracts recipient from Permit2 payload and checks fee allowance", async () => {
+    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+      allowance: 100000n,
+      remainingSettlements: 10,
+      sufficient: true,
+    });
+
+    const args = permit2HookArgs("0x3333333333333333333333333333333333333333", "eip155:10");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(true);
+    expect(args.result.recipient).toBe("0x3333333333333333333333333333333333333333");
+    expect(checkMerchantAllowance).toHaveBeenCalledWith(
+      "0x3333333333333333333333333333333333333333",
+      "eip155:10",
+    );
+  });
+
+  it("rejects Permit2 payload when fee allowance is insufficient", async () => {
+    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+      allowance: 0n,
+      remainingSettlements: 0,
+      sufficient: false,
+    });
+
+    const args = permit2HookArgs("0x4444444444444444444444444444444444444444", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("insufficient_fee_allowance");
+    expect(args.result.currentAllowance).toBe("0");
+  });
+
+  it("allows Permit2 payload when fees are disabled", async () => {
+    vi.mocked(getFeeAmount).mockReturnValue(0n);
+
+    const args = permit2HookArgs("0x5555555555555555555555555555555555555555", "eip155:10");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+  });
+
+  it("rejects Permit2 payload when recipient is missing from witness", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: { network: "eip155:11155420" },
+        payload: {
+          permit2Authorization: { witness: {}, from: "0xSomePayer" },
+          signature: "0xdeadbeef",
+        },
       },
       result: { isValid: true },
     };

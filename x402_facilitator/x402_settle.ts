@@ -1,13 +1,16 @@
 /**
  * x402 v2 Facilitator - Settlement Logic
- * Uses centralized x402Facilitator instance
- * Includes post-settlement fee collection
+ * Uses centralized x402Facilitator instance.
+ * Includes post-settlement fee collection.
+ * Supports both EIP-3009 and Permit2 payment flows.
  */
 
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
 import { collectFee, getFeeAmount } from "./x402_fee";
 import { getChainConfig } from "./chain_utils";
+import { isPermit2Payload } from "@x402/evm";
+import type { ExactEvmPayloadV2 } from "@x402/evm";
 import type { Address } from "viem";
 import pino from "pino";
 
@@ -157,16 +160,29 @@ export async function settlePayment(
       errorReason = "authorization_already_used";
     } else if (err.message?.includes("expired")) {
       errorReason = "authorization_expired";
+    } else if (err.message?.includes("InvalidDestination")) {
+      errorReason = "invalid_destination";
+    } else if (err.message?.includes("InvalidOwner")) {
+      errorReason = "invalid_owner";
+    } else if (err.message?.includes("PaymentTooEarly")) {
+      errorReason = "payment_too_early";
     }
 
-    const payload = paymentPayload.payload as Record<string, unknown> | undefined;
-    const authorization = payload?.authorization as Record<string, unknown> | undefined;
+    // Extract payer from either EIP-3009 or Permit2 payload
+    const payload = paymentPayload.payload as ExactEvmPayloadV2 | undefined;
+    let payer: string | undefined;
+    if (payload && isPermit2Payload(payload)) {
+      payer = payload.permit2Authorization?.from;
+    } else {
+      const authorization = (payload as Record<string, unknown> | undefined)?.authorization as Record<string, unknown> | undefined;
+      payer = authorization?.from as string | undefined;
+    }
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     return {
       success: false,
       errorReason,
-      payer: authorization?.from as string | undefined,
+      payer,
       transaction: "",
       network: accepted?.network as string | undefined,
     };

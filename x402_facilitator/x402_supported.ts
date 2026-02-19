@@ -1,9 +1,11 @@
 /**
  * x402 v2 Supported Capabilities Module
- * Creates fresh read-only facilitator instance (no singleton caching)
+ * Creates fresh read-only facilitator instance (no singleton caching).
+ * Advertises both EIP-3009 and Permit2 transfer methods (v2.3.1+).
  */
 
 import { formatUnits } from "viem";
+import { PERMIT2_ADDRESS, x402ExactPermit2ProxyAddress } from "@x402/evm";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
 import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 
@@ -37,6 +39,14 @@ interface FeeExtension {
   };
 }
 
+interface Permit2Extension {
+  name: string;
+  description: string;
+  permit2Address: string;
+  proxyAddress: string;
+  supportedMethods: string[];
+}
+
 interface SupportedCapabilities {
   kinds: Array<{
     x402Version: number;
@@ -44,7 +54,7 @@ interface SupportedCapabilities {
     network: string;
     extra?: Record<string, unknown>;
   }>;
-  extensions: Array<FeeExtension | FacilitatorFeesExtension | Record<string, unknown>>;
+  extensions: Array<FeeExtension | FacilitatorFeesExtension | Permit2Extension | Record<string, unknown>>;
   signers: Record<string, string[]>;
 }
 
@@ -102,6 +112,17 @@ export function getSupportedCapabilities(): SupportedCapabilities {
     };
     supported.extensions.push(facilitatorFeesExtension);
   }
+
+  // Advertise Permit2 support (v2.3.1+)
+  const permit2Extension: Permit2Extension = {
+    name: "permit2",
+    description:
+      "Permit2 support for universal ERC-20 token payments. Clients can use either EIP-3009 (transferWithAuthorization) or Permit2 (PermitWitnessTransferFrom) to authorize payments. Permit2 requires a one-time token approval to the canonical Permit2 contract.",
+    permit2Address: PERMIT2_ADDRESS,
+    proxyAddress: x402ExactPermit2ProxyAddress,
+    supportedMethods: ["eip3009", "permit2"],
+  };
+  supported.extensions.push(permit2Extension);
 
   return supported;
 }

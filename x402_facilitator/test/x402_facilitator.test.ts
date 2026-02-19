@@ -19,6 +19,15 @@ vi.mock("../x402_supported.js", () => ({
       "eip155:10": ["USDC"],
       "eip155:11155420": ["USDC"],
     },
+    extensions: [
+      {
+        name: "permit2",
+        description: "Permit2 support",
+        permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        proxyAddress: "0x4020615294c913F045dc10f0a5cdEbd86c280001",
+        supportedMethods: ["eip3009", "permit2"],
+      },
+    ],
   })),
 }));
 
@@ -144,6 +153,48 @@ describe("x402_facilitator handlers", () => {
       expect(body.invalidReason).toBe("insufficient_funds");
     });
 
+    it("should handle Permit2 payment payload in verify", async () => {
+      verifyPayment.mockResolvedValue({
+        isValid: true,
+        payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      });
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: {
+            x402Version: 2,
+            accepted: { scheme: "exact", network: "eip155:10" },
+            payload: {
+              signature: "0x" + "ab".repeat(65),
+              permit2Authorization: {
+                from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                permitted: { token: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", amount: "100000" },
+                nonce: "1",
+                deadline: "9999999999",
+                witness: { to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C", validAfter: "0", extra: "0x" },
+              },
+            },
+          },
+          paymentRequirements: { amount: "100000", network: "eip155:10" },
+        }),
+      };
+      const result = await handleVerify(event, {});
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.isValid).toBe(true);
+      // Verify that verifyPayment was called with the Permit2 payload
+      expect(verifyPayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            permit2Authorization: expect.any(Object),
+          }),
+        }),
+        expect.any(Object),
+      );
+    });
+
     it("should handle unexpected verification error", async () => {
       verifyPayment.mockRejectedValue(new Error("Unexpected error"));
 
@@ -260,6 +311,51 @@ describe("x402_facilitator handlers", () => {
       expect(body.extensions.facilitatorFees.info.model).toBe("flat");
     });
 
+    it("should handle Permit2 payment payload in settle", async () => {
+      settlePayment.mockResolvedValue({
+        success: true,
+        payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        transaction: "0xpermit2tx123",
+        network: "eip155:10",
+      });
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: {
+            x402Version: 2,
+            accepted: { scheme: "exact", network: "eip155:10" },
+            payload: {
+              signature: "0x" + "ab".repeat(65),
+              permit2Authorization: {
+                from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                permitted: { token: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", amount: "100000" },
+                nonce: "1",
+                deadline: "9999999999",
+                witness: { to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C", validAfter: "0", extra: "0x" },
+              },
+            },
+          },
+          paymentRequirements: { amount: "100000", network: "eip155:10" },
+        }),
+      };
+      const result = await handleSettle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.success).toBe(true);
+      expect(body.transaction).toBe("0xpermit2tx123");
+      // Verify settlePayment was called with the Permit2 payload
+      expect(settlePayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            permit2Authorization: expect.any(Object),
+          }),
+        }),
+        expect.any(Object),
+      );
+    });
+
     it("should return failed settlement with error reason", async () => {
       settlePayment.mockResolvedValue({
         success: false,
@@ -331,6 +427,19 @@ describe("x402_facilitator handlers", () => {
       const body = JSON.parse(result.body);
       expect(body.x402Version).toBe(2);
       expect(body.networks).toContain("eip155:10");
+    });
+
+    it("should include permit2 extension in supported response", async () => {
+      const event = { httpMethod: "GET" };
+      const result = await handleSupported(event, {});
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.extensions).toBeDefined();
+      const permit2Extension = body.extensions.find((e) => e.name === "permit2");
+      expect(permit2Extension).toBeDefined();
+      expect(permit2Extension.permit2Address).toBe("0x000000000022D473030F116dDEE9F6B43aC78BA3");
+      expect(permit2Extension.supportedMethods).toContain("permit2");
     });
   });
 

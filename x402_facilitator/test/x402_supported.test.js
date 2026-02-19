@@ -164,4 +164,32 @@ describe("x402 /supported endpoint", () => {
     const feeExtension = capabilities.extensions.find((e) => e.name === "facilitator_fee");
     expect(feeExtension).toBeUndefined();
   });
+
+  test("includes permit2 extension with canonical addresses", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const permit2Extension = capabilities.extensions.find((e) => e.name === "permit2");
+    expect(permit2Extension).toBeDefined();
+    expect(permit2Extension.description).toContain("Permit2");
+    // Canonical Permit2 contract address (same on all EVM chains)
+    expect(permit2Extension.permit2Address).toBe(
+      "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    );
+    // x402 Permit2 proxy address
+    expect(permit2Extension.proxyAddress).toBe(
+      "0x4020615294c913F045dc10f0a5cdEbd86c280001",
+    );
+    expect(permit2Extension.supportedMethods).toContain("eip3009");
+    expect(permit2Extension.supportedMethods).toContain("permit2");
+  });
+
+  test("permit2 extension is always present (even without private key)", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    const capabilities = getSupportedCapabilities();
+
+    // Permit2 support is advertised regardless of facilitator key presence
+    const permit2Extension = capabilities.extensions.find((e) => e.name === "permit2");
+    expect(permit2Extension).toBeDefined();
+    expect(permit2Extension.supportedMethods).toEqual(["eip3009", "permit2"]);
+  });
 });

@@ -344,6 +344,51 @@ describe("x402_settle", () => {
   // 1. Mainnet signatures are validated with chain-bound Mainnet clients
   // 2. The facilitator uses separate ExactEvmScheme per network
   // Since settlePayment() calls verifyPayment() internally, the same security applies.
+
+  describe("Permit2 payload handling", () => {
+    it("processes Permit2 payload structure without crashing", async () => {
+      // Permit2 payloads use permit2Authorization instead of authorization
+      const permit2Payload = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:11155420",
+          amount: paymentAmount,
+          asset: tokenAddress,
+          payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+          maxTimeoutSeconds: 60,
+          extra: {
+            name: "USDC",
+            version: "2",
+          },
+        },
+        payload: {
+          signature: "0x" + "ab".repeat(65),
+          permit2Authorization: {
+            from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            permitted: {
+              token: tokenAddress,
+              amount: paymentAmount,
+            },
+            nonce: "1",
+            deadline: "9999999999",
+            witness: {
+              to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              validAfter: "0",
+              extra: "0x",
+            },
+          },
+        },
+      };
+
+      // Should not crash — may fail on verification but should handle gracefully
+      const result = await settlePayment(permit2Payload, validPaymentRequirements);
+      expect(result).toBeDefined();
+      expect(result.success).toBe(false);
+      // The Permit2 payload will fail signature verification, not crash
+      expect(result.errorReason).toBeDefined();
+    });
+  });
 });
 
 describe("x402_settle with mocked facilitator", () => {
@@ -639,5 +684,151 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.success).toBe(true);
     expect(result.fee).toBeUndefined();
     expect(collectFeeSpy).not.toHaveBeenCalled();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Permit2 payload tests
+  // ═══════════════════════════════════════════════════════════
+
+  it("extracts payer from Permit2 payload in error path", async () => {
+    const permit2Payload = {
+      x402Version: 2,
+      accepted: {
+        scheme: "exact",
+        network: "eip155:11155420",
+        amount: paymentAmount,
+        asset: tokenAddress,
+        payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      },
+      payload: {
+        signature: "0x" + "ab".repeat(65),
+        permit2Authorization: {
+          from: "0xPermit2Payer000000000000000000000000000001",
+          permitted: {
+            token: tokenAddress,
+            amount: paymentAmount,
+          },
+          nonce: "1",
+          deadline: "9999999999",
+          witness: {
+            to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            validAfter: "0",
+            extra: "0x",
+          },
+        },
+      },
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xPermit2Payer000000000000000000000000000001",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Permit2 settlement failed: InvalidOwner");
+    });
+
+    const result = await settlePayment(permit2Payload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_owner");
+    // Payer extracted from permit2Authorization.from
+    expect(result.payer).toBe("0xPermit2Payer000000000000000000000000000001");
+  });
+
+  it("handles Permit2 InvalidDestination error", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Transaction failed: InvalidDestination");
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_destination");
+  });
+
+  it("handles Permit2 PaymentTooEarly error", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Transaction failed: PaymentTooEarly");
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("payment_too_early");
+  });
+
+  it("settles Permit2 payment with fees", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xpermit2settle123",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: true,
+      txHash: "0xpermit2fee456",
+    });
+
+    // Use Permit2 payload structure
+    const permit2Payload = {
+      x402Version: 2,
+      accepted: {
+        scheme: "exact",
+        network: "eip155:11155420",
+        amount: paymentAmount,
+        asset: tokenAddress,
+        payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      },
+      payload: {
+        signature: "0x" + "ab".repeat(65),
+        permit2Authorization: {
+          from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          permitted: {
+            token: tokenAddress,
+            amount: paymentAmount,
+          },
+          nonce: "1",
+          deadline: "9999999999",
+          witness: {
+            to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            validAfter: "0",
+            extra: "0x",
+          },
+        },
+      },
+    };
+
+    const result = await settlePayment(permit2Payload, validPaymentRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.transaction).toBe("0xpermit2settle123");
+    expect(result.fee).toBeDefined();
+    expect(result.fee.collected).toBe(true);
+    expect(result.fee.txHash).toBe("0xpermit2fee456");
+    // Fee extensions should work identically for Permit2 as for EIP-3009
+    expect(result.extensions).toBeDefined();
+    expect(result.extensions.facilitatorFees).toBeDefined();
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
   });
 });

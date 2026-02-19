@@ -439,4 +439,110 @@ describe("x402 Verify", () => {
 
   // Note: Additional blockchain integration tests (actual settlement on testnet)
   // would require testnet funds and transaction execution
+
+  // ═══════════════════════════════════════════════════════════
+  // Permit2 payload tests
+  // ═══════════════════════════════════════════════════════════
+
+  test("handles Permit2 payload structure without crashing", async () => {
+    // Permit2 payloads use permit2Authorization instead of authorization
+    // The facilitator should route this to the Permit2 verification path
+    const permit2Payload = {
+      x402Version: 2,
+      resource: {
+        url: "https://api.example.com/permit2-test",
+        description: "Permit2 verification test",
+        mimeType: "application/json",
+      },
+      accepted: {
+        scheme: "exact",
+        network: "eip155:11155420",
+        amount: paymentAmount,
+        asset: tokenAddress,
+        payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+        maxTimeoutSeconds: 60,
+        extra: {
+          name: "USDC",
+          version: "2",
+        },
+      },
+      payload: {
+        signature: "0x" + "ab".repeat(65),
+        permit2Authorization: {
+          from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          permitted: {
+            token: tokenAddress,
+            amount: paymentAmount,
+          },
+          nonce: "1",
+          deadline: "9999999999",
+          witness: {
+            to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            validAfter: "0",
+            extra: "0x",
+          },
+        },
+      },
+    };
+
+    const result = await verifyPayment(permit2Payload, validPaymentRequirements);
+
+    // Permit2 payload should be processed (not crash).
+    // The facilitator will attempt to verify the Permit2 payload.
+    // With a dummy signature, it will fail — but should never throw unhandled.
+    expect(result).toBeDefined();
+    expect(result.isValid).toBe(false);
+    // The library may return a signature error or wrap as unexpected_verify_error
+    // depending on how deep the Permit2 routing goes with dummy data.
+    // The key assertion is that verifyPayment returns a structured result.
+    expect(result.invalidReason).toBeDefined();
+    expect(typeof result.invalidReason).toBe("string");
+  });
+
+  test("rejects Permit2 payload with mismatched network", async () => {
+    const permit2Payload = {
+      x402Version: 2,
+      accepted: {
+        scheme: "exact",
+        network: "eip155:1", // Unsupported network
+        amount: paymentAmount,
+        asset: tokenAddress,
+        payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+        maxTimeoutSeconds: 60,
+        extra: {
+          name: "USDC",
+          version: "2",
+        },
+      },
+      payload: {
+        signature: "0x" + "ab".repeat(65),
+        permit2Authorization: {
+          from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          permitted: {
+            token: tokenAddress,
+            amount: paymentAmount,
+          },
+          nonce: "1",
+          deadline: "9999999999",
+          witness: {
+            to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            validAfter: "0",
+            extra: "0x",
+          },
+        },
+      },
+    };
+
+    const mismatchRequirements = {
+      ...validPaymentRequirements,
+      network: "eip155:1",
+    };
+
+    const result = await verifyPayment(permit2Payload, mismatchRequirements);
+
+    expect(result.isValid).toBe(false);
+    // Unsupported network returns either network_mismatch or unexpected_verify_error
+    // depending on whether the library checks network before parsing the Permit2 payload
+    expect(["network_mismatch", "unexpected_verify_error"]).toContain(result.invalidReason);
+  });
 });

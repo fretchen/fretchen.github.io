@@ -32,10 +32,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@coinbase/x402": "^2.0.0",
+    "@coinbase/x402": "^2.1.0",
     "@fretchen/chain-utils": "file:../shared/chain-utils",
-    "@x402/core": "^2.0.0",
-    "@x402/evm": "^2.0.0",
+    "@x402/core": "^2.3.1",
+    "@x402/evm": "^2.3.1",
     "dotenv": "^16.0.0",
     "pino": "^9.0.0",
     "viem": "^2.38.3"

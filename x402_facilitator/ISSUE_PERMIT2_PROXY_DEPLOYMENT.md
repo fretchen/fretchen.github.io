@@ -21,6 +21,33 @@ The facilitator's `/supported` endpoint still advertises Permit2 capability for 
 
 ## Reproduction
 
+### 1. Verify missing proxy deployment
+
+```js
+import { createPublicClient, http } from "viem";
+import { optimismSepolia, baseSepolia, optimism, base } from "viem/chains";
+
+const PROXY = "0x4020615294c913F045dc10f0a5cdEbd86c280001";
+
+for (const chain of [baseSepolia, optimismSepolia, optimism, base]) {
+  const client = createPublicClient({ chain, transport: http() });
+  const code = await client.getCode({ address: PROXY });
+  const bytes = code ? (code.length - 2) / 2 : 0;
+  console.log(`${chain.name}: ${bytes} bytes [${bytes > 0 ? "DEPLOYED" : "EMPTY"}]`);
+}
+```
+
+Output:
+
+```
+Base Sepolia: 2440 bytes [DEPLOYED]
+OP Sepolia: 0 bytes [EMPTY]
+OP Mainnet: 0 bytes [EMPTY]
+Base: 0 bytes [EMPTY]
+```
+
+### 2. Settlement silently fails
+
 1. Configure facilitator with OP Sepolia (`eip155:11155420`)
 2. Create a WETH Permit2 payment payload (`assetTransferMethod: "permit2"`)
 3. Call `settle()` → returns `{ success: true, transaction: "0x..." }`

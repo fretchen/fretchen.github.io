@@ -172,13 +172,9 @@ describe("x402 /supported endpoint", () => {
     expect(permit2Extension).toBeDefined();
     expect(permit2Extension.description).toContain("Permit2");
     // Canonical Permit2 contract address (same on all EVM chains)
-    expect(permit2Extension.permit2Address).toBe(
-      "0x000000000022D473030F116dDEE9F6B43aC78BA3",
-    );
+    expect(permit2Extension.permit2Address).toBe("0x000000000022D473030F116dDEE9F6B43aC78BA3");
     // x402 Permit2 proxy address
-    expect(permit2Extension.proxyAddress).toBe(
-      "0x4020615294c913F045dc10f0a5cdEbd86c280001",
-    );
+    expect(permit2Extension.proxyAddress).toBe("0x4020615294c913F045dc10f0a5cdEbd86c280001");
     expect(permit2Extension.supportedMethods).toContain("eip3009");
     expect(permit2Extension.supportedMethods).toContain("permit2");
   });
@@ -191,5 +187,28 @@ describe("x402 /supported endpoint", () => {
     const permit2Extension = capabilities.extensions.find((e) => e.name === "permit2");
     expect(permit2Extension).toBeDefined();
     expect(permit2Extension.supportedMethods).toEqual(["eip3009", "permit2"]);
+  });
+
+  test("only includes configured networks (not all library-known chains)", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const networks = capabilities.kinds.map((k) => k.network);
+    const allowedNetworks = ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
+
+    // Every returned network must be in our allowed list
+    for (const network of networks) {
+      expect(allowedNetworks).toContain(network);
+    }
+
+    // All 4 configured networks should be present
+    for (const allowed of allowedNetworks) {
+      expect(networks).toContain(allowed);
+    }
+
+    // No extra networks from V1 registration (e.g. ethereum, polygon, avalanche)
+    expect(networks).not.toContain("ethereum");
+    expect(networks).not.toContain("polygon");
+    expect(networks).not.toContain("avalanche");
+    expect(networks).not.toContain("abstract");
   });
 });

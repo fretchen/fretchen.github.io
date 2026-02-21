@@ -8,6 +8,7 @@ import { formatUnits } from "viem";
 import { PERMIT2_ADDRESS, x402ExactPermit2ProxyAddress } from "@x402/evm";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
 import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
+import { getSupportedNetworks } from "./chain_utils";
 
 /** Facilitator fee model disclosure per x402 Fee Disclosure proposal (coinbase/x402#1016) */
 interface FacilitatorFeesExtension {
@@ -67,6 +68,12 @@ export function getSupportedCapabilities(): SupportedCapabilities {
 
   // Get base supported capabilities from facilitator
   const supported = facilitator.getSupported() as SupportedCapabilities;
+
+  // Filter to only our configured networks.
+  // registerExactEvmScheme registers V1 schemes for ALL library-known chains,
+  // so we must restrict the output to our actual supported networks.
+  const allowedNetworks = new Set(getSupportedNetworks());
+  supported.kinds = supported.kinds.filter((k) => allowedNetworks.has(k.network));
 
   // Ensure extensions array exists
   supported.extensions = supported.extensions || [];

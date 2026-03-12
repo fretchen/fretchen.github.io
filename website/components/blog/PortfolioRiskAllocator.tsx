@@ -209,7 +209,7 @@ export default function PortfolioRiskAllocator() {
       })}
     >
       {/* ── Header ── */}
-      <h3
+      <p
         className={css({
           fontSize: "1.1rem",
           fontWeight: "bold",
@@ -219,7 +219,7 @@ export default function PortfolioRiskAllocator() {
         })}
       >
         Build your portfolio by risk budget
-      </h3>
+      </p>
       <p
         className={css({
           fontSize: "0.85rem",

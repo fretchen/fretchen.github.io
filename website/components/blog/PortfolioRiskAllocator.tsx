@@ -515,7 +515,15 @@ export default function PortfolioRiskAllocator() {
                           return (
                             <tr key={etf} className={css({ borderBottom: "1px solid #f3f4f6" })}>
                               <td className={css({ padding: "0.2rem 0.3rem", color: "#374151" })}>
-                                {DATA.etf_labels[idx]} <span className={css({ color: "#9ca3af" })}>{etf}</span>
+                                {DATA.etf_labels[idx]}{" "}
+                                <a
+                                  href={DATA.etf_urls[idx]}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={css({ color: "#6b7280", textDecoration: "underline", _hover: { color: "#374151" } })}
+                                >
+                                  {etf}
+                                </a>
                               </td>
                               <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>
                                 {(weights[idx] * 100).toFixed(1)}%

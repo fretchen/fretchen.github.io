@@ -60,6 +60,17 @@ export const DATA = {
     "Japan",
     "Canada",
   ],
+  etf_urls: [
+    "https://www.ishares.com/uk/individual/en/products/251565/ishares-euro-corporate-bond-large-cap-ucits-etf",
+    "https://www.ishares.com/ch/professionals/en/products/251740/ishares-core-euro-government-bond-ucits-etf",
+    "https://www.ishares.com/ch/professionals/en/products/253743/ishares-core-sp-500-ucits-etf",
+    "https://www.ishares.com/ch/professionals/en/products/251781/ishares-core-euro-stoxx-50-ucits-etf-de",
+    "https://www.ishares.com/uk/individual/en/products/308633/ishares-j-p-morgan-em-bond-ucits-etf",
+    "https://www.ishares.com/ch/professionals/en/products/297617/",
+    "https://www.ishares.com/ch/professionals/en/products/251851/ishares-msci-australia-ucits-etf",
+    "https://www.ishares.com/ch/professionals/en/products/253732/ishares-msci-japan-b-ucits-etf-acc-fund",
+    "https://www.ishares.com/ch/professionals/en/products/253721/ishares-msci-canada-b-ucits-etf",
+  ],
   cov_etf_ann: [
     [0.00235705, 0.00188179, 0.00101898, 0.00116085, 0.00153483, 0.0012564, 0.00201358, 0.00177889, 0.00117574],
     [0.00188179, 0.00414109, 0.00102919, 0.00027942, 0.00172953, 0.0003092, 0.00087098, 0.00145604, 0.00091051],

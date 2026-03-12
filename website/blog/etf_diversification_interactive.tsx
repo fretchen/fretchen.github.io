@@ -259,6 +259,7 @@ const PEDAGOGY = {
 
 function DiversificationRandomWalk() {
   const [stockPct, setStockPct] = useState(50);
+  const [hasMovedSlider, setHasMovedSlider] = useState(false);
   const [paths, setPaths] = useState<Paths | null>(null);
   const [visibleSteps, setVisibleSteps] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -278,6 +279,25 @@ function DiversificationRandomWalk() {
 
   // Cleanup on unmount
   useEffect(() => stopAnimation, [stopAnimation]);
+
+  // Auto-start animation on mount
+  useEffect(() => {
+    const fresh = generatePaths(sigBond, sigStock, rho);
+    setPaths(fresh);
+    setVisibleSteps(0);
+    setIsAnimating(true);
+    let step = 0;
+    animRef.current = setInterval(() => {
+      step = Math.min(step + ANIM_BATCH, STEPS);
+      setVisibleSteps(step);
+      if (step >= STEPS) {
+        clearInterval(animRef.current!);
+        animRef.current = null;
+        setIsAnimating(false);
+      }
+    }, ANIM_INTERVAL);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startAnimation = useCallback(
     (newPaths?: Paths) => {
@@ -350,6 +370,7 @@ function DiversificationRandomWalk() {
         backgroundColor: "transparent",
         borderWidth: 2,
         pointRadius: 0,
+        pointStyle: "line" as const,
         tension: 0.1,
       },
       {
@@ -359,6 +380,7 @@ function DiversificationRandomWalk() {
         backgroundColor: "transparent",
         borderWidth: 2,
         pointRadius: 0,
+        pointStyle: "line" as const,
         tension: 0.1,
       },
       {
@@ -368,6 +390,7 @@ function DiversificationRandomWalk() {
         backgroundColor: "transparent",
         borderWidth: 3,
         pointRadius: 0,
+        pointStyle: "line" as const,
         tension: 0.1,
       },
     ],
@@ -378,7 +401,7 @@ function DiversificationRandomWalk() {
     maintainAspectRatio: false,
     animation: { duration: 0 },
     plugins: {
-      legend: { position: "top" as const, labels: { font: { size: 12 } } },
+      legend: { position: "top" as const, labels: { font: { size: 12 }, usePointStyle: true, pointStyleWidth: 20 } },
       title: { display: false },
     },
     scales: {
@@ -438,7 +461,7 @@ function DiversificationRandomWalk() {
           marginBottom: "1rem",
         })}
       >
-        Each line shows a possible one-year journey of €100. Parameters are exaggerated for clarity (bonds and stocks
+        Each line shows a possible two-year journey of €100. Parameters are exaggerated for clarity (bonds and stocks
         move in opposite directions here). Watch how the mix (purple) is smoother than either alone.
       </p>
 
@@ -475,13 +498,14 @@ function DiversificationRandomWalk() {
           value={stockPct}
           onChange={(e) => {
             setStockPct(parseInt(e.target.value, 10));
+            setHasMovedSlider(true);
           }}
           className={css({ width: "100%" })}
         />
       </div>
 
       {/* Button */}
-      <div className={css({ marginBottom: "1rem" })}>
+      <div className={css({ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" })}>
         <button
           onClick={handleNewPaths}
           disabled={isAnimating}
@@ -496,32 +520,20 @@ function DiversificationRandomWalk() {
             fontWeight: "bold",
           })}
         >
-          {isAnimating ? "Running…" : paths ? "▶ Replay" : "▶ Start"}
+          {isAnimating ? "Running…" : "🔄 New random scenario"}
         </button>
+        {showVol && !hasMovedSlider && (
+          <span className={css({ fontSize: "0.8rem", color: "#7b3fa0", fontStyle: "italic" })}>
+            👆 Move the slider to see how the mix changes
+          </span>
+        )}
       </div>
 
       {/* Chart + side histogram */}
       <div className={css({ display: "flex", gap: "0.25rem", marginBottom: "1rem" })}>
         {/* Line chart */}
         <div className={css({ flex: "1 1 0%", height: "300px", minWidth: 0 })}>
-          {paths ? (
-            <Line data={chartData} options={chartOptions} />
-          ) : (
-            <div
-              className={css({
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "2px dashed #d1d5db",
-                borderRadius: "4px",
-                color: "#9ca3af",
-                fontSize: "0.9rem",
-              })}
-            >
-              Press <strong className={css({ margin: "0 0.3em" })}>▶ Start</strong> to watch the paths grow
-            </div>
-          )}
+          <Line data={chartData} options={chartOptions} />
         </div>
 
         {/* Rotated histogram on the right */}
@@ -531,14 +543,21 @@ function DiversificationRandomWalk() {
               width: "90px",
               flexShrink: 0,
               height: "300px",
+              display: "flex",
+              flexDirection: "column",
             })}
           >
-            <ReturnHistogram
-              bondReturns={paths.bondReturns}
-              stockReturns={paths.stockReturns}
-              mixReturns={mixReturns}
-              visibleSteps={stepsToShow}
-            />
+            <span className={css({ fontSize: "0.6rem", color: "#9ca3af", textAlign: "center", marginBottom: "2px" })}>
+              Daily return spread
+            </span>
+            <div className={css({ flex: 1 })}>
+              <ReturnHistogram
+                bondReturns={paths.bondReturns}
+                stockReturns={paths.stockReturns}
+                mixReturns={mixReturns}
+                visibleSteps={stepsToShow}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -568,7 +587,7 @@ function DiversificationRandomWalk() {
               marginBottom: "0.5rem",
             })}
           >
-            Measured volatility of this particular random path:
+            How bumpy was this ride? (lower = smoother)
           </p>
           <div className={css({ display: "flex", gap: "0.75rem", flexWrap: "wrap" })}>
             {[

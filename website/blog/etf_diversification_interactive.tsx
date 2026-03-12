@@ -1222,31 +1222,18 @@ export default function ETFDiversification() {
       <section>
         <MarkdownWithLatex>
           {`
-## Motivation for this post
+## A Systematic Approach to Saving
 
-In numerous discussions we get to the question on how to invest savings. And quite
-often the people in the group fall into some of the following categories:
-
-- The "Housing Only" crowd: "I put all my money into my house, that's the safest bet!"
-- The "Stock Market" fans: "I invest into stocks. Look at the long-term returns, it's the best way to grow wealth!"
-- The "I do nothing" group: "I just keep my money in the bank, it's safe and I don't have to worry about it."
-- The "desperate quant" who tries to explain his friends about the "magic of diversification" but fails to make it intuitive.
-
-I likely fall into the last category, and I certainly fail all the time to get my point across more than once in a blue moon. So I want to 
-try to make it more intuitive here and maybe it helps some of the "I do nothing" people or the "Housing Only" crowd to diversify a bit. 
+Most people keep their savings in a bank account, invest in a single asset class, or avoid the topic altogether. This post outlines a systematic approach to diversifying savings — one that doesn't require predicting markets or paying expensive advisors. It's close to what I actually do.
 
 ## The Diversification Paradox
 
-So let's start with the common question. You have some job which allows you to put away some savings every month. But it is not enough to make the
-down payment for a house in the next 5 years. You want to grow your savings, but you also don't want to take too much risk. How do you invest it?
-The savings account is really not giving much of a return, but it feels riskless. So what are other options?
+You have savings you'd like to grow, but you don't want to gamble. The savings account barely keeps up with inflation. So what are your options?
 
 - Bonds feel safe: steady, boring, predictable.
 - Stocks feel risky: volatile, unpredictable, scary.
 
-So maybe put all the money into the safe option — bonds? That way you won't lose money, right? 
-
-Try the simulator below: drag the slider to mix bonds and stocks, then press **▶ Start** to watch what happens. Can you find the mix that fluctuates least?
+The safe choice seems obvious — put everything into bonds. But try the simulator below first: drag the slider to mix bonds and stocks. Can you find the mix that fluctuates least?
 `}
         </MarkdownWithLatex>
 
@@ -1255,20 +1242,13 @@ Try the simulator below: drag the slider to mix bonds and stocks, then press **�
         <MarkdownWithLatex>
           {`
 
-If you played with the slider above, you probably noticed something surprising: a 50/50 mix (purple) fluctuates much less than the 100% stock portfolio (red) — but also less than the 100% bond portfolio (blue).
-In other words: when you combine assets that move independently, their random ups and downs partially cancel. The result: the mix fluctuates less than any single part. 
+If you played with the slider, you probably noticed something surprising: a 50/50 mix (purple) fluctuates much less than 100% stocks (red) — but also less than 100% bonds (blue). When you combine assets that move independently, their random ups and downs partially cancel. The mix fluctuates less than any single part.
 
-So, what should we do ? Think of it like packing for unpredictable weather. If you bring only an
-umbrella, you're covered for rain but stuck in sunshine. If you add sunscreen,
-you haven't made your bag heavier in any meaningful way — you've made it
-*more useful for more situations*. This effect is called **diversification**, and it's the only genuine free lunch
-in investing.
+Think of it like packing for unpredictable weather: an umbrella alone covers rain but not sunshine. Adding sunscreen doesn't make the bag heavier — it makes it useful for more situations. This principle is called **diversification**, and it's the closest thing to a free lunch in investing.
 
-## So Let's Find the Perfect Mix?
+## Why Chasing Returns Fails
 
-Once someone accepts that it is helpful to diversify, they typically try to understand what would be an optimal mix.
-And optimal often means "maximizing return for a given level of risk". You only started to look into the whole investment
-thing to get a good return, right?
+Once you accept that diversification helps, the next instinct is to find the *optimal* mix — the one that maximizes return for a given level of risk.
 
 This kind of optimization earned [Harry Markowitz a Nobel Prize in 1990](https://www.nobelprize.org/prizes/economic-sciences/1990/summary/). Banks and fund
 managers have tried his "mean-variance optimization" ever since. And if you tried it too, you would unfortunately discover
@@ -1289,21 +1269,17 @@ The good news? We *can* measure risk (volatility, correlations) much more
 reliably. So instead of chasing the "best return", we focus on
 the thing we *can* control: **risk**.
 
-## Allocating the risks
+## Allocating Risk Across Asset Classes
 
-So now you might wonder what we can do with this kind of information ? Actually,
-we can look into the risk contribution of each asset to the overall portfolio risk. 
-And then we can see if this is in line what we are confortable with. Let's make it more concrete.
+Since we can measure risk reliably, we can use it as a building block: decide how much risk each asset group should contribute, and let the math determine the capital allocation.
 
-I actually went through a number of different ETFs that are available in Europe. They allow you to invest
-in a number of really large asset classes within the the following clusters:
+The tool below uses 9 European-listed ETFs grouped into three clusters based on how they move together:
 
 - 🟦 Bonds: Corporate bonds, government bonds, and emerging market bonds.
 - 🟥 Stocks: US & Canada — US stocks and the closely correlated Canadian market.
 - 🟧 Stocks: EU, Asia & Australia — Euro Stoxx, India, Australia, and Japan.
 
-I then went through the historic data of the last ten years and looked into the fluctuations of the ETFs. In the tool
-below, you set how much risk each group should contribute — and the math finds the capital allocation that matches.
+Set how much risk each group should bear — the tool computes the matching capital split.
 
 `}
         </MarkdownWithLatex>
@@ -1314,11 +1290,8 @@ below, you set how much risk each group should contribute — and the math finds
           {`
 ### What to notice
 
-- **Bonds are your shock absorber.** Even a small risk budget for bonds translates into
-  a large capital allocation — that's because bonds fluctuate much less than stocks.
-- **Capital ≠ Risk.** Notice how the capital allocation bars look very different from
-  the risk contribution bars. Bonds need a lot of capital to "earn" their share of risk,
-  while a small stock allocation can dominate portfolio risk.
+- **Bonds are your shock absorber.** Even a small risk budget for bonds translates into a large capital allocation — bonds fluctuate much less than stocks, so they need more capital to "earn" their share of risk.
+- **A little stock goes a long way.** Even a small stock allocation can dominate portfolio risk. That's why the risk budget view matters more than the capital split.
 `}
         </MarkdownWithLatex>
       </section>
@@ -1329,31 +1302,20 @@ below, you set how much risk each group should contribute — and the math finds
       <section>
         <MarkdownWithLatex>
           {`
-## What Does This Mean for You?
+## Turning This Into a Monthly Savings Plan
 
-Three takeaways from our data:
+The tool above gives you a capital allocation — but this isn't about a single purchase. The idea is to set up an automatic monthly savings plan:
 
-**1. Diversify broadly — don't put all eggs in one basket.**
-Mixing assets that don't move in lockstep reduces risk more than you'd expect.
-Bonds + stocks is the classic pair, but adding different geographies
-(US, Europe, Emerging Markets) helps too.
+1. **Pick a risk budget** that lets you sleep at night. "Equal risk" is a reasonable starting point.
+2. **Split your monthly savings** according to the capital allocation the tool computes. Most European brokers offer free ETF savings plans that execute automatically.
+3. **Rebalance once a year.** Check whether your actual allocation still matches the target. If one group has drifted more than 5 percentage points, sell some of the overweight and buy more of the underweight.
+4. **Don't tinker.** The biggest risk is yourself — panic-selling during a crash or chasing last year's winner. A systematic plan removes that temptation.
 
-**2. Don't chase "optimal" allocations.**
-The math shows that expected returns are too noisy to optimize.
-No model, no AI, no guru can reliably predict which asset class will
-outperform next year. Focus on what's measurable: risk.
-
-**3. Keep it simple and cheap.**
-A broad mix of low-cost index ETFs — rebalanced once a year — captures
-most of the diversification benefit. Complexity adds fees, not returns.
+This is close to what I do with my own savings. It doesn't require predicting markets, paying for advice, or watching charts. It just requires patience.
 
 ---
 
-*The analysis behind this post is based on 9 European-listed ETFs tracked
-from 2018 to 2026. Cluster assignments were determined by Ward-linkage
-hierarchical clustering on bootstrapped correlation matrices. Risk metrics
-use 252-day annualization. For the full methodology see the
-[analysis notebooks](https://github.com/fretchen/EuropeSmallCapAnalysis).*
+*The analysis is based on 9 European-listed ETFs tracked from 2018 to 2026. Cluster assignments use Ward-linkage hierarchical clustering on bootstrapped correlation matrices. Risk metrics use 252-day annualization. Full methodology: [analysis notebooks](https://github.com/fretchen/EuropeSmallCapAnalysis).*
 `}
         </MarkdownWithLatex>
       </section>

@@ -666,36 +666,52 @@ function matVec(cov: number[][], w: number[]): number[] {
   return result;
 }
 
-/** Solve risk-budget allocation: find weights w≥0, Σw=1 such that
- *  each cluster's risk contribution matches the target budget fractions.
- *  Ported from NB06 (Roncalli 2013). Uses projected gradient descent
- *  with numerical gradient and simplex projection. */
+/** Solve risk-budget allocation via Roncalli (2013) multiplicative update. */
 function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]): number[] {
   const n = cov.length;
-  let w = new Array(n).fill(1 / n);
-  const EPS = 1e-6;
-  const lr = 0.3;
-  const nClusters = budgets.length;
+  const nC = budgets.length;
+  const active = new Array(n).fill(true);
+  for (let i = 0; i < n; i++) if (budgets[clusterOf[i]] < 1e-10) active[i] = false;
+  const activeCount = active.filter(Boolean).length;
+  if (activeCount === 0) return new Array(n).fill(1 / n);
 
-  /** Objective: Σ_c (RC_c/totalRC - b_c)² */
-  function objective(ww: number[]): number {
-    const sw = matVec(cov, ww);
-    const rc = ww.map((wi, i) => wi * sw[i]);
+  let w = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) w[i] = active[i] ? 1 / activeCount : 0;
+
+  for (let iter = 0; iter < 5000; iter++) {
+    const sw = matVec(cov, w);
+    const rc = w.map((wi, i) => wi * sw[i]);
     const totalRc = rc.reduce((a, b) => a + b, 0);
-    if (totalRc < 1e-15) return 1e10;
-    const clusterRc = new Array(nClusters).fill(0);
+    if (totalRc < 1e-15) break;
+    const clusterRc = new Array(nC).fill(0);
     for (let i = 0; i < n; i++) clusterRc[clusterOf[i]] += rc[i];
-    let loss = 0;
-    for (let c = 0; c < nClusters; c++) {
-      const diff = clusterRc[c] / totalRc - budgets[c];
-      loss += diff * diff;
-    }
-    return loss;
-  }
 
-  /** Project onto simplex (w≥0, Σw=1) — Duchi et al. */
-  function projectSimplex(v: number[]): number[] {
-    const sorted = [...v].sort((a, b) => b - a);
+    let maxErr = 0;
+    for (let c = 0; c < nC; c++)
+      if (budgets[c] > 1e-10) maxErr = Math.max(maxErr, Math.abs(clusterRc[c] / totalRc - budgets[c]));
+    if (maxErr < 1e-8) break;
+
+    for (let i = 0; i < n; i++) {
+      if (!active[i]) continue;
+      const c = clusterOf[i];
+      const frac = clusterRc[c] / totalRc;
+      if (frac < 1e-15) continue;
+      w[i] *= Math.pow(budgets[c] / frac, 0.5);
+    }
+    const wSum = w.reduce((a, b) => a + b, 0);
+    if (wSum > 0) w = w.map((wi) => wi / wSum);
+  }
+  return w;
+}
+
+/** Solve long-only minimum variance: min w'Σw s.t. Σw=1, w≥0. */
+function solveMinVariance(cov: number[][]): number[] {
+  const n = cov.length;
+  let w = new Array(n).fill(1 / n);
+  for (let iter = 0; iter < 5000; iter++) {
+    const grad = matVec(cov, w).map((g) => 2 * g);
+    const raw = w.map((wi, i) => wi - 0.5 * grad[i]);
+    const sorted = [...raw].sort((a, b) => b - a);
     let cumSum = 0;
     let rho = 0;
     for (let j = 0; j < n; j++) {
@@ -703,22 +719,7 @@ function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]
       if (sorted[j] - (cumSum - 1) / (j + 1) > 0) rho = j;
     }
     const theta = (sorted.slice(0, rho + 1).reduce((a, b) => a + b, 0) - 1) / (rho + 1);
-    return v.map((r) => Math.max(0, r - theta));
-  }
-
-  for (let iter = 0; iter < 10000; iter++) {
-    const f0 = objective(w);
-    // Numerical gradient
-    const grad = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
-      const wp = [...w];
-      wp[i] += EPS;
-      grad[i] = (objective(wp) - f0) / EPS;
-    }
-    const raw = w.map((wi, i) => wi - lr * grad[i]);
-    w = projectSimplex(raw);
-    // Early stopping
-    if (f0 < 1e-12) break;
+    w = raw.map((r) => Math.max(0, r - theta));
   }
   return w;
 }
@@ -748,57 +749,96 @@ function computeRisk(w: number[]) {
 
 /** Color for the risk gauge */
 function riskColor(vol: number): string {
-  if (vol < 8) return "#22c55e"; // green
-  if (vol < 15) return "#eab308"; // yellow
-  return "#ef4444"; // red
+  if (vol < 8) return "#22c55e";
+  if (vol < 15) return "#eab308";
+  return "#ef4444";
 }
+
+// Precompute minimum-variance risk budgets for preset
+const _mvW = solveMinVariance(DATA.cov_etf_ann);
+const _mvRisk = (() => {
+  const sw = matVec(DATA.cov_etf_ann, _mvW);
+  const rc = _mvW.map((wi, i) => wi * sw[i]);
+  const total = rc.reduce((a, b) => a + b, 0);
+  const clRc = new Array(N_CLUSTERS).fill(0);
+  for (let i = 0; i < N_ETF; i++) clRc[DATA.etf_cluster[i]] += rc[i];
+  return clRc.map((v) => Math.round((v / total) * 100));
+})();
+_mvRisk[_mvRisk.indexOf(Math.max(..._mvRisk))] += 100 - _mvRisk.reduce((a, b) => a + b, 0);
 
 const PRESETS: { label: string; description: string; budgets: number[] }[] = [
   {
     label: "Just two",
-    description: "Only bonds and US stocks contribute risk — the simplest diversified portfolio",
+    description: "Only bonds and US stocks contribute risk",
     budgets: [50, 50, 0],
   },
   {
     label: "Equal risk",
-    description: "Each group contributes equally to risk — a balanced starting point",
+    description: "Each group contributes equally — a balanced starting point",
     budgets: [33, 33, 34],
   },
   {
+    label: "Minimum risk",
+    description: "The lowest-risk portfolio — heavily bond-dominated",
+    budgets: _mvRisk,
+  },
+  {
     label: "Growth",
-    description: "Most risk from stocks, small bond cushion — for those with a long time horizon",
+    description: "Most risk from stocks, small bond cushion",
     budgets: [10, 45, 45],
   },
 ];
 
 function PortfolioRiskAllocator() {
-  const [budgets, setBudgets] = useState<number[]>(PRESETS[0].budgets);
-  const [activePreset, setActivePreset] = useState(0);
+  const [budgets, setBudgets] = useState<number[]>([...PRESETS[1].budgets]);
+  const [activePreset, setActivePreset] = useState(1);
   const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
-  // Normalize budgets and solve for weights
   const { weights, risk } = useMemo(() => {
-    const sum = budgets.reduce((a, b) => a + b, 0);
-    const norm = sum > 0 ? budgets.map((b) => b / sum) : budgets.map(() => 1 / N_CLUSTERS);
-    const w = solveRiskBudget(DATA.cov_etf_ann, DATA.etf_cluster, norm);
+    const w = solveRiskBudget(
+      DATA.cov_etf_ann,
+      DATA.etf_cluster,
+      budgets.map((b) => b / 100),
+    );
     return { weights: w, risk: computeRisk(w) };
   }, [budgets]);
 
-  const handleBudget = (ci: number, val: number) => {
-    setBudgets((prev) => {
-      const next = [...prev];
-      next[ci] = Math.max(0, Math.min(100, val));
-      return next;
-    });
-    setActivePreset(-1);
-  };
-
   const applyPreset = (i: number) => {
-    setBudgets(PRESETS[i].budgets);
+    setBudgets([...PRESETS[i].budgets]);
     setActivePreset(i);
   };
 
-  const budgetSum = budgets.reduce((a, b) => a + b, 0);
+  useEffect(() => {
+    if (dragging === null) return;
+    const onMove = (e: PointerEvent) => {
+      if (!barRef.current) return;
+      const rect = barRef.current.getBoundingClientRect();
+      const pos = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * 100);
+      setBudgets((prev) => {
+        const next = [...prev];
+        if (dragging === 0) {
+          const b2 = next[0] + next[1];
+          next[0] = Math.max(0, Math.min(b2, pos));
+          next[1] = b2 - next[0];
+        } else {
+          const clamped = Math.max(next[0], Math.min(100, pos));
+          next[1] = clamped - next[0];
+          next[2] = 100 - clamped;
+        }
+        return next;
+      });
+      setActivePreset(-1);
+    };
+    const onUp = () => setDragging(null);
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+  }, [dragging]);
 
   return (
     <div
@@ -830,15 +870,11 @@ function PortfolioRiskAllocator() {
           marginTop: 0,
         })}
       >
-        Decide how much of the total portfolio risk each group should contribute. The math then finds the capital
-        allocation that matches your risk budget.
+        Set how much risk each group should contribute — the math finds the capital allocation.
       </p>
 
       {/* ── Preset buttons ── */}
-      <div className={css({ marginBottom: "1.25rem" })}>
-        <span className={css({ fontWeight: "bold", fontSize: "0.9rem", display: "block", marginBottom: "0.5rem" })}>
-          Start from a template
-        </span>
+      <div className={css({ marginBottom: "1rem" })}>
         <div className={css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })}>
           {PRESETS.map((p, i) => (
             <button
@@ -870,65 +906,95 @@ function PortfolioRiskAllocator() {
         )}
       </div>
 
-      {/* ── Risk budget inputs ── */}
+      {/* ── Draggable risk-budget bar ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
-        <span className={css({ fontWeight: "bold", fontSize: "0.9rem", display: "block", marginBottom: "0.5rem" })}>
-          Your risk budget
-        </span>
-        <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: 0, marginBottom: "0.75rem" })}>
-          Set what fraction of total portfolio risk each group should contribute.
-        </p>
-        <div className={css({ display: "flex", flexDirection: "column", gap: "0.5rem" })}>
-          {DATA.clusters.map((cluster, ci) => (
-            <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
-              <span
-                className={css({ width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0 })}
-                style={{ backgroundColor: cluster.color }}
-              />
-              <span className={css({ fontSize: "0.85rem", fontWeight: "600", color: "#374151", minWidth: "180px" })}>
-                {cluster.name}
-              </span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={budgets[ci]}
-                onChange={(e) => handleBudget(ci, parseInt(e.target.value, 10) || 0)}
-                className={css({
-                  width: "4rem",
-                  padding: "0.25rem 0.4rem",
-                  fontSize: "0.85rem",
-                  border: "2px solid",
-                  borderRadius: "6px",
-                  textAlign: "right",
-                  fontWeight: "bold",
-                  flexShrink: 0,
-                  outline: "none",
-                })}
-                style={{ borderColor: cluster.color, color: cluster.color }}
-              />
-              <span className={css({ fontSize: "0.8rem", color: "#9ca3af", flexShrink: 0 })}>%</span>
-            </div>
-          ))}
+        <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>
+          Risk budget — drag the handles or pick a preset
         </div>
         <div
+          ref={barRef}
           className={css({
-            marginTop: "0.5rem",
-            fontSize: "0.8rem",
+            position: "relative",
             display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
+            height: "32px",
+            borderRadius: "6px",
+            overflow: "visible",
+            border: "1px solid #e5e7eb",
+            userSelect: "none",
+            touchAction: "none",
           })}
+          style={{ cursor: dragging !== null ? "col-resize" : "default" }}
         >
-          <span className={css({ color: budgetSum === 100 ? "#22c55e" : "#9ca3af", fontWeight: "bold" })}>
-            Sum: {budgetSum}%
-          </span>
-          {budgetSum !== 100 && (
-            <span className={css({ color: "#9ca3af", fontSize: "0.7rem", fontStyle: "italic" })}>
-              (auto-normalized to 100%)
-            </span>
-          )}
+          {DATA.clusters.map((cluster, ci) => (
+            <div
+              key={cluster.name}
+              style={{
+                width: `${budgets[ci]}%`,
+                backgroundColor: cluster.color,
+                transition: dragging !== null ? "none" : "width 0.2s",
+              }}
+              className={css({
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.7rem",
+                fontWeight: "bold",
+                color: "white",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                borderRadius: ci === 0 ? "5px 0 0 5px" : ci === N_CLUSTERS - 1 ? "0 5px 5px 0" : "0",
+              })}
+            >
+              {budgets[ci] >= 8 ? `${budgets[ci]}%` : ""}
+            </div>
+          ))}
+          {[0, 1].map((hi) => {
+            const leftPct = budgets.slice(0, hi + 1).reduce((a, b) => a + b, 0);
+            if (leftPct <= 0 || leftPct >= 100) return null;
+            return (
+              <div
+                key={hi}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  setDragging(hi);
+                }}
+                className={css({
+                  position: "absolute",
+                  top: "-2px",
+                  width: "16px",
+                  height: "calc(100% + 4px)",
+                  cursor: "col-resize",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 2,
+                })}
+                style={{ left: `calc(${leftPct}% - 8px)` }}
+              >
+                <div
+                  className={css({
+                    width: "4px",
+                    height: "60%",
+                    backgroundColor: "white",
+                    borderRadius: "2px",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
+                  })}
+                />
+              </div>
+            );
+          })}
+        </div>
+        {/* Legend */}
+        <div className={css({ display: "flex", gap: "0.75rem", marginTop: "0.3rem", flexWrap: "wrap" })}>
+          {DATA.clusters.map((cluster) => (
+            <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "0.25rem" })}>
+              <span
+                className={css({ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 })}
+                style={{ backgroundColor: cluster.color }}
+              />
+              <span className={css({ fontSize: "0.65rem", color: "#6b7280" })}>{cluster.name}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -991,51 +1057,48 @@ function PortfolioRiskAllocator() {
           </div>
         </div>
 
-        {/* Cluster weight vs risk stacked bars */}
-        {[
-          { label: "Capital allocation (computed)", values: risk.clusterWeight },
-          { label: "Risk contribution (your budget)", values: risk.clusterRc },
-        ].map((row) => (
-          <div key={row.label} className={css({ marginBottom: "0.5rem" })}>
-            <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>{row.label}</div>
-            <div
-              className={css({
-                display: "flex",
-                height: "26px",
-                borderRadius: "4px",
-                overflow: "hidden",
-                border: "1px solid #e5e7eb",
-              })}
-            >
-              {DATA.clusters.map((cluster, ci) => {
-                const pct = row.values[ci];
-                return pct > 0 ? (
-                  <div
-                    key={cluster.name}
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: cluster.color,
-                      transition: "width 0.2s",
-                    }}
-                    className={css({
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.7rem",
-                      fontWeight: "bold",
-                      color: "white",
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                    })}
-                    title={`${cluster.name}: ${pct.toFixed(1)}%`}
-                  >
-                    {pct >= 8 ? `${pct.toFixed(0)}%` : ""}
-                  </div>
-                ) : null;
-              })}
-            </div>
+        {/* Capital allocation bar */}
+        <div className={css({ marginBottom: "0.75rem" })}>
+          <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>
+            Capital allocation (computed)
           </div>
-        ))}
+          <div
+            className={css({
+              display: "flex",
+              height: "26px",
+              borderRadius: "4px",
+              overflow: "hidden",
+              border: "1px solid #e5e7eb",
+            })}
+          >
+            {DATA.clusters.map((cluster, ci) => {
+              const pct = risk.clusterWeight[ci];
+              return pct > 0 ? (
+                <div
+                  key={cluster.name}
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: cluster.color,
+                    transition: "width 0.2s",
+                  }}
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.7rem",
+                    fontWeight: "bold",
+                    color: "white",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                  })}
+                  title={`${cluster.name}: ${pct.toFixed(1)}%`}
+                >
+                  {pct >= 8 ? `${pct.toFixed(0)}%` : ""}
+                </div>
+              ) : null;
+            })}
+          </div>
+        </div>
 
         {/* ── Cluster detail cards ── */}
         <div className={css({ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" })}>

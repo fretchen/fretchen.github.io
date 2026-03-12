@@ -16,7 +16,8 @@ function matVec(cov: number[][], w: number[]): number[] {
   return result;
 }
 
-/** Solve risk-budget allocation via Roncalli (2013) multiplicative update. */
+/** Solve risk-budget allocation via Roncalli (2013) multiplicative update.
+ *  Per-asset ERC within each cluster: b_i = B_c / n_c (matching Python NB07). */
 function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]): number[] {
   const n = cov.length;
   const nC = budgets.length;
@@ -25,28 +26,36 @@ function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]
   const activeCount = active.filter(Boolean).length;
   if (activeCount === 0) return new Array(n).fill(1 / n);
 
+  // Per-asset risk budgets: b_i = B_c / clusterSize_c
+  const clusterSize = new Array(nC).fill(0);
+  for (let i = 0; i < n; i++) if (active[i]) clusterSize[clusterOf[i]]++;
+  const targetRc = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) if (active[i]) targetRc[i] = budgets[clusterOf[i]] / clusterSize[clusterOf[i]];
+
+  // Initialize: w_i ∝ b_i / σ_i (inverse-vol scaled by budget)
   let w = new Array(n).fill(0);
-  for (let i = 0; i < n; i++) w[i] = active[i] ? 1 / activeCount : 0;
+  for (let i = 0; i < n; i++) if (active[i]) w[i] = targetRc[i] / Math.sqrt(cov[i][i]);
+  const wInit = w.reduce((a, b) => a + b, 0);
+  if (wInit > 0) w = w.map((wi) => wi / wInit);
 
   for (let iter = 0; iter < 5000; iter++) {
     const sw = matVec(cov, w);
     const rc = w.map((wi, i) => wi * sw[i]);
     const totalRc = rc.reduce((a, b) => a + b, 0);
     if (totalRc < 1e-15) break;
-    const clusterRc = new Array(nC).fill(0);
-    for (let i = 0; i < n; i++) clusterRc[clusterOf[i]] += rc[i];
 
+    // Convergence: per-asset risk contribution vs target
     let maxErr = 0;
-    for (let c = 0; c < nC; c++)
-      if (budgets[c] > 1e-10) maxErr = Math.max(maxErr, Math.abs(clusterRc[c] / totalRc - budgets[c]));
+    for (let i = 0; i < n; i++)
+      if (active[i]) maxErr = Math.max(maxErr, Math.abs(rc[i] / totalRc - targetRc[i]));
     if (maxErr < 1e-8) break;
 
+    // Multiplicative update per asset
     for (let i = 0; i < n; i++) {
       if (!active[i]) continue;
-      const c = clusterOf[i];
-      const frac = clusterRc[c] / totalRc;
-      if (frac < 1e-15) continue;
-      w[i] *= Math.pow(budgets[c] / frac, 0.5);
+      const rcFrac = rc[i] / totalRc;
+      if (rcFrac < 1e-15) continue;
+      w[i] *= Math.pow(targetRc[i] / rcFrac, 0.5);
     }
     const wSum = w.reduce((a, b) => a + b, 0);
     if (wSum > 0) w = w.map((wi) => wi / wSum);

@@ -747,23 +747,22 @@ function computeRisk(w: number[]) {
   return { w, portVol, rc, clusterWeight, clusterRc };
 }
 
-/** Color for the risk gauge */
-function riskColor(vol: number): string {
-  if (vol < 8) return "#22c55e";
-  if (vol < 15) return "#eab308";
-  return "#ef4444";
-}
-
 // Precompute minimum-variance risk budgets for preset
 const _mvW = solveMinVariance(DATA.cov_etf_ann);
-const _mvRisk = (() => {
-  const sw = matVec(DATA.cov_etf_ann, _mvW);
-  const rc = _mvW.map((wi, i) => wi * sw[i]);
-  const total = rc.reduce((a, b) => a + b, 0);
-  const clRc = new Array(N_CLUSTERS).fill(0);
-  for (let i = 0; i < N_ETF; i++) clRc[DATA.etf_cluster[i]] += rc[i];
-  return clRc.map((v) => Math.round((v / total) * 100));
-})();
+const _mvRisk0 = computeRisk(_mvW);
+const MIN_VOL = _mvRisk0.portVol;
+const MAX_VOL = Math.max(...DATA.vol_cluster_ann) * 100;
+
+/** Interpolate color from calm blue to warm red based on position in [MIN_VOL, MAX_VOL]. */
+function bumpinessColor(vol: number): string {
+  const t = Math.max(0, Math.min(1, (vol - MIN_VOL) / (MAX_VOL - MIN_VOL)));
+  // #4e79a7 (blue) → #e15759 (red)
+  const r = Math.round(78 + t * (225 - 78));
+  const g = Math.round(121 + t * (87 - 121));
+  const b = Math.round(167 + t * (89 - 167));
+  return `rgb(${r},${g},${b})`;
+}
+const _mvRisk = _mvRisk0.clusterRc.map((v) => Math.round(v));
 _mvRisk[_mvRisk.indexOf(Math.max(..._mvRisk))] += 100 - _mvRisk.reduce((a, b) => a + b, 0);
 
 const PRESETS: { label: string; description: string; budgets: number[] }[] = [
@@ -998,6 +997,51 @@ function PortfolioRiskAllocator() {
         </div>
       </div>
 
+      {/* ── Bumpiness gauge (between drag bar and results) ── */}
+      <div className={css({ marginBottom: "1.25rem" })}>
+        <div className={css({ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.3rem" })}>
+          <span className={css({ fontSize: "0.8rem", color: "#374151" })}>How bumpy is this portfolio?</span>
+          <span
+            className={css({ fontSize: "1.1rem", fontWeight: "bold" })}
+            style={{ color: bumpinessColor(risk.portVol) }}
+          >
+            {risk.portVol.toFixed(1)}%
+          </span>
+          <span className={css({ fontSize: "0.65rem", color: "#9ca3af" })}>per year</span>
+        </div>
+        <div
+          className={css({
+            position: "relative",
+            height: "10px",
+            borderRadius: "5px",
+            backgroundColor: "#f3f4f6",
+            overflow: "hidden",
+          })}
+        >
+          <div
+            style={{
+              width: `${Math.max(0, Math.min(100, ((risk.portVol - MIN_VOL) / (MAX_VOL - MIN_VOL)) * 100))}%`,
+              height: "100%",
+              backgroundColor: bumpinessColor(risk.portVol),
+              borderRadius: "5px",
+              transition: "width 0.2s, background-color 0.2s",
+            }}
+          />
+        </div>
+        <div
+          className={css({
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "0.6rem",
+            color: "#9ca3af",
+            marginTop: "0.15rem",
+          })}
+        >
+          <span>smoothest mix ({MIN_VOL.toFixed(1)}%)</span>
+          <span>single stock group ({MAX_VOL.toFixed(1)}%)</span>
+        </div>
+      </div>
+
       {/* ── Portfolio summary ── */}
       <div
         className={css({
@@ -1007,56 +1051,6 @@ function PortfolioRiskAllocator() {
           border: "1px solid #e5e7eb",
         })}
       >
-        <p className={css({ fontSize: "0.85rem", fontWeight: "bold", marginBottom: "0.75rem", color: "#374151" })}>
-          Resulting portfolio
-        </p>
-
-        {/* Volatility gauge */}
-        <div className={css({ marginBottom: "1rem" })}>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.4rem" })}>
-            <span
-              className={css({ fontSize: "1.5rem", fontWeight: "bold" })}
-              style={{ color: riskColor(risk.portVol) }}
-            >
-              {risk.portVol.toFixed(1)}%
-            </span>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>annual volatility</span>
-          </div>
-          <div
-            className={css({
-              height: "10px",
-              borderRadius: "5px",
-              backgroundColor: "#f3f4f6",
-              overflow: "hidden",
-            })}
-          >
-            <div
-              style={{
-                width: `${Math.min(100, (risk.portVol / 30) * 100)}%`,
-                height: "100%",
-                backgroundColor: riskColor(risk.portVol),
-                borderRadius: "5px",
-                transition: "width 0.2s, background-color 0.2s",
-              }}
-            />
-          </div>
-          <div
-            className={css({
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: "0.6rem",
-              color: "#9ca3af",
-              marginTop: "0.1rem",
-            })}
-          >
-            <span>0%</span>
-            <span>low</span>
-            <span>medium</span>
-            <span>high</span>
-            <span>30%</span>
-          </div>
-        </div>
-
         {/* Capital allocation bar */}
         <div className={css({ marginBottom: "0.75rem" })}>
           <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>

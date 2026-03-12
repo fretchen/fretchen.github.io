@@ -22,15 +22,15 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 // ============================================================
 const DATA = {
   clusters: [
-    { name: "EU Bonds", etfs: ["IBCS", "EUNH"], color: "#4e79a7" },
+    { name: "Bonds", etfs: ["IBCS", "EUNH", "3SUD"], color: "#4e79a7" },
     {
-      name: "US & Friends",
+      name: "Stocks: US & Canada",
       etfs: ["SXR8", "CSCA"],
       color: "#e15759",
     },
     {
-      name: "Regional Diversifiers",
-      etfs: ["SXRT", "3SUD", "NDIA", "SAUS", "CSJP"],
+      name: "Stocks: EU, Asia & Australia",
+      etfs: ["SXRT", "NDIA", "SAUS", "CSJP"],
       color: "#f28e2b",
     },
   ],
@@ -65,7 +65,7 @@ const DATA = {
   // 9×9 Ledoit-Wolf annualized covariance matrix (9-ETF subset, removing EXXY, IQQ6, 4BRZ)
   // Order: IBCS, EUNH, SXR8, SXRT, 3SUD, NDIA, SAUS, CSJP, CSCA
   etf_names: ["IBCS", "EUNH", "SXR8", "SXRT", "3SUD", "NDIA", "SAUS", "CSJP", "CSCA"],
-  etf_cluster: [0, 0, 1, 2, 2, 2, 2, 2, 1], // index into clusters[]
+  etf_cluster: [0, 0, 1, 2, 0, 2, 2, 2, 1], // index into clusters[]
   etf_labels: [
     "EU Corporate Bonds",
     "EU Government Bonds",
@@ -666,17 +666,36 @@ function matVec(cov: number[][], w: number[]): number[] {
   return result;
 }
 
-/** Solve long-only minimum variance: min w'Σw s.t. Σw=1, w≥0.
- *  Projected gradient descent with simplex projection. */
-function solveMinVariance(cov: number[][]): number[] {
+/** Solve risk-budget allocation: find weights w≥0, Σw=1 such that
+ *  each cluster's risk contribution matches the target budget fractions.
+ *  Ported from NB06 (Roncalli 2013). Uses projected gradient descent
+ *  with numerical gradient and simplex projection. */
+function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]): number[] {
   const n = cov.length;
   let w = new Array(n).fill(1 / n);
-  const lr = 0.5;
-  for (let iter = 0; iter < 5000; iter++) {
-    const grad = matVec(cov, w).map((g) => 2 * g);
-    const raw = w.map((wi, i) => wi - lr * grad[i]);
-    // Project onto simplex (w≥0, Σw=1)
-    const sorted = [...raw].sort((a, b) => b - a);
+  const EPS = 1e-6;
+  const lr = 0.3;
+  const nClusters = budgets.length;
+
+  /** Objective: Σ_c (RC_c/totalRC - b_c)² */
+  function objective(ww: number[]): number {
+    const sw = matVec(cov, ww);
+    const rc = ww.map((wi, i) => wi * sw[i]);
+    const totalRc = rc.reduce((a, b) => a + b, 0);
+    if (totalRc < 1e-15) return 1e10;
+    const clusterRc = new Array(nClusters).fill(0);
+    for (let i = 0; i < n; i++) clusterRc[clusterOf[i]] += rc[i];
+    let loss = 0;
+    for (let c = 0; c < nClusters; c++) {
+      const diff = clusterRc[c] / totalRc - budgets[c];
+      loss += diff * diff;
+    }
+    return loss;
+  }
+
+  /** Project onto simplex (w≥0, Σw=1) — Duchi et al. */
+  function projectSimplex(v: number[]): number[] {
+    const sorted = [...v].sort((a, b) => b - a);
     let cumSum = 0;
     let rho = 0;
     for (let j = 0; j < n; j++) {
@@ -684,41 +703,30 @@ function solveMinVariance(cov: number[][]): number[] {
       if (sorted[j] - (cumSum - 1) / (j + 1) > 0) rho = j;
     }
     const theta = (sorted.slice(0, rho + 1).reduce((a, b) => a + b, 0) - 1) / (rho + 1);
-    w = raw.map((r) => Math.max(0, r - theta));
+    return v.map((r) => Math.max(0, r - theta));
+  }
+
+  for (let iter = 0; iter < 10000; iter++) {
+    const f0 = objective(w);
+    // Numerical gradient
+    const grad = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+      const wp = [...w];
+      wp[i] += EPS;
+      grad[i] = (objective(wp) - f0) / EPS;
+    }
+    const raw = w.map((wi, i) => wi - lr * grad[i]);
+    w = projectSimplex(raw);
+    // Early stopping
+    if (f0 < 1e-12) break;
   }
   return w;
 }
 
-const MIN_VAR_W = solveMinVariance(DATA.cov_etf_ann);
-const MIN_VAR_PCT = MIN_VAR_W.map((v) => Math.round(v * 100));
-// Adjust rounding to sum to exactly 100
-MIN_VAR_PCT[MIN_VAR_W.indexOf(Math.max(...MIN_VAR_W))] += 100 - MIN_VAR_PCT.reduce((a, b) => a + b, 0);
+const N_CLUSTERS = DATA.clusters.length;
 
-const PRESETS: { label: string; description: string; weights: number[] }[] = [
-  {
-    label: "Just two",
-    description: "50 % S&P 500 + 50 % EU Gov Bonds — the simplest diversified portfolio",
-    //             IBCS EUNH SXR8 SXRT 3SUD NDIA SAUS CSJP CSCA
-    weights: [0, 50, 50, 0, 0, 0, 0, 0, 0],
-  },
-  {
-    label: "Equal weight",
-    description: "~11 % in each ETF — simple, no agonizing over the right mix",
-    weights: [11, 11, 11, 11, 12, 11, 11, 11, 11],
-  },
-  {
-    label: "Minimum risk",
-    description: "The mathematically lowest-risk mix — computed from the covariance matrix",
-    weights: MIN_VAR_PCT,
-  },
-];
-
-/** Compute portfolio risk metrics from percentage weights */
-function computeRisk(pctWeights: number[]) {
-  const sum = pctWeights.reduce((a, b) => a + b, 0);
-  // Normalize to fractions
-  const w = sum > 0 ? pctWeights.map((p) => p / sum) : pctWeights.map(() => 1 / N_ETF);
-
+/** Compute portfolio risk metrics from fractional weights */
+function computeRisk(w: number[]) {
   const sigmaW = matVec(DATA.cov_etf_ann, w);
   const portVar = w.reduce((s, wi, i) => s + wi * sigmaW[i], 0);
   const portVol = Math.sqrt(Math.max(0, portVar)) * 100; // annualized %
@@ -727,15 +735,15 @@ function computeRisk(pctWeights: number[]) {
   const rc = w.map((wi, i) => (portVar > 0 ? ((wi * sigmaW[i]) / portVar) * 100 : 0));
 
   // Cluster-level aggregation
-  const clusterWeight = [0, 0, 0];
-  const clusterRc = [0, 0, 0];
+  const clusterWeight = new Array(N_CLUSTERS).fill(0);
+  const clusterRc = new Array(N_CLUSTERS).fill(0);
   for (let i = 0; i < N_ETF; i++) {
     const ci = DATA.etf_cluster[i];
-    clusterWeight[ci] += sum > 0 ? (pctWeights[i] / sum) * 100 : 100 / N_ETF;
+    clusterWeight[ci] += w[i] * 100;
     clusterRc[ci] += rc[i];
   }
 
-  return { w, portVol, rc, clusterWeight, clusterRc, sum };
+  return { w, portVol, rc, clusterWeight, clusterRc };
 }
 
 /** Color for the risk gauge */
@@ -745,27 +753,52 @@ function riskColor(vol: number): string {
   return "#ef4444"; // red
 }
 
+const PRESETS: { label: string; description: string; budgets: number[] }[] = [
+  {
+    label: "Just two",
+    description: "Only bonds and US stocks contribute risk — the simplest diversified portfolio",
+    budgets: [50, 50, 0],
+  },
+  {
+    label: "Equal risk",
+    description: "Each group contributes equally to risk — a balanced starting point",
+    budgets: [33, 33, 34],
+  },
+  {
+    label: "Growth",
+    description: "Most risk from stocks, small bond cushion — for those with a long time horizon",
+    budgets: [10, 45, 45],
+  },
+];
+
 function PortfolioRiskAllocator() {
-  const [weights, setWeights] = useState<number[]>(PRESETS[0].weights);
+  const [budgets, setBudgets] = useState<number[]>(PRESETS[0].budgets);
   const [activePreset, setActivePreset] = useState(0);
   const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
 
-  const risk = useMemo(() => computeRisk(weights), [weights]);
+  // Normalize budgets and solve for weights
+  const { weights, risk } = useMemo(() => {
+    const sum = budgets.reduce((a, b) => a + b, 0);
+    const norm = sum > 0 ? budgets.map((b) => b / sum) : budgets.map(() => 1 / N_CLUSTERS);
+    const w = solveRiskBudget(DATA.cov_etf_ann, DATA.etf_cluster, norm);
+    return { weights: w, risk: computeRisk(w) };
+  }, [budgets]);
 
-  const handleWeight = (idx: number, val: string) => {
-    const num = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
-    setWeights((prev) => {
+  const handleBudget = (ci: number, val: number) => {
+    setBudgets((prev) => {
       const next = [...prev];
-      next[idx] = num;
+      next[ci] = Math.max(0, Math.min(100, val));
       return next;
     });
     setActivePreset(-1);
   };
 
   const applyPreset = (i: number) => {
-    setWeights(PRESETS[i].weights);
+    setBudgets(PRESETS[i].budgets);
     setActivePreset(i);
   };
+
+  const budgetSum = budgets.reduce((a, b) => a + b, 0);
 
   return (
     <div
@@ -787,7 +820,7 @@ function PortfolioRiskAllocator() {
           marginTop: 0,
         })}
       >
-        Build your portfolio
+        Build your portfolio by risk budget
       </h3>
       <p
         className={css({
@@ -797,7 +830,8 @@ function PortfolioRiskAllocator() {
           marginTop: 0,
         })}
       >
-        Adjust the weights below to see how different allocations change the overall risk of your portfolio.
+        Decide how much of the total portfolio risk each group should contribute. The math then finds the capital
+        allocation that matches your risk budget.
       </p>
 
       {/* ── Preset buttons ── */}
@@ -836,89 +870,48 @@ function PortfolioRiskAllocator() {
         )}
       </div>
 
-      {/* ── ETF weight inputs grouped by cluster ── */}
+      {/* ── Risk budget inputs ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
         <span className={css({ fontWeight: "bold", fontSize: "0.9rem", display: "block", marginBottom: "0.5rem" })}>
-          Your allocation
+          Your risk budget
         </span>
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "0.75rem",
-          })}
-        >
-          {DATA.clusters.map((cluster) => (
-            <div
-              key={cluster.name}
-              className={css({
-                borderLeft: "4px solid",
-                borderRadius: "6px",
-                padding: "0.5rem 0.75rem",
-                backgroundColor: "white",
-              })}
-              style={{ borderLeftColor: cluster.color }}
-            >
-              <div
-                className={css({
-                  fontSize: "0.8rem",
-                  fontWeight: "bold",
-                  marginBottom: "0.4rem",
-                })}
-                style={{ color: cluster.color }}
-              >
+        <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: 0, marginBottom: "0.75rem" })}>
+          Set what fraction of total portfolio risk each group should contribute.
+        </p>
+        <div className={css({ display: "flex", flexDirection: "column", gap: "0.5rem" })}>
+          {DATA.clusters.map((cluster, ci) => (
+            <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
+              <span
+                className={css({ width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0 })}
+                style={{ backgroundColor: cluster.color }}
+              />
+              <span className={css({ fontSize: "0.85rem", fontWeight: "600", color: "#374151", minWidth: "180px" })}>
                 {cluster.name}
-              </div>
-              {cluster.etfs.map((etf) => {
-                const idx = DATA.etf_names.indexOf(etf);
-                const label = DATA.etf_labels[idx];
-                return (
-                  <div
-                    key={etf}
-                    className={css({
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.4rem",
-                      marginBottom: "0.3rem",
-                    })}
-                  >
-                    <span
-                      className={css({
-                        flex: "1 1 0%",
-                        minWidth: 0,
-                      })}
-                    >
-                      <span className={css({ fontSize: "0.8rem", color: "#374151" })}>{label}</span>
-                      <span className={css({ fontSize: "0.65rem", color: "#9ca3af", marginLeft: "0.3rem" })}>
-                        {etf}
-                      </span>
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={weights[idx]}
-                      onChange={(e) => handleWeight(idx, e.target.value)}
-                      className={css({
-                        width: "3.5rem",
-                        padding: "0.15rem 0.3rem",
-                        fontSize: "0.8rem",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "4px",
-                        textAlign: "right",
-                        flexShrink: 0,
-                      })}
-                    />
-                    <span className={css({ fontSize: "0.7rem", color: "#9ca3af", flexShrink: 0 })}>%</span>
-                  </div>
-                );
-              })}
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={budgets[ci]}
+                onChange={(e) => handleBudget(ci, parseInt(e.target.value, 10) || 0)}
+                className={css({
+                  width: "4rem",
+                  padding: "0.25rem 0.4rem",
+                  fontSize: "0.85rem",
+                  border: "2px solid",
+                  borderRadius: "6px",
+                  textAlign: "right",
+                  fontWeight: "bold",
+                  flexShrink: 0,
+                  outline: "none",
+                })}
+                style={{ borderColor: cluster.color, color: cluster.color }}
+              />
+              <span className={css({ fontSize: "0.8rem", color: "#9ca3af", flexShrink: 0 })}>%</span>
             </div>
           ))}
         </div>
-
-        {/* Sum indicator */}
         <div
           className={css({
             marginTop: "0.5rem",
@@ -928,18 +921,18 @@ function PortfolioRiskAllocator() {
             gap: "0.5rem",
           })}
         >
-          <span className={css({ color: risk.sum === 100 ? "#22c55e" : "#ef4444", fontWeight: "bold" })}>
-            Sum: {risk.sum}%
+          <span className={css({ color: budgetSum === 100 ? "#22c55e" : "#9ca3af", fontWeight: "bold" })}>
+            Sum: {budgetSum}%
           </span>
-          {risk.sum !== 100 && (
-            <span className={css({ color: "#ef4444", fontSize: "0.7rem" })}>
-              (weights are auto-normalized for the calculation)
+          {budgetSum !== 100 && (
+            <span className={css({ color: "#9ca3af", fontSize: "0.7rem", fontStyle: "italic" })}>
+              (auto-normalized to 100%)
             </span>
           )}
         </div>
       </div>
 
-      {/* ── Portfolio summary with volatility ── */}
+      {/* ── Portfolio summary ── */}
       <div
         className={css({
           padding: "1rem",
@@ -949,7 +942,7 @@ function PortfolioRiskAllocator() {
         })}
       >
         <p className={css({ fontSize: "0.85rem", fontWeight: "bold", marginBottom: "0.75rem", color: "#374151" })}>
-          Portfolio summary
+          Resulting portfolio
         </p>
 
         {/* Volatility gauge */}
@@ -1000,8 +993,8 @@ function PortfolioRiskAllocator() {
 
         {/* Cluster weight vs risk stacked bars */}
         {[
-          { label: "Capital allocation", values: risk.clusterWeight },
-          { label: "Risk contribution", values: risk.clusterRc },
+          { label: "Capital allocation (computed)", values: risk.clusterWeight },
+          { label: "Risk contribution (your budget)", values: risk.clusterRc },
         ].map((row) => (
           <div key={row.label} className={css({ marginBottom: "0.5rem" })}>
             <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>{row.label}</div>
@@ -1044,98 +1037,105 @@ function PortfolioRiskAllocator() {
           </div>
         ))}
 
-        {/* Cluster legend — clickable for ETF details */}
-        <div
-          className={css({
-            display: "flex",
-            gap: "1rem",
-            marginTop: "0.5rem",
-            fontSize: "0.7rem",
-            color: "#6b7280",
-          })}
-        >
-          {DATA.clusters.map((cluster, ci) => (
-            <button
-              key={cluster.name}
-              onClick={() => setExpandedCluster(expandedCluster === ci ? null : ci)}
-              className={css({
-                display: "flex",
-                alignItems: "center",
-                gap: "0.3rem",
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                fontSize: "0.7rem",
-                color: "#6b7280",
-              })}
-              style={{ textDecoration: expandedCluster === ci ? "underline" : "none" }}
-            >
-              <span
-                className={css({ width: "10px", height: "10px", borderRadius: "2px", flexShrink: 0 })}
-                style={{ backgroundColor: cluster.color }}
-              />
-              {cluster.name} {expandedCluster === ci ? "▾" : "▸"}
-            </button>
-          ))}
-        </div>
-
-        {/* Expandable per-ETF details */}
-        {expandedCluster !== null && (
-          <div
-            className={css({
-              marginTop: "0.5rem",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "6px",
-              backgroundColor: "#f9fafb",
-              border: "1px solid #e5e7eb",
-            })}
-          >
-            <div
-              className={css({
-                fontSize: "0.75rem",
-                fontWeight: "bold",
-                marginBottom: "0.4rem",
-              })}
-              style={{ color: DATA.clusters[expandedCluster].color }}
-            >
-              {DATA.clusters[expandedCluster].name}
-            </div>
-            <table className={css({ width: "100%", fontSize: "0.7rem", borderCollapse: "collapse" })}>
-              <thead>
-                <tr className={css({ borderBottom: "1px solid #e5e7eb" })}>
-                  <th className={css({ textAlign: "left", padding: "0.2rem 0.3rem", color: "#6b7280" })}>ETF</th>
-                  <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>Weight</th>
-                  <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
-                    Vol (ann.)
-                  </th>
-                  <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
-                    Risk contrib.
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {DATA.clusters[expandedCluster].etfs.map((etf) => {
-                  const idx = DATA.etf_names.indexOf(etf);
-                  const etfVol = Math.sqrt(DATA.cov_etf_ann[idx][idx]) * 100;
-                  const wNorm = risk.sum > 0 ? (weights[idx] / risk.sum) * 100 : 100 / N_ETF;
-                  return (
-                    <tr key={etf} className={css({ borderBottom: "1px solid #f3f4f6" })}>
-                      <td className={css({ padding: "0.2rem 0.3rem", color: "#374151" })}>
-                        {DATA.etf_labels[idx]} <span className={css({ color: "#9ca3af" })}>{etf}</span>
-                      </td>
-                      <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>{wNorm.toFixed(1)}%</td>
-                      <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>{etfVol.toFixed(1)}%</td>
-                      <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem", fontWeight: "600" })}>
-                        {risk.rc[idx].toFixed(1)}%
-                      </td>
-                    </tr>
-                  );
+        {/* ── Cluster detail cards ── */}
+        <div className={css({ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" })}>
+          {DATA.clusters.map((cluster, ci) => {
+            const isOpen = expandedCluster === ci;
+            return (
+              <div
+                key={cluster.name}
+                className={css({
+                  borderLeft: "4px solid",
+                  borderRadius: "6px",
+                  backgroundColor: isOpen ? "#f9fafb" : "white",
+                  border: "1px solid #e5e7eb",
+                  overflow: "hidden",
+                  transition: "background-color 0.15s",
+                  _hover: { backgroundColor: "#f9fafb" },
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                style={{ borderLeftColor: cluster.color, borderLeftWidth: "4px", borderLeftStyle: "solid" }}
+              >
+                <button
+                  onClick={() => setExpandedCluster(isOpen ? null : ci)}
+                  className={css({
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.6rem 0.75rem",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  })}
+                >
+                  <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
+                    <span className={css({ fontSize: "0.85rem", fontWeight: "bold" })} style={{ color: cluster.color }}>
+                      {cluster.name}
+                    </span>
+                    <span className={css({ fontSize: "0.8rem", color: "#374151", fontWeight: "600" })}>
+                      {risk.clusterWeight[ci].toFixed(0)}% capital
+                    </span>
+                  </div>
+                  <span className={css({ fontSize: "0.75rem", color: "#6b7280" })}>
+                    {isOpen ? "▾ Hide ETFs" : "▸ Show ETFs"}
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className={css({ padding: "0 0.75rem 0.6rem" })}>
+                    <table className={css({ width: "100%", fontSize: "0.7rem", borderCollapse: "collapse" })}>
+                      <thead>
+                        <tr className={css({ borderBottom: "1px solid #e5e7eb" })}>
+                          <th className={css({ textAlign: "left", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                            ETF
+                          </th>
+                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                            Weight
+                          </th>
+                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                            Vol (ann.)
+                          </th>
+                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                            Risk contrib.
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cluster.etfs.map((etf) => {
+                          const idx = DATA.etf_names.indexOf(etf);
+                          const etfVol = Math.sqrt(DATA.cov_etf_ann[idx][idx]) * 100;
+                          return (
+                            <tr key={etf} className={css({ borderBottom: "1px solid #f3f4f6" })}>
+                              <td className={css({ padding: "0.2rem 0.3rem", color: "#374151" })}>
+                                {DATA.etf_labels[idx]} <span className={css({ color: "#9ca3af" })}>{etf}</span>
+                              </td>
+                              <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>
+                                {(weights[idx] * 100).toFixed(1)}%
+                              </td>
+                              <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>
+                                {etfVol.toFixed(1)}%
+                              </td>
+                              <td
+                                className={css({
+                                  textAlign: "right",
+                                  padding: "0.2rem 0.3rem",
+                                  fontWeight: "600",
+                                })}
+                              >
+                                {risk.rc[idx].toFixed(1)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -1241,12 +1241,12 @@ And then we can see if this is in line what we are confortable with. Let's make 
 I actually went through a number of different ETFs that are available in Europe. They allow you to invest
 in a number of really large asset classes within the the following clusters:
 
-- 🟦 EU Bonds: There you might invest into corporate or government bonds.
-- 🟥 US & Friends: US stocks and closely correlated markets like Canada.
-- 🟧 Regional Diversifiers: This includes ETFs that invest into regional markets like Europe, emerging market bonds, India, Australia, and Japan.
+- 🟦 Bonds: Corporate bonds, government bonds, and emerging market bonds.
+- 🟥 Stocks: US & Canada — US stocks and the closely correlated Canadian market.
+- 🟧 Stocks: EU, Asia & Australia — Euro Stoxx, India, Australia, and Japan.
 
-I then went through the historic data of the last ten years and looked into the fluctuations of the ETFs. Based on
-this data, we can see how the risk contribution of each cluster looks like depending on your investment choice.
+I then went through the historic data of the last ten years and looked into the fluctuations of the ETFs. In the tool
+below, you set how much risk each group should contribute — and the math finds the capital allocation that matches.
 
 `}
         </MarkdownWithLatex>
@@ -1257,10 +1257,11 @@ this data, we can see how the risk contribution of each cluster looks like depen
           {`
 ### What to notice
 
-- **Bonds are your shock absorber.** Even 20–30% bonds dramatically reduce
-  portfolio swings — the gauge drops fast.
-- **Weight ≠ Risk.** A 30% allocation to US stocks can easily contribute 50%
-  of total portfolio risk. The bars above show this mismatch.
+- **Bonds are your shock absorber.** Even a small risk budget for bonds translates into
+  a large capital allocation — that's because bonds fluctuate much less than stocks.
+- **Capital ≠ Risk.** Notice how the capital allocation bars look very different from
+  the risk contribution bars. Bonds need a lot of capital to "earn" their share of risk,
+  while a small stock allocation can dominate portfolio risk.
 `}
         </MarkdownWithLatex>
       </section>
@@ -1291,7 +1292,7 @@ most of the diversification benefit. Complexity adds fees, not returns.
 
 ---
 
-*The analysis behind this post is based on 12 European-listed ETFs tracked
+*The analysis behind this post is based on 9 European-listed ETFs tracked
 from 2018 to 2026. Cluster assignments were determined by Ward-linkage
 hierarchical clustering on bootstrapped correlation matrices. Risk metrics
 use 252-day annualization. For the full methodology see the

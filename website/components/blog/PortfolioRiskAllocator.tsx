@@ -46,8 +46,7 @@ function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]
 
     // Convergence: per-asset risk contribution vs target
     let maxErr = 0;
-    for (let i = 0; i < n; i++)
-      if (active[i]) maxErr = Math.max(maxErr, Math.abs(rc[i] / totalRc - targetRc[i]));
+    for (let i = 0; i < n; i++) if (active[i]) maxErr = Math.max(maxErr, Math.abs(rc[i] / totalRc - targetRc[i]));
     if (maxErr < 1e-8) break;
 
     // Multiplicative update per asset
@@ -529,7 +528,11 @@ export default function PortfolioRiskAllocator() {
                                   href={DATA.etf_urls[idx]}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={css({ color: "#6b7280", textDecoration: "underline", _hover: { color: "#374151" } })}
+                                  className={css({
+                                    color: "#6b7280",
+                                    textDecoration: "underline",
+                                    _hover: { color: "#374151" },
+                                  })}
                                 >
                                   {etf}
                                 </a>

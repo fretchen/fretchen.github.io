@@ -4,6 +4,7 @@ import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
 import { titleBar } from "../../layouts/styles";
 import * as styles from "../../layouts/styles";
+import { Link } from "../../components/Link";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────
 
@@ -389,7 +390,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
           </pre>
           <p>
             That&apos;s it — your service now accepts crypto payments. See the{" "}
-            <a href="/agent-onboarding">agent onboarding guide</a> for a complete walkthrough.
+            <Link href="/agent-onboarding">agent onboarding guide</Link> for a complete walkthrough.
           </p>
         </div>
 
@@ -728,7 +729,7 @@ app.post("/api/resource", async (req, res) => {
         <p>
           Each payment is individually signed via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>. The
           authorization is bound to a specific amount, recipient, and expiration. The protocol never has blanket access
-          to your customer&apos;s funds. See the <a href="/imagegen">AI Image Generator</a> for a live example.
+          to your customer&apos;s funds. See the <Link href="/imagegen">AI Image Generator</Link> for a live example.
         </p>
 
         {/* ── 9. Links ─────────────────────────────────────────────────── */}
@@ -747,10 +748,10 @@ app.post("/api/resource", async (req, res) => {
             </a>
           </li>
           <li>
-            <a href="/imagegen">AI Image Generator</a> — live x402 service using this facilitator
+            <Link href="/imagegen">AI Image Generator</Link> — live x402 service using this facilitator
           </li>
           <li>
-            <a href="/agent-onboarding">Agent onboarding</a> — build your own x402-protected service
+            <Link href="/agent-onboarding">Agent onboarding</Link> — build your own x402-protected service
           </li>
         </ul>
       </div>

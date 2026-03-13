@@ -104,9 +104,9 @@ describe("EntryList Component", () => {
     const links = screen.getAllByRole("link");
 
     // Bei reverseOrder sollte der erste Link zum letzten Blog führen (Index 2)
-    expect(links[0]).toHaveAttribute("href", "/blog/2");
+    expect(links[0]).toHaveAttribute("href", "/blog/2/");
     // Der dritte Link sollte zum ersten Blog führen (Index 0)
-    expect(links[2]).toHaveAttribute("href", "/blog/0");
+    expect(links[2]).toHaveAttribute("href", "/blog/0/");
   });
 
   /**
@@ -132,7 +132,7 @@ describe("EntryList Component", () => {
 
     const viewAllLink = screen.getByText("View all entries →");
     expect(viewAllLink).toBeInTheDocument();
-    expect(viewAllLink.closest("a")).toHaveAttribute("href", "/blog");
+    expect(viewAllLink.closest("a")).toHaveAttribute("href", "/blog/");
   });
 
   /**
@@ -146,9 +146,9 @@ describe("EntryList Component", () => {
     // Jetzt ist die ganze Card klickbar, daher suchen wir nach allen Links
     const links = screen.getAllByRole("link");
 
-    expect(links[0]).toHaveAttribute("href", "/blog/0");
-    expect(links[1]).toHaveAttribute("href", "/blog/1");
-    expect(links[2]).toHaveAttribute("href", "/blog/2");
+    expect(links[0]).toHaveAttribute("href", "/blog/0/");
+    expect(links[1]).toHaveAttribute("href", "/blog/1/");
+    expect(links[2]).toHaveAttribute("href", "/blog/2/");
   });
 
   /**
@@ -187,11 +187,24 @@ describe("EntryList Component", () => {
 
     // Jetzt ist die ganze Card klickbar, daher suchen wir nach allen Links
     const links = screen.getAllByRole("link");
-    expect(links[0]).toHaveAttribute("href", "/quantum/basics/0");
+    expect(links[0]).toHaveAttribute("href", "/quantum/basics/0/");
 
     const viewAllLink = screen.queryByText("View all entries →");
     if (viewAllLink) {
-      expect(viewAllLink.closest("a")).toHaveAttribute("href", "/quantum/basics");
+      expect(viewAllLink.closest("a")).toHaveAttribute("href", "/quantum/basics/");
     }
+  });
+
+  it("normalizes basePath with trailing slash to avoid double slashes", () => {
+    render(<EntryList {...defaultProps} basePath="/blog/" limit={2} showViewAllLink={true} />);
+
+    const links = screen.getAllByRole("link");
+    // Entry links should not have double slashes
+    expect(links[0]).toHaveAttribute("href", "/blog/0/");
+    expect(links[1]).toHaveAttribute("href", "/blog/1/");
+
+    // View all link should also be clean
+    const viewAllLink = screen.getByText("View all entries →");
+    expect(viewAllLink.closest("a")).toHaveAttribute("href", "/blog/");
   });
 });

@@ -19,13 +19,15 @@ import { SITE } from "../utils/siteData";
  */
 const EntryList: React.FC<EntryListProps> = ({
   blogs,
-  basePath,
+  basePath: rawBasePath,
   titleClassName,
   showDate = false,
   reverseOrder = false,
   limit,
   showViewAllLink = false,
 }) => {
+  // Normalize basePath: strip trailing slash to prevent double-slash URLs
+  const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
   let displayBlogs = reverseOrder ? [...blogs].reverse() : blogs;
   const hasMore = limit && blogs.length > limit;
   if (limit) {
@@ -39,7 +41,7 @@ const EntryList: React.FC<EntryListProps> = ({
         // This ensures correct link indices when the blog list is filtered by category
         const linkIndex =
           blog.originalIndex !== undefined ? blog.originalIndex : reverseOrder ? blogs.length - 1 - index : index;
-        const entryUrl = `${basePath}/${linkIndex}`;
+        const entryUrl = `${basePath}/${linkIndex}/`;
 
         // Format publishing date as ISO8601 for dt-published if available
         const isoDatetime = blog.publishing_date ? new Date(blog.publishing_date).toISOString().split("T")[0] : null;
@@ -114,7 +116,7 @@ const EntryList: React.FC<EntryListProps> = ({
       {/* View All Link */}
       {hasMore && showViewAllLink && (
         <div className={entryList.viewAllContainer}>
-          <Link href={basePath}>View all entries →</Link>
+          <Link href={`${basePath}/`}>View all entries →</Link>
         </div>
       )}
     </div>

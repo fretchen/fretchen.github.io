@@ -25,6 +25,11 @@ export function Link({
     locale = defaultLocale;
   }
 
+  // Ensure trailing slash for internal page links (not files, hashes, or queries)
+  if (!href.endsWith("/") && !href.includes(".") && !href.includes("#") && !href.includes("?")) {
+    href += "/";
+  }
+
   // Only add locale prefix for non-default locale
   if (locale !== defaultLocale) {
     href = "/" + locale + href;

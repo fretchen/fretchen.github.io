@@ -19,13 +19,15 @@ import { SITE } from "../utils/siteData";
  */
 const EntryList: React.FC<EntryListProps> = ({
   blogs,
-  basePath,
+  basePath: rawBasePath,
   titleClassName,
   showDate = false,
   reverseOrder = false,
   limit,
   showViewAllLink = false,
 }) => {
+  // Normalize basePath: strip trailing slash to prevent double-slash URLs
+  const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
   let displayBlogs = reverseOrder ? [...blogs].reverse() : blogs;
   const hasMore = limit && blogs.length > limit;
   if (limit) {
@@ -114,7 +116,7 @@ const EntryList: React.FC<EntryListProps> = ({
       {/* View All Link */}
       {hasMore && showViewAllLink && (
         <div className={entryList.viewAllContainer}>
-          <Link href={basePath}>View all entries →</Link>
+          <Link href={`${basePath}/`}>View all entries →</Link>
         </div>
       )}
     </div>

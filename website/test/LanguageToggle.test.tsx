@@ -20,16 +20,18 @@ vi.mock("vike-react/usePageContext", () => ({
 
 vi.mock("../locales/extractLocale", () => ({
   extractLocale: (pathname: string) => {
-    // Simulate the extractLocale logic for testing
-    if (pathname.startsWith("/de/")) {
+    // Simulate the extractLocale logic including trailing slash normalization
+    const addTrailingSlash = (p: string) => (p === "/" || p.endsWith("/") ? p : p + "/");
+    if (pathname.startsWith("/de/") || pathname === "/de") {
+      const withoutLocale = pathname.replace(/^\/de/, "") || "/";
       return {
         locale: "de",
-        urlPathnameWithoutLocale: pathname.replace("/de", "") || "/",
+        urlPathnameWithoutLocale: addTrailingSlash(withoutLocale),
       };
     }
     return {
       locale: "en",
-      urlPathnameWithoutLocale: pathname,
+      urlPathnameWithoutLocale: addTrailingSlash(pathname),
     };
   },
 }));
@@ -52,10 +54,10 @@ describe("LanguageToggle URL Generation", () => {
       const deLink = screen.getByLabelText("Switch to German");
 
       // English should use root path (matches build structure)
-      expect(enLink).toHaveAttribute("href", "/imagegen");
+      expect(enLink).toHaveAttribute("href", "/imagegen/");
 
       // German should use prefixed path (matches build structure)
-      expect(deLink).toHaveAttribute("href", "/de/imagegen");
+      expect(deLink).toHaveAttribute("href", "/de/imagegen/");
     });
 
     it("should generate correct URLs for root page", () => {
@@ -84,10 +86,10 @@ describe("LanguageToggle URL Generation", () => {
       const deLink = screen.getByLabelText("Switch to German");
 
       // Switch from German to English: remove /de/ prefix
-      expect(enLink).toHaveAttribute("href", "/assistent");
+      expect(enLink).toHaveAttribute("href", "/assistent/");
 
       // Stay on German: keep /de/ prefix
-      expect(deLink).toHaveAttribute("href", "/de/assistent");
+      expect(deLink).toHaveAttribute("href", "/de/assistent/");
     });
 
     it("should handle deep nested paths correctly", () => {
@@ -101,10 +103,10 @@ describe("LanguageToggle URL Generation", () => {
       const deLink = screen.getByLabelText("Switch to German");
 
       // English: root path (no prefix)
-      expect(enLink).toHaveAttribute("href", "/blog/5");
+      expect(enLink).toHaveAttribute("href", "/blog/5/");
 
       // German: prefixed path
-      expect(deLink).toHaveAttribute("href", "/de/blog/5");
+      expect(deLink).toHaveAttribute("href", "/de/blog/5/");
     });
   });
 
@@ -148,18 +150,18 @@ describe("LanguageToggle URL Generation", () => {
       const testCases = [
         {
           current: "/imagegen",
-          expectedEn: "/imagegen", // Matches build/client/imagegen/index.html
-          expectedDe: "/de/imagegen", // Matches build/client/de/imagegen/index.html
+          expectedEn: "/imagegen/", // Matches build/client/imagegen/index.html
+          expectedDe: "/de/imagegen/", // Matches build/client/de/imagegen/index.html
         },
         {
           current: "/assistent",
-          expectedEn: "/assistent", // Matches build/client/assistent/index.html
-          expectedDe: "/de/assistent", // Matches build/client/de/assistent/index.html
+          expectedEn: "/assistent/", // Matches build/client/assistent/index.html
+          expectedDe: "/de/assistent/", // Matches build/client/de/assistent/index.html
         },
         {
           current: "/blog",
-          expectedEn: "/blog", // Matches build/client/blog/index.html
-          expectedDe: "/de/blog", // Matches build/client/de/blog/index.html
+          expectedEn: "/blog/", // Matches build/client/blog/index.html
+          expectedDe: "/de/blog/", // Matches build/client/de/blog/index.html
         },
       ];
 

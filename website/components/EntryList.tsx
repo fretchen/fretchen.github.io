@@ -39,7 +39,7 @@ const EntryList: React.FC<EntryListProps> = ({
         // This ensures correct link indices when the blog list is filtered by category
         const linkIndex =
           blog.originalIndex !== undefined ? blog.originalIndex : reverseOrder ? blogs.length - 1 - index : index;
-        const entryUrl = `${basePath}/${linkIndex}`;
+        const entryUrl = `${basePath}/${linkIndex}/`;
 
         // Format publishing date as ISO8601 for dt-published if available
         const isoDatetime = blog.publishing_date ? new Date(blog.publishing_date).toISOString().split("T")[0] : null;

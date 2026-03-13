@@ -11,8 +11,6 @@ import PortfolioRiskAllocator from "../components/blog/PortfolioRiskAllocator";
 
 In this blog post, I present a simple, systematic approach to invest money across multiple asset classes. It is flexible enough to fit different risk tolerances and simple enough that it requires minimal time once set up. So it is pretty close to the approach that I use for my own savings.
 
-I will walk you through the advantages of diversification to minimize risk, present you a way to allocate risks across asset classes according to your preference, and then give a few hints how to turn this into a savings plan.
-
 ## The Diversification Paradox
 
 Once, you start to put money in the savings account, you might be tempted to look for better returns. And then you will typically have the choice between two
@@ -91,12 +89,15 @@ If you tried to use the tool, you might have noticed a few patterns:
 The tool above gives you a capital allocation — but this isn't about a single purchase. The idea is to set up an automatic monthly savings plan:
 
 1. **Pick a risk budget** that lets you sleep at night. "Equal risk" is a reasonable starting point for people that have a long time to sit out some swings.
-2. **Split your monthly savings** according to the capital allocation the tool computes. Most European brokers offer free ETF savings plans that execute automatically.
-3. **Don't tinker.** The biggest risk is yourself — panic-selling during a crash or chasing last year's winner. A systematic plan removes that temptation.
+2. **Split your monthly savings** according to the capital allocation the tool computes. For example, if you save €300/month and the tool says 60% bonds / 25% US stocks / 15% other stocks, that's €180 / €75 / €45. Most European brokers offer free ETF savings plans that execute automatically.
+
+The hardest part isn't choosing — it's sticking with it. The biggest risk is yourself: panic-selling during a crash or chasing last year's winner. A systematic monthly plan removes that temptation.
 
 This is close to what I do with my own savings. It doesn't require predicting markets, paying for advice, or watching charts. It just requires patience.
 
-## Methodology (for the curious)
+---
+
+## Technical notes
 
 This analysis uses daily EUR-denominated prices of the 9 iShares ETFs listed above, from 2018 to 2026. A few notes on methodology:
 

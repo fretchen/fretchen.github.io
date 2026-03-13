@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { css } from "../styled-system/css";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import MermaidDiagram from "../components/MermaidDiagram";
+import { Link } from "../components/Link";
 
 // Mermaid diagram definitions
 const MERKLE_TREE_MATH_DEFINITION = `graph TD
@@ -1094,7 +1095,7 @@ export default function MerkleAIBatching() {
 
         <p>
           I&apos;ve already built an AI image generator that works on the blockchain - you can try it on my{" "}
-          <a href="/imagegen">image generation page</a>. Users pay with their wallet, and my{" "}
+          <Link href="/imagegen">image generation page</Link>. Users pay with their wallet, and my{" "}
           <a href="https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code">
             GenImNFT contract
           </a>{" "}

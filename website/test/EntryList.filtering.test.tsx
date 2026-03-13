@@ -58,9 +58,9 @@ describe("EntryList - Link consistency after filtering", () => {
     const links = screen.getAllByRole("link");
 
     // Links should use originalIndex, not array position
-    expect(links[0]).toHaveAttribute("href", "/blog/5");
-    expect(links[1]).toHaveAttribute("href", "/blog/12");
-    expect(links[2]).toHaveAttribute("href", "/blog/18");
+    expect(links[0]).toHaveAttribute("href", "/blog/5/");
+    expect(links[1]).toHaveAttribute("href", "/blog/12/");
+    expect(links[2]).toHaveAttribute("href", "/blog/18/");
   });
 
   /**
@@ -77,9 +77,9 @@ describe("EntryList - Link consistency after filtering", () => {
     const links = screen.getAllByRole("link");
 
     // Without originalIndex, use array position
-    expect(links[0]).toHaveAttribute("href", "/blog/0");
-    expect(links[1]).toHaveAttribute("href", "/blog/1");
-    expect(links[2]).toHaveAttribute("href", "/blog/2");
+    expect(links[0]).toHaveAttribute("href", "/blog/0/");
+    expect(links[1]).toHaveAttribute("href", "/blog/1/");
+    expect(links[2]).toHaveAttribute("href", "/blog/2/");
   });
 
   /**
@@ -98,11 +98,11 @@ describe("EntryList - Link consistency after filtering", () => {
 
     // With reverseOrder, display is reversed but originalIndex stays the same
     // Post C (originalIndex 11) should be first in display
-    expect(links[0]).toHaveAttribute("href", "/blog/11");
+    expect(links[0]).toHaveAttribute("href", "/blog/11/");
     // Post B (originalIndex 7) should be second
-    expect(links[1]).toHaveAttribute("href", "/blog/7");
+    expect(links[1]).toHaveAttribute("href", "/blog/7/");
     // Post A (originalIndex 3) should be third
-    expect(links[2]).toHaveAttribute("href", "/blog/3");
+    expect(links[2]).toHaveAttribute("href", "/blog/3/");
   });
 
   /**
@@ -120,11 +120,11 @@ describe("EntryList - Link consistency after filtering", () => {
     const links = screen.getAllByRole("link");
 
     // First blog: use originalIndex
-    expect(links[0]).toHaveAttribute("href", "/blog/10");
+    expect(links[0]).toHaveAttribute("href", "/blog/10/");
     // Second blog: fall back to array index (1)
-    expect(links[1]).toHaveAttribute("href", "/blog/1");
+    expect(links[1]).toHaveAttribute("href", "/blog/1/");
     // Third blog: use originalIndex
-    expect(links[2]).toHaveAttribute("href", "/blog/20");
+    expect(links[2]).toHaveAttribute("href", "/blog/20/");
   });
 
   /**
@@ -161,8 +161,8 @@ describe("EntryList - Link consistency after filtering", () => {
     const links = screen.getAllByRole("link");
 
     // Links should point to original indices, not filtered positions
-    expect(links[0]).toHaveAttribute("href", "/blog/1"); // AI Post 1 was at index 1
-    expect(links[1]).toHaveAttribute("href", "/blog/3"); // AI Post 2 was at index 3
-    expect(links[2]).toHaveAttribute("href", "/blog/5"); // AI Post 3 was at index 5
+    expect(links[0]).toHaveAttribute("href", "/blog/1/"); // AI Post 1 was at index 1
+    expect(links[1]).toHaveAttribute("href", "/blog/3/"); // AI Post 2 was at index 3
+    expect(links[2]).toHaveAttribute("href", "/blog/5/"); // AI Post 3 was at index 5
   });
 });

@@ -38,7 +38,7 @@ sequenceDiagram
 
 ## Introduction
 
-Over the last year, I've built two AI services with blockchain payments: an [image generator with NFT minting](/blog/9) and an [LLM assistant with Merkle-tree batching](/blog/16). Both work well – users can pay anonymously with crypto, no accounts needed, costs under control.
+Over the last year, I've built two AI services with blockchain payments: an [image generator with NFT minting](/blog/9/) and an [LLM assistant with Merkle-tree batching](/blog/16/). Both work well – users can pay anonymously with crypto, no accounts needed, costs under control.
 
 But each service has its own payment logic. My image generator uses a custom smart contract flow, my LLM assistant uses prepaid deposits. If someone wanted to build a client that uses both, they'd need to understand two completely different payment systems. And if an AI agent wanted to pay for my services autonomously? It would need custom integration for each endpoint.
 
@@ -178,7 +178,7 @@ Now that we understand the infrastructure, let's see how the actual image genera
 
 ## The ImageGen Endpoint
 
-Part of my website is the imagegen feature, which calls a serverless function to generate AI images via Black Forest Labs and mints an NFT via the GenImNFTv4 contract. The NFT serves as a certificate of authenticity and proof of ownership for the generated image – I've written more about the [original implementation](/blog/9) and the [gallery features](/blog/12) in previous posts. This endpoint is now upgraded to use the x402 standard for payments and accessible to anyone interested under [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). How does the endpoint work now?
+Part of my website is the imagegen feature, which calls a serverless function to generate AI images via Black Forest Labs and mints an NFT via the GenImNFTv4 contract. The NFT serves as a certificate of authenticity and proof of ownership for the generated image – I've written more about the [original implementation](/blog/9/) and the [gallery features](/blog/12/) in previous posts. This endpoint is now upgraded to use the x402 standard for payments and accessible to anyone interested under [imagegen-agent.fretchen.eu](https://imagegen-agent.fretchen.eu). How does the endpoint work now?
 
 Using the official x402 TypeScript SDK, the buyer-side code is remarkably simple:
 

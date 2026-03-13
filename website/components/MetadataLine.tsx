@@ -35,10 +35,11 @@ export default function MetadataLine({
   const { supportCount, isLoading, isSuccess, errorMessage, isConnected, handleSupport, isReadPending, readError } =
     useSupportAction(showSupport ? currentUrl : "");
 
-  // Format publishing date
+  // Format publishing date — parse as local time to avoid timezone shifts
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      const [year, month, day] = dateString.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
       return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",

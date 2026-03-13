@@ -3,6 +3,7 @@ import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
 
 const N_ETF = DATA.etf_names.length;
+const ETF_INDEX = new Map(DATA.etf_names.map((name, i) => [name, i]));
 
 /** Matrix-vector product: Σw */
 function matVec(cov: number[][], w: number[]): number[] {
@@ -151,6 +152,7 @@ export default function PortfolioRiskAllocator() {
   const [activePreset, setActivePreset] = useState(1);
   const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
+  const [hasEverDragged, setHasEverDragged] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   const { weights, risk } = useMemo(() => {
@@ -207,6 +209,12 @@ export default function PortfolioRiskAllocator() {
         border: "1px solid rgba(78, 121, 167, 0.15)",
       })}
     >
+      <style>{`
+        @keyframes handlePulse {
+          0%, 100% { transform: scaleX(1); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+          50% { transform: scaleX(1.6); box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
+        }
+      `}</style>
       {/* ── Header ── */}
       <p
         className={css({
@@ -265,8 +273,8 @@ export default function PortfolioRiskAllocator() {
 
       {/* ── Draggable risk-budget bar ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
-        <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>
-          Risk budget — drag the handles or pick a preset
+        <div className={css({ fontSize: "0.75rem", color: "#374151", marginBottom: "0.2rem", fontWeight: "600" })}>
+          ↔ Drag the handles to set your risk budget
         </div>
         <div
           ref={barRef}
@@ -314,29 +322,51 @@ export default function PortfolioRiskAllocator() {
                 onPointerDown={(e) => {
                   e.preventDefault();
                   setDragging(hi);
+                  setHasEverDragged(true);
                 }}
                 className={css({
                   position: "absolute",
-                  top: "-2px",
-                  width: "16px",
-                  height: "calc(100% + 4px)",
+                  top: "-4px",
+                  width: "20px",
+                  height: "calc(100% + 8px)",
                   cursor: "col-resize",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   zIndex: 2,
+                  _hover: { "& > div": { transform: "scaleX(1.3)", boxShadow: "0 2px 8px rgba(0,0,0,0.45)" } },
                 })}
-                style={{ left: `calc(${leftPct}% - 8px)` }}
+                style={{ left: `calc(${leftPct}% - 10px)` }}
               >
                 <div
                   className={css({
-                    width: "4px",
+                    width: "8px",
                     height: "60%",
                     backgroundColor: "white",
-                    borderRadius: "2px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
+                    borderRadius: "3px",
+                    border: "1px solid rgba(0,0,0,0.2)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "2px",
+                    transition: "transform 0.15s, box-shadow 0.15s",
                   })}
-                />
+                  style={!hasEverDragged ? { animation: "handlePulse 1s ease-in-out 3" } : undefined}
+                >
+                  {[0, 1, 2].map((l) => (
+                    <div
+                      key={l}
+                      className={css({
+                        width: "4px",
+                        height: "1px",
+                        backgroundColor: "rgba(0,0,0,0.35)",
+                        borderRadius: "0.5px",
+                      })}
+                    />
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -518,7 +548,7 @@ export default function PortfolioRiskAllocator() {
                       </thead>
                       <tbody>
                         {cluster.etfs.map((etf) => {
-                          const idx = DATA.etf_names.indexOf(etf);
+                          const idx = ETF_INDEX.get(etf)!;
                           const etfVol = Math.sqrt(DATA.cov_etf_ann[idx][idx]) * 100;
                           return (
                             <tr key={etf} className={css({ borderBottom: "1px solid #f3f4f6" })}>

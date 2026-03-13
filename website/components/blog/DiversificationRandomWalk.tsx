@@ -26,6 +26,7 @@ const gaussianRandom = (): number => {
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 };
 
+const TRADING_DAYS_PER_YEAR = 252;
 const STEPS = 504; // 2 trading years — more points for smoother histogram
 const ANIM_BATCH = 8; // steps drawn per frame
 const ANIM_INTERVAL = 25; // ms between frames
@@ -38,8 +39,8 @@ interface Paths {
 /** Generate correlated daily returns for bonds and stocks.
  *  Uses Cholesky decomposition for the 2×2 case. */
 function generatePaths(sigBond: number, sigStock: number, rho: number): Paths {
-  const dailySigBond = sigBond / Math.sqrt(STEPS);
-  const dailySigStock = sigStock / Math.sqrt(STEPS);
+  const dailySigBond = sigBond / Math.sqrt(TRADING_DAYS_PER_YEAR);
+  const dailySigStock = sigStock / Math.sqrt(TRADING_DAYS_PER_YEAR);
   const bondReturns: number[] = [];
   const stockReturns: number[] = [];
   for (let i = 0; i < STEPS; i++) {
@@ -65,7 +66,7 @@ function measuredVol(dailyReturns: number[], steps: number): number {
   const slice = dailyReturns.slice(0, steps);
   const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
   const variance = slice.reduce((s, r) => s + (r - mean) ** 2, 0) / slice.length;
-  return Math.sqrt(variance * STEPS) * 100; // percent, annualized
+  return Math.sqrt(variance * TRADING_DAYS_PER_YEAR) * 100; // percent, annualized
 }
 
 // ============================================================
@@ -225,26 +226,10 @@ export default function DiversificationRandomWalk() {
   const startAnimation = useCallback(
     (newPaths?: Paths) => {
       stopAnimation();
-      const p = newPaths ?? paths;
+      let p = newPaths ?? paths;
       if (!p) {
-        const fresh = generatePaths(sigBond, sigStock, rho);
-        setPaths(fresh);
-        setVisibleSteps(0);
-        setIsAnimating(true);
-        // defer interval to next tick so state is set
-        setTimeout(() => {
-          let step = 0;
-          animRef.current = setInterval(() => {
-            step = Math.min(step + ANIM_BATCH, STEPS);
-            setVisibleSteps(step);
-            if (step >= STEPS) {
-              clearInterval(animRef.current!);
-              animRef.current = null;
-              setIsAnimating(false);
-            }
-          }, ANIM_INTERVAL);
-        }, 0);
-        return;
+        p = generatePaths(sigBond, sigStock, rho);
+        setPaths(p);
       }
       setVisibleSteps(0);
       setIsAnimating(true);

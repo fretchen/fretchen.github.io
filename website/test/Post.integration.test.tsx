@@ -11,6 +11,37 @@ vi.mock("vike-react/usePageContext", () => ({
   }),
 }));
 
+// Mock useSupportAction (used by MetadataLine)
+vi.mock("../hooks/useSupportAction", () => ({
+  useSupportAction: () => ({
+    supportCount: "0",
+    isLoading: false,
+    isSuccess: false,
+    errorMessage: null,
+    isConnected: false,
+    handleSupport: vi.fn(),
+    isReadPending: false,
+    readError: null,
+  }),
+}));
+
+// Mock useUmami (used by MetadataLine)
+vi.mock("../hooks/useUmami", () => ({
+  useUmami: () => ({
+    trackEvent: vi.fn(),
+    isDisabled: true,
+    isDebugMode: false,
+  }),
+}));
+
+// Mock useWebmentionUrls (used by Post)
+vi.mock("../hooks/useWebmentionUrls", () => ({
+  useWebmentionUrls: () => ({
+    urlWithoutSlash: "https://www.fretchen.eu/blog/1",
+    urlWithSlash: "https://www.fretchen.eu/blog/1/",
+  }),
+}));
+
 // Mock fetch globally
 global.fetch = vi.fn();
 

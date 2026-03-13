@@ -1,6 +1,7 @@
 import React from "react";
 import { css } from "../styled-system/css";
 import MermaidDiagram from "../components/MermaidDiagram";
+import { Link } from "../components/Link";
 
 // Simplified LLM Prepaid Workflow with Merkle Batching
 const UPDATED_LLM_WORKFLOW_DEFINITION = `sequenceDiagram
@@ -53,7 +54,7 @@ export default function MerkleAIBatching() {
 
         <p>
           <strong>My initial answer is now live:</strong>{" "}
-          <a
+          <Link
             href="/assistent"
             className={css({
               fontWeight: "bold",
@@ -62,7 +63,7 @@ export default function MerkleAIBatching() {
             })}
           >
             Feel free to try my AI assistant
-          </a>{" "}
+          </Link>{" "}
           - you connect your wallet, deposit ETH, and chat with an LLM. No subscriptions, no accounts, no data weird
           harvesting. And you just pay for exactly what you use.
         </p>
@@ -113,7 +114,7 @@ export default function MerkleAIBatching() {
         <h2>Building on Previous Blockchain-AI Experience</h2>
 
         <p>
-          I previously built an <a href="/blog/9">AI image generator with blockchain payments</a>, proving that
+          I previously built an <Link href="/blog/9">AI image generator with blockchain payments</Link>, proving that
           crypto-native AI services can work. But LLMs present fundamentally different challenges: users expect multiple
           requests per session, instant responses, and variable costs per interaction. The traditional &quot;one
           transaction per request&quot; model becomes prohibitively expensive and cumbersome.
@@ -133,8 +134,8 @@ export default function MerkleAIBatching() {
           After evaluating different approaches, Merkle tree batching emerged as the optimal solution - providing
           cryptographic proof of each interaction while enabling efficient batch processing. This approach balances the
           competing demands of user experience, cost efficiency, and technical simplicity. I explored this technique in
-          detail in my <a href="/blog/15">previous post on Merkle tree fundamentals</a>. While that post covered the
-          mathematical foundations, here we&apos;ll focus on the practical implementation for real-time AI services.
+          detail in my <Link href="/blog/15">previous post on Merkle tree fundamentals</Link>. While that post covered
+          the mathematical foundations, here we&apos;ll focus on the practical implementation for real-time AI services.
         </p>
 
         <p>

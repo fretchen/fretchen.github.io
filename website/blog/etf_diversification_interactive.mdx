@@ -96,6 +96,13 @@ The tool above gives you a capital allocation — but this isn't about a single 
 
 This is close to what I do with my own savings. It doesn't require predicting markets, paying for advice, or watching charts. It just requires patience.
 
----
+## Methodology (for the curious)
 
-_The analysis is based on 9 European-listed ETFs tracked from 2018 to 2026. Cluster assignments use Ward-linkage hierarchical clustering on bootstrapped correlation matrices. Risk metrics use 252-day annualization. Full methodology: [analysis notebooks](https://github.com/fretchen/EuropeSmallCapAnalysis)._
+This analysis uses daily EUR-denominated prices of the 9 iShares ETFs listed above, from 2018 to 2026. A few notes on methodology:
+
+- **Covariance estimation.** The covariance matrix is estimated using [Ledoit-Wolf shrinkage](https://en.wikipedia.org/wiki/Estimation_of_covariance_matrices#Shrinkage_estimation), which stabilizes the estimate when the number of assets is large relative to the number of observations.
+- **Risk as volatility.** Risk is measured as annualized portfolio volatility (standard deviation of returns, scaled by √252 trading days). This is a simplification — it treats upside and downside swings equally — but it is the standard starting point for portfolio construction.
+- **Cluster assignment.** The three asset groups (Bonds, US & Canada, EU/Asia/Australia) were derived using Ward-linkage hierarchical clustering on bootstrapped correlation matrices. One manual adjustment: 3SUD (EM Bonds) was moved from the "Regional Diversifiers" cluster to the Bonds cluster, since it is easier to explain a bond in the bond group.
+- **Risk budgeting.** Capital allocation follows the risk budgeting framework of [Roncalli (2013)](https://doi.org/10.2139/ssrn.2272862). Each asset within a cluster receives an equal share of that cluster's risk budget, and the solver finds weights such that actual risk contributions match the targets.
+
+_The full analysis notebooks are not published yet, but can be made available on request._

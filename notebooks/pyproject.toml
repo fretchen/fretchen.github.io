@@ -21,7 +21,7 @@ requests = "^2.32.5"
 eip712 = "^0.3.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
+black = "^26.3.1"
 isort = "^5.12.0"
 jupyter = "^1.1.1"
 ipykernel = "^6.30.0"

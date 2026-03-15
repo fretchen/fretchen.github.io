@@ -152,7 +152,6 @@ export default function PortfolioRiskAllocator() {
   const [activePreset, setActivePreset] = useState(1);
   const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
-  const [hasEverDragged, setHasEverDragged] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   const { weights, risk } = useMemo(() => {
@@ -209,12 +208,6 @@ export default function PortfolioRiskAllocator() {
         border: "1px solid rgba(78, 121, 167, 0.15)",
       })}
     >
-      <style>{`
-        @keyframes handlePulse {
-          0%, 100% { transform: scaleX(1); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-          50% { transform: scaleX(1.6); box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
-        }
-      `}</style>
       {/* ── Header ── */}
       <p
         className={css({
@@ -273,29 +266,24 @@ export default function PortfolioRiskAllocator() {
 
       {/* ── Draggable risk-budget bar ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
-        <div className={css({ fontSize: "0.75rem", color: "#374151", marginBottom: "0.2rem", fontWeight: "600" })}>
-          ↔ Drag the handles to set your risk budget
+        <div className={css({ fontSize: "0.8rem", color: "#374151", marginBottom: "0.35rem", fontWeight: "600" })}>
+          Refine your mix — drag the ● circles to adjust
         </div>
+        {/* Percentage labels above the track */}
         <div
-          ref={barRef}
           className={css({
             position: "relative",
             display: "flex",
-            height: "32px",
-            borderRadius: "6px",
-            overflow: "visible",
-            border: "1px solid #e5e7eb",
+            height: "1.1rem",
+            marginBottom: "0.2rem",
             userSelect: "none",
-            touchAction: "none",
           })}
-          style={{ cursor: dragging !== null ? "col-resize" : "default" }}
         >
           {DATA.clusters.map((cluster, ci) => (
             <div
               key={cluster.name}
               style={{
                 width: `${budgets[ci]}%`,
-                backgroundColor: cluster.color,
                 transition: dragging !== null ? "none" : "width 0.2s",
               }}
               className={css({
@@ -304,15 +292,54 @@ export default function PortfolioRiskAllocator() {
                 justifyContent: "center",
                 fontSize: "0.7rem",
                 fontWeight: "bold",
-                color: "white",
                 overflow: "hidden",
                 whiteSpace: "nowrap",
-                borderRadius: ci === 0 ? "5px 0 0 5px" : ci === N_CLUSTERS - 1 ? "0 5px 5px 0" : "0",
               })}
             >
-              {budgets[ci] >= 8 ? `${budgets[ci]}%` : ""}
+              <span style={{ color: cluster.color }}>{budgets[ci] >= 6 ? `${budgets[ci]}%` : ""}</span>
             </div>
           ))}
+        </div>
+        {/* Thin track with round thumb circles */}
+        <div
+          ref={barRef}
+          className={css({
+            position: "relative",
+            height: "10px",
+            userSelect: "none",
+            touchAction: "none",
+            cursor: "col-resize",
+          })}
+          style={{ overflow: "visible" }}
+        >
+          {/* Colored track segments (clipped inside their own wrapper) */}
+          <div
+            className={css({
+              position: "absolute",
+              top: "0",
+              left: "0",
+              right: "0",
+              bottom: "0",
+              display: "flex",
+              borderRadius: "5px",
+              overflow: "hidden",
+              border: "1px solid rgba(0,0,0,0.12)",
+            })}
+            style={{ zIndex: 1 }}
+          >
+            {DATA.clusters.map((cluster, ci) => (
+              <div
+                key={cluster.name}
+                style={{
+                  width: `${budgets[ci]}%`,
+                  height: "100%",
+                  backgroundColor: cluster.color,
+                  transition: dragging !== null ? "none" : "width 0.2s",
+                }}
+              />
+            ))}
+          </div>
+          {/* Round thumb handles */}
           {[0, 1].map((hi) => {
             const leftPct = budgets.slice(0, hi + 1).reduce((a, b) => a + b, 0);
             if (leftPct <= 0 || leftPct >= 100) return null;
@@ -322,57 +349,37 @@ export default function PortfolioRiskAllocator() {
                 onPointerDown={(e) => {
                   e.preventDefault();
                   setDragging(hi);
-                  setHasEverDragged(true);
                 }}
-                className={css({
+                style={{
                   position: "absolute",
-                  top: "-4px",
-                  width: "20px",
-                  height: "calc(100% + 8px)",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  left: `calc(${leftPct}% - 14px)`,
+                  width: "28px",
+                  height: "28px",
                   cursor: "col-resize",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  zIndex: 2,
-                  _hover: { "& > div": { transform: "scaleX(1.3)", boxShadow: "0 2px 8px rgba(0,0,0,0.45)" } },
-                })}
-                style={{ left: `calc(${leftPct}% - 10px)` }}
+                  zIndex: 10,
+                }}
               >
                 <div
-                  className={css({
-                    width: "8px",
-                    height: "60%",
+                  style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
                     backgroundColor: "white",
-                    borderRadius: "3px",
-                    border: "1px solid rgba(0,0,0,0.2)",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "2px",
-                    transition: "transform 0.15s, box-shadow 0.15s",
-                  })}
-                  style={!hasEverDragged ? { animation: "handlePulse 1s ease-in-out 3" } : undefined}
-                >
-                  {[0, 1, 2].map((l) => (
-                    <div
-                      key={l}
-                      className={css({
-                        width: "4px",
-                        height: "1px",
-                        backgroundColor: "rgba(0,0,0,0.35)",
-                        borderRadius: "0.5px",
-                      })}
-                    />
-                  ))}
-                </div>
+                    border: "2px solid #7b3fa0",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                  }}
+                />
               </div>
             );
           })}
         </div>
         {/* Legend */}
-        <div className={css({ display: "flex", gap: "0.75rem", marginTop: "0.3rem", flexWrap: "wrap" })}>
+        <div className={css({ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" })}>
           {DATA.clusters.map((cluster) => (
             <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "0.25rem" })}>
               <span

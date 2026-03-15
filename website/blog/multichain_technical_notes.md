@@ -34,6 +34,7 @@ const chain = getViemChain(network);
 ```
 
 **Why CAIP-2?**
+
 - Human-readable (`eip155:10` vs `10`)
 - Standard across wallets, indexers, block explorers
 - Type-safe with TypeScript (can't accidentally pass chainId where network expected)
@@ -59,6 +60,7 @@ monorepo/
 ### 1. Shared Package: `@fretchen/chain-utils`
 
 **Exports:**
+
 - `toCAIP2(chainId)` / `fromCAIP2(network)` - conversion utilities
 - `getViemChain(network)` - returns viem Chain object
 - `getGenAiNFTAddress(network)` - contract address lookup
@@ -67,9 +69,10 @@ monorepo/
 - Contract ABIs
 
 **Critical detail:** No `prepare` script. CI must explicitly build before consumers install:
+
 ```yaml
 - run: cd shared/chain-utils && npm ci && npm run build
-- run: cd website && npm ci  # Now chain-utils is built
+- run: cd website && npm ci # Now chain-utils is built
 ```
 
 ### 2. Backend: Network Parameter
@@ -87,12 +90,14 @@ const network = body.network; // "eip155:10" | "eip155:8453" | ...
 ### 3. Frontend: Multi-Chain Hooks
 
 **New hook: `useMultiChainNFTs`**
+
 ```typescript
 const { tokens, isLoading, reload } = useMultiChainUserNFTs();
 // Returns NFTs from ALL supported chains, merged
 ```
 
 **New component: `ChainBadge`**
+
 ```typescript
 <ChainBadge network="eip155:8453" /> // Renders "Base" badge
 ```
@@ -109,6 +114,7 @@ const { tokens, isLoading, reload } = useMultiChainUserNFTs();
 ```
 
 The `network` parameter flows through the entire stack:
+
 - Frontend → Backend → Payment Facilitator → Smart Contract
 
 ## Testing Architecture (Key Learning)
@@ -148,6 +154,7 @@ it("should fail gracefully with invalid config", async () => {
 ```
 
 **Why this matters:**
+
 - Functional tests are 10x faster → run on every save
 - Deployment tests catch CI/CD issues → run before deploy
 - Clear separation prevents "test pollution" (ethers global state affecting viem tests)
@@ -185,14 +192,14 @@ vi.mock("../hooks/useMultiChainNFTs", () => ({
 
 ## Metrics
 
-| Metric | Value |
-|--------|-------|
-| Planning duration | ~4 weeks |
+| Metric                  | Value      |
+| ----------------------- | ---------- |
+| Planning duration       | ~4 weeks   |
 | Implementation duration | ~3-4 weeks |
-| Lines changed | ~2,500 |
-| New tests | ~50 |
-| Test coverage | >90% |
-| Breaking changes | 0 |
+| Lines changed           | ~2,500     |
+| New tests               | ~50        |
+| Test coverage           | >90%       |
+| Breaking changes        | 0          |
 
 ## Common Pitfalls
 
@@ -201,6 +208,7 @@ vi.mock("../hooks/useMultiChainNFTs", () => ({
 2. **Nonce race conditions:** Parallel requests can cause "nonce too low" errors. Viem auto-manages nonces, but add retry logic for resilience.
 
 3. **Type casting with wagmi:** `chainId` from `fromCAIP2()` returns `number`, but wagmi expects specific chain IDs:
+
    ```typescript
    const chainId = fromCAIP2(network) as SupportedChainId;
    ```

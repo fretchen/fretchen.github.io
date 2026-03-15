@@ -1,0 +1,109 @@
+---
+title: "How to invest your money without predicting markets"
+publishing_date: "2026-03-13"
+tokenID: 192
+category: "others"
+description: "A hands-on guide to ETF diversification using risk budgets, with interactive tools to find your own allocation."
+---
+
+import DiversificationRandomWalk from "../components/blog/DiversificationRandomWalk";
+import PortfolioRiskAllocator from "../components/blog/PortfolioRiskAllocator";
+
+In this blog post, I present a simple, systematic approach to invest money across multiple asset classes. It is flexible enough to fit different risk tolerances and simple enough that it requires minimal time once set up. So it is pretty close to the approach that I use for my own savings.
+
+## The Diversification Paradox
+
+Once, you start to put money in the savings account, you might be tempted to look for better returns. And then you will typically have the choice between two
+major investment classes.
+
+- [Bonds](https://en.wikipedia.org/wiki/Bond_(finance)): You lend money to a government or company. In return, you receive regular interest payments (called _coupons_) and get your principal back at a fixed date. They feel safe — steady, boring, predictable — but the returns are modest.
+- [Stocks](https://en.wikipedia.org/wiki/Stock): You buy a small piece of a company. If the company grows, your share grows too; if it stumbles, so does your investment. They feel risky — volatile, unpredictable, scary — but historically they offer higher returns.
+
+If you are a risk averse first-time investor, the safe choice seems obvious — put everything into bonds. But try the simulator below first: drag the slider to mix bonds and stocks. Which one is the mix that fluctuates least?
+
+<DiversificationRandomWalk />
+
+If you played with the slider, you probably noticed something counterintuitive. A mix (purple) fluctuates much less than 100% stocks (red) — but also less than 100% bonds (blue). When you combine assets that move independently, their random ups and downs partially cancel. The mix fluctuates less than any single part.
+
+Think of it like packing for unpredictable weather: an umbrella alone covers rain but not sunshine. Adding sunscreen doesn't make the bag heavier — it makes it useful for more situations. This principle is called **diversification**, and it's the closest thing to a free lunch in investing.
+
+## Why Chasing Returns Fails
+
+The simulator above already hinted at a fundamental trade-off: assets that offer higher returns tend to fluctuate more. Stocks historically earn more than bonds — but they also swing harder. This much is common sense.
+
+The trouble starts when you try to be precise about it. _How much_ extra return do stocks actually deliver? And is that enough to justify the extra risk? Once you try to answer these questions with numbers, you run into a wall.
+
+This kind of optimization earned [Harry Markowitz a Nobel Prize in 1990](https://www.nobelprize.org/prizes/economic-sciences/1990/summary/). Banks and fund
+managers have tried his "mean-variance optimization" ever since. And if you tried it too, you would unfortunately discover
+that this optimization **doesn't work in practice.**
+
+The reason is simple. To find the optimal mix, you need two ingredients:
+
+1. How much each asset _fluctuates_ (risk) — this we can measure reasonably well.
+2. How much each asset will _earn in the future_ (expected return) — this we **cannot**.
+
+Estimating future returns from past data is like predicting next year's
+weather from last year's diary. The mathematician Robert Merton showed in 1980 that you'd need
+**80 to 100 years** of data to estimate stock returns with any confidence.
+
+The good news? We _can_ measure risk (volatility, correlations) much more
+reliably. So instead of chasing the "best return", we focus on
+the thing we _can_ control: **risk**.
+
+## How to actually buy "bonds" and "stocks"
+
+So far we've talked about bonds and stocks as abstract categories. But you can't walk into a shop and buy "some bonds". You need a concrete product — and this is where **ETFs** (Exchange-Traded Funds) come in.
+
+An [ETF](https://en.wikipedia.org/wiki/Exchange-traded_fund) is a fund that holds a basket of assets — hundreds or even thousands of individual bonds or stocks — and trades on a stock exchange like a single share. When you buy one share of an S&P 500 ETF, you instantly own a tiny slice of the 500 largest US companies.
+
+Why are ETFs so popular?
+
+- **Diversification in one click.** Instead of picking individual companies, you get the whole market (or a large chunk of it).
+- **Low fees.** Because ETFs simply track an index rather than paying a manager to pick winners, annual costs are often below 0.2%.
+- **Easy to trade.** You buy and sell them through any regular broker, just like a stock. Most European brokers even offer free monthly savings plans for popular ETFs.
+
+In the next section, we'll use 9 specific ETFs that cover bonds and stocks across different regions. You don't need to memorize them — the tool does the math. But it helps to know that each colored bar in the tool below represents a _group_ of ETFs, not a single company or government.
+
+## Allocating Risk Across Asset Classes
+
+Since we can measure risk reliably, we can use it as a building block: decide how much risk each asset group should contribute, and let the math determine the capital allocation.
+
+The tool below uses 9 European-listed ETFs grouped into three clusters based on how they move together:
+
+- 🟦 Bonds from European corporations and governments as well as governments in emerging markets.
+- 🟥 Stocks for the US and the closely correlated Canadian market.
+- 🟧 Stocks from Europe, Asia & Australia.
+
+Below you can set how much risk each group should bear — the tool computes the matching capital split.
+
+<PortfolioRiskAllocator />
+
+If you tried to use the tool, you might have noticed a few patterns:
+
+- **Bonds dominate capital, not risk.** Most presets allocate the majority of capital to bonds. That's not a mistake — bonds fluctuate so little that they need a lot of capital to "earn" their share of risk.
+- **Even the safest portfolio holds stocks.** Try "Minimum risk": it's mostly bonds, but it still includes a small slice of equities. That small slice actually _lowers_ total risk — the same diversification effect you saw in the simulator above.
+- **Your risk choice matters — a lot.** Compare "Minimum risk" to "Growth": annual volatility roughly quadruples. This isn't fine-tuning — it's the single most important decision in your savings plan.
+
+## Turning This Into a Monthly Savings Plan
+
+The tool above gives you a capital allocation — but this isn't about a single purchase. The idea is to set up an automatic monthly savings plan:
+
+1. **Pick a risk budget** that lets you sleep at night. "Equal risk" is a reasonable starting point for people that have a long time to sit out some swings.
+2. **Split your monthly savings** according to the capital allocation the tool computes. For example, if you save €300/month and the tool says 60% bonds / 25% US stocks / 15% other stocks, that's €180 / €75 / €45. Most European brokers offer free ETF savings plans that execute automatically.
+
+The hardest part isn't choosing — it's sticking with it. The biggest risk is yourself: panic-selling during a crash or chasing last year's winner. A systematic monthly plan removes that temptation.
+
+This is close to what I do with my own savings. It doesn't require predicting markets, paying for advice, or watching charts. It just requires patience.
+
+---
+
+## Technical notes
+
+This analysis uses daily EUR-denominated prices of the 9 iShares ETFs listed above, from 2018 to 2026. A few notes on methodology:
+
+- **Covariance estimation.** The covariance matrix is estimated using [Ledoit-Wolf shrinkage](https://en.wikipedia.org/wiki/Estimation_of_covariance_matrices#Shrinkage_estimation), which stabilizes the estimate when the number of assets is large relative to the number of observations.
+- **Risk as volatility.** Risk is measured as annualized portfolio volatility (standard deviation of returns, scaled by √252 trading days). This is a simplification — it treats upside and downside swings equally — but it is the standard starting point for portfolio construction.
+- **Cluster assignment.** The three asset groups (Bonds, US & Canada, EU/Asia/Australia) were derived using Ward-linkage hierarchical clustering on bootstrapped correlation matrices. One manual adjustment: 3SUD (EM Bonds) was moved from the "Regional Diversifiers" cluster to the Bonds cluster, since it is easier to explain a bond in the bond group.
+- **Risk budgeting.** Capital allocation follows the risk budgeting framework of [Roncalli (2013)](https://doi.org/10.2139/ssrn.2272862). Each asset within a cluster receives an equal share of that cluster's risk budget, and the solver finds weights such that actual risk contributions match the targets.
+
+_The full analysis notebooks are not published yet, but can be made available on request._

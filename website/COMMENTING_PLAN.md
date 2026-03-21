@@ -7,7 +7,32 @@ Add a two-channel commenting system to all blog posts:
 1. **Custom serverless comments** – anonymous comment function on Scaleway Functions + S3 storage + email notification
 2. **Improved Webmentions UX** – better reply intent buttons for Fediverse users
 
-Both are presented in a **tabbed layout** at the end of each article, replacing the current standalone `<Webmentions />` component.
+Both are rendered in an **integrated single-view** at the end of each article – no tabs, no hidden panels. The user scrolls through one continuous section:
+
+```
+── Reactions from the Web ─────────────
+❤️ Likes  [Avatar] [Avatar] [Avatar]...
+🔁 Reposts [Avatar] [Avatar]...
+💬 Replies
+  ┌─ Reply Card ────────────────┐
+  │ @alice via Mastodon: Great!  │
+  └─────────────────────────────┘
+
+  💬 Share on [Mastodon] or [Bluesky]
+     and your reaction appears above!
+
+── Leave a Comment ────────────────────
+  [Name (optional)             ]
+  [Write a comment...          ]
+  [Send Comment]
+
+  ┌─ Comment Card ──────────────┐
+  │ Bob · 18.3.2026             │
+  │ Interesting analysis!       │
+  └─────────────────────────────┘
+```
+
+This avoids the indirection of a tab layout. With anonymous-only comments, a dedicated tab would feel empty and disproportionate. The integrated view gives the user **everything at a glance**: social proof (likes/avatars), existing conversation (replies), the comment form, and Fediverse share buttons – all without a single extra click.
 
 ### Design Decisions
 
@@ -18,6 +43,7 @@ Both are presented in a **tabbed layout** at the end of each article, replacing 
 | **S3 over database** | No external DB to maintain. JSON files in S3. Matches existing `image_service.js` pattern in scw_js/. |
 | **Email notification over Telegram/Slack** | Scaleway TEM already available via `SCW_SECRET_KEY`. No additional accounts/tokens needed. |
 | **Remark42, Commento, Cusdis, Cactus all evaluated and rejected** | Remark42/Commento: need always-on server. Cusdis: too minimal, no threading, stale. Cactus: Matrix protocol ≠ Fediverse, high auth barrier. See conversation history for full comparison. |
+| **Integrated single-view over tab layout** | With anonymous-only comments, a dedicated tab feels empty and disproportionate. Single-view shows social proof (likes/avatars) + comment form at a glance – no extra click. Tab layout can be added later if both channels grow. |
 
 ---
 
@@ -26,20 +52,22 @@ Both are presented in a **tabbed layout** at the end of each article, replacing 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                   Static Website (Vike / GitHub Pages)       │
-├────────────────────────────┬─────────────────────────────────┤
-│  💬 Comments Tab (default) │  🌐 Fediverse Tab              │
-│                            │                                 │
-│  Anonymous form:           │  Webmentions (existing):        │
-│  [Name] [Comment] [Send]   │  Likes, Reposts, Replies from   │
-│                            │  Bluesky & Mastodon             │
-│  ↓ POST                   │                                 │
-│  Scaleway Function         │  webmention.io API              │
-│  (comments.handle)         │  + Bridgy Fed                   │
-│  ↓                         │                                 │
-│  S3 Bucket (private write) │  Reply intent buttons:          │
-│  + Email notification      │  [Reply via Mastodon]           │
-│  via Scaleway TEM          │  [Reply via Bluesky]            │
-└────────────────────────────┴─────────────────────────────────┘
+│                                                              │
+│  Article Footer – Integrated Single View:                    │
+│                                                              │
+│  ┌─ <Webmentions /> ──────────────────────────────────────┐  │
+│  │  Likes, Reposts, Replies from Bluesky & Mastodon       │  │
+│  │  + Reply intent buttons [Mastodon] [Bluesky]           │  │
+│  │  (webmention.io API + Bridgy Fed)                      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌─ <CommentsSection /> ──────────────────────────────────┐  │
+│  │  Anonymous comment form: [Name] [Comment] [Send]       │  │
+│  │  + Comment list from S3                                │  │
+│  │                                                        │  │
+│  │  ↓ POST → Scaleway Function → S3 + Email notification  │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow: Posting a Comment
@@ -74,6 +102,7 @@ Both are presented in a **tabbed layout** at the end of each article, replacing 
 
 ### Post.tsx Article Footer (lines 226–249)
 
+**Current:**
 ```
 Article Content
   ↓
@@ -84,17 +113,27 @@ Prev/Next Navigation
 <Webmentions />           (standalone, always rendered)
 ```
 
+**After implementation:**
+```
+Article Content
+  ↓
+EndOfArticleSupport       (☕ Buy me a coffee)
+  ↓
+Prev/Next Navigation
+  ↓
+<Webmentions />           (with improved reply intent buttons)
+  ↓
+<CommentsSection />       (NEW – comment form + list)
+```
+
 ### Existing Building Blocks
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | `Webmentions` | `components/Webmentions.tsx` | Fetches & displays likes/reposts/replies from webmention.io |
-| `Tab` | `components/Tab.tsx` | Generic tab button (used in imagegen page) |
-| `tabs.*` styles | `layouts/styles.ts:1564` | Full tab styling (container, tabList, tab, activeTab, tabPanel, hiddenPanel) |
 | `webmentions.*` styles | `layouts/styles.ts:1935` | Full webmention styling (container, avatars, replies, CTA) |
 | `useWebmentionUrls` | `hooks/useWebmentionUrls.ts` | Generates URL variants for webmention.io API |
 | `fetchWebmentions` | `utils/webmentionUtils.ts` | Fetches & deduplicates webmentions from both URL variants |
-| `TabProps` | `types/components.ts:247` | Interface for Tab component |
 | `image_service.js` | `scw_js/image_service.js` | S3 upload pattern (reusable for comment storage) |
 | `sc_llm.js` | `scw_js/sc_llm.js` | Handler pattern, CORS headers, input validation |
 
@@ -329,7 +368,7 @@ Tests for:
 
 ### New File: `website/components/CommentsSection.tsx`
 
-**Purpose:** Comment form + comment list, fetching from/posting to the Scaleway Function.
+**Purpose:** Comment form + comment list, rendered directly below `<Webmentions />` in `Post.tsx`. Fetches from/posts to the Scaleway Function.
 
 **Implementation sketch:**
 
@@ -562,114 +601,37 @@ Tests for:
 - Name defaults to optional (not required)
 - Text area is required
 
+### Changes to `Post.tsx`
+
+1. **Add import:** `import { CommentsSection } from "./CommentsSection";`
+2. **Keep** existing `<Webmentions />` as-is
+3. **Add** `<CommentsSection />` **after** `<Webmentions />` (line 250)
+
+The result in Post.tsx:
+```tsx
+<Webmentions />
+<CommentsSection />
+```
+
+No tabs, no wrapper component. Two independent components rendered sequentially.
+
 ### Verification
 
-- [ ] Comment form renders on blog pages
+- [ ] Comment form renders on blog pages, below Webmentions
 - [ ] Submitting a comment adds it to the list immediately (optimistic)
 - [ ] Honeypot field is invisible to users, present in DOM
 - [ ] Empty name displays "Anonymous" in comment list
 - [ ] Form disables submit button while sending
 - [ ] Error state shows on network failure
+- [ ] Webmentions section is unaffected (no regressions)
 
 ---
 
-## Phase 3: Frontend – Comment Tabs Layout
-
-### New File: `website/components/CommentTabs.tsx`
-
-**Purpose:** Tabbed container that switches between direct comments and Webmentions.
-
-**Implementation sketch:**
-
-```tsx
-import React, { useState } from "react";
-import { Tab } from "./Tab";
-import { CommentsSection } from "./CommentsSection";
-import { Webmentions } from "./Webmentions";
-import { tabs } from "../layouts/styles";
-
-interface CommentTabsProps {
-  webmentionCount: number;
-}
-
-export function CommentTabs({ webmentionCount }: CommentTabsProps) {
-  const [activeTab, setActiveTab] = useState<"comments" | "fediverse">("comments");
-
-  const commentsLabel = "💬 Comments";
-  const fediverseLabel = webmentionCount > 0
-    ? `🌐 Fediverse (${webmentionCount})`
-    : "🌐 Fediverse";
-
-  return (
-    <div className={tabs.container}>
-      <div className={tabs.tabList} role="tablist">
-        <Tab
-          label={commentsLabel}
-          isActive={activeTab === "comments"}
-          onClick={() => setActiveTab("comments")}
-        />
-        <Tab
-          label={fediverseLabel}
-          isActive={activeTab === "fediverse"}
-          onClick={() => setActiveTab("fediverse")}
-        />
-      </div>
-
-      <div
-        className={activeTab === "comments" ? tabs.tabPanel : tabs.hiddenPanel}
-        role="tabpanel"
-        aria-label="Comments"
-      >
-        <CommentsSection />
-      </div>
-
-      <div
-        className={activeTab === "fediverse" ? tabs.tabPanel : tabs.hiddenPanel}
-        role="tabpanel"
-        aria-label="Fediverse Reactions"
-      >
-        <Webmentions />
-      </div>
-    </div>
-  );
-}
-```
-
-**Key decisions:**
-- Default tab is "Comments" (lowest barrier for mainstream users)
-- Webmention count displayed as badge on Fediverse tab (uses existing `reactionCount` from Post.tsx)
-- Both panels are always mounted but hidden via CSS (`display: none`). This avoids re-fetching when switching tabs.
-- Uses existing `Tab` component and `tabs.*` styles – no new styling needed
-
-### Changes to `Post.tsx`
-
-1. **Add import:** `import { CommentTabs } from "./CommentTabs";`
-2. **Remove import:** `import { Webmentions } from "./Webmentions";` (moved into CommentTabs)
-3. **Replace** `<Webmentions />` **(line 249)** with `<CommentTabs webmentionCount={reactionCount} />`
-
-### New Test File: `website/test/CommentTabs.test.tsx`
-
-Tests for:
-- "Comments" tab is active by default
-- Switching tabs shows/hides the correct panel
-- Webmention count badge displays correctly
-- Both panels are in the DOM (mounted but one hidden)
-
-### Verification
-
-- [ ] Tab "Comments" is active by default
-- [ ] Switching tabs shows/hides the correct panel
-- [ ] Webmention count badge updates (shows "(5)" when there are 5 reactions)
-- [ ] Both panels render correctly on mobile (responsive)
-- [ ] Keyboard navigation works (Tab/Enter to switch tabs)
-
----
-
-## Phase 4: Webmentions UX Improvements
+## Phase 3: Webmentions UX Improvements
 
 ### Modify: `website/components/Webmentions.tsx`
 
-#### 4a. Reply Intent Buttons
+#### 3a. Reply Intent Buttons
 
 Replace the current generic "Post on Bluesky / Mastodon" text links with dedicated buttons:
 
@@ -701,7 +663,7 @@ const shareText = encodeURIComponent(`${document.title} ${urlWithoutSlash}`);
 - `bsky.app/intent/compose` is Bluesky's official compose intent.
 - Both pre-fill page title + URL (user can edit before posting).
 
-#### 4b. New Styles
+#### 3b. New Styles
 
 Add to `webmentions` styles in `layouts/styles.ts`:
 
@@ -758,14 +720,12 @@ ctaButtonGroup: css({
 | File | Action | Description |
 |------|--------|-------------|
 | `website/components/CommentsSection.tsx` | **CREATE** | Comment form + list, fetches from Scaleway Function |
-| `website/components/CommentTabs.tsx` | **CREATE** | Tabbed container for Comments + Webmentions |
-| `website/components/Post.tsx` | **MODIFY** | Replace `<Webmentions />` with `<CommentTabs />` |
+| `website/components/Post.tsx` | **MODIFY** | Add `<CommentsSection />` after `<Webmentions />` |
 | `website/components/Webmentions.tsx` | **MODIFY** | Add reply intent buttons (Mastodon/Bluesky) |
 | `website/layouts/styles.ts` | **MODIFY** | Add `commentSection` styles + `ctaButton`/`ctaButtonGroup` to webmentions |
-| `website/test/CommentTabs.test.tsx` | **CREATE** | Tests for tab switching, default state, badge counts |
 | `website/test/CommentsSection.test.tsx` | **CREATE** | Tests for form, submission, loading, error states |
 | `website/test/Webmentions.test.tsx` | **MODIFY** | Add tests for reply intent buttons |
-| `website/test/Post.integration.test.tsx` | **MODIFY** | Update to expect CommentTabs instead of standalone Webmentions |
+| `website/test/Post.integration.test.tsx` | **MODIFY** | Add expectation for CommentsSection below Webmentions |
 
 ---
 
@@ -783,21 +743,19 @@ Phase 1: Backend (scw_js/)
 Phase 2: CommentsSection component (depends on Phase 1)
    │      ├── Create website/components/CommentsSection.tsx
    │      ├── Add commentSection styles to website/layouts/styles.ts
-   │      └── Create website/test/CommentsSection.test.tsx
-   │
-Phase 3: CommentTabs layout (depends on Phase 2)
-   │      ├── Create website/components/CommentTabs.tsx
-   │      ├── Modify website/components/Post.tsx
-   │      ├── Create website/test/CommentTabs.test.tsx
+   │      ├── Modify website/components/Post.tsx (add <CommentsSection /> after <Webmentions />)
+   │      ├── Create website/test/CommentsSection.test.tsx
    │      └── Update website/test/Post.integration.test.tsx
    │
-Phase 4: Webmentions UX improvements (independent – can start anytime)
+Phase 3: Webmentions UX improvements (independent – can start anytime)
           ├── Modify website/components/Webmentions.tsx
           ├── Add ctaButton styles to website/layouts/styles.ts
           └── Update website/test/Webmentions.test.tsx
 ```
 
-**Phase 4 can be developed and merged independently** – it improves the current Webmentions UX even without the comment system.
+**Phase 3 can be developed and merged independently** – it improves the current Webmentions UX even without the comment system.
+
+**Nur 3 Phasen statt 4.** Das Tab-Layout (alte Phase 3) entfällt komplett – kein `CommentTabs.tsx`, kein `Tab`-Import, keine zusätzliche UI-Indirektion.
 
 ---
 
@@ -904,7 +862,7 @@ Future enhancement: Include a "Delete" link in the notification email (signed UR
 | Function cold start | Scaleway Functions cold start ~1-2s. Acceptable – comments are not latency-critical. |
 | S3 costs | At a few comments/month: effectively €0. Even 10,000 comments would be < €0.01. |
 | Email notification fails | `try/catch` – comment is still stored. Notification failure doesn't block the user. |
-| Existing Webmentions tests break | Post.integration.test.tsx needs update to expect CommentTabs. Webmentions.test.tsx unchanged. |
+| Existing Webmentions tests break | Post.integration.test.tsx needs update to expect CommentsSection below Webmentions. Webmentions.test.tsx unchanged. |
 | CORS misconfiguration | Locked to `https://www.fretchen.eu`. Tested in Phase 1 verification. |
 
 ---
@@ -918,6 +876,7 @@ These are explicitly **not** part of this plan but documented for later consider
 | OAuth login (Google/GitHub) | ~200-300 lines per provider | When anonymous spam becomes a problem |
 | Wallet-based auth (reuse existing Wagmi) | ~100 lines | Natural fit since wallet auth already exists |
 | Threaded replies | ~50 lines backend + ~80 lines frontend | When conversations start happening |
+| Tab layout (Comments / Fediverse) | ~60 lines (`CommentTabs.tsx`) | When both channels have significant volume |
 | Admin delete via email link | ~40 lines (signed URL in notification) | When manual S3 deletion gets annoying |
 | Mastodon DM as additional notification | ~15 lines | If email latency is too slow |
 | Approval flow (comments hidden until approved) | ~30 lines backend + ~20 lines frontend | Spam becomes a problem |

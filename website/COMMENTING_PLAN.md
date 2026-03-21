@@ -4,31 +4,68 @@
 
 Add a two-channel commenting system to all blog posts:
 
-1. **Remark42** – self-hosted comment engine with Google/Facebook/GitHub/Email/Anonymous login
+1. **Custom serverless comments** – anonymous comment function on Scaleway Functions + S3 storage + email notification
 2. **Improved Webmentions UX** – better reply intent buttons for Fediverse users
 
 Both are presented in a **tabbed layout** at the end of each article, replacing the current standalone `<Webmentions />` component.
+
+### Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Custom serverless over Remark42** | No always-on server needed. Scaleway Functions + S3 are already in the stack. At current traffic (~few comments/month), a full comment engine is overkill. |
+| **Anonymous over OAuth** | Lowest barrier for readers. OAuth adds ~200-300 lines per provider + complex redirect/session handling on a static SSG site. Can be added later. |
+| **S3 over database** | No external DB to maintain. JSON files in S3. Matches existing `image_service.js` pattern in scw_js/. |
+| **Email notification over Telegram/Slack** | Scaleway TEM already available via `SCW_SECRET_KEY`. No additional accounts/tokens needed. |
+| **Remark42, Commento, Cusdis, Cactus all evaluated and rejected** | Remark42/Commento: need always-on server. Cusdis: too minimal, no threading, stale. Cactus: Matrix protocol ≠ Fediverse, high auth barrier. See conversation history for full comparison. |
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│              Static Website (Vike)           │
-│              GitHub Pages                     │
-├─────────────────────┬────────────────────────┤
-│  Remark42            │  Webmentions           │
-│  (Direct Comments)   │  (Fediverse Reactions) │
-│                      │                        │
-│  comments.fretchen.eu│  webmention.io         │
-│  (Scaleway DEV1-S)   │  + Bridgy Fed          │
-│                      │                        │
-│  Auth:               │  Auth:                 │
-│  Google / Facebook / │  Mastodon / Bluesky    │
-│  GitHub / Email /    │  Account               │
-│  Anonymous           │                        │
-└─────────────────────┴────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                   Static Website (Vike / GitHub Pages)       │
+├────────────────────────────┬─────────────────────────────────┤
+│  💬 Comments Tab (default) │  🌐 Fediverse Tab              │
+│                            │                                 │
+│  Anonymous form:           │  Webmentions (existing):        │
+│  [Name] [Comment] [Send]   │  Likes, Reposts, Replies from   │
+│                            │  Bluesky & Mastodon             │
+│  ↓ POST                   │                                 │
+│  Scaleway Function         │  webmention.io API              │
+│  (comments.handle)         │  + Bridgy Fed                   │
+│  ↓                         │                                 │
+│  S3 Bucket (private write) │  Reply intent buttons:          │
+│  + Email notification      │  [Reply via Mastodon]           │
+│  via Scaleway TEM          │  [Reply via Bluesky]            │
+└────────────────────────────┴─────────────────────────────────┘
+```
+
+### Data Flow: Posting a Comment
+
+```
+1. User fills form: name + comment text
+2. Browser POSTs to Scaleway Function
+3. Function validates input:
+   - Max length (name: 100, text: 2000 chars)
+   - Strip HTML tags (XSS prevention)
+   - Honeypot field check (anti-bot)
+   - Rate limit check (max 3/min per IP)
+4. Function writes JSON to S3:
+   s3://my-imagestore/comments/{page-hash}/{timestamp}-{random}.json
+5. Function sends email notification via Scaleway TEM
+6. Function returns 201 + comment JSON
+```
+
+### Data Flow: Reading Comments
+
+```
+1. Component mounts on blog page
+2. Browser GETs Scaleway Function with ?page={urlWithoutSlash}
+3. Function lists S3 objects in comments/{page-hash}/
+4. Function reads + aggregates JSON files
+5. Returns sorted array of comments
 ```
 
 ---
@@ -58,6 +95,8 @@ Prev/Next Navigation
 | `useWebmentionUrls` | `hooks/useWebmentionUrls.ts` | Generates URL variants for webmention.io API |
 | `fetchWebmentions` | `utils/webmentionUtils.ts` | Fetches & deduplicates webmentions from both URL variants |
 | `TabProps` | `types/components.ts:247` | Interface for Tab component |
+| `image_service.js` | `scw_js/image_service.js` | S3 upload pattern (reusable for comment storage) |
+| `sc_llm.js` | `scw_js/sc_llm.js` | Handler pattern, CORS headers, input validation |
 
 ### Existing Tests
 
@@ -68,216 +107,477 @@ Prev/Next Navigation
 
 ---
 
-## Phase 1: Infrastructure – Remark42 on Scaleway
+## Phase 1: Backend – Scaleway Comment Function
 
-> **Not implemented in code.** This is a manual server setup step that must happen before frontend integration.
+### New File: `scw_js/comments.js`
 
-### 1a. Scaleway DEV1-S Instance
+A single Scaleway Function handling both read and write operations via HTTP method routing.
 
-1. Create DEV1-S instance (Ubuntu 22.04, Docker pre-installed)
-2. Attach Block Storage volume for persistent BoltDB data
-3. DNS: Add A record `comments.fretchen.eu` → instance IP
+**Implementation sketch:**
 
-### 1b. Docker Compose
+```js
+import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import crypto from "crypto";
 
-```yaml
-# docker-compose.yml on comments.fretchen.eu
-services:
-  remark42:
-    image: umputun/remark42:latest
-    restart: always
-    environment:
-      - REMARK_URL=https://comments.fretchen.eu
-      - SITE=fretchen.eu
-      - SECRET=${REMARK_SECRET}
-      - ADMIN_SHARED_ID=${ADMIN_ID}
-      # Auth providers
-      - AUTH_GOOGLE_CID=${GOOGLE_CID}
-      - AUTH_GOOGLE_CSEC=${GOOGLE_CSEC}
-      - AUTH_GITHUB_CID=${GITHUB_CID}
-      - AUTH_GITHUB_CSEC=${GITHUB_CSEC}
-      - AUTH_FACEBOOK_CID=${FACEBOOK_CID}
-      - AUTH_FACEBOOK_CSEC=${FACEBOOK_CSEC}
-      - AUTH_EMAIL_ENABLE=true
-      - AUTH_EMAIL_FROM=comments@fretchen.eu
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=465
-      - SMTP_TLS=true
-      - SMTP_USERNAME=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASS}
-      - AUTH_ANON=true
-    volumes:
-      - remark-data:/srv/var
-    ports:
-      - "8080:8080"
+const BUCKET_NAME = "my-imagestore";
+const COMMENTS_PREFIX = "comments/";
+const MAX_NAME_LENGTH = 100;
+const MAX_TEXT_LENGTH = 2000;
+const RATE_LIMIT_PER_MIN = 3;
 
-  caddy:
-    image: caddy:latest
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy-data:/data
+// In-memory rate limit store (resets on cold start – acceptable for low traffic)
+const rateLimitStore = new Map();
 
-volumes:
-  remark-data:
-  caddy-data:
-```
+const headers = {
+  "Access-Control-Allow-Origin": "https://www.fretchen.eu",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Content-Type": "application/json",
+};
 
-```
-# Caddyfile
-comments.fretchen.eu {
-    reverse_proxy remark42:8080
-    header {
-        Access-Control-Allow-Origin https://www.fretchen.eu
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Content-Type, Authorization"
-        Access-Control-Allow-Credentials true
-    }
+export async function handle(event, _context) {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers, body: "" };
+  }
+
+  const s3 = new S3Client({
+    region: "fr-par",
+    endpoint: "https://s3.nl-ams.scw.cloud",
+    credentials: {
+      accessKeyId: process.env.SCW_ACCESS_KEY,
+      secretAccessKey: process.env.SCW_SECRET_KEY,
+    },
+  });
+
+  if (event.httpMethod === "GET") {
+    return handleGetComments(event, s3);
+  }
+
+  if (event.httpMethod === "POST") {
+    return handlePostComment(event, s3);
+  }
+
+  return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
+}
+
+async function handleGetComments(event, s3) {
+  const params = event.queryStringParameters || {};
+  const page = params.page;
+  if (!page) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing page parameter" }) };
+  }
+
+  const pageHash = crypto.createHash("sha256").update(page).digest("hex").slice(0, 16);
+  const prefix = `${COMMENTS_PREFIX}${pageHash}/`;
+
+  const listed = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET_NAME, Prefix: prefix }));
+  if (!listed.Contents || listed.Contents.length === 0) {
+    return { statusCode: 200, headers, body: JSON.stringify({ comments: [] }) };
+  }
+
+  const comments = await Promise.all(
+    listed.Contents.map(async (obj) => {
+      const data = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key }));
+      const text = await data.Body.transformToString();
+      return JSON.parse(text);
+    })
+  );
+
+  // Sort by timestamp ascending (oldest first)
+  comments.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  return { statusCode: 200, headers, body: JSON.stringify({ comments }) };
+}
+
+async function handlePostComment(event, s3) {
+  const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+
+  // Honeypot check: if hidden field is filled, it's a bot
+  if (body.website) {
+    // Silently accept but don't store – bot thinks it succeeded
+    return { statusCode: 201, headers, body: JSON.stringify({ success: true }) };
+  }
+
+  // Validate required fields
+  const { name, text, page } = body;
+  if (!text || !page) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing required fields" }) };
+  }
+
+  // Sanitize: strip HTML tags
+  const cleanName = (name || "Anonymous").replace(/<[^>]*>/g, "").trim().slice(0, MAX_NAME_LENGTH);
+  const cleanText = text.replace(/<[^>]*>/g, "").trim().slice(0, MAX_TEXT_LENGTH);
+
+  if (cleanText.length === 0) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "Comment text is empty" }) };
+  }
+
+  // Rate limiting by source IP
+  const ip = event.headers?.["x-forwarded-for"] || "unknown";
+  const now = Date.now();
+  const recentRequests = (rateLimitStore.get(ip) || []).filter((t) => now - t < 60000);
+  if (recentRequests.length >= RATE_LIMIT_PER_MIN) {
+    return { statusCode: 429, headers, body: JSON.stringify({ error: "Too many comments. Please wait." }) };
+  }
+  recentRequests.push(now);
+  rateLimitStore.set(ip, recentRequests);
+
+  // Build comment object
+  const comment = {
+    id: crypto.randomUUID(),
+    name: cleanName,
+    text: cleanText,
+    page,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Store in S3
+  const pageHash = crypto.createHash("sha256").update(page).digest("hex").slice(0, 16);
+  const key = `${COMMENTS_PREFIX}${pageHash}/${comment.timestamp}-${comment.id.slice(0, 8)}.json`;
+
+  await s3.send(new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Body: JSON.stringify(comment),
+    ContentType: "application/json",
+  }));
+
+  // Send email notification
+  await sendEmailNotification(comment);
+
+  return { statusCode: 201, headers, body: JSON.stringify({ comment }) };
+}
+
+async function sendEmailNotification(comment) {
+  try {
+    await fetch("https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails", {
+      method: "POST",
+      headers: {
+        "X-Auth-Token": process.env.SCW_SECRET_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: { email: "comments@fretchen.eu", name: "Blog Comments" },
+        to: [{ email: process.env.NOTIFICATION_EMAIL }],
+        subject: `💬 New comment on ${comment.page}`,
+        text: `From: ${comment.name}\nPage: ${comment.page}\nTime: ${comment.timestamp}\n\n${comment.text}`,
+      }),
+    });
+  } catch (err) {
+    // Don't fail the comment submission if notification fails
+    console.error("Email notification failed:", err);
+  }
 }
 ```
 
-### 1c. OAuth Provider Setup
+### serverless.yml Addition
 
-| Provider | Console URL | Redirect URI |
-|----------|------------|--------------|
-| Google | console.cloud.google.com → Credentials | `https://comments.fretchen.eu/auth/google/callback` |
-| GitHub | github.com/settings/developers | `https://comments.fretchen.eu/auth/github/callback` |
-| Facebook | developers.facebook.com | `https://comments.fretchen.eu/auth/facebook/callback` |
+Add to `scw_js/serverless.yml` under `functions:`:
 
-### 1d. Backup
-
-Cronjob on the instance:
-```bash
-# Daily backup of BoltDB to Scaleway Object Storage
-0 3 * * * docker exec remark42 remark42 backup > /tmp/remark42-backup.gz && \
-  s3cmd put /tmp/remark42-backup.gz s3://fretchen-backups/remark42/$(date +%Y%m%d).gz
+```yaml
+  comments:
+    handler: dist/comments.handle
+    description: "Blog comment system - anonymous comments stored in S3"
+    custom_domains:
+      - comments-api.fretchen.eu
 ```
+
+Add to `provider.secret:`:
+
+```yaml
+    NOTIFICATION_EMAIL: ${env:NOTIFICATION_EMAIL}
+```
+
+### DNS Setup
+
+Add A/CNAME record: `comments-api.fretchen.eu` → Scaleway Function endpoint
+
+### Scaleway TEM Setup
+
+1. Add DNS records for `fretchen.eu` domain verification (SPF, DKIM, DMARC)
+2. Verify sender address `comments@fretchen.eu` in Scaleway Console
+3. Set `NOTIFICATION_EMAIL` secret in Scaleway Console
+
+### New Test File: `scw_js/test/comments.test.js`
+
+Tests for:
+- GET with valid page → returns comments array sorted by timestamp
+- GET with missing page → returns 400
+- GET with no comments → returns empty array
+- POST valid comment → returns 201 + comment object
+- POST with honeypot field filled → returns 201 but not stored
+- POST with missing text → returns 400
+- POST with HTML tags → tags stripped from output
+- POST exceeding rate limit → returns 429
+- POST triggers email notification (mock fetch)
+- Name defaults to "Anonymous" when omitted
+- Text truncated at MAX_TEXT_LENGTH
 
 ### Verification
 
-- [ ] `curl https://comments.fretchen.eu/api/v1/config` returns Remark42 config JSON
-- [ ] CORS header present for `https://www.fretchen.eu`
-- [ ] Google/GitHub/Facebook OAuth flows redirect correctly
-- [ ] Anonymous comment can be posted and appears immediately
-- [ ] Admin panel accessible at `https://comments.fretchen.eu/web`
+- [ ] `npx serverless deploy` succeeds with new function
+- [ ] `curl -X POST https://comments-api.fretchen.eu -d '{"name":"Test","text":"Hello","page":"/blog/0"}'` returns 201
+- [ ] `curl https://comments-api.fretchen.eu?page=/blog/0` returns the comment
+- [ ] CORS header is `https://www.fretchen.eu` (not `*`)
+- [ ] Honeypot submissions return 201 but no file in S3
+- [ ] Email notification arrives within seconds
+- [ ] `npm test` passes all new tests
 
 ---
 
 ## Phase 2: Frontend – CommentsSection Component
 
-### New File: `components/CommentsSection.tsx`
+### New File: `website/components/CommentsSection.tsx`
 
-**Purpose:** Lazy-loads the Remark42 JS widget and renders the comment container.
-
-**Behavior:**
-- On mount, dynamically inserts `<script>` tag for `https://comments.fretchen.eu/web/embed.js`
-- Configures Remark42 via `window.remark_config` before script loads
-- Uses `pageId` derived from the current page URL (same URL used for webmentions: `urlWithoutSlash`)
-- Cleans up script on unmount
-- Shows loading placeholder until widget initializes
+**Purpose:** Comment form + comment list, fetching from/posting to the Scaleway Function.
 
 **Implementation sketch:**
 
 ```tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { commentSection } from "../layouts/styles";
 
-const REMARK42_HOST = "https://comments.fretchen.eu";
+const API_URL = import.meta.env.VITE_COMMENTS_API || "https://comments-api.fretchen.eu";
+
+interface Comment {
+  id: string;
+  name: string;
+  text: string;
+  timestamp: string;
+}
 
 export function CommentsSection() {
   const { urlWithoutSlash } = useWebmentionUrls();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [text, setText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
+  // Fetch comments on mount
   useEffect(() => {
-    // Set Remark42 config before loading script
-    (window as any).remark_config = {
-      host: REMARK42_HOST,
-      site_id: "fretchen.eu",
-      url: urlWithoutSlash,
-      components: ["embed"],
-      max_shown_comments: 15,
-      theme: "light",
-      locale: "en",
-      show_email_subscription: false,
-    };
-
-    // Load Remark42 embed script
-    const script = document.createElement("script");
-    script.src = `${REMARK42_HOST}/web/embed.js`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {
-      // Cleanup: remove script and global config
-      script.remove();
-      delete (window as any).remark_config;
-      delete (window as any).REMARK42;
-    };
+    fetch(`${API_URL}?page=${encodeURIComponent(urlWithoutSlash)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setComments(data.comments || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [urlWithoutSlash]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          text: text.trim(),
+          page: urlWithoutSlash,
+          website: "", // Honeypot field – must be empty
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to post comment");
+      }
+      const data = await res.json();
+      setComments((prev) => [...prev, data.comment]);
+      setText("");
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to post comment");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className={commentSection.container} ref={containerRef}>
-      <div id="remark42"></div>
+    <div className={commentSection.container}>
+      <h3 className={commentSection.title}>Comments</h3>
+
+      {/* Comment list */}
+      {loading ? (
+        <p className={commentSection.loading}>Loading comments...</p>
+      ) : comments.length === 0 ? (
+        <p className={commentSection.empty}>No comments yet. Be the first!</p>
+      ) : (
+        <ul className={commentSection.list}>
+          {comments.map((c) => (
+            <li key={c.id} className={commentSection.comment}>
+              <div className={commentSection.commentHeader}>
+                <strong>{c.name}</strong>
+                <span className={commentSection.commentDate}>
+                  {new Date(c.timestamp).toLocaleDateString()}
+                </span>
+              </div>
+              <p className={commentSection.commentText}>{c.text}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Comment form */}
+      <form onSubmit={handleSubmit} className={commentSection.form}>
+        <input
+          type="text"
+          placeholder="Name (optional)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={100}
+          className={commentSection.nameInput}
+        />
+        {/* Honeypot – hidden from real users, bots fill it */}
+        <input
+          type="text"
+          name="website"
+          style={{ display: "none" }}
+          tabIndex={-1}
+          autoComplete="off"
+        />
+        <textarea
+          placeholder="Write a comment..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={2000}
+          required
+          rows={3}
+          className={commentSection.textInput}
+        />
+        <div className={commentSection.formFooter}>
+          <button
+            type="submit"
+            disabled={submitting || !text.trim()}
+            className={commentSection.submitButton}
+          >
+            {submitting ? "Sending..." : "Send Comment"}
+          </button>
+          {success && <span className={commentSection.successMsg}>✓ Comment posted!</span>}
+          {error && <span className={commentSection.errorMsg}>{error}</span>}
+        </div>
+      </form>
     </div>
   );
 }
 ```
 
-**Key decisions:**
-- `url` property uses `urlWithoutSlash` (consistent with webmention page ID)
-- Script loaded via DOM insertion (not a static `<script>` in Head) to avoid loading on non-blog pages
-- `show_email_subscription: false` – avoids extra GDPR complexity initially
-- `max_shown_comments: 15` – prevents excessive initial load
-
 ### New Styles: `commentSection` in `layouts/styles.ts`
 
-Add after the existing `webmentions` style block (~line 2080):
+Add after the existing `webmentions` style block:
 
 ```ts
 export const commentSection = {
   container: css({
     marginTop: "md",
-    minHeight: "200px", // Prevents layout shift while widget loads
   }),
+  title: css({
+    fontSize: "xl",
+    fontWeight: "semibold",
+    color: "text",
+    marginBottom: "md",
+  }),
+  loading: css({ color: "gray.500", fontStyle: "italic" }),
+  empty: css({ color: "gray.500", fontStyle: "italic", marginBottom: "md" }),
+  list: css({ listStyle: "none", padding: 0, margin: "0 0 lg 0" }),
+  comment: css({
+    padding: "md",
+    marginBottom: "sm",
+    backgroundColor: "white",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+  }),
+  commentHeader: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "xs",
+  }),
+  commentDate: css({ fontSize: "sm", color: "gray.500" }),
+  commentText: css({ margin: 0, lineHeight: "1.5" }),
+  form: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "sm",
+    padding: "md",
+    backgroundColor: "gray.50",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+  }),
+  nameInput: css({
+    padding: "sm",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    fontSize: "sm",
+    maxWidth: "300px",
+  }),
+  textInput: css({
+    padding: "sm",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    fontSize: "sm",
+    resize: "vertical",
+    minHeight: "80px",
+  }),
+  formFooter: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+  }),
+  submitButton: css({
+    padding: "sm lg",
+    backgroundColor: "brand",
+    color: "white",
+    border: "none",
+    borderRadius: "sm",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    _hover: { opacity: 0.9 },
+    _disabled: { opacity: 0.5, cursor: "not-allowed" },
+  }),
+  successMsg: css({ color: "green.600", fontSize: "sm" }),
+  errorMsg: css({ color: "red.600", fontSize: "sm" }),
 };
 ```
 
-Minimal styling – Remark42's built-in styles handle the widget. Custom CSS overrides can be added later via Remark42's CSS customization API if needed.
+### New Test File: `website/test/CommentsSection.test.tsx`
+
+Tests for:
+- Renders loading state initially
+- Renders empty state when no comments
+- Renders comment list after fetch
+- Form submission sends POST with correct payload
+- Honeypot field is hidden and empty
+- Success message appears after submission
+- Error message on failed submission
+- Name defaults to optional (not required)
+- Text area is required
 
 ### Verification
 
-- [ ] CommentsSection renders `<div id="remark42">` in DOM
-- [ ] Remark42 script loads only on blog pages (not on /imagegen, /x402, etc.)
-- [ ] `window.remark_config.url` matches the page's canonical URL
-- [ ] Script is cleaned up on navigation (no duplicate scripts)
-- [ ] Widget shows login options (Google, GitHub, Facebook, Email, Anonymous)
+- [ ] Comment form renders on blog pages
+- [ ] Submitting a comment adds it to the list immediately (optimistic)
+- [ ] Honeypot field is invisible to users, present in DOM
+- [ ] Empty name displays "Anonymous" in comment list
+- [ ] Form disables submit button while sending
+- [ ] Error state shows on network failure
 
 ---
 
 ## Phase 3: Frontend – Comment Tabs Layout
 
-### Modify: `components/Post.tsx`
+### New File: `website/components/CommentTabs.tsx`
 
-**Current** (line 249):
-```tsx
-<Webmentions />
-```
-
-**Replace with:**
-```tsx
-<CommentTabs
-  webmentionCount={reactionCount}
-/>
-```
-
-### New File: `components/CommentTabs.tsx`
-
-**Purpose:** Tabbed container that switches between Remark42 comments and Webmentions.
+**Purpose:** Tabbed container that switches between direct comments and Webmentions.
 
 **Implementation sketch:**
 
@@ -338,9 +638,8 @@ export function CommentTabs({ webmentionCount }: CommentTabsProps) {
 **Key decisions:**
 - Default tab is "Comments" (lowest barrier for mainstream users)
 - Webmention count displayed as badge on Fediverse tab (uses existing `reactionCount` from Post.tsx)
-- Both panels are always mounted (Webmentions fetches on mount regardless) but hidden via CSS (`display: none`). This avoids re-fetching webmentions when switching tabs.
+- Both panels are always mounted but hidden via CSS (`display: none`). This avoids re-fetching when switching tabs.
 - Uses existing `Tab` component and `tabs.*` styles – no new styling needed
-- Reuses existing `TabProps` interface
 
 ### Changes to `Post.tsx`
 
@@ -348,56 +647,59 @@ export function CommentTabs({ webmentionCount }: CommentTabsProps) {
 2. **Remove import:** `import { Webmentions } from "./Webmentions";` (moved into CommentTabs)
 3. **Replace** `<Webmentions />` **(line 249)** with `<CommentTabs webmentionCount={reactionCount} />`
 
+### New Test File: `website/test/CommentTabs.test.tsx`
+
+Tests for:
+- "Comments" tab is active by default
+- Switching tabs shows/hides the correct panel
+- Webmention count badge displays correctly
+- Both panels are in the DOM (mounted but one hidden)
+
 ### Verification
 
 - [ ] Tab "Comments" is active by default
 - [ ] Switching tabs shows/hides the correct panel
 - [ ] Webmention count badge updates (shows "(5)" when there are 5 reactions)
 - [ ] Both panels render correctly on mobile (responsive)
-- [ ] Tab state persists during scroll (no re-render resets)
 - [ ] Keyboard navigation works (Tab/Enter to switch tabs)
 
 ---
 
 ## Phase 4: Webmentions UX Improvements
 
-### Modify: `components/Webmentions.tsx`
+### Modify: `website/components/Webmentions.tsx`
 
 #### 4a. Reply Intent Buttons
 
-Add dedicated reply buttons that open Mastodon/Bluesky compose views with pre-filled text.
-
-**Add to the CTA section** (both empty state and populated state):
+Replace the current generic "Post on Bluesky / Mastodon" text links with dedicated buttons:
 
 ```tsx
 const shareText = encodeURIComponent(`${document.title} ${urlWithoutSlash}`);
 
-// Mastodon share intent (uses mastodon.social as default instance)
-<a
-  href={`https://mastodon.social/share?text=${shareText}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className={webmentions.ctaButton}
->
-  Reply via Mastodon
-</a>
-
-// Bluesky share intent
-<a
-  href={`https://bsky.app/intent/compose?text=${shareText}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className={webmentions.ctaButton}
->
-  Reply via Bluesky
-</a>
+<div className={webmentions.ctaButtonGroup}>
+  <a
+    href={`https://mastodon.social/share?text=${shareText}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className={webmentions.ctaButton}
+  >
+    Reply via Mastodon
+  </a>
+  <a
+    href={`https://bsky.app/intent/compose?text=${shareText}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className={webmentions.ctaButton}
+  >
+    Reply via Bluesky
+  </a>
+</div>
 ```
 
 **Key decisions:**
-- Use `mastodon.social/share` – this is the official Mastodon share intent. Users on other instances get redirected.
-- Use `bsky.app/intent/compose` – Bluesky's official compose intent.
-- Both use the page title + URL as pre-filled text (user can edit before posting).
-- These replace the current generic "Post on Bluesky / Mastodon" text links.
+- `mastodon.social/share` is the official Mastodon share intent. Users on other instances get redirected.
+- `bsky.app/intent/compose` is Bluesky's official compose intent.
+- Both pre-fill page title + URL (user can edit before posting).
 
 #### 4b. New Styles
 
@@ -438,83 +740,159 @@ ctaButtonGroup: css({
 - [ ] "Reply via Bluesky" opens `bsky.app/intent/compose` with correct text
 - [ ] Pre-filled text contains page title + URL
 - [ ] Buttons render correctly on mobile (wrap to new line if needed)
-- [ ] Links have `target="_blank"` and `rel="noopener noreferrer"`
 
 ---
 
 ## File Change Summary
 
+### Backend (scw_js/)
+
 | File | Action | Description |
 |------|--------|-------------|
-| `components/CommentsSection.tsx` | **CREATE** | Remark42 widget wrapper (lazy-loads script) |
-| `components/CommentTabs.tsx` | **CREATE** | Tabbed container for Comments + Webmentions |
-| `components/Post.tsx` | **MODIFY** | Replace `<Webmentions />` with `<CommentTabs />` |
-| `components/Webmentions.tsx` | **MODIFY** | Add reply intent buttons (Mastodon/Bluesky) |
-| `layouts/styles.ts` | **MODIFY** | Add `commentSection` styles + `ctaButton`/`ctaButtonGroup` to webmentions |
-| `test/CommentTabs.test.tsx` | **CREATE** | Tests for tab switching, default state, badge counts |
-| `test/CommentsSection.test.tsx` | **CREATE** | Tests for script loading, cleanup, config |
-| `test/Webmentions.test.tsx` | **MODIFY** | Add tests for reply intent buttons |
-| `test/Post.integration.test.tsx` | **MODIFY** | Update to expect CommentTabs instead of standalone Webmentions |
+| `scw_js/comments.js` | **CREATE** | Comment read/write function with S3 storage + email notification |
+| `scw_js/serverless.yml` | **MODIFY** | Add `comments` function entry + `NOTIFICATION_EMAIL` secret |
+| `scw_js/test/comments.test.js` | **CREATE** | Tests for GET/POST handlers, validation, honeypot, rate limiting |
+
+### Frontend (website/)
+
+| File | Action | Description |
+|------|--------|-------------|
+| `website/components/CommentsSection.tsx` | **CREATE** | Comment form + list, fetches from Scaleway Function |
+| `website/components/CommentTabs.tsx` | **CREATE** | Tabbed container for Comments + Webmentions |
+| `website/components/Post.tsx` | **MODIFY** | Replace `<Webmentions />` with `<CommentTabs />` |
+| `website/components/Webmentions.tsx` | **MODIFY** | Add reply intent buttons (Mastodon/Bluesky) |
+| `website/layouts/styles.ts` | **MODIFY** | Add `commentSection` styles + `ctaButton`/`ctaButtonGroup` to webmentions |
+| `website/test/CommentTabs.test.tsx` | **CREATE** | Tests for tab switching, default state, badge counts |
+| `website/test/CommentsSection.test.tsx` | **CREATE** | Tests for form, submission, loading, error states |
+| `website/test/Webmentions.test.tsx` | **MODIFY** | Add tests for reply intent buttons |
+| `website/test/Post.integration.test.tsx` | **MODIFY** | Update to expect CommentTabs instead of standalone Webmentions |
 
 ---
 
 ## Implementation Order
 
 ```
-Phase 1: Scaleway Infrastructure (manual, no code changes)
+Phase 1: Backend (scw_js/)
    │
-   ├── 1a. Instance + Docker Compose
-   ├── 1b. OAuth providers (parallel)
-   └── 1c. Verify Remark42 API is live
+   ├── 1a. Create scw_js/comments.js
+   ├── 1b. Create scw_js/test/comments.test.js
+   ├── 1c. Add to serverless.yml
+   ├── 1d. Setup Scaleway TEM (DNS records for fretchen.eu)
+   └── 1e. Deploy: npx serverless deploy
           │
-Phase 2: CommentsSection component
-   │      ├── Create components/CommentsSection.tsx
-   │      ├── Add commentSection styles to layouts/styles.ts
-   │      └── Create test/CommentsSection.test.tsx
+Phase 2: CommentsSection component (depends on Phase 1)
+   │      ├── Create website/components/CommentsSection.tsx
+   │      ├── Add commentSection styles to website/layouts/styles.ts
+   │      └── Create website/test/CommentsSection.test.tsx
    │
-Phase 3: CommentTabs layout
-   │      ├── Create components/CommentTabs.tsx
-   │      ├── Modify components/Post.tsx (replace <Webmentions />)
-   │      ├── Create test/CommentTabs.test.tsx
-   │      └── Update test/Post.integration.test.tsx
+Phase 3: CommentTabs layout (depends on Phase 2)
+   │      ├── Create website/components/CommentTabs.tsx
+   │      ├── Modify website/components/Post.tsx
+   │      ├── Create website/test/CommentTabs.test.tsx
+   │      └── Update website/test/Post.integration.test.tsx
    │
-Phase 4: Webmentions UX improvements (can start parallel with Phase 2)
-          ├── Modify components/Webmentions.tsx (reply intent buttons)
-          ├── Add ctaButton styles to layouts/styles.ts
-          └── Update test/Webmentions.test.tsx
+Phase 4: Webmentions UX improvements (independent – can start anytime)
+          ├── Modify website/components/Webmentions.tsx
+          ├── Add ctaButton styles to website/layouts/styles.ts
+          └── Update website/test/Webmentions.test.tsx
 ```
 
-**Phases 2 + 4 can be developed in parallel** (no dependencies). Phase 3 depends on Phase 2.
-
-**Phase 4 can be merged independently** – it improves the current Webmentions UX even without Remark42.
+**Phase 4 can be developed and merged independently** – it improves the current Webmentions UX even without the comment system.
 
 ---
 
 ## Environment Variables / Configuration
 
-The Remark42 host URL should be configurable for development/testing:
+### Backend (scw_js/)
 
-```tsx
-// In CommentsSection.tsx
-const REMARK42_HOST = import.meta.env.VITE_REMARK42_HOST || "https://comments.fretchen.eu";
-```
+| Variable | Location | Value |
+|----------|----------|-------|
+| `SCW_ACCESS_KEY` | Scaleway Console (secret) | Existing – already configured |
+| `SCW_SECRET_KEY` | Scaleway Console (secret) | Existing – already configured |
+| `NOTIFICATION_EMAIL` | Scaleway Console (secret) | Your email address |
 
-This allows:
-- **Production:** `VITE_REMARK42_HOST=https://comments.fretchen.eu`
-- **Local dev:** `VITE_REMARK42_HOST=http://localhost:8080` (local Docker instance)
-- **Tests:** Mock the script loading entirely
+### Frontend (website/)
+
+| Variable | Usage | Value |
+|----------|-------|-------|
+| `VITE_COMMENTS_API` | CommentsSection.tsx | `https://comments-api.fretchen.eu` (production) / `http://localhost:3000` (dev) |
 
 ---
 
-## GDPR Considerations
+## Security
 
-- Remark42 sets a session cookie when users log in to comment. This is **strictly necessary** for the commenting functionality and does not require consent under GDPR (similar to a login session cookie).
-- No tracking cookies are set for readers who don't interact with the comment widget.
-- The Remark42 script is loaded lazily (only on blog pages), not on every page.
-- Anonymous commenting is available – no personal data required.
-- `show_email_subscription: false` avoids collecting email addresses for notifications.
+### S3 Protection
 
-**Recommendation:** Add a brief notice below the comment widget: *"Comments are self-hosted. Your data stays on our server. [Privacy Policy]"*
+The S3 bucket is **private** (no public write access). Only the Scaleway Function has credentials:
+
+```
+Browser  ──POST──→  Scaleway Function  ──PutObject──→  S3 (private)
+                     (validates input)
+                     (has SCW_ACCESS_KEY)
+```
+
+- Browser never sees S3 credentials
+- Function validates all input before writing
+- CORS restricted to `https://www.fretchen.eu` (not `*`)
+
+### Input Validation
+
+| Check | Implementation |
+|-------|---------------|
+| XSS prevention | Strip all HTML tags (`text.replace(/<[^>]*>/g, "")`) |
+| Length limits | Name: 100 chars, Text: 2000 chars |
+| Honeypot | Hidden `website` field – bots fill it, humans don't see it |
+| Rate limiting | Max 3 comments/minute per IP (in-memory, resets on cold start) |
+| Required fields | `text` and `page` are mandatory |
+
+### No Auth Required
+
+Comments are anonymous. No cookies, no sessions, no personal data stored beyond the optional name. No GDPR consent needed for the comment form itself.
+
+---
+
+## Email Notification
+
+Uses Scaleway Transactional Email (TEM) via REST API. Requires one-time DNS setup.
+
+### Setup Steps
+
+1. In Scaleway Console → Transactional Email → Add domain `fretchen.eu`
+2. Add DNS records (provided by Scaleway):
+   - SPF TXT record
+   - DKIM TXT record
+   - DMARC TXT record (optional but recommended)
+3. Verify domain
+4. Set `NOTIFICATION_EMAIL` secret in Scaleway Functions Console
+
+### Email Content
+
+```
+Subject: 💬 New comment on /blog/3
+From: comments@fretchen.eu
+
+From: Alice
+Page: https://www.fretchen.eu/blog/3
+Time: 2026-03-21T14:30:00.000Z
+
+This is a great article! I especially liked the section about...
+```
+
+### Cost
+
+Scaleway TEM Free Tier: 300 emails/month. At a few comments per month, this is effectively free.
+
+---
+
+## Comment Moderation
+
+At current traffic levels (few comments/month), moderation is manual:
+
+1. **Email notification** tells you about every new comment immediately
+2. **To delete a comment:** Remove the JSON file from S3 via Scaleway Console or `s3cmd rm`
+3. **If spam becomes a problem** (unlikely at this traffic): Add an `approved: false` flag and a simple approval endpoint
+
+Future enhancement: Include a "Delete" link in the notification email (signed URL that calls a delete endpoint on the Function).
 
 ---
 
@@ -522,9 +900,24 @@ This allows:
 
 | Risk | Mitigation |
 |------|------------|
-| Remark42 server downtime | Comments tab gracefully shows "Comments unavailable" (widget timeout). Webmentions tab unaffected. |
-| OAuth provider blocks app | Multiple providers configured. Anonymous always works as fallback. |
-| CORS issues | Caddy config explicitly allows `https://www.fretchen.eu`. Test during Phase 1 verification. |
-| Script loading slows page | Remark42 script is `async defer` and only loads in the Comments tab. Lighthouse impact: minimal. |
-| Spam comments | Remark42 has built-in anti-spam (rate limiting, admin moderation). Anonymous comments can be disabled later if needed. |
-| Existing Webmentions tests break | Post.integration.test.tsx needs update to expect CommentTabs. Webmentions.test.tsx unchanged (component itself doesn't change structurally). |
+| Spam comments | Honeypot + rate limiting. At low traffic, manual deletion via S3. Can add approval flow later. |
+| Function cold start | Scaleway Functions cold start ~1-2s. Acceptable – comments are not latency-critical. |
+| S3 costs | At a few comments/month: effectively €0. Even 10,000 comments would be < €0.01. |
+| Email notification fails | `try/catch` – comment is still stored. Notification failure doesn't block the user. |
+| Existing Webmentions tests break | Post.integration.test.tsx needs update to expect CommentTabs. Webmentions.test.tsx unchanged. |
+| CORS misconfiguration | Locked to `https://www.fretchen.eu`. Tested in Phase 1 verification. |
+
+---
+
+## Future Enhancements (Not in Scope)
+
+These are explicitly **not** part of this plan but documented for later consideration:
+
+| Enhancement | Effort | Trigger |
+|-------------|--------|---------|
+| OAuth login (Google/GitHub) | ~200-300 lines per provider | When anonymous spam becomes a problem |
+| Wallet-based auth (reuse existing Wagmi) | ~100 lines | Natural fit since wallet auth already exists |
+| Threaded replies | ~50 lines backend + ~80 lines frontend | When conversations start happening |
+| Admin delete via email link | ~40 lines (signed URL in notification) | When manual S3 deletion gets annoying |
+| Mastodon DM as additional notification | ~15 lines | If email latency is too slow |
+| Approval flow (comments hidden until approved) | ~30 lines backend + ~20 lines frontend | Spam becomes a problem |

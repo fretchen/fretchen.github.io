@@ -751,12 +751,12 @@ Phase 1: Backend (comment_service/)                          ✅ COMPLETED 2026-
    ├── 1d. Setup Scaleway TEM (DNS: SPF, DKIM, DMARC)       ✅ Domain verified
    └── 1e. Deploy + verify                                   ✅ comments.fretchen.eu live
           │
-Phase 2: CommentsSection component (depends on Phase 1)      ⬜ NOT STARTED
-   │      ├── Create website/components/CommentsSection.tsx
-   │      ├── Add commentSection styles to website/layouts/styles.ts
-   │      ├── Modify website/components/Post.tsx (add <CommentsSection /> after <Webmentions />)
-   │      ├── Create website/test/CommentsSection.test.tsx
-   │      └── Update website/test/Post.integration.test.tsx
+Phase 2: CommentsSection component (depends on Phase 1)      ✅ COMPLETED 2026-03-22
+   │      ├── Create website/components/CommentsSection.tsx           ✅
+   │      ├── Add commentSection styles to website/layouts/styles.ts  ✅
+   │      ├── Modify website/components/Post.tsx                      ✅ <CommentsSection /> after <Webmentions />
+   │      ├── Create website/test/CommentsSection.test.tsx            ✅ 12 tests passing
+   │      └── Update website/test/Post.integration.test.tsx           ✅ 9 tests passing (no changes needed)
    │
 Phase 3: Webmentions UX improvements (independent)           ⬜ NOT STARTED
           ├── Modify website/components/Webmentions.tsx

@@ -53,12 +53,22 @@ const MAX_AGENT_COMMENTS = 10;
 // In-memory rate limit store (resets on cold start – acceptable for low traffic)
 const rateLimitStore = new Map<string, number[]>();
 
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "https://www.fretchen.eu",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+const ALLOWED_ORIGINS = [
+  "https://www.fretchen.eu",
+  "http://localhost:3000",
+];
+
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin ?? "")
+    ? origin!
+    : "https://www.fretchen.eu";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Content-Type": "application/json",
+  };
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -115,6 +125,7 @@ async function sendEmailNotification(comment: Comment): Promise<void> {
 async function handleGetComments(
   event: ScalewayEvent,
   s3: S3Client,
+  corsHeaders: Record<string, string>,
 ): Promise<HandlerResponse> {
   const page = event.queryStringParameters?.page;
   if (!page) {
@@ -173,6 +184,7 @@ async function handleGetComments(
 async function handlePostComment(
   event: ScalewayEvent,
   s3: S3Client,
+  corsHeaders: Record<string, string>,
 ): Promise<HandlerResponse> {
   const body: CommentPostBody =
     typeof event.body === "string"
@@ -248,6 +260,9 @@ export async function handle(
   event: ScalewayEvent,
   _context: unknown,
 ): Promise<HandlerResponse> {
+  const origin = event.headers?.origin;
+  const corsHeaders = getCorsHeaders(origin);
+
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: corsHeaders, body: "" };
   }
@@ -262,11 +277,11 @@ export async function handle(
   });
 
   if (event.httpMethod === "GET") {
-    return handleGetComments(event, s3);
+    return handleGetComments(event, s3, corsHeaders);
   }
 
   if (event.httpMethod === "POST") {
-    return handlePostComment(event, s3);
+    return handlePostComment(event, s3, corsHeaders);
   }
 
   return {

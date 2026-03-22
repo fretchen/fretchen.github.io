@@ -17,6 +17,7 @@ import { SITE } from "../utils/siteData";
 import { TableOfContents } from "./TableOfContents";
 
 import { Webmentions } from "./Webmentions";
+import { CommentsSection } from "./CommentsSection";
 
 // Dynamic React component renderer
 const ReactPostRenderer: React.FC<{
@@ -247,6 +248,7 @@ export function Post({
           )}
 
           <Webmentions />
+          <CommentsSection />
         </div>
 
         {/* Right sidebar with Table of Contents */}

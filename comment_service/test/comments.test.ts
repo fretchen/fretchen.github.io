@@ -71,6 +71,26 @@ describe("comments.ts", () => {
       expect(res.headers["Access-Control-Allow-Methods"]).toBe("GET, POST, OPTIONS");
     });
 
+    test("OPTIONS returns localhost origin when requested from localhost", async () => {
+      const res = await handle({
+        httpMethod: "OPTIONS",
+        headers: { origin: "http://localhost:3000" },
+      }, {});
+
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
+    });
+
+    test("OPTIONS falls back to production origin for unknown origins", async () => {
+      const res = await handle({
+        httpMethod: "OPTIONS",
+        headers: { origin: "https://evil.com" },
+      }, {});
+
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://www.fretchen.eu");
+    });
+
     test("unsupported method returns 405", async () => {
       const res = await handle({ httpMethod: "DELETE" }, {});
 

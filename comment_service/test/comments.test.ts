@@ -81,6 +81,16 @@ describe("comments.ts", () => {
       expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
     });
 
+    test("OPTIONS handles capitalized Origin header", async () => {
+      const res = await handle({
+        httpMethod: "OPTIONS",
+        headers: { Origin: "http://localhost:3000" },
+      }, {});
+
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
+    });
+
     test("OPTIONS falls back to production origin for unknown origins", async () => {
       const res = await handle({
         httpMethod: "OPTIONS",

@@ -260,7 +260,7 @@ export async function handle(
   event: ScalewayEvent,
   _context: unknown,
 ): Promise<HandlerResponse> {
-  const origin = event.headers?.origin;
+  const origin = event.headers?.origin ?? event.headers?.Origin;
   const corsHeaders = getCorsHeaders(origin);
 
   if (event.httpMethod === "OPTIONS") {

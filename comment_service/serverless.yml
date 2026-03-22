@@ -30,4 +30,4 @@ functions:
     handler: dist/comments.handle
     description: "Blog comment system – anonymous comments stored in S3"
     custom_domains:
-      - comments-api.fretchen.eu
+      - comments.fretchen.eu

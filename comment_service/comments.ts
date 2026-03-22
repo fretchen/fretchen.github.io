@@ -2,12 +2,7 @@
  * Blog comment system – anonymous comments stored in S3 with email notification.
  * Honeypot-triggered comments are stored with suspectedAgent flag.
  */
-import {
-  S3Client,
-  PutObjectCommand,
-  ListObjectsV2Command,
-  GetObjectCommand,
-} from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -53,15 +48,10 @@ const MAX_AGENT_COMMENTS = 10;
 // In-memory rate limit store (resets on cold start – acceptable for low traffic)
 const rateLimitStore = new Map<string, number[]>();
 
-const ALLOWED_ORIGINS = [
-  "https://www.fretchen.eu",
-  "http://localhost:3000",
-];
+const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000"];
 
 function getCorsHeaders(origin?: string): Record<string, string> {
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin ?? "")
-    ? origin!
-    : "https://www.fretchen.eu";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin ?? "") ? origin! : "https://www.fretchen.eu";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "Content-Type",
@@ -77,7 +67,10 @@ function pageHash(page: string): string {
 }
 
 function sanitize(input: string, maxLength: number): string {
-  return input.replace(/<[^>]*>/g, "").trim().slice(0, maxLength);
+  return input
+    .replace(/<[^>]*>/g, "")
+    .trim()
+    .slice(0, maxLength);
 }
 
 function isRateLimited(ip: string): boolean {
@@ -95,26 +88,21 @@ function isRateLimited(ip: string): boolean {
 
 async function sendEmailNotification(comment: Comment): Promise<void> {
   try {
-    const agentWarning = comment.suspectedAgent
-      ? "🤖 SUSPECTED AGENT (honeypot triggered)\n"
-      : "";
-    await fetch(
-      "https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails",
-      {
-        method: "POST",
-        headers: {
-          "X-Auth-Token": process.env.SCW_SECRET_KEY!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          project_id: process.env.TEM_PROJECT_ID,
-          from: { email: "comments@fretchen.eu", name: "Blog Comments" },
-          to: [{ email: process.env.NOTIFICATION_EMAIL }],
-          subject: `💬 New comment on ${comment.page}`,
-          text: `${agentWarning}From: ${comment.name}\nPage: ${comment.page}\nTime: ${comment.timestamp}\n\n${comment.text}`,
-        }),
+    const agentWarning = comment.suspectedAgent ? "🤖 SUSPECTED AGENT (honeypot triggered)\n" : "";
+    await fetch("https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails", {
+      method: "POST",
+      headers: {
+        "X-Auth-Token": process.env.SCW_SECRET_KEY!,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        project_id: process.env.TEM_PROJECT_ID,
+        from: { email: "comments@fretchen.eu", name: "Blog Comments" },
+        to: [{ email: process.env.NOTIFICATION_EMAIL }],
+        subject: `💬 New comment on ${comment.page}`,
+        text: `${agentWarning}From: ${comment.name}\nPage: ${comment.page}\nTime: ${comment.timestamp}\n\n${comment.text}`,
+      }),
+    });
   } catch (err) {
     console.error("Email notification failed:", err);
   }
@@ -138,9 +126,7 @@ async function handleGetComments(
 
   const prefix = `${COMMENTS_PREFIX}${pageHash(page)}/`;
 
-  const listed = await s3.send(
-    new ListObjectsV2Command({ Bucket: BUCKET_NAME, Prefix: prefix }),
-  );
+  const listed = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET_NAME, Prefix: prefix }));
   if (!listed.Contents || listed.Contents.length === 0) {
     return {
       statusCode: 200,
@@ -151,18 +137,14 @@ async function handleGetComments(
 
   const comments: Comment[] = await Promise.all(
     listed.Contents.map(async (obj) => {
-      const data = await s3.send(
-        new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key }),
-      );
+      const data = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key }));
       const text = await data.Body!.transformToString();
       return JSON.parse(text) as Comment;
     }),
   );
 
   // Sort by timestamp ascending (oldest first)
-  comments.sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-  );
+  comments.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   // Limit suspected agent comments to prevent spam flooding
   const agentComments = comments.filter((c) => c.suspectedAgent);
@@ -256,10 +238,7 @@ async function handlePostComment(
 
 // ── Main handler ────────────────────────────────────────────────────────
 
-export async function handle(
-  event: ScalewayEvent,
-  _context: unknown,
-): Promise<HandlerResponse> {
+export async function handle(event: ScalewayEvent, _context: unknown): Promise<HandlerResponse> {
   const origin = event.headers?.origin ?? event.headers?.Origin;
   const corsHeaders = getCorsHeaders(origin);
 

@@ -72,30 +72,39 @@ describe("comments.ts", () => {
     });
 
     test("OPTIONS returns localhost origin when requested from localhost", async () => {
-      const res = await handle({
-        httpMethod: "OPTIONS",
-        headers: { origin: "http://localhost:3000" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "OPTIONS",
+          headers: { origin: "http://localhost:3000" },
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(200);
       expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
     });
 
     test("OPTIONS handles capitalized Origin header", async () => {
-      const res = await handle({
-        httpMethod: "OPTIONS",
-        headers: { Origin: "http://localhost:3000" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "OPTIONS",
+          headers: { Origin: "http://localhost:3000" },
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(200);
       expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
     });
 
     test("OPTIONS falls back to production origin for unknown origins", async () => {
-      const res = await handle({
-        httpMethod: "OPTIONS",
-        headers: { origin: "https://evil.com" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "OPTIONS",
+          headers: { origin: "https://evil.com" },
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(200);
       expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://www.fretchen.eu");
@@ -112,10 +121,13 @@ describe("comments.ts", () => {
 
   describe("GET comments", () => {
     test("returns 400 when page parameter is missing", async () => {
-      const res = await handle({
-        httpMethod: "GET",
-        queryStringParameters: {},
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "GET",
+          queryStringParameters: {},
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error).toBe("Missing page parameter");
@@ -124,10 +136,13 @@ describe("comments.ts", () => {
     test("returns empty array when no comments exist", async () => {
       mockS3Send.mockResolvedValueOnce({ Contents: null });
 
-      const res = await handle({
-        httpMethod: "GET",
-        queryStringParameters: { page: "/blog/test" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "GET",
+          queryStringParameters: { page: "/blog/test" },
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(200);
       expect(JSON.parse(res.body).comments).toEqual([]);
@@ -135,12 +150,20 @@ describe("comments.ts", () => {
 
     test("returns comments sorted by timestamp", async () => {
       const comment1 = {
-        id: "1", name: "Alice", text: "First", page: "/blog/test",
-        timestamp: "2026-03-20T10:00:00.000Z", suspectedAgent: false,
+        id: "1",
+        name: "Alice",
+        text: "First",
+        page: "/blog/test",
+        timestamp: "2026-03-20T10:00:00.000Z",
+        suspectedAgent: false,
       };
       const comment2 = {
-        id: "2", name: "Bob", text: "Second", page: "/blog/test",
-        timestamp: "2026-03-21T10:00:00.000Z", suspectedAgent: false,
+        id: "2",
+        name: "Bob",
+        text: "Second",
+        page: "/blog/test",
+        timestamp: "2026-03-21T10:00:00.000Z",
+        suspectedAgent: false,
       };
 
       mockS3Send.mockResolvedValueOnce({
@@ -156,10 +179,13 @@ describe("comments.ts", () => {
         Body: { transformToString: () => Promise.resolve(JSON.stringify(comment1)) },
       });
 
-      const res = await handle({
-        httpMethod: "GET",
-        queryStringParameters: { page: "/blog/test" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "GET",
+          queryStringParameters: { page: "/blog/test" },
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(200);
       const data = JSON.parse(res.body);
@@ -176,11 +202,17 @@ describe("comments.ts", () => {
         contents.push({ Key: `comments/abc/agent-${i}.json` });
         getResponses.push({
           Body: {
-            transformToString: () => Promise.resolve(JSON.stringify({
-              id: `agent-${i}`, name: "Bot", text: `Spam ${i}`, page: "/blog/test",
-              timestamp: `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00.000Z`,
-              suspectedAgent: true,
-            })),
+            transformToString: () =>
+              Promise.resolve(
+                JSON.stringify({
+                  id: `agent-${i}`,
+                  name: "Bot",
+                  text: `Spam ${i}`,
+                  page: "/blog/test",
+                  timestamp: `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00.000Z`,
+                  suspectedAgent: true,
+                }),
+              ),
           },
         });
       }
@@ -188,11 +220,17 @@ describe("comments.ts", () => {
         contents.push({ Key: `comments/abc/normal-${i}.json` });
         getResponses.push({
           Body: {
-            transformToString: () => Promise.resolve(JSON.stringify({
-              id: `normal-${i}`, name: "Human", text: `Real ${i}`, page: "/blog/test",
-              timestamp: `2026-03-${String(i + 15).padStart(2, "0")}T10:00:00.000Z`,
-              suspectedAgent: false,
-            })),
+            transformToString: () =>
+              Promise.resolve(
+                JSON.stringify({
+                  id: `normal-${i}`,
+                  name: "Human",
+                  text: `Real ${i}`,
+                  page: "/blog/test",
+                  timestamp: `2026-03-${String(i + 15).padStart(2, "0")}T10:00:00.000Z`,
+                  suspectedAgent: false,
+                }),
+              ),
           },
         });
       }
@@ -202,10 +240,13 @@ describe("comments.ts", () => {
         mockS3Send.mockResolvedValueOnce(resp);
       }
 
-      const res = await handle({
-        httpMethod: "GET",
-        queryStringParameters: { page: "/blog/test" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "GET",
+          queryStringParameters: { page: "/blog/test" },
+        },
+        {},
+      );
 
       const data = JSON.parse(res.body);
       expect(data.comments).toHaveLength(12);
@@ -220,15 +261,18 @@ describe("comments.ts", () => {
 
   describe("POST comment", () => {
     test("creates a comment and returns 201", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.1" },
-        body: JSON.stringify({
-          name: "Alice",
-          text: "Great article!",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.1" },
+          body: JSON.stringify({
+            name: "Alice",
+            text: "Great article!",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       const data = JSON.parse(res.body);
@@ -241,15 +285,18 @@ describe("comments.ts", () => {
     });
 
     test("stores comment in S3", async () => {
-      await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.2" },
-        body: JSON.stringify({
-          name: "Alice",
-          text: "Hello",
-          page: "/blog/test",
-        }),
-      }, {});
+      await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.2" },
+          body: JSON.stringify({
+            name: "Alice",
+            text: "Hello",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(mockS3Send).toHaveBeenCalled();
       const putCommand = mockS3Send.mock.calls[0][0] as any;
@@ -263,79 +310,97 @@ describe("comments.ts", () => {
     });
 
     test("defaults name to Anonymous when omitted", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.3" },
-        body: JSON.stringify({
-          text: "Anonymous comment",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.3" },
+          body: JSON.stringify({
+            text: "Anonymous comment",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       expect(JSON.parse(res.body).comment.name).toBe("Anonymous");
     });
 
     test("returns 400 when text is missing", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.4" },
-        body: JSON.stringify({ page: "/blog/test" }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.4" },
+          body: JSON.stringify({ page: "/blog/test" }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error).toBe("Missing required fields");
     });
 
     test("returns 400 when page is missing", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.5" },
-        body: JSON.stringify({ text: "Hello" }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.5" },
+          body: JSON.stringify({ text: "Hello" }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error).toBe("Missing required fields");
     });
 
     test("returns 400 when text is only whitespace after sanitization", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.6" },
-        body: JSON.stringify({
-          text: "   ",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.6" },
+          body: JSON.stringify({
+            text: "   ",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error).toBe("Comment text is empty");
     });
 
     test("strips HTML tags but keeps text content", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.12" },
-        body: JSON.stringify({
-          text: "<script>alert('xss')</script>",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.12" },
+          body: JSON.stringify({
+            text: "<script>alert('xss')</script>",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       expect(JSON.parse(res.body).comment.text).toBe("alert('xss')");
     });
 
     test("strips HTML tags from name and text", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.7" },
-        body: JSON.stringify({
-          name: "<b>Bold</b> Name",
-          text: "Hello <script>evil</script> world",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.7" },
+          body: JSON.stringify({
+            name: "<b>Bold</b> Name",
+            text: "Hello <script>evil</script> world",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       const comment = JSON.parse(res.body).comment;
@@ -345,14 +410,17 @@ describe("comments.ts", () => {
 
     test("truncates text at MAX_TEXT_LENGTH", async () => {
       const longText = "a".repeat(3000);
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.8" },
-        body: JSON.stringify({
-          text: longText,
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.8" },
+          body: JSON.stringify({
+            text: longText,
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       expect(JSON.parse(res.body).comment.text).toHaveLength(2000);
@@ -360,36 +428,45 @@ describe("comments.ts", () => {
 
     test("truncates name at MAX_NAME_LENGTH", async () => {
       const longName = "a".repeat(200);
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.9" },
-        body: JSON.stringify({
-          name: longName,
-          text: "Hello",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.9" },
+          body: JSON.stringify({
+            name: longName,
+            text: "Hello",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       expect(JSON.parse(res.body).comment.name).toHaveLength(100);
     });
 
     test("parses body as string when body is a string", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.10" },
-        body: JSON.stringify({ text: "Hello", page: "/blog/test" }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.10" },
+          body: JSON.stringify({ text: "Hello", page: "/blog/test" }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
     });
 
     test("handles body as object when already parsed", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.0.11" },
-        body: { text: "Hello", page: "/blog/test" },
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.0.11" },
+          body: { text: "Hello", page: "/blog/test" },
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
     });
@@ -399,16 +476,19 @@ describe("comments.ts", () => {
 
   describe("honeypot / suspected agent", () => {
     test("flags comment as suspectedAgent when honeypot is filled", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.1.1" },
-        body: JSON.stringify({
-          name: "Bot",
-          text: "Buy cheap watches",
-          page: "/blog/test",
-          website: "http://spam.com",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.1.1" },
+          body: JSON.stringify({
+            name: "Bot",
+            text: "Buy cheap watches",
+            page: "/blog/test",
+            website: "http://spam.com",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       const comment = JSON.parse(res.body).comment;
@@ -416,15 +496,18 @@ describe("comments.ts", () => {
     });
 
     test("stores honeypot comment in S3", async () => {
-      await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.1.2" },
-        body: JSON.stringify({
-          text: "Spam",
-          page: "/blog/test",
-          website: "http://spam.com",
-        }),
-      }, {});
+      await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.1.2" },
+          body: JSON.stringify({
+            text: "Spam",
+            page: "/blog/test",
+            website: "http://spam.com",
+          }),
+        },
+        {},
+      );
 
       expect(mockS3Send).toHaveBeenCalled();
       const storedComment = JSON.parse((mockS3Send.mock.calls[0][0] as any).params.Body);
@@ -432,28 +515,34 @@ describe("comments.ts", () => {
     });
 
     test("normal comment has suspectedAgent: false", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.1.3" },
-        body: JSON.stringify({
-          text: "Normal comment",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.1.3" },
+          body: JSON.stringify({
+            text: "Normal comment",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(JSON.parse(res.body).comment.suspectedAgent).toBe(false);
     });
 
     test("empty website field is not flagged", async () => {
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "100.0.1.4" },
-        body: JSON.stringify({
-          text: "Normal",
-          page: "/blog/test",
-          website: "",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "100.0.1.4" },
+          body: JSON.stringify({
+            text: "Normal",
+            page: "/blog/test",
+            website: "",
+          }),
+        },
+        {},
+      );
 
       expect(JSON.parse(res.body).comment.suspectedAgent).toBe(false);
     });
@@ -504,15 +593,18 @@ describe("comments.ts", () => {
 
   describe("email notification", () => {
     test("sends email on new comment", async () => {
-      await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "5.5.5.5" },
-        body: JSON.stringify({
-          name: "Alice",
-          text: "Great post!",
-          page: "/blog/test",
-        }),
-      }, {});
+      await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "5.5.5.5" },
+          body: JSON.stringify({
+            name: "Alice",
+            text: "Great post!",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const [url, options] = (global.fetch as any).mock.calls[0];
@@ -525,15 +617,18 @@ describe("comments.ts", () => {
     });
 
     test("includes agent warning in email for suspected agents", async () => {
-      await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "6.6.6.6" },
-        body: JSON.stringify({
-          text: "Spam",
-          page: "/blog/test",
-          website: "http://spam.com",
-        }),
-      }, {});
+      await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "6.6.6.6" },
+          body: JSON.stringify({
+            text: "Spam",
+            page: "/blog/test",
+            website: "http://spam.com",
+          }),
+        },
+        {},
+      );
 
       const emailBody = JSON.parse((global.fetch as any).mock.calls[0][1].body);
       expect(emailBody.text).toContain("SUSPECTED AGENT");
@@ -542,14 +637,17 @@ describe("comments.ts", () => {
     test("comment is stored even if email fails", async () => {
       (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-      const res = await handle({
-        httpMethod: "POST",
-        headers: { "x-forwarded-for": "7.7.7.7" },
-        body: JSON.stringify({
-          text: "Hello",
-          page: "/blog/test",
-        }),
-      }, {});
+      const res = await handle(
+        {
+          httpMethod: "POST",
+          headers: { "x-forwarded-for": "7.7.7.7" },
+          body: JSON.stringify({
+            text: "Hello",
+            page: "/blog/test",
+          }),
+        },
+        {},
+      );
 
       expect(res.statusCode).toBe(201);
       expect(mockS3Send).toHaveBeenCalled();

@@ -5,13 +5,13 @@ Deployed as a **Scaleway Function** (Node 22) – comments are stored as JSON ob
 
 ## Features
 
-| Feature | Details |
-|---|---|
-| **Anonymous comments** | No login required; optional display name (default "Anonymous") |
+| Feature                     | Details                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Anonymous comments**      | No login required; optional display name (default "Anonymous")                                               |
 | **Honeypot spam detection** | Hidden `website` field – filled submissions are stored with `suspectedAgent: true` and capped at 10 per page |
-| **Rate limiting** | 3 comments / minute / IP (in-memory, resets on cold start) |
-| **Email notification** | Via Scaleway Transactional Email; includes 🤖 warning for suspected agents |
-| **Input sanitisation** | HTML tag stripping, length limits (name 100, text 2 000 chars) |
+| **Rate limiting**           | 3 comments / minute / IP (in-memory, resets on cold start)                                                   |
+| **Email notification**      | Via Scaleway Transactional Email; includes 🤖 warning for suspected agents                                   |
+| **Input sanitisation**      | HTML tag stripping, length limits (name 100, text 2 000 chars)                                               |
 
 ## API
 
@@ -53,8 +53,8 @@ npm run deploy        # serverless deploy
 
 ## Environment variables
 
-| Variable | Scope | Description |
-|---|---|---|
-| `SCW_ACCESS_KEY` | secret | Scaleway API / S3 credential |
-| `SCW_SECRET_KEY` | secret | Scaleway API / S3 credential |
+| Variable             | Scope  | Description                         |
+| -------------------- | ------ | ----------------------------------- |
+| `SCW_ACCESS_KEY`     | secret | Scaleway API / S3 credential        |
+| `SCW_SECRET_KEY`     | secret | Scaleway API / S3 credential        |
 | `NOTIFICATION_EMAIL` | secret | Recipient for comment notifications |

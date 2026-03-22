@@ -11,6 +11,7 @@ provider:
   secret:
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
+    TEM_PROJECT_ID: ${env:TEM_PROJECT_ID}
     NOTIFICATION_EMAIL: ${env:NOTIFICATION_EMAIL}
 
 plugins:

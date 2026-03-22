@@ -97,6 +97,7 @@ async function sendEmailNotification(comment: Comment): Promise<void> {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          project_id: process.env.TEM_PROJECT_ID,
           from: { email: "comments@fretchen.eu", name: "Blog Comments" },
           to: [{ email: process.env.NOTIFICATION_EMAIL }],
           subject: `💬 New comment on ${comment.page}`,

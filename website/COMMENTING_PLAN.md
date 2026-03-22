@@ -148,13 +148,14 @@ Prev/Next Navigation
 
 ## Phase 1: Backend – Scaleway Comment Function
 
-### New File: `scw_js/comments.js`
+### New File: `comment_service/comments.ts`
 
 A single Scaleway Function handling both read and write operations via HTTP method routing.
+Lives in its own mini-repo (`comment_service/`) with TypeScript, own `serverless.yml`, and independent test/build tooling.
 
 **Implementation sketch:**
 
-```js
+```ts
 import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
@@ -225,17 +226,21 @@ async function handleGetComments(event, s3) {
   // Sort by timestamp ascending (oldest first)
   comments.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-  return { statusCode: 200, headers, body: JSON.stringify({ comments }) };
+  // Limit suspected agent comments to prevent spam flooding
+  const MAX_AGENT_COMMENTS = 10;
+  const agentComments = comments.filter(c => c.suspectedAgent);
+  const normalComments = comments.filter(c => !c.suspectedAgent);
+  const limitedAgents = agentComments.slice(-MAX_AGENT_COMMENTS);
+  const result = [...normalComments, ...limitedAgents].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  return { statusCode: 200, headers, body: JSON.stringify({ comments: result }) };
 }
 
 async function handlePostComment(event, s3) {
   const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
 
-  // Honeypot check: if hidden field is filled, it's a bot
-  if (body.website) {
-    // Silently accept but don't store – bot thinks it succeeded
-    return { statusCode: 201, headers, body: JSON.stringify({ success: true }) };
-  }
+  // Honeypot check: if hidden field is filled, flag as suspected agent
+  const suspectedAgent = !!body.website;
 
   // Validate required fields
   const { name, text, page } = body;
@@ -268,6 +273,7 @@ async function handlePostComment(event, s3) {
     text: cleanText,
     page,
     timestamp: new Date().toISOString(),
+    suspectedAgent,
   };
 
   // Store in S3
@@ -344,7 +350,8 @@ Tests for:
 - GET with missing page → returns 400
 - GET with no comments → returns empty array
 - POST valid comment → returns 201 + comment object
-- POST with honeypot field filled → returns 201 but not stored
+- POST with honeypot field filled → returns 201 with `suspectedAgent: true`
+- GET limits agent comments to max 10 per page
 - POST with missing text → returns 400
 - POST with HTML tags → tags stripped from output
 - POST exceeding rate limit → returns 429
@@ -358,7 +365,7 @@ Tests for:
 - [ ] `curl -X POST https://comments-api.fretchen.eu -d '{"name":"Test","text":"Hello","page":"/blog/0"}'` returns 201
 - [ ] `curl https://comments-api.fretchen.eu?page=/blog/0` returns the comment
 - [ ] CORS header is `https://www.fretchen.eu` (not `*`)
-- [ ] Honeypot submissions return 201 but no file in S3
+- [ ] Honeypot submissions return 201 with `suspectedAgent: true` and are stored in S3
 - [ ] Email notification arrives within seconds
 - [ ] `npm test` passes all new tests
 
@@ -707,13 +714,13 @@ ctaButtonGroup: css({
 
 ## File Change Summary
 
-### Backend (scw_js/)
+### Backend (comment_service/)
 
 | File | Action | Description |
 |------|--------|-------------|
-| `scw_js/comments.js` | **CREATE** | Comment read/write function with S3 storage + email notification |
-| `scw_js/serverless.yml` | **MODIFY** | Add `comments` function entry + `NOTIFICATION_EMAIL` secret |
-| `scw_js/test/comments.test.js` | **CREATE** | Tests for GET/POST handlers, validation, honeypot, rate limiting |
+| `comment_service/comments.ts` | **CREATE** | Comment read/write function with S3 storage + email notification |
+| `comment_service/serverless.yml` | **CREATE** | Scaleway Function config + `NOTIFICATION_EMAIL` secret |
+| `comment_service/test/comments.test.ts` | **CREATE** | Tests for GET/POST handlers, validation, honeypot, rate limiting |
 
 ### Frontend (website/)
 
@@ -732,11 +739,11 @@ ctaButtonGroup: css({
 ## Implementation Order
 
 ```
-Phase 1: Backend (scw_js/)
+Phase 1: Backend (comment_service/)
    │
-   ├── 1a. Create scw_js/comments.js
-   ├── 1b. Create scw_js/test/comments.test.js
-   ├── 1c. Add to serverless.yml
+   ├── 1a. Create comment_service/comments.ts
+   ├── 1b. Create comment_service/test/comments.test.ts
+   ├── 1c. Create comment_service/serverless.yml
    ├── 1d. Setup Scaleway TEM (DNS records for fretchen.eu)
    └── 1e. Deploy: npx serverless deploy
           │
@@ -799,7 +806,7 @@ Browser  ──POST──→  Scaleway Function  ──PutObject──→  S3 (p
 |-------|---------------|
 | XSS prevention | Strip all HTML tags (`text.replace(/<[^>]*>/g, "")`) |
 | Length limits | Name: 100 chars, Text: 2000 chars |
-| Honeypot | Hidden `website` field – bots fill it, humans don't see it |
+| Honeypot | Hidden `website` field – bots fill it → comment stored with `suspectedAgent: true`, shown with 🤖 badge. Max 10 agent comments per page returned. |
 | Rate limiting | Max 3 comments/minute per IP (in-memory, resets on cold start) |
 | Required fields | `text` and `page` are mandatory |
 
@@ -829,6 +836,7 @@ Uses Scaleway Transactional Email (TEM) via REST API. Requires one-time DNS setu
 Subject: 💬 New comment on /blog/3
 From: comments@fretchen.eu
 
+🤖 SUSPECTED AGENT (honeypot triggered)   ← only if suspectedAgent
 From: Alice
 Page: https://www.fretchen.eu/blog/3
 Time: 2026-03-21T14:30:00.000Z
@@ -858,7 +866,7 @@ Future enhancement: Include a "Delete" link in the notification email (signed UR
 
 | Risk | Mitigation |
 |------|------------|
-| Spam comments | Honeypot + rate limiting. At low traffic, manual deletion via S3. Can add approval flow later. |
+| Spam comments | Honeypot flags suspected agents (shown with 🤖 badge, max 10 per page). Rate limiting (3/min/IP). Manual deletion via S3. Can add approval flow later. |
 | Function cold start | Scaleway Functions cold start ~1-2s. Acceptable – comments are not latency-critical. |
 | S3 costs | At a few comments/month: effectively €0. Even 10,000 comments would be < €0.01. |
 | Email notification fails | `try/catch` – comment is still stored. Notification failure doesn't block the user. |

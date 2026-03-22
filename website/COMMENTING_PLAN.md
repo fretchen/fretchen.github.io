@@ -718,9 +718,13 @@ ctaButtonGroup: css({
 
 | File | Action | Description |
 |------|--------|-------------|
-| `comment_service/comments.ts` | **CREATE** | Comment read/write function with S3 storage + email notification |
-| `comment_service/serverless.yml` | **CREATE** | Scaleway Function config + `NOTIFICATION_EMAIL` secret |
-| `comment_service/test/comments.test.ts` | **CREATE** | Tests for GET/POST handlers, validation, honeypot, rate limiting |
+| `comment_service/comments.ts` | **DONE** | Comment read/write function with S3 storage + email notification |
+| `comment_service/serverless.yml` | **DONE** | Scaleway Function config with secrets |
+| `comment_service/test/comments.test.ts` | **DONE** | 27 tests for GET/POST, validation, honeypot, rate limiting, email |
+| `comment_service/package.json` | **DONE** | Independent mini-repo with TypeScript, vitest, tsup, eslint |
+| `comment_service/tsconfig.json` | **DONE** | Strict TypeScript config |
+| `comment_service/README.md` | **DONE** | API docs, features, dev/deploy instructions |
+| `comment_service/.env.example` | **DONE** | Template for required environment variables |
 
 ### Frontend (website/)
 
@@ -739,22 +743,22 @@ ctaButtonGroup: css({
 ## Implementation Order
 
 ```
-Phase 1: Backend (comment_service/)
+Phase 1: Backend (comment_service/)                          ✅ COMPLETED 2026-03-22
    │
-   ├── 1a. Create comment_service/comments.ts
-   ├── 1b. Create comment_service/test/comments.test.ts
-   ├── 1c. Create comment_service/serverless.yml
-   ├── 1d. Setup Scaleway TEM (DNS records for fretchen.eu)
-   └── 1e. Deploy: npx serverless deploy
+   ├── 1a. Create comment_service/comments.ts                ✅
+   ├── 1b. Create comment_service/test/comments.test.ts      ✅ 27 tests passing
+   ├── 1c. Create comment_service/serverless.yml             ✅
+   ├── 1d. Setup Scaleway TEM (DNS: SPF, DKIM, DMARC)       ✅ Domain verified
+   └── 1e. Deploy + verify                                   ✅ comments.fretchen.eu live
           │
-Phase 2: CommentsSection component (depends on Phase 1)
+Phase 2: CommentsSection component (depends on Phase 1)      ⬜ NOT STARTED
    │      ├── Create website/components/CommentsSection.tsx
    │      ├── Add commentSection styles to website/layouts/styles.ts
    │      ├── Modify website/components/Post.tsx (add <CommentsSection /> after <Webmentions />)
    │      ├── Create website/test/CommentsSection.test.tsx
    │      └── Update website/test/Post.integration.test.tsx
    │
-Phase 3: Webmentions UX improvements (independent – can start anytime)
+Phase 3: Webmentions UX improvements (independent)           ⬜ NOT STARTED
           ├── Modify website/components/Webmentions.tsx
           ├── Add ctaButton styles to website/layouts/styles.ts
           └── Update website/test/Webmentions.test.tsx
@@ -764,23 +768,33 @@ Phase 3: Webmentions UX improvements (independent – can start anytime)
 
 **Nur 3 Phasen statt 4.** Das Tab-Layout (alte Phase 3) entfällt komplett – kein `CommentTabs.tsx`, kein `Tab`-Import, keine zusätzliche UI-Indirektion.
 
+### Phase 1 Deployment Details
+
+- **Endpoint:** `https://comments.fretchen.eu`
+- **Service:** Scaleway Function `comment-service` (Node 22)
+- **Storage:** S3 bucket `my-imagestore`, prefix `comments/`
+- **Email:** Scaleway TEM via `comments@fretchen.eu` → `fretchen.dev@proton.me`
+- **Project files:** `comment_service/` (independent mini-repo with TypeScript, own serverless.yml)
+- **Note:** `SCW_PROJECT_ID` is a reserved variable in Scaleway Functions – renamed to `TEM_PROJECT_ID`
+
 ---
 
 ## Environment Variables / Configuration
 
-### Backend (scw_js/)
+### Backend (comment_service/)
 
 | Variable | Location | Value |
 |----------|----------|-------|
 | `SCW_ACCESS_KEY` | Scaleway Console (secret) | Existing – already configured |
 | `SCW_SECRET_KEY` | Scaleway Console (secret) | Existing – already configured |
+| `TEM_PROJECT_ID` | Scaleway Console (secret) | Scaleway Project UUID (required for TEM API) |
 | `NOTIFICATION_EMAIL` | Scaleway Console (secret) | Your email address |
 
 ### Frontend (website/)
 
 | Variable | Usage | Value |
 |----------|-------|-------|
-| `VITE_COMMENTS_API` | CommentsSection.tsx | `https://comments-api.fretchen.eu` (production) / `http://localhost:3000` (dev) |
+| `VITE_COMMENTS_API` | CommentsSection.tsx | `https://comments.fretchen.eu` (production) / `http://localhost:3000` (dev) |
 
 ---
 

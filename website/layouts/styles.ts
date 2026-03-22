@@ -1938,7 +1938,7 @@ export const commentSection = {
     borderTop: "token(borders.light)",
   }),
   title: css({
-    fontSize: "xl",
+    fontSize: "md",
     fontWeight: "semibold",
     color: "text",
     marginBottom: "md",
@@ -2016,6 +2016,19 @@ export const commentSection = {
   }),
   successMsg: css({ color: "green.600", fontSize: "sm" }),
   errorMsg: css({ color: "red.600", fontSize: "sm" }),
+  toggleButton: css({
+    background: "none",
+    border: "none",
+    color: "brand",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    padding: 0,
+    textDecoration: "underline",
+    textUnderlineOffset: "3px",
+    transition: "all 0.2s ease",
+    _hover: { opacity: 0.7 },
+  }),
 };
 
 // ===== WEBMENTIONS STYLES =====
@@ -2028,18 +2041,46 @@ export const webmentions = {
     borderTop: "token(borders.light)",
   }),
   sectionTitle: css({
-    fontSize: "xl",
+    fontSize: "md",
     fontWeight: "semibold",
     color: "text",
-    marginBottom: "md",
-    margin: 0,
+    margin: "0 0 sm 0",
   }),
-  subsectionTitle: css({
-    fontSize: "md",
-    fontWeight: "medium",
-    color: "text",
-    marginTop: "md",
+  shareSeparator: css({
+    color: "gray.400",
+    fontSize: "sm",
+  }),
+  compactBar: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "md",
+    flexWrap: "wrap",
     marginBottom: "sm",
+  }),
+  compactCounts: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "center",
+  }),
+  compactCount: css({
+    fontSize: "sm",
+    color: "gray.600",
+    fontWeight: "medium",
+  }),
+  shareActions: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: "sm",
+  }),
+  shareButton: css({
+    fontSize: "sm",
+    color: "brand",
+    textDecoration: "none",
+    fontWeight: "medium",
+    transition: "all 0.2s ease",
+    _hover: { textDecoration: "underline" },
   }),
   avatarGrid: css({
     display: "flex",

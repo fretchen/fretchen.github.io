@@ -147,12 +147,18 @@ describe("CommentsSection Component", () => {
       });
     });
 
-    it("should render the comment form", async () => {
+    it("should render the comment form after clicking toggle", async () => {
       render(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
+
+      // Form is hidden by default
+      expect(screen.queryByLabelText("Comment")).not.toBeInTheDocument();
+
+      // Click toggle to open form
+      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
 
       expect(screen.getByLabelText("Name")).toBeInTheDocument();
       expect(screen.getByLabelText("Comment")).toBeInTheDocument();
@@ -165,6 +171,9 @@ describe("CommentsSection Component", () => {
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
+
+      // Open the form
+      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
 
       // Fill in the form
       fireEvent.change(screen.getByLabelText("Name"), {
@@ -203,6 +212,8 @@ describe("CommentsSection Component", () => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
 
+      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
+
       fireEvent.change(screen.getByLabelText("Comment"), {
         target: { value: "A comment" },
       });
@@ -226,6 +237,8 @@ describe("CommentsSection Component", () => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
 
+      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
+
       const submitButton = screen.getByRole("button", { name: /Send Comment/i });
       expect(submitButton).toBeDisabled();
     });
@@ -237,6 +250,8 @@ describe("CommentsSection Component", () => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
 
+      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
+
       const honeypot = document.querySelector("input[name='website']");
       expect(honeypot).toBeTruthy();
       expect(honeypot).toHaveAttribute("tabindex", "-1");
@@ -245,7 +260,7 @@ describe("CommentsSection Component", () => {
   });
 
   describe("Form Title", () => {
-    it("should display the 'Leave a Comment' heading", async () => {
+    it("should display count-based heading", async () => {
       (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ comments: [] }),
@@ -253,7 +268,9 @@ describe("CommentsSection Component", () => {
 
       render(<CommentsSection />);
 
-      expect(screen.getByText("Leave a Comment")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
+      });
     });
   });
 });

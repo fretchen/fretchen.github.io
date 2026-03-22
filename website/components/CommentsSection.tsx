@@ -71,11 +71,16 @@ export function CommentsSection() {
     }
   };
 
+  const commentCount = comments.length;
+
   return (
     <div className={commentSection.container}>
-      <h3 className={commentSection.title}>Leave a Comment</h3>
+      {/* Section title */}
+      <h3 className={commentSection.title}>
+        {loading ? "Comments" : commentCount === 0 ? "Comments" : `${commentCount} Comment${commentCount !== 1 ? "s" : ""}`}
+      </h3>
 
-      {/* Comment form */}
+      {/* Comment form — always visible */}
       <form onSubmit={handleSubmit} className={commentSection.form}>
         <input
           type="text"
@@ -118,9 +123,7 @@ export function CommentsSection() {
       {/* Comment list */}
       {loading ? (
         <p className={commentSection.loading}>Loading comments...</p>
-      ) : comments.length === 0 ? (
-        <p className={commentSection.empty}>No comments yet. Be the first!</p>
-      ) : (
+      ) : comments.length > 0 ? (
         <ul className={commentSection.list}>
           {comments.map((c) => (
             <li key={c.id} className={commentSection.comment}>
@@ -141,7 +144,7 @@ export function CommentsSection() {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 }

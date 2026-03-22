@@ -45,7 +45,7 @@ npm run build         # tsup → dist/
 
 ## Deployment
 
-Secrets (`SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, `NOTIFICATION_EMAIL`) must be set in the Scaleway Console.
+Secrets (`SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, `NOTIFICATION_EMAIL`, `TEM_PROJECT_ID`) must be set in the Scaleway Console.
 
 ```bash
 npm run deploy        # serverless deploy
@@ -58,3 +58,4 @@ npm run deploy        # serverless deploy
 | `SCW_ACCESS_KEY`     | secret | Scaleway API / S3 credential        |
 | `SCW_SECRET_KEY`     | secret | Scaleway API / S3 credential        |
 | `NOTIFICATION_EMAIL` | secret | Recipient for comment notifications |
+| `TEM_PROJECT_ID`     | secret | Scaleway TEM project ID for emails  |

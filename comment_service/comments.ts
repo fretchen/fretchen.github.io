@@ -136,8 +136,8 @@ async function handleGetComments(
   }
 
   const comments: Comment[] = await Promise.all(
-    listed.Contents.map(async (obj) => {
-      const data = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key }));
+    listed.Contents.filter((obj) => obj.Key).map(async (obj) => {
+      const data = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key! }));
       const text = await data.Body!.transformToString();
       return JSON.parse(text) as Comment;
     }),

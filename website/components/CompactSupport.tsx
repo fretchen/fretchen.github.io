@@ -50,12 +50,7 @@ export function CompactSupport() {
   return (
     <div className={compactSupport.container} onMouseEnter={handleHover}>
       <span className={compactSupport.text}>Enjoyed this article?</span>
-      <button
-        onClick={handleSupportClick}
-        disabled={isLoading}
-        className={compactSupport.button}
-        title={getTooltip()}
-      >
+      <button onClick={handleSupportClick} disabled={isLoading} className={compactSupport.button} title={getTooltip()}>
         {getButtonText()}
       </button>
       {count > 0 && <span className={compactSupport.count}>· {count} supporters</span>}

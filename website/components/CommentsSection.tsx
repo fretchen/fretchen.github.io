@@ -77,7 +77,11 @@ export function CommentsSection() {
     <div className={commentSection.container}>
       {/* Section title */}
       <h3 className={commentSection.title}>
-        {loading ? "Comments" : commentCount === 0 ? "Comments" : `${commentCount} Comment${commentCount !== 1 ? "s" : ""}`}
+        {loading
+          ? "Comments"
+          : commentCount === 0
+            ? "Comments"
+            : `${commentCount} Comment${commentCount !== 1 ? "s" : ""}`}
       </h3>
 
       {/* Comment form — always visible */}

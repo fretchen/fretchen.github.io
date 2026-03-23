@@ -76,7 +76,7 @@ function sanitize(input: string, maxLength: number): string {
 
 function sanitizePage(page: string): string | null {
   // Strip control characters, trim, enforce length
-  const clean = page.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, MAX_PAGE_LENGTH);
+  const clean = page.replace(/\p{Cc}/gu, "").trim().slice(0, MAX_PAGE_LENGTH);
   // Must start with / and contain only safe URL path characters
   if (!clean || !/^\/[\w/.\-~%]*$/.test(clean)) {
     return null;

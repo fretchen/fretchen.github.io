@@ -1,0 +1,34 @@
+service: comment-service
+
+useDotenv: true
+
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: node22
+  env:
+    NODE_ENV: production
+  secret:
+    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
+    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
+    TEM_PROJECT_ID: ${env:TEM_PROJECT_ID}
+    NOTIFICATION_EMAIL: ${env:NOTIFICATION_EMAIL}
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    - "dist/**"
+    - "!.gitignore"
+    - "!.git/**"
+    - "!test/**"
+    - "!coverage/**"
+    - "!.prettierrc"
+
+functions:
+  comments:
+    handler: dist/comments.handle
+    description: "Blog comment system – anonymous comments stored in S3"
+    custom_domains:
+      - comments.fretchen.eu

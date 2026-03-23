@@ -1,0 +1,51 @@
+name: Test Comment Service
+
+permissions:
+    contents: read
+
+on:
+    pull_request:
+        paths:
+            - "comment_service/**"
+            - ".github/workflows/test-comment-service.yml"
+    push:
+        branches:
+            - main
+        paths:
+            - "comment_service/**"
+            - ".github/workflows/test-comment-service.yml"
+
+jobs:
+    test-comment-service:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "npm"
+                  cache-dependency-path: comment_service/package.json
+
+            - name: Install dependencies
+              working-directory: ./comment_service
+              run: npm install
+
+            - name: Run quality checks (lint + format + test with coverage)
+              working-directory: ./comment_service
+              run: npm run check
+              env:
+                  NODE_ENV: test
+                  CI: true
+
+            - name: Upload coverage reports to Codecov (optional)
+              uses: codecov/codecov-action@v3
+              with:
+                  directory: ./comment_service/coverage
+                  flags: comment-service
+                  name: comment-service-coverage
+                  fail_ci_if_error: false
+              continue-on-error: true

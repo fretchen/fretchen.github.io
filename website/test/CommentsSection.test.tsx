@@ -147,18 +147,12 @@ describe("CommentsSection Component", () => {
       });
     });
 
-    it("should render the comment form after clicking toggle", async () => {
+    it("should render the comment form immediately (always visible)", async () => {
       render(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
-
-      // Form is hidden by default
-      expect(screen.queryByLabelText("Comment")).not.toBeInTheDocument();
-
-      // Click toggle to open form
-      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
 
       expect(screen.getByLabelText("Name")).toBeInTheDocument();
       expect(screen.getByLabelText("Comment")).toBeInTheDocument();
@@ -171,9 +165,6 @@ describe("CommentsSection Component", () => {
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
-
-      // Open the form
-      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
 
       // Fill in the form
       fireEvent.change(screen.getByLabelText("Name"), {
@@ -212,8 +203,6 @@ describe("CommentsSection Component", () => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
-
       fireEvent.change(screen.getByLabelText("Comment"), {
         target: { value: "A comment" },
       });
@@ -237,8 +226,6 @@ describe("CommentsSection Component", () => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
-
       const submitButton = screen.getByRole("button", { name: /Send Comment/i });
       expect(submitButton).toBeDisabled();
     });
@@ -249,8 +236,6 @@ describe("CommentsSection Component", () => {
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
       });
-
-      fireEvent.click(screen.getByRole("button", { name: /Leave a comment/i }));
 
       const honeypot = document.querySelector("input[name='website']");
       expect(honeypot).toBeTruthy();

@@ -15,7 +15,7 @@ Deployed as a **Scaleway Function** (Node 22) – comments are stored as JSON ob
 
 ## API
 
-**Base URL** `https://comments-api.fretchen.eu`
+**Base URL** `https://comments.fretchen.eu`
 
 ### `GET /?page=/blog/my-post`
 

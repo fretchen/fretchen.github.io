@@ -42,6 +42,7 @@ const BUCKET_NAME = "my-imagestore";
 const COMMENTS_PREFIX = "comments/";
 const MAX_NAME_LENGTH = 100;
 const MAX_TEXT_LENGTH = 2000;
+const MAX_PAGE_LENGTH = 200;
 const RATE_LIMIT_PER_MIN = 3;
 const MAX_AGENT_COMMENTS = 10;
 
@@ -73,6 +74,16 @@ function sanitize(input: string, maxLength: number): string {
     .slice(0, maxLength);
 }
 
+function sanitizePage(page: string): string | null {
+  // Strip control characters, trim, enforce length
+  const clean = page.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, MAX_PAGE_LENGTH);
+  // Must start with / and contain only safe URL path characters
+  if (!clean || !/^\/[\w/.\-~%]*$/.test(clean)) {
+    return null;
+  }
+  return clean;
+}
+
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const recent = (rateLimitStore.get(ip) ?? []).filter((t) => now - t < 60_000);
@@ -88,8 +99,13 @@ function isRateLimited(ip: string): boolean {
 
 async function sendEmailNotification(comment: Comment): Promise<void> {
   try {
+    if (!process.env.TEM_PROJECT_ID || !process.env.NOTIFICATION_EMAIL) {
+      console.warn("Email notification skipped: TEM_PROJECT_ID or NOTIFICATION_EMAIL not set");
+      return;
+    }
+
     const agentWarning = comment.suspectedAgent ? "🤖 SUSPECTED AGENT (honeypot triggered)\n" : "";
-    await fetch("https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails", {
+    const res = await fetch("https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails", {
       method: "POST",
       headers: {
         "X-Auth-Token": process.env.SCW_SECRET_KEY!,
@@ -103,6 +119,10 @@ async function sendEmailNotification(comment: Comment): Promise<void> {
         text: `${agentWarning}From: ${comment.name}\nPage: ${comment.page}\nTime: ${comment.timestamp}\n\n${comment.text}`,
       }),
     });
+
+    if (!res.ok) {
+      console.error(`Email API returned ${res.status}: ${await res.text()}`);
+    }
   } catch (err) {
     console.error("Email notification failed:", err);
   }
@@ -115,12 +135,21 @@ async function handleGetComments(
   s3: S3Client,
   corsHeaders: Record<string, string>,
 ): Promise<HandlerResponse> {
-  const page = event.queryStringParameters?.page;
-  if (!page) {
+  const rawPage = event.queryStringParameters?.page;
+  if (!rawPage) {
     return {
       statusCode: 400,
       headers: corsHeaders,
       body: JSON.stringify({ error: "Missing page parameter" }),
+    };
+  }
+
+  const page = sanitizePage(rawPage);
+  if (!page) {
+    return {
+      statusCode: 400,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: "Invalid page parameter" }),
     };
   }
 
@@ -168,20 +197,46 @@ async function handlePostComment(
   s3: S3Client,
   corsHeaders: Record<string, string>,
 ): Promise<HandlerResponse> {
-  const body: CommentPostBody =
-    typeof event.body === "string"
-      ? (JSON.parse(event.body) as CommentPostBody)
-      : (event.body as unknown as CommentPostBody);
+  if (!event.body) {
+    return {
+      statusCode: 400,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: "Missing request body" }),
+    };
+  }
+
+  let body: CommentPostBody;
+  try {
+    body =
+      typeof event.body === "string"
+        ? (JSON.parse(event.body) as CommentPostBody)
+        : (event.body as unknown as CommentPostBody);
+  } catch {
+    return {
+      statusCode: 400,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: "Invalid JSON in request body" }),
+    };
+  }
 
   // Honeypot check: if hidden field is filled, flag as suspected agent
   const suspectedAgent = !!body.website;
 
-  const { name, text, page } = body;
-  if (!text || !page) {
+  const { name, text, page: rawPage } = body;
+  if (!text || !rawPage) {
     return {
       statusCode: 400,
       headers: corsHeaders,
       body: JSON.stringify({ error: "Missing required fields" }),
+    };
+  }
+
+  const page = sanitizePage(rawPage);
+  if (!page) {
+    return {
+      statusCode: 400,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: "Invalid page value" }),
     };
   }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
+import { usePageContext } from "vike-react/usePageContext";
 import { commentSection } from "../layouts/styles";
 
 const API_URL = import.meta.env.VITE_COMMENTS_API || "https://comments.fretchen.eu";
@@ -13,7 +13,7 @@ interface Comment {
 }
 
 export function CommentsSection() {
-  const { urlWithoutSlash } = useWebmentionUrls();
+  const { urlPathname } = usePageContext();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -23,18 +23,15 @@ export function CommentsSection() {
   const [success, setSuccess] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
-  // Derive page path from full URL
-  const page = urlWithoutSlash.replace("https://www.fretchen.eu", "");
-
   useEffect(() => {
-    fetch(`${API_URL}?page=${encodeURIComponent(page)}`)
+    fetch(`${API_URL}?page=${encodeURIComponent(urlPathname)}`)
       .then((r) => r.json())
       .then((data) => {
         setComments(data.comments || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [page]);
+  }, [urlPathname]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +48,7 @@ export function CommentsSection() {
         body: JSON.stringify({
           name: name.trim() || undefined,
           text: text.trim(),
-          page,
+          page: urlPathname,
           website: honeypotRef.current?.value || "",
         }),
       });
@@ -127,7 +124,9 @@ export function CommentsSection() {
       {/* Comment list */}
       {loading ? (
         <p className={commentSection.loading}>Loading comments...</p>
-      ) : comments.length > 0 ? (
+      ) : comments.length === 0 ? (
+        <p className={commentSection.empty}>No comments yet — be the first!</p>
+      ) : (
         <ul className={commentSection.list}>
           {comments.map((c) => (
             <li key={c.id} className={commentSection.comment}>
@@ -148,7 +147,7 @@ export function CommentsSection() {
             </li>
           ))}
         </ul>
-      ) : null}
+      )}
     </div>
   );
 }

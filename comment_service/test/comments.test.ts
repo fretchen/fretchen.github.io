@@ -48,6 +48,7 @@ describe("comments.ts", () => {
     process.env.SCW_ACCESS_KEY = "test-access-key";
     process.env.SCW_SECRET_KEY = "test-secret-key";
     process.env.NOTIFICATION_EMAIL = "test@example.com";
+    process.env.TEM_PROJECT_ID = "test-project-id";
 
     vi.clearAllMocks();
     mockS3Send.mockResolvedValue({});
@@ -58,6 +59,7 @@ describe("comments.ts", () => {
     delete process.env.SCW_ACCESS_KEY;
     delete process.env.SCW_SECRET_KEY;
     delete process.env.NOTIFICATION_EMAIL;
+    delete process.env.TEM_PROJECT_ID;
   });
 
   // ===== CORS =====

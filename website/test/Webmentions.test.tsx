@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { Webmentions } from "../components/Webmentions";
 
 /**
@@ -17,13 +17,6 @@ vi.mock("vike-react/usePageContext", () => ({
 
 // Mock fetch API
 global.fetch = vi.fn() as Mock;
-
-// Mock clipboard API
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn() as Mock,
-  },
-});
 
 describe("Webmentions Component", () => {
   beforeEach(() => {
@@ -64,10 +57,12 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText(/No reactions yet/i)).toBeInTheDocument();
+        expect(screen.getByText("Social Reactions")).toBeInTheDocument();
       });
 
-      expect(screen.getByText(/Be the first to share this post!/i)).toBeInTheDocument();
+      // Share actions should be present
+      expect(screen.getByRole("link", { name: /Bluesky/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Mastodon/i })).toBeInTheDocument();
     });
 
     it("should show CTA even when empty", async () => {
@@ -79,10 +74,10 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Share this post on social media!/i)).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /Bluesky/i })).toBeInTheDocument();
       });
 
-      expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Mastodon/i })).toBeInTheDocument();
     });
   });
 
@@ -129,11 +124,12 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        // Should only show one like, not two
-        const likeSection = screen.getByText(/Like/i).parentElement;
-        const avatars = likeSection?.parentElement?.querySelectorAll("img");
-        expect(avatars).toHaveLength(1); // Deduplicated, not 2
+        // Should only show one like, not two (deduplicated)
+        expect(screen.getByText(/❤️ 1/)).toBeInTheDocument();
       });
+
+      const images = screen.getAllByRole("img");
+      expect(images).toHaveLength(1);
     });
 
     it("should handle fetch errors gracefully", async () => {
@@ -142,7 +138,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText(/No reactions yet/i)).toBeInTheDocument();
+        expect(screen.getByText("Social Reactions")).toBeInTheDocument();
       });
     });
   });
@@ -182,8 +178,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText("2", { exact: false })).toBeInTheDocument();
-        expect(screen.getByText("Likes", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText(/❤️ 2/)).toBeInTheDocument();
       });
 
       // Check that avatars are rendered
@@ -213,7 +208,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText("❤️ 1 Like", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText(/❤️ 1/)).toBeInTheDocument();
       });
 
       // Should render fallback icon instead of img
@@ -264,7 +259,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText("🔁 1 Repost", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText(/🔁 1/)).toBeInTheDocument();
       });
     });
 
@@ -300,7 +295,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText(/3 Reposts/i)).toBeInTheDocument();
+        expect(screen.getByText(/🔁 3/)).toBeInTheDocument();
       });
     });
   });
@@ -334,7 +329,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText("💬 1 Reply", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText(/💬 1/)).toBeInTheDocument();
       });
 
       expect(screen.getByText("David")).toBeInTheDocument();
@@ -368,7 +363,7 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText("💬 1 Reply", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText(/💬 1/)).toBeInTheDocument();
       });
 
       expect(screen.getByText("Check out this post!")).toBeInTheDocument();
@@ -407,8 +402,8 @@ describe("Webmentions Component", () => {
     });
   });
 
-  describe("Copy Link Functionality", () => {
-    it("should copy link to clipboard when button clicked", async () => {
+  describe("Share Links", () => {
+    it("should render Bluesky and Mastodon intent links", async () => {
       (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ children: [] }),
@@ -417,97 +412,19 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
-      });
-
-      const copyButton = screen.getByRole("button", { name: /Copy Link/i });
-      fireEvent.click(copyButton);
-
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://www.fretchen.eu/quantum/amo/0");
-    });
-
-    it("should show 'Copied!' feedback after copying", async () => {
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ children: [] }),
-      });
-
-      render(<Webmentions />);
-
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
-      });
-
-      const copyButton = screen.getByRole("button", { name: /Copy Link/i });
-      fireEvent.click(copyButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/✓ Copied!/i)).toBeInTheDocument();
-      });
-    });
-
-    it("should handle clipboard write errors gracefully", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      (navigator.clipboard.writeText as Mock).mockRejectedValueOnce(new Error("Clipboard error"));
-
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ children: [] }),
-      });
-
-      render(<Webmentions />);
-
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Copy Link/i })).toBeInTheDocument();
-      });
-
-      const copyButton = screen.getByRole("button", { name: /Copy Link/i });
-      fireEvent.click(copyButton);
-
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to copy:", expect.any(Error));
-      });
-
-      consoleErrorSpy.mockRestore();
-    });
-  });
-
-  describe("CTA Links", () => {
-    it("should render Bluesky and Mastodon links", async () => {
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ children: [] }),
-      });
-
-      render(<Webmentions />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Share this post on social media!/i)).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /Bluesky/i })).toBeInTheDocument();
       });
 
       const blueskyLink = screen.getByRole("link", { name: /Bluesky/i });
       const mastodonLink = screen.getByRole("link", { name: /Mastodon/i });
 
-      expect(blueskyLink).toHaveAttribute("href", "https://bsky.app");
+      expect(blueskyLink).toHaveAttribute("href", expect.stringContaining("bsky.app/intent/compose"));
       expect(blueskyLink).toHaveAttribute("target", "_blank");
       expect(blueskyLink).toHaveAttribute("rel", "noopener noreferrer");
 
-      expect(mastodonLink).toHaveAttribute("href", "https://mastodon.social");
+      expect(mastodonLink).toHaveAttribute("href", expect.stringContaining("mastodon.social/share"));
       expect(mastodonLink).toHaveAttribute("target", "_blank");
       expect(mastodonLink).toHaveAttribute("rel", "noopener noreferrer");
-    });
-
-    it("should show timing expectation in CTA", async () => {
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ children: [] }),
-      });
-
-      render(<Webmentions />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/appears above within 5-10 minutes/i)).toBeInTheDocument();
-      });
     });
   });
 
@@ -551,12 +468,12 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        expect(screen.getByText("Reactions from the Web")).toBeInTheDocument();
+        expect(screen.getByText("Reactions")).toBeInTheDocument();
       });
 
-      expect(screen.getByText("❤️ 2 Likes", { exact: false })).toBeInTheDocument();
-      expect(screen.getByText("🔁 1 Repost", { exact: false })).toBeInTheDocument();
-      expect(screen.getByText("💬 1 Reply", { exact: false })).toBeInTheDocument();
+      expect(screen.getByText(/❤️ 2/)).toBeInTheDocument();
+      expect(screen.getByText(/🔁 1/)).toBeInTheDocument();
+      expect(screen.getByText(/💬 1/)).toBeInTheDocument();
       expect(screen.getByText("Great post!")).toBeInTheDocument();
     });
   });
@@ -571,8 +488,9 @@ describe("Webmentions Component", () => {
       render(<Webmentions />);
 
       await waitFor(() => {
-        const copyButton = screen.getByRole("button", { name: /Copy Link/i });
-        expect(copyButton).toHaveAttribute("title", "Copy link to clipboard");
+        const blueskyLink = screen.getByRole("link", { name: /Bluesky/i });
+        expect(blueskyLink).toHaveAttribute("target", "_blank");
+        expect(blueskyLink).toHaveAttribute("rel", "noopener noreferrer");
       });
     });
 

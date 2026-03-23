@@ -1929,6 +1929,108 @@ export const metadataLine = {
   }),
 };
 
+// ===== COMMENTS SECTION STYLES =====
+
+export const commentSection = {
+  container: css({
+    marginTop: "xl",
+    paddingTop: "md",
+    borderTop: "token(borders.light)",
+  }),
+  title: css({
+    fontSize: "md",
+    fontWeight: "semibold",
+    color: "text",
+    margin: 0,
+    marginBottom: "md",
+  }),
+  loading: css({ color: "gray.500", fontStyle: "italic" }),
+  empty: css({ color: "gray.500", fontStyle: "italic", marginBottom: "md" }),
+  list: css({ listStyle: "none", padding: 0, margin: "md 0 0 0" }),
+  comment: css({
+    padding: "md",
+    marginBottom: "sm",
+    backgroundColor: "white",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    boxShadow: "sm",
+    "@media (max-width: 768px)": {
+      padding: "sm",
+    },
+  }),
+  commentHeader: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "xs",
+  }),
+  commentDate: css({ fontSize: "sm", color: "gray.500" }),
+  commentText: css({ margin: 0, lineHeight: "1.6", color: "text" }),
+  form: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "sm",
+    padding: "md",
+    marginTop: "md",
+    backgroundColor: "gray.50",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    "@media (max-width: 480px)": {
+      padding: "sm",
+    },
+  }),
+  nameInput: css({
+    padding: "sm",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    fontSize: "sm",
+    maxWidth: "300px",
+    backgroundColor: "white",
+  }),
+  textInput: css({
+    padding: "sm",
+    borderRadius: "sm",
+    border: "1px solid token(colors.border)",
+    fontSize: "sm",
+    resize: "vertical",
+    minHeight: "80px",
+    backgroundColor: "white",
+  }),
+  formFooter: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "sm",
+  }),
+  submitButton: css({
+    padding: "sm lg",
+    backgroundColor: "brand",
+    color: "white",
+    border: "none",
+    borderRadius: "sm",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    transition: "all 0.2s ease",
+    _hover: { opacity: 0.9 },
+    _disabled: { opacity: 0.5, cursor: "not-allowed" },
+  }),
+  successMsg: css({ color: "green.600", fontSize: "sm" }),
+  errorMsg: css({ color: "red.600", fontSize: "sm" }),
+  toggleButton: css({
+    background: "none",
+    border: "none",
+    color: "brand",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    padding: 0,
+    textDecoration: "underline",
+    textUnderlineOffset: "3px",
+    transition: "all 0.2s ease",
+    _hover: { opacity: 0.7 },
+  }),
+};
+
 // ===== WEBMENTIONS STYLES =====
 
 // Webmentions component styles - social reactions from the web
@@ -1939,18 +2041,46 @@ export const webmentions = {
     borderTop: "token(borders.light)",
   }),
   sectionTitle: css({
-    fontSize: "xl",
+    fontSize: "md",
     fontWeight: "semibold",
     color: "text",
-    marginBottom: "md",
-    margin: 0,
+    margin: "0 0 sm 0",
   }),
-  subsectionTitle: css({
-    fontSize: "md",
-    fontWeight: "medium",
-    color: "text",
-    marginTop: "md",
+  shareSeparator: css({
+    color: "gray.400",
+    fontSize: "sm",
+  }),
+  compactBar: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "md",
+    flexWrap: "wrap",
     marginBottom: "sm",
+  }),
+  compactCounts: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "center",
+  }),
+  compactCount: css({
+    fontSize: "sm",
+    color: "gray.600",
+    fontWeight: "medium",
+  }),
+  shareActions: css({
+    display: "flex",
+    gap: "sm",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: "sm",
+  }),
+  shareButton: css({
+    fontSize: "sm",
+    color: "brand",
+    textDecoration: "none",
+    fontWeight: "medium",
+    transition: "all 0.2s ease",
+    _hover: { textDecoration: "underline" },
   }),
   avatarGrid: css({
     display: "flex",

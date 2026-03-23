@@ -4,7 +4,6 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
-import EndOfArticleSupport from "./EndOfArticleSupport";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
@@ -17,6 +16,7 @@ import { SITE } from "../utils/siteData";
 import { TableOfContents } from "./TableOfContents";
 
 import { Webmentions } from "./Webmentions";
+import { CommentsSection } from "./CommentsSection";
 
 // Dynamic React component renderer
 const ReactPostRenderer: React.FC<{
@@ -216,9 +216,6 @@ export function Post({
             </div>
           )}
 
-          {/* End of Article Support CTA */}
-          <EndOfArticleSupport />
-
           {/* Navigation zwischen Posts */}
           {(prevPost || nextPost) && (
             <div className={post.navigation}>
@@ -247,6 +244,7 @@ export function Post({
           )}
 
           <Webmentions />
+          <CommentsSection />
         </div>
 
         {/* Right sidebar with Table of Contents */}

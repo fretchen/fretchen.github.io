@@ -120,4 +120,18 @@ describe("blogLoader - Integration Test", () => {
       expect(blog.title.length).toBeGreaterThan(0);
     });
   });
+
+  it("should exclude .plan.md files from blog loading", async () => {
+    const blogs = await loadBlogs("blog", "publishing_date");
+
+    const planFiles = blogs.filter(
+      (b) => b.componentPath && b.componentPath.endsWith(".plan.md"),
+    );
+
+    expect(planFiles).toHaveLength(0);
+
+    // Verify no blog title matches a known plan file
+    const titles = blogs.map((b) => b.title.toLowerCase());
+    expect(titles).not.toContain("housing_risk_portfolio.plan");
+  });
 });

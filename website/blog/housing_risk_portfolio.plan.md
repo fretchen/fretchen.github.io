@@ -74,15 +74,29 @@ This section delivers:
 
 ### Act 2: Amara's Spreadsheet — What She Found
 
-**§3 — "Want to see what I found?"** *(interactive: BalanceSheetSnapshot)*
+**§3 — "What if something breaks?"** *(interactive: ShockCalculator)*
 
-Amara pulls out her phone. "I kept staring at my finances trying to understand what happened. And the first thing I realized is — I'd never actually looked at the whole picture."
+Amara pulls out her phone. "After the crisis, I kept staring at my finances trying to understand what went wrong. I'd never looked at the whole picture."
 
-She shows a simple balance sheet view. Sofia plugs in her own numbers. The house dominates everything. The mortgage is a known line going down. The savings are tiny.
+She shows Sofia a simple view: apartment value on one side, mortgage on the other, a thin sliver of savings in the corner. The house dominates everything.
 
-> Amara: "Now — which of these can suddenly change without you having any say?"
+Adam: "What if something breaks on top of that?"
 
-The BalanceSheetSnapshot widget appears here — framed as "Amara's tool." Sofia (and the reader) enters their numbers: house value, mortgage remaining, monthly income, monthly mortgage payment, extra savings, existing savings. Output: stacked bar (assets vs. liabilities), housing share %, months of mortgage payments covered by liquid reserves.
+Sofia: "That's what the savings are for."
+
+Amara: "At my place it was a burst water pipe. Two weeks after the contract ended. €4,000."
+
+Sofia does the math in her head. Then she tries the numbers on Amara's phone.
+
+The ShockCalculator widget appears here. Enter your monthly mortgage payment and liquid savings. Toggle shocks: job loss (3/6/12 months) and emergency repair (€2k–€20k). Watch the savings bar shrink. One shock = tight. Two shocks = in the red.
+
+> Amara: "Now you see what I saw."
+
+This section delivers:
+- The balance sheet picture in one paragraph of dialogue (house dominates, savings tiny — no widget needed for this)
+- The ShockCalculator makes the buffer argument visceral: two shocks at once = crisis
+- Connects directly to Amara's lived experience (job loss + repair)
+- Sets up the urgency for "what should I do with my €300/month?" later
 
 **§4 — "Your mortgage is boring — and that's good"** *(dialogue)*
 
@@ -198,14 +212,41 @@ Amara smiles. "That's all I wanted to hear."
 
 Three components, building on each other. Introduced through dialogue — each has a narrative trigger.
 
-### 1. BalanceSheetSnapshot (§3)
-**Narrative trigger:** Amara shows her phone — "Want to see what I found?"
+### 1. ShockCalculator (§3)
+**Narrative trigger:** After Amara's story, Adam asks "What if something breaks?" — Sofia: "That's what the savings are for." — Amara: "At my place it was a burst pipe. Two weeks after the job loss. €4,000."
 
-Sliders: house value (200k–800k), mortgage remaining (0–house value), monthly income (2k–6k), monthly mortgage payment (500–2500), extra monthly savings (0–1000), existing savings/investments (0–100k).
+**Purpose:** Make the abstract "buffer" argument viscerally concrete. The reader sees: one shock = tight. Two shocks = in the red. This is what happened to Amara.
 
-Output: stacked bar (assets vs. liabilities), housing share %, net worth, months of mortgage payments covered by liquid reserves.
+**Inputs (two fields):**
+- Monthly mortgage payment (default: €1,200)
+- Liquid savings (default: €8,000)
 
-Values persist for subsequent components.
+**Shock toggles (checkboxes with sliders):**
+- ☐ **Job loss** — slider: 3 / 6 / 12 months (default: 6). Cost = months × monthly payment.
+- ☐ **Emergency repair** — slider: €2k–€20k (default: €5,000). Burst pipe, roof, heating — whatever hits.
+
+**Output:**
+- Horizontal bar showing savings, shrinking as shocks are activated
+- Green (>6 months remaining) → Yellow (3–6 months) → Red (<3 months) → Deep red with negative number when below zero
+- Text label: "X months of mortgage payments remaining" or "€Y in the red — you need outside help"
+
+**Interaction flow:**
+1. Reader enters their numbers (or uses Sofia's defaults)
+2. Activates "Job loss" alone → bar shrinks, maybe still yellow
+3. Activates "Emergency repair" on top → bar goes red or negative
+4. The visual gap between "one shock" and "two shocks" IS the argument
+
+**Design notes:**
+- No balance sheet visualization (the dialogue already establishes that the house dominates). The widget focuses on the one number that matters: **how long can you pay?**
+- Deliberately simple — two inputs, two toggles with sliders. No investment options here; that comes in SafetyNetBuilder.
+- Values (monthly payment, savings) persist for SafetyNetBuilder, which picks up where this leaves off.
+
+**Dialog in the post around this widget:**
+> Adam: "What if something breaks on top of job loss?"
+> Sofia: "At the same time? That doesn't happen."
+> Amara: "It happened to me. Burst water pipe, two weeks after the contract ended. €4,000."
+> Sofia does the math in her head. Then she moves the sliders.
+> Amara: "Now you see what I saw."
 
 ### 2. RiskReality (§5 + §6)
 **Narrative trigger:** Amara shows risk breakdown; Adam extends it.

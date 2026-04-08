@@ -5,10 +5,10 @@ category: "others"
 description: "A dinner conversation between three friends reveals why paying off your mortgage faster isn't always the safest strategy — and what actually protects your home when life goes wrong."
 ---
 
-{/* TODO: Import interactive components once implemented */}
-{/* import BalanceSheetSnapshot from "../components/blog/BalanceSheetSnapshot"; */}
-{/* import RiskReality from "../components/blog/RiskReality"; */}
+{/* TODO: Import SafetyNetBuilder once implemented */}
 {/* import SafetyNetBuilder from "../components/blog/SafetyNetBuilder"; */}
+import ShockCalculator from "../components/blog/ShockCalculator";
+import RiskReality from "../components/blog/RiskReality";
 
 
 In this blog post, I explore what actually protects your home when life goes wrong — and why paying off the mortgage faster isn't always the answer. To make the arguments easier to follow, they unfold as a conversation between three friends over dinner.
@@ -78,65 +78,72 @@ She shows Sofia a simple view: apartment value on one side, mortgage on the othe
 
 Sofia enters her own numbers. Apartment: €380,000. Mortgage: €290,000. Savings: €8,000.
 
-The picture is stark. The house is almost everything. The savings are a rounding error.
+Adam: "What if something breaks on top of that?"
 
-{/* TODO: BalanceSheetSnapshot component */}
-{/* <BalanceSheetSnapshot /> */}
+Sofia: "That's what the savings are for."
 
-_Interactive component coming soon: enter your own numbers to see your balance sheet and how many months of mortgage payments your liquid reserves cover._
+Amara: "At my place it was a burst water pipe. Two weeks after the contract ended. €4,000."
+
+Sofia does the math in her head. Then she tries the numbers on Amara's phone.
+
+<ShockCalculator />
+
+Amara: "Now you see what I saw."
 
 ## The boring mortgage and the risky house
+
+AUTHOR COMMENT: This is too dialog heavy. The key points should still be clearly narrated etc. This comment holds throughout the post for me. It feels too much like a novel and less like "Fabel / Image / Scene to clarify something".
+
+AUTHOR COMMENT: This section to really hit poorly. I do not know what is meant to mortage line etc. The introduction should be somehow different.
 
 Adam leans forward. "Look at the mortgage line on your balance sheet. Fixed rate, fixed schedule, known end date. That's the most boring thing on here."
 
 "Boring is bad?"
 
+AUTHOR COMMENT: Why would Adam pull out housing data from Germany here ? This is completely random as there is no connection to Germany in the whole text...
+
+
 "Boring is _great_." He pulls up housing price data — German cities, 2015–2023. Up 8% per year for six years. Then down 15% in a single correction. "The mortgage balance during that time? A calm straight line. The house price went on a rollercoaster."
 
 "The thing you _fear_ — the debt — is predictable. The thing you _trust_ — what the apartment is worth — is uncertain."
 
-Amara shows the risk breakdown on her phone: of all the uncertainty in Sofia's financial life, the house is almost all of it.
+Amara swipes to a new view on her phone — a single horizontal bar.
 
-"But paying it off reduces the risk, right?" Sofia asks.
+"What am I looking at?" Sofia asks.
 
-"That's what I assumed." Amara swipes. "Look — before paying off the mortgage, and after. The risk barely changes."
+"Everything that can change in your finances. Where the wobble comes from."
 
-"How?"
+The bar is almost entirely orange: the house. A thin green sliver: savings. A barely visible grey edge: the mortgage.
 
-"The mortgage was never the risk. It's the predictable straight line. Paying it off removes a known quantity. The house price uncertainty stays exactly the same."
+"The mortgage is... nothing?"
 
-Adam: "It's like canceling your alarm subscription but keeping the unlocked front door."
+"It's predictable. Zero surprise. The house value? That moves."
 
-Amara: "...That's actually not bad."
+Adam: "Try something — show it after paying off the mortgage entirely."
 
-{/* TODO: RiskReality component */}
-{/* <RiskReality /> */}
+Amara toggles. The bar barely changes.
 
-_Interactive component coming soon: see where your financial risk actually comes from, and what changes (and doesn't change) when you pay off the mortgage._
+"So paying it all off doesn't actually make me... safer?"
 
-## The rent hedge you didn't know you had
+"It makes your balance smaller. It doesn't make the wobble smaller."
 
 Sofia stares at her plate. "So I made a mistake buying?"
 
-"No — your instinct was dead right," Amara says. "Even with a mortgage, you don't pay rent. If rents in Brussels go up 30% over the next decade, you're unaffected. You locked in your housing cost the day you signed."
+"No — your instinct was dead right," Amara says. "Even with a mortgage, you don't pay rent. If rents in Brussels go up 30% over the next decade, you're unaffected."
 
 Adam: "And if house prices drop 20%? What actually changes in your daily life?"
 
 Sofia thinks. "...Nothing. Same mortgage payment."
 
-"Exactly. A crash doesn't change your monthly reality. Renters feel it; you don't."
+"Exactly." Amara toggles again. "This is the raw risk. And _this_ is your actual risk — you live here, you save rent."
 
-Amara toggles the risk breakdown. "This is the raw housing risk. And _this_ is your actual risk after accounting for the fact that you live there."
-
-The bar shrinks noticeably.
+The bar shrinks visibly.
 
 "The risk is real, but smaller than it looked — because I bought for the right reason."
 
 "Your instinct to buy was more sound than you knew."
 
-{/* TODO: Add rent hedge toggle to RiskReality component */}
-
-_Interactive component coming soon: toggle between raw housing risk and your actual risk after rent protection._
+<RiskReality />
 
 ## The €300 question
 
@@ -184,6 +191,31 @@ Sofia looks down the hallway at the bathroom.
 She pauses. "And _then_ I'm fixing that bathroom."
 
 ---
+
+<details>
+<summary>🔬 Technical appendix: How the "wobble" is computed</summary>
+
+The **RiskReality** widget computes each asset's contribution to your total financial uncertainty using a simplified **Contribution-to-Volatility** (CtV) decomposition.
+
+**Inputs you provide:**
+- Home value, mortgage remaining, liquid savings
+
+**Fixed parameters** (from [retail-portfolio-analysis](https://github.com/fretchen/retail-portfolio-analysis) notebooks NB05 + NB06b, based on GREIX Frankfurt quarterly data 2008–2022):
+- Housing price volatility (mark-to-market): **σ = 7.5% p.a.**
+- Housing price volatility (owner-occupier, after rent hedge): **σ = 4.2% p.a.** — because purchase prices and rents are strongly correlated (ρ ≈ 0.7, Sinai & Souleles 2005)
+- Savings account volatility: **σ ≈ 0.5% p.a.**
+- Mortgage volatility: **σ = 0%** (fixed-rate, perfectly predictable)
+
+**Calculation:** For each asset, the variance contribution is (weight × volatility)². The widget shows the share of total variance per asset. Because the mortgage has zero volatility, it contributes nothing — even though it's a large number on your balance sheet.
+
+**"I'm staying" toggle:** Switches housing volatility from 7.5% to 4.2%. This reflects the economic insight that an owner-occupier is hedged against rent increases: if house prices fall, rents tend to fall too — but you're not paying rent, so you're unaffected. The effective risk is the _difference_ between price and rent movements (Yao & Zhang 2005).
+
+**Limitations:**
+- Cross-correlations between housing and savings are ignored (minimal for cash)
+- GREIX data covers German cities — your local market may differ
+- The rent hedge assumes you stay long-term; forced sellers face the full mark-to-market risk
+
+</details>
 
 ## References
 

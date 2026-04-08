@@ -112,49 +112,43 @@ He pulls up something on his laptop — housing price data. German cities: 8%/ye
 
 Simple visual: mortgage balance (straight line) vs. house price (wobbly line). No widget needed — a static chart in the narrative.
 
-**§5 — "Where does your risk actually come from?"** *(interactive: RiskReality)*
+**§5 — "Where does the wobble come from?"** *(interactive: RiskReality)*
 
-Adam: "Amara, you did the risk breakdown too, right?"
+Amara swipes to a new view on her phone. A single horizontal bar — labeled "Your financial wobble."
 
-Amara: "Already did." She turns her phone around.
+Sofia: "What am I looking at?"
 
-Adam, grinning: "...I'm so proud."
+Amara: "Everything that can change in your finances. Where it comes from."
 
-Amara shows the risk contribution breakdown: "Of all the uncertainty in your financial life, how much comes from the house, how much from savings, how much from everything else?" It's overwhelmingly the house.
+The bar is almost entirely orange: the house. A thin green sliver: savings. A barely visible grey edge: the mortgage.
 
-Adam extends: "Wait — can I add something? Show it before and after paying off the mortgage."
+> Sofia: "The mortgage is... nothing?"
+>
+> Amara: "It's predictable. A straight line going down. Fixed rate, fixed schedule. Zero surprise. The house value? That moves."
+>
+> Adam: "Wait — can I try something? Show it after paying off the mortgage entirely."
 
-They toggle. The risk barely changes. Because the mortgage was never the risk.
+Amara toggles. The bar barely changes. The grey sliver disappears, but the orange mass stays.
 
 > Sofia, staring: "So paying it all off doesn't actually make me... safer?"
 >
 > Amara: "It makes your balance smaller. It doesn't make the wobble smaller."
 
-The RiskReality widget: uses balance sheet values from §3. Shows risk contribution breakdown. Toggle: "before mortgage payoff" vs. "after mortgage payoff." Pre-computed covariance parameters from the notebooks.
+Then Adam: "But remember why you bought this place."
 
-### Act 3: The Relief — Your Instinct Was Right
+Sofia: "So nobody can raise my rent. So nobody can kick me out."
 
-**§6 — "Remember why you bought in the first place"** *(dialogue + toggle)*
+"Exactly. And that matters here." Amara toggles again: "raw housing risk" vs. "your actual risk — you live here, you save rent."
 
-A pause. Sofia looks deflated. Amara reaches over.
+The orange shrinks visibly. The total bar gets shorter.
 
-> Amara: "Hey — remember why you bought this place?"
+> Sofia: "So the risk is real, but smaller than it looked — because I bought for the right reason."
 >
-> Sofia: "So nobody can kick me out. So my rent can't go up. So I have something that's mine."
->
-> Amara: "And that instinct was dead right."
+> Amara: "Your instinct to buy was more sound than you knew."
 
-Amara explains: even now, with a mortgage, Sofia doesn't pay rent. If rents go up 30% over the next decade, she's unaffected. Across Europe, this is *the* reason people buy — in France they say you stop "throwing money out the window," in Germany it's the peace of fixed housing costs.
-
-Adam: "And it goes further than comfort. Imagine house prices drop 20%. Sounds terrible? What changes in your daily life?"
-
-Sofia: "...Nothing. I still live here. Same mortgage payment."
-
-Adam: "Exactly. The rent protection you bought is also a risk dampener. A crash doesn't change your monthly reality."
-
-Toggle in the RiskReality widget (carried from §5): "raw housing risk" vs. "your actual risk (after rent protection)." The bar shrinks noticeably. This is the relief moment.
-
-> Sofia: "So the risk is real, but smaller than it looks — because I bought for the right reason."
+The RiskReality widget appears here. A single stacked bar showing where financial uncertainty comes from. Two toggles:
+1. "What if I pay off the mortgage?" → barely changes
+2. "But I live here — I save rent" → housing risk shrinks visibly
 
 ### Act 4: The Decision — What To Do With €300/month
 
@@ -248,15 +242,45 @@ Three components, building on each other. Introduced through dialogue — each h
 > Sofia does the math in her head. Then she moves the sliders.
 > Amara: "Now you see what I saw."
 
-### 2. RiskReality (§5 + §6)
-**Narrative trigger:** Amara shows risk breakdown; Adam extends it.
+### 2. RiskReality (§5)
+**Narrative trigger:** Amara swipes to a new view. "Where does the wobble come from?"
 
-Uses balance sheet from BalanceSheetSnapshot. Shows:
-- "Where your risk actually comes from" (risk contribution breakdown — housing dominates)
-- Toggle: "before mortgage payoff" vs. "after mortgage payoff" → risk barely changes
-- Toggle (§6): "raw housing risk" vs. "after rent protection" → bar shrinks, relief moment
+**Purpose:** Two visual surprises that carry the post's core argument: (1) paying off the mortgage doesn't reduce risk, and (2) staying in your home does.
 
-Pre-computed covariance parameters from the notebooks, not live Ledoit-Wolf.
+**Layout:** Three input fields + a single horizontal stacked bar ("Your financial wobble") + two toggle switches below. Technical details live in a post-level `<details>` appendix (not inside the widget).
+
+**Inputs (three fields, same style as ShockCalculator):**
+- 🏠 **Home value** (default: €380,000)
+- 🏦 **Mortgage remaining** (default: €290,000)
+- 💰 **Liquid savings** (default: €8,000)
+
+**Dynamic calculation:** Uses fixed volatilities from NB05/NB06b:
+- σ_house = 7.5% p.a. (mark-to-market) or 4.2% (when "staying" toggle is on)
+- σ_savings ≈ 0.5% p.a. (cash)
+- σ_mortgage = 0% (fixed-rate, perfectly predictable)
+- Each asset's variance contribution = (weight × σ)². The bar shows shares of total variance.
+- Result: regardless of realistic values, Housing always dominates (>90%). Mortgage always contributes ~nothing.
+
+**Default state (no toggles):**
+- 🏠 **Your home** — dominates the bar (~90%+, orange)
+- 💰 **Savings** — thin sliver (green)
+- 🏦 **Mortgage** — barely visible (~3% minimum visual), grey, tooltip: "predictable — fixed rate, fixed schedule"
+- Label: *"Almost all your financial uncertainty comes from one thing: what your home is worth."*
+
+**Toggle 1: "What if I pay off the mortgage?"**
+- Grey mortgage segment disappears. Bar proportions barely change.
+- Label: *"The mortgage was the predictable part. Removing it barely changes where the wobble comes from."*
+
+**Toggle 2: "I'm staying — price swings don't affect my costs"**
+- σ_house switches from 7.5% to 4.2%. Housing share shrinks visibly. Total bar gets shorter.
+- Explanation when active: *"If house prices drop 20%, your mortgage payment stays the same. If rents rise 30%, you don't pay them. As someone who lives in their home, these price swings matter much less than they look on paper."*
+- This is the relief moment — Sofia's instinct to buy was right.
+
+**Design notes:**
+- No jargon in the widget — "wobble", not "volatility". "Your home", not "Housing CtV".
+- No asset-class breakdown (Bonds vs DM Equity etc.) — Sofia has no ETFs.
+- User's own numbers make the conclusion more convincing than pre-computed values.
+- Technical appendix at post level (same pattern as etf_diversification_interactive) explains the variance decomposition, data sources, and limitations.
 
 ### 3. SafetyNetBuilder (§7)
 **Narrative trigger:** Adam reaches for the laptop. Amara raises an eyebrow.

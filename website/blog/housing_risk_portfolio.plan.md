@@ -332,7 +332,7 @@ All open issues from `housing_risk_portfolio.todos.md`, grouped into ordered imp
 - Body: replace all "wobble" instances
 
 **Add on first use in §4 (narrator voice):**
-> By risk we mean how much your financial picture can shift from year to year — not whether something *will* go wrong, but how much it *could* move.
+> By risk we mean how much the value of what you own — your apartment, your savings — can change from year to year. Not whether something *will* go wrong, but how big the swings could be.
 
 ### Step 2: Rewrite section titles
 
@@ -368,7 +368,7 @@ Short dialogue:
 
 **Risk definition (narrator):**
 
-By risk we mean how much your financial picture can shift from year to year — not whether something *will* go wrong, but how much it *could* move.
+By risk we mean how much the value of what you own — your apartment, your savings — can change from year to year. Not whether something *will* go wrong, but how big the swings could be.
 
 **Beat 2 — Where the risk actually comes from (narrator → RiskReality)**
 

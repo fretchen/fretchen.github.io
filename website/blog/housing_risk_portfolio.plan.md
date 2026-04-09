@@ -298,4 +298,190 @@ Three components, building on each other. Introduced through dialogue — each h
 
 4. **Amara's backstory depth:** How much detail on the job loss? Current plan: enough to be real (bank call, family loan) but not so much it becomes Amara's post rather than Sofia's journey. The spreadsheet aftermath gets more space than the crisis itself.
 
-5. **Post length:** The dialogue format naturally compresses — §2 and §8 from the old plan now overlap (Amara's story IS the crisis scenario). Estimate: ~4,000–5,000 words + 3 widgets, comparable to budget_gridlock.
+5. **Post length:** The dialogue format naturally compresses — §2 and §8 from the old plan now overlap (Amara's story IS the crisis scenario). Estimate: ~4,000–5,000 words + 2 widgets, comparable to budget_gridlock.
+
+---
+
+## Implementation Plan: Fixing Open Issues
+
+All open issues from `housing_risk_portfolio.todos.md`, grouped into ordered implementation steps. Each step specifies what changes, where, and why.
+
+### Step 1: Terminology — Replace "wobble" with "risk" everywhere
+
+**Addresses:** C4 (wobble terminology), S8 (appendix wobble), S11 (widget column header)
+
+**Files:**
+- `components/blog/RiskReality.tsx` — 12 occurrences of "wobble"
+- `blog/housing_risk_portfolio.mdx` — narrative uses + appendix
+
+**Changes in RiskReality.tsx:**
+- Widget title: "Where does the wobble come from?" → "Where does the risk come from?"
+- Second bar label: "How the wobble is split" → "How the risk is split"
+- Percentage badge: "X% less wobble" → "X% less risk"
+- Table header: "Annual wobble" → "Annual risk (±€)"
+- All `getMessage()` strings: replace "wobble" with "risk"
+- "So what?" conclusion: replace "wobble" with "risk"
+
+**Changes in MDX narrative (§4):**
+- "Where the wobble comes from" → "where the risk comes from"
+- "It doesn't make the wobble smaller" → "It doesn't make the risk smaller"
+- All other uses
+
+**Changes in MDX appendix:**
+- Title: "How the wobble is computed" → "How the risk is computed"
+- Body: replace all "wobble" instances
+
+**Add on first use in §4 (narrator voice):**
+> By risk we mean how much your financial picture can shift from year to year — not whether something *will* go wrong, but how much it *could* move.
+
+### Step 2: Rewrite section titles
+
+**Addresses:** C5 (scenic titles)
+
+**Changes in MDX:**
+| Current | New | Rationale |
+|---------|-----|-----------|
+| `## Sofia's apartment` | `## Why extra repayment feels so safe` | Tells reader what this section is about |
+| `## The money in the walls` | Keep as-is | Strong metaphor that communicates the insight; already informational |
+| `## What's actually on your balance sheet?` | Keep as-is | Question that promises an answer |
+| `## The boring mortgage and the risky house` | `## Where your financial risk actually comes from` | Informational, matches what reader will learn |
+| `## So what do I do?` | Keep as-is | Direct, practical |
+| `## Three things to remember` | Keep as-is | Clear |
+
+Also: **Remove all `AUTHOR COMMENT:` lines** from the MDX.
+
+### Step 3: Restructure §4 — narrator framing + cut Germany data
+
+**Addresses:** C1 (too dialog-heavy), C2 ("mortgage line" unclear), C3 (Germany data random), S2 (split into two beats), S3 (widget transition abrupt)
+
+This is the largest change. The current §4 ("The boring mortgage and the risky house") is ~35 lines of nearly unframed dialogue. Restructure into the cosmopol_democracy pattern: **narrator states insight → short dialogue illustrates → narrator bridges**.
+
+**New structure for §4 (now titled "Where your financial risk actually comes from"):**
+
+**Beat 1 — The mortgage is predictable (narrator-led)**
+
+Narrator paragraph: Adam noticed something in the numbers. The mortgage — the thing Sofia feared most — was the most predictable part of her finances. Fixed rate, fixed monthly payment, known end date. It drops by the same amount every month, decade after decade. Meanwhile, apartment prices across European cities had risen sharply for years, then fell in a single correction. The mortgage balance during that time didn't flinch.
+
+Short dialogue:
+> Sofia: "So the debt is the boring part?"
+> Adam: "The debt is the *safe* part. The house price is where the surprises happen."
+
+**Risk definition (narrator):**
+
+By risk we mean how much your financial picture can shift from year to year — not whether something *will* go wrong, but how much it *could* move.
+
+**Beat 2 — Where the risk actually comes from (narrator → RiskReality)**
+
+Narrator: After her crisis, Amara had built a simple breakdown — a way to see where her financial risk actually came from. She'd discovered something that surprised her: almost all of it was the house. The mortgage, despite being the largest number on her balance sheet, contributed almost nothing. She showed it to Sofia.
+
+Short dialogue:
+> Sofia: "The mortgage is... nothing?"
+> Amara: "It's fixed. Zero surprise."
+
+Narrator frames the widget: The tool below shows the same breakdown for your numbers. Enter your home value, mortgage, and savings — then try the two toggles.
+
+`<RiskReality />`
+
+**Post-widget dialogue (short, key reactions only):**
+
+> Sofia: "So paying it all off doesn't make me safer?"
+> Amara: "It makes your balance smaller. It doesn't make the risk smaller."
+>
+> Sofia stares at her plate. "So I made a mistake buying?"
+>
+> "No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. Toggle the second switch."
+>
+> The bar shrinks.
+>
+> "The risk is real, but smaller than it looked — because you bought for the right reason."
+
+**What this removes:**
+- "Look at the mortgage line" (unclear reference — C2)
+- "German cities, 2015–2023" data (random — C3)
+- The rapid-fire 20+ line dialogue exchange
+- "Amara swipes to a new view on her phone — a single horizontal bar" (abrupt — S3)
+
+**What this preserves:**
+- Both key surprises (paying off mortgage ≠ less risk; staying = less risk)
+- Sofia's emotional arc (fear → surprise → relief)
+- Amara as analytical authority
+
+### Step 4: Add bridge and payment-pause exchange
+
+**Addresses:** S1 (Stundung), S4 (balance sheet → shocks bridge)
+
+**Change 1 — Bridge line in §3 ("What's actually on your balance sheet?"):**
+
+After "The house dominates everything" and before Adam's "What if something breaks?", add Amara's bridge:
+
+> "Right. But that's not what scared me — what scared me was how fast the thin slice of savings can vanish."
+
+**Change 2 — Payment pause in §2 ("The money in the walls"):**
+
+After "I almost lost the apartment. My sister lent me money — barely enough.", add:
+
+> Sofia: "Wouldn't the bank give you a payment pause?"
+>
+> "They did — two months. But with no income *and* a repair bill, two months isn't enough. That's what I learned: it's never just one thing."
+
+This also sets up the ShockCalculator's "two shocks" logic.
+
+### Step 5: Sofia's pushback in "So what do I do?"
+
+**Addresses:** S5 (missing interest objection), S6 (diversification pitch too vague)
+
+**Change 1 — Add Sofia's objection after "It's _sequence_":**
+
+> Sofia: "But those euros just sitting in a savings account earn nothing. At least extra repayment saves me 3.5%."
+>
+> Amara: "It does. And once you have six months of buffer, every extra euro should go right back to repayment. But the first six months are worth more than any interest saving — because they're what keeps you in the apartment if something goes wrong."
+
+**Change 2 — Rewrite Adam's diversification pitch:**
+
+> Adam: "And once the buffer is full — right now 98% of your wealth is one apartment in Brussels. Even €100 a month into a broad savings plan means not everything depends on one market. I've [written about how that works](/blog/etf_diversification_interactive)."
+
+### Step 6: Fix takeaways and intro
+
+**Addresses:** S7 ("straight line" in takeaways), N1 (intro formula)
+
+**Change 1 — Takeaway #2:**
+"It's a straight line going down" → "It drops by the same amount every month — completely predictable."
+
+**Change 2 — Intro (optional, low priority):**
+"In this blog post, I explore what actually protects your home..." → "What actually protects your home when life goes wrong? Not what you'd expect. In this post, three friends work it out over dinner."
+
+### Step 7: Fix technical appendix
+
+**Addresses:** S9 (wrong input count), S10 (references uncited), S8 (wobble terminology — already handled in Step 1)
+
+**Change 1 — Update inputs list:**
+"Home value, mortgage remaining, liquid savings" → "Home value, mortgage remaining, cash savings, and investments"
+
+**Change 2 — Move references into appendix:**
+Cut the standalone `## References` section. Add the citations inline in the `<details>` appendix where they support specific claims:
+- Cocco (2005) → cite after "housing = 70–90% of total wealth" claim
+- Yao & Zhang (2005) → already cited re: rent hedge, keep
+- Gomes (2020) → cite after "your biggest asset by far"
+- GREIX → already cited as data source, keep
+
+### Step 8: Widget detail — "Annual risk" explanation
+
+**Addresses:** S11 (confusing column header)
+
+After renaming to "Annual risk (±€)" in Step 1, add a tooltip or table caption:
+
+Option A: HTML title attribute on the column header (tooltip on hover)
+Option B: Small caption text under the table: *"Annual risk shows how much each asset's value could swing in a typical year."*
+
+Recommend Option B — tooltips are invisible on mobile.
+
+### Implementation order
+
+1. **Step 1** (terminology) — foundational, touches both files
+2. **Step 2** (titles) — quick, independent
+3. **Step 3** (§4 restructure) — largest change, core quality issue
+4. **Step 4** (bridge + Stundung) — small additions, two locations
+5. **Step 5** (Sofia pushback) — small addition, one location
+6. **Step 6** (takeaways + intro) — small edits
+7. **Step 7** (appendix) — mechanical
+8. **Step 8** (widget caption) — trivial

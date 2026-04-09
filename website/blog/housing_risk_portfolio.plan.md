@@ -150,57 +150,26 @@ The RiskReality widget appears here. A single stacked bar showing where financia
 1. "What if I pay off the mortgage?" → barely changes
 2. "But I live here — I save rent" → housing risk shrinks visibly
 
-### Act 4: The Decision — What To Do With €300/month
+### Act 4: The Decision — So What Do I Do?
 
-**§7 — "Okay, so what do I actually do?"** *(interactive: SafetyNetBuilder)*
+**§7 — "Okay, so what do I actually do?"** *(dialogue only — no widget)*
 
 Sofia, practical now: "I have about €300 a month after everything. What do I do with it?"
 
-Amara and Adam look at each other. They build it together — Amara's crisis experience meets Adam's instinct to make it interactive.
+Amara gives the key principle: buffer first. Build six months of mortgage payments in liquid reserves, then accelerate repayment. The sequence matters — not the destination.
 
-> Adam reaches for the laptop. Amara raises an eyebrow.
->
-> Adam: "What? I'm just helping."
->
-> Amara: "You're making a tool."
->
-> Adam: "...I'm making a tool."
+Adam extends: once the buffer is full, a diversified savings plan alongside the mortgage reduces concentration. Link to [ETF post](/blog/etf_diversification_interactive) for interested readers.
 
-The SafetyNetBuilder: slider splits extra monthly savings between Sondertilgung / liquid reserve / diversified portfolio. Two outputs:
-- **Left: "Months of safety"** — how many months of mortgage payments covered by liquid reserves. Battery visual: red (0–3), yellow (3–6), green (6+).
-- **Right: "Risk concentration"** — how overall risk shifts as reserves/portfolio grow alongside the fixed house.
+Sofia's closing: "I'm keeping the extra repayment. But I'm building the buffer first."
 
-Framing: "Where does each euro help your safety most?" Not "investing is better than tilgen." Sofia moves the sliders herself. She sees: the first euros into reserves have the biggest impact on safety. Once the buffer is green, Sondertilgung or diversification both make sense.
+**Decision:** SafetyNetBuilder widget was dropped. The dialogue already conveys the key insight (buffer first → then repay → then diversify). The ETF post covers investment strategy in depth — no need to duplicate it here.
 
-**§8 — "Two homeowners, same house"** *(Amara's story, extended)*
+### Epilogue: Three Things to Remember
 
-Amara makes it concrete — no widget, just a well-told comparison:
-
-Two homeowners, same apartment, same mortgage. One puts everything into Sondertilgung for 5 years. The other builds a 6-month buffer and saves the rest. Then: job loss for 8 months.
-
-The first has a lower remaining balance but no cash — in trouble at month 2. The second has €15k in reserves — covered through the crisis. After 8 months, the first was forced to sell. The second kept her home.
-
-> Amara: "The safest path isn't the lowest debt. It's the most options when life gets hard."
-
-Sofia: "That's basically what happened to you."
-
-Amara nods. "Except nobody told me."
-
-### Epilogue: Clearing the Table
-
-**§9 — Takeaways, naturally**
-
-They're clearing plates. Each character voices one takeaway — matching what they brought to the conversation:
-
-> **Sofia** (the convert): "My house is safe because I can *pay* for it — not because I've *paid it off*. Six months of reserves first. Then Sondertilgung."
->
-> **Amara** (the experienced): "Your mortgage is the boring, predictable part. The actual uncertainty is in your house price — and you already have built-in protection because you don't pay rent."
->
-> **Adam** (the builder): "Once the safety net is full, diversification gives your finances a second leg. A small monthly savings plan — bonds, international stocks — shrinks the concentration." He pauses. "I can send you both a link to how that works." *(Link to [ETF post](/blog/etf_diversification_interactive).)*
-
-Sofia looks around her half-unpacked apartment. "I'm keeping the Sondertilgung," she says. "But I'm building the buffer first."
-
-Amara smiles. "That's all I wanted to hear."
+Numbered takeaways (not character dialogue — direct to reader):
+1. Your house is safe because you can *pay* for it — not because you've paid it off.
+2. The mortgage adds almost no financial risk. The actual uncertainty is the house price — and if you're staying, it's smaller than it looks.
+3. Once the safety net is full, diversification beats concentration. Link to [ETF post](/blog/etf_diversification_interactive).
 
 ## Interactive Elements
 
@@ -232,8 +201,8 @@ Three components, building on each other. Introduced through dialogue — each h
 
 **Design notes:**
 - No balance sheet visualization (the dialogue already establishes that the house dominates). The widget focuses on the one number that matters: **how long can you pay?**
-- Deliberately simple — two inputs, two toggles with sliders. No investment options here; that comes in SafetyNetBuilder.
-- Values (monthly payment, savings) persist for SafetyNetBuilder, which picks up where this leaves off.
+- Deliberately simple — two inputs, two toggles with sliders. No investment options here.
+- Standalone widget — no downstream dependencies.
 
 **Dialog in the post around this widget:**
 > Adam: "What if something breaks on top of job loss?"
@@ -282,16 +251,9 @@ Three components, building on each other. Introduced through dialogue — each h
 - User's own numbers make the conclusion more convincing than pre-computed values.
 - Technical appendix at post level (same pattern as etf_diversification_interactive) explains the variance decomposition, data sources, and limitations.
 
-### 3. SafetyNetBuilder (§7)
-**Narrative trigger:** Adam reaches for the laptop. Amara raises an eyebrow.
+### 3. ~~SafetyNetBuilder~~ (removed)
 
-Slider: extra savings split between Sondertilgung / liquid reserve / diversified portfolio.
-- **Left: "Months of safety"** — battery/bar filling up. Red (0–3), yellow (3–6), green (6+).
-- **Right: "Risk concentration"** — how overall risk shifts as reserves grow.
-
-Framing: "Where does each euro help your safety most?"
-
-**Reusable from existing post:** Same visual style (Panda CSS, Chart.js). Link to `PortfolioRiskAllocator` from the ETF post in §9.
+**Decision:** Replaced by dialogue-only §7 + link to [ETF post](/blog/etf_diversification_interactive). The core message (buffer first → repay → diversify) is conveyed through Amara and Adam's dialogue. Investment details are covered in depth in the ETF post — no need to duplicate with a widget here.
 
 ## Tone & Style
 
@@ -326,7 +288,7 @@ Framing: "Where does each euro help your safety most?"
 
 1. **Data hardcoding vs. live calculation:** Pre-compute representative parameters from the notebooks and hardcode into React components. Sliders interpolate within realistic ranges rather than computing Ledoit-Wolf in the browser.
 
-2. **Sondertilgung neutrality:** Sofia *keeps* the Sondertilgung at the end. The message is "buffer first, then tilgen" — not "don't tilgen." The SafetyNetBuilder shows what each euro does without prescribing an answer. Needs to feel balanced.
+2. **Sondertilgung neutrality:** Sofia *keeps* the Sondertilgung at the end. The message is "buffer first, then tilgen" — not "don't tilgen." The dialogue conveys this without prescribing an answer. Needs to feel balanced.
 
 3. **Title options:**
    - "What Actually Protects Your Home?" (hooks into core concern)

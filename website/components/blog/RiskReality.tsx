@@ -4,7 +4,8 @@ import { css } from "../../styled-system/css";
 // Annualised volatilities from retail-portfolio-analysis NB05 + NB06b
 const SIGMA_HOUSE_MTM = 0.075; // mark-to-market housing vol (7.5% p.a.)
 const SIGMA_HOUSE_HEDGED = 0.042; // after rent hedge (4.2% p.a.)
-const SIGMA_SAVINGS = 0.005; // cash/savings account (~0.5% p.a.)
+const SIGMA_CASH = 0.005; // cash/savings account (~0.5% p.a.)
+const SIGMA_INVESTMENTS = 0.12; // diversified equity/bond portfolio (~12% p.a.)
 // Mortgage: fixed-rate → σ = 0 (perfectly predictable)
 
 const MORTGAGE_MIN_VISUAL = 0.03; // minimum visual share so grey sliver stays visible
@@ -14,54 +15,159 @@ interface Segment {
   emoji: string;
   share: number;
   color: string;
+  euroVol: number; // € annual volatility for breakdown table
+}
+
+interface WealthSegment {
+  label: string;
+  emoji: string;
+  share: number;
+  color: string;
+  amount: number;
+}
+
+interface ScenarioResult {
+  segments: Segment[];
+  totalRelative: number;
+  baseVariance: number;
+  currentVariance: number;
+  wealthSegments: WealthSegment[];
 }
 
 function computeScenario(
   property: number,
   mortgage: number,
-  savings: number,
+  cash: number,
+  investments: number,
   paidOff: boolean,
   staying: boolean,
-): { segments: Segment[]; totalRelative: number; baseVariance: number; currentVariance: number } {
+): ScenarioResult {
   const effectiveMortgage = paidOff ? 0 : mortgage;
-  const netWorth = property + savings - effectiveMortgage;
+  const totalAssets = property + cash + investments;
+  const netWorth = totalAssets - effectiveMortgage;
   if (netWorth <= 0) {
     return {
-      segments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316" }],
+      segments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316", euroVol: 0 }],
       totalRelative: 1,
       baseVariance: 1,
       currentVariance: 1,
+      wealthSegments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316", amount: property }],
     };
   }
 
+  // Wealth allocation bar (equity view: what you own vs what you owe)
+  const wealthSegments: WealthSegment[] = [
+    { label: "Your home", emoji: "\u{1F3E0}", share: property / totalAssets, color: "#f97316", amount: property },
+  ];
+  if (cash > 0) {
+    wealthSegments.push({
+      label: "Cash",
+      emoji: "\u{1F4B5}",
+      share: cash / totalAssets,
+      color: "#22c55e",
+      amount: cash,
+    });
+  }
+  if (investments > 0) {
+    wealthSegments.push({
+      label: "Investments",
+      emoji: "\u{1F4C8}",
+      share: investments / totalAssets,
+      color: "#3b82f6",
+      amount: investments,
+    });
+  }
+  if (!paidOff && mortgage > 0) {
+    wealthSegments.push({
+      label: "Mortgage",
+      emoji: "\u{1F3E6}",
+      share: mortgage / totalAssets,
+      color: "#9ca3af",
+      amount: -mortgage,
+    });
+  }
+
+  // Risk calculation: variance contribution per asset
   const wHouse = property / netWorth;
-  const wSavings = savings / netWorth;
+  const wCash = cash / netWorth;
+  const wInv = investments / netWorth;
 
   const sigHouse = staying ? SIGMA_HOUSE_HEDGED : SIGMA_HOUSE_MTM;
   const varHouse = (wHouse * sigHouse) ** 2;
-  const varSavings = (wSavings * SIGMA_SAVINGS) ** 2;
-  const totalVar = varHouse + varSavings;
+  const varCash = (wCash * SIGMA_CASH) ** 2;
+  const varInv = (wInv * SIGMA_INVESTMENTS) ** 2;
+  const totalVar = varHouse + varCash + varInv;
+
+  // Euro volatilities for breakdown table
+  const euroVolHouse = property * sigHouse;
+  const euroVolCash = cash * SIGMA_CASH;
+  const euroVolInv = investments * SIGMA_INVESTMENTS;
 
   // Base variance (no toggles) for totalRelative scaling
-  const wHouseBase = property / (property + savings - mortgage);
-  const wSavingsBase = savings / (property + savings - mortgage);
-  const baseVar = (wHouseBase * SIGMA_HOUSE_MTM) ** 2 + (wSavingsBase * SIGMA_SAVINGS) ** 2;
+  const baseNW = property + cash + investments - mortgage;
+  const baseVar =
+    baseNW > 0
+      ? ((property / baseNW) * SIGMA_HOUSE_MTM) ** 2 +
+        ((cash / baseNW) * SIGMA_CASH) ** 2 +
+        ((investments / baseNW) * SIGMA_INVESTMENTS) ** 2
+      : 1;
 
   const shareHouse = totalVar > 0 ? varHouse / totalVar : 0.9;
-  const shareSavings = totalVar > 0 ? varSavings / totalVar : 0.1;
+  const shareCash = totalVar > 0 ? varCash / totalVar : 0.05;
+  const shareInv = totalVar > 0 ? varInv / totalVar : 0.05;
 
-  const segments: Segment[] = [{ label: "Your home", emoji: "\u{1F3E0}", share: shareHouse, color: "#f97316" }];
+  const segments: Segment[] = [];
 
-  if (!paidOff) {
+  if (!paidOff && mortgage > 0) {
     // Mortgage gets a minimum visual share (it contributes ~0% variance but needs to be visible)
     const mortgageVisual = MORTGAGE_MIN_VISUAL;
-    const scaledHouse = shareHouse * (1 - mortgageVisual);
-    const scaledSavings = shareSavings * (1 - mortgageVisual);
-    segments[0] = { ...segments[0], share: scaledHouse };
-    segments.push({ label: "Savings", emoji: "\u{1F4B0}", share: scaledSavings, color: "#22c55e" });
-    segments.push({ label: "Mortgage", emoji: "\u{1F3E6}", share: mortgageVisual, color: "#9ca3af" });
+    const scale = 1 - mortgageVisual;
+    segments.push({
+      label: "Your home",
+      emoji: "\u{1F3E0}",
+      share: shareHouse * scale,
+      color: "#f97316",
+      euroVol: euroVolHouse,
+    });
+    if (cash > 0) {
+      segments.push({
+        label: "Cash",
+        emoji: "\u{1F4B5}",
+        share: shareCash * scale,
+        color: "#22c55e",
+        euroVol: euroVolCash,
+      });
+    }
+    if (investments > 0) {
+      segments.push({
+        label: "Investments",
+        emoji: "\u{1F4C8}",
+        share: shareInv * scale,
+        color: "#3b82f6",
+        euroVol: euroVolInv,
+      });
+    }
+    segments.push({ label: "Mortgage", emoji: "\u{1F3E6}", share: mortgageVisual, color: "#9ca3af", euroVol: 0 });
   } else {
-    segments.push({ label: "Savings", emoji: "\u{1F4B0}", share: shareSavings, color: "#22c55e" });
+    segments.push({
+      label: "Your home",
+      emoji: "\u{1F3E0}",
+      share: shareHouse,
+      color: "#f97316",
+      euroVol: euroVolHouse,
+    });
+    if (cash > 0) {
+      segments.push({ label: "Cash", emoji: "\u{1F4B5}", share: shareCash, color: "#22c55e", euroVol: euroVolCash });
+    }
+    if (investments > 0) {
+      segments.push({
+        label: "Investments",
+        emoji: "\u{1F4C8}",
+        share: shareInv,
+        color: "#3b82f6",
+        euroVol: euroVolInv,
+      });
+    }
   }
 
   return {
@@ -69,15 +175,28 @@ function computeScenario(
     totalRelative: baseVar > 0 ? Math.sqrt(totalVar / baseVar) : 1,
     baseVariance: baseVar,
     currentVariance: totalVar,
+    wealthSegments,
   };
 }
 
-function getMessage(paidOff: boolean, staying: boolean): string {
+function getMessage(paidOff: boolean, staying: boolean, hasMortgage: boolean): string {
+  if (!hasMortgage) {
+    if (staying) {
+      return (
+        "Your home dominates the wobble. But because you live there" +
+        " and save rent, it\u2019s smaller than it looks."
+      );
+    }
+    return "Your home dominates the wobble. The mortgage was already at zero.";
+  }
   if (paidOff && staying) {
-    return "Even without the mortgage, your home dominates. But because you live there, the wobble is noticeably smaller.";
+    return (
+      "Even without the mortgage, your home dominates." +
+      " But because you live there, the wobble is noticeably smaller."
+    );
   }
   if (paidOff) {
-    return "The mortgage was the predictable part. Removing it barely changes where the wobble comes from.";
+    return "The mortgage was the predictable part. Removing it barely changes" + " where the wobble comes from.";
   }
   if (staying) {
     return (
@@ -108,18 +227,115 @@ const labelCss = css({
   marginBottom: "0.3rem",
 });
 
+const fmtEuro = (n: number) =>
+  n < 0 ? `\u2212\u20AC${Math.abs(Math.round(n)).toLocaleString()}` : `\u20AC${Math.round(n).toLocaleString()}`;
+
+/* ── Reusable stacked bar renderer ── */
+function StackedBar({
+  segments,
+  widthPct,
+  height,
+}: {
+  segments: { label: string; emoji: string; share: number; color: string }[];
+  widthPct: number;
+  height: string;
+}) {
+  return (
+    <div
+      className={css({
+        position: "relative",
+        height,
+        borderRadius: "6px",
+        overflow: "hidden",
+        backgroundColor: "#f3f4f6",
+      })}
+    >
+      <div
+        style={{
+          display: "flex",
+          height: "100%",
+          width: `${Math.max(10, widthPct)}%`,
+          transition: "width 0.5s ease",
+        }}
+      >
+        {segments.map((seg) => (
+          <div
+            key={seg.label}
+            style={{
+              width: `${seg.share * 100}%`,
+              height: "100%",
+              backgroundColor: seg.color,
+              transition: "width 0.5s ease, background-color 0.3s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              minWidth: seg.share > 0.05 ? "24px" : "8px",
+            }}
+            title={`${seg.emoji} ${seg.label}: ${Math.round(seg.share * 100)}%`}
+          >
+            {seg.share > 0.1 && (
+              <span
+                className={css({
+                  fontSize: "0.7rem",
+                  color: "white",
+                  fontWeight: "bold",
+                  whiteSpace: "nowrap",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                })}
+              >
+                {seg.emoji} {seg.label}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Legend row ── */
+function Legend({ segments }: { segments: { label: string; emoji: string; share: number; color: string }[] }) {
+  return (
+    <div className={css({ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "0.4rem" })}>
+      {segments.map((seg) => (
+        <div key={seg.label} className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
+          <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: seg.color }} />
+          <span className={css({ fontSize: "0.75rem", color: "#6b7280" })}>
+            {seg.emoji} {seg.label} ({Math.round(seg.share * 100)}%)
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function RiskReality() {
   const [property, setProperty] = useState(380000);
   const [mortgage, setMortgage] = useState(290000);
-  const [savings, setSavings] = useState(8000);
+  const [cash, setCash] = useState(8000);
+  const [investments, setInvestments] = useState(0);
   const [mortgagePaidOff, setMortgagePaidOff] = useState(false);
   const [staying, setStaying] = useState(false);
 
+  const hasMortgage = mortgage > 0;
+
   const scenario = useMemo(
-    () => computeScenario(property, mortgage, savings, mortgagePaidOff, staying),
-    [property, mortgage, savings, mortgagePaidOff, staying],
+    () => computeScenario(property, mortgage, cash, investments, mortgagePaidOff, staying),
+    [property, mortgage, cash, investments, mortgagePaidOff, staying],
   );
-  const message = getMessage(mortgagePaidOff, staying);
+
+  // Baseline scenario (no toggles) for before/after comparison
+  const baseScenario = useMemo(
+    () => computeScenario(property, mortgage, cash, investments, false, false),
+    [property, mortgage, cash, investments],
+  );
+
+  const message = getMessage(mortgagePaidOff, staying, hasMortgage);
+
+  const anyToggle = mortgagePaidOff || staying;
+  const pctChange =
+    baseScenario.baseVariance > 0 ? Math.round((1 - scenario.currentVariance / baseScenario.baseVariance) * 100) : 0;
 
   return (
     <div
@@ -151,23 +367,23 @@ export default function RiskReality() {
           marginTop: 0,
         })}
       >
-        Enter your numbers, then toggle the switches to see what changes — and what doesn&apos;t.
+        Enter your numbers, then toggle the switches to see what changes &mdash; and what doesn&apos;t.
       </p>
 
-      {/* Inputs */}
+      {/* Inputs — 2×2 grid */}
       <div
         className={css({
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: "1rem",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "0.75rem",
           marginBottom: "1.25rem",
-          "@media (max-width: 560px)": { gridTemplateColumns: "1fr" },
+          "@media (max-width: 480px)": { gridTemplateColumns: "1fr" },
         })}
       >
         <div>
-          <label className={labelCss}>Home value</label>
+          <label className={labelCss}>{"\u{1F3E0}"} Home value</label>
           <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>€</span>
+            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
             <input
               type="number"
               min={50000}
@@ -180,9 +396,9 @@ export default function RiskReality() {
           </div>
         </div>
         <div>
-          <label className={labelCss}>Mortgage remaining</label>
+          <label className={labelCss}>{"\u{1F3E6}"} Mortgage remaining</label>
           <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>€</span>
+            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
             <input
               type="number"
               min={0}
@@ -195,23 +411,38 @@ export default function RiskReality() {
           </div>
         </div>
         <div>
-          <label className={labelCss}>Liquid savings</label>
+          <label className={labelCss}>{"\u{1F4B5}"} Cash savings</label>
           <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>€</span>
+            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
             <input
               type="number"
               min={0}
               max={500000}
               step={1000}
-              value={savings}
-              onChange={(e) => setSavings(Math.max(0, Math.min(500000, Number(e.target.value))))}
+              value={cash}
+              onChange={(e) => setCash(Math.max(0, Math.min(500000, Number(e.target.value))))}
+              className={inputCss}
+            />
+          </div>
+        </div>
+        <div>
+          <label className={labelCss}>{"\u{1F4C8}"} Investments (ETFs etc.)</label>
+          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
+            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
+            <input
+              type="number"
+              min={0}
+              max={500000}
+              step={1000}
+              value={investments}
+              onChange={(e) => setInvestments(Math.max(0, Math.min(500000, Number(e.target.value))))}
               className={inputCss}
             />
           </div>
         </div>
       </div>
 
-      {/* Stacked bar */}
+      {/* Visualization card */}
       <div
         className={css({
           padding: "1rem",
@@ -221,82 +452,178 @@ export default function RiskReality() {
           marginBottom: "1rem",
         })}
       >
-        <div
+        {/* Bar 1: Wealth allocation */}
+        <p
           className={css({
-            position: "relative",
-            height: "40px",
-            borderRadius: "6px",
-            overflow: "hidden",
-            backgroundColor: "#f3f4f6",
+            fontSize: "0.8rem",
+            fontWeight: "700",
+            color: "#6b7280",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            marginTop: 0,
+            marginBottom: "0.4rem",
           })}
         >
-          <div
-            style={{
-              display: "flex",
-              height: "100%",
-              width: `${Math.max(10, scenario.totalRelative * 100)}%`,
-              transition: "width 0.5s ease",
-            }}
-          >
-            {scenario.segments.map((seg) => (
-              <div
-                key={seg.label}
-                style={{
-                  width: `${seg.share * 100}%`,
-                  height: "100%",
-                  backgroundColor: seg.color,
-                  transition: "width 0.5s ease, background-color 0.3s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  minWidth: seg.share > 0.05 ? "24px" : "8px",
-                }}
-                title={`${seg.emoji} ${seg.label}: ${Math.round(seg.share * 100)}%`}
-              >
-                {seg.share > 0.08 && (
-                  <span
-                    className={css({
-                      fontSize: "0.75rem",
-                      color: "white",
-                      fontWeight: "bold",
-                      whiteSpace: "nowrap",
-                      textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                    })}
-                  >
-                    {seg.emoji} {seg.label}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+          How your wealth is split
+        </p>
+        <StackedBar segments={scenario.wealthSegments} widthPct={100} height="28px" />
+        <Legend segments={scenario.wealthSegments} />
 
-        {/* Legend */}
-        <div
+        {/* Bar 2: Wobble (risk) — before/after when toggle active */}
+        <p
           className={css({
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-            marginTop: "0.5rem",
+            fontSize: "0.8rem",
+            fontWeight: "700",
+            color: "#6b7280",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            marginTop: "1.25rem",
+            marginBottom: "0.4rem",
           })}
         >
-          {scenario.segments.map((seg) => (
-            <div key={seg.label} className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-              <div
-                style={{
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "2px",
-                  backgroundColor: seg.color,
-                }}
-              />
-              <span className={css({ fontSize: "0.75rem", color: "#6b7280" })}>
-                {seg.emoji} {seg.label}
-              </span>
+          How the wobble is split
+          {anyToggle && pctChange !== 0 && (
+            <span
+              className={css({ fontWeight: "600", textTransform: "none", letterSpacing: "0" })}
+              style={{ color: pctChange > 0 ? "#16a34a" : "#dc2626" }}
+            >
+              {" "}
+              ({pctChange > 0 ? `${pctChange}% less` : `${Math.abs(pctChange)}% more`} wobble)
+            </span>
+          )}
+        </p>
+
+        {/* Show baseline bar when toggles are active, for comparison */}
+        {anyToggle && (
+          <>
+            <p
+              className={css({
+                fontSize: "0.7rem",
+                color: "#9ca3af",
+                marginTop: 0,
+                marginBottom: "0.25rem",
+              })}
+            >
+              Before
+            </p>
+            <div style={{ opacity: 0.4 }}>
+              <StackedBar segments={baseScenario.segments} widthPct={100} height="20px" />
             </div>
-          ))}
-        </div>
+            <p
+              className={css({
+                fontSize: "0.7rem",
+                color: "#374151",
+                fontWeight: "600",
+                marginTop: "0.4rem",
+                marginBottom: "0.25rem",
+              })}
+            >
+              After
+            </p>
+          </>
+        )}
+
+        <StackedBar segments={scenario.segments} widthPct={Math.max(10, scenario.totalRelative * 100)} height="36px" />
+        <Legend segments={scenario.segments} />
+
+        {/* Breakdown table: € amounts */}
+        <table
+          className={css({
+            width: "100%",
+            marginTop: "0.75rem",
+            fontSize: "0.8rem",
+            borderCollapse: "collapse",
+          })}
+        >
+          <thead>
+            <tr>
+              <th
+                className={css({
+                  textAlign: "left",
+                  color: "#6b7280",
+                  fontWeight: "600",
+                  paddingBottom: "0.3rem",
+                  borderBottom: "1px solid #e5e7eb",
+                })}
+              >
+                Asset
+              </th>
+              <th
+                className={css({
+                  textAlign: "right",
+                  color: "#6b7280",
+                  fontWeight: "600",
+                  paddingBottom: "0.3rem",
+                  borderBottom: "1px solid #e5e7eb",
+                })}
+              >
+                Value
+              </th>
+              <th
+                className={css({
+                  textAlign: "right",
+                  color: "#6b7280",
+                  fontWeight: "600",
+                  paddingBottom: "0.3rem",
+                  borderBottom: "1px solid #e5e7eb",
+                })}
+              >
+                Annual wobble
+              </th>
+              <th
+                className={css({
+                  textAlign: "right",
+                  color: "#6b7280",
+                  fontWeight: "600",
+                  paddingBottom: "0.3rem",
+                  borderBottom: "1px solid #e5e7eb",
+                })}
+              >
+                Share
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {scenario.segments
+              .filter((seg) => seg.label !== "Mortgage")
+              .map((seg) => (
+                <tr key={seg.label}>
+                  <td className={css({ padding: "0.3rem 0", color: "#374151" })}>
+                    <span style={{ color: seg.color }}>{"\u25CF"}</span> {seg.emoji} {seg.label}
+                  </td>
+                  <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
+                    {seg.label === "Your home"
+                      ? fmtEuro(property)
+                      : seg.label === "Cash"
+                        ? fmtEuro(cash)
+                        : fmtEuro(investments)}
+                  </td>
+                  <td
+                    className={css({ textAlign: "right", padding: "0.3rem 0" })}
+                    style={{ color: seg.euroVol > 1000 ? "#dc2626" : "#374151" }}
+                  >
+                    &plusmn;{fmtEuro(seg.euroVol)}
+                  </td>
+                  <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
+                    {Math.round(seg.share * 100)}%
+                  </td>
+                </tr>
+              ))}
+            {/* Mortgage row */}
+            {!mortgagePaidOff && mortgage > 0 && (
+              <tr>
+                <td className={css({ padding: "0.3rem 0", color: "#9ca3af" })}>
+                  <span style={{ color: "#9ca3af" }}>{"\u25CF"}</span> {"\u{1F3E6}"} Mortgage
+                </td>
+                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>
+                  {fmtEuro(-mortgage)}
+                </td>
+                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>&plusmn;&euro;0</td>
+                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>~0%</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
 
         {/* Message */}
         <p
@@ -322,18 +649,23 @@ export default function RiskReality() {
             borderRadius: "6px",
             border: "1px solid",
             transition: "all 0.15s",
-            cursor: "pointer",
           })}
           style={{
-            borderColor: mortgagePaidOff ? "#f97316" : "#d1d5db",
-            backgroundColor: mortgagePaidOff ? "rgba(249, 115, 22, 0.04)" : "white",
+            borderColor: !hasMortgage ? "#e5e7eb" : mortgagePaidOff ? "#f97316" : "#d1d5db",
+            backgroundColor: !hasMortgage ? "#f9fafb" : mortgagePaidOff ? "rgba(249, 115, 22, 0.04)" : "white",
+            cursor: hasMortgage ? "pointer" : "default",
+            opacity: hasMortgage ? 1 : 0.5,
           }}
-          onClick={() => setMortgagePaidOff((v) => !v)}
+          onClick={() => hasMortgage && setMortgagePaidOff((v) => !v)}
         >
-          <label className={css({ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" })}>
+          <label
+            className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}
+            style={{ cursor: hasMortgage ? "pointer" : "default" }}
+          >
             <input
               type="checkbox"
               checked={mortgagePaidOff}
+              disabled={!hasMortgage}
               onChange={(e) => setMortgagePaidOff(e.target.checked)}
               className={css({ width: "16px", height: "16px", accentColor: "#f97316" })}
             />
@@ -341,7 +673,20 @@ export default function RiskReality() {
               What if I pay off the mortgage?
             </span>
           </label>
-          {mortgagePaidOff && (
+          {!hasMortgage && (
+            <p
+              className={css({
+                fontSize: "0.8rem",
+                color: "#9ca3af",
+                marginTop: "0.4rem",
+                marginBottom: 0,
+                paddingLeft: "1.75rem",
+              })}
+            >
+              Your mortgage is already at &euro;0.
+            </p>
+          )}
+          {mortgagePaidOff && hasMortgage && (
             <p
               className={css({
                 fontSize: "0.8rem",
@@ -351,8 +696,8 @@ export default function RiskReality() {
                 paddingLeft: "1.75rem",
               })}
             >
-              The grey sliver disappeared — but the bar barely changed. The mortgage was never the source of
-              uncertainty.
+              Look at the &quot;before&quot; and &quot;after&quot; bars above. The grey mortgage sliver disappeared
+              &mdash; but the overall wobble barely changed. The mortgage was never the source of uncertainty.
             </p>
           )}
         </div>
@@ -380,7 +725,7 @@ export default function RiskReality() {
               className={css({ width: "16px", height: "16px", accentColor: "#22c55e" })}
             />
             <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
-              I&apos;m staying — price swings don&apos;t affect my costs
+              I&apos;m staying &mdash; price swings don&apos;t affect my costs
             </span>
           </label>
           {staying && (
@@ -393,12 +738,34 @@ export default function RiskReality() {
                 paddingLeft: "1.75rem",
               })}
             >
-              If house prices drop 20%, your mortgage payment stays the same. If rents rise 30%, you don&apos;t pay
-              them. As someone who lives in their home, these price swings matter much less than they look on paper.
+              Look at the &quot;after&quot; bar &mdash; it got shorter. If house prices drop 20%, your mortgage payment
+              stays the same. If rents rise 30%, you don&apos;t pay them. As someone who lives in their home, these
+              price swings matter much less than they look on paper.
             </p>
           )}
         </div>
       </div>
+
+      {/* "So what?" conclusion */}
+      {anyToggle && (
+        <p
+          className={css({
+            fontSize: "0.85rem",
+            color: "#374151",
+            marginTop: "1rem",
+            marginBottom: 0,
+            padding: "0.75rem",
+            backgroundColor: "rgba(34, 197, 94, 0.06)",
+            borderRadius: "6px",
+            border: "1px solid rgba(34, 197, 94, 0.2)",
+            lineHeight: "1.5",
+          })}
+        >
+          <strong>So what does this mean?</strong> Your home will always dominate the wobble &mdash; it&apos;s your
+          biggest asset. The mortgage adds almost nothing. The real question is: when life throws a shock at you,{" "}
+          <em>do you have money outside the walls?</em> That&apos;s what protects the house.
+        </p>
+      )}
     </div>
   );
 }

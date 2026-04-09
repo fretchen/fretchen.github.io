@@ -182,26 +182,20 @@ function computeScenario(
 function getMessage(paidOff: boolean, staying: boolean, hasMortgage: boolean): string {
   if (!hasMortgage) {
     if (staying) {
-      return (
-        "Your home dominates the wobble. But because you live there" +
-        " and save rent, it\u2019s smaller than it looks."
-      );
+      return "Your home dominates the risk. But because you live there and save rent, it\u2019s smaller than it looks.";
     }
-    return "Your home dominates the wobble. The mortgage was already at zero.";
+    return "Your home dominates the risk. The mortgage was already at zero.";
   }
   if (paidOff && staying) {
-    return (
-      "Even without the mortgage, your home dominates." +
-      " But because you live there, the wobble is noticeably smaller."
-    );
+    return "Even without the mortgage, your home dominates. But because you live there, the risk is noticeably smaller.";
   }
   if (paidOff) {
-    return "The mortgage was the predictable part. Removing it barely changes" + " where the wobble comes from.";
+    return "The mortgage was the predictable part. Removing it barely changes" + " where the risk comes from.";
   }
   if (staying) {
     return (
       "You\u2019re not selling tomorrow. If prices drop, your mortgage payment stays the same." +
-      " If rents rise, you don\u2019t pay them. That shrinks the wobble."
+      " If rents rise, you don\u2019t pay them. That shrinks the risk."
     );
   }
   return (
@@ -357,7 +351,7 @@ export default function RiskReality() {
           marginTop: 0,
         })}
       >
-        Where does the wobble come from?
+        Where does the risk come from?
       </p>
       <p
         className={css({
@@ -481,14 +475,14 @@ export default function RiskReality() {
             marginBottom: "0.4rem",
           })}
         >
-          How the wobble is split
+          How the risk is split
           {anyToggle && pctChange !== 0 && (
             <span
               className={css({ fontWeight: "600", textTransform: "none", letterSpacing: "0" })}
               style={{ color: pctChange > 0 ? "#16a34a" : "#dc2626" }}
             >
               {" "}
-              ({pctChange > 0 ? `${pctChange}% less` : `${Math.abs(pctChange)}% more`} wobble)
+              ({pctChange > 0 ? `${pctChange}% less` : `${Math.abs(pctChange)}% more`} risk)
             </span>
           )}
         </p>
@@ -568,7 +562,7 @@ export default function RiskReality() {
                   borderBottom: "1px solid #e5e7eb",
                 })}
               >
-                Annual wobble
+                Annual risk (±€)
               </th>
               <th
                 className={css({
@@ -624,6 +618,17 @@ export default function RiskReality() {
             )}
           </tbody>
         </table>
+        <p
+          className={css({
+            fontSize: "0.7rem",
+            color: "#9ca3af",
+            marginTop: "0.25rem",
+            marginBottom: "0.5rem",
+            fontStyle: "italic",
+          })}
+        >
+          Annual risk shows how much each asset&apos;s value could swing in a typical year.
+        </p>
 
         {/* Message */}
         <p
@@ -697,7 +702,7 @@ export default function RiskReality() {
               })}
             >
               Look at the &quot;before&quot; and &quot;after&quot; bars above. The grey mortgage sliver disappeared
-              &mdash; but the overall wobble barely changed. The mortgage was never the source of uncertainty.
+              &mdash; but the overall risk barely changed. The mortgage was never the source of uncertainty.
             </p>
           )}
         </div>
@@ -761,7 +766,7 @@ export default function RiskReality() {
             lineHeight: "1.5",
           })}
         >
-          <strong>So what does this mean?</strong> Your home will always dominate the wobble &mdash; it&apos;s your
+          <strong>So what does this mean?</strong> Your home will always dominate the risk &mdash; it&apos;s your
           biggest asset. The mortgage adds almost nothing. The real question is: when life throws a shock at you,{" "}
           <em>do you have money outside the walls?</em> That&apos;s what protects the house.
         </p>

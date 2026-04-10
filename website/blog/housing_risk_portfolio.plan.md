@@ -485,3 +485,233 @@ Recommend Option B — tooltips are invisible on mobile.
 6. **Step 6** (takeaways + intro) — small edits
 7. **Step 7** (appendix) — mechanical
 8. **Step 8** (widget caption) — trivial
+
+---
+
+## Round 3 Implementation Plan
+
+Fixes for the critique in `housing_risk_portfolio.todos.md` (Round 3). Steps 1-8 above are all completed. This section addresses the remaining issues.
+
+### Step 9: Fix frontmatter — "three friends" → "two friends"
+
+**Addresses:** Critical #3
+
+**File:** `housing_risk_portfolio.mdx`, line 5
+
+**Change:**
+```
+description: "A dinner conversation between three friends reveals..."
+→
+description: "A dinner conversation between two friends reveals..."
+```
+
+Trivial, no risk.
+
+---
+
+### Step 10: Fix doubled flashback between §3 and §4
+
+**Addresses:** Critical #1
+
+**Problem:** §3 opens with "After the crisis, Amara had spent weeks staring at her finances" and §4 opens with "After her crisis, Amara had spent three months with spreadsheets." Both flash back to the same period. The reader feels a reset, and "weeks" vs. "three months" is a factual contradiction.
+
+**Fix:** Keep the flashback in §3 (it introduces the balance sheet — the right context). Rewrite §4's opening to chain *forward* from §3 instead of flashing back again.
+
+**Current §4 opening (lines 76–80):**
+```
+## Where your financial risk actually comes from
+
+After her crisis, Amara had spent three months with spreadsheets — not just tracking what
+she owed, but understanding where the uncertainty actually came from. What she found surprised her.
+
+The mortgage — the thing she'd feared most — was perfectly predictable. Fixed rate, fixed
+monthly payment, known end date. It drops by the same amount every month. The apartment's
+value, on the other hand, could swing by thousands from one year to the next. By _risk_ she
+means exactly this: not whether something will go wrong, but how much the value of what you
+own can change.
+```
+
+**Proposed replacement:**
+```
+## Where your financial risk actually comes from
+
+But knowing what you own isn't the same as knowing where the danger sits. Amara had gone
+further — not just listing assets, but asking: which of these can actually move?
+
+The mortgage, it turned out, couldn't. Fixed rate, fixed monthly payment, known end date. It
+drops by the same amount every month. The apartment's value, on the other hand, could swing
+by tens of thousands from one year to the next. By _risk_ Amara means exactly this: not
+whether something will go wrong, but how much the value of what you own can change.
+```
+
+**What this achieves:**
+- Eliminates the duplicate flashback entirely
+- Chains forward from §3 ("knowing what you own → knowing where the danger sits")
+- Preserves the key content (mortgage = predictable, house = not)
+- Also fixes S4 ("thousands" → "tens of thousands") and S2 ("she means" → "Amara means") in the same edit
+
+---
+
+### Step 11: Bridge the logical gap between RiskReality and diversification argument
+
+**Addresses:** Critical #2
+
+**Problem:** RiskReality just showed Sofia her risk is smaller than it looks (via the "I'm staying" toggle). Then §6 immediately argues "diversify away from the house." The reader thinks: "You just told me it's fine — now you say it's too concentrated?" The 98% number appears in §6 but arrives too late to prevent the cognitive dissonance.
+
+**Fix:** Add a 3-line bridge at the end of §5 (after "because you bought for the right reason") that transitions from "smaller than it looks" to "but still almost everything." Move the 98% concentration insight from §6 into this bridge.
+
+**Current end of §5 / start of §6 (lines 100–106):**
+```
+"The risk is real, but smaller than it looked — because you bought for the right reason."
+
+## So what do I do?
+
+Sofia straightens up. "Okay. I have €300 a month after everything. What do I _do_ with it?"
+
+"Build savings outside the walls," Amara says. "Right now 98% of your wealth is one
+apartment in Brussels. Every euro you keep liquid is a euro that doesn't depend on what
+happens to the housing market — and a euro you can actually reach if you need it."
+```
+
+**Proposed replacement:**
+```
+"The risk is real, but smaller than it looked — because you bought for the right reason."
+
+Sofia sits back. "So I'm actually in a decent position."
+
+"Better than you thought," Amara says. "But look at the bar one more time — almost everything is still orange. The risk per euro is small. The problem is that almost every euro you have is in the same place."
+
+## So what do I do?
+
+Sofia straightens up. "Okay. I have €300 a month after everything. What do I _do_ with it?"
+
+"Build savings outside the walls," Amara says. "Every euro you keep liquid is a euro that doesn't depend on what happens to the housing market — and a euro you can actually reach if you need it."
+```
+
+**What this achieves:**
+- Sofia processes the relief ("decent position") before hearing the concentration argument
+- The pivot is clean: risk per euro is small → but all euros are in one place
+- Removes the "98% of your wealth" number from §6 (now implicit in the bridge), keeping §6 focused on the practical answer
+- The flow is: relief → but concentration → so what do I do?
+
+---
+
+### Step 12: Fix the "`. -`" merge artifact in §1
+
+**Addresses:** Suggestion S1
+
+**Current (line 28):**
+```
+"Every payment feels like buying another piece of freedom. One day this place is _mine_.
+No bank, no debt. - I don't understand people who invest while they still owe money,"
+she adds. "Pay off the house first. Then you're safe."
+```
+
+**Proposed fix:**
+```
+"Every payment feels like buying another piece of freedom. One day this place is _mine_.
+No bank, no debt." She takes a sip. "I don't understand people who invest while they still
+owe money. Pay off the house first. Then you're safe."
+```
+
+"She takes a sip" is a natural interrupt that keeps the dinner-table feeling. The `she adds` attribution becomes unnecessary.
+
+---
+
+### Step 13: Fix "Toggle the second switch" in dialogue
+
+**Addresses:** Suggestion S3
+
+**Current (lines 99–101):**
+```
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up,
+you're unaffected. Toggle the second switch."
+
+The bar shrinks.
+```
+
+**Proposed fix:**
+```
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up,
+you're unaffected. That's what staying changes."
+
+The bar shrinks.
+```
+
+Amara explains the concept; the narrator line "The bar shrinks" implies the reader should try it. No widget tutorial in dialogue.
+
+---
+
+### Step 14: Fix narrator break around ETF link
+
+**Addresses:** Suggestion S5
+
+**Current (lines 112–113):**
+```
+For what to do once you've built up cash savings — how to invest beyond a savings account
+without adding concentration — [that's a separate question](/blog/etf_diversification_interactive).
+```
+
+This narrator-voice sentence sits awkwardly between two dialogue scenes.
+
+**Proposed fix — integrate into Amara's voice:**
+```
+"And once you want to go beyond a savings account — investing without just adding more
+concentration — [that's a separate conversation](/blog/etf_diversification_interactive),"
+Amara says.
+```
+
+This keeps the ETF link but in Amara's register, consistent with the surrounding dialogue.
+
+---
+
+### Step 15: Fix takeaway #1 — too absolute
+
+**Addresses:** Suggestion S6
+
+**Current:**
+```
+Liquid savings protect your home; a lower balance doesn't.
+```
+
+**Proposed fix:**
+```
+Liquid savings protect your home in a crisis; a lower balance doesn't.
+```
+
+The post itself acknowledges 3.5% interest saving is real. "In a crisis" scopes the claim correctly.
+
+---
+
+### Step 16: Fix "burst pipe" repetition
+
+**Addresses:** Suggestion S7
+
+**Current §2 (line 43):**
+```
+...and a burst pipe on top, two months wasn't enough.
+```
+
+**Proposed fix:**
+```
+...and an emergency repair on top, two months wasn't enough.
+```
+
+The second "burst pipe" in §3 (line 67) is the detailed, impactful version — keep that one. The first mention becomes generic, and the reader encounters the specific detail fresh later.
+
+---
+
+### Implementation order
+
+| Step | Issue | Scope | Risk |
+|------|-------|-------|------|
+| 9  | Frontmatter "three friends" | 1 word | None |
+| 10 | Doubled flashback | §4 opening rewrite (5 lines) | Medium — sets §4 tone |
+| 11 | Logical gap → bridge | 3 new lines + trim §6 | Medium — structural |
+| 12 | "`. -`" artifact | 2 lines in §1 | None |
+| 13 | "Toggle the second switch" | 1 line in §5 | None |
+| 14 | ETF link narrator break | 2 lines in §6 | Low |
+| 15 | Takeaway #1 qualifier | 3 words | None |
+| 16 | "burst pipe" repetition | 1 word in §2 | None |
+
+Steps 9, 12–16 are mechanical. Steps 10–11 are structural and carry the plan's weight.

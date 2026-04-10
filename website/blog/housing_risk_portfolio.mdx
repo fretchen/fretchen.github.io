@@ -9,7 +9,8 @@ import ShockCalculator from "../components/blog/ShockCalculator";
 import RiskReality from "../components/blog/RiskReality";
 
 
-In this blog post, I explore what actually protects your home when life goes wrong — and why paying off the mortgage faster isn't always the answer. To make the arguments easier to follow, they unfold as a conversation between three friends over dinner.
+In this blog post, I explore what actually protects your home when life goes wrong — and why paying off the mortgage faster isn't always the answer. 
+To make the arguments less abstract and easier to follow, I embedded them into a conversation between three friends over dinner.
 
 ## Why extra repayment feels so safe
 
@@ -21,43 +22,29 @@ It's Adam and Amara's first time seeing the apartment. Living room with a view o
 
 "Are you going to redo this?" Adam asks.
 
-"Eventually. Every spare euro goes into the mortgage."
+"Eventually. Every spare euro goes into the mortgage." Sofia answers while she is finishing the table.
 
 Over dinner, she explains. She's been making extra repayments beyond the regular rate since she moved in. "Every payment feels like buying another piece of freedom. One day this place is _mine_. No bank, no debt."
 
 "I don't understand people who invest while they still owe money," she adds. "Pay off the house first. Then you're safe."
 
-Amara is quiet.
+Amara is surpringly quiet as Sofia makes her point.
 
 "You okay?" Sofia asks.
 
-"Can I tell you something?"
-
 ## The money in the walls
 
-"My research contract wasn't renewed." Amara says it matter-of-factly. "Budget cuts in the water governance program. Six months without income."
+Amara had owned a small apartment in Tunis — two rooms near the Medina, her base between research trips. She'd been doing the same thing as Sofia: every spare dinar into extra repayment. Then her research contract wasn't renewed and the income stopped.
 
-"I had a small apartment in Tunis," she continues. "Nothing fancy — two rooms near the Medina. My base between research trips. I was putting every spare dinar into extra repayment. The balance was dropping beautifully."
+"Month two, I couldn't cover the rate. The bank said: the payments you've already made are gone. The money was in the walls. And I needed it in my account."
 
-"Month two without a paycheck, I couldn't cover the rate. The bank told me the payments I'd already made were gone — I couldn't get them back. The money was in the walls. And I needed it in my account."
+Her sister lent her money — barely enough. The bank offered a two-month payment pause, but with no income and a burst pipe on top, two months wasn't enough.
 
-"I almost lost the apartment. My sister lent me money — barely enough."
+She looks at Sofia's bathroom door. "The money in the walls can't help you. The money outside the walls can."
 
-Sofia: "Wouldn't the bank give you a payment pause?"
+Sofia: "But you _did_ save on interest."
 
-"They did — two months. But with no income _and_ a repair bill, two months isn't enough. That's what I learned: it's never just one thing."
-
-Sofia: "But you _did_ save on interest. That's not nothing."
-
-"Saving on interest is real, and it's better than any savings account. But that's a _return_ question. What would have protected my apartment wasn't a lower balance. It was cash I could actually use when everything went sideways."
-
-She looks at Sofia's bathroom door, still open down the hallway.
-
-"The money in the walls can't help you. The money outside the walls can."
-
-Adam: "So — don't pay off the mortgage?"
-
-"_Sequence matters_. Safety net first. Extra repayment second. I had the order wrong."
+"That's a _return_ question. What would have protected my apartment was cash I could actually use."
 
 <details>
 <summary>🔬 The return question vs. the risk question</summary>
@@ -70,23 +57,15 @@ But as we explored in [the ETF diversification post](/blog/etf_diversification_i
 
 ## What's actually on your balance sheet?
 
-Amara pulls out her phone. "After the crisis, I kept staring at my finances trying to understand what went wrong. I'd never looked at the whole picture."
+After the crisis, Amara had spent weeks staring at her finances. The picture was simple and brutal: the apartment dominated everything, the mortgage was a predictable line going down, and the savings — the only thing she could actually reach — were a thin sliver in the corner.
 
-She shows Sofia a simple view: apartment value on one side, mortgage on the other, a thin sliver of savings in the corner.
+She shows Sofia the same view with Sofia's numbers. Apartment: €380,000. Mortgage: €290,000. Savings: €8,000. The sliver looks even thinner.
 
-"The house dominates everything," Sofia says.
+Sofia points at the savings. "That's what they're for."
 
-"Right. But that's not what scared me — what scared me was how fast the thin slice of savings can vanish."
+"Now imagine something breaks on top of a job loss," Amara says. "At my place it was a burst pipe. Two weeks after the contract ended. €4,000."
 
-Sofia enters her own numbers. Apartment: €380,000. Mortgage: €290,000. Savings: €8,000.
-
-Adam: "What if something breaks on top of that?"
-
-Sofia: "That's what the savings are for."
-
-Amara: "At my place it was a burst water pipe. Two weeks after the contract ended. €4,000."
-
-Sofia does the math in her head. Then she tries the numbers on Amara's phone.
+Enter your own numbers below — then toggle the shocks.
 
 <ShockCalculator />
 
@@ -94,35 +73,31 @@ Amara: "Now you see what I saw."
 
 ## Where your financial risk actually comes from
 
-Adam noticed something in the numbers. The mortgage — the thing Sofia feared most — was the most predictable part of her finances. Fixed rate, fixed monthly payment, known end date. It drops by the same amount every month, decade after decade. Meanwhile, apartment prices across European cities had risen sharply for years, then fell in a single correction. The mortgage balance during that time didn't flinch.
+After her crisis, Amara had spent three months with a spreadsheet — not just tracking what she owed, but understanding where the uncertainty actually came from. What she found surprised her.
 
-> Sofia: "So the debt is the boring part?"
->
-> Adam: "The debt is the _safe_ part. The house price is where the surprises happen."
+The mortgage — the thing she'd feared most — was perfectly predictable. Fixed rate, fixed monthly payment, known end date. It drops by the same amount every month. The apartment's value, on the other hand, could swing by thousands from one year to the next. By _risk_ she means exactly this: not whether something will go wrong, but how much the value of what you own can change.
 
-By _risk_ we mean how much the value of what you own — your apartment, your savings — can change from year to year. Not whether something _will_ go wrong, but how big the swings could be.
+"Almost all of it was the house," Amara tells Sofia. "The mortgage — despite being the biggest number on my balance sheet — contributed almost nothing."
 
-After her crisis, Amara had built a simple breakdown — a way to see where her financial risk actually came from. She'd discovered something that surprised her: almost all of it was the house. The mortgage, despite being the largest number on her balance sheet, contributed almost nothing. She showed it to Sofia.
+"The mortgage is... nothing?" Sofia asks.
 
-> "The mortgage is... nothing?"
->
-> "It's fixed. Zero surprise."
+"It's fixed. Zero surprise. The house price is where all the uncertainty sits."
 
 The tool below shows the same breakdown for your numbers. Enter your home value, mortgage, and savings — then try the two toggles.
 
 <RiskReality />
 
-> Sofia: "So paying it all off doesn't make me safer?"
->
-> Amara: "It makes your balance smaller. It doesn't make the risk smaller."
->
-> Sofia stares at her plate. "So I made a mistake buying?"
->
-> "No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. Toggle the second switch."
->
-> The bar shrinks.
->
-> "The risk is real, but smaller than it looked — because you bought for the right reason."
+Sofia: "So paying it all off doesn't make me safer?"
+
+Amara: "It makes your balance smaller. It doesn't make the risk smaller."
+
+Sofia stares at her plate. "So I made a mistake buying?"
+
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. Toggle the second switch."
+
+The bar shrinks.
+
+"The risk is real, but smaller than it looked — because you bought for the right reason."
 
 ## So what do I do?
 

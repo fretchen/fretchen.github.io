@@ -28,6 +28,14 @@ class WebsiteAnalytics(BaseModel):
     event_funnels: dict[str, EventFunnel] = Field(default_factory=dict)
 
 
+class PageMeta(BaseModel):
+    """Metadata fetched from a web page's HTML head."""
+
+    url: str
+    title: str = ""
+    description: str | None = None
+
+
 class SocialMetrics(BaseModel):
     """Metrics for a single social platform."""
 

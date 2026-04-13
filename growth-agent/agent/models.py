@@ -48,11 +48,15 @@ class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
     top_topics: list[str] = Field(description="Most popular topics based on page views")
-    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
+    traffic_sources: list[str] = Field(
+        description="Key traffic sources and their significance"
+    )
     best_pages_for_social: list[PageForSocial] = Field(
         description="Blog pages best suited for social media promotion"
     )
-    content_gaps: list[str] = Field(description="Topics the audience wants but are underrepresented")
+    content_gaps: list[str] = Field(
+        description="Topics the audience wants but are underrepresented"
+    )
     growth_opportunities: list[str] = Field(
         description="Actionable growth opportunities based on the data"
     )

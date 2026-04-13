@@ -94,12 +94,15 @@ class LLMClient:
             content = msg["content"]
             if role == "system":
                 from langchain_core.messages import SystemMessage
+
                 langchain_messages.append(SystemMessage(content=content))
             elif role == "user":
                 from langchain_core.messages import HumanMessage
+
                 langchain_messages.append(HumanMessage(content=content))
             elif role == "assistant":
                 from langchain_core.messages import AIMessage
+
                 langchain_messages.append(AIMessage(content=content))
 
         return structured.invoke(langchain_messages)

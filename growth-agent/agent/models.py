@@ -113,6 +113,7 @@ class Draft(BaseModel):
     hashtags: list[str] = Field(default_factory=list)
     link: str | None = None
     status: str = "pending_approval"
+    scheduled_at: datetime | None = None
 
 
 class ContentQueue(BaseModel):

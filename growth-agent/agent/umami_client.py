@@ -45,7 +45,11 @@ class UmamiClient:
         )
 
     def get_pageviews(
-        self, start_at: int, end_at: int, unit: str = "day", timezone: str = "Europe/Berlin"
+        self,
+        start_at: int,
+        end_at: int,
+        unit: str = "day",
+        timezone: str = "Europe/Berlin",
     ) -> dict:
         """Get pageviews within a given time range."""
         return self._get(
@@ -78,7 +82,11 @@ class UmamiClient:
         )
 
     def get_events_series(
-        self, start_at: int, end_at: int, unit: str = "day", timezone: str = "Europe/Berlin"
+        self,
+        start_at: int,
+        end_at: int,
+        unit: str = "day",
+        timezone: str = "Europe/Berlin",
     ) -> list:
         """Get events within a given time range."""
         return self._get(

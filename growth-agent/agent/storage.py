@@ -81,6 +81,5 @@ class S3Storage:
             Bucket=self.bucket, Prefix=self.prefix + prefix
         )
         return [
-            obj["Key"].removeprefix(self.prefix)
-            for obj in response.get("Contents", [])
+            obj["Key"].removeprefix(self.prefix) for obj in response.get("Contents", [])
         ]

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.ruff_cache/
+state/
+node_modules/

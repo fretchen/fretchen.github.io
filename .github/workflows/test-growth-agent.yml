@@ -1,0 +1,50 @@
+name: Test Growth Agent
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "growth-agent/**"
+      - ".github/workflows/test-growth-agent.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "growth-agent/**"
+      - ".github/workflows/test-growth-agent.yml"
+
+jobs:
+  test-growth-agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: ./growth-agent
+        run: uv sync --all-extras
+
+      - name: Lint
+        working-directory: ./growth-agent
+        run: uv run ruff check .
+
+      - name: Format check
+        working-directory: ./growth-agent
+        run: uv run ruff format --check .
+
+      - name: Run tests
+        working-directory: ./growth-agent
+        run: uv run pytest -v

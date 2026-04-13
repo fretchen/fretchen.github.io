@@ -121,39 +121,35 @@ Build an AI-powered **Social Media Growth Agent** that:
 ```
 growth-agent/
 │
-├── handler.py              # Scaleway Function entry point
 ├── pyproject.toml          # uv-managed dependencies
 ├── uv.lock                 # Lockfile
-├── serverless.yml          # Scaleway deployment config
 ├── .env.example            # Required environment variables
+├── .gitignore
 │
 ├── agent/
 │   ├── __init__.py
-│   ├── graph.py            # LangGraph workflow definition
-│   ├── nodes/
-│   │   ├── analytics.py    # Umami data ingestion
-│   │   ├── insights.py     # LLM-based insight generation
-│   │   ├── strategy.py     # Strategy update logic
-│   │   ├── planning.py     # Content idea generation
-│   │   ├── creation.py     # Social media post drafting
-│   │   ├── approval.py     # Queue management for human review
-│   │   └── publishing.py   # Mastodon/Bluesky API posting
-│   ├── platforms/
+│   ├── models.py           # Pydantic state models (Insights, Strategy, Draft, LLMAnalysis, PageMeta, ...)
+│   ├── llm_client.py       # IONOS LLM client (httpx + langchain-openai structured output)
+│   ├── umami_client.py     # Umami Cloud REST API client
+│   ├── page_meta.py        # HTTP-based page metadata fetcher (title, description from meta tags)
+│   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production)
+│   ├── platforms/           # (Phase 1a)
 │   │   ├── mastodon.py     # Mastodon REST API client
-│   │   ├── bluesky.py      # AT Protocol client
-│   │   └── threads.py      # (Phase 2) Meta Threads API
-│   └── storage.py          # S3 state read/write
+│   │   └── bluesky.py      # AT Protocol client
+│   └── graph.py            # (Phase 2) LangGraph workflow definition
 │
-├── prompts/
-│   ├── insight.txt
-│   ├── strategy.txt
-│   ├── planning.txt
-│   └── writing.txt
+├── notebooks/
+│   ├── 01_umami_ingest.ipynb
+│   ├── 02_llm_insights.ipynb
+│   ├── 03_content_creation.ipynb
+│   ├── 04_s3_state.ipynb
+│   └── 05_social_posting.ipynb
+│
+├── handler.py              # (Phase 1b) Scaleway Function entry point
+├── serverless.yml          # (Phase 1b) Scaleway deployment config
 │
 └── test/
-    ├── test_analytics.py
-    ├── test_creation.py
-    └── test_publishing.py
+    └── ...
 ```
 
 > **Note:** `growth-agent/` is its own subproject in the monorepo, managed with `uv`
@@ -285,7 +281,14 @@ functions:
       "status": "pending_approval"
     }
   ],
-  "approved": [],
+  "approved": [
+    {
+      "id": "draft_002",
+      "content": "... (edited by human) ...",
+      "scheduled_at": "2026-04-14T09:00:00Z",
+      "status": "approved"
+    }
+  ],
   "published": [],
   "rejected": []
 }
@@ -436,13 +439,30 @@ Platform-specific formatting:
 
 ---
 
-## Node 6: Human Approval (API)
+## Node 6: Human Approval (Email + Web UI)
 
-**Endpoint:** `GET /drafts` → returns pending drafts
-**Endpoint:** `POST /approve` → moves draft to approved
-**Endpoint:** `POST /reject` → moves draft to rejected with reason
+**Notification:** Scaleway TEM sends email when new drafts are available.
+Email contains draft previews and links to the approval UI.
 
-> Human reviews via API (could later be a simple web UI or Telegram bot).
+**Web UI:** `growth.fretchen.eu/drafts` — minimal HTML page:
+- View all pending drafts with preview
+- **Edit** post text inline (textarea) — posts consistently need human editing
+- Set **scheduled publication time** via datepicker (`scheduled_at`)
+- Approve (moves to scheduled queue) or Reject (with reason)
+
+**Endpoints:**
+- `GET /drafts` — returns pending drafts
+- `PUT /drafts/:id` — update draft content (edit)
+- `POST /drafts/:id/approve` — approve with `scheduled_at` timestamp
+- `POST /drafts/:id/reject` — reject with reason
+
+**Scheduled Publishing:** The daily cron checks approved drafts where
+`scheduled_at <= now()` and publishes them. This allows building a queue
+of edited posts days or weeks in advance.
+
+> **Why Email + Web UI?** Scaleway TEM is sending-only (no reply parsing).
+> Email serves as push notification, the web UI handles editing.
+> This avoids fragile email reply parsing while enabling mobile review.
 
 ---
 
@@ -551,15 +571,16 @@ Anforderungen:
 
 # 12. API Endpoints (growth.fretchen.eu)
 
-| Method | Path           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| GET    | `/status`      | Agent status, last run, follower counts  |
-| GET    | `/drafts`      | Pending drafts for approval              |
-| POST   | `/approve/:id` | Approve a draft for publishing           |
-| POST   | `/reject/:id`  | Reject a draft with reason               |
-| POST   | `/trigger`     | Manually trigger a full agent run        |
-| GET    | `/insights`    | Latest insights and performance data     |
-| GET    | `/health`      | Health check                             |
+| Method | Path              | Description                              |
+| ------ | ----------------- | ---------------------------------------- |
+| GET    | `/status`         | Agent status, last run, follower counts  |
+| GET    | `/drafts`         | Pending drafts for review/editing        |
+| PUT    | `/drafts/:id`     | Edit draft content                       |
+| POST   | `/drafts/:id/approve` | Approve with `scheduled_at` timestamp |
+| POST   | `/drafts/:id/reject`  | Reject with reason                    |
+| POST   | `/trigger`        | Manually trigger a full agent run        |
+| GET    | `/insights`       | Latest insights and performance data     |
+| GET    | `/health`         | Health check                             |
 
 > Path-based routing in a single function, matching x402_facilitator pattern.
 
@@ -580,67 +601,103 @@ Anforderungen:
 
 # 14. Phase Plan
 
-## Phase 0 — Local Validation (Notebooks)
+## Phase 0 — Local Validation (Notebooks) ✅ COMPLETE
 
 Before any Scaleway deployment, validate each node interactively in Jupyter notebooks
 within the `growth-agent/` project. This follows the proven pattern from `notebooks/`
 (e.g. `ionos_llm.ipynb`, `x402_facilitator_demo.ipynb`).
 
-**Notebook: `growth-agent/notebooks/01_umami_ingest.ipynb`**
-- [ ] Call Umami REST API with token, inspect response structure
-- [ ] Parse page views, referrers, event funnels
-- [ ] Write parsed data to local JSON file (mock S3)
+**Notebook: `growth-agent/notebooks/01_umami_ingest.ipynb`** ✅
+- [x] Call Umami REST API with token, inspect response structure
+- [x] Parse page views, referrers, event funnels
+- [x] Write parsed data to local JSON file (mock S3)
 
-**Notebook: `growth-agent/notebooks/02_llm_insights.ipynb`**
-- [ ] Load analytics JSON from previous notebook
-- [ ] Call IONOS LLM API with insight prompt
-- [ ] Inspect and iterate on prompt quality
-- [ ] Validate structured JSON output
+**Notebook: `growth-agent/notebooks/02_llm_insights.ipynb`** ✅
+- [x] Load analytics JSON from previous notebook
+- [x] Call IONOS LLM API with insight prompt
+- [x] Structured output via `langchain-openai` (`ChatOpenAI.with_structured_output()`)
+- [x] Fetch page descriptions from live site (`page_meta.py`) for richer LLM context
+- [x] Validate typed `LLMAnalysis` Pydantic model output
 
-**Notebook: `growth-agent/notebooks/03_content_creation.ipynb`**
-- [ ] Load strategy + insights JSON
-- [ ] Call IONOS LLM with content planning + writing prompts
-- [ ] Generate sample Mastodon/Bluesky posts
-- [ ] Manual review: is quality publishable?
+**Notebook: `growth-agent/notebooks/03_content_creation.ipynb`** ✅
+- [x] Load strategy + insights JSON
+- [x] Fetch page descriptions via HTTP (meta tags) for content-aware prompts
+- [x] Generate sample Mastodon/Bluesky posts (EN + DE)
+- [x] Manual review: quality requires significant editing (see lessons learned)
 
-**Notebook: `growth-agent/notebooks/04_s3_state.ipynb`**
-- [ ] Test S3 read/write with boto3 to `my-imagestore/growth-agent/`
-- [ ] Round-trip: write state → read state → verify
+**Notebook: `growth-agent/notebooks/04_s3_state.ipynb`** ✅
+- [x] Test S3 read/write with boto3 to `my-imagestore/growth-agent/`
+- [x] Round-trip: write state → read state → verify
 
-**Notebook: `growth-agent/notebooks/05_social_posting.ipynb`** (Phase 1b)
+**Notebook: `growth-agent/notebooks/05_social_posting.ipynb`** (deferred to Phase 1a)
 - [ ] Test Mastodon API posting (once OAuth app created)
 - [ ] Test Bluesky atproto posting (once app password generated)
 
 > Each notebook imports directly from `growth-agent/agent/` modules.
 > This ensures the same code runs in notebooks and in the deployed function.
-> Use `uv run jupyter notebook` or register kernel for VS Code.
+> Jupyter kernel registered as `growth-agent` for VS Code.
 
-## Phase 1 — MVP (Target: 2-3 weeks)
+### Phase 0 Lessons Learned
 
-- [ ] Scaffold `growth-agent/` with pyproject.toml (uv) + serverless.yml + handler
-- [ ] Implement S3 state storage (read/write JSON)
-- [ ] Implement Umami analytics ingestion
-- [ ] Basic LLM insight generation (IONOS Llama 3.3)
-- [ ] Content planning + draft generation (LLM)
-- [ ] Manual trigger via API endpoint
-- [ ] Deploy to Scaleway (analytics + insights only, no posting yet)
-- [ ] Implement Mastodon posting (OAuth2 app setup — create app when ready)
-- [ ] Implement Bluesky posting (atproto, app password — generate when ready)
+1. **Post quality requires human editing, not just approval.** LLM-generated posts are
+   a useful starting draft but consistently need tone/content adjustments before publishing.
+   The approval workflow must support **editing**, not just approve/reject.
+2. **Page descriptions are essential context.** Without fetching the meta description from
+   the target page, the LLM produces generic, superficial posts. `page_meta.py` fetches
+   `<meta name="description">` via HTTP — works for all page types (blog, quantum, lab).
+3. **Structured output eliminates fragile JSON parsing.** Using `langchain-openai`'s
+   `with_structured_output()` with Pydantic models is far more reliable than prompting
+   for JSON and parsing with `json.loads()` + code-fence stripping.
+4. **IONOS supports `response_format: json_schema` with `strict: true`** — OpenAI-compatible
+   structured output works out of the box.
 
-## Phase 2 — Automation & Intelligence
+## Phase 1a — Edit, Schedule & Publish
 
-- [ ] LangGraph workflow (multi-node graph)
-- [ ] Daily Cron trigger setup
-- [ ] Human approval API + simple web UI
-- [ ] Performance tracking + feedback loop
-- [ ] UTM attribution (Umami → social post mapping)
+Goal: Publish agent-generated posts to Mastodon and Bluesky with a human-edit workflow
+and scheduled publishing queue.
+
+- [ ] Create Mastodon OAuth app (mastodon.social → Settings → Development)
+- [ ] Generate Bluesky app password (bsky.app → Settings → App Passwords)
+- [ ] Implement Mastodon posting client (`agent/platforms/mastodon.py`)
+- [ ] Implement Bluesky posting client (`agent/platforms/bluesky.py`)
+- [ ] Validate posting in `05_social_posting.ipynb`
+- [ ] Add `scheduled_at` field to `Draft` model (when to publish)
+- [ ] Implement scheduled publisher: process approved drafts where `scheduled_at <= now`
+- [ ] Minimal approval web UI at `growth.fretchen.eu/drafts`:
+  - View pending drafts
+  - **Edit** post text inline (not just approve/reject)
+  - Set `scheduled_at` date/time via datepicker
+  - Approve / Reject buttons
+- [ ] API endpoints: `GET /drafts`, `POST /drafts/:id/approve`, `POST /drafts/:id/reject`, `PUT /drafts/:id` (edit)
+
+## Phase 1b — Scaleway Deployment & Cron
+
+Goal: Run the full pipeline (ingest → insights → content → queue) as a daily serverless function.
+
+- [x] Scaffold `growth-agent/` with pyproject.toml (uv) — done in Phase 0
+- [x] Implement local state storage (read/write JSON) — done in Phase 0
+- [x] Implement Umami analytics ingestion — done in Phase 0
+- [x] LLM insight generation with structured output — done in Phase 0
+- [x] Content planning + draft generation with page descriptions — done in Phase 0
+- [ ] `handler.py` — Scaleway Function entry point
+- [ ] `serverless.yml` — deployment config
+- [ ] S3 state storage (replace LocalStorage with S3Storage in production)
+- [ ] Daily Cron trigger (Scaleway Console → `0 8 * * *`)
+- [ ] Optional: Email notification via Scaleway TEM on each run with draft summary
+
+## Phase 2 — Performance Feedback & Intelligence
+
+- [ ] Performance tracking: fetch Mastodon/Bluesky metrics for published posts
+- [ ] UTM attribution: correlate Umami referrals → social posts
+- [ ] Feedback loop: top-performing post styles influence future generation
+- [ ] LangGraph workflow (multi-node graph with conditional edges)
+- [ ] Strategy auto-adjustment based on performance data
 
 ## Phase 3 — Optimization
 
 - [ ] A/B test post variants (time, tone, language)
-- [ ] Auto-approval for high-confidence posts
-- [ ] Threads integration (if API access secured)
-- [ ] LLM switch to Anthropic/OpenAI if quality insufficient
+- [ ] Threads integration (if Meta API access secured)
+- [ ] LLM provider switch if quality insufficient (Anthropic, OpenAI)
 - [ ] Newsletter integration (optional)
 
 ---
@@ -649,12 +706,12 @@ within the `growth-agent/` project. This follows the proven pattern from `notebo
 
 | Risk                           | Mitigation                                       |
 | ------------------------------ | ------------------------------------------------ |
-| Poor content quality           | Human approval in loop, reject + learn            |
+| Poor content quality           | Human edit + approval workflow, not just approve/reject |
 | Strategy drift                 | Max 1 change per run, audit log                   |
-| API rate limits (Mastodon)     | Respect 300 req/5min, queue-based posting          |
+| API rate limits (Mastodon)     | Respect 300 req/5min, scheduled queue spreads posts |
 | Bluesky API changes            | atproto is versioned, pin SDK version              |
-| Threads API access denied      | Phase 2 only, Mastodon/Bluesky are sufficient MVP  |
-| LLM hallucination in posts     | Human review, factual grounding via blog content   |
+| Threads API access denied      | Phase 3 only, Mastodon/Bluesky are sufficient MVP  |
+| LLM hallucination in posts     | Human edit step, factual grounding via page descriptions |
 | ~~Umami free plan limitations~~ | ~~Resolved: API key generated, REST API available~~ |
 | Scaleway Python cold starts    | Acceptable for daily cron (not latency-sensitive)  |
 | Bridgy conflict                | Both can coexist — Bridgy for webmentions, agent for original posts |
@@ -668,23 +725,28 @@ within the `growth-agent/` project. This follows the proven pattern from `notebo
 1. ~~**Umami API access**~~ — ✅ API key generated. Free plan includes REST API.
 2. ~~**Scaleway Python runtime**~~ — ✅ `python311` confirmed available.
 3. ~~**Dependency management**~~ — ✅ Using `uv` (not Poetry, not pip).
-4. **Mastodon OAuth App** — Deferred. Will create when publishing node is implemented.
+4. **Mastodon OAuth App** — Deferred to Phase 1a.
    - Scopes needed: `read:accounts`, `read:statuses`, `write:statuses`
    - Create at mastodon.social → Settings → Development
-5. **Bluesky App Password** — Deferred. Will generate when publishing node is implemented.
+5. **Bluesky App Password** — Deferred to Phase 1a.
    - Generate at bsky.app → Settings → App Passwords
-6. ~~**S3 prefix permissions**~~ — ✅ Confirmed working in production. Existing SCW credentials
-   can write to `my-imagestore` bucket under `growth-agent/` prefix.
-7. ~~**Scaleway Python packaging with uv**~~ — ✅ Using `uv export > requirements.txt`
-   to generate requirements.txt for Scaleway's build step.
+6. ~~**S3 prefix permissions**~~ — ✅ Confirmed working in production.
+7. ~~**Scaleway Python packaging with uv**~~ — ✅ Using `uv export > requirements.txt`.
+8. ~~**LLM structured output**~~ — ✅ IONOS supports `json_schema` response format.
+   Using `langchain-openai` `ChatOpenAI.with_structured_output()` with Pydantic models.
+9. ~~**Page content for post generation**~~ — ✅ Solved via HTTP-based `page_meta.py`.
+   Fetches `<meta name="description">` from any page on fretchen.eu.
+10. ~~**Approval interface**~~ — ✅ Decided: Minimal web UI for editing and scheduled
+    publishing. Optional email notification via Scaleway TEM deferred to Phase 1b.
 
-### Must resolve before Phase 1:
+### Must resolve before Phase 1a:
 
-_None — all blockers resolved. Ready to start._
+11. **Mastodon OAuth app creation** — needed for posting.
+12. **Bluesky app password generation** — needed for posting.
 
 ### Decide during Phase 2:
 
-8. **Approval UI** — Telegram bot vs. simple web page vs. CLI tool?
+8. ~~**Approval UI**~~ — ✅ Decided: Email notification + web UI (see §9 Node 6).
 9. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
 10. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
 11. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
@@ -693,7 +755,8 @@ _None — all blockers resolved. Ready to start._
 ### Evaluate for Phase 3:
 
 12. **Threads API** — Apply for Meta App Review, test API limitations
-13. **Auto-approval** — Define confidence threshold for skipping human review
+13. ~~**Auto-approval**~~ — Removed. Phase 0 showed posts consistently need human editing.
+    Revisit only if LLM quality improves significantly.
 
 ---
 
@@ -713,15 +776,25 @@ BLUESKY_APP_PASSWORD     # Deferred — generate when publishing node ready
 ## Python Dependencies (managed via `uv`, defined in `pyproject.toml`)
 
 ```
-langgraph>=0.2
-langchain-core>=0.3
+# Core (installed)
 httpx>=0.27              # HTTP client for APIs
 boto3>=1.34              # S3 access
 pydantic>=2.0            # State validation
-atproto>=0.0.50          # Bluesky AT Protocol SDK (Phase 1b)
-Mastodon.py>=1.8         # Mastodon API client (Phase 1b)
-pytest>=8.0              # Testing
-ruff>=0.4                # Linting
+langchain-openai>=0.2    # Structured output via ChatOpenAI.with_structured_output()
+
+# Phase 1a
+atproto>=0.0.50          # Bluesky AT Protocol SDK
+Mastodon.py>=1.8         # Mastodon API client
+
+# Phase 2
+langgraph>=0.2           # Multi-step workflow orchestration
+
+# Dev (installed)
+pytest>=8.0
+ruff>=0.4
+jupyter>=1.0
+ipykernel>=6.0
+python-dotenv>=1.0
 ```
 
 ---

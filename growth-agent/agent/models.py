@@ -36,6 +36,28 @@ class SocialMetrics(BaseModel):
     top_posts: list[dict] = Field(default_factory=list)
 
 
+class PageForSocial(BaseModel):
+    """A blog page recommended for social media promotion."""
+
+    url: str
+    title: str
+    reason: str
+
+
+class LLMAnalysis(BaseModel):
+    """Structured LLM output for website analytics analysis."""
+
+    top_topics: list[str] = Field(description="Most popular topics based on page views")
+    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
+    best_pages_for_social: list[PageForSocial] = Field(
+        description="Blog pages best suited for social media promotion"
+    )
+    content_gaps: list[str] = Field(description="Topics the audience wants but are underrepresented")
+    growth_opportunities: list[str] = Field(
+        description="Actionable growth opportunities based on the data"
+    )
+
+
 class Insights(BaseModel):
     """Combined insights from all data sources."""
 

@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
 export default [
   // Ignore patterns first
@@ -66,7 +67,7 @@ export default [
 
   // Test files configuration
   {
-    files: ["test/**/*.js", "**/*.test.js"],
+    files: ["test/**/*.js", "test/**/*.ts", "**/*.test.js", "**/*.test.ts"],
     languageOptions: {
       globals: {
         describe: "readonly",
@@ -81,6 +82,22 @@ export default [
     },
     rules: {
       "no-unused-expressions": "off",
+    },
+  },
+
+  // TypeScript files configuration
+  {
+    files: ["**/*.ts"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: "module",
+      },
+    },
+    rules: {
+      "no-unused-vars": "off",
+      "no-undef": "off",
     },
   },
 ];

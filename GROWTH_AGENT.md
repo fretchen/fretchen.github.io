@@ -98,8 +98,8 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 | Platform  | API                     | Auth                    | Status        |
 | --------- | ----------------------- | ----------------------- | ------------- |
-| Mastodon  | REST API (v1/v2)        | OAuth2 Bearer Token     | **Phase 1** (auth deferred until publishing node) |
-| Bluesky   | AT Protocol (atproto)   | App Password            | **Phase 1** (auth deferred until publishing node) |
+| Mastodon  | REST API (v1/v2)        | OAuth2 Bearer Token     | **Phase 1** ✅ OAuth app created |
+| Bluesky   | AT Protocol (atproto)   | App Password            | **Phase 1** ✅ App password generated |
 | Threads   | Meta Threads API        | Instagram OAuth + Token | **Phase 2** ⚠ |
 
 > ⚠ **Threads API** requires Meta App Review and Instagram Business account.
@@ -143,7 +143,8 @@ growth-agent/
 │   ├── 02_llm_insights.ipynb
 │   ├── 03_content_creation.ipynb
 │   ├── 04_s3_state.ipynb
-│   └── 05_social_posting.ipynb
+│   ├── 05_social_posting.ipynb
+│   └── 06_approval.ipynb          # Phase 1a: review, edit & approve drafts
 │
 ├── handler.py              # (Phase 1b) Scaleway Function entry point
 ├── serverless.yml          # (Phase 1b) Scaleway deployment config
@@ -151,6 +152,9 @@ growth-agent/
 └── test/
     └── ...
 ```
+
+**Approval UI** (Phase 1b): Static page lives in `website/pages/growth/` — part of the
+main website build, uses Wagmi wallet auth. Communicates with the growth-agent API.
 
 > **Note:** `growth-agent/` is its own subproject in the monorepo, managed with `uv`
 > (not Poetry like `notebooks/`). It has its own `pyproject.toml` and `uv.lock`.
@@ -174,6 +178,7 @@ provider:
     UMAMI_API_TOKEN: ${env:UMAMI_API_TOKEN}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
+    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
   env:
     MASTODON_INSTANCE: "https://mastodon.social"
     BLUESKY_HANDLE: "fretchen.eu"
@@ -204,7 +209,7 @@ functions:
 
   growth-api:
     handler: handler.api_handle
-    description: "Growth Agent API - approval queue, status, manual trigger"
+    description: "Growth Agent API - draft approval, status, manual trigger"
     min_scale: 0
     max_scale: 1
     custom_domains:
@@ -213,6 +218,10 @@ functions:
 
 > **Note:** Scaleway Cron Triggers are configured via Console, not YAML.
 > Set CRON expression `0 8 * * *` pointing to the `growth-agent` function.
+>
+> The `growth-api` function serves the draft approval API used by the static
+> approval page in `website/pages/growth/`. It verifies the caller's ETH wallet
+> signature matches the `OWNER_ETH_ADDRESS`.
 
 ---
 
@@ -439,30 +448,43 @@ Platform-specific formatting:
 
 ---
 
-## Node 6: Human Approval (Email + Web UI)
+## Node 6: Human Approval
 
-**Notification:** Scaleway TEM sends email when new drafts are available.
-Email contains draft previews and links to the approval UI.
+Two-stage approach: notebook-first for zero deployment overhead,
+then a wallet-authenticated website page for convenience.
 
-**Web UI:** `growth.fretchen.eu/drafts` — minimal HTML page:
-- View all pending drafts with preview
-- **Edit** post text inline (textarea) — posts consistently need human editing
-- Set **scheduled publication time** via datepicker (`scheduled_at`)
-- Approve (moves to scheduled queue) or Reject (with reason)
+### Stage 1 — Notebook Approval (Phase 1a)
 
-**Endpoints:**
-- `GET /drafts` — returns pending drafts
-- `PUT /drafts/:id` — update draft content (edit)
-- `POST /drafts/:id/approve` — approve with `scheduled_at` timestamp
-- `POST /drafts/:id/reject` — reject with reason
+**`06_approval.ipynb`** reads `content_queue.json`, displays pending drafts,
+and provides an interactive editing workflow:
 
-**Scheduled Publishing:** The daily cron checks approved drafts where
-`scheduled_at <= now()` and publishes them. This allows building a queue
-of edited posts days or weeks in advance.
+1. Load drafts with `status: pending_approval`
+2. Display each draft (channel, language, content, source link)
+3. Edit content inline in notebook cells
+4. Set `scheduled_at` datetime
+5. Mark approved or rejected → writes back to `content_queue.json`
 
-> **Why Email + Web UI?** Scaleway TEM is sending-only (no reply parsing).
-> Email serves as push notification, the web UI handles editing.
-> This avoids fragile email reply parsing while enabling mobile review.
+No API, no deployment, no server. Works with local state (notebooks) or S3.
+
+### Stage 2 — Website Approval Page (Phase 1b)
+
+**Static page at `website/pages/growth/`** — ships with the main Vite+Vike build.
+
+- **Wallet auth:** Connect via Wagmi → verify `address === OWNER_ADDRESS`
+- **Draft list:** Fetches pending drafts from `growth.fretchen.eu/drafts` API
+- **Edit:** Inline textarea for each draft
+- **Schedule:** Set `scheduled_at` via datepicker
+- **Approve / Reject** buttons
+
+The page is purely a frontend — all state mutations go through the
+growth-agent API (`growth-api` Scaleway Function), which verifies
+the caller's ETH wallet signature before accepting writes.
+
+### Scheduled Publishing
+
+The daily cron checks approved drafts where `scheduled_at <= now()`
+and publishes them. This allows building a queue of edited posts
+days or weeks in advance.
 
 ---
 
@@ -563,13 +585,16 @@ Anforderungen:
 6. **Content Planning** — generate 5-10 draft ideas for the week
 7. **Content Creation** — draft posts for top 5 ideas
 
-## Human (async, via API)
+## Human (async)
 
-8. **Review drafts** — approve/reject via `growth.fretchen.eu/drafts`
+8. **Review drafts** — edit/approve/reject via notebook (Phase 1a) or website page (Phase 1b)
 
 ---
 
-# 12. API Endpoints (growth.fretchen.eu)
+# 12. API Endpoints (growth.fretchen.eu) — Phase 1b
+
+These endpoints are served by the `growth-api` Scaleway Function.
+All write endpoints require an EIP-191 signature from `OWNER_ETH_ADDRESS`.
 
 | Method | Path              | Description                              |
 | ------ | ----------------- | ---------------------------------------- |
@@ -583,6 +608,7 @@ Anforderungen:
 | GET    | `/health`         | Health check                             |
 
 > Path-based routing in a single function, matching x402_facilitator pattern.
+> Not needed during Phase 1a — the notebook reads/writes state directly.
 
 ---
 
@@ -651,39 +677,44 @@ within the `growth-agent/` project. This follows the proven pattern from `notebo
 4. **IONOS supports `response_format: json_schema` with `strict: true`** — OpenAI-compatible
    structured output works out of the box.
 
-## Phase 1a — Edit, Schedule & Publish
+## Phase 1a — Notebook Approval, Posting & Scheduling
 
-Goal: Publish agent-generated posts to Mastodon and Bluesky with a human-edit workflow
-and scheduled publishing queue.
+Goal: Edit and approve drafts in a notebook, publish to Mastodon and Bluesky,
+with a scheduled publishing queue. No deployment required.
 
-- [ ] Create Mastodon OAuth app (mastodon.social → Settings → Development)
-- [ ] Generate Bluesky app password (bsky.app → Settings → App Passwords)
+- [x] Create Mastodon OAuth app (mastodon.social → Settings → Development) ✅
+- [x] Generate Bluesky app password (bsky.app → Settings → App Passwords) ✅
 - [ ] Implement Mastodon posting client (`agent/platforms/mastodon.py`)
 - [ ] Implement Bluesky posting client (`agent/platforms/bluesky.py`)
 - [ ] Validate posting in `05_social_posting.ipynb`
 - [ ] Add `scheduled_at` field to `Draft` model (when to publish)
+- [ ] Create `06_approval.ipynb` — notebook-based draft review:
+  - Load pending drafts from `content_queue.json`
+  - Display each draft with channel, language, content preview
+  - Edit content inline in notebook cells
+  - Set `scheduled_at` datetime
+  - Mark approved / rejected → write back to state
 - [ ] Implement scheduled publisher: process approved drafts where `scheduled_at <= now`
-- [ ] Minimal approval web UI at `growth.fretchen.eu/drafts`:
-  - View pending drafts
-  - **Edit** post text inline (not just approve/reject)
-  - Set `scheduled_at` date/time via datepicker
-  - Approve / Reject buttons
-- [ ] API endpoints: `GET /drafts`, `POST /drafts/:id/approve`, `POST /drafts/:id/reject`, `PUT /drafts/:id` (edit)
 
-## Phase 1b — Scaleway Deployment & Cron
+## Phase 1b — Scaleway Deployment, Cron & Approval Website
 
-Goal: Run the full pipeline (ingest → insights → content → queue) as a daily serverless function.
+Goal: Deploy the pipeline as a daily serverless function AND add a wallet-authenticated
+approval page to the website — replacing the notebook workflow for convenience.
 
 - [x] Scaffold `growth-agent/` with pyproject.toml (uv) — done in Phase 0
 - [x] Implement local state storage (read/write JSON) — done in Phase 0
 - [x] Implement Umami analytics ingestion — done in Phase 0
 - [x] LLM insight generation with structured output — done in Phase 0
 - [x] Content planning + draft generation with page descriptions — done in Phase 0
-- [ ] `handler.py` — Scaleway Function entry point
+- [ ] `handler.py` — Scaleway Function entry point (cron + API)
 - [ ] `serverless.yml` — deployment config
 - [ ] S3 state storage (replace LocalStorage with S3Storage in production)
 - [ ] Daily Cron trigger (Scaleway Console → `0 8 * * *`)
-- [ ] Optional: Email notification via Scaleway TEM on each run with draft summary
+- [ ] API endpoints for draft management (see §12) with EIP-191 wallet auth
+- [ ] Static approval page in `website/pages/growth/`:
+  - Wagmi wallet connection → owner address check
+  - List/edit/schedule/approve/reject drafts
+  - Calls growth-agent API (`growth.fretchen.eu`)
 
 ## Phase 2 — Performance Feedback & Intelligence
 
@@ -725,28 +756,25 @@ Goal: Run the full pipeline (ingest → insights → content → queue) as a dai
 1. ~~**Umami API access**~~ — ✅ API key generated. Free plan includes REST API.
 2. ~~**Scaleway Python runtime**~~ — ✅ `python311` confirmed available.
 3. ~~**Dependency management**~~ — ✅ Using `uv` (not Poetry, not pip).
-4. **Mastodon OAuth App** — Deferred to Phase 1a.
-   - Scopes needed: `read:accounts`, `read:statuses`, `write:statuses`
-   - Create at mastodon.social → Settings → Development
-5. **Bluesky App Password** — Deferred to Phase 1a.
-   - Generate at bsky.app → Settings → App Passwords
+4. ~~**Mastodon OAuth App**~~ — ✅ Created.
+5. ~~**Bluesky App Password**~~ — ✅ Generated.
 6. ~~**S3 prefix permissions**~~ — ✅ Confirmed working in production.
 7. ~~**Scaleway Python packaging with uv**~~ — ✅ Using `uv export > requirements.txt`.
 8. ~~**LLM structured output**~~ — ✅ IONOS supports `json_schema` response format.
    Using `langchain-openai` `ChatOpenAI.with_structured_output()` with Pydantic models.
 9. ~~**Page content for post generation**~~ — ✅ Solved via HTTP-based `page_meta.py`.
    Fetches `<meta name="description">` from any page on fretchen.eu.
-10. ~~**Approval interface**~~ — ✅ Decided: Minimal web UI for editing and scheduled
-    publishing. Optional email notification via Scaleway TEM deferred to Phase 1b.
+10. ~~**Approval interface**~~ — ✅ Decided: Notebook approval (Phase 1a), then
+    static website page with ETH wallet auth (Phase 1b). No email notifications.
 
-### Must resolve before Phase 1a:
+### Resolved before Phase 1a:
 
-11. **Mastodon OAuth app creation** — needed for posting.
-12. **Bluesky app password generation** — needed for posting.
+11. ~~**Mastodon OAuth app creation**~~ — ✅ Created.
+12. ~~**Bluesky app password generation**~~ — ✅ Generated.
 
 ### Decide during Phase 2:
 
-8. ~~**Approval UI**~~ — ✅ Decided: Email notification + web UI (see §9 Node 6).
+8. ~~**Approval UI**~~ — ✅ Decided: Notebook (1a) → Website with wallet auth (1b).
 9. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
 10. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
 11. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
@@ -769,8 +797,9 @@ IONOS_API_TOKEN          # Existing — IONOS AI Model Hub
 UMAMI_API_TOKEN          # ✅ Generated — cloud.umami.is API key
 SCW_ACCESS_KEY           # Existing — S3 access
 SCW_SECRET_KEY           # Existing — S3 access
-MASTODON_ACCESS_TOKEN    # Deferred — create when publishing node ready
-BLUESKY_APP_PASSWORD     # Deferred — generate when publishing node ready
+MAST_ACCESS_TOKEN    # ✅ Created — Mastodon OAuth app
+BLUESKY_APP_PASSWORD     # ✅ Generated — Bluesky app password
+OWNER_ETH_ADDRESS        # Phase 1b — wallet address for approval page auth
 ```
 
 ## Python Dependencies (managed via `uv`, defined in `pyproject.toml`)

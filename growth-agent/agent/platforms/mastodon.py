@@ -40,9 +40,7 @@ class MastodonClient:
         resp.raise_for_status()
 
     def get_account_statuses(self, account_id: str, limit: int = 20) -> list[dict]:
-        resp = self.client.get(
-            f"/api/v1/accounts/{account_id}/statuses", params={"limit": limit}
-        )
+        resp = self.client.get(f"/api/v1/accounts/{account_id}/statuses", params={"limit": limit})
         resp.raise_for_status()
         return resp.json()
 

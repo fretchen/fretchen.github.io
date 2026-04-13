@@ -104,6 +104,8 @@ class LLMClient:
                 from langchain_core.messages import AIMessage
 
                 langchain_messages.append(AIMessage(content=content))
+            else:
+                raise ValueError(f"Unsupported message role: {role!r}")
 
         return structured.invoke(langchain_messages)
 

@@ -86,6 +86,7 @@ Build an AI-powered **Social Media Growth Agent** that:
 | Component       | Technology                      | Justification                                       |
 | --------------- | ------------------------------- | --------------------------------------------------- |
 | Runtime         | Python 3.11 (Scaleway Function) | LangGraph ecosystem, rich social media libraries     |
+| Dep Management  | `uv`                            | Fast, modern Python package manager                  |
 | Deployment      | `serverless-scaleway-functions` | Matches existing scw_js/, x402_facilitator/ pattern  |
 | Trigger         | Scaleway Cron (daily)           | Serverless, no persistent infrastructure             |
 | State Storage   | S3 (`my-imagestore` bucket)     | Already used by scw_js/ for Merkle tree data         |
@@ -97,8 +98,8 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 | Platform  | API                     | Auth                    | Status        |
 | --------- | ----------------------- | ----------------------- | ------------- |
-| Mastodon  | REST API (v1/v2)        | OAuth2 Bearer Token     | **Phase 1**   |
-| Bluesky   | AT Protocol (atproto)   | App Password            | **Phase 1**   |
+| Mastodon  | REST API (v1/v2)        | OAuth2 Bearer Token     | **Phase 1** (auth deferred until publishing node) |
+| Bluesky   | AT Protocol (atproto)   | App Password            | **Phase 1** (auth deferred until publishing node) |
 | Threads   | Meta Threads API        | Instagram OAuth + Token | **Phase 2** ⚠ |
 
 > ⚠ **Threads API** requires Meta App Review and Instagram Business account.
@@ -118,10 +119,11 @@ Build an AI-powered **Social Media Growth Agent** that:
 # 5. Folder Structure
 
 ```
-growth_agent/
+growth-agent/
 │
 ├── handler.py              # Scaleway Function entry point
-├── requirements.txt        # Python dependencies
+├── pyproject.toml          # uv-managed dependencies
+├── uv.lock                 # Lockfile
 ├── serverless.yml          # Scaleway deployment config
 ├── .env.example            # Required environment variables
 │
@@ -153,6 +155,9 @@ growth_agent/
     ├── test_creation.py
     └── test_publishing.py
 ```
+
+> **Note:** `growth-agent/` is its own subproject in the monorepo, managed with `uv`
+> (not Poetry like `notebooks/`). It has its own `pyproject.toml` and `uv.lock`.
 
 ---
 
@@ -575,16 +580,52 @@ Anforderungen:
 
 # 14. Phase Plan
 
+## Phase 0 — Local Validation (Notebooks)
+
+Before any Scaleway deployment, validate each node interactively in Jupyter notebooks
+within the `growth-agent/` project. This follows the proven pattern from `notebooks/`
+(e.g. `ionos_llm.ipynb`, `x402_facilitator_demo.ipynb`).
+
+**Notebook: `growth-agent/notebooks/01_umami_ingest.ipynb`**
+- [ ] Call Umami REST API with token, inspect response structure
+- [ ] Parse page views, referrers, event funnels
+- [ ] Write parsed data to local JSON file (mock S3)
+
+**Notebook: `growth-agent/notebooks/02_llm_insights.ipynb`**
+- [ ] Load analytics JSON from previous notebook
+- [ ] Call IONOS LLM API with insight prompt
+- [ ] Inspect and iterate on prompt quality
+- [ ] Validate structured JSON output
+
+**Notebook: `growth-agent/notebooks/03_content_creation.ipynb`**
+- [ ] Load strategy + insights JSON
+- [ ] Call IONOS LLM with content planning + writing prompts
+- [ ] Generate sample Mastodon/Bluesky posts
+- [ ] Manual review: is quality publishable?
+
+**Notebook: `growth-agent/notebooks/04_s3_state.ipynb`**
+- [ ] Test S3 read/write with boto3 to `my-imagestore/growth-agent/`
+- [ ] Round-trip: write state → read state → verify
+
+**Notebook: `growth-agent/notebooks/05_social_posting.ipynb`** (Phase 1b)
+- [ ] Test Mastodon API posting (once OAuth app created)
+- [ ] Test Bluesky atproto posting (once app password generated)
+
+> Each notebook imports directly from `growth-agent/agent/` modules.
+> This ensures the same code runs in notebooks and in the deployed function.
+> Use `uv run jupyter notebook` or register kernel for VS Code.
+
 ## Phase 1 — MVP (Target: 2-3 weeks)
 
-- [ ] Scaffold `growth_agent/` with serverless.yml + handler
+- [ ] Scaffold `growth-agent/` with pyproject.toml (uv) + serverless.yml + handler
+- [ ] Implement S3 state storage (read/write JSON)
 - [ ] Implement Umami analytics ingestion
-- [ ] Implement Mastodon posting (OAuth2 app setup)
-- [ ] Implement Bluesky posting (atproto, app password)
-- [ ] Basic LLM content generation (IONOS Llama 3.3)
-- [ ] S3 state storage (read/write JSON)
+- [ ] Basic LLM insight generation (IONOS Llama 3.3)
+- [ ] Content planning + draft generation (LLM)
 - [ ] Manual trigger via API endpoint
-- [ ] Deploy to Scaleway
+- [ ] Deploy to Scaleway (analytics + insights only, no posting yet)
+- [ ] Implement Mastodon posting (OAuth2 app setup — create app when ready)
+- [ ] Implement Bluesky posting (atproto, app password — generate when ready)
 
 ## Phase 2 — Automation & Intelligence
 
@@ -614,7 +655,7 @@ Anforderungen:
 | Bluesky API changes            | atproto is versioned, pin SDK version              |
 | Threads API access denied      | Phase 2 only, Mastodon/Bluesky are sufficient MVP  |
 | LLM hallucination in posts     | Human review, factual grounding via blog content   |
-| Umami free plan limitations    | Check API access; fallback to manual data input    |
+| ~~Umami free plan limitations~~ | ~~Resolved: API key generated, REST API available~~ |
 | Scaleway Python cold starts    | Acceptable for daily cron (not latency-sensitive)  |
 | Bridgy conflict                | Both can coexist — Bridgy for webmentions, agent for original posts |
 
@@ -622,40 +663,37 @@ Anforderungen:
 
 # 16. Open Items & Decisions
 
+### Resolved:
+
+1. ~~**Umami API access**~~ — ✅ API key generated. Free plan includes REST API.
+2. ~~**Scaleway Python runtime**~~ — ✅ `python311` confirmed available.
+3. ~~**Dependency management**~~ — ✅ Using `uv` (not Poetry, not pip).
+4. **Mastodon OAuth App** — Deferred. Will create when publishing node is implemented.
+   - Scopes needed: `read:accounts`, `read:statuses`, `write:statuses`
+   - Create at mastodon.social → Settings → Development
+5. **Bluesky App Password** — Deferred. Will generate when publishing node is implemented.
+   - Generate at bsky.app → Settings → App Passwords
+6. ~~**S3 prefix permissions**~~ — ✅ Confirmed working in production. Existing SCW credentials
+   can write to `my-imagestore` bucket under `growth-agent/` prefix.
+7. ~~**Scaleway Python packaging with uv**~~ — ✅ Using `uv export > requirements.txt`
+   to generate requirements.txt for Scaleway's build step.
+
 ### Must resolve before Phase 1:
 
-1. **Umami API access** — Does the free plan include REST API?
-   Check at cloud.umami.is → API docs. If not, consider:
-   - Upgrade to paid plan (~$9/month)
-   - Manual analytics export as interim
-   - Browser automation as fallback (fragile)
-
-2. **Mastodon OAuth App** — Create app at mastodon.social → Settings → Development
-   - Scopes needed: `read:accounts`, `read:statuses`, `write:statuses`
-   - Store access token as Scaleway secret
-
-3. **Bluesky App Password** — Generate at bsky.app → Settings → App Passwords
-   - Store as Scaleway secret
-   - Consider using `@atproto/api` Python SDK
-
-4. **S3 prefix permissions** — Verify growth-agent can write to `my-imagestore` bucket
-   with existing SCW credentials
-
-5. **Scaleway Python runtime** — Verify `python311` is available in the current region
-   (nl-ams). Check Scaleway docs for Python function support.
+_None — all blockers resolved. Ready to start._
 
 ### Decide during Phase 2:
 
-6. **Approval UI** — Telegram bot vs. simple web page vs. CLI tool?
-7. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
-8. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
-9. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
-   Or migrate fully to agent-managed posting?
+8. **Approval UI** — Telegram bot vs. simple web page vs. CLI tool?
+9. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
+10. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
+11. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
+    Or migrate fully to agent-managed posting?
 
 ### Evaluate for Phase 3:
 
-10. **Threads API** — Apply for Meta App Review, test API limitations
-11. **Auto-approval** — Define confidence threshold for skipping human review
+12. **Threads API** — Apply for Meta App Review, test API limitations
+13. **Auto-approval** — Define confidence threshold for skipping human review
 
 ---
 
@@ -665,14 +703,14 @@ Anforderungen:
 
 ```
 IONOS_API_TOKEN          # Existing — IONOS AI Model Hub
-MASTODON_ACCESS_TOKEN    # New — mastodon.social OAuth2 token
-BLUESKY_APP_PASSWORD     # New — bsky.app app password
-UMAMI_API_TOKEN          # New — cloud.umami.is API key (if available)
+UMAMI_API_TOKEN          # ✅ Generated — cloud.umami.is API key
 SCW_ACCESS_KEY           # Existing — S3 access
 SCW_SECRET_KEY           # Existing — S3 access
+MASTODON_ACCESS_TOKEN    # Deferred — create when publishing node ready
+BLUESKY_APP_PASSWORD     # Deferred — generate when publishing node ready
 ```
 
-## Python Dependencies (requirements.txt)
+## Python Dependencies (managed via `uv`, defined in `pyproject.toml`)
 
 ```
 langgraph>=0.2
@@ -680,8 +718,10 @@ langchain-core>=0.3
 httpx>=0.27              # HTTP client for APIs
 boto3>=1.34              # S3 access
 pydantic>=2.0            # State validation
-atproto>=0.0.50          # Bluesky AT Protocol SDK
-Mastodon.py>=1.8         # Mastodon API client
+atproto>=0.0.50          # Bluesky AT Protocol SDK (Phase 1b)
+Mastodon.py>=1.8         # Mastodon API client (Phase 1b)
+pytest>=8.0              # Testing
+ruff>=0.4                # Linting
 ```
 
 ---
@@ -699,8 +739,8 @@ Mastodon.py>=1.8         # Mastodon API client
 │       │                                                          │
 │       │ reads                                                    │
 │       ▼                                                          │
-│  growth_agent/     ← NEW                                         │
-│  (Python 3.11)                                                   │
+│  growth-agent/     ← NEW                                         │
+│  (Python 3.11, uv)                                               │
 │  Reads: Umami API, blog content index                            │
 │  Writes: Mastodon, Bluesky posts                                 │
 │  State: S3 (growth-agent/ prefix)                                │

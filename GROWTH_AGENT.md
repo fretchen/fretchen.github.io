@@ -39,9 +39,8 @@ Build an AI-powered **Social Media Growth Agent** that:
          │                      │
          ▼                      ▼
 ┌─────────────────────────────────────────┐
-│         Growth Agent (Python)           │
-│         Scaleway Function               │
-│         Daily Cron Trigger              │
+│  growth-agent/ (Python 3.11, Cron)      │
+│  Scaleway Function — Daily 08:00 UTC    │
 │                                         │
 │  ┌─────────────┐  ┌──────────────────┐  │
 │  │ Analytics    │→ │ Insight          │  │
@@ -59,22 +58,39 @@ Build an AI-powered **Social Media Growth Agent** that:
 │                   └───────┬──────────┘   │
 │                           ▼              │
 │                   ┌──────────────────┐   │
-│                   │ Human Approval   │   │
-│                   │ (API Queue)      │   │
-│                   └───────┬──────────┘   │
-│                           ▼              │
-│                   ┌──────────────────┐   │
 │                   │ Publishing       │   │
 │                   │ (Mastodon API,   │   │
 │                   │  Bluesky atproto)│   │
 │                   └──────────────────┘   │
+└──────────────┬──────────────────────────┘
+               │ reads/writes
+               ▼
+┌──────────────────────┐
+│ S3 State Storage     │
+│ (my-imagestore/      │
+│  growth-agent/*.json)│
+└──────────────────────┘
+               ▲ reads/writes
+               │
+┌──────────────┴──────────────────────────┐
+│  scw_js/growth_api.js (Node 22, HTTP)   │
+│  Draft Approval API — growth.fretchen.eu│
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ Path-based routing:              │   │
+│  │ GET  /drafts, /status, /insights │   │
+│  │ PUT  /drafts/:id                 │   │
+│  │ POST /drafts/:id/approve|reject  │   │
+│  └──────────────────────────────────┘   │
+│  Auth: viem.verifyMessage() EIP-191     │
+└──────────────┬──────────────────────────┘
+               │ HTTP
+               ▼
+┌─────────────────────────────────────────┐
+│  website/pages/growth/ (Vite+Vike)      │
+│  Wagmi wallet connect → Owner check     │
+│  Draft list, edit, schedule, approve    │
 └─────────────────────────────────────────┘
-         │
-         ▼
-┌──────────────────┐
-│ S3 State Storage │
-│ (my-imagestore)  │
-└──────────────────┘
 ```
 
 ---
@@ -85,9 +101,10 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 | Component       | Technology                      | Justification                                       |
 | --------------- | ------------------------------- | --------------------------------------------------- |
-| Runtime         | Python 3.11 (Scaleway Function) | LangGraph ecosystem, rich social media libraries     |
-| Dep Management  | `uv`                            | Fast, modern Python package manager                  |
-| Deployment      | `serverless-scaleway-functions` | Matches existing scw_js/, x402_facilitator/ pattern  |
+| Runtime (Cron)  | Python 3.11 (Scaleway Function) | LLM ecosystem, social media libraries                |
+| Runtime (API)   | Node 22 (Scaleway Function)     | Reuses scw_js/ — viem, S3, pino already available    |
+| Dep Management  | `uv` (Python), `npm` (TypeScript) | Separate toolchains per runtime                    |
+| Deployment      | `serverless-scaleway-functions` | Two namespaces: growth-agent (Python), scw_js (Node) |
 | Trigger         | Scaleway Cron (daily)           | Serverless, no persistent infrastructure             |
 | State Storage   | S3 (`my-imagestore` bucket)     | Already used by scw_js/ for Merkle tree data         |
 | LLM             | IONOS AI Model Hub              | Existing integration, OpenAI-compatible API          |
@@ -118,6 +135,8 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 # 5. Folder Structure
 
+### growth-agent/ (Python — AI pipeline + Cron)
+
 ```
 growth-agent/
 │
@@ -133,9 +152,10 @@ growth-agent/
 │   ├── umami_client.py     # Umami Cloud REST API client
 │   ├── page_meta.py        # HTTP-based page metadata fetcher (title, description from meta tags)
 │   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production)
+│   ├── publisher.py        # Publish approved drafts to platforms
 │   ├── platforms/           # (Phase 1a)
-│   │   ├── mastodon.py     # Mastodon REST API client
-│   │   └── bluesky.py      # AT Protocol client
+│   │   ├── mastodon.py     # Mastodon REST API client (httpx)
+│   │   └── bluesky.py      # AT Protocol client (httpx)
 │   └── graph.py            # (Phase 2) LangGraph workflow definition
 │
 ├── notebooks/
@@ -146,24 +166,45 @@ growth-agent/
 │   ├── 05_social_posting.ipynb
 │   └── 06_approval.ipynb          # Phase 1a: review, edit & approve drafts
 │
-├── handler.py              # (Phase 1b) Scaleway Function entry point
-├── serverless.yml          # (Phase 1b) Scaleway deployment config
+├── handler.py              # (Phase 1b) Scaleway Function entry point (cron only, no API)
+├── serverless.yml          # (Phase 1b) Scaleway deployment config (Python runtime)
 │
 └── test/
     └── ...
 ```
 
-**Approval UI** (Phase 1b): Static page lives in `website/pages/growth/` — part of the
-main website build, uses Wagmi wallet auth. Communicates with the growth-agent API.
+### scw_js/ additions (TypeScript — Draft Approval API)
+
+The API lives in `scw_js/` alongside existing functions (LLM, image gen, leaf history).
+This avoids a new project, reuses `viem`, `@aws-sdk/client-s3`, `pino`, and the
+existing Serverless Framework deployment.
+
+```
+scw_js/
+├── growth_api.js           # (Phase 1c) Handler: path-based routing for /drafts, /status, etc.
+├── growth_service.js       # (Phase 1c) S3 read/write for growth-agent/*.json + wallet auth
+├── serverless.yml          #            + new `growthapi` function entry
+├── tsup.config.js          #            + growth_api.js in entry array
+└── test/
+    └── growth_api.test.js  # (Phase 1c) Tests for API routes + auth
+```
+
+### website/ additions (Frontend — Approval UI)
+
+```
+website/pages/growth/
+└── +Page.tsx               # (Phase 1d) Draft approval page with Wagmi wallet auth
+```
 
 > **Note:** `growth-agent/` is its own subproject in the monorepo, managed with `uv`
 > (not Poetry like `notebooks/`). It has its own `pyproject.toml` and `uv.lock`.
+> The API in `scw_js/` shares the existing `package.json` and deployment pipeline.
 
 ---
 
 # 6. Scaleway Deployment
 
-## serverless.yml
+## growth-agent/serverless.yml (Python — Cron only)
 
 ```yaml
 service: growth-agent
@@ -178,7 +219,6 @@ provider:
     UMAMI_API_TOKEN: ${env:UMAMI_API_TOKEN}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
-    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
   env:
     MASTODON_INSTANCE: "https://mastodon.social"
     BLUESKY_HANDLE: "fretchen.eu"
@@ -194,11 +234,12 @@ package:
     - "!node_modules/**"
     - "!.env"
     - "!test/**"
+    - "!notebooks/**"
 
 functions:
   growth-agent:
     handler: handler.handle
-    description: "AI Growth Agent - daily social media content"
+    description: "AI Growth Agent - daily content pipeline + scheduled publishing"
     min_scale: 0
     max_scale: 1
     memory_limit: 1024
@@ -206,22 +247,37 @@ functions:
     # Cron: daily at 08:00 UTC
     # Configure via Scaleway Console → Triggers → CRON
     # Expression: 0 8 * * *
+```
 
-  growth-api:
-    handler: handler.api_handle
-    description: "Growth Agent API - draft approval, status, manual trigger"
+> **Note:** This namespace contains **only** the Python cron function.
+> No API handler — the approval API lives in `scw_js/`.
+
+## scw_js/serverless.yml additions (TypeScript — API)
+
+Add the growth API function to the existing `scw_js/serverless.yml`:
+
+```yaml
+# ... existing functions ...
+  growthapi:
+    handler: dist/growth_api.handle
+    description: "Growth Agent API - draft approval with wallet auth"
     min_scale: 0
     max_scale: 1
     custom_domains:
       - growth.fretchen.eu
 ```
 
-> **Note:** Scaleway Cron Triggers are configured via Console, not YAML.
-> Set CRON expression `0 8 * * *` pointing to the `growth-agent` function.
->
-> The `growth-api` function serves the draft approval API used by the static
-> approval page in `website/pages/growth/`. It verifies the caller's ETH wallet
-> signature matches the `OWNER_ETH_ADDRESS`.
+Additional secrets needed in the `scw_js/` provider block:
+
+```yaml
+  secret:
+    # ... existing secrets ...
+    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
+```
+
+> The `growthapi` function deploys alongside `genimgx402token`, `llm`, and `leafhistory`
+> in the same Scaleway namespace. It reuses the same S3 credentials and Node 22 runtime.
+> Wallet auth uses `viem.verifyMessage()` (already a dependency).
 
 ---
 
@@ -450,8 +506,9 @@ Platform-specific formatting:
 
 ## Node 6: Human Approval
 
-Two-stage approach: notebook-first for zero deployment overhead,
-then a wallet-authenticated website page for convenience.
+Three-stage approach: notebook-first for zero deployment overhead,
+then a TypeScript API in `scw_js/` for programmatic access,
+finally a wallet-authenticated website page for convenience.
 
 ### Stage 1 — Notebook Approval (Phase 1a)
 
@@ -466,7 +523,17 @@ and provides an interactive editing workflow:
 
 No API, no deployment, no server. Works with local state (notebooks) or S3.
 
-### Stage 2 — Website Approval Page (Phase 1b)
+### Stage 2 — Draft Approval API in scw_js/ (Phase 1c)
+
+**`scw_js/growth_api.js`** — new function in the existing `scw_js/` namespace.
+
+- Path-based routing (same pattern as `x402_facilitator`)
+- S3 read/write for `growth-agent/content_queue.json`
+- Wallet auth via `viem.verifyMessage()` + `OWNER_ETH_ADDRESS` env var
+- CORS headers for `fretchen.eu` origin
+- No new dependencies — reuses `@aws-sdk/client-s3`, `viem`, `pino`
+
+### Stage 3 — Website Approval Page (Phase 1d)
 
 **Static page at `website/pages/growth/`** — ships with the main Vite+Vike build.
 
@@ -477,8 +544,7 @@ No API, no deployment, no server. Works with local state (notebooks) or S3.
 - **Approve / Reject** buttons
 
 The page is purely a frontend — all state mutations go through the
-growth-agent API (`growth-api` Scaleway Function), which verifies
-the caller's ETH wallet signature before accepting writes.
+scw_js growth API, which verifies the caller's ETH wallet signature.
 
 ### Scheduled Publishing
 
@@ -587,13 +653,14 @@ Anforderungen:
 
 ## Human (async)
 
-8. **Review drafts** — edit/approve/reject via notebook (Phase 1a) or website page (Phase 1b)
+8. **Review drafts** — edit/approve/reject via notebook (Phase 1a), API (Phase 1c), or website page (Phase 1d)
 
 ---
 
-# 12. API Endpoints (growth.fretchen.eu) — Phase 1b
+# 12. API Endpoints (growth.fretchen.eu) — Phase 1c
 
-These endpoints are served by the `growth-api` Scaleway Function.
+These endpoints are served by the `growthapi` function in **`scw_js/`** (Node 22).
+The static approval page (Phase 1d) and any other client consumes these endpoints.
 All write endpoints require an EIP-191 signature from `OWNER_ETH_ADDRESS`.
 
 | Method | Path              | Description                              |
@@ -607,7 +674,9 @@ All write endpoints require an EIP-191 signature from `OWNER_ETH_ADDRESS`.
 | GET    | `/insights`       | Latest insights and performance data     |
 | GET    | `/health`         | Health check                             |
 
-> Path-based routing in a single function, matching x402_facilitator pattern.
+> Path-based routing in a single function, matching `x402_facilitator` pattern.
+> Implementation lives in `scw_js/growth_api.js` + `scw_js/growth_service.js`.
+> Auth uses `viem.verifyMessage()` — no SIWE or web3.py needed.
 > Not needed during Phase 1a — the notebook reads/writes state directly.
 
 ---
@@ -684,37 +753,67 @@ with a scheduled publishing queue. No deployment required.
 
 - [x] Create Mastodon OAuth app (mastodon.social → Settings → Development) ✅
 - [x] Generate Bluesky app password (bsky.app → Settings → App Passwords) ✅
-- [ ] Implement Mastodon posting client (`agent/platforms/mastodon.py`)
-- [ ] Implement Bluesky posting client (`agent/platforms/bluesky.py`)
-- [ ] Validate posting in `05_social_posting.ipynb`
-- [ ] Add `scheduled_at` field to `Draft` model (when to publish)
-- [ ] Create `06_approval.ipynb` — notebook-based draft review:
+- [x] Implement Mastodon posting client (`agent/platforms/mastodon.py`) ✅
+- [x] Implement Bluesky posting client (`agent/platforms/bluesky.py`) ✅
+- [x] Validate posting in `05_social_posting.ipynb` ✅
+- [x] Add `scheduled_at` field to `Draft` model (when to publish) ✅
+- [x] Create `06_approval.ipynb` — notebook-based draft review: ✅
   - Load pending drafts from `content_queue.json`
   - Display each draft with channel, language, content preview
   - Edit content inline in notebook cells
   - Set `scheduled_at` datetime
   - Mark approved / rejected → write back to state
-- [ ] Implement scheduled publisher: process approved drafts where `scheduled_at <= now`
+- [x] Implement scheduled publisher: process approved drafts where `scheduled_at <= now` ✅
 
-## Phase 1b — Scaleway Deployment, Cron & Approval Website
+## Phase 1b — Python Cron Deployment (PR: `growth-agent/`)
 
-Goal: Deploy the pipeline as a daily serverless function AND add a wallet-authenticated
-approval page to the website — replacing the notebook workflow for convenience.
+Goal: Deploy the AI pipeline as a Scaleway Python Function with cron trigger.
+**Cron only — no API, no wallet auth.** Self-contained PR touching only `growth-agent/`.
 
 - [x] Scaffold `growth-agent/` with pyproject.toml (uv) — done in Phase 0
 - [x] Implement local state storage (read/write JSON) — done in Phase 0
 - [x] Implement Umami analytics ingestion — done in Phase 0
 - [x] LLM insight generation with structured output — done in Phase 0
 - [x] Content planning + draft generation with page descriptions — done in Phase 0
-- [ ] `handler.py` — Scaleway Function entry point (cron + API)
-- [ ] `serverless.yml` — deployment config
-- [ ] S3 state storage (replace LocalStorage with S3Storage in production)
+- [ ] `handler.py` — Scaleway Function entry point (cron handler only):
+  - Daily: analytics ingest, publish approved drafts, performance update
+  - Weekly (Monday): LLM insights, strategy update, content creation
+  - Uses `S3Storage` for all state
+- [ ] `serverless.yml` — Python 3.11, single function, no API handler
+- [ ] `requirements.txt` via `uv export` for Scaleway packaging
+- [ ] Tests for handler (cron logic, S3 mocking)
 - [ ] Daily Cron trigger (Scaleway Console → `0 8 * * *`)
-- [ ] API endpoints for draft management (see §12) with EIP-191 wallet auth
-- [ ] Static approval page in `website/pages/growth/`:
+
+## Phase 1c — Draft Approval API (PR: `scw_js/`)
+
+Goal: TypeScript API for draft management, deployed in the existing `scw_js/` namespace.
+Reuses `viem`, `@aws-sdk/client-s3`, `pino`. Self-contained PR touching only `scw_js/`.
+
+- [ ] `growth_api.js` — handler with path-based routing (see §12):
+  - `GET /drafts`, `GET /status`, `GET /insights`, `GET /health`
+  - `PUT /drafts/:id` (edit content)
+  - `POST /drafts/:id/approve`, `POST /drafts/:id/reject`
+  - `POST /trigger` (manual agent run — future)
+- [ ] `growth_service.js` — S3 read/write for `growth-agent/*.json`:
+  - Read/write `content_queue.json` (drafts, approved, published, rejected)
+  - Read `insights.json`, `strategy.json`, `performance.json`
+  - Wallet auth: `viem.verifyMessage()` + `OWNER_ETH_ADDRESS` env check
+- [ ] CORS headers for `fretchen.eu` origin
+- [ ] Add `growthapi` function to `serverless.yml`
+- [ ] Add `growth_api.js` to `tsup.config.js` entry array
+- [ ] Add `OWNER_ETH_ADDRESS` to secrets in `serverless.yml`
+- [ ] Tests for API routes + wallet auth (`growth_api.test.js`)
+
+## Phase 1d — Approval Website (PR: `website/`)
+
+Goal: Static approval page in the website, authenticated via ETH wallet.
+Depends on Phase 1c API being deployed. Self-contained PR touching only `website/`.
+
+- [ ] Static page in `website/pages/growth/+Page.tsx`:
   - Wagmi wallet connection → owner address check
   - List/edit/schedule/approve/reject drafts
-  - Calls growth-agent API (`growth.fretchen.eu`)
+  - Calls growth API (`growth.fretchen.eu`)
+- [ ] No CORS changes needed (handled in Phase 1c)
 
 ## Phase 2 — Performance Feedback & Intelligence
 
@@ -746,6 +845,7 @@ approval page to the website — replacing the notebook workflow for convenience
 | ~~Umami free plan limitations~~ | ~~Resolved: API key generated, REST API available~~ |
 | Scaleway Python cold starts    | Acceptable for daily cron (not latency-sensitive)  |
 | Bridgy conflict                | Both can coexist — Bridgy for webmentions, agent for original posts |
+| S3 state race condition        | Cron runs daily at fixed time, API writes are rare — low conflict risk. S3 is eventually consistent but sufficient for single-user admin workflow |
 
 ---
 
@@ -764,8 +864,9 @@ approval page to the website — replacing the notebook workflow for convenience
    Using `langchain-openai` `ChatOpenAI.with_structured_output()` with Pydantic models.
 9. ~~**Page content for post generation**~~ — ✅ Solved via HTTP-based `page_meta.py`.
    Fetches `<meta name="description">` from any page on fretchen.eu.
-10. ~~**Approval interface**~~ — ✅ Decided: Notebook approval (Phase 1a), then
-    static website page with ETH wallet auth (Phase 1b). No email notifications.
+10. ~~**Approval interface**~~ — ✅ Decided: Notebook approval (Phase 1a), TypeScript API
+    in `scw_js/` with `viem.verifyMessage()` wallet auth (Phase 1c), then
+    static website page (Phase 1d). No email notifications. No SIWE/web3.py.
 
 ### Resolved before Phase 1a:
 
@@ -774,7 +875,7 @@ approval page to the website — replacing the notebook workflow for convenience
 
 ### Decide during Phase 2:
 
-8. ~~**Approval UI**~~ — ✅ Decided: Notebook (1a) → Website with wallet auth (1b).
+8. ~~**Approval UI**~~ — ✅ Decided: Notebook (1a) → Python Cron (1b) → TypeScript API in scw_js (1c) → Website with wallet auth (1d).
 9. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
 10. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
 11. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
@@ -792,15 +893,24 @@ approval page to the website — replacing the notebook workflow for convenience
 
 ## Environment Variables (Scaleway Console → Secrets)
 
+### growth-agent namespace (Python)
+
 ```
 IONOS_API_TOKEN          # Existing — IONOS AI Model Hub
 UMAMI_API_TOKEN          # ✅ Generated — cloud.umami.is API key
 SCW_ACCESS_KEY           # Existing — S3 access
 SCW_SECRET_KEY           # Existing — S3 access
-MAST_ACCESS_TOKEN    # ✅ Created — Mastodon OAuth app
+MASTODON_ACCESS_TOKEN    # ✅ Created — Mastodon OAuth app
 BLUESKY_APP_PASSWORD     # ✅ Generated — Bluesky app password
-OWNER_ETH_ADDRESS        # Phase 1b — wallet address for approval page auth
 ```
+
+### scw_js namespace (Node 22) — additional secret
+
+```
+OWNER_ETH_ADDRESS        # Phase 1c — wallet address for approval API auth
+```
+
+> All other scw_js secrets (`SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, etc.) already exist.
 
 ## Python Dependencies (managed via `uv`, defined in `pyproject.toml`)
 
@@ -811,9 +921,8 @@ boto3>=1.34              # S3 access
 pydantic>=2.0            # State validation
 langchain-openai>=0.2    # Structured output via ChatOpenAI.with_structured_output()
 
-# Phase 1a
-atproto>=0.0.50          # Bluesky AT Protocol SDK
-Mastodon.py>=1.8         # Mastodon API client
+# Phase 1a (no additional deps — clients use httpx directly)
+# atproto, Mastodon.py SDKs not needed
 
 # Phase 2
 langgraph>=0.2           # Multi-step workflow orchestration
@@ -825,6 +934,19 @@ jupyter>=1.0
 ipykernel>=6.0
 python-dotenv>=1.0
 ```
+
+## TypeScript Dependencies (Phase 1c — no new packages needed)
+
+The growth API in `scw_js/` reuses existing dependencies:
+
+```
+# Already in scw_js/package.json:
+@aws-sdk/client-s3       # S3 read/write for growth-agent/*.json
+viem                     # verifyMessage() for EIP-191 wallet auth
+pino                     # Structured logging
+```
+
+> No new `npm install` needed — all dependencies are already available.
 
 ---
 
@@ -838,17 +960,28 @@ python-dotenv>=1.0
 │  (Vite+Vike)       (Node 22)         (Node 22)                  │
 │  Blog content ←──── LLM + Images     Payment facilitator        │
 │  Umami tracking     S3 storage ─────→ S3 bucket (shared)        │
-│       │                                                          │
-│       │ reads                                                    │
-│       ▼                                                          │
-│  growth-agent/     ← NEW                                         │
-│  (Python 3.11, uv)                                               │
-│  Reads: Umami API, blog content index                            │
-│  Writes: Mastodon, Bluesky posts                                 │
-│  State: S3 (growth-agent/ prefix)                                │
-│  LLM: IONOS (shared token)                                       │
-│                                                                  │
+│       │             │                                            │
+│       │ reads       │ NEW: growth_api.js                         │
+│       │             │ Draft approval API                         │
+│       │             │ viem wallet auth                            │
+│       │             │ S3 read/write growth-agent/*.json           │
+│       ▼             │                                            │
+│  growth-agent/      │                                            │
+│  (Python 3.11, uv)  │                                            │
+│  Cron: AI pipeline   │                                           │
+│  Reads: Umami API   │                                            │
+│  Writes: Mastodon,  ├──── shared S3 state ────→ S3 bucket        │
+│   Bluesky posts     │     (growth-agent/)      (my-imagestore)   │
+│  LLM: IONOS         │                                            │
+│                     │                                            │
 │  Bridgy (external) ← coexists for webmention cross-posting      │
+└──────────────────────────────────────────────────────────────────┘
+
+PR Boundary Map:
+  Phase 1b PR: growth-agent/ only (Python cron)
+  Phase 1c PR: scw_js/ only (TypeScript API)
+  Phase 1d PR: website/ only (approval page)
+```
 └──────────────────────────────────────────────────────────────────┘
 ```
 

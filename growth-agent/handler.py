@@ -80,7 +80,7 @@ def ingest_analytics(storage: S3Storage) -> Insights:
 
     # Umami
     umami = UmamiClient(
-        api_key=os.environ["UMAMI_API_TOKEN"],
+        api_key=os.environ["UMAMI_API_KEY"],
         website_id=os.environ.get(
             "UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"
         ),

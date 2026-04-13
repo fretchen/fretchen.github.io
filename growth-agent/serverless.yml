@@ -1,4 +1,8 @@
 service: growth-agent
+
+# Read environment variables from a .env file
+useDotenv: true
+
 configValidationMode: off
 provider:
   name: scaleway
@@ -7,7 +11,7 @@ provider:
     IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
     MASTODON_ACCESS_TOKEN: ${env:MASTODON_ACCESS_TOKEN}
     BLUESKY_APP_PASSWORD: ${env:BLUESKY_APP_PASSWORD}
-    UMAMI_API_TOKEN: ${env:UMAMI_API_TOKEN}
+    UMAMI_API_KEY: ${env:UMAMI_API_KEY}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
   env:
@@ -23,18 +27,28 @@ plugins:
 package:
   patterns:
     - "!node_modules/**"
+    - "!.venv/**"
     - "!.env"
+    - "!.env.example"
+    - "!.git/**"
+    - "!.gitignore"
+    - "!.ruff_cache/**"
+    - "!.pytest_cache/**"
+    - "!__pycache__/**"
     - "!test/**"
     - "!notebooks/**"
+    - "!state/**"
+    - "!uv.lock"
+    - "!pyproject.toml"
+    - "!*.md"
 
 functions:
   growth-agent:
     handler: handler.handle
     description: "AI Growth Agent - daily content pipeline + scheduled publishing"
-    min_scale: 0
-    max_scale: 1
-    memory_limit: 1024
-    timeout: 300
-    # Cron: daily at 08:00 UTC
-    # Configure via Scaleway Console → Triggers → CRON
-    # Expression: 0 8 * * *
+    minScale: 0
+    maxScale: 1
+    memoryLimit: 1024
+    events:
+      - schedule:
+          rate: "0 8 * * *"

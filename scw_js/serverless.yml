@@ -15,6 +15,7 @@ provider:
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
+    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
 
 plugins:
   - serverless-scaleway-functions
@@ -41,3 +42,8 @@ functions:
     handler: dist/sc_llm.handle
   leafhistory:
     handler: dist/leaf_history.handle
+  growthapi:
+    handler: dist/growth_api.handle
+    description: "Growth Agent API - draft approval with wallet auth"
+    minScale: 0
+    maxScale: 1

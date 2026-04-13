@@ -34,7 +34,7 @@ ENV = {
     "SCW_ACCESS_KEY": "test-ak",
     "SCW_SECRET_KEY": "test-sk",
     "IONOS_API_TOKEN": "test-ionos",
-    "UMAMI_API_TOKEN": "test-umami",
+    "UMAMI_API_KEY": "test-umami",
     "MASTODON_ACCESS_TOKEN": "test-masto-token",
     "MASTODON_INSTANCE": "https://mastodon.social",
     "BLUESKY_APP_PASSWORD": "test-bsky-pw",

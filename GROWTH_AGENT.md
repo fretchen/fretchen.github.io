@@ -775,13 +775,13 @@ Goal: Deploy the AI pipeline as a Scaleway Python Function with cron trigger.
 - [x] Implement Umami analytics ingestion — done in Phase 0
 - [x] LLM insight generation with structured output — done in Phase 0
 - [x] Content planning + draft generation with page descriptions — done in Phase 0
-- [ ] `handler.py` — Scaleway Function entry point (cron handler only):
+- [x] `handler.py` — Scaleway Function entry point (cron handler only):
   - Daily: analytics ingest, publish approved drafts, performance update
   - Weekly (Monday): LLM insights, strategy update, content creation
   - Uses `S3Storage` for all state
-- [ ] `serverless.yml` — Python 3.11, single function, no API handler
-- [ ] `requirements.txt` via `uv export` for Scaleway packaging
-- [ ] Tests for handler (cron logic, S3 mocking)
+- [x] `serverless.yml` — Python 3.11, single function, no API handler
+- [x] `requirements.txt` via `uv export` for Scaleway packaging
+- [x] Tests for handler (cron logic, S3 mocking)
 - [ ] Daily Cron trigger (Scaleway Console → `0 8 * * *`)
 
 ## Phase 1c — Draft Approval API (PR: `scw_js/`)

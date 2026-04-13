@@ -1,0 +1,40 @@
+service: growth-agent
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: python311
+  secret:
+    IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
+    MASTODON_ACCESS_TOKEN: ${env:MASTODON_ACCESS_TOKEN}
+    BLUESKY_APP_PASSWORD: ${env:BLUESKY_APP_PASSWORD}
+    UMAMI_API_TOKEN: ${env:UMAMI_API_TOKEN}
+    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
+    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
+  env:
+    MASTODON_INSTANCE: "https://mastodon.social"
+    BLUESKY_HANDLE: "fretchen.eu"
+    UMAMI_WEBSITE_ID: "e41ae7d9-a536-426d-b40e-f2488b11bf95"
+    S3_BUCKET: "my-imagestore"
+    S3_STATE_PREFIX: "growth-agent/"
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!.env"
+    - "!test/**"
+    - "!notebooks/**"
+
+functions:
+  growth-agent:
+    handler: handler.handle
+    description: "AI Growth Agent - daily content pipeline + scheduled publishing"
+    min_scale: 0
+    max_scale: 1
+    memory_limit: 1024
+    timeout: 300
+    # Cron: daily at 08:00 UTC
+    # Configure via Scaleway Console → Triggers → CRON
+    # Expression: 0 8 * * *

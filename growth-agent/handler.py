@@ -81,9 +81,7 @@ def ingest_analytics(storage: S3Storage) -> Insights:
     # Umami
     umami = UmamiClient(
         api_key=os.environ["UMAMI_API_KEY"],
-        website_id=os.environ.get(
-            "UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"
-        ),
+        website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
     )
     try:
         start_at = ms_timestamp(days_ago=7)
@@ -124,14 +122,14 @@ def ingest_analytics(storage: S3Storage) -> Insights:
 
     # Bluesky metrics
     try:
-        bsky = BlueskyClient(
+        with BlueskyClient(
             handle=os.environ.get("BLUESKY_HANDLE", "fretchen.eu"),
             app_password=os.environ["BLUESKY_APP_PASSWORD"],
-        )
-        profile = bsky.get_profile()
-        insights.social_metrics["bluesky"] = SocialMetrics(
-            followers=profile.get("followersCount", 0),
-        )
+        ) as bsky:
+            profile = bsky.get_profile()
+            insights.social_metrics["bluesky"] = SocialMetrics(
+                followers=profile.get("followersCount", 0),
+            )
     except Exception:
         logger.exception("Bluesky metrics failed")
 
@@ -167,9 +165,7 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
             if draft.channel == "mastodon":
                 if mastodon_client is None:
                     mastodon_client = MastodonClient(
-                        instance=os.environ.get(
-                            "MASTODON_INSTANCE", "https://mastodon.social"
-                        ),
+                        instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
                 result = publish_draft(draft, mastodon_client)
@@ -183,9 +179,7 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
                 result = publish_draft(draft, bluesky_client)
                 platform_id = result.get("uri")
             else:
-                logger.warning(
-                    "Unknown channel %s for draft %s", draft.channel, draft.id
-                )
+                logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
                 still_approved.append(draft)
                 continue
 
@@ -208,6 +202,8 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
 
     if mastodon_client:
         mastodon_client.close()
+    if bluesky_client:
+        bluesky_client.close()
 
     queue.approved = still_approved
     storage.write("content_queue.json", queue)
@@ -235,14 +231,16 @@ def generate_insights(storage: S3Storage) -> LLMAnalysis | None:
         ]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
-            f"- {m.url}: {m.description or '(no description)'}"
-            for m in page_metas.values()
+            f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()
         )
 
-        insight_prompt = f"""You are a social media growth analyst for a technical blog (fretchen.eu).
+        blog_url = strategy.website_url
+        pillars = ", ".join(strategy.content_pillars)
+        insight_prompt = f"""You are a social media growth analyst \
+for a technical blog ({blog_url}).
 
-The blog covers: {', '.join(strategy.content_pillars)}
-Social channels: {', '.join(strategy.channels)}
+The blog covers: {pillars}
+Social channels: {", ".join(strategy.channels)}
 Target audience: {strategy.target_audience}
 
 Here is the website analytics data from the last 7 days:
@@ -316,9 +314,7 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     try:
         for page in pages_to_promote:
             meta = page_metas.get(page.url)
-            page_desc = (
-                (meta.description or "(no description)") if meta else "(no description)"
-            )
+            page_desc = (meta.description or "(no description)") if meta else "(no description)"
             page_title = (meta.title or page.title) if meta else page.title
 
             # Generate Mastodon EN post
@@ -326,11 +322,11 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You write engaging social media posts for a technical blog. Be concise and punchy.",
+                        "content": _system_prompt(strategy),
                     },
                     {
                         "role": "user",
-                        "content": _mastodon_prompt(page, page_title, page_desc, "en"),
+                        "content": _mastodon_prompt(page, page_title, page_desc, "en", strategy),
                     },
                 ],
                 temperature=0.8,
@@ -352,11 +348,11 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You write engaging social media posts for a technical blog. Be concise and punchy.",
+                        "content": _system_prompt(strategy),
                     },
                     {
                         "role": "user",
-                        "content": _bluesky_prompt(page, page_title, page_desc, "en"),
+                        "content": _bluesky_prompt(page, page_title, page_desc, "en", strategy),
                     },
                 ],
                 temperature=0.8,
@@ -384,7 +380,18 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     return len(new_drafts)
 
 
-def _mastodon_prompt(page, title: str, description: str, language: str) -> str:
+def _system_prompt(strategy: Strategy) -> str:
+    pillars = ", ".join(strategy.content_pillars)
+    return (
+        f"You write engaging social media posts for a technical blog ({strategy.website_url}). "
+        f"The blog covers: {pillars}. "
+        f"Target audience: {strategy.target_audience}. "
+        f"Tone: {strategy.tone}. "
+        "Be concise and punchy."
+    )
+
+
+def _mastodon_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
     url = f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Mastodon-Post (max 500 Zeichen) über diesen Blog-Artikel:
@@ -400,10 +407,11 @@ Anforderungen:
 - Link einbinden
 - 2-3 relevante Hashtags
 - Duzen, nicht Siezen
-- Ton: technisch aber verständlich, meinungsstark
+- Ton: {strategy.tone}
 
 Gib NUR den Post-Text zurück, nichts anderes."""
 
+    pillars = ", ".join(strategy.content_pillars)
     return f"""Write a Mastodon post (max 500 characters) about this blog article:
 
 URL: {url}
@@ -411,21 +419,21 @@ Title: {title}
 Article summary: {description}
 Why promote: {page.reason}
 
-Context about the blog: fretchen.eu covers political economy, game theory,
-quantum computing, blockchain/Web3, and AI tools.
+Context: {strategy.website_url} covers {pillars}.
+Target audience: {strategy.target_audience}
 
 Requirements:
 - Hook in the first line (question or bold claim)
 - Mention one specific insight from the article topic
 - Include the link
 - Add 2-3 relevant hashtags
-- Tone: technical but accessible, opinionated
+- Tone: {strategy.tone}
 
 Do NOT use emojis excessively. One is fine.
 Return ONLY the post text, nothing else."""
 
 
-def _bluesky_prompt(page, title: str, description: str, language: str) -> str:
+def _bluesky_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
     url = f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Bluesky-Post (max 300 Zeichen) über diesen Blog-Artikel:
@@ -439,7 +447,7 @@ Anforderungen:
 - Knackiger Hook
 - Link einbinden
 - Keine Hashtags (Bluesky-Kultur)
-- Ton: gesprächig, klug
+- Ton: {strategy.tone}
 
 Gib NUR den Post-Text zurück, nichts anderes."""
 
@@ -450,11 +458,13 @@ Title: {title}
 Article summary: {description}
 Why promote: {page.reason}
 
+Target audience: {strategy.target_audience}
+
 Requirements:
 - Concise, punchy hook
 - Include the link
 - No hashtags (Bluesky culture)
-- Tone: conversational, insightful
+- Tone: {strategy.tone}
 
 Return ONLY the post text, nothing else."""
 

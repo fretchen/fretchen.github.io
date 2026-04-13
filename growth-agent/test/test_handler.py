@@ -11,18 +11,15 @@ from agent.models import (
     Insights,
     LLMAnalysis,
     PageForSocial,
-    Performance,
-    Strategy,
     WebsiteAnalytics,
 )
 from handler import (
     create_drafts,
+    generate_insights,
     handle,
     ingest_analytics,
     publish_approved_drafts,
-    generate_insights,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -99,8 +96,10 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
     MockMasto.return_value.__exit__ = MagicMock(return_value=False)
 
     # Bluesky mock
-    bsky_inst = MockBsky.return_value
-    bsky_inst.get_profile.return_value = {"followersCount": 150}
+    bsky_ctx = MagicMock()
+    bsky_ctx.get_profile.return_value = {"followersCount": 150}
+    MockBsky.return_value.__enter__ = MagicMock(return_value=bsky_ctx)
+    MockBsky.return_value.__exit__ = MagicMock(return_value=False)
 
     result = ingest_analytics(storage)
 
@@ -119,9 +118,7 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("handler.publish_draft")
 @patch("handler.BlueskyClient")
 @patch("handler.MastodonClient")
-def test_publish_approved_drafts_publishes_due(
-    MockMasto, MockBsky, mock_publish, mock_storage
-):
+def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -162,9 +159,7 @@ def test_publish_approved_drafts_publishes_due(
 
 @patch("handler.publish_draft")
 @patch("handler.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(
-    MockMasto, mock_publish, mock_storage
-):
+def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -283,9 +278,7 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
     }
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {
-        "content": "Check out this post about quantum computing!"
-    }
+    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, analysis)

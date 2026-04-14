@@ -79,11 +79,9 @@ export function useGrowthApi(): UseGrowthApi {
   }, [address, signMessageAsync]);
 
   const fetchDrafts = useCallback(async () => {
-      const auth = await getAuth();
-      return apiFetch<ContentQueue>("drafts", auth);
-    },
-    [getAuth],
-  );
+    const auth = await getAuth();
+    return apiFetch<ContentQueue>("drafts", auth);
+  }, [getAuth]);
 
   const fetchInsights = useCallback(async () => {
     const auth = await getAuth();

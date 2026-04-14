@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run format:check && npm run test:coverage",
-    "dev:x402": "NODE_ENV=test node genimg_x402_token.js"
+    "dev:x402": "NODE_ENV=test node genimg_x402_token.js",
+    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts"
   },
   "keywords": [],
   "author": "",

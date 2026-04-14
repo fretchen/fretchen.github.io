@@ -909,14 +909,142 @@ Path-based routing handler. Delegates all logic to `growth_service.ts`.
 
 ## Phase 1d — Approval Website (PR: `website/`)
 
-Goal: Static approval page in the website, authenticated via ETH wallet.
+Goal: Static prerendered approval page in the website, authenticated via ETH wallet.
 Depends on Phase 1c API being deployed. Self-contained PR touching only `website/`.
+No new dependencies — uses existing Wagmi, Panda CSS, `useUmami`.
 
-- [ ] Static page in `website/pages/growth/+Page.tsx`:
-  - Wagmi wallet connection → owner address check
-  - List/edit/schedule/approve/reject drafts
-  - Calls growth API (Scaleway-generated function URL)
-- [ ] No CORS changes needed (handled in Phase 1c)
+**Complexity estimate:** ~400-600 LOC for the page, ~100-150 LOC for the API hook.
+Comparable to the assistant page, simpler than ImageGenerator.
+
+**Decisions:**
+- **Fresh signature per action** (not cached like assistant page) — growth API requires
+  `growth-api:<timestamp>` with 5-min replay window, so each action signs a new message.
+  MetaMask popup per action is acceptable for single-owner usage. Optimize later if needed.
+- **Unlisted page** — no navigation link, access via direct URL `/growth` only (owner-only).
+- **Optimistic UI updates** — after approve/reject, move card immediately in the UI,
+  then background re-fetch for consistency.
+- **Prerendered** — same pattern as imagegen/assistent pages.
+  Server renders "Connect wallet" state, client hydrates with wallet-dependent content
+  via the `hasMounted` pattern.
+- **Native `<input type="datetime-local">`** for scheduling — no date picker library needed.
+- **No CORS changes needed** — handled in Phase 1c API (sends `Access-Control-Allow-Origin: *`).
+
+### Step 1: TypeScript Interfaces (`website/types/growth.ts`)
+
+Mirror the interfaces from `scw_js/growth_service.ts` for type-safe API responses.
+
+- [ ] `Draft` — `id, created, channel, language, content, source_blog_post, hashtags, link, status, scheduled_at`
+- [ ] `ContentQueue` — `drafts[], approved[], published[], rejected[]`
+- [ ] `Insights` — `website_analytics, social_metrics, growth_opportunities, last_analysis`
+- [ ] `Performance` — `posts[]` with `PostMetrics`
+
+### Step 2: API Hook (`website/hooks/useGrowthApi.ts`)
+
+Custom hook that encapsulates all Growth API calls with wallet-based auth.
+
+- [ ] Uses `useAccount()` and `useSignMessage()` from Wagmi
+- [ ] `createAuthHeader()` helper:
+  - Signs message `"growth-api:<unix-timestamp>"` via `signMessageAsync()`
+  - Base64-encodes `{ address, signature, message }`
+  - Returns `Authorization: Bearer <token>` header
+- [ ] API base URL from `import.meta.env.PUBLIC_ENV__GROWTH_API_URL` with Scaleway fallback
+- [ ] Methods (each creates fresh auth header → `fetch()` → parse JSON → return typed result):
+  - `fetchDrafts(status?: string): Promise<ContentQueue | Draft[]>`
+  - `fetchInsights(): Promise<Insights>`
+  - `fetchPerformance(): Promise<Performance>`
+  - `updateDraft(id: string, body: Partial<Draft>): Promise<Draft>`
+  - `approveDraft(id: string, scheduledAt?: string): Promise<Draft>`
+  - `rejectDraft(id: string): Promise<Draft>`
+- [ ] Error handling: throw on non-2xx with error message from response body
+
+### Step 3: Page Component (`website/pages/growth/+Page.tsx`)
+
+Single-file page component with inline Panda CSS styling.
+
+**3a. Owner Gate**
+
+- [ ] `useAccount()` → `{ address, isConnected }`
+- [ ] Hydration safety: `hasMounted` pattern (same as imagegen/assistent)
+- [ ] Owner address from `import.meta.env.PUBLIC_ENV__OWNER_ADDRESS` or hardcoded constant
+- [ ] Three states:
+  - Not connected → "Connect your wallet to manage drafts"
+  - Connected, wrong address → "This page is restricted to the site owner"
+  - Connected, correct address → render draft management UI
+
+**3b. Draft List (main view)**
+
+- [ ] Fetch all drafts on mount via `fetchDrafts()`
+- [ ] Tab/filter bar: "Pending" | "Approved" | "Published" | "Rejected"
+  - Reuse `categoryFilterButton` from `layouts/styles.ts`
+- [ ] Draft card for each item:
+  - Channel badge (Mastodon / Bluesky icon or text)
+  - Language badge (DE / EN)
+  - Content preview (truncated or full)
+  - Source blog post link (if set)
+  - Status badge with color
+  - `scheduled_at` display (if set)
+  - Action buttons (Edit / Approve / Reject — context-dependent)
+
+**3c. Inline Edit Mode**
+
+- [ ] Click "Edit" → textarea replaces content preview
+  - Reuse `compactTextarea` style from `layouts/styles.ts`
+- [ ] Editable fields: content (textarea), hashtags (comma-separated input)
+- [ ] Save / Cancel buttons
+- [ ] Save calls `updateDraft(id, { content, hashtags })` → updates card in-place
+
+**3d. Approve with Schedule**
+
+- [ ] Click "Approve" → show optional `<input type="datetime-local">` (native HTML)
+- [ ] "Confirm Approve" button → calls `approveDraft(id, scheduledAt)`
+- [ ] Optimistic update: move card from Pending to Approved tab immediately
+
+**3e. Reject**
+
+- [ ] Click "Reject" → calls `rejectDraft(id)`
+- [ ] Optimistic update: move card from Pending to Rejected tab immediately
+
+**3f. Insights Panel (optional, collapsed)**
+
+- [ ] Collapsible `<details>` section at bottom of page
+- [ ] Fetches `getInsights()` on expand
+- [ ] Read-only display: top pages, growth opportunities, follower counts
+
+### Step 4: Styling
+
+- [ ] Inline `css()` calls in the page component (standard pattern)
+- [ ] Reuse from `layouts/styles.ts`: `baseButton`, `container`, `compactTextarea`,
+  `categoryFilterButton`, `modalInput`
+- [ ] New styles (minimal): draft card layout, status badge colors,
+  channel badge, responsive grid
+
+### Step 5: Tests
+
+**`website/test/useGrowthApi.test.ts`:**
+- [ ] Mock `fetch` and `useSignMessage`
+- [ ] Auth header format: base64-encoded JSON with address, signature, message fields
+- [ ] Each API method calls correct URL + HTTP method
+- [ ] Error handling for non-2xx responses
+
+**`website/test/GrowthPage.test.tsx`:**
+- [ ] Mock Wagmi hooks (`useAccount`, `useSignMessage`, `useConnect`)
+- [ ] Shows connect prompt when wallet not connected
+- [ ] Shows owner-only message for wrong address
+- [ ] Renders draft list when owner wallet connected
+- [ ] Edit mode toggles textarea visibility
+- [ ] Approve calls API with correct params
+- [ ] Reject calls API with correct params
+
+### Step 6: Verification
+
+- [ ] `cd website && npm test` → all existing + new tests pass
+- [ ] `cd website && npx eslint .` → no lint errors
+- [ ] Manual: `/growth` without wallet → connect prompt
+- [ ] Manual: `/growth` with non-owner wallet → owner-only message
+- [ ] Manual: `/growth` with owner wallet → draft list from API
+- [ ] Manual: edit draft → save → re-fetch confirms update persisted
+- [ ] Manual: approve with scheduled_at → draft moves to Approved tab
+- [ ] Manual: reject → draft moves to Rejected tab
 
 ## Phase 2 — Performance Feedback & Intelligence
 

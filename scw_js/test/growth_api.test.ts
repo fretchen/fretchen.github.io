@@ -302,12 +302,12 @@ describe("growth_api", () => {
       expect(body.growth_opportunities).toHaveLength(1);
     });
 
-    test("returns empty object when no insights file", async () => {
+    test("returns null when no insights file", async () => {
       mockS3ReadNotFound();
       const event = makeEvent("GET", "insights");
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(200);
-      expect(JSON.parse(res.body)).toEqual({});
+      expect(JSON.parse(res.body)).toBeNull();
     });
   });
 

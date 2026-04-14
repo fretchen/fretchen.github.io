@@ -3,8 +3,7 @@ import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
 import { useGrowthApi } from "../../hooks/useGrowthApi";
 import type { ContentQueue, Draft, Insights } from "../../types/growth";
-
-const OWNER_ADDRESS = "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19";
+import { OWNER_ADDRESS } from "../../utils/getChain";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
 

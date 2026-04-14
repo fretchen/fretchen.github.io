@@ -73,8 +73,8 @@ Build an AI-powered **Social Media Growth Agent** that:
                ▲ reads/writes
                │
 ┌──────────────┴──────────────────────────┐
-│  scw_js/growth_api.js (Node 22, HTTP)   │
-│  Draft Approval API — growth.fretchen.eu│
+│  scw_js/growth_api.ts (Node 22, HTTP)   │
+│  Draft Approval API — Scaleway Function │
 │                                         │
 │  ┌──────────────────────────────────┐   │
 │  │ Path-based routing:              │   │
@@ -181,12 +181,12 @@ existing Serverless Framework deployment.
 
 ```
 scw_js/
-├── growth_api.js           # (Phase 1c) Handler: path-based routing for /drafts, /status, etc.
-├── growth_service.js       # (Phase 1c) S3 read/write for growth-agent/*.json + wallet auth
+├── growth_api.ts           # (Phase 1c) Handler: path-based routing for /drafts, /insights, etc.
+├── growth_service.ts       # (Phase 1c) S3 read/write for growth-agent/*.json + wallet auth
 ├── serverless.yml          #            + new `growthapi` function entry
-├── tsup.config.js          #            + growth_api.js in entry array
+├── tsup.config.js          #            + growth_api.ts in entry array
 └── test/
-    └── growth_api.test.js  # (Phase 1c) Tests for API routes + auth
+    └── growth_api.test.ts  # (Phase 1c) Tests for API routes + auth
 ```
 
 ### website/ additions (Frontend — Approval UI)
@@ -261,10 +261,8 @@ Add the growth API function to the existing `scw_js/serverless.yml`:
   growthapi:
     handler: dist/growth_api.handle
     description: "Growth Agent API - draft approval with wallet auth"
-    min_scale: 0
-    max_scale: 1
-    custom_domains:
-      - growth.fretchen.eu
+    minScale: 0
+    maxScale: 1
 ```
 
 Additional secrets needed in the `scw_js/` provider block:
@@ -657,25 +655,46 @@ Anforderungen:
 
 ---
 
-# 12. API Endpoints (growth.fretchen.eu) — Phase 1c
+# 12. API Endpoints — Phase 1c
 
-These endpoints are served by the `growthapi` function in **`scw_js/`** (Node 22).
+These endpoints are served by the `growthapi` function in **`scw_js/`** (Node 22),
+accessible via the Scaleway-generated domain (no custom domain needed).
 The static approval page (Phase 1d) and any other client consumes these endpoints.
-All write endpoints require an EIP-191 signature from `OWNER_ETH_ADDRESS`.
+All endpoints require an EIP-191 signature from `OWNER_ETH_ADDRESS`.
 
-| Method | Path              | Description                              |
-| ------ | ----------------- | ---------------------------------------- |
-| GET    | `/status`         | Agent status, last run, follower counts  |
-| GET    | `/drafts`         | Pending drafts for review/editing        |
-| PUT    | `/drafts/:id`     | Edit draft content                       |
-| POST   | `/drafts/:id/approve` | Approve with `scheduled_at` timestamp |
-| POST   | `/drafts/:id/reject`  | Reject with reason                    |
-| POST   | `/trigger`        | Manually trigger a full agent run        |
-| GET    | `/insights`       | Latest insights and performance data     |
-| GET    | `/health`         | Health check                             |
+| Method | Path                    | Description                              |
+| ------ | ----------------------- | ---------------------------------------- |
+| GET    | `/drafts`               | All drafts (optionally filter `?status=pending_approval`) |
+| GET    | `/insights`             | Latest insights and analytics            |
+| GET    | `/performance`          | Published post metrics                   |
+| PUT    | `/drafts/:id`           | Edit draft content (pending or approved) |
+| POST   | `/drafts/:id/approve`   | Approve with optional `{ scheduled_at }` |
+| POST   | `/drafts/:id/reject`    | Reject draft                             |
+
+### Authentication
+
+All non-OPTIONS requests require an `Authorization` header:
+
+```
+Authorization: Bearer <base64-encoded JSON>
+```
+
+Payload: `{ "address": "0x...", "signature": "0x...", "message": "growth-api:1713000000" }`
+
+**Verification steps:**
+1. `viem.verifyMessage({ address, message, signature })` — valid EIP-191 signature
+2. `address.toLowerCase() === OWNER_ETH_ADDRESS.toLowerCase()` — owner check
+3. **Replay protection:** `message` must be `"growth-api:<unix-timestamp>"` where
+   timestamp is within 5 minutes of server time. Simple, no server-side state needed.
+
+### Draft Editing Scope
+
+Drafts with status `pending_approval` **and** `approved` (not yet published) can be
+edited via `PUT /drafts/:id`. This allows correcting a draft even after approval,
+as long as the cron hasn't published it yet.
 
 > Path-based routing in a single function, matching `x402_facilitator` pattern.
-> Implementation lives in `scw_js/growth_api.js` + `scw_js/growth_service.js`.
+> Implementation lives in `scw_js/growth_api.ts` + `scw_js/growth_service.ts`.
 > Auth uses `viem.verifyMessage()` — no SIWE or web3.py needed.
 > Not needed during Phase 1a — the notebook reads/writes state directly.
 
@@ -787,22 +806,106 @@ Goal: Deploy the AI pipeline as a Scaleway Python Function with cron trigger.
 ## Phase 1c — Draft Approval API (PR: `scw_js/`)
 
 Goal: TypeScript API for draft management, deployed in the existing `scw_js/` namespace.
-Reuses `viem`, `@aws-sdk/client-s3`, `pino`. Self-contained PR touching only `scw_js/`.
+Reuses `viem`, `@aws-sdk/client-s3`, `pino`. No new npm dependencies. Self-contained PR
+touching only `scw_js/`. Uses Scaleway-generated function domain (no custom domain needed).
 
-- [ ] `growth_api.js` — handler with path-based routing (see §12):
-  - `GET /drafts`, `GET /status`, `GET /insights`, `GET /health`
-  - `PUT /drafts/:id` (edit content)
-  - `POST /drafts/:id/approve`, `POST /drafts/:id/reject`
-  - `POST /trigger` (manual agent run — future)
-- [ ] `growth_service.js` — S3 read/write for `growth-agent/*.json`:
-  - Read/write `content_queue.json` (drafts, approved, published, rejected)
-  - Read `insights.json`, `strategy.json`, `performance.json`
-  - Wallet auth: `viem.verifyMessage()` + `OWNER_ETH_ADDRESS` env check
-- [ ] CORS headers for `fretchen.eu` origin
-- [ ] Add `growthapi` function to `serverless.yml`
-- [ ] Add `growth_api.js` to `tsup.config.js` entry array
-- [ ] Add `OWNER_ETH_ADDRESS` to secrets in `serverless.yml`
-- [ ] Tests for API routes + wallet auth (`growth_api.test.js`)
+### Step 1: Service Layer (`growth_service.ts`)
+
+TypeScript module with S3 operations and business logic. No handler concerns.
+
+- [ ] **TypeScript interfaces** mirroring Python Pydantic models (exact field names for S3 JSON compatibility):
+  - `Draft` — `id, created, channel, language, content, source_blog_post, hashtags, link, status, scheduled_at`
+  - `ContentQueue` — `drafts[], approved[], published[], rejected[]`
+  - `Insights` — `website_analytics, social_metrics, growth_opportunities, last_analysis`
+  - `Performance` — `posts[]` with `PostMetrics` (id, channel, published_at, platform_id, metrics)
+- [ ] **S3 helpers** (pattern from `llm_service.js` + `leaf_history.js`):
+  - `createS3Client()` — factory using `SCW_ACCESS_KEY/SCW_SECRET_KEY`, region `nl-ams`
+  - `streamToString(stream)` — readable stream → string
+  - `readJsonFromS3<T>(key): Promise<T | null>` — GET + parse, null on NoSuchKey
+  - `writeJsonToS3(key, data): Promise<void>` — PUT with `application/json`
+- [ ] **State accessors:**
+  - `getContentQueue(): Promise<ContentQueue>` — reads `growth-agent/content_queue.json`
+  - `saveContentQueue(queue): Promise<void>` — writes back
+  - `getInsights(): Promise<Insights | null>` — reads `growth-agent/insights.json`
+  - `getPerformance(): Promise<Performance | null>` — reads `growth-agent/performance.json`
+- [ ] **Business logic:**
+  - `approveDraft(id, scheduledAt?)` — find in `drafts[]`, move to `approved[]`, set status + scheduled_at
+  - `rejectDraft(id)` — find in `drafts[]`, move to `rejected[]`, set status
+  - `updateDraft(id, { content?, hashtags?, scheduled_at? })` — edit draft in `drafts[]` or `approved[]` (both editable before publish)
+  - All three return the modified `Draft` or throw if not found
+- [ ] **Auth:**
+  - `verifyOwner(address, signature, message)` — `viem.verifyMessage()` + `address === OWNER_ETH_ADDRESS` (case-insensitive)
+  - **Replay protection:** parse `message` as `"growth-api:<timestamp>"`, reject if timestamp > 5 min from server time
+  - No balance check (owner-only API, not pay-per-use)
+- [ ] Pino logger (same pattern as `llm_service.js`)
+
+### Step 2: Handler (`growth_api.ts`)
+
+Path-based routing handler. Delegates all logic to `growth_service.ts`.
+
+- [ ] `export async function handle(event, _context)` with:
+  - CORS headers + OPTIONS preflight (pattern from `leaf_history.js`)
+  - Parse `event.path` for routing (strip base path prefix)
+  - Auth middleware: extract `Authorization: Bearer <base64>` → decode → `verifyOwner()`
+  - Route dispatch:
+    - `GET /drafts` → `getContentQueue()` (optionally filter by `?status=` query param)
+    - `GET /insights` → `getInsights()`
+    - `GET /performance` → `getPerformance()`
+    - `PUT /drafts/:id` → `updateDraft()` with parsed body
+    - `POST /drafts/:id/approve` → `approveDraft()` with optional body `{ scheduled_at }`
+    - `POST /drafts/:id/reject` → `rejectDraft()`
+  - Error responses: 401 (auth failed), 404 (draft/route not found), 400 (bad request), 500 (S3/internal)
+  - All responses: `{ statusCode, body: JSON.stringify(...), headers }`
+
+### Step 3: Build & Deploy Config
+
+- [ ] **`tsup.config.js`** — add `"growth_api.ts"` to `entry` array (tsup compiles `.ts` natively)
+- [ ] **`serverless.yml`** — add function + secret:
+  ```yaml
+  functions:
+    # ... existing ...
+    growthapi:
+      handler: dist/growth_api.handle
+      description: "Growth Agent API - draft approval with wallet auth"
+      minScale: 0
+      maxScale: 1
+  ```
+  ```yaml
+  secret:
+    # ... existing ...
+    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
+  ```
+- [ ] Add `OWNER_ETH_ADDRESS` to `.env` locally
+
+### Step 4: Tests (`test/growth_api.test.ts`)
+
+- [ ] Mock S3 (`GetObjectCommand`/`PutObjectCommand`) — pattern from `test/setup.ts`
+- [ ] Mock `viem.verifyMessage` — pattern from existing mocks
+- [ ] Set `OWNER_ETH_ADDRESS` in test environment
+- [ ] **Auth tests:**
+  - Valid signature + correct owner → 200
+  - Invalid signature → 401
+  - Missing Authorization header → 401
+  - Valid signature but wrong address → 401
+  - Replay: message timestamp > 5 min old → 401
+- [ ] **Route tests:**
+  - `GET /drafts` → returns full ContentQueue
+  - `GET /drafts?status=pending_approval` → filters drafts
+  - `GET /insights` → returns insights, handles missing file (null → empty)
+  - `GET /performance` → returns performance data
+  - `PUT /drafts/:id` → updates content, 404 for unknown ID
+  - `POST /drafts/:id/approve` → moves to approved, sets scheduled_at
+  - `POST /drafts/:id/reject` → moves to rejected
+  - `OPTIONS` → 200 with CORS headers
+  - Unknown route → 404
+
+### Step 5: Verification
+
+- [ ] `npm run build` → verify `dist/growth_api.js` exists
+- [ ] `npm test` → all existing + new tests pass
+- [ ] `npm run lint` → no errors
+- [ ] `npm run deploy` → `growthapi` function appears in Scaleway Console
+- [ ] Smoke test: `curl` GET /drafts with valid auth → returns content_queue.json
 
 ## Phase 1d — Approval Website (PR: `website/`)
 
@@ -812,7 +915,7 @@ Depends on Phase 1c API being deployed. Self-contained PR touching only `website
 - [ ] Static page in `website/pages/growth/+Page.tsx`:
   - Wagmi wallet connection → owner address check
   - List/edit/schedule/approve/reject drafts
-  - Calls growth API (`growth.fretchen.eu`)
+  - Calls growth API (Scaleway-generated function URL)
 - [ ] No CORS changes needed (handled in Phase 1c)
 
 ## Phase 2 — Performance Feedback & Intelligence
@@ -961,7 +1064,7 @@ pino                     # Structured logging
 │  Blog content ←──── LLM + Images     Payment facilitator        │
 │  Umami tracking     S3 storage ─────→ S3 bucket (shared)        │
 │       │             │                                            │
-│       │ reads       │ NEW: growth_api.js                         │
+│       │ reads       │ NEW: growth_api.ts                         │
 │       │             │ Draft approval API                         │
 │       │             │ viem wallet auth                            │
 │       │             │ S3 read/write growth-agent/*.json           │

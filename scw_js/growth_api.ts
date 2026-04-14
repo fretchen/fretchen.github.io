@@ -49,9 +49,12 @@ function extractAuth(event: Record<string, unknown>): {
     const decoded = JSON.parse(Buffer.from(match[1], "base64").toString("utf-8"));
     const { address, signature, message } = decoded;
     if (
-      typeof address === "string" && address.startsWith("0x") &&
-      typeof signature === "string" && signature.startsWith("0x") &&
-      typeof message === "string" && message.length > 0
+      typeof address === "string" &&
+      address.startsWith("0x") &&
+      typeof signature === "string" &&
+      signature.startsWith("0x") &&
+      typeof message === "string" &&
+      message.length > 0
     ) {
       return { address, signature, message };
     }

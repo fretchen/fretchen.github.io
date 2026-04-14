@@ -197,10 +197,7 @@ describe("useGrowthApi", () => {
       const { result } = renderHook(() => useGrowthApi());
 
       // Fire both calls simultaneously (like Promise.all on page load)
-      const [drafts, insights] = await Promise.all([
-        result.current.fetchDrafts(),
-        result.current.fetchInsights(),
-      ]);
+      const [drafts, insights] = await Promise.all([result.current.fetchDrafts(), result.current.fetchInsights()]);
 
       expect(drafts).toBeDefined();
       expect(insights).toBeDefined();

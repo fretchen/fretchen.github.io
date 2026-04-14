@@ -639,19 +639,22 @@ Anforderungen:
 ## Daily Cron (08:00 UTC)
 
 1. **Analytics Ingest** — fetch Umami + social metrics
-2. **Check approved queue** — publish any approved drafts
+2. **Check approved queue** — publish any approved drafts with `scheduled_at <= now`
 3. **Performance update** — refresh metrics for published posts
+4. **Pipeline refill** *(Phase 1e)* — count pending + approved drafts, generate new ones if < 10.
+   Each new draft auto-scheduled at `last_slot + 1 day`, alternating Mastodon/Bluesky.
+   Uses last saved LLMAnalysis from S3 (no LLM call unless Monday).
 
 ## Weekly (Monday run, logic in agent)
 
-4. **Insight Generation** — LLM analysis of weekly data
-5. **Strategy Update** — adjust if data warrants it
-6. **Content Planning** — generate 5-10 draft ideas for the week
-7. **Content Creation** — draft posts for top 5 ideas
+5. **Insight Generation** — LLM analysis of weekly data, persisted to `growth-agent/llm_analysis.json`
+6. **Strategy Update** — adjust if data warrants it
+7. **Content Planning** — generate draft ideas (folded into pipeline refill step 4)
 
 ## Human (async)
 
-8. **Review drafts** — edit/approve/reject via notebook (Phase 1a), API (Phase 1c), or website page (Phase 1d)
+8. **Review drafts** — edit/approve/reject via website page (`/growth`).
+   Pre-filled `scheduled_at` can be overridden during approval.
 
 ---
 
@@ -765,7 +768,7 @@ within the `growth-agent/` project. This follows the proven pattern from `notebo
 4. **IONOS supports `response_format: json_schema` with `strict: true`** — OpenAI-compatible
    structured output works out of the box.
 
-## Phase 1a — Notebook Approval, Posting & Scheduling
+## Phase 1a — Notebook Approval, Posting & Scheduling ✅ COMPLETE
 
 Goal: Edit and approve drafts in a notebook, publish to Mastodon and Bluesky,
 with a scheduled publishing queue. No deployment required.
@@ -776,275 +779,126 @@ with a scheduled publishing queue. No deployment required.
 - [x] Implement Bluesky posting client (`agent/platforms/bluesky.py`) ✅
 - [x] Validate posting in `05_social_posting.ipynb` ✅
 - [x] Add `scheduled_at` field to `Draft` model (when to publish) ✅
-- [x] Create `06_approval.ipynb` — notebook-based draft review: ✅
-  - Load pending drafts from `content_queue.json`
-  - Display each draft with channel, language, content preview
-  - Edit content inline in notebook cells
-  - Set `scheduled_at` datetime
-  - Mark approved / rejected → write back to state
+- [x] Create `06_approval.ipynb` — notebook-based draft review ✅
 - [x] Implement scheduled publisher: process approved drafts where `scheduled_at <= now` ✅
 
-## Phase 1b — Python Cron Deployment (PR: `growth-agent/`)
+## Phase 1b — Python Cron Deployment (PR: `growth-agent/`) ✅ COMPLETE
 
 Goal: Deploy the AI pipeline as a Scaleway Python Function with cron trigger.
 **Cron only — no API, no wallet auth.** Self-contained PR touching only `growth-agent/`.
 
-- [x] Scaffold `growth-agent/` with pyproject.toml (uv) — done in Phase 0
-- [x] Implement local state storage (read/write JSON) — done in Phase 0
-- [x] Implement Umami analytics ingestion — done in Phase 0
-- [x] LLM insight generation with structured output — done in Phase 0
-- [x] Content planning + draft generation with page descriptions — done in Phase 0
-- [x] `handler.py` — Scaleway Function entry point (cron handler only):
-  - Daily: analytics ingest, publish approved drafts, performance update
-  - Weekly (Monday): LLM insights, strategy update, content creation
-  - Uses `S3Storage` for all state
-- [x] `serverless.yml` — Python 3.11, single function, no API handler
-- [x] `requirements.txt` via `uv export` for Scaleway packaging
-- [x] Tests for handler (cron logic, S3 mocking)
-- [ ] Daily Cron trigger (Scaleway Console → `0 8 * * *`)
+- [x] Scaffold `growth-agent/` with pyproject.toml (uv) ✅
+- [x] Implement local state storage (read/write JSON) ✅
+- [x] Implement Umami analytics ingestion ✅
+- [x] LLM insight generation with structured output ✅
+- [x] Content planning + draft generation with page descriptions ✅
+- [x] `handler.py` — Scaleway Function entry point (cron handler only) ✅
+- [x] `serverless.yml` — Python 3.11, single function, no API handler ✅
+- [x] `requirements.txt` via `uv export` for Scaleway packaging ✅
+- [x] Tests for handler (cron logic, S3 mocking) ✅
+- [x] Daily Cron trigger (Scaleway Console → `0 8 * * *`) ✅
 
-## Phase 1c — Draft Approval API (PR: `scw_js/`)
+## Phase 1c — Draft Approval API (PR: `scw_js/`) ✅ COMPLETE
 
 Goal: TypeScript API for draft management, deployed in the existing `scw_js/` namespace.
 Reuses `viem`, `@aws-sdk/client-s3`, `pino`. No new npm dependencies. Self-contained PR
 touching only `scw_js/`. Uses Scaleway-generated function domain (no custom domain needed).
 
-### Step 1: Service Layer (`growth_service.ts`)
+- [x] `growth_service.ts` — S3 read/write, business logic (approve/reject/update), wallet auth ✅
+- [x] `growth_api.ts` — Path-based routing handler with CORS + auth middleware ✅
+- [x] `tsup.config.js` — Added `growth_api.ts` to entry array ✅
+- [x] `serverless.yml` — Added `growthapi` function + `OWNER_ETH_ADDRESS` secret ✅
+- [x] `test/growth_api.test.ts` — 140 tests (auth, routing, S3 mocking, edge cases) ✅
+- [x] Deployed to Scaleway (`npx serverless deploy`) ✅
+- [x] Smoke test via curl ✅
 
-TypeScript module with S3 operations and business logic. No handler concerns.
-
-- [ ] **TypeScript interfaces** mirroring Python Pydantic models (exact field names for S3 JSON compatibility):
-  - `Draft` — `id, created, channel, language, content, source_blog_post, hashtags, link, status, scheduled_at`
-  - `ContentQueue` — `drafts[], approved[], published[], rejected[]`
-  - `Insights` — `website_analytics, social_metrics, growth_opportunities, last_analysis`
-  - `Performance` — `posts[]` with `PostMetrics` (id, channel, published_at, platform_id, metrics)
-- [ ] **S3 helpers** (pattern from `llm_service.js` + `leaf_history.js`):
-  - `createS3Client()` — factory using `SCW_ACCESS_KEY/SCW_SECRET_KEY`, region `nl-ams`
-  - `streamToString(stream)` — readable stream → string
-  - `readJsonFromS3<T>(key): Promise<T | null>` — GET + parse, null on NoSuchKey
-  - `writeJsonToS3(key, data): Promise<void>` — PUT with `application/json`
-- [ ] **State accessors:**
-  - `getContentQueue(): Promise<ContentQueue>` — reads `growth-agent/content_queue.json`
-  - `saveContentQueue(queue): Promise<void>` — writes back
-  - `getInsights(): Promise<Insights | null>` — reads `growth-agent/insights.json`
-  - `getPerformance(): Promise<Performance | null>` — reads `growth-agent/performance.json`
-- [ ] **Business logic:**
-  - `approveDraft(id, scheduledAt?)` — find in `drafts[]`, move to `approved[]`, set status + scheduled_at
-  - `rejectDraft(id)` — find in `drafts[]`, move to `rejected[]`, set status
-  - `updateDraft(id, { content?, hashtags?, scheduled_at? })` — edit draft in `drafts[]` or `approved[]` (both editable before publish)
-  - All three return the modified `Draft` or throw if not found
-- [ ] **Auth:**
-  - `verifyOwner(address, signature, message)` — `viem.verifyMessage()` + `address === OWNER_ETH_ADDRESS` (case-insensitive)
-  - **Replay protection:** parse `message` as `"growth-api:<timestamp>"`, reject if timestamp > 5 min from server time
-  - No balance check (owner-only API, not pay-per-use)
-- [ ] Pino logger (same pattern as `llm_service.js`)
-
-### Step 2: Handler (`growth_api.ts`)
-
-Path-based routing handler. Delegates all logic to `growth_service.ts`.
-
-- [ ] `export async function handle(event, _context)` with:
-  - CORS headers + OPTIONS preflight (pattern from `leaf_history.js`)
-  - Parse `event.path` for routing (strip base path prefix)
-  - Auth middleware: extract `Authorization: Bearer <base64>` → decode → `verifyOwner()`
-  - Route dispatch:
-    - `GET /drafts` → `getContentQueue()` (optionally filter by `?status=` query param)
-    - `GET /insights` → `getInsights()`
-    - `GET /performance` → `getPerformance()`
-    - `PUT /drafts/:id` → `updateDraft()` with parsed body
-    - `POST /drafts/:id/approve` → `approveDraft()` with optional body `{ scheduled_at }`
-    - `POST /drafts/:id/reject` → `rejectDraft()`
-  - Error responses: 401 (auth failed), 404 (draft/route not found), 400 (bad request), 500 (S3/internal)
-  - All responses: `{ statusCode, body: JSON.stringify(...), headers }`
-
-### Step 3: Build & Deploy Config
-
-- [ ] **`tsup.config.js`** — add `"growth_api.ts"` to `entry` array (tsup compiles `.ts` natively)
-- [ ] **`serverless.yml`** — add function + secret:
-  ```yaml
-  functions:
-    # ... existing ...
-    growthapi:
-      handler: dist/growth_api.handle
-      description: "Growth Agent API - draft approval with wallet auth"
-      minScale: 0
-      maxScale: 1
-  ```
-  ```yaml
-  secret:
-    # ... existing ...
-    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
-  ```
-- [ ] Add `OWNER_ETH_ADDRESS` to `.env` locally
-
-### Step 4: Tests (`test/growth_api.test.ts`)
-
-- [ ] Mock S3 (`GetObjectCommand`/`PutObjectCommand`) — pattern from `test/setup.ts`
-- [ ] Mock `viem.verifyMessage` — pattern from existing mocks
-- [ ] Set `OWNER_ETH_ADDRESS` in test environment
-- [ ] **Auth tests:**
-  - Valid signature + correct owner → 200
-  - Invalid signature → 401
-  - Missing Authorization header → 401
-  - Valid signature but wrong address → 401
-  - Replay: message timestamp > 5 min old → 401
-- [ ] **Route tests:**
-  - `GET /drafts` → returns full ContentQueue
-  - `GET /drafts?status=pending_approval` → filters drafts
-  - `GET /insights` → returns insights, handles missing file (null → empty)
-  - `GET /performance` → returns performance data
-  - `PUT /drafts/:id` → updates content, 404 for unknown ID
-  - `POST /drafts/:id/approve` → moves to approved, sets scheduled_at
-  - `POST /drafts/:id/reject` → moves to rejected
-  - `OPTIONS` → 200 with CORS headers
-  - Unknown route → 404
-
-### Step 5: Verification
-
-- [ ] `npm run build` → verify `dist/growth_api.js` exists
-- [ ] `npm test` → all existing + new tests pass
-- [ ] `npm run lint` → no errors
-- [ ] `npm run deploy` → `growthapi` function appears in Scaleway Console
-- [ ] Smoke test: `curl` GET /drafts with valid auth → returns content_queue.json
-
-## Phase 1d — Approval Website (PR: `website/`)
+## Phase 1d — Approval Website (PR: `website/`) ✅ COMPLETE
 
 Goal: Static prerendered approval page in the website, authenticated via ETH wallet.
 Depends on Phase 1c API being deployed. Self-contained PR touching only `website/`.
 No new dependencies — uses existing Wagmi, Panda CSS, `useUmami`.
 
-**Complexity estimate:** ~400-600 LOC for the page, ~100-150 LOC for the API hook.
-Comparable to the assistant page, simpler than ImageGenerator.
+**Implementation notes:**
+- **Auth caching** (4-min TTL) with in-flight promise deduplication — avoids MetaMask popup per action.
+  `pendingAuth` ref tracks both the promise and the address to prevent cross-address token reuse.
+- **Unlisted page** — no navigation link, access via direct URL `/growth` only (owner-only).
+- **Optimistic UI updates** — after approve/reject, move card immediately in the UI.
+- **`OWNER_ADDRESS`** centralized in `website/utils/getChain.ts`, imported by page and tests.
+- **Native `<input type="datetime-local">`** for scheduling — no date picker library.
+- **InsightsSection** uses defensive `?? []` and `?? {}` guards for null resilience.
+
+- [x] `website/types/growth.ts` — TypeScript interfaces (Draft, ContentQueue, Insights, Performance) ✅
+- [x] `website/hooks/useGrowthApi.ts` — API hook with 4-min auth cache + dedup, 6 methods via useMemo ✅
+- [x] `website/pages/growth/+Page.tsx` — Owner gate, tab bar, draft cards, edit/approve/reject, insights panel ✅
+- [x] `website/test/useGrowthApi.test.ts` — 14 tests (auth, API methods, error handling) ✅
+- [x] `website/test/GrowthPage.test.tsx` — 8 tests (wallet states, draft actions) ✅
+- [x] 22/22 tests passing, lint clean ✅
+
+## Phase 1e — Auto-Scheduling & Pipeline Depth (PR: `growth-agent/` + `website/`)
+
+Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draft creation,
+10-post pipeline maintained. Draft generation moves from weekly to daily with pipeline guard.
 
 **Decisions:**
-- **Fresh signature per action** (not cached like assistant page) — growth API requires
-  `growth-api:<timestamp>` with 5-min replay window, so each action signs a new message.
-  MetaMask popup per action is acceptable for single-owner usage. Optimize later if needed.
-- **Unlisted page** — no navigation link, access via direct URL `/growth` only (owner-only).
-- **Optimistic UI updates** — after approve/reject, move card immediately in the UI,
-  then background re-fetch for consistency.
-- **Prerendered** — same pattern as imagegen/assistent pages.
-  Server renders "Connect wallet" state, client hydrates with wallet-dependent content
-  via the `hasMounted` pattern.
-- **Native `<input type="datetime-local">`** for scheduling — no date picker library needed.
-- **No CORS changes needed** — handled in Phase 1c API (sends `Access-Control-Allow-Origin: *`).
+- **1 post/day total** — alternating Mastodon and Bluesky (not both per day).
+- **Auto-schedule at draft creation** — `scheduled_at` assigned when draft is generated.
+  Owner can override during approval.
+- **Pipeline depth: 10 posts** (7 + 3 backup) — `create_drafts()` only generates the difference.
+- **Draft generation daily** (not weekly) — pipeline check guards against overproduction.
+  Insights analysis remains weekly (Monday only).
+- **LLMAnalysis persisted to S3** — so daily draft generation can reuse last analysis.
 
-### Step 1: TypeScript Interfaces (`website/types/growth.ts`)
+### Step 1: Pipeline Depth Check (`handler.py`)
 
-Mirror the interfaces from `scw_js/growth_service.ts` for type-safe API responses.
+- [ ] In `create_drafts()`, count existing pending + approved drafts
+- [ ] Target pipeline depth: 10. Generate only `max(0, 10 - existing)` new drafts
+- [ ] If >= 10 already exist, skip generation entirely (log and return)
 
-- [ ] `Draft` — `id, created, channel, language, content, source_blog_post, hashtags, link, status, scheduled_at`
-- [ ] `ContentQueue` — `drafts[], approved[], published[], rejected[]`
-- [ ] `Insights` — `website_analytics, social_metrics, growth_opportunities, last_analysis`
-- [ ] `Performance` — `posts[]` with `PostMetrics`
+### Step 2: Auto-Schedule at Creation (`handler.py`)
 
-### Step 2: API Hook (`website/hooks/useGrowthApi.ts`)
+- [ ] Find latest `scheduled_at` across all pending + approved drafts
+- [ ] If none: start at tomorrow 09:00 UTC
+- [ ] Each new draft gets `scheduled_at = last_slot + 1 day`
+- [ ] Alternate channels: Mastodon, Bluesky, Mastodon, Bluesky, ...
 
-Custom hook that encapsulates all Growth API calls with wallet-based auth.
+### Step 3: Dynamic Page Count (`handler.py`)
 
-- [ ] Uses `useAccount()` and `useSignMessage()` from Wagmi
-- [ ] `createAuthHeader()` helper:
-  - Signs message `"growth-api:<unix-timestamp>"` via `signMessageAsync()`
-  - Base64-encodes `{ address, signature, message }`
-  - Returns `Authorization: Bearer <token>` header
-- [ ] API base URL from `import.meta.env.PUBLIC_ENV__GROWTH_API_URL` with Scaleway fallback
-- [ ] Methods (each creates fresh auth header → `fetch()` → parse JSON → return typed result):
-  - `fetchDrafts(status?: string): Promise<ContentQueue | Draft[]>`
-  - `fetchInsights(): Promise<Insights>`
-  - `fetchPerformance(): Promise<Performance>`
-  - `updateDraft(id: string, body: Partial<Draft>): Promise<Draft>`
-  - `approveDraft(id: string, scheduledAt?: string): Promise<Draft>`
-  - `rejectDraft(id: string): Promise<Draft>`
-- [ ] Error handling: throw on non-2xx with error message from response body
+- [ ] Replace `pages_to_promote[:5]` with `pages_to_promote[:ceil(needed/2)]`
+  (each page generates 2 drafts: one Mastodon, one Bluesky)
 
-### Step 3: Page Component (`website/pages/growth/+Page.tsx`)
+### Step 4: Draft-ID Collision Fix (`handler.py`)
 
-Single-file page component with inline Panda CSS styling.
+- [ ] `_make_draft_id()`: append index counter instead of relying only on seconds-timestamp
 
-**3a. Owner Gate**
+### Step 5: Daily Draft Generation (`handler.py`)
 
-- [ ] `useAccount()` → `{ address, isConnected }`
-- [ ] Hydration safety: `hasMounted` pattern (same as imagegen/assistent)
-- [ ] Owner address from `import.meta.env.PUBLIC_ENV__OWNER_ADDRESS` or hardcoded constant
-- [ ] Three states:
-  - Not connected → "Connect your wallet to manage drafts"
-  - Connected, wrong address → "This page is restricted to the site owner"
-  - Connected, correct address → render draft management UI
+- [ ] Move `create_drafts()` from weekly-only (Monday) to daily execution
+- [ ] Pipeline depth check (Step 1) serves as the guard against overproduction
+- [ ] Insights generation (`analyze()`) stays weekly (Monday only)
 
-**3b. Draft List (main view)**
+### Step 6: Persist LLMAnalysis (`handler.py`)
 
-- [ ] Fetch all drafts on mount via `fetchDrafts()`
-- [ ] Tab/filter bar: "Pending" | "Approved" | "Published" | "Rejected"
-  - Reuse `categoryFilterButton` from `layouts/styles.ts`
-- [ ] Draft card for each item:
-  - Channel badge (Mastodon / Bluesky icon or text)
-  - Language badge (DE / EN)
-  - Content preview (truncated or full)
-  - Source blog post link (if set)
-  - Status badge with color
-  - `scheduled_at` display (if set)
-  - Action buttons (Edit / Approve / Reject — context-dependent)
+- [ ] Save LLMAnalysis to `growth-agent/llm_analysis.json` in S3 after weekly generation
+- [ ] Daily `create_drafts()` loads last saved analysis instead of regenerating
 
-**3c. Inline Edit Mode**
+### Step 7: Pre-fill Schedule in Approval UI (`website/`)
 
-- [ ] Click "Edit" → textarea replaces content preview
-  - Reuse `compactTextarea` style from `layouts/styles.ts`
-- [ ] Editable fields: content (textarea), hashtags (comma-separated input)
-- [ ] Save / Cancel buttons
-- [ ] Save calls `updateDraft(id, { content, hashtags })` → updates card in-place
+- [ ] `DraftCardView`: initialize `scheduleDate` from `draft.scheduled_at` if present
+- [ ] Auto-expand schedule picker when `scheduled_at` exists
 
-**3d. Approve with Schedule**
+### Step 8: Strategy Sync
 
-- [ ] Click "Approve" → show optional `<input type="datetime-local">` (native HTML)
-- [ ] "Confirm Approve" button → calls `approveDraft(id, scheduledAt)`
-- [ ] Optimistic update: move card from Pending to Approved tab immediately
+- [ ] Update `posting_frequency` defaults in Strategy model
+  (from `{"mastodon": 5, "bluesky": 5}` to values reflecting 1/day alternating)
 
-**3e. Reject**
+### Verification
 
-- [ ] Click "Reject" → calls `rejectDraft(id)`
-- [ ] Optimistic update: move card from Pending to Rejected tab immediately
-
-**3f. Insights Panel (optional, collapsed)**
-
-- [ ] Collapsible `<details>` section at bottom of page
-- [ ] Fetches `getInsights()` on expand
-- [ ] Read-only display: top pages, growth opportunities, follower counts
-
-### Step 4: Styling
-
-- [ ] Inline `css()` calls in the page component (standard pattern)
-- [ ] Reuse from `layouts/styles.ts`: `baseButton`, `container`, `compactTextarea`,
-  `categoryFilterButton`, `modalInput`
-- [ ] New styles (minimal): draft card layout, status badge colors,
-  channel badge, responsive grid
-
-### Step 5: Tests
-
-**`website/test/useGrowthApi.test.ts`:**
-- [ ] Mock `fetch` and `useSignMessage`
-- [ ] Auth header format: base64-encoded JSON with address, signature, message fields
-- [ ] Each API method calls correct URL + HTTP method
-- [ ] Error handling for non-2xx responses
-
-**`website/test/GrowthPage.test.tsx`:**
-- [ ] Mock Wagmi hooks (`useAccount`, `useSignMessage`, `useConnect`)
-- [ ] Shows connect prompt when wallet not connected
-- [ ] Shows owner-only message for wrong address
-- [ ] Renders draft list when owner wallet connected
-- [ ] Edit mode toggles textarea visibility
-- [ ] Approve calls API with correct params
-- [ ] Reject calls API with correct params
-
-### Step 6: Verification
-
-- [ ] `cd website && npm test` → all existing + new tests pass
-- [ ] `cd website && npx eslint .` → no lint errors
-- [ ] Manual: `/growth` without wallet → connect prompt
-- [ ] Manual: `/growth` with non-owner wallet → owner-only message
-- [ ] Manual: `/growth` with owner wallet → draft list from API
-- [ ] Manual: edit draft → save → re-fetch confirms update persisted
-- [ ] Manual: approve with scheduled_at → draft moves to Approved tab
-- [ ] Manual: reject → draft moves to Rejected tab
+- [ ] pytest: `create_drafts()` with empty queue → 10 drafts, alternating channels, 1 day apart
+- [ ] pytest: `create_drafts()` with 7 existing → 3 new drafts
+- [ ] pytest: `create_drafts()` with >= 10 existing → 0 new drafts
+- [ ] pytest: scheduling starts from latest existing `scheduled_at` + 1 day
+- [ ] Website: approve flow shows pre-filled schedule date
+- [ ] `npm test` in `website/` → all tests pass
 
 ## Phase 2 — Performance Feedback & Intelligence
 
@@ -1098,17 +952,23 @@ Single-file page component with inline Panda CSS styling.
 10. ~~**Approval interface**~~ — ✅ Decided: Notebook approval (Phase 1a), TypeScript API
     in `scw_js/` with `viem.verifyMessage()` wallet auth (Phase 1c), then
     static website page (Phase 1d). No email notifications. No SIWE/web3.py.
+11. ~~**Auth caching (Phase 1d)**~~ — ✅ 4-min TTL with in-flight promise dedup.
+    Fresh signature per action not needed — cached token reused within window.
+12. ~~**OWNER_ADDRESS centralization**~~ — ✅ Moved to `website/utils/getChain.ts`.
+13. ~~**Scheduling approach**~~ — ✅ Decided: 1 post/day alternating Mastodon/Bluesky,
+    auto-scheduled at draft creation, 10-post pipeline. See Phase 1e.
 
 ### Resolved before Phase 1a:
 
 11. ~~**Mastodon OAuth app creation**~~ — ✅ Created.
 12. ~~**Bluesky app password generation**~~ — ✅ Generated.
 
-### Decide during Phase 2:
+### Decide during Phase 1e / Phase 2:
 
 8. ~~**Approval UI**~~ — ✅ Decided: Notebook (1a) → Python Cron (1b) → TypeScript API in scw_js (1c) → Website with wallet auth (1d).
 9. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
 10. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
+    Currently EN only. DE variants could expand pipeline.
 11. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
     Or migrate fully to agent-managed posting?
 
@@ -1209,9 +1069,11 @@ pino                     # Structured logging
 └──────────────────────────────────────────────────────────────────┘
 
 PR Boundary Map:
-  Phase 1b PR: growth-agent/ only (Python cron)
-  Phase 1c PR: scw_js/ only (TypeScript API)
-  Phase 1d PR: website/ only (approval page)
+  Phase 1a PR: growth-agent/ (Python notebooks) ✅ COMPLETE
+  Phase 1b PR: growth-agent/ (Python cron) ✅ COMPLETE
+  Phase 1c PR: scw_js/ (TypeScript API) ✅ COMPLETE
+  Phase 1d PR: website/ (approval page) ✅ COMPLETE
+  Phase 1e PR: growth-agent/ + website/ (auto-scheduling & pipeline)
 ```
 └──────────────────────────────────────────────────────────────────┘
 ```

@@ -2,8 +2,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
-
-const OWNER_ADDRESS = "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19";
+import { OWNER_ADDRESS } from "../utils/getChain";
 
 // Mock useGrowthApi
 const mockFetchDrafts = vi.fn();

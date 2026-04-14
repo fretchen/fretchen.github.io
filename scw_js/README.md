@@ -101,14 +101,14 @@ API for reviewing, editing, and approving AI-generated social media drafts. Used
 
 **Auth:** All routes require EIP-191 wallet signature matching `OWNER_ETH_ADDRESS`.
 
-| Method | Path                   | Description                          |
-| ------ | ---------------------- | ------------------------------------ |
-| GET    | `/drafts`              | List all drafts (optional `?status`) |
-| PUT    | `/drafts/:id`          | Edit draft content                   |
-| POST   | `/drafts/:id/approve`  | Approve draft (optional scheduling)  |
-| POST   | `/drafts/:id/reject`   | Reject draft                         |
-| GET    | `/insights`            | Website analytics insights           |
-| GET    | `/performance`         | Post performance metrics             |
+| Method | Path                  | Description                          |
+| ------ | --------------------- | ------------------------------------ |
+| GET    | `/drafts`             | List all drafts (optional `?status`) |
+| PUT    | `/drafts/:id`         | Edit draft content                   |
+| POST   | `/drafts/:id/approve` | Approve draft (optional scheduling)  |
+| POST   | `/drafts/:id/reject`  | Reject draft                         |
+| GET    | `/insights`           | Website analytics insights           |
+| GET    | `/performance`        | Post performance metrics             |
 
 **State:** Reads/writes JSON files in S3 (`growth-agent/` prefix in `my-imagestore` bucket).
 

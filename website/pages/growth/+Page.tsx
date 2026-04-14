@@ -392,7 +392,7 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
     <div className={insightsPanel}>
       <details>
         <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>Insights & Analytics</summary>
-        {insights.growth_opportunities.length > 0 && (
+        {(insights.growth_opportunities ?? []).length > 0 && (
           <>
             <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Growth Opportunities</h4>
             <ul className={insightsList}>
@@ -402,7 +402,7 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
             </ul>
           </>
         )}
-        {Object.entries(insights.social_metrics).map(([platform, metrics]) => (
+        {Object.entries(insights.social_metrics ?? {}).map(([platform, metrics]) => (
           <p key={platform} style={{ fontSize: "14px", color: "#555", marginTop: "4px" }}>
             <strong>{platform}:</strong> {metrics.followers} followers, {(metrics.engagement_rate * 100).toFixed(1)}%
             engagement

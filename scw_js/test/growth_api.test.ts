@@ -213,6 +213,27 @@ describe("growth_api", () => {
       expect(JSON.parse(res.body).error).toMatch(/Invalid message format/i);
     });
 
+    test("returns 401 when auth fields are non-string types", async () => {
+      const payload = { address: 123, signature: true, message: ["array"] };
+      const auth = `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+      const event = makeEvent("GET", "drafts", { auth });
+      const res = (await handle(event, {})) as { statusCode: number; body: string };
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res.body).error).toMatch(/Missing/i);
+    });
+
+    test("returns 401 when address lacks 0x prefix", async () => {
+      const payload = {
+        address: "AAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        signature: "0xvalidsignature",
+        message: `growth-api:${Math.floor(Date.now() / 1000)}`,
+      };
+      const auth = `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+      const event = makeEvent("GET", "drafts", { auth });
+      const res = (await handle(event, {})) as { statusCode: number; body: string };
+      expect(res.statusCode).toBe(401);
+    });
+
     test("returns 200 with valid auth", async () => {
       mockS3Read(sampleQueue);
       const event = makeEvent("GET", "drafts");

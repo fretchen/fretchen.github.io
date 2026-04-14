@@ -132,16 +132,9 @@ export async function writeJsonToS3(key: string, data: unknown): Promise<void> {
 
 // ===== State accessors =====
 
-const EMPTY_QUEUE: ContentQueue = {
-  drafts: [],
-  approved: [],
-  published: [],
-  rejected: [],
-};
-
 export async function getContentQueue(): Promise<ContentQueue> {
   const queue = await readJsonFromS3<ContentQueue>("content_queue.json");
-  return queue ?? EMPTY_QUEUE;
+  return queue ?? { drafts: [], approved: [], published: [], rejected: [] };
 }
 
 export async function saveContentQueue(queue: ContentQueue): Promise<void> {

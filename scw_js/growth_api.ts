@@ -128,7 +128,7 @@ export async function handle(
     // GET /insights
     if (method === "GET" && path === "insights") {
       const insights = await getInsights();
-      return jsonResponse(200, insights ?? {});
+      return jsonResponse(200, insights ?? null);
     }
 
     // GET /performance

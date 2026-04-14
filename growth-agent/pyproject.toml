@@ -17,6 +17,7 @@ dev = [
     "jupyter>=1.0",
     "ipykernel>=6.0",
     "python-dotenv>=1.0",
+    "eth-account>=0.13.7",
 ]
 
 [tool.ruff]

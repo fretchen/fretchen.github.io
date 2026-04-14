@@ -55,14 +55,16 @@ describe("useGrowthApi", () => {
     expect(payload.message).toMatch(/^growth-api:\d+$/);
   });
 
-  it("fetchDrafts passes status query param", async () => {
-    mockFetchResponse({ drafts: [], approved: [], published: [], rejected: [] });
+  it("fetchDrafts calls GET /drafts", async () => {
+    const queue = { drafts: [], approved: [], published: [], rejected: [] };
+    mockFetchResponse(queue);
 
     const { result } = renderHook(() => useGrowthApi());
-    await result.current.fetchDrafts("pending_approval");
+    const data = await result.current.fetchDrafts();
 
     const [url] = vi.mocked(globalThis.fetch).mock.calls[0];
-    expect(url).toContain("?status=pending_approval");
+    expect(url).toContain("/drafts");
+    expect(data).toEqual(queue);
   });
 
   it("fetchInsights calls GET /insights", async () => {

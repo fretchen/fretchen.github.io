@@ -154,3 +154,65 @@ export async function handle(
     return jsonResponse(500, { error: "Internal server error" });
   }
 }
+
+// --- Local dev server (Fastify) ---
+if (process.env.NODE_ENV === "test" && !process.env.CI) {
+  import("dotenv").then((dotenv) => {
+    dotenv.config();
+
+    import("fastify").then((fastifyModule) => {
+      const fastify = fastifyModule.default();
+
+      import("@fastify/cors").then((corsModule) => {
+        fastify.register(corsModule.default, {
+          origin: true,
+          methods: ["GET", "POST", "PUT", "OPTIONS"],
+          allowedHeaders: "*",
+        });
+
+        import("@fastify/url-data").then((urlDataModule) => {
+          fastify.register(urlDataModule.default);
+
+          fastify.addContentTypeParser(
+            "application/json",
+            { parseAs: "string" },
+            fastify.defaultTextParser,
+          );
+
+          fastify.route({
+            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            url: "/*",
+            handler: async (request, reply) => {
+              try {
+                const event = {
+                  httpMethod: request.method,
+                  headers: request.headers,
+                  body: request.body,
+                  path: request.url.split("?")[0],
+                  queryStringParameters: request.query,
+                };
+                const result = await handle(event, {});
+                reply.status(result.statusCode);
+                for (const [key, value] of Object.entries(result.headers)) {
+                  reply.header(key, value);
+                }
+                return result.body;
+              } catch (error) {
+                console.error("Handler error:", error);
+                reply.status(500).send({ error: (error as Error).message });
+              }
+            },
+          });
+
+          fastify.listen({ port: 8083, host: "0.0.0.0" }, (err, address) => {
+            if (err) {
+              console.error("Failed to start server:", err);
+              process.exit(1);
+            }
+            console.log(`🚀 Growth API local server listening at ${address}`);
+          });
+        });
+      });
+    });
+  });
+}

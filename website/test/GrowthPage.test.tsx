@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import { useAccount, useConnect, useSignMessage } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 
 const OWNER_ADDRESS = "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19";
 
@@ -54,7 +54,12 @@ describe("Growth Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetchDrafts.mockResolvedValue(sampleQueue);
-    mockFetchInsights.mockResolvedValue({ growth_opportunities: [], last_analysis: null, social_metrics: {}, website_analytics: {} });
+    mockFetchInsights.mockResolvedValue({
+      growth_opportunities: [],
+      last_analysis: null,
+      social_metrics: {},
+      website_analytics: {},
+    });
     mockApproveDraft.mockResolvedValue({ ...sampleQueue.drafts[0], status: "approved" });
     mockRejectDraft.mockResolvedValue({ ...sampleQueue.drafts[0], status: "rejected" });
     mockUpdateDraft.mockResolvedValue({ ...sampleQueue.drafts[0], content: "Updated content" });

@@ -313,11 +313,7 @@ function DraftCardView({
 
       {editing ? (
         <>
-          <textarea
-            className={editTextarea}
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-          />
+          <textarea className={editTextarea} value={editContent} onChange={(e) => setEditContent(e.target.value)} />
           <input
             className={editInput}
             value={editHashtags}
@@ -328,11 +324,7 @@ function DraftCardView({
             <button className={`${actionButton} ${saveButton}`} onClick={handleSave} disabled={busy}>
               Save
             </button>
-            <button
-              className={`${actionButton} ${cancelButton}`}
-              onClick={() => setEditing(false)}
-              disabled={busy}
-            >
+            <button className={`${actionButton} ${cancelButton}`} onClick={() => setEditing(false)} disabled={busy}>
               Cancel
             </button>
           </div>
@@ -340,9 +332,7 @@ function DraftCardView({
       ) : (
         <>
           <p className={contentPreview}>{draft.content}</p>
-          {draft.hashtags.length > 0 && (
-            <p className={hashtagLine}>{draft.hashtags.join(" ")}</p>
-          )}
+          {draft.hashtags.length > 0 && <p className={hashtagLine}>{draft.hashtags.join(" ")}</p>}
           {draft.link && (
             <a className={sourceLink} href={draft.link} target="_blank" rel="noopener noreferrer">
               {draft.source_blog_post || draft.link}
@@ -350,20 +340,12 @@ function DraftCardView({
           )}
           {showActions && (
             <div className={cardActions}>
-              <button
-                className={`${actionButton} ${editButton}`}
-                onClick={() => setEditing(true)}
-                disabled={busy}
-              >
+              <button className={`${actionButton} ${editButton}`} onClick={() => setEditing(true)} disabled={busy}>
                 Edit
               </button>
               {draft.status !== "approved" && draft.status !== "published" && (
                 <>
-                  <button
-                    className={`${actionButton} ${approveButton}`}
-                    onClick={handleApprove}
-                    disabled={busy}
-                  >
+                  <button className={`${actionButton} ${approveButton}`} onClick={handleApprove} disabled={busy}>
                     {showSchedule ? "Confirm Approve" : "Approve"}
                   </button>
                   {showSchedule && (
@@ -409,9 +391,7 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
   return (
     <div className={insightsPanel}>
       <details>
-        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>
-          Insights & Analytics
-        </summary>
+        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>Insights & Analytics</summary>
         {insights.growth_opportunities.length > 0 && (
           <>
             <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Growth Opportunities</h4>
@@ -446,7 +426,7 @@ export default function Page() {
     setHasMounted(true);
   }, []);
 
-  const { address, isConnected, status } = useAccount();
+  const { address, status } = useAccount();
   const { connectors, connect } = useConnect();
   const { fetchDrafts, fetchInsights, updateDraft, approveDraft: apiApprove, rejectDraft: apiReject } = useGrowthApi();
 
@@ -570,7 +550,11 @@ export default function Page() {
         <div className={infoBox}>
           <p>Connect your wallet to manage drafts.</p>
           {connectors.length > 0 && (
-            <button className={connectButton} onClick={() => connect({ connector: connectors[0] })} style={{ marginTop: "12px" }}>
+            <button
+              className={connectButton}
+              onClick={() => connect({ connector: connectors[0] })}
+              style={{ marginTop: "12px" }}
+            >
               Connect Wallet
             </button>
           )}
@@ -611,11 +595,7 @@ export default function Page() {
         <>
           <div className={tabBar}>
             {tabs.map((t) => (
-              <button
-                key={t.key}
-                className={tab === t.key ? tabButtonActive : tabButton}
-                onClick={() => setTab(t.key)}
-              >
+              <button key={t.key} className={tab === t.key ? tabButtonActive : tabButton} onClick={() => setTab(t.key)}>
                 {t.label} ({t.count})
               </button>
             ))}

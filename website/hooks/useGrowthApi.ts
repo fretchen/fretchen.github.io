@@ -19,11 +19,7 @@ async function createAuthHeader(
   return `Bearer ${btoa(payload)}`;
 }
 
-async function apiFetch<T>(
-  path: string,
-  auth: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}/${path}`, {
     ...options,
     headers: {

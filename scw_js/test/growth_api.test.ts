@@ -334,6 +334,20 @@ describe("growth_api", () => {
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(404);
     });
+
+    test("returns 400 when body is missing", async () => {
+      const event = makeEvent("PUT", "drafts/draft_mastodon_en_20260413");
+      const res = (await handle(event, {})) as { statusCode: number; body: string };
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error).toMatch(/invalid json/i);
+    });
+
+    test("returns 400 when body is invalid JSON", async () => {
+      const event = makeEvent("PUT", "drafts/draft_mastodon_en_20260413");
+      event.body = "{not valid json";
+      const res = (await handle(event, {})) as { statusCode: number; body: string };
+      expect(res.statusCode).toBe(400);
+    });
   });
 
   // ===== POST /drafts/:id/approve =====
@@ -366,6 +380,16 @@ describe("growth_api", () => {
       const event = makeEvent("POST", "drafts/nonexistent/approve");
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(404);
+    });
+
+    test("still approves when body is invalid JSON (body is optional)", async () => {
+      mockS3Read(sampleQueue);
+      mockS3Write();
+      const event = makeEvent("POST", "drafts/draft_mastodon_en_20260413/approve");
+      event.body = "{bad json";
+      const res = (await handle(event, {})) as { statusCode: number; body: string };
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body).status).toBe("approved");
     });
   });
 

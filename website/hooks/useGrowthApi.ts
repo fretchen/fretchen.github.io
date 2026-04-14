@@ -36,7 +36,7 @@ async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}
 }
 
 export interface UseGrowthApi {
-  fetchDrafts: (status?: string) => Promise<ContentQueue>;
+  fetchDrafts: () => Promise<ContentQueue>;
   fetchInsights: () => Promise<Insights>;
   fetchPerformance: () => Promise<Performance>;
   updateDraft: (id: string, body: Partial<Draft>) => Promise<Draft>;
@@ -78,11 +78,9 @@ export function useGrowthApi(): UseGrowthApi {
     return promise;
   }, [address, signMessageAsync]);
 
-  const fetchDrafts = useCallback(
-    async (status?: string) => {
+  const fetchDrafts = useCallback(async () => {
       const auth = await getAuth();
-      const query = status ? `?status=${encodeURIComponent(status)}` : "";
-      return apiFetch<ContentQueue>(`drafts${query}`, auth);
+      return apiFetch<ContentQueue>("drafts", auth);
     },
     [getAuth],
   );

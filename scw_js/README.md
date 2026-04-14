@@ -14,6 +14,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 | Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment) |
 | LLM              | `llm`             | Blockchain-authenticated LLM                          |
 | Leaf History     | `leafhistory`     | Merkle tree leaf queries                              |
+| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)     |
 
 ## Functions
 
@@ -94,6 +95,23 @@ LLM service with wallet signature authentication and Merkle-tree based usage tra
 
 Query Merkle tree leaves for usage tracking.
 
+### `growth_api.ts` - Growth Agent Draft Approval
+
+API for reviewing, editing, and approving AI-generated social media drafts. Used by the Growth Agent notebooks and cron job.
+
+**Auth:** All routes require EIP-191 wallet signature matching `OWNER_ETH_ADDRESS`.
+
+| Method | Path                  | Description                          |
+| ------ | --------------------- | ------------------------------------ |
+| GET    | `/drafts`             | List all drafts (optional `?status`) |
+| PUT    | `/drafts/:id`         | Edit draft content                   |
+| POST   | `/drafts/:id/approve` | Approve draft (optional scheduling)  |
+| POST   | `/drafts/:id/reject`  | Reject draft                         |
+| GET    | `/insights`           | Website analytics insights           |
+| GET    | `/performance`        | Post performance metrics             |
+
+**State:** Reads/writes JSON files in S3 (`growth-agent/` prefix in `my-imagestore` bucket).
+
 ## 🔗 On-Chain Integration
 
 | Contract   | Chain    | Address                                      |
@@ -105,6 +123,9 @@ Query Merkle tree leaves for usage tracking.
 ```bash
 # Image Generation (x402)
 npm run dev:x402
+
+# Growth API (port 8083)
+npm run dev:growth
 
 # LLM Service
 NODE_ENV=test node sc_llm.js

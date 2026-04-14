@@ -69,6 +69,17 @@ function filterByStatus(queue: ContentQueue, status: string | undefined): unknow
   return all.filter((d) => d.status === status);
 }
 
+function parseJsonBody(raw: unknown): Record<string, unknown> | null {
+  if (raw == null || raw === "") return null;
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export async function handle(
   event: Record<string, unknown>,
   _context: unknown,
@@ -122,7 +133,10 @@ export async function handle(
     const putMatch = path.match(/^drafts\/(.+)$/);
     if (method === "PUT" && putMatch) {
       const id = decodeURIComponent(putMatch[1]);
-      const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+      const body = parseJsonBody(event.body);
+      if (!body) {
+        return jsonResponse(400, { error: "Missing or invalid JSON body" });
+      }
       const draft = await updateDraft(id, body);
       return jsonResponse(200, draft);
     }
@@ -131,8 +145,7 @@ export async function handle(
     const approveMatch = path.match(/^drafts\/(.+)\/approve$/);
     if (method === "POST" && approveMatch) {
       const id = decodeURIComponent(approveMatch[1]);
-      const body =
-        typeof event.body === "string" && event.body ? JSON.parse(event.body) : event.body;
+      const body = parseJsonBody(event.body);
       const draft = await approveDraft(id, body?.scheduled_at);
       return jsonResponse(200, draft);
     }
@@ -155,64 +168,17 @@ export async function handle(
   }
 }
 
-// --- Local dev server (Fastify) ---
-if (process.env.NODE_ENV === "test" && !process.env.CI) {
-  import("dotenv").then((dotenv) => {
-    dotenv.config();
+/* Local dev server — only when run directly: npm run dev:growth */
+const isEntrypoint =
+  typeof process.argv[1] === "string" &&
+  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
 
-    import("fastify").then((fastifyModule) => {
-      const fastify = fastifyModule.default();
+if (isEntrypoint && process.env.NODE_ENV === "test") {
+  (async () => {
+    const dotenvModule = await import("dotenv");
+    dotenvModule.config();
 
-      import("@fastify/cors").then((corsModule) => {
-        fastify.register(corsModule.default, {
-          origin: true,
-          methods: ["GET", "POST", "PUT", "OPTIONS"],
-          allowedHeaders: "*",
-        });
-
-        import("@fastify/url-data").then((urlDataModule) => {
-          fastify.register(urlDataModule.default);
-
-          fastify.addContentTypeParser(
-            "application/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-
-          fastify.route({
-            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-            url: "/*",
-            handler: async (request, reply) => {
-              try {
-                const event = {
-                  httpMethod: request.method,
-                  headers: request.headers,
-                  body: request.body,
-                  path: request.url.split("?")[0],
-                  queryStringParameters: request.query,
-                };
-                const result = await handle(event, {});
-                reply.status(result.statusCode);
-                for (const [key, value] of Object.entries(result.headers)) {
-                  reply.header(key, value);
-                }
-                return result.body;
-              } catch (error) {
-                console.error("Handler error:", error);
-                reply.status(500).send({ error: (error as Error).message });
-              }
-            },
-          });
-
-          fastify.listen({ port: 8083, host: "0.0.0.0" }, (err, address) => {
-            if (err) {
-              console.error("Failed to start server:", err);
-              process.exit(1);
-            }
-            console.log(`🚀 Growth API local server listening at ${address}`);
-          });
-        });
-      });
-    });
-  });
+    const scw = await import("@scaleway/serverless-functions");
+    scw.serveHandler(handle, 8083);
+  })().catch((err) => logger.error({ err }, "Error starting local server"));
 }

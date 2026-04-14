@@ -48,7 +48,7 @@ export function useGrowthApi(): UseGrowthApi {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const authCache = useRef<{ token: string; timestamp: number; address: string } | null>(null);
-  const pendingAuth = useRef<Promise<string> | null>(null);
+  const pendingAuth = useRef<{ promise: Promise<string>; address: string } | null>(null);
 
   const getAuth = useCallback(async () => {
     if (!address) throw new Error("Wallet not connected");
@@ -58,9 +58,9 @@ export function useGrowthApi(): UseGrowthApi {
       return cached.token;
     }
 
-    // If a signing request is already in flight, reuse it
-    if (pendingAuth.current) {
-      return pendingAuth.current;
+    // If a signing request is already in flight for the same address, reuse it
+    if (pendingAuth.current && pendingAuth.current.address === address) {
+      return pendingAuth.current.promise;
     }
 
     const promise = createAuthHeader(address, signMessageAsync)
@@ -74,7 +74,7 @@ export function useGrowthApi(): UseGrowthApi {
         throw err;
       });
 
-    pendingAuth.current = promise;
+    pendingAuth.current = { promise, address };
     return promise;
   }, [address, signMessageAsync]);
 

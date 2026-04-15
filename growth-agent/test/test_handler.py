@@ -121,7 +121,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("handler.publish_draft")
 @patch("handler.BlueskyClient")
 @patch("handler.MastodonClient")
-def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
+def test_publish_approved_drafts_publishes_due(
+    MockMasto, MockBsky, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -162,7 +164,9 @@ def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish
 
 @patch("handler.publish_draft")
 @patch("handler.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
+def test_publish_no_scheduled_at_publishes_immediately(
+    MockMasto, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -285,7 +289,9 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
     }
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.chat.return_value = {
+        "content": "Check out this post about quantum computing!"
+    }
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, analysis)

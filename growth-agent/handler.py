@@ -94,7 +94,9 @@ def ingest_analytics(storage: S3Storage) -> Insights:
     # Umami
     umami = UmamiClient(
         api_key=os.environ["UMAMI_API_KEY"],
-        website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
+        website_id=os.environ.get(
+            "UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"
+        ),
     )
     try:
         start_at = ms_timestamp(days_ago=7)
@@ -178,7 +180,9 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
             if draft.channel == "mastodon":
                 if mastodon_client is None:
                     mastodon_client = MastodonClient(
-                        instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
+                        instance=os.environ.get(
+                            "MASTODON_INSTANCE", "https://mastodon.social"
+                        ),
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
                 result = publish_draft(draft, mastodon_client)
@@ -192,7 +196,9 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
                 result = publish_draft(draft, bluesky_client)
                 platform_id = result.get("uri")
             else:
-                logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
+                logger.warning(
+                    "Unknown channel %s for draft %s", draft.channel, draft.id
+                )
                 still_approved.append(draft)
                 continue
 
@@ -244,7 +250,8 @@ def generate_insights(storage: S3Storage) -> LLMAnalysis | None:
         ]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
-            f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()
+            f"- {m.url}: {m.description or '(no description)'}"
+            for m in page_metas.values()
         )
 
         blog_url = strategy.website_url
@@ -322,7 +329,9 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     existing = len(queue.drafts) + len(queue.approved)
     needed = max(0, PIPELINE_TARGET - existing)
     if needed == 0:
-        logger.info("Pipeline full (%d pending+approved), skipping draft creation", existing)
+        logger.info(
+            "Pipeline full (%d pending+approved), skipping draft creation", existing
+        )
         return 0
 
     pages_to_promote = analysis.best_pages_for_social[: ceil(needed / 2)]
@@ -334,7 +343,9 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     last_scheduled = _find_last_scheduled_at(queue)
     if last_scheduled is None:
         # Start tomorrow at 09:00 UTC
-        tomorrow = datetime.now(timezone.utc).replace(hour=9, minute=0, second=0, microsecond=0)
+        tomorrow = datetime.now(timezone.utc).replace(
+            hour=9, minute=0, second=0, microsecond=0
+        )
         tomorrow += timedelta(days=1)
         next_slot = tomorrow
     else:
@@ -354,7 +365,9 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
                 break
 
             meta = page_metas.get(page.url)
-            page_desc = (meta.description or "(no description)") if meta else "(no description)"
+            page_desc = (
+                (meta.description or "(no description)") if meta else "(no description)"
+            )
             page_title = (meta.title or page.title) if meta else page.title
 
             # Generate Mastodon EN post
@@ -429,7 +442,12 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     queue.drafts.extend(new_drafts)
     storage.write("content_queue.json", queue)
     total = existing + len(new_drafts)
-    logger.info("Created %d new drafts (pipeline: %d/%d)", len(new_drafts), total, PIPELINE_TARGET)
+    logger.info(
+        "Created %d new drafts (pipeline: %d/%d)",
+        len(new_drafts),
+        total,
+        PIPELINE_TARGET,
+    )
     return len(new_drafts)
 
 
@@ -444,7 +462,9 @@ def _system_prompt(strategy: Strategy) -> str:
     )
 
 
-def _mastodon_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
+def _mastodon_prompt(
+    page, title: str, description: str, language: str, strategy: Strategy
+) -> str:
     url = f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Mastodon-Post (max 500 Zeichen) über diesen Blog-Artikel:
@@ -486,7 +506,9 @@ Do NOT use emojis excessively. One is fine.
 Return ONLY the post text, nothing else."""
 
 
-def _bluesky_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
+def _bluesky_prompt(
+    page, title: str, description: str, language: str, strategy: Strategy
+) -> str:
     url = f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Bluesky-Post (max 300 Zeichen) über diesen Blog-Artikel:

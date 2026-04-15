@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run format:check && npm run test:coverage",
-    "dev:x402": "NODE_ENV=test node genimg_x402_token.js"
+    "dev:x402": "NODE_ENV=test node genimg_x402_token.js",
+    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts"
   },
   "keywords": [],
   "author": "",
@@ -30,11 +31,12 @@
     "eslint": "^9.38.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-vitest": "^0.5.4",
-    "fastify": "^5.8.2",
+    "fastify": "^5.8.5",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.4.16",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.58.2",
     "vitest": "^4.0.1"
   },
   "dependencies": {

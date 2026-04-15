@@ -49,6 +49,9 @@ export const DEFAULT_SUPPORT_CHAIN = USE_TESTNET ? optimismSepolia : optimism;
 /** Recipient wallet for donations */
 export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
 
+/** Owner wallet for admin pages (growth agent, etc.) */
+export const OWNER_ADDRESS = "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19" as const;
+
 /**
  * Get SupportV2 contract config for a specific chain
  * @param chainId - The chain ID to get config for

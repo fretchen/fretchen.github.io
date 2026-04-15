@@ -218,4 +218,85 @@ describe("Growth Page", () => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
     });
   });
+
+  it("shows character counter in edit mode", async () => {
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Edit"));
+
+    // Content is "Check out this blog post about game theory!" (43 chars), channel is mastodon (limit 500)
+    expect(screen.getByText("43/500")).toBeInTheDocument();
+  });
+
+  it("disables save button when content exceeds character limit", async () => {
+    const longContent = "x".repeat(501);
+    mockFetchDrafts.mockResolvedValue({
+      ...sampleQueue,
+      drafts: [{ ...sampleQueue.drafts[0], content: longContent }],
+    });
+
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Edit"));
+
+    expect(screen.getByText("501/500")).toBeInTheDocument();
+    expect(screen.getByText("Save")).toBeDisabled();
+  });
+
+  it("shows over-limit warning and disables approve for too-long content", async () => {
+    const longContent = "y".repeat(501);
+    mockFetchDrafts.mockResolvedValue({
+      ...sampleQueue,
+      drafts: [{ ...sampleQueue.drafts[0], content: longContent }],
+    });
+
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Content exceeds mastodon limit/)).toBeInTheDocument();
+    });
+
+    // Approve button should be disabled when content exceeds limit
+    expect(screen.getByText("Approve")).toBeDisabled();
+  });
+
+  it("shows character count in view mode for owner", async () => {
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText("43/500 characters")).toBeInTheDocument();
+    });
+  });
 });

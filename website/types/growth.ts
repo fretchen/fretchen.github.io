@@ -1,3 +1,9 @@
+/** Character limits per channel — keep in sync with growth-agent/handler.py CHAR_LIMITS */
+export const CHANNEL_CHAR_LIMITS: Record<string, number> = {
+  mastodon: 500,
+  bluesky: 300,
+};
+
 export interface Draft {
   id: string;
   created: string;

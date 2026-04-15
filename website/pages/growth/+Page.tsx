@@ -3,6 +3,7 @@ import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
 import { useGrowthApi } from "../../hooks/useGrowthApi";
 import type { ContentQueue, Draft, Insights } from "../../types/growth";
+import { CHANNEL_CHAR_LIMITS } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
@@ -208,6 +209,34 @@ const scheduleInput = css({
   fontSize: "sm",
 });
 
+const charCounter = css({
+  fontSize: "xs",
+  textAlign: "right",
+  mb: "sm",
+  color: "gray.500",
+});
+
+const charCounterWarn = css({
+  fontSize: "xs",
+  textAlign: "right",
+  mb: "sm",
+  color: "orange.600",
+});
+
+const charCounterOver = css({
+  fontSize: "xs",
+  textAlign: "right",
+  mb: "sm",
+  color: "red.600",
+  fontWeight: "bold",
+});
+
+const overLimitWarning = css({
+  fontSize: "xs",
+  color: "red.600",
+  mb: "sm",
+});
+
 const errorBanner = css({
   padding: "sm md",
   backgroundColor: "red.50",
@@ -279,6 +308,8 @@ function DraftCardView({
   });
   const [showSchedule, setShowSchedule] = useState(!!draft.scheduled_at);
 
+  const limit = CHANNEL_CHAR_LIMITS[draft.channel] ?? 500;
+
   const handleSave = async () => {
     await onUpdate(draft.id, {
       content: editContent,
@@ -319,6 +350,17 @@ function DraftCardView({
       {editing ? (
         <>
           <textarea className={editTextarea} value={editContent} onChange={(e) => setEditContent(e.target.value)} />
+          <div
+            className={
+              editContent.length > limit
+                ? charCounterOver
+                : limit - editContent.length < 20
+                  ? charCounterWarn
+                  : charCounter
+            }
+          >
+            {editContent.length}/{limit}
+          </div>
           <input
             className={editInput}
             value={editHashtags}
@@ -326,7 +368,11 @@ function DraftCardView({
             placeholder="Hashtags (comma-separated)"
           />
           <div className={cardActions}>
-            <button className={`${actionButton} ${saveButton}`} onClick={handleSave} disabled={busy}>
+            <button
+              className={`${actionButton} ${saveButton}`}
+              onClick={handleSave}
+              disabled={busy || editContent.length > limit}
+            >
               Save
             </button>
             <button className={`${actionButton} ${cancelButton}`} onClick={() => setEditing(false)} disabled={busy}>
@@ -337,6 +383,16 @@ function DraftCardView({
       ) : (
         <>
           <p className={contentPreview}>{draft.content}</p>
+          {showActions && (
+            <div className={draft.content.length > limit ? charCounterOver : charCounter}>
+              {draft.content.length}/{limit} characters
+            </div>
+          )}
+          {draft.content.length > limit && showActions && (
+            <div className={overLimitWarning}>
+              ⚠️ Content exceeds {draft.channel} limit ({draft.content.length}/{limit})
+            </div>
+          )}
           {draft.hashtags.length > 0 && <p className={hashtagLine}>{draft.hashtags.join(" ")}</p>}
           {draft.link && (
             <a className={sourceLink} href={draft.link} target="_blank" rel="noopener noreferrer">
@@ -350,7 +406,7 @@ function DraftCardView({
               </button>
               {draft.status !== "approved" && draft.status !== "published" && (
                 <>
-                  <button className={`${actionButton} ${approveButton}`} onClick={handleApprove} disabled={busy}>
+                  <button className={`${actionButton} ${approveButton}`} onClick={handleApprove} disabled={busy || draft.content.length > limit}>
                     {showSchedule ? "Confirm Approve" : "Approve"}
                   </button>
                   {showSchedule && (

@@ -80,14 +80,14 @@ def mock_storage():
 def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
     storage, store = mock_storage
 
-    # Umami mock
+    # Umami mock — new format returns ints directly
     umami_inst = MockUmami.return_value
     umami_inst.get_stats.return_value = {
-        "pageviews": {"value": 500},
-        "visitors": {"value": 120},
-        "visits": {"value": 200},
-        "bounces": {"value": 50},
-        "totaltime": {"value": 9000},
+        "pageviews": 500,
+        "visitors": 120,
+        "visits": 200,
+        "bounces": 50,
+        "totaltime": 9000,
     }
     umami_inst.get_metrics.return_value = [{"x": "/quantum", "y": 42}]
     umami_inst.close.return_value = None
@@ -111,6 +111,39 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
     assert result.social_metrics["mastodon"].followers == 300
     assert result.social_metrics["bluesky"].followers == 150
     assert "insights.json" in store
+
+
+@patch("handler.BlueskyClient")
+@patch("handler.MastodonClient")
+@patch("handler.UmamiClient")
+def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
+    """Umami legacy format with {\"value\": n} dicts still works."""
+    storage, store = mock_storage
+
+    umami_inst = MockUmami.return_value
+    umami_inst.get_stats.return_value = {
+        "pageviews": {"value": 500},
+        "visitors": {"value": 120},
+        "visits": {"value": 200},
+        "bounces": {"value": 50},
+        "totaltime": {"value": 9000},
+    }
+    umami_inst.get_metrics.return_value = []
+    umami_inst.close.return_value = None
+
+    masto_ctx = MagicMock()
+    masto_ctx.verify_credentials.return_value = {"followers_count": 300}
+    MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
+    MockMasto.return_value.__exit__ = MagicMock(return_value=False)
+
+    bsky_ctx = MagicMock()
+    bsky_ctx.get_profile.return_value = {"followersCount": 150}
+    MockBsky.return_value.__enter__ = MagicMock(return_value=bsky_ctx)
+    MockBsky.return_value.__exit__ = MagicMock(return_value=False)
+
+    result = ingest_analytics(storage)
+    assert result.website_analytics.pageviews == 500
+    assert result.website_analytics.visitors == 120
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +221,31 @@ def test_publish_empty_queue(mock_storage):
     storage, _store = mock_storage
     published = publish_approved_drafts(storage)
     assert published == []
+
+
+def test_publish_skips_oversized_content(mock_storage):
+    """Drafts exceeding platform char limits stay in approved without error."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    queue = ContentQueue(
+        approved=[
+            Draft(
+                id="too-long",
+                channel="mastodon",
+                language="en",
+                content="x" * 501,  # Exceeds 500 char limit
+                scheduled_at=past,
+            ),
+        ]
+    )
+    storage.write("content_queue.json", queue)
+
+    published = publish_approved_drafts(storage)
+    assert published == []
+    updated_queue = ContentQueue.model_validate(store["content_queue.json"])
+    assert len(updated_queue.approved) == 1
+    assert updated_queue.approved[0].id == "too-long"
 
 
 # ---------------------------------------------------------------------------

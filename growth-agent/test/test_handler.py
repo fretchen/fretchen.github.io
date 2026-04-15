@@ -435,8 +435,12 @@ def test_find_last_scheduled_at_from_drafts():
     t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
-            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
+            Draft(
+                id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1
+            ),
+            Draft(
+                id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2
+            ),
         ]
     )
     assert _find_last_scheduled_at(queue) == t2
@@ -447,7 +451,13 @@ def test_find_last_scheduled_at_across_drafts_and_approved():
     t_approved = datetime(2025, 4, 15, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t_draft),
+            Draft(
+                id="d1",
+                channel="mastodon",
+                language="en",
+                content="a",
+                scheduled_at=t_draft,
+            ),
         ],
         approved=[
             Draft(
@@ -553,7 +563,9 @@ def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
 
 @patch("handler.fetch_pages_meta")
 @patch("handler.LLMClient")
-def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts_scheduling_continues_from_last(
+    MockLLM, mock_fetch, mock_storage
+):
     """New drafts' scheduled_at starts from the latest existing scheduled_at + 1 day."""
     storage, store = mock_storage
 
@@ -598,14 +610,16 @@ def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_
     new_drafts = updated_queue.drafts[1:]  # skip existing
     assert new_drafts[0].scheduled_at == last_scheduled + timedelta(days=1)
     assert new_drafts[1].scheduled_at == last_scheduled + timedelta(days=2)
-    # Verify alternating channels
-    assert new_drafts[0].channel == "mastodon"
-    assert new_drafts[1].channel == "bluesky"
+    # Existing draft is mastodon → new drafts alternate starting with bluesky
+    assert new_drafts[0].channel == "bluesky"
+    assert new_drafts[1].channel == "mastodon"
 
 
 @patch("handler.fetch_pages_meta")
 @patch("handler.LLMClient")
-def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts_empty_queue_schedules_from_tomorrow(
+    MockLLM, mock_fetch, mock_storage
+):
     """With an empty queue, scheduling starts from tomorrow 09:00 UTC."""
     storage, store = mock_storage
 
@@ -631,13 +645,17 @@ def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, 
     llm_inst.chat.return_value = {"content": "Content"}
     llm_inst.close.return_value = None
 
-    create_drafts(storage, analysis)
+    # Freeze time so create_drafts() and the assertion use the same "now"
+    frozen_now = datetime(2025, 6, 10, 14, 30, 0, tzinfo=timezone.utc)
+    with patch("handler.datetime") as mock_dt:
+        mock_dt.now.return_value = frozen_now
+        mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+        create_drafts(storage, analysis)
 
     updated_queue = ContentQueue.model_validate(store["content_queue.json"])
     first_draft = updated_queue.drafts[0]
     # Should be scheduled for tomorrow at 09:00 UTC
-    now = datetime.now(timezone.utc)
-    expected_date = (now + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
+    expected_date = datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc)
     assert first_draft.scheduled_at == expected_date
 
 

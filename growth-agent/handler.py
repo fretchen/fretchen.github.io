@@ -339,7 +339,7 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
         logger.info("No pages to promote")
         return 0
 
-    # --- Find scheduling start point ---
+    # --- Find scheduling start point and next channel ---
     last_scheduled = _find_last_scheduled_at(queue)
     if last_scheduled is None:
         # Start tomorrow at 09:00 UTC
@@ -348,8 +348,15 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
         )
         tomorrow += timedelta(days=1)
         next_slot = tomorrow
+        next_channel = "mastodon"
     else:
         next_slot = last_scheduled + timedelta(days=1)
+        # Continue alternation from last scheduled draft's channel
+        next_channel = "mastodon"
+        for d in queue.drafts + queue.approved:
+            if d.scheduled_at and d.scheduled_at == last_scheduled:
+                next_channel = "bluesky" if d.channel == "mastodon" else "mastodon"
+                break
 
     # Fetch descriptions for pages to promote
     page_urls = [p.url for p in pages_to_promote]
@@ -370,69 +377,44 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
             )
             page_title = (meta.title or page.title) if meta else page.title
 
-            # Generate Mastodon EN post
-            if len(new_drafts) < needed:
-                mastodon_result = llm.chat(
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": _system_prompt(strategy),
-                        },
-                        {
-                            "role": "user",
-                            "content": _mastodon_prompt(
-                                page, page_title, page_desc, "en", strategy
-                            ),
-                        },
-                    ],
-                    temperature=0.8,
-                    max_tokens=300,
-                )
-                new_drafts.append(
-                    Draft(
-                        id=_make_draft_id("mastodon", "en", draft_index),
-                        channel="mastodon",
-                        language="en",
-                        content=mastodon_result["content"].strip(),
-                        source_blog_post=page_title,
-                        link=f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent",
-                        scheduled_at=next_slot,
-                    )
-                )
-                next_slot += timedelta(days=1)
-                draft_index += 1
+            for _ in range(2):  # up to 2 drafts per page
+                if len(new_drafts) >= needed:
+                    break
 
-            # Generate Bluesky EN post
-            if len(new_drafts) < needed:
-                bluesky_result = llm.chat(
+                if next_channel == "mastodon":
+                    prompt = _mastodon_prompt(
+                        page, page_title, page_desc, "en", strategy
+                    )
+                    max_tokens = 300
+                else:
+                    prompt = _bluesky_prompt(
+                        page, page_title, page_desc, "en", strategy
+                    )
+                    max_tokens = 200
+
+                result = llm.chat(
                     messages=[
-                        {
-                            "role": "system",
-                            "content": _system_prompt(strategy),
-                        },
-                        {
-                            "role": "user",
-                            "content": _bluesky_prompt(
-                                page, page_title, page_desc, "en", strategy
-                            ),
-                        },
+                        {"role": "system", "content": _system_prompt(strategy)},
+                        {"role": "user", "content": prompt},
                     ],
                     temperature=0.8,
-                    max_tokens=200,
+                    max_tokens=max_tokens,
                 )
+                utm = next_channel
                 new_drafts.append(
                     Draft(
-                        id=_make_draft_id("bluesky", "en", draft_index),
-                        channel="bluesky",
+                        id=_make_draft_id(next_channel, "en", draft_index),
+                        channel=next_channel,
                         language="en",
-                        content=bluesky_result["content"].strip(),
+                        content=result["content"].strip(),
                         source_blog_post=page_title,
-                        link=f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent",
+                        link=f"{page.url}?utm_source={utm}&utm_campaign=growth-agent",
                         scheduled_at=next_slot,
                     )
                 )
                 next_slot += timedelta(days=1)
                 draft_index += 1
+                next_channel = "bluesky" if next_channel == "mastodon" else "mastodon"
 
     except Exception:
         logger.exception("Draft creation failed")

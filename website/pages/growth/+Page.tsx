@@ -406,7 +406,11 @@ function DraftCardView({
               </button>
               {draft.status !== "approved" && draft.status !== "published" && (
                 <>
-                  <button className={`${actionButton} ${approveButton}`} onClick={handleApprove} disabled={busy || draft.content.length > limit}>
+                  <button
+                    className={`${actionButton} ${approveButton}`}
+                    onClick={handleApprove}
+                    disabled={busy || draft.content.length > limit}
+                  >
                     {showSchedule ? "Confirm Approve" : "Approve"}
                   </button>
                   {showSchedule && (

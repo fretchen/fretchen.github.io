@@ -67,6 +67,9 @@ def _load_model(storage: S3Storage, key: str, model_cls):
 
 PIPELINE_TARGET = 10
 
+# Keep in sync with website/types/growth.ts CHANNEL_CHAR_LIMITS
+CHAR_LIMITS = {"mastodon": 500, "bluesky": 300}
+
 
 def _make_draft_id(channel: str, language: str, index: int = 0) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
@@ -172,9 +175,6 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
     mastodon_client = None
     bluesky_client = None
 
-    # Keep in sync with website/types/growth.ts CHANNEL_CHAR_LIMITS
-    CHAR_LIMITS = {"mastodon": 500, "bluesky": 300}
-
     for draft in queue.approved:
         # Only publish if scheduled time has passed
         if draft.scheduled_at and draft.scheduled_at > now:
@@ -185,10 +185,11 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
         limit = CHAR_LIMITS.get(draft.channel, 500)
         if len(draft.content) > limit:
             logger.warning(
-                "Draft %s exceeds %s char limit (%d chars) — skipping",
+                "Draft %s exceeds %s char limit (%d/%d chars) — skipping",
                 draft.id,
                 draft.channel,
                 len(draft.content),
+                limit,
             )
             still_approved.append(draft)
             continue

@@ -270,8 +270,13 @@ function DraftCardView({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(draft.content);
   const [editHashtags, setEditHashtags] = useState(draft.hashtags.join(", "));
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(() => {
+    if (!draft.scheduled_at) return "";
+    // Format as local datetime string for <input type="datetime-local">
+    const d = new Date(draft.scheduled_at);
+    return d.toISOString().slice(0, 16);
+  });
+  const [showSchedule, setShowSchedule] = useState(!!draft.scheduled_at);
 
   const handleSave = async () => {
     await onUpdate(draft.id, {

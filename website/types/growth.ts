@@ -1,13 +1,15 @@
+export type Channel = "mastodon" | "bluesky";
+
 /** Character limits per channel — keep in sync with growth-agent/handler.py CHAR_LIMITS */
-export const CHANNEL_CHAR_LIMITS: Record<string, number> = {
+export const CHANNEL_CHAR_LIMITS: Record<Channel, number> = {
   mastodon: 500,
   bluesky: 300,
-};
+} as const;
 
 export interface Draft {
   id: string;
   created: string;
-  channel: string;
+  channel: Channel;
   language: string;
   content: string;
   source_blog_post: string | null;

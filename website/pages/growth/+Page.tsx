@@ -274,7 +274,8 @@ function DraftCardView({
     if (!draft.scheduled_at) return "";
     // Format as local datetime string for <input type="datetime-local">
     const d = new Date(draft.scheduled_at);
-    return d.toISOString().slice(0, 16);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   });
   const [showSchedule, setShowSchedule] = useState(!!draft.scheduled_at);
 

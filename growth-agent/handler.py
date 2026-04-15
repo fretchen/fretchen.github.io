@@ -67,6 +67,9 @@ def _load_model(storage: S3Storage, key: str, model_cls):
 
 PIPELINE_TARGET = 10
 
+# Keep in sync with website/types/growth.ts CHANNEL_CHAR_LIMITS
+CHAR_LIMITS = {"mastodon": 500, "bluesky": 300}
+
 
 def _make_draft_id(channel: str, language: str, index: int = 0) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
@@ -105,12 +108,16 @@ def ingest_analytics(storage: S3Storage) -> Insights:
         top_referrers = umami.get_metrics(start_at, end_at, "referrer", limit=10)
         top_events = umami.get_metrics(start_at, end_at, "event", limit=20)
 
+        def _stat(val):
+            """Handle both old ({"value": n}) and new (n) Umami formats."""
+            return val.get("value", 0) if isinstance(val, dict) else (val or 0)
+
         insights.website_analytics = WebsiteAnalytics(
-            pageviews=stats.get("pageviews", {}).get("value", 0),
-            visitors=stats.get("visitors", {}).get("value", 0),
-            visits=stats.get("visits", {}).get("value", 0),
-            bounces=stats.get("bounces", {}).get("value", 0),
-            totaltime=stats.get("totaltime", {}).get("value", 0),
+            pageviews=_stat(stats.get("pageviews", 0)),
+            visitors=_stat(stats.get("visitors", 0)),
+            visits=_stat(stats.get("visits", 0)),
+            bounces=_stat(stats.get("bounces", 0)),
+            totaltime=_stat(stats.get("totaltime", 0)),
             top_pages=top_pages,
             top_referrers=top_referrers,
             top_events=top_events,
@@ -171,6 +178,19 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
     for draft in queue.approved:
         # Only publish if scheduled time has passed
         if draft.scheduled_at and draft.scheduled_at > now:
+            still_approved.append(draft)
+            continue
+
+        # Validate content length
+        limit = CHAR_LIMITS.get(draft.channel, 500)
+        if len(draft.content) > limit:
+            logger.warning(
+                "Draft %s exceeds %s char limit (%d/%d chars) — skipping",
+                draft.id,
+                draft.channel,
+                len(draft.content),
+                limit,
+            )
             still_approved.append(draft)
             continue
 
@@ -581,3 +601,13 @@ def handle(event, _context):
         "statusCode": 200,
         "body": json.dumps(result, default=str),
     }
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+    from scaleway_functions_python import local
+
+    local.serve_handler(handle, port=8080)

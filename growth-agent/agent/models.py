@@ -89,7 +89,9 @@ class Strategy(BaseModel):
         ]
     )
     channels: list[str] = Field(default_factory=lambda: ["mastodon", "bluesky"])
-    posting_frequency: dict[str, int] = Field(default_factory=lambda: {"mastodon": 5, "bluesky": 5})
+    posting_frequency: dict[str, int] = Field(
+        default_factory=lambda: {"mastodon": 4, "bluesky": 3}
+    )
     tone: str = "insightful, technical, opinionated, accessible"
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"

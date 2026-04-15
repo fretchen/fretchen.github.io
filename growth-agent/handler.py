@@ -6,10 +6,10 @@ Daily tasks:
   - Analytics ingest (Umami + social metrics)
   - Publish approved drafts where scheduled_at <= now
   - Performance update (refresh metrics for published posts)
+  - Pipeline refill: generate drafts if pipeline < PIPELINE_TARGET
 
 Weekly tasks (Monday only):
-  - LLM insight generation
-  - Content planning + draft creation
+  - LLM insight generation (persisted to S3 for daily reuse)
 """
 
 from __future__ import annotations
@@ -17,7 +17,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from math import ceil
 
 from agent.llm_client import LLMClient
 from agent.models import (
@@ -64,9 +65,21 @@ def _load_model(storage: S3Storage, key: str, model_cls):
     return model_cls.model_validate(data)
 
 
-def _make_draft_id(channel: str, language: str) -> str:
+PIPELINE_TARGET = 10
+
+
+def _make_draft_id(channel: str, language: str, index: int = 0) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"draft_{channel}_{language}_{ts}"
+    return f"draft_{channel}_{language}_{ts}_{index}"
+
+
+def _find_last_scheduled_at(queue: ContentQueue) -> datetime | None:
+    """Find the latest scheduled_at across pending + approved drafts."""
+    latest: datetime | None = None
+    for draft in queue.drafts + queue.approved:
+        if draft.scheduled_at and (latest is None or draft.scheduled_at > latest):
+            latest = draft.scheduled_at
+    return latest
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +297,8 @@ Based on this data, identify:
         insights.growth_opportunities = analysis.growth_opportunities
         insights.last_analysis = datetime.now(timezone.utc)
         storage.write("insights.json", insights)
-        logger.info("LLM insights generated")
+        storage.write("llm_analysis.json", analysis)
+        logger.info("LLM insights generated and persisted")
         return analysis
 
     except Exception:
@@ -295,14 +309,36 @@ Based on this data, identify:
 
 
 def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
-    """Generate social media draft posts from LLM analysis. Returns count."""
+    """Generate social media draft posts from LLM analysis. Returns count.
+
+    Maintains a pipeline of PIPELINE_TARGET drafts (pending + approved).
+    Each draft is auto-scheduled 1 day after the previous, alternating
+    Mastodon and Bluesky channels.
+    """
     strategy = _load_model(storage, "strategy.json", Strategy)
     queue = _load_model(storage, "content_queue.json", ContentQueue)
 
-    pages_to_promote = analysis.best_pages_for_social[:5]
+    # --- Pipeline depth check ---
+    existing = len(queue.drafts) + len(queue.approved)
+    needed = max(0, PIPELINE_TARGET - existing)
+    if needed == 0:
+        logger.info("Pipeline full (%d pending+approved), skipping draft creation", existing)
+        return 0
+
+    pages_to_promote = analysis.best_pages_for_social[: ceil(needed / 2)]
     if not pages_to_promote:
         logger.info("No pages to promote")
         return 0
+
+    # --- Find scheduling start point ---
+    last_scheduled = _find_last_scheduled_at(queue)
+    if last_scheduled is None:
+        # Start tomorrow at 09:00 UTC
+        tomorrow = datetime.now(timezone.utc).replace(hour=9, minute=0, second=0, microsecond=0)
+        tomorrow += timedelta(days=1)
+        next_slot = tomorrow
+    else:
+        next_slot = last_scheduled + timedelta(days=1)
 
     # Fetch descriptions for pages to promote
     page_urls = [p.url for p in pages_to_promote]
@@ -310,64 +346,80 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
 
     llm = LLMClient(api_token=os.environ["IONOS_API_TOKEN"])
     new_drafts: list[Draft] = []
+    draft_index = 0
 
     try:
         for page in pages_to_promote:
+            if len(new_drafts) >= needed:
+                break
+
             meta = page_metas.get(page.url)
             page_desc = (meta.description or "(no description)") if meta else "(no description)"
             page_title = (meta.title or page.title) if meta else page.title
 
             # Generate Mastodon EN post
-            mastodon_result = llm.chat(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": _system_prompt(strategy),
-                    },
-                    {
-                        "role": "user",
-                        "content": _mastodon_prompt(page, page_title, page_desc, "en", strategy),
-                    },
-                ],
-                temperature=0.8,
-                max_tokens=300,
-            )
-            new_drafts.append(
-                Draft(
-                    id=_make_draft_id("mastodon", "en"),
-                    channel="mastodon",
-                    language="en",
-                    content=mastodon_result["content"].strip(),
-                    source_blog_post=page_title,
-                    link=f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent",
+            if len(new_drafts) < needed:
+                mastodon_result = llm.chat(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": _system_prompt(strategy),
+                        },
+                        {
+                            "role": "user",
+                            "content": _mastodon_prompt(
+                                page, page_title, page_desc, "en", strategy
+                            ),
+                        },
+                    ],
+                    temperature=0.8,
+                    max_tokens=300,
                 )
-            )
+                new_drafts.append(
+                    Draft(
+                        id=_make_draft_id("mastodon", "en", draft_index),
+                        channel="mastodon",
+                        language="en",
+                        content=mastodon_result["content"].strip(),
+                        source_blog_post=page_title,
+                        link=f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent",
+                        scheduled_at=next_slot,
+                    )
+                )
+                next_slot += timedelta(days=1)
+                draft_index += 1
 
             # Generate Bluesky EN post
-            bluesky_result = llm.chat(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": _system_prompt(strategy),
-                    },
-                    {
-                        "role": "user",
-                        "content": _bluesky_prompt(page, page_title, page_desc, "en", strategy),
-                    },
-                ],
-                temperature=0.8,
-                max_tokens=200,
-            )
-            new_drafts.append(
-                Draft(
-                    id=_make_draft_id("bluesky", "en"),
-                    channel="bluesky",
-                    language="en",
-                    content=bluesky_result["content"].strip(),
-                    source_blog_post=page_title,
-                    link=f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent",
+            if len(new_drafts) < needed:
+                bluesky_result = llm.chat(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": _system_prompt(strategy),
+                        },
+                        {
+                            "role": "user",
+                            "content": _bluesky_prompt(
+                                page, page_title, page_desc, "en", strategy
+                            ),
+                        },
+                    ],
+                    temperature=0.8,
+                    max_tokens=200,
                 )
-            )
+                new_drafts.append(
+                    Draft(
+                        id=_make_draft_id("bluesky", "en", draft_index),
+                        channel="bluesky",
+                        language="en",
+                        content=bluesky_result["content"].strip(),
+                        source_blog_post=page_title,
+                        link=f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent",
+                        scheduled_at=next_slot,
+                    )
+                )
+                next_slot += timedelta(days=1)
+                draft_index += 1
 
     except Exception:
         logger.exception("Draft creation failed")
@@ -376,7 +428,8 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
 
     queue.drafts.extend(new_drafts)
     storage.write("content_queue.json", queue)
-    logger.info("Created %d new drafts", len(new_drafts))
+    total = existing + len(new_drafts)
+    logger.info("Created %d new drafts (pipeline: %d/%d)", len(new_drafts), total, PIPELINE_TARGET)
     return len(new_drafts)
 
 
@@ -480,11 +533,10 @@ def handle(event, _context):
     Daily (every run):
       1. Analytics ingest
       2. Publish approved drafts
-      3. (future) Performance update
+      3. Pipeline refill (generate drafts if pipeline < PIPELINE_TARGET)
 
     Weekly (Monday only):
-      4. LLM insight generation
-      5. Content creation (drafts)
+      4. LLM insight generation (persisted for daily reuse)
     """
     logger.info("Growth Agent cron started")
 
@@ -509,18 +561,27 @@ def handle(event, _context):
     except Exception:
         logger.exception("Publishing failed")
 
-    # --- Weekly tasks (Monday) ---
+    # --- Weekly tasks (Monday): LLM insight generation ---
     now = datetime.now(timezone.utc)
     if now.weekday() == 0:  # Monday
-        logger.info("Monday — running weekly tasks")
+        logger.info("Monday — running weekly insight generation")
         try:
             analysis = generate_insights(storage)
             result["insights"] = analysis is not None
-            if analysis:
-                count = create_drafts(storage, analysis)
-                result["drafts_created"] = count
         except Exception:
-            logger.exception("Weekly tasks failed")
+            logger.exception("Insight generation failed")
+
+    # --- Daily: Pipeline refill (uses last saved analysis) ---
+    try:
+        analysis_data = storage.read("llm_analysis.json")
+        if analysis_data:
+            analysis = LLMAnalysis.model_validate(analysis_data)
+            count = create_drafts(storage, analysis)
+            result["drafts_created"] = count
+        else:
+            logger.info("No saved LLM analysis — skipping draft creation")
+    except Exception:
+        logger.exception("Draft pipeline refill failed")
 
     # Write run log
     log_key = f"logs/{now.strftime('%Y-%m-%d')}.json"

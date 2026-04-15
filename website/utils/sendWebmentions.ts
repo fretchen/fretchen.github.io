@@ -20,7 +20,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,7 +66,7 @@ function setupGhPagesWorktree(): string {
   // Clean up if exists
   if (fs.existsSync(TEMP_PAGES_DIR)) {
     try {
-      execSync(`git worktree remove "${TEMP_PAGES_DIR}" --force`, { stdio: "ignore" });
+      execFileSync("git", ["worktree", "remove", TEMP_PAGES_DIR, "--force"], { stdio: "ignore" });
     } catch {
       // Worktree might not be registered, just remove directory
       fs.rmSync(TEMP_PAGES_DIR, { recursive: true, force: true });
@@ -75,7 +75,7 @@ function setupGhPagesWorktree(): string {
 
   // Create worktree from remote to ensure it's up-to-date
   try {
-    execSync(`git worktree add "${TEMP_PAGES_DIR}" origin/gh-pages`, { stdio: "pipe" });
+    execFileSync("git", ["worktree", "add", TEMP_PAGES_DIR, "origin/gh-pages"], { stdio: "pipe" });
     console.log("   ✅ gh-pages worktree ready\n");
     // Blog files are directly in the root, not in client/ subdirectory
     return path.join(TEMP_PAGES_DIR, "blog");
@@ -93,7 +93,7 @@ function setupGhPagesWorktree(): string {
 function cleanupGhPagesWorktree(): void {
   if (fs.existsSync(TEMP_PAGES_DIR)) {
     try {
-      execSync(`git worktree remove "${TEMP_PAGES_DIR}" --force`, { stdio: "ignore" });
+      execFileSync("git", ["worktree", "remove", TEMP_PAGES_DIR, "--force"], { stdio: "ignore" });
     } catch {
       fs.rmSync(TEMP_PAGES_DIR, { recursive: true, force: true });
     }

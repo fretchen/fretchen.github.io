@@ -13,8 +13,12 @@ import React from "react";
 
 export const GLOB_REGISTRY = {
   blog: {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../blog/*.{tsx,md,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../blog/*.{tsx,md,mdx}", { eager: false }),
+    eager: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,md,mdx}", "!../blog/*.plan.md"], {
+      eager: true,
+    }),
+    lazy: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,md,mdx}", "!../blog/*.plan.md"], {
+      eager: false,
+    }),
   },
   "quantum/amo": {
     eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,md,mdx}", { eager: true }),

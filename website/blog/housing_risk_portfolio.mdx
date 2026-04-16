@@ -1,0 +1,173 @@
+---
+title: "What Actually Protects Your Home?"
+publishing_date: "2026-04-16"
+category: "others"
+description: "A dinner conversation reveals why paying off your mortgage faster isn't always the safest strategy — and what actually protects your home when life goes wrong."
+tokenID: 194
+---
+
+import ShockCalculator from "../components/blog/ShockCalculator";
+import RiskReality from "../components/blog/RiskReality";
+
+## Prologue
+
+In this blog post, I explore what ways to protect your home financially when life goes wrong — and why paying off the mortgage faster isn't always the answer.
+To make the arguments less abstract and easier to follow, I embedded them into a conversation between two friends over dinner.
+
+## Why extra repayment feels so safe
+
+Sofia opens the door, slightly breathless. "Sorry — the oven timer. Come in."
+
+It's a reunion with Amara. The two met [on a ferry to Tunis](/blog/20/) arguing about democracy until 3 AM — Sofia, who works at the European Commission in Brussels, and Amara, a water governance researcher from Tunisia.
+
+It's Amara's first time seeing the apartment. Living room with a view of the park. Compact kitchen with new tiles. Then the bathroom — old tiles, cracked mirror, fixtures from 2003.
+
+"Are you going to redo this?" Amara asks.
+
+"Eventually. Every spare euro goes into the mortgage." Sofia answers while she is finishing the table.
+
+Over dinner, she explains. She's been making extra repayments beyond the regular rate since she moved in. "Every payment feels like buying another piece of freedom. One day this place is _mine_. No bank, no debt." She takes a sip. "I don't understand people who invest while they still owe money. Pay off the house first. Then you're safe."
+
+Amara has gone quiet.
+
+"You okay?" Sofia asks.
+
+## The money in the walls
+
+Amara had owned a small apartment in Tunis — two rooms near the Medina, her base between research trips. She'd been doing the same thing as Sofia: every spare dinar into extra repayment. Then her research contract wasn't renewed and the income stopped.
+
+"Month two, I couldn't cover the rate. The bank said: the payments you've already made are gone. The money was in the walls. And I needed it in my account."
+
+The bank offered a two-month payment pause. Then a pipe burst — €4,000 she didn't have. Her sister lent her money for the repair. But with no income returning, two months wasn't enough.
+
+She looks at Sofia's bathroom door. "The money in the walls can't help you. The money outside the walls can."
+
+Sofia: "But you _did_ save on interest."
+
+"That's a _return_ question. What would have protected my apartment was cash I could actually use."
+
+## What's actually on your balance sheet?
+
+After the crisis, Amara had spent weeks staring at her finances. The picture was simple and brutal: the apartment dominated everything, the mortgage was a predictable line going down, and the savings — the only thing she could actually reach — were a thin sliver in the corner.
+
+She updates the spreadsheet with Sofia's numbers. Apartment: €380,000. Mortgage: €290,000. Savings: €8,000. The sliver looks even thinner.
+
+Sofia points at the savings. "That's what they're for."
+
+"Now imagine something breaks on top of a job loss," Amara says. "You saw what happened to me — job loss and a repair bill at the same time."
+
+Enter your own numbers below — then toggle the shocks.
+
+<ShockCalculator />
+
+Amara: "Now you see what I saw."
+
+Sofia nods slowly. "So cash is what protects the house."
+
+"Exactly. But that raises a question you haven't asked yet: if the mortgage isn't the danger — what is? Where does the risk actually sit?"
+
+## Where your financial risk actually comes from
+
+But knowing what you own isn't the same as knowing where the danger sits. Amara had gone further — not just listing assets, but asking: which of these can actually move?
+
+The mortgage, it turned out, couldn't. Fixed rate, fixed monthly payment, known end date. It drops by the same amount every month. The apartment's value, on the other hand, could swing by tens of thousands from one year to the next. By _risk_ Amara means exactly this: not whether something will go wrong, but how much the value of what you own can change.
+
+"Almost all of it was the house," Amara tells Sofia. "The mortgage — despite being the biggest number on my balance sheet — contributed almost nothing."
+
+"The mortgage is... nothing?" Sofia asks.
+
+"It's fixed. Zero surprise. The house price is where all the uncertainty sits."
+
+The tool below shows the same breakdown for your numbers. Enter your numbers — then try the two toggles.
+
+<RiskReality />
+
+Sofia: "So paying it all off doesn't make me safer?"
+
+Amara: "It makes your balance smaller. It doesn't make the risk smaller."
+
+Sofia stares at her plate. The kitchen timer ticks.
+
+"So I made a mistake buying?"
+
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes."
+
+"The risk is real, but smaller than it looked — because you bought for the right reason."
+
+Sofia sits back. "So I'm actually in a decent position."
+
+"Better than you thought," Amara says. "But look at the bar one more time — almost everything is still orange. The risk per euro is small. The problem is that almost every euro you have is in the same place."
+
+## So what do I do?
+
+Sofia straightens up. "Okay. I have €300 a month after everything. What do I _do_ with it?"
+
+"Build savings outside the walls," Amara says. "Every euro you keep liquid is a euro that doesn't depend on what happens to the housing market — and a euro you can actually reach if you need it."
+
+Sofia: "How much?"
+
+"Remember what we just saw? Six months of mortgage payments in savings you can reach. That's the first goal."
+
+Sofia: "But extra repayment saves me 3.5%."
+
+"It does. And once the buffer is there, every extra euro should go right back to repayment. But the first six months are worth more than any interest saving — because they're what keeps you in the apartment if something goes wrong."
+
+"And once you want to go beyond a savings account — investing without putting all your eggs in one basket — [that's a separate conversation](/blog/etf_diversification_interactive)," Amara says.
+
+Sofia looks down the hallway at the bathroom. "I'm keeping the extra repayment. But I'm building savings first."
+
+She pauses. "And _then_ I'm fixing that bathroom."
+
+## Three things to remember
+
+1. **Your house is safe because you can _pay_ for it — not because you've _paid it off_.** The mortgage is predictable. What's unpredictable is life. Liquid savings protect your home in a crisis; a lower balance doesn't.
+
+2. **The mortgage adds almost no financial risk.** It drops by the same amount every month — completely predictable. The actual uncertainty comes from your house price — and if you're staying, that risk is smaller than it looks because you save rent.
+
+3. **Liquid savings are money that doesn't depend on the housing market.** Your biggest asset is one apartment. Cash you can reach gives you options that the house can't — and it's the first step before [going further](/blog/etf_diversification_interactive).
+
+## Technical appendix
+
+### How the risk is computed
+
+The **RiskReality** widget estimates each asset's contribution to your total financial uncertainty. Only two asset classes carry risk: **your home** (house price moves) and **investments** (market moves). Cash and fixed-rate mortgages have zero volatility by design.
+
+**Your inputs:**
+
+- Home value, mortgage remaining, cash savings, investments
+
+**Model:** Each asset's annual euro risk is its value times its volatility: `euroVol = value × σ`. The risk bar shows how much each asset contributes to total risk. The "share of risk" in the table is each asset's variance share: $(\text{weight} \times \sigma)^2 \,/\, \Sigma(\text{weight} \times \sigma)^2$, where weight = value / total assets.
+
+**Parameters** (from the [housing analysis notebooks](https://github.com/fretchen/retail-portfolio-analysis/tree/main/notebooks/housing), based on GREIX Frankfurt quarterly data 2008–2022):
+
+| Parameter                           | Value     | Source                                                                             |
+| ----------------------------------- | --------- | ---------------------------------------------------------------------------------- |
+| Housing volatility (mark-to-market) | 7.5% p.a. | NB05 — GREIX price index                                                           |
+| Housing volatility (owner-occupier) | 4.2% p.a. | NB06b — after rent hedge (ρ ≈ 0.7 between prices and rents, Sinai & Souleles 2005) |
+| Cash volatility                     | 0%        | Savings accounts don't fluctuate in nominal terms                                  |
+| Investment portfolio volatility     | 12% p.a.  | Diversified equity/bond mix                                                        |
+| Mortgage volatility                 | 0%        | Fixed-rate, perfectly predictable                                                  |
+
+**"I'm staying" toggle:** Switches housing volatility from 7.5% to 4.2%. An owner-occupier is hedged against rent changes: if house prices fall, rents tend to fall too — but you're not paying rent. Your effective risk is the _residual_ after accounting for this hedge (Yao & Zhang 2005). The Before/After bars use an absolute euro scale so that the blue (investment) segment stays the same width and only the orange (housing) segment shrinks from the right.
+
+**Why paying off the mortgage doesn't reduce risk:** The mortgage has zero volatility regardless of its size. Reducing the balance changes your net worth but not your risk exposure — the house still moves by the same amount. This is the "crowding-out" effect: housing dominates the portfolio so completely that other decisions barely register (Cocco 2005).
+
+**Simplifications:**
+
+- Cross-correlations between assets are ignored (zero covariance assumption). For cash this is exact; for equity-housing correlation (~0.1–0.3) the effect is small.
+- GREIX data covers German cities — your local market may differ. European cities show similar orders of magnitude.
+- The rent hedge assumes you stay long-term; a forced seller faces the full 7.5% mark-to-market risk.
+- Cash volatility is set to zero (no inflation adjustment). In real terms, cash loses purchasing power — but that's a return question, not a risk-of-loss question.
+
+### The return vs. the risk question
+
+Saving on mortgage interest is equivalent to earning a guaranteed return — that's real and valuable. The question "should I invest at higher but uncertain returns instead?" is a _return comparison_.
+
+But as we explored in [the ETF diversification post](/blog/etf_diversification_interactive), reliably estimating future returns requires 80–100 years of data (Merton, 1980). We're genuinely bad at it. What we _can_ measure is risk. This post focuses on what protects your home — not what earns more. The interest-saving argument is valid; it's just answering a different question.
+
+### References
+
+- Cocco, J.F. (2005). Portfolio Choice in the Presence of Housing. _Review of Financial Studies_, 18(2), 535–567.
+- Gomes, F. (2020). Portfolio Choice Over the Life Cycle: A Survey. _Annual Review of Financial Economics_, 12, 277–304.
+- Yao, R. & Zhang, H.H. (2005). Optimal Consumption and Portfolio Choices with Risky Housing and Borrowing Constraints. _Review of Financial Studies_, 18(1), 197–239.
+- GREIX — German Real Estate Index. Housing price data for German cities.

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadBlogs } from "../utils/blogLoader";
+import { GLOB_REGISTRY } from "../utils/globRegistry";
 
 describe("blogLoader - Integration Test", () => {
   it("should load blogs from blog directory", async () => {
@@ -119,5 +120,28 @@ describe("blogLoader - Integration Test", () => {
       expect(blog.title).toBeDefined();
       expect(blog.title.length).toBeGreaterThan(0);
     });
+  });
+
+  it("should exclude .plan.md files from blog loading", async () => {
+    // Verify at the glob level: .plan.md files must not appear in registry keys.
+    // This is where the exclusion actually happens (via "!../blog/*.plan.md" pattern).
+    const eagerKeys = Object.keys(GLOB_REGISTRY.blog.eager);
+    const lazyKeys = Object.keys(GLOB_REGISTRY.blog.lazy);
+
+    const planInEager = eagerKeys.filter((k) => k.endsWith(".plan.md"));
+    const planInLazy = lazyKeys.filter((k) => k.endsWith(".plan.md"));
+
+    expect(planInEager).toHaveLength(0);
+    expect(planInLazy).toHaveLength(0);
+
+    // Also confirm they don't appear in loaded blogs
+    const blogs = await loadBlogs("blog", "publishing_date");
+    const planFiles = blogs.filter((b) => b.componentPath && b.componentPath.endsWith(".plan.md"));
+
+    expect(planFiles).toHaveLength(0);
+
+    // Verify no blog title matches a known plan file
+    const titles = blogs.map((b) => b.title.toLowerCase());
+    expect(titles).not.toContain("housing_risk_portfolio.plan");
   });
 });

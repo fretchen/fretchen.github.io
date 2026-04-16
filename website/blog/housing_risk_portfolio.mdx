@@ -9,14 +9,14 @@ import ShockCalculator from "../components/blog/ShockCalculator";
 import RiskReality from "../components/blog/RiskReality";
 
 
-In this blog post, I explore what actually protects your home when life goes wrong — and why paying off the mortgage faster isn't always the answer. 
+In this blog post, I explore what ways to protect your home financially when life goes wrong — and why paying off the mortgage faster isn't always the answer. 
 To make the arguments less abstract and easier to follow, I embedded them into a conversation between two friends over dinner.
 
 ## Why extra repayment feels so safe
 
 Sofia opens the door, slightly breathless. "Sorry — the oven timer. Come in."
 
-It's a reunion with Amara. The two met [on a ferry to Tunis](/blog/cosmopol_democracy) arguing about democracy until 3 AM — Sofia, who works at the European Commission in Brussels, and Amara, a water governance researcher from Tunisia.
+It's a reunion with Amara. The two met [on a ferry to Tunis](/blog/20/) arguing about democracy until 3 AM — Sofia, who works at the European Commission in Brussels, and Amara, a water governance researcher from Tunisia.
 
 It's Amara's first time seeing the apartment. Living room with a view of the park. Compact kitchen with new tiles. Then the bathroom — old tiles, cracked mirror, fixtures from 2003.
 
@@ -44,14 +44,6 @@ Sofia: "But you _did_ save on interest."
 
 "That's a _return_ question. What would have protected my apartment was cash I could actually use."
 
-<details>
-<summary>🔬 The return question vs. the risk question</summary>
-
-Saving on mortgage interest is equivalent to earning a guaranteed return — that's real and valuable. The question "should I invest at higher but uncertain returns instead?" is a _return comparison_.
-
-But as we explored in [the ETF diversification post](/blog/etf_diversification_interactive), reliably estimating future returns requires 80–100 years of data (Merton, 1980). We're genuinely bad at it. What we _can_ measure is risk. This post focuses on what protects your home — not what earns more. The interest-saving argument is valid; it's just answering a different question.
-
-</details>
 
 ## What's actually on your balance sheet?
 
@@ -91,9 +83,7 @@ Amara: "It makes your balance smaller. It doesn't make the risk smaller."
 
 Sofia stares at her plate. "So I made a mistake buying?"
 
-"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes."
-
-The bar shrinks.
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes — look at the risk bar again."
 
 "The risk is real, but smaller than it looked — because you bought for the right reason."
 
@@ -125,10 +115,9 @@ She pauses. "And _then_ I'm fixing that bathroom."
 
 3. **Liquid savings diversify you away from the house.** Your biggest asset is one apartment. Cash you can reach reduces that concentration. To go beyond cash, [start here](/blog/etf_diversification_interactive).
 
----
+## Technical appendix
 
-<details>
-<summary>🔬 Technical appendix: How the risk is computed</summary>
+### How the risk is computed
 
 The **RiskReality** widget computes each asset's contribution to your total financial uncertainty using a simplified **Contribution-to-Volatility** (CtV) decomposition.
 
@@ -153,10 +142,15 @@ The **RiskReality** widget computes each asset's contribution to your total fina
 - GREIX data covers German cities — your local market may differ
 - The rent hedge assumes you stay long-term; forced sellers face the full mark-to-market risk
 
-**References:**
+###  The return vs. the risk question
+
+Saving on mortgage interest is equivalent to earning a guaranteed return — that's real and valuable. The question "should I invest at higher but uncertain returns instead?" is a _return comparison_.
+
+But as we explored in [the ETF diversification post](/blog/etf_diversification_interactive), reliably estimating future returns requires 80–100 years of data (Merton, 1980). We're genuinely bad at it. What we _can_ measure is risk. This post focuses on what protects your home — not what earns more. The interest-saving argument is valid; it's just answering a different question.
+
+### References
+
 - Cocco, J.F. (2005). Portfolio Choice in the Presence of Housing. _Review of Financial Studies_, 18(2), 535–567.
 - Gomes, F. (2020). Portfolio Choice Over the Life Cycle: A Survey. _Annual Review of Financial Economics_, 12, 277–304.
 - Yao, R. & Zhang, H.H. (2005). Optimal Consumption and Portfolio Choices with Risky Housing and Borrowing Constraints. _Review of Financial Studies_, 18(1), 197–239.
 - GREIX — German Real Estate Index. Housing price data for German cities.
-
-</details>

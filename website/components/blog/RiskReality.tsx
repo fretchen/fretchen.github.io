@@ -4,11 +4,9 @@ import { css } from "../../styled-system/css";
 // Annualised volatilities from retail-portfolio-analysis NB05 + NB06b
 const SIGMA_HOUSE_MTM = 0.075; // mark-to-market housing vol (7.5% p.a.)
 const SIGMA_HOUSE_HEDGED = 0.042; // after rent hedge (4.2% p.a.)
-const SIGMA_CASH = 0.005; // cash/savings account (~0.5% p.a.)
+const SIGMA_CASH = 0; // cash on savings account: safe, no risk
 const SIGMA_INVESTMENTS = 0.12; // diversified equity/bond portfolio (~12% p.a.)
 // Mortgage: fixed-rate → σ = 0 (perfectly predictable)
-
-const MORTGAGE_MIN_VISUAL = 0.03; // minimum visual share so grey sliver stays visible
 
 interface Segment {
   label: string;
@@ -26,12 +24,16 @@ interface WealthSegment {
   amount: number;
 }
 
+interface AssetBreakdown {
+  euroVol: number;
+  share: number;
+}
+
 interface ScenarioResult {
   segments: Segment[];
-  totalRelative: number;
-  baseVariance: number;
-  currentVariance: number;
+  totalEuroVol: number;
   wealthSegments: WealthSegment[];
+  breakdown: { house: AssetBreakdown; cash: AssetBreakdown; investments: AssetBreakdown };
 }
 
 function computeScenario(
@@ -42,15 +44,11 @@ function computeScenario(
   paidOff: boolean,
   staying: boolean,
 ): ScenarioResult {
-  const effectiveMortgage = paidOff ? 0 : mortgage;
   const totalAssets = property + cash + investments;
-  const netWorth = totalAssets - effectiveMortgage;
-  if (netWorth <= 0) {
+  if (totalAssets <= 0) {
     return {
       segments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316", euroVol: 0 }],
-      totalRelative: 1,
-      baseVariance: 1,
-      currentVariance: 1,
+      totalEuroVol: 0,
       wealthSegments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316", amount: property }],
     };
   }
@@ -88,9 +86,12 @@ function computeScenario(
   }
 
   // Risk calculation: variance contribution per asset
-  const wHouse = property / netWorth;
-  const wCash = cash / netWorth;
-  const wInv = investments / netWorth;
+  // Use totalAssets as denominator (not netWorth) so that paying off
+  // the mortgage does not change the weights — the mortgage has σ=0,
+  // so it should not affect the risk picture at all.
+  const wHouse = property / totalAssets;
+  const wCash = cash / totalAssets;
+  const wInv = investments / totalAssets;
 
   const sigHouse = staying ? SIGMA_HOUSE_HEDGED : SIGMA_HOUSE_MTM;
   const varHouse = (wHouse * sigHouse) ** 2;
@@ -102,80 +103,27 @@ function computeScenario(
   const euroVolHouse = property * sigHouse;
   const euroVolCash = cash * SIGMA_CASH;
   const euroVolInv = investments * SIGMA_INVESTMENTS;
+  const totalEuroVol = Math.sqrt(euroVolHouse ** 2 + euroVolCash ** 2 + euroVolInv ** 2);
 
-  // Base variance (no toggles) for totalRelative scaling
-  const baseNW = property + cash + investments - mortgage;
-  const baseVar =
-    baseNW > 0
-      ? ((property / baseNW) * SIGMA_HOUSE_MTM) ** 2 +
-        ((cash / baseNW) * SIGMA_CASH) ** 2 +
-        ((investments / baseNW) * SIGMA_INVESTMENTS) ** 2
-      : 1;
+  const shareHouse = totalVar > 0 ? varHouse / totalVar : 1;
+  const shareInv = totalVar > 0 ? varInv / totalVar : 0;
 
-  const shareHouse = totalVar > 0 ? varHouse / totalVar : 0.9;
-  const shareCash = totalVar > 0 ? varCash / totalVar : 0.05;
-  const shareInv = totalVar > 0 ? varInv / totalVar : 0.05;
-
-  const segments: Segment[] = [];
-
-  if (!paidOff && mortgage > 0) {
-    // Mortgage gets a minimum visual share (it contributes ~0% variance but needs to be visible)
-    const mortgageVisual = MORTGAGE_MIN_VISUAL;
-    const scale = 1 - mortgageVisual;
-    segments.push({
-      label: "Your home",
-      emoji: "\u{1F3E0}",
-      share: shareHouse * scale,
-      color: "#f97316",
-      euroVol: euroVolHouse,
-    });
-    if (cash > 0) {
-      segments.push({
-        label: "Cash",
-        emoji: "\u{1F4B5}",
-        share: shareCash * scale,
-        color: "#22c55e",
-        euroVol: euroVolCash,
-      });
-    }
-    if (investments > 0) {
-      segments.push({
-        label: "Investments",
-        emoji: "\u{1F4C8}",
-        share: shareInv * scale,
-        color: "#3b82f6",
-        euroVol: euroVolInv,
-      });
-    }
-    segments.push({ label: "Mortgage", emoji: "\u{1F3E6}", share: mortgageVisual, color: "#9ca3af", euroVol: 0 });
-  } else {
-    segments.push({
-      label: "Your home",
-      emoji: "\u{1F3E0}",
-      share: shareHouse,
-      color: "#f97316",
-      euroVol: euroVolHouse,
-    });
-    if (cash > 0) {
-      segments.push({ label: "Cash", emoji: "\u{1F4B5}", share: shareCash, color: "#22c55e", euroVol: euroVolCash });
-    }
-    if (investments > 0) {
-      segments.push({
-        label: "Investments",
-        emoji: "\u{1F4C8}",
-        share: shareInv,
-        color: "#3b82f6",
-        euroVol: euroVolInv,
-      });
-    }
-  }
+  // Risk bar: only house and investments carry risk (cash σ=0, mortgage σ=0)
+  // Always show both — no conditional logic.
+  const segments: Segment[] = [
+    { label: "Your home", emoji: "\u{1F3E0}", share: shareHouse, color: "#f97316", euroVol: euroVolHouse },
+    { label: "Investments", emoji: "\u{1F4C8}", share: shareInv, color: "#3b82f6", euroVol: euroVolInv },
+  ];
 
   return {
     segments,
-    totalRelative: baseVar > 0 ? Math.sqrt(totalVar / baseVar) : 1,
-    baseVariance: baseVar,
-    currentVariance: totalVar,
+    totalEuroVol,
     wealthSegments,
+    breakdown: {
+      house: { euroVol: euroVolHouse, share: shareHouse },
+      cash: { euroVol: euroVolCash, share: 0 },
+      investments: { euroVol: euroVolInv, share: shareInv },
+    },
   };
 }
 
@@ -227,63 +175,43 @@ const fmtEuro = (n: number) =>
 /* ── Reusable stacked bar renderer ── */
 function StackedBar({
   segments,
-  widthPct,
   height,
 }: {
   segments: { label: string; emoji: string; share: number; color: string }[];
-  widthPct: number;
   height: string;
 }) {
   return (
-    <div
-      className={css({
-        position: "relative",
-        height,
-        borderRadius: "6px",
-        overflow: "hidden",
-        backgroundColor: "#f3f4f6",
-      })}
-    >
-      <div
-        style={{
-          display: "flex",
-          height: "100%",
-          width: `${Math.max(10, widthPct)}%`,
-          transition: "width 0.5s ease",
-        }}
-      >
-        {segments.map((seg) => (
-          <div
-            key={seg.label}
-            style={{
-              width: `${seg.share * 100}%`,
-              height: "100%",
-              backgroundColor: seg.color,
-              transition: "width 0.5s ease, background-color 0.3s",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-              minWidth: seg.share > 0.05 ? "24px" : "8px",
-            }}
-            title={`${seg.emoji} ${seg.label}: ${Math.round(seg.share * 100)}%`}
-          >
-            {seg.share > 0.1 && (
-              <span
-                className={css({
-                  fontSize: "0.7rem",
-                  color: "white",
-                  fontWeight: "bold",
-                  whiteSpace: "nowrap",
-                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                })}
-              >
-                {seg.emoji} {seg.label}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+    <div style={{ display: "flex", height, borderRadius: "6px", overflow: "hidden" }}>
+      {segments.map((seg) => (
+        <div
+          key={seg.label}
+          style={{
+            width: `${seg.share * 100}%`,
+            height: "100%",
+            backgroundColor: seg.color,
+            transition: "width 0.5s ease",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+          title={`${seg.emoji} ${seg.label}: ${Math.round(seg.share * 100)}%`}
+        >
+          {seg.share > 0.1 && (
+            <span
+              className={css({
+                fontSize: "0.7rem",
+                color: "white",
+                fontWeight: "bold",
+                whiteSpace: "nowrap",
+                textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+              })}
+            >
+              {seg.emoji} {seg.label}
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -329,7 +257,7 @@ export default function RiskReality() {
 
   const anyToggle = mortgagePaidOff || staying;
   const pctChange =
-    baseScenario.baseVariance > 0 ? Math.round((1 - scenario.currentVariance / baseScenario.baseVariance) * 100) : 0;
+    baseScenario.totalEuroVol > 0 ? Math.round((1 - scenario.totalEuroVol / baseScenario.totalEuroVol) * 100) : 0;
 
   return (
     <div
@@ -460,7 +388,7 @@ export default function RiskReality() {
         >
           How your wealth is split
         </p>
-        <StackedBar segments={scenario.wealthSegments} widthPct={100} height="28px" />
+        <StackedBar segments={scenario.wealthSegments} height="28px" />
         <Legend segments={scenario.wealthSegments} />
 
         {/* Bar 2: Wobble (risk) — before/after when toggle active */}
@@ -501,7 +429,7 @@ export default function RiskReality() {
               Before
             </p>
             <div style={{ opacity: 0.4 }}>
-              <StackedBar segments={baseScenario.segments} widthPct={100} height="20px" />
+              <StackedBar segments={baseScenario.segments} height="20px" />
             </div>
             <p
               className={css({
@@ -517,7 +445,7 @@ export default function RiskReality() {
           </>
         )}
 
-        <StackedBar segments={scenario.segments} widthPct={Math.max(10, scenario.totalRelative * 100)} height="36px" />
+        <StackedBar segments={scenario.segments} height="36px" />
         <Legend segments={scenario.segments} />
 
         {/* Breakdown table: € amounts */}
@@ -578,31 +506,29 @@ export default function RiskReality() {
             </tr>
           </thead>
           <tbody>
-            {scenario.segments
-              .filter((seg) => seg.label !== "Mortgage")
-              .map((seg) => (
-                <tr key={seg.label}>
-                  <td className={css({ padding: "0.3rem 0", color: "#374151" })}>
-                    <span style={{ color: seg.color }}>{"\u25CF"}</span> {seg.emoji} {seg.label}
-                  </td>
-                  <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
-                    {seg.label === "Your home"
-                      ? fmtEuro(property)
-                      : seg.label === "Cash"
-                        ? fmtEuro(cash)
-                        : fmtEuro(investments)}
-                  </td>
-                  <td
-                    className={css({ textAlign: "right", padding: "0.3rem 0" })}
-                    style={{ color: seg.euroVol > 1000 ? "#dc2626" : "#374151" }}
-                  >
-                    &plusmn;{fmtEuro(seg.euroVol)}
-                  </td>
-                  <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
-                    {Math.round(seg.share * 100)}%
-                  </td>
-                </tr>
-              ))}
+            {[
+              { label: "Your home", emoji: "\u{1F3E0}", color: "#f97316", value: property, ...scenario.breakdown.house },
+              { label: "Cash", emoji: "\u{1F4B5}", color: "#22c55e", value: cash, ...scenario.breakdown.cash },
+              { label: "Investments", emoji: "\u{1F4C8}", color: "#3b82f6", value: investments, ...scenario.breakdown.investments },
+            ].map((row) => (
+              <tr key={row.label}>
+                <td className={css({ padding: "0.3rem 0", color: "#374151" })}>
+                  <span style={{ color: row.color }}>{"\u25CF"}</span> {row.emoji} {row.label}
+                </td>
+                <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
+                  {fmtEuro(row.value)}
+                </td>
+                <td
+                  className={css({ textAlign: "right", padding: "0.3rem 0" })}
+                  style={{ color: row.euroVol > 1000 ? "#dc2626" : "#374151" }}
+                >
+                  &plusmn;{fmtEuro(row.euroVol)}
+                </td>
+                <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
+                  {row.euroVol > 0 ? `${Math.round(row.share * 100)}%` : "0%"}
+                </td>
+              </tr>
+            ))}
             {/* Mortgage row */}
             {!mortgagePaidOff && mortgage > 0 && (
               <tr>
@@ -613,10 +539,47 @@ export default function RiskReality() {
                   {fmtEuro(-mortgage)}
                 </td>
                 <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>&plusmn;&euro;0</td>
-                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>~0%</td>
+                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>0%</td>
               </tr>
             )}
           </tbody>
+          <tfoot>
+            <tr>
+              <td
+                colSpan={2}
+                className={css({
+                  padding: "0.4rem 0 0.2rem",
+                  fontWeight: "700",
+                  color: "#374151",
+                  borderTop: "1px solid #e5e7eb",
+                })}
+              >
+                Total annual risk
+              </td>
+              <td
+                className={css({
+                  textAlign: "right",
+                  padding: "0.4rem 0 0.2rem",
+                  fontWeight: "700",
+                  borderTop: "1px solid #e5e7eb",
+                })}
+                style={{ color: "#dc2626" }}
+              >
+                &plusmn;{fmtEuro(scenario.totalEuroVol)}
+              </td>
+              <td
+                className={css({
+                  textAlign: "right",
+                  padding: "0.4rem 0 0.2rem",
+                  fontWeight: "700",
+                  color: "#374151",
+                  borderTop: "1px solid #e5e7eb",
+                })}
+              >
+                100%
+              </td>
+            </tr>
+          </tfoot>
         </table>
         <p
           className={css({

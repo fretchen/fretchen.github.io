@@ -1,37 +1,105 @@
-# Critique: What Actually Protects Your Home? (Round 3)
+# Critique: What Actually Protects Your Home? (Round 4)
 
-**Target audience:** Risk-averse European homeowner, 30–50, with a mortgage, who believes paying it off fast = safety. Educated but not financially literate. May distrust investing.
+**Focus:** Three AUTHOR COMMENTs addressing RiskReality widget behavior.
 
-**Overall impression:** The post has improved substantially. The narrative flows as a two-person conversation, Amara's analytical authority is earned through crisis, both widgets land at the right moments, and the message is clear: liquid savings protect your home, not a lower mortgage balance. Three structural issues remain — a doubled flashback, a logical gap in the conclusion, and some small artifacts from prior edits.
+## Round 3 Status
 
-## Critical Issues
+All Round 3 fixes implemented ✅ (Steps 9–16 in plan.md). Frontmatter, doubled flashback, logical gap bridge, merge artifact, toggle dialogue, ETF link, takeaway qualifier, burst pipe — all done.
 
-- [ ] **[§ What's actually on your balance sheet? → § Where your financial risk actually comes from]** Amara's post-crisis analysis is introduced twice with near-identical framing: "spent weeks staring at her finances" (§3) and "spent three months with spreadsheets" (§4). Both start with "After the crisis, Amara had spent..." — the reader feels a reset rather than a progression. Worse, "weeks" vs. "three months" is a factual contradiction. This is the biggest structural issue: §3 and §4 both flashback to the same period. **Fix:** Remove the flashback intro from one section. The simplest approach: §3 keeps "after the crisis" framing (it introduces the balance sheet), §4 drops it and chains directly: "But that was just the crisis. What really changed how I think was what I found next." This eliminates the duplicated flashback and gives the reader forward momentum.
+---
 
-- [ ] **[§ So what do I do?]** There is a logical gap. The RiskReality widget just showed Sofia that staying *reduces* her housing risk — her instinct to buy was right. Then Amara immediately argues "you need to diversify away from the house." A careful reader will think: "Wait — you just told me the risk is smaller than it looks. Now you tell me it's still too concentrated?" The post needs a bridge sentence that resolves this: something like "Smaller than it looks — but still almost everything. 98% of your wealth is one apartment." The 98% number is already in the text, but it comes too late — after the cognitive dissonance has already happened.
+## New Issues from AUTHOR COMMENTs
 
-- [ ] **[§ Description / frontmatter]** The `description` still says "three friends" but the post now has two characters. Readers arriving via social share or search see a mismatch before reading the first line.
+### Critical: "Pay off mortgage" toggle causes dramatic bar shrink (AUTHOR COMMENT #1)
 
-## Suggestions
+**Location:** RiskReality widget, `computeScenario()` in RiskReality.tsx
 
-- [ ] **[§ Why extra repayment feels so safe]** The sentence "Every payment feels like buying another piece of freedom. One day this place is _mine_. No bank, no debt. - I don't understand people who invest while they still owe money," has an odd "`. -`" join that looks like a manual edit artifact. Should be two separate quoted lines or one properly joined sentence.
+**Problem:** When the user toggles "What if I pay off the mortgage?", the risk bar shrinks to ~25% of its original width. The narrative says "barely changes" — but the bar changes drastically.
 
-- [ ] **[§ Where your financial risk actually comes from]** "By _risk_ she means exactly this" — the switch to indirect speech ("she means") is inconsistent with the narrator voice used everywhere else. "We mean" or direct speech from Amara would be more consistent.
+**Root cause:** Weights are computed as `wHouse = property / netWorth`. With a mortgage, `netWorth = 98k` → `wHouse = 3.88` (3.88× leverage). Without mortgage, `netWorth = 388k` → `wHouse = 0.98`. The leverage removal causes variance to drop from 0.085 to 0.005 — a 94% reduction. The bar width is proportional to `sqrt(currentVar / baseVar)`, so it shrinks to 25%.
 
-- [ ] **[§ Where your financial risk actually comes from, post-widget]** "Toggle the second switch" appears in Amara's dialogue. This is widget tutorial text leaking into the story — Sofia wouldn't be told to "toggle" anything in a real dinner conversation. The narrator already says "try the two toggles" before the widget. Consider cutting or rephrasing Amara's line.
+The mortgage truly has σ=0 (no risk), but it creates *leverage* on the housing position. Removing it de-leverages the portfolio. This is mathematically correct but:
+1. Too advanced for the target audience
+2. Contradicts the narrative ("the mortgage was never the source of uncertainty")
+3. Confuses the core message
 
-- [ ] **[§ Where your financial risk actually comes from]** "could swing by thousands from one year to the next" — for a €380,000 apartment at 7.5% vol, the annual swing is ±€28,500. "Thousands" significantly undersells it. Consider "tens of thousands."
+**Proposed fix:** Change the weight denominator from `netWorth` to `totalAssets` (`property + cash + investments`). This way:
+- The mortgage has no effect on weights (it's not in the denominator)
+- Toggling "pay off" truly does nothing to the bar except removing the grey sliver
+- The "I'm staying" toggle still works correctly (changes σ, bar shrinks)
+- The narrative and widget are aligned
 
-- [ ] **[§ So what do I do?]** "For what to do once you've built up cash savings — how to invest beyond a savings account without adding concentration — that's a separate question." This narrator-voice sentence sits between two dialogue scenes. Tonally it's a sudden break. Could be set apart more clearly (e.g., its own paragraph after a scene break) or integrated into Amara's voice.
+**Concrete code change in `computeScenario()`:**
+```typescript
+// BEFORE:
+const wHouse = property / netWorth;
+const wCash = cash / netWorth;
+const wInv = investments / netWorth;
 
-- [ ] **[§ Three things to remember]** Takeaway #1 says "Liquid savings protect your home; a lower balance doesn't." Stated as absolute — but the post itself acknowledges extra repayment saves 3.5%. A reader paying attention may feel contradicted. Consider: "Liquid savings protect your home in a crisis; a lower balance doesn't."
+// AFTER:
+const wHouse = property / totalAssets;
+const wCash = cash / totalAssets;
+const wInv = investments / totalAssets;
+```
 
-- [ ] **[§ The money in the walls]** "burst pipe" appears twice: once in §2 ("burst pipe on top") and again in §3 ("burst pipe. Two weeks after the contract ended. €4,000"). The second is more detailed and impactful. Consider "emergency repair" for the first mention to avoid repetition.
+Same change for the `baseVar` calculation (replace `baseNW` with `totalAssets`).
 
-## Nitpicks
+**Trade-off:** This ignores leverage, which is a real financial effect. But the post already simplifies portfolio theory for a non-financial audience, and introducing leverage would muddy the core message. The post is about *where* risk comes from (house price, not mortgage), not about leverage ratios.
 
-- [ ] **[§ Intro]** "In this blog post, I explore what actually protects your home..." — this was previously revised to a more direct hook ("What actually protects your home when life goes wrong? Not what you'd expect.") but appears to have been reverted. The "I explore" framing is weaker.
+---
 
-- [ ] **[§ Why extra repayment feels so safe]** "surpringly" → typo, should be "surprisingly". (Though this may have already been fixed by the user — check current file.)
+### Important: Table doesn't visibly respond to "I'm staying" toggle (AUTHOR COMMENT #2)
 
-- [ ] **[§ What's actually on your balance sheet?]** "She updates the spreadsheet with Sofia's numbers" — earlier she showed it on her phone. Minor device inconsistency (phone vs. spreadsheet). Not critical but slightly noticeable.
+**Location:** RiskReality widget, breakdown table
+
+**Problem:** When "I'm staying" is toggled, the bar changes (intuitive), but the table appears not to change.
+
+**Diagnosis:** The table has 4 columns: Asset, Value, Annual risk (±€), Share. When staying is toggled:
+- **Value**: unchanged (correct — you still own the same things)
+- **Annual risk (±€)**: DOES change (€28,500 → €15,960) — this is working correctly
+- **Share**: stays at 97% — because housing still dominates ~100% of total variance regardless of σ level
+
+The user likely looks at the Share column (the rightmost, most prominent number) and sees no change. The €-column does change but isn't visually highlighted.
+
+**Proposed fix (two parts):**
+
+1. **Add a "Total risk" summary row** at the bottom of the table showing the portfolio-level annual volatility in €. This number changes visibly (e.g., from ±€28,540 to ±€15,996) and gives the user a clear signal that the toggle worked.
+
+2. **Highlight changed cells** — when a toggle is active, briefly flash or color-code cells that changed vs. the baseline. Alternatively, show the baseline value in parentheses: "±€15,960 (was ±€28,500)".
+
+Recommendation: Option 1 (total row) is simpler and sufficient. The user sees a concrete € number change at the table level.
+
+---
+
+### Moderate: "The bar shrinks" is disconnected from widget (AUTHOR COMMENT #3)
+
+**Location:** MDX narrative, lines 99–101 (between RiskReality widget and "So what do I do" section)
+
+**Current text:**
+```
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up,
+you're unaffected. That's what staying changes."
+
+The bar shrinks.
+```
+
+**Problem:** The RiskReality widget is several lines of dialogue above. "The bar shrinks" reads like a stage direction floating in space — the reader may not connect it to the widget's "I'm staying" toggle.
+
+**Proposed fix:** Replace the orphaned narrator line with an explicit reference:
+
+```
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up,
+you're unaffected. That's what staying changes — look at the risk bar again."
+```
+
+This folds the visual cue into Amara's dialogue and tells the reader where to look. Remove "The bar shrinks." as a separate line — the widget itself shows the change.
+
+---
+
+## Implementation order
+
+| # | Issue | Scope | Risk |
+|---|-------|-------|------|
+| 1 | Leverage fix (weight denominator) | `computeScenario()` + `baseVar` calc in RiskReality.tsx | Medium — changes model behavior |
+| 2 | Total risk row in table | RiskReality.tsx table section | Low — additive |
+| 3 | "The bar shrinks" → integrate into dialogue | MDX, 2 lines | None |

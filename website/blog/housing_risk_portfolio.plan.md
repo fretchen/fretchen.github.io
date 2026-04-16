@@ -715,3 +715,163 @@ The second "burst pipe" in §3 (line 67) is the detailed, impactful version — 
 | 16 | "burst pipe" repetition | 1 word in §2 | None |
 
 Steps 9, 12–16 are mechanical. Steps 10–11 are structural and carry the plan's weight.
+
+---
+
+## RiskReality Widget — Vereinfachung nach KISS
+
+### Wer benutzt das Widget?
+
+Sofia — risikoaverse Eigenheimbesitzerin, 30–50, mit Hypothek. Glaubt: Tilgen = Sicherheit. Kennt weder "Volatilität" noch "Varianz" noch "Portfolio-Gewichtung". Benutzt einen Taschenrechner, keine Spreadsheets.
+
+### Was soll Sofia lernen?
+
+Sie hat eine Frage: **"Woher kommt das Risiko eigentlich?"**
+
+Sie erwartet: "Von der Hypothek." Das Widget soll sie überraschen:
+
+1. **Aha #1:** Fast alles Risiko kommt vom Hauspreis, nicht von der Hypothek
+2. **Aha #2:** Hypothek tilgen ändert daran nichts (die Hypothek war nie riskant)
+3. **Aha #3:** Wer bleibt, hat weniger Risiko als es aussieht (Miet-Hedge)
+
+### Was soll Sofia sehen?
+
+**4 Inputs** (ihre Zahlen — macht es persönlich):
+- Hauswert (Default: €380.000)
+- Hypothek (Default: €290.000)
+- Bargeld/Sparkonto (Default: €8.000)
+- Investments/ETFs (Default: €0 — Sofia hat keine)
+
+**1 Wealth-Bar** ("How your wealth is split"):
+- Zeigt die Allokation: Haus, Cash, Investments, Hypothek (negativ)
+- Immer 100% breit
+- Das ist Kontext — nicht die Hauptaussage
+
+**1 Risk-Bar** ("How the risk is split"):
+- Zeigt woher die finanzielle Unsicherheit kommt
+- **Immer 100% breit** — zeigt Zusammensetzung, nicht absolute Größe
+- Fast komplett orange (Haus). Kein Cash-Segment (σ=0). Blau nur wenn Investments > 0.
+- Keine Hypothek im Risk-Bar — Hypothek hat σ=0, gehört nicht in den Risk-Bar
+- **Der Kontrast zwischen Wealth-Bar (Hypothek sichtbar) und Risk-Bar (Hypothek weg) IST der Aha-Moment**
+
+**1 Tabelle** ("Breakdown"):
+- 4 Zeilen, immer sichtbar: Home, Cash, Investments, Mortgage
+- Spalten: Asset | Value | Annual risk (±€) | Share of risk
+- Cash zeigt ±€0 (σ=0) — Cash ist sicher, Punkt. ±€40 für €8k untergräbt das Vertrauen und verwässert die Botschaft.
+- Hypothek zeigt ±€0 — Festzins, keine Überraschungen
+- Total-Zeile am Ende mit Gesamtrisiko in €
+- Bei Investments=€0 zeigt die Zeile "€0 | ±€0 | 0%" — ehrlich, keine versteckten Zeilen
+
+**2 Toggles** (die Aha-Momente):
+
+**Toggle 1: "What if I pay off the mortgage?"**
+- Wealth-Bar: Hypothek-Segment verschwindet
+- Risk-Bar: **Nichts ändert sich** — das ist der Punkt
+- Tabelle: Hypothek-Zeile verschwindet, Anteile bleiben gleich
+- Erklärungstext erscheint
+
+**Toggle 2: "I'm staying — price swings don't affect my costs"**
+- Risk-Bar: Housing-Anteil schrumpft (σ von 7.5% → 4.2%)
+- Tabelle: House ±€ sinkt, Total ±€ sinkt
+- Erklärungstext erscheint
+
+**Before/After Vergleich (wenn ein Toggle aktiv):**
+- Vorheriger Risk-Bar (verblasst) über dem aktuellen
+- Label: "Before" / "After"
+- **Beide Bars sind 100% breit** — zeigen Kompositionsänderung
+- Die Größenänderung wird durch das Badge ("X% less risk") und die Total-Zeile der Tabelle gezeigt
+- **Kein variabler Balken, kein grauer Leerraum**
+
+**1 Nachricht** (kursiv, unter der Tabelle):
+- Ändert sich je nach Toggle-Status
+- Default: "Almost all your financial uncertainty comes from one thing: what your home is worth."
+
+### Was Sofia NICHT braucht
+
+- Varianz, Volatilität, σ, Portfolio-Gewichtung
+- Variable Balkenbreiten die schrumpfen/wachsen ("warum ist da grauer Raum?")
+- Cash-Risiko (sie weiß dass Cash sicher ist — das bestätigen baut Vertrauen auf)
+- Segmente die ab Schwellenwerten erscheinen/verschwinden (fühlt sich buggy an)
+
+---
+
+### Essentielle Features vs. KISS-Vereinfachungen
+
+| Feature | Status | Begründung |
+|---------|--------|------------|
+| 4 Input-Felder | **Essentiell** | Eigene Zahlen → eigene Erkenntnis. Ohne das ist es eine statische Grafik. |
+| Wealth-Bar (100% breit) | **Essentiell** | Zeigt den Kontrast: Hypothek sichtbar hier, unsichtbar im Risk-Bar. |
+| Risk-Bar (100% breit) | **Essentiell** | Kernelement — zeigt woher das Risiko kommt. |
+| 4 Zeilen in der Tabelle | **Essentiell** | Übersetzt das Bar-Bild in konkrete €-Beträge. Cash=€0 und Mortgage=€0 sind die Pointe. |
+| Toggle "Hypothek tilgen" | **Essentiell** | Aha #2 — ohne diesen Toggle fehlt die halbe Aussage. |
+| Toggle "Ich bleibe" | **Essentiell** | Aha #3 — das Relief-Moment. |
+| Before/After (beide 100% breit) | **Essentiell** | Zeigt visuell was sich ändert. Ohne das müsste man sich die vorherige Bar merken. |
+| Badge "X% less risk" | **Essentiell** | Einziger Ort wo die absolute Größenänderung sichtbar ist (Bars zeigen nur Komposition). |
+| Erklärungstext pro Toggle | **Essentiell** | Ohne Erklärung versteht Sofia nicht warum sich nichts / etwas ändert. |
+| Kursive Nachricht | Nice-to-have | Hilft, ist aber nicht kritisch. Könnte entfallen. |
+| "So what?" Box (grün) | Nice-to-have | Fasst zusammen wenn Toggles aktiv. Redundant mit den Toggle-Texten. |
+| Legend unter den Bars | Nice-to-have | Tooltips + Tabelle liefern dieselbe Info. Entfernen = weniger visuelles Rauschen. |
+
+**KISS-Vereinfachungen (Code wird einfacher):**
+
+| Vereinfachung | Was wird entfernt | Was wird einfacher |
+|---------------|-------------------|--------------------|
+| `SIGMA_CASH = 0` | Fake-Risiko für Cash (±€40) | Cash taucht nicht im Risk-Bar auf, Tabelle zeigt ±€0 |
+| Risk-Bar immer 100% breit | `totalRelative` Skalierung | `widthPct` ist immer 100, kein dynamisches Schrumpfen |
+| Before/After beide 100% breit | Variable Breite der Ghost-Bar | Konsistente visuelle Sprache |
+| `baseVariance`/`currentVariance` entfernen | 2 Felder aus ScenarioResult | `pctChange` berechnet aus `totalEuroVol`-Ratio — intuitiver und direkt lesbar |
+| `totalRelative` entfernen | 1 Feld aus ScenarioResult + base-Varianz-Berechnung | ~15 Zeilen weniger Code |
+| Cash-Segment aus Risk-Bar entfernen | Bedingte Segment-Logik für σ=0 Assets | Risk-Bar hat maximal 2 Segmente (House + optional Investments) |
+
+---
+
+### Implementierungsschritte
+
+**Schritt A: `SIGMA_CASH = 0` setzen**
+
+- Datei: `RiskReality.tsx`, Zeile 7
+- Änderung: `const SIGMA_CASH = 0.005;` → `const SIGMA_CASH = 0;`
+- Auswirkung: Cash verschwindet aus dem Risk-Bar (share=0), Tabelle zeigt ±€0
+- Risiko: Keins
+
+**Schritt B: Risk-Bar immer 100% breit**
+
+- Datei: `RiskReality.tsx`
+- Änderung am After-Bar (Zeile ~493): `widthPct={Math.max(10, scenario.totalRelative * 100)}` → `widthPct={100}`
+- Before-Bar bleibt `widthPct={100}` (ist schon so)
+- Auswirkung: Kein Schrumpfen/Wachsen der Bars mehr, kein grauer Leerraum
+- Risiko: Keins
+
+**Schritt C: `pctChange` aus `totalEuroVol` berechnen**
+
+- Datei: `RiskReality.tsx`
+- Aktuelle Berechnung: `Math.round((1 - scenario.currentVariance / baseScenario.baseVariance) * 100)`
+- Neue Berechnung: `Math.round((1 - scenario.totalEuroVol / baseScenario.totalEuroVol) * 100)`
+- Auswirkung: Badge zeigt jetzt €-basierte Reduktion (intuitiver für Sofia)
+- Risiko: Gering — Zahlen ändern sich leicht (√Varianz-Ratio vs. Varianz-Ratio), aber Richtung bleibt gleich
+
+**Schritt D: `totalRelative`, `baseVariance`, `currentVariance` aus ScenarioResult entfernen**
+
+- Datei: `RiskReality.tsx`
+- Interface `ScenarioResult`: 3 Felder entfernen
+- `computeScenario()`: `baseVar`-Berechnung entfernen, `totalRelative`-Berechnung entfernen, nur noch `totalEuroVol` zurückgeben
+- Auswirkung: ~15 Zeilen weniger Code, klareres Interface
+- Risiko: Gering — hängt von Schritt B+C ab (erst nach denen)
+
+**Schritt E (optional): Legend entfernen**
+
+- Nur wenn gewünscht — die Tabelle + Tooltips liefern dieselbe Information
+- Auswirkung: Weniger visuelles Rauschen, ~20 Zeilen weniger Code
+
+### Reihenfolge
+
+A → B → C → D (jeder Schritt baut auf dem vorherigen auf). E ist unabhängig und optional.
+
+### Nicht ändern
+
+- Wealth-Bar (funktioniert bereits korrekt)
+- Tabelle mit 4 festen Zeilen (bereits korrekt implementiert)
+- Toggle-Logik (funktioniert)
+- Input-Felder (funktionieren)
+- Messages (funktionieren)
+- Before/After-Mechanismus (funktioniert — nur die Breite ändert sich)

@@ -544,6 +544,13 @@ def handle(event, _context):
     logger.info("Growth Agent cron started")
 
     storage = _get_storage()
+    now = datetime.now(timezone.utc)
+    log_key = f"logs/{now.strftime('%Y-%m-%d')}.json"
+
+    # Write a "started" marker so we know the function was invoked,
+    # even if it crashes before reaching the end.
+    storage.write(log_key, {"timestamp": now.isoformat(), "status": "started"})
+
     result = {
         "analytics": False,
         "published": [],
@@ -551,50 +558,65 @@ def handle(event, _context):
         "drafts_created": 0,
     }
 
-    # --- Daily tasks ---
     try:
-        ingest_analytics(storage)
-        result["analytics"] = True
-    except Exception:
-        logger.exception("Analytics ingest failed")
-
-    try:
-        published = publish_approved_drafts(storage)
-        result["published"] = published
-    except Exception:
-        logger.exception("Publishing failed")
-
-    # --- Weekly tasks (Monday): LLM insight generation ---
-    now = datetime.now(timezone.utc)
-    if now.weekday() == 0:  # Monday
-        logger.info("Monday — running weekly insight generation")
+        # --- Daily tasks ---
         try:
-            analysis = generate_insights(storage)
-            result["insights"] = analysis is not None
+            ingest_analytics(storage)
+            result["analytics"] = True
         except Exception:
-            logger.exception("Insight generation failed")
+            logger.exception("Analytics ingest failed")
 
-    # --- Daily: Pipeline refill (uses last saved analysis) ---
-    try:
-        analysis_data = storage.read("llm_analysis.json")
-        if analysis_data:
-            analysis = LLMAnalysis.model_validate(analysis_data)
-            count = create_drafts(storage, analysis)
-            result["drafts_created"] = count
-        else:
-            logger.info("No saved LLM analysis — skipping draft creation")
+        try:
+            published = publish_approved_drafts(storage)
+            result["published"] = published
+        except Exception:
+            logger.exception("Publishing failed")
+
+        # --- Weekly tasks (Monday): LLM insight generation ---
+        if now.weekday() == 0:  # Monday
+            logger.info("Monday — running weekly insight generation")
+            try:
+                analysis = generate_insights(storage)
+                result["insights"] = analysis is not None
+            except Exception:
+                logger.exception("Insight generation failed")
+
+        # --- Daily: Pipeline refill (uses last saved analysis) ---
+        try:
+            analysis_data = storage.read("llm_analysis.json")
+            if analysis_data:
+                analysis = LLMAnalysis.model_validate(analysis_data)
+                count = create_drafts(storage, analysis)
+                result["drafts_created"] = count
+            else:
+                logger.info("No saved LLM analysis — skipping draft creation")
+        except Exception:
+            logger.exception("Draft pipeline refill failed")
+
+        # Write final success log
+        storage.write(
+            log_key,
+            {
+                "timestamp": now.isoformat(),
+                "status": "completed",
+                "result": result,
+            },
+        )
+
     except Exception:
-        logger.exception("Draft pipeline refill failed")
+        # Catch-all: write crash info to S3 so we have evidence
+        logger.exception("Handler crashed unexpectedly")
+        import traceback
 
-    # Write run log
-    log_key = f"logs/{now.strftime('%Y-%m-%d')}.json"
-    storage.write(
-        log_key,
-        {
-            "timestamp": now.isoformat(),
-            "result": result,
-        },
-    )
+        storage.write(
+            log_key,
+            {
+                "timestamp": now.isoformat(),
+                "status": "crashed",
+                "error": traceback.format_exc(),
+                "result": result,
+            },
+        )
 
     logger.info("Growth Agent cron finished: %s", result)
     return {

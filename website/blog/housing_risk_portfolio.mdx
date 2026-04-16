@@ -119,28 +119,32 @@ She pauses. "And _then_ I'm fixing that bathroom."
 
 ### How the risk is computed
 
-The **RiskReality** widget computes each asset's contribution to your total financial uncertainty using a simplified **Contribution-to-Volatility** (CtV) decomposition.
+The **RiskReality** widget estimates each asset's contribution to your total financial uncertainty. Only two asset classes carry risk: **your home** (house price moves) and **investments** (market moves). Cash and fixed-rate mortgages have zero volatility by design.
 
-**Inputs you provide:**
-- Home value, mortgage remaining, cash savings, and investments
+**Your inputs:**
+- Home value, mortgage remaining, cash savings, investments
 
-**Fixed parameters** (from [retail-portfolio-analysis](https://github.com/fretchen/retail-portfolio-analysis) notebooks NB05 + NB06b, based on GREIX Frankfurt quarterly data 2008–2022):
-- Housing price volatility (mark-to-market): **σ = 7.5% p.a.**
-- Housing price volatility (owner-occupier, after rent hedge): **σ = 4.2% p.a.** — because purchase prices and rents are strongly correlated (ρ ≈ 0.7, Sinai & Souleles 2005)
-- Savings account volatility: **σ ≈ 0.5% p.a.**
-- Investment portfolio volatility: **σ ≈ 12% p.a.** (diversified equity/bond mix)
-- Mortgage volatility: **σ = 0%** (fixed-rate, perfectly predictable)
+**Model:** Each asset's annual euro risk is its value times its volatility: `euroVol = value × σ`. The risk bar shows how much each asset contributes to total risk. The "share of risk" in the table is each asset's variance share: `(weight × σ)² / Σ(weight × σ)²`, where `weight = value / total assets`.
 
-**Calculation:** For each asset, the variance contribution is (weight × volatility)². The widget shows the share of total variance per asset. Because the mortgage has zero volatility, it contributes nothing — even though it's a large number on your balance sheet. For typical European homeowners, housing represents 70–90% of total wealth (Gomes 2020), which is why it dominates the risk picture.
+**Parameters** (from the [housing analysis notebooks](https://github.com/fretchen/retail-portfolio-analysis/tree/main/notebooks/housing), based on GREIX Frankfurt quarterly data 2008–2022):
 
-**"I'm staying" toggle:** Switches housing volatility from 7.5% to 4.2%. This reflects the economic insight that an owner-occupier is hedged against rent increases: if house prices fall, rents tend to fall too — but you're not paying rent, so you're unaffected. The effective risk is the _difference_ between price and rent movements (Yao & Zhang 2005).
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| Housing volatility (mark-to-market) | 7.5% p.a. | NB05 — GREIX price index |
+| Housing volatility (owner-occupier) | 4.2% p.a. | NB06b — after rent hedge (ρ ≈ 0.7 between prices and rents, Sinai & Souleles 2005) |
+| Cash volatility | 0% | Savings accounts don't fluctuate in nominal terms |
+| Investment portfolio volatility | 12% p.a. | Diversified equity/bond mix |
+| Mortgage volatility | 0% | Fixed-rate, perfectly predictable |
 
-**Why extra repayment doesn't reduce risk:** The mortgage has zero volatility regardless of its size. Reducing the balance changes your net worth but not your risk exposure — the house still moves by the same amount. This is the "crowding-out" effect: housing dominates the portfolio so completely that other decisions barely register (Cocco 2005).
+**"I'm staying" toggle:** Switches housing volatility from 7.5% to 4.2%. An owner-occupier is hedged against rent changes: if house prices fall, rents tend to fall too — but you're not paying rent. Your effective risk is the _residual_ after accounting for this hedge (Yao & Zhang 2005). The Before/After bars use an absolute euro scale so that the blue (investment) segment stays the same width and only the orange (housing) segment shrinks from the right.
 
-**Limitations:**
-- Cross-correlations between housing and savings are ignored (minimal for cash)
-- GREIX data covers German cities — your local market may differ
-- The rent hedge assumes you stay long-term; forced sellers face the full mark-to-market risk
+**Why paying off the mortgage doesn't reduce risk:** The mortgage has zero volatility regardless of its size. Reducing the balance changes your net worth but not your risk exposure — the house still moves by the same amount. This is the "crowding-out" effect: housing dominates the portfolio so completely that other decisions barely register (Cocco 2005).
+
+**Simplifications:**
+- Cross-correlations between assets are ignored (zero covariance assumption). For cash this is exact; for equity-housing correlation (~0.1–0.3) the effect is small.
+- GREIX data covers German cities — your local market may differ. European cities show similar orders of magnitude.
+- The rent hedge assumes you stay long-term; a forced seller faces the full 7.5% mark-to-market risk.
+- Cash volatility is set to zero (no inflation adjustment). In real terms, cash loses purchasing power — but that's a return question, not a risk-of-loss question.
 
 ###  The return vs. the risk question
 

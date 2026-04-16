@@ -181,7 +181,7 @@ function StackedBar({
   height: string;
 }) {
   return (
-    <div style={{ display: "flex", height, borderRadius: "6px", overflow: "hidden" }}>
+    <div style={{ display: "flex", height, borderRadius: "6px", overflow: "hidden", backgroundColor: "#f3f4f6" }}>
       {segments.map((seg) => (
         <div
           key={seg.label}
@@ -258,6 +258,30 @@ export default function RiskReality() {
   const anyToggle = mortgagePaidOff || staying;
   const pctChange =
     baseScenario.totalEuroVol > 0 ? Math.round((1 - scenario.totalEuroVol / baseScenario.totalEuroVol) * 100) : 0;
+
+  // Absolute €-based segments for Before/After comparison (Toggle 2: staying)
+  // Uses linear sum so investment keeps the same pixel width in both bars
+  const absBeforeSegments = useMemo(() => {
+    const hVol = baseScenario.breakdown.house.euroVol;
+    const iVol = baseScenario.breakdown.investments.euroVol;
+    const linear = hVol + iVol;
+    if (linear <= 0) return baseScenario.segments;
+    return [
+      { label: "Your home", emoji: "\u{1F3E0}", share: hVol / linear, color: "#f97316" },
+      { label: "Investments", emoji: "\u{1F4C8}", share: iVol / linear, color: "#3b82f6" },
+    ];
+  }, [baseScenario]);
+
+  const absAfterSegments = useMemo(() => {
+    const hVol = scenario.breakdown.house.euroVol;
+    const iVol = scenario.breakdown.investments.euroVol;
+    const baseLinear = baseScenario.breakdown.house.euroVol + baseScenario.breakdown.investments.euroVol;
+    if (baseLinear <= 0) return scenario.segments;
+    return [
+      { label: "Your home", emoji: "\u{1F3E0}", share: hVol / baseLinear, color: "#f97316" },
+      { label: "Investments", emoji: "\u{1F4C8}", share: iVol / baseLinear, color: "#3b82f6" },
+    ];
+  }, [scenario, baseScenario]);
 
   return (
     <div
@@ -364,6 +388,112 @@ export default function RiskReality() {
         </div>
       </div>
 
+      {/* Toggles — above visualization so user sets controls first, sees result below */}
+      <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" })}>
+        {/* Toggle 1: Pay off mortgage */}
+        <div
+          className={css({
+            padding: "0.75rem",
+            borderRadius: "6px",
+            border: "1px solid",
+            transition: "all 0.15s",
+          })}
+          style={{
+            borderColor: !hasMortgage ? "#e5e7eb" : mortgagePaidOff ? "#f97316" : "#d1d5db",
+            backgroundColor: !hasMortgage ? "#f9fafb" : mortgagePaidOff ? "rgba(249, 115, 22, 0.04)" : "white",
+            cursor: hasMortgage ? "pointer" : "default",
+            opacity: hasMortgage ? 1 : 0.5,
+          }}
+          onClick={() => hasMortgage && setMortgagePaidOff((v) => !v)}
+        >
+          <label
+            className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}
+            style={{ cursor: hasMortgage ? "pointer" : "default" }}
+          >
+            <input
+              type="checkbox"
+              checked={mortgagePaidOff}
+              disabled={!hasMortgage}
+              onChange={(e) => setMortgagePaidOff(e.target.checked)}
+              className={css({ width: "16px", height: "16px", accentColor: "#f97316" })}
+            />
+            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
+              What if I pay off the mortgage?
+            </span>
+          </label>
+          {!hasMortgage && (
+            <p
+              className={css({
+                fontSize: "0.8rem",
+                color: "#9ca3af",
+                marginTop: "0.4rem",
+                marginBottom: 0,
+                paddingLeft: "1.75rem",
+              })}
+            >
+              Your mortgage is already at &euro;0.
+            </p>
+          )}
+          {mortgagePaidOff && hasMortgage && (
+            <p
+              className={css({
+                fontSize: "0.8rem",
+                color: "#9a3412",
+                marginTop: "0.4rem",
+                marginBottom: 0,
+                paddingLeft: "1.75rem",
+              })}
+            >
+              The mortgage disappeared from your wealth &mdash; but the risk bar didn&apos;t change.
+              The mortgage was never the source of uncertainty.
+            </p>
+          )}
+        </div>
+
+        {/* Toggle 2: I'm staying */}
+        <div
+          className={css({
+            padding: "0.75rem",
+            borderRadius: "6px",
+            border: "1px solid",
+            transition: "all 0.15s",
+            cursor: "pointer",
+          })}
+          style={{
+            borderColor: staying ? "#22c55e" : "#d1d5db",
+            backgroundColor: staying ? "rgba(34, 197, 94, 0.04)" : "white",
+          }}
+          onClick={() => setStaying((v) => !v)}
+        >
+          <label className={css({ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" })}>
+            <input
+              type="checkbox"
+              checked={staying}
+              onChange={(e) => setStaying(e.target.checked)}
+              className={css({ width: "16px", height: "16px", accentColor: "#22c55e" })}
+            />
+            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
+              I&apos;m staying &mdash; price swings don&apos;t affect my costs
+            </span>
+          </label>
+          {staying && (
+            <p
+              className={css({
+                fontSize: "0.8rem",
+                color: "#166534",
+                marginTop: "0.4rem",
+                marginBottom: 0,
+                paddingLeft: "1.75rem",
+              })}
+            >
+              The risk bar got shorter. If house prices drop 20%, your mortgage payment stays the same.
+              If rents rise 30%, you don&apos;t pay them. As someone who lives in their home,
+              these price swings matter much less than they look on paper.
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Visualization card */}
       <div
         className={css({
@@ -404,7 +534,7 @@ export default function RiskReality() {
           })}
         >
           How the risk is split
-          {anyToggle && pctChange !== 0 && (
+          {staying && pctChange !== 0 && (
             <span
               className={css({ fontWeight: "600", textTransform: "none", letterSpacing: "0" })}
               style={{ color: pctChange > 0 ? "#16a34a" : "#dc2626" }}
@@ -415,8 +545,8 @@ export default function RiskReality() {
           )}
         </p>
 
-        {/* Show baseline bar when toggles are active, for comparison */}
-        {anyToggle && (
+        {/* Before/After comparison — only for Toggle 2 (staying) where risk actually shrinks */}
+        {staying ? (
           <>
             <p
               className={css({
@@ -429,7 +559,7 @@ export default function RiskReality() {
               Before
             </p>
             <div style={{ opacity: 0.4 }}>
-              <StackedBar segments={baseScenario.segments} height="20px" />
+              <StackedBar segments={absBeforeSegments} height="20px" />
             </div>
             <p
               className={css({
@@ -442,11 +572,15 @@ export default function RiskReality() {
             >
               After
             </p>
+            <StackedBar segments={absAfterSegments} height="36px" />
+            <Legend segments={scenario.segments} />
+          </>
+        ) : (
+          <>
+            <StackedBar segments={scenario.segments} height="36px" />
+            <Legend segments={scenario.segments} />
           </>
         )}
-
-        <StackedBar segments={scenario.segments} height="36px" />
-        <Legend segments={scenario.segments} />
 
         {/* Breakdown table: € amounts */}
         <table
@@ -606,112 +740,6 @@ export default function RiskReality() {
         >
           {message}
         </p>
-      </div>
-
-      {/* Toggles */}
-      <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem" })}>
-        {/* Toggle 1: Pay off mortgage */}
-        <div
-          className={css({
-            padding: "0.75rem",
-            borderRadius: "6px",
-            border: "1px solid",
-            transition: "all 0.15s",
-          })}
-          style={{
-            borderColor: !hasMortgage ? "#e5e7eb" : mortgagePaidOff ? "#f97316" : "#d1d5db",
-            backgroundColor: !hasMortgage ? "#f9fafb" : mortgagePaidOff ? "rgba(249, 115, 22, 0.04)" : "white",
-            cursor: hasMortgage ? "pointer" : "default",
-            opacity: hasMortgage ? 1 : 0.5,
-          }}
-          onClick={() => hasMortgage && setMortgagePaidOff((v) => !v)}
-        >
-          <label
-            className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}
-            style={{ cursor: hasMortgage ? "pointer" : "default" }}
-          >
-            <input
-              type="checkbox"
-              checked={mortgagePaidOff}
-              disabled={!hasMortgage}
-              onChange={(e) => setMortgagePaidOff(e.target.checked)}
-              className={css({ width: "16px", height: "16px", accentColor: "#f97316" })}
-            />
-            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
-              What if I pay off the mortgage?
-            </span>
-          </label>
-          {!hasMortgage && (
-            <p
-              className={css({
-                fontSize: "0.8rem",
-                color: "#9ca3af",
-                marginTop: "0.4rem",
-                marginBottom: 0,
-                paddingLeft: "1.75rem",
-              })}
-            >
-              Your mortgage is already at &euro;0.
-            </p>
-          )}
-          {mortgagePaidOff && hasMortgage && (
-            <p
-              className={css({
-                fontSize: "0.8rem",
-                color: "#9a3412",
-                marginTop: "0.4rem",
-                marginBottom: 0,
-                paddingLeft: "1.75rem",
-              })}
-            >
-              Look at the &quot;before&quot; and &quot;after&quot; bars above. The grey mortgage sliver disappeared
-              &mdash; but the overall risk barely changed. The mortgage was never the source of uncertainty.
-            </p>
-          )}
-        </div>
-
-        {/* Toggle 2: I'm staying */}
-        <div
-          className={css({
-            padding: "0.75rem",
-            borderRadius: "6px",
-            border: "1px solid",
-            transition: "all 0.15s",
-            cursor: "pointer",
-          })}
-          style={{
-            borderColor: staying ? "#22c55e" : "#d1d5db",
-            backgroundColor: staying ? "rgba(34, 197, 94, 0.04)" : "white",
-          }}
-          onClick={() => setStaying((v) => !v)}
-        >
-          <label className={css({ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" })}>
-            <input
-              type="checkbox"
-              checked={staying}
-              onChange={(e) => setStaying(e.target.checked)}
-              className={css({ width: "16px", height: "16px", accentColor: "#22c55e" })}
-            />
-            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
-              I&apos;m staying &mdash; price swings don&apos;t affect my costs
-            </span>
-          </label>
-          {staying && (
-            <p
-              className={css({
-                fontSize: "0.8rem",
-                color: "#166534",
-                marginTop: "0.4rem",
-                marginBottom: 0,
-                paddingLeft: "1.75rem",
-              })}
-            >
-              Look at the &quot;after&quot; bar &mdash; it got shorter. If house prices drop 20%, your mortgage payment
-              stays the same. If rents rise 30%, you don&apos;t pay them. As someone who lives in their home, these
-              price swings matter much less than they look on paper.
-            </p>
-          )}
-        </div>
       </div>
 
       {/* "So what?" conclusion */}

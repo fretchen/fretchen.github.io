@@ -1,52 +1,42 @@
-# Critique: What Actually Protects Your Home? (Round 4)
+# Critique: What Actually Protects Your Home? (Round 5)
 
-**Focus:** Three AUTHOR COMMENTs addressing RiskReality widget behavior.
+**Target audience:** Risk-averse European homeowner, 30–50, with a mortgage. Believes paying it off fast = safety. Knows savings accounts, has heard of ETFs but associates them with speculation. Does NOT know portfolio theory, variance, or what "volatility" means. Will skim if bored.
 
-## Round 3 Status
+**Overall impression:** The post has a clear, important message and the dialogue format makes it accessible. The two widgets land well. The main problems are: (1) the transition from ShockCalculator to RiskReality is a logic gap that may lose the reader, (2) the "So what do I do?" section is too thin for the weight of the question, and (3) the intro paragraph before the dialogue is unnecessary scaffolding.
 
-All Round 3 fixes implemented ✅ (Steps 9–16 in plan.md). Frontmatter, doubled flashback, logical gap bridge, merge artifact, toggle dialogue, ETF link, takeaway qualifier, burst pipe — all done.
+## Critical Issues
 
----
+- [ ] **[§ Intro paragraph]** ~~Delete the intro paragraph.~~ **AUTHOR DECISION: Keep the intro, but mark it as "Prologue"** — same pattern as cosmopol_democracy.md. Add `## Prologue` heading before the paragraph. This frames the meta-commentary as deliberate stage-setting.
 
-## New Issues from AUTHOR COMMENTs
+- [ ] **[§ What's actually on your balance sheet? → § Where your financial risk actually comes from]** Biggest logic gap. §3 establishes: "you need cash to survive shocks." The ShockCalculator proves it viscerally. Then §4 pivots to variance decomposition ("which assets move?"). But the target reader has no reason to care about this pivot yet. They just learned cash protects the house — why are we now talking about which assets "move"? The connection (understanding risk composition reveals *why* extra repayment doesn't help) is never stated. Amara needs one bridging sentence after the ShockCalculator: e.g. "So now you know cash matters — but there's a deeper question: why does putting extra money into the mortgage feel safe but change nothing about your risk?"
 
-### Critical: "Pay off mortgage" toggle causes dramatic bar shrink (AUTHOR COMMENT #1)
+- [ ] **[§ Where your financial risk actually comes from]** The instruction "Enter your home value, mortgage, and savings — then try the two toggles" is out of sync with the current widget. The widget has *four* inputs (home, mortgage, cash, investments), and the toggles are now *above* the bars, not below. The reader will be confused. Update to match the actual layout.
 
-**Location:** RiskReality widget, `computeScenario()` in RiskReality.tsx
+## Suggestions
 
-**Problem:** When the user toggles "What if I pay off the mortgage?", the risk bar shrinks to ~25% of its original width. The narrative says "barely changes" — but the bar changes drastically.
+- [ ] **[§ So what do I do?]** This section carries the practical payoff but is only ~10 lines. After 4 sections building the case, the reader expects a concrete answer. "Build savings outside the walls" is vague. The ShockCalculator already showed 6 months as the danger zone — Amara could reference it: "Remember the calculator? Six months of mortgage payments in savings you can reach. That's your first goal." This connects both widgets and gives the reader a number.
 
-**Root cause:** Weights are computed as `wHouse = property / netWorth`. With a mortgage, `netWorth = 98k` → `wHouse = 3.88` (3.88× leverage). Without mortgage, `netWorth = 388k` → `wHouse = 0.98`. The leverage removal causes variance to drop from 0.085 to 0.005 — a 94% reduction. The bar width is proportional to `sqrt(currentVar / baseVar)`, so it shrinks to 25%.
+- [ ] **[§ So what do I do?]** "The first euros outside the house do something extra repayment can't: they reduce your dependence on a single asset." The phrase "dependence on a single asset" is portfolio-speak the audience won't connect with. Try: "they give you options when something goes wrong" — which ties back to Amara's story.
 
-The mortgage truly has σ=0 (no risk), but it creates *leverage* on the housing position. Removing it de-leverages the portfolio. This is mathematically correct but:
-1. Too advanced for the target audience
-2. Contradicts the narrative ("the mortgage was never the source of uncertainty")
-3. Confuses the core message
+- [ ] **[§ The money in the walls]** The timeline of sister's loan vs. bank payment pause is slightly unclear. Did the sister lend money before or after the pause? Was it for the mortgage or the repair? The target audience (practical homeowners) will mentally simulate "could this happen to me?" — the sequence matters.
 
-**Proposed fix:** Change the weight denominator from `netWorth` to `totalAssets` (`property + cash + investments`). This way:
-- The mortgage has no effect on weights (it's not in the denominator)
-- Toggling "pay off" truly does nothing to the bar except removing the grey sliver
-- The "I'm staying" toggle still works correctly (changes σ, bar shrinks)
-- The narrative and widget are aligned
+- [ ] **[§ What's actually on your balance sheet?]** "She updates the spreadsheet with Sofia's numbers" — but Amara was earlier described as showing things on her phone. Minor inconsistency but detail-oriented readers will notice.
 
-**Concrete code change in `computeScenario()`:**
-```typescript
-// BEFORE:
-const wHouse = property / netWorth;
-const wCash = cash / netWorth;
-const wInv = investments / netWorth;
+- [ ] **[§ Three things to remember]** Takeaway #3: "Cash you can reach reduces that concentration" uses "concentration" — a concept never explained. The reader understands "cash = safety net" but not "cash = diversification." Consider: "Cash you can reach is money that doesn't depend on what happens to the housing market."
 
-// AFTER:
-const wHouse = property / totalAssets;
-const wCash = cash / totalAssets;
-const wInv = investments / totalAssets;
-```
+- [ ] **[§ Where your financial risk actually comes from]** The post-widget dialogue has two heavy realizations back-to-back: "So paying it all off doesn't make me safer?" then immediately "So I made a mistake buying?" The reader needs a breath between them — a narrator line or action beat would help.
 
-Same change for the `baseVar` calculation (replace `baseNW` with `totalAssets`).
+## Nitpicks
 
-**Trade-off:** This ignores leverage, which is a real financial effect. But the post already simplifies portfolio theory for a non-financial audience, and introducing leverage would muddy the core message. The post is about *where* risk comes from (house price, not mortgage), not about leverage ratios.
+- [ ] **[§ Why extra repayment feels so safe]** "It's a reunion with Amara" — the description says "two friends" but the ferry reference suggests acquaintances. The target audience won't click the ferry link; they need to understand the relationship from context.
 
----
+- [ ] **[§ Where your financial risk actually comes from]** "That's what staying changes — look at the risk bar again" — widget tutorial in dialogue. Characters shouldn't instruct the reader to interact with UI. The narrative should imply it.
+
+- [ ] **[§ Technical appendix]** The formula `(weight × σ)² / Σ(weight × σ)²` in inline code looks like computer code to non-technical readers. Either use proper math notation (the blog supports KaTeX) or remove it — the prose explanation is sufficient.
+
+- [ ] **[§ So what do I do?]** "Investing without just adding more concentration" — "concentration" is jargon. "Without putting even more eggs in one basket" would land better.
+
+- [ ] **[Frontmatter]** Description "A dinner conversation between two friends reveals..." could be more self-contained without "between two friends" — just "A dinner conversation reveals why paying off your mortgage faster isn't always the safest strategy."
 
 ### Important: Table doesn't visibly respond to "I'm staying" toggle (AUTHOR COMMENT #2)
 

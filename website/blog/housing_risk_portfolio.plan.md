@@ -875,3 +875,324 @@ A → B → C → D (jeder Schritt baut auf dem vorherigen auf). E ist unabhäng
 - Input-Felder (funktionieren)
 - Messages (funktionieren)
 - Before/After-Mechanismus (funktioniert — nur die Breite ändert sich)
+
+---
+
+## Round 5 Implementation Plan
+
+Fixes from the Round 5 critique in `housing_risk_portfolio.todos.md`. Steps 1–16 are all completed. This section addresses the remaining issues.
+
+### Suggestion assessment
+
+| # | Suggestion | Agree? | Rationale |
+|---|-----------|--------|-----------|
+| S1 | "So what do I do?" too thin — 6-month ref | **Yes** | Connects both widgets, gives Sofia a concrete number |
+| S2 | "dependence on a single asset" jargon | **Yes** | "they give you options when something goes wrong" lands better |
+| S3 | Timeline sister/bank unclear | **Yes** | Sequence (sister → bank pause → repair) is genuinely unclear |
+| S4 | Spreadsheet/phone inconsistency | **No** | The MDX never mentions a phone — "spreadsheet" is the only reference. No inconsistency exists. |
+| S5 | "concentration" in takeaway #3 | **Yes** | Never explained. "Money that doesn't depend on the housing market" is clearer |
+| S6 | Two heavy realizations too fast | **Yes** | A narrator beat between the two questions lets the reader breathe |
+
+### Step 17: Mark intro as "Prologue"
+
+**Addresses:** Critical #1 (modified — user wants to keep the intro, add Prologue heading like cosmopol_democracy.md)
+
+**File:** `housing_risk_portfolio.mdx`, lines 11–13
+
+**Current:**
+```
+In this blog post, I explore what ways to protect your home financially when life goes wrong — and why paying off the mortgage faster isn't always the answer.
+To make the arguments less abstract and easier to follow, I embedded them into a conversation between two friends over dinner.
+```
+
+**Change:** Add `## Prologue` heading before the paragraph, keep text as-is:
+```
+## Prologue
+
+In this blog post, I explore what ways to protect your home financially when life goes wrong — and why paying off the mortgage faster isn't always the answer.
+To make the arguments less abstract and easier to follow, I embedded them into a conversation between two friends over dinner.
+```
+
+**Pattern:** Same as cosmopol_democracy.md which uses `## Prologue` + framing paragraph before the narrative begins.
+
+**Risk:** None.
+
+---
+
+### Step 18: Bridge the §3→§4 logic gap
+
+**Addresses:** Critical #2
+
+**File:** `housing_risk_portfolio.mdx`, between ShockCalculator section and "Where your financial risk actually comes from"
+
+**Current (lines 70–74):**
+```
+Amara: "Now you see what I saw."
+
+## Where your financial risk actually comes from
+
+But knowing what you own isn't the same as knowing where the danger sits.
+```
+
+**Change:** Add bridging dialogue after "Now you see what I saw.":
+```
+Amara: "Now you see what I saw."
+
+Sofia nods slowly. "So cash is what protects the house."
+
+"Exactly. But that raises a question you haven't asked yet: if the mortgage isn't the danger — what is? Where does the risk actually sit?"
+
+## Where your financial risk actually comes from
+
+But knowing what you own isn't the same as knowing where the danger sits.
+```
+
+**What this achieves:**
+- Sofia summarizes what she just learned (cash protects the house)
+- Amara pivots explicitly: if not the mortgage, then what?
+- The reader now has a reason to care about risk decomposition
+- The transition into §4 flows naturally instead of feeling like a topic change
+
+**Risk:** Low — adds 3 lines of dialogue, no structural change.
+
+---
+
+### Step 19: Update widget instruction
+
+**Addresses:** Critical #3
+
+**File:** `housing_risk_portfolio.mdx`, line ~87
+
+**Current:**
+```
+The tool below shows the same breakdown for your numbers. Enter your home value, mortgage, and savings — then try the two toggles.
+```
+
+**Change:**
+```
+The tool below shows the same breakdown for your numbers. Enter your numbers — then try the two toggles.
+```
+
+**Rationale:** Doesn't enumerate inputs (which may change), matches the 4-field layout. The widget itself labels the fields clearly.
+
+**Risk:** None.
+
+---
+
+### Step 20: Expand "So what do I do?" — 6-month reference
+
+**Addresses:** Suggestion #1
+
+**File:** `housing_risk_portfolio.mdx`, §6 "So what do I do?"
+
+**Current (lines 97–100):**
+```
+"Build savings outside the walls," Amara says. "Every euro you keep liquid is a euro that doesn't depend on what happens to the housing market — and a euro you can actually reach if you need it."
+
+Sofia: "But extra repayment saves me 3.5%."
+
+"It does. And at some point that's the right move. But the first euros outside the house do something extra repayment can't: they reduce your dependence on a single asset."
+```
+
+**Change:**
+```
+"Build savings outside the walls," Amara says. "Every euro you keep liquid is a euro that doesn't depend on what happens to the housing market — and a euro you can actually reach if you need it."
+
+Sofia: "How much?"
+
+"Remember what we just saw? Six months of mortgage payments in savings you can reach. That's the first goal."
+
+Sofia: "But extra repayment saves me 3.5%."
+
+"It does. And once the buffer is there, every extra euro should go right back to repayment. But the first six months are worth more than any interest saving — because they're what keeps you in the apartment if something goes wrong."
+```
+
+**What this achieves:**
+- Sofia asks the practical question the reader has ("how much?")
+- Amara connects back to the ShockCalculator (6 months was the danger zone)
+- The interest-saving objection is still addressed, but now scoped: "once the buffer is there"
+- Replaces the vague "reduce your dependence on a single asset" (see also Step 21)
+
+**Risk:** Low — extends the section by ~4 lines.
+
+---
+
+### Step 21: Fix portfolio jargon
+
+**Addresses:** Suggestion #2, Suggestion #5, Nitpick #4
+
+**File:** `housing_risk_portfolio.mdx`
+
+**Change 1 — §6 ETF link line (line ~105):**
+```
+"And once you want to go beyond a savings account — investing without just adding more concentration — that's a separate conversation," Amara says.
+```
+→
+```
+"And once you want to go beyond a savings account — investing without putting all your eggs in one basket — [that's a separate conversation](/blog/etf_diversification_interactive)," Amara says.
+```
+
+**Change 2 — Takeaway #3 (line ~118):**
+```
+3. **Liquid savings diversify you away from the house.** Your biggest asset is one apartment. Cash you can reach reduces that concentration. To go beyond cash, [start here](/blog/etf_diversification_interactive).
+```
+→
+```
+3. **Liquid savings are money that doesn't depend on the housing market.** Your biggest asset is one apartment. Cash you can reach gives you options that the house can't — and it's the first step before [going further](/blog/etf_diversification_interactive).
+```
+
+**Risk:** None — wording only.
+
+---
+
+### Step 22: Clarify Amara's crisis timeline
+
+**Addresses:** Suggestion #3
+
+**File:** `housing_risk_portfolio.mdx`, §2 "The money in the walls" (lines 39–42)
+
+**Current:**
+```
+Her sister lent her money — barely enough. The bank offered a two-month payment pause, but with no income and an emergency repair on top, two months wasn't enough.
+```
+
+The sequence is unclear: did the sister lend money before or after the pause? Was it for the mortgage or the repair?
+
+**Change:**
+```
+The bank offered a two-month payment pause. Then a pipe burst — €4,000 she didn't have. Her sister lent her money for the repair. But with no income returning, two months wasn't enough.
+```
+
+**What this achieves:**
+- Clear sequence: contract lost → can't pay → bank pause → pipe bursts → sister helps with repair → pause runs out
+- "€4,000 she didn't have" is concrete and ties to ShockCalculator later
+- Note: this moves the burst pipe FROM §3 to §2 as the specific event. §3's "burst pipe" line needs updating to avoid repetition. Check if the current §3 text still mentions it — if so, generalize to "emergency repair" in §3.
+
+**Downstream check:** Current §3 (line ~67) says: `"At my place it was a burst pipe. Two weeks after the contract ended. €4,000."` — This now duplicates the §2 timeline. **Change to:** `"You saw what happened to me — job loss and a repair bill at the same time."` — references the story without repeating it.
+
+**Risk:** Medium — touches two sections. Must verify no other burst-pipe references break.
+
+---
+
+### Step 23: Add breath between two realizations
+
+**Addresses:** Suggestion #6
+
+**File:** `housing_risk_portfolio.mdx`, post-widget dialogue (lines ~91–95)
+
+**Current:**
+```
+Sofia: "So paying it all off doesn't make me safer?"
+
+Amara: "It makes your balance smaller. It doesn't make the risk smaller."
+
+Sofia stares at her plate. "So I made a mistake buying?"
+```
+
+**Change:**
+```
+Sofia: "So paying it all off doesn't make me safer?"
+
+Amara: "It makes your balance smaller. It doesn't make the risk smaller."
+
+Sofia stares at her plate. The kitchen timer ticks.
+
+"So I made a mistake buying?"
+```
+
+**What this achieves:**
+- The kitchen timer is a sensory beat — it grounds the reader in the dinner scene
+- "So I made a mistake buying?" arrives as a separate emotional beat, not a rapid-fire follow-up
+- The break lets the first realization (paying off ≠ safer) sink in before the second (did I make a mistake?)
+
+**Risk:** None.
+
+---
+
+### Step 24: Fix widget tutorial in dialogue
+
+**Addresses:** Nitpick #2
+
+**File:** `housing_risk_portfolio.mdx`, line ~99
+
+**Current:**
+```
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes — look at the risk bar again."
+```
+
+**Change:**
+```
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes."
+```
+
+**Rationale:** Characters shouldn't instruct the reader to interact with UI. The narrative implies it; the toggle is right there.
+
+**Risk:** None.
+
+---
+
+### Step 25: Fix formula formatting in appendix
+
+**Addresses:** Nitpick #3
+
+**File:** `housing_risk_portfolio.mdx`, technical appendix
+
+**Current:**
+```
+The risk bar shows how much each asset contributes to total risk. The "share of risk" in the table is each asset's variance share: `(weight × σ)² / Σ(weight × σ)²`, where `weight = value / total assets`.
+```
+
+**Change:**
+```
+The risk bar shows how much each asset contributes to total risk. The "share of risk" in the table is each asset's variance share: $(\text{weight} \times \sigma)^2 \,/\, \Sigma(\text{weight} \times \sigma)^2$, where weight = value / total assets.
+```
+
+**Rationale:** Blog supports KaTeX. Inline code looks like computer code to non-technical readers; math notation is more honest about what it is.
+
+**Risk:** Low — verify KaTeX renders correctly in MDX.
+
+---
+
+### Step 26: Simplify frontmatter description
+
+**Addresses:** Nitpick #5
+
+**File:** `housing_risk_portfolio.mdx`, line 5
+
+**Current:**
+```
+description: "A dinner conversation between two friends reveals why paying off your mortgage faster isn't always the safest strategy — and what actually protects your home when life goes wrong."
+```
+
+**Change:**
+```
+description: "A dinner conversation reveals why paying off your mortgage faster isn't always the safest strategy — and what actually protects your home when life goes wrong."
+```
+
+**Rationale:** "between two friends" is unnecessary detail for SEO description. The post itself introduces the characters.
+
+**Risk:** None.
+
+---
+
+### Implementation order
+
+| Step | Issue | Scope | Risk | Dependencies |
+|------|-------|-------|------|-------------|
+| 17 | Prologue heading | 1 line add | None | — |
+| 26 | Frontmatter description | 2 words | None | — |
+| 24 | Widget tutorial in dialogue | 5 words removed | None | — |
+| 25 | KaTeX formula | 1 line | Low | — |
+| 19 | Widget instruction | 1 line | None | — |
+| 23 | Breath between realizations | 2 lines add | None | — |
+| 21 | Portfolio jargon (3 locations) | Wording only | None | — |
+| 22 | Crisis timeline (§2 + §3) | ~4 lines rewrite | Medium | Check burst-pipe refs |
+| 18 | §3→§4 bridge | 3 lines add | Low | — |
+| 20 | Expand "So what do I do?" | ~6 lines rewrite | Low | Step 21 (jargon fix in same section) |
+
+Steps 17, 26, 24, 25, 19 are mechanical. Steps 22, 18, 20 carry the plan's weight.
+
+### Nitpicks NOT implemented
+
+- **Nitpick #1 ("reunion" context):** The MDX already says "The two met on a ferry to Tunis arguing about democracy until 3 AM — Sofia, who works at the European Commission in Brussels, and Amara, a water governance researcher from Tunisia." This provides sufficient context. No change needed.
+- **Nitpick #4 ("concentration" in §6):** Already handled by Step 21.

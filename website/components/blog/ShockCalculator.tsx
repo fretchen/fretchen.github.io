@@ -259,6 +259,7 @@ export default function ShockCalculator() {
                   step={REPAIR_STEP}
                   value={repairCost}
                   onChange={(e) => setRepairCost(Number(e.target.value))}
+                  aria-label="Emergency repair cost"
                   className={css({
                     flex: 1,
                     accentColor: "#ef4444",

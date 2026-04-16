@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadBlogs } from "../utils/blogLoader";
+import { GLOB_REGISTRY } from "../utils/globRegistry";
 
 describe("blogLoader - Integration Test", () => {
   it("should load blogs from blog directory", async () => {
@@ -122,11 +123,20 @@ describe("blogLoader - Integration Test", () => {
   });
 
   it("should exclude .plan.md files from blog loading", async () => {
-    const blogs = await loadBlogs("blog", "publishing_date");
+    // Verify at the glob level: .plan.md files must not appear in registry keys.
+    // This is where the exclusion actually happens (via "!../blog/*.plan.md" pattern).
+    const eagerKeys = Object.keys(GLOB_REGISTRY.blog.eager);
+    const lazyKeys = Object.keys(GLOB_REGISTRY.blog.lazy);
 
-    const planFiles = blogs.filter(
-      (b) => b.componentPath && b.componentPath.endsWith(".plan.md"),
-    );
+    const planInEager = eagerKeys.filter((k) => k.endsWith(".plan.md"));
+    const planInLazy = lazyKeys.filter((k) => k.endsWith(".plan.md"));
+
+    expect(planInEager).toHaveLength(0);
+    expect(planInLazy).toHaveLength(0);
+
+    // Also confirm they don't appear in loaded blogs
+    const blogs = await loadBlogs("blog", "publishing_date");
+    const planFiles = blogs.filter((b) => b.componentPath && b.componentPath.endsWith(".plan.md"));
 
     expect(planFiles).toHaveLength(0);
 

@@ -45,23 +45,20 @@ function computeScenario(
   staying: boolean,
 ): ScenarioResult {
   const totalAssets = property + cash + investments;
-  if (totalAssets <= 0) {
-    return {
-      segments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316", euroVol: 0 }],
-      totalEuroVol: 0,
-      wealthSegments: [{ label: "Your home", emoji: "\u{1F3E0}", share: 1, color: "#f97316", amount: property }],
-    };
-  }
 
   // Wealth allocation bar (equity view: what you own vs what you owe)
+  // Use a denominator that includes the mortgage when displayed,
+  // so segment shares sum to exactly 1.
+  const showMortgage = !paidOff && mortgage > 0;
+  const wealthDenom = totalAssets + (showMortgage ? mortgage : 0);
   const wealthSegments: WealthSegment[] = [
-    { label: "Your home", emoji: "\u{1F3E0}", share: property / totalAssets, color: "#f97316", amount: property },
+    { label: "Your home", emoji: "\u{1F3E0}", share: property / wealthDenom, color: "#f97316", amount: property },
   ];
   if (cash > 0) {
     wealthSegments.push({
       label: "Cash",
       emoji: "\u{1F4B5}",
-      share: cash / totalAssets,
+      share: cash / wealthDenom,
       color: "#22c55e",
       amount: cash,
     });
@@ -70,16 +67,16 @@ function computeScenario(
     wealthSegments.push({
       label: "Investments",
       emoji: "\u{1F4C8}",
-      share: investments / totalAssets,
+      share: investments / wealthDenom,
       color: "#3b82f6",
       amount: investments,
     });
   }
-  if (!paidOff && mortgage > 0) {
+  if (showMortgage) {
     wealthSegments.push({
       label: "Mortgage",
       emoji: "\u{1F3E6}",
-      share: mortgage / totalAssets,
+      share: mortgage / wealthDenom,
       color: "#9ca3af",
       amount: -mortgage,
     });
@@ -444,8 +441,8 @@ export default function RiskReality() {
                 paddingLeft: "1.75rem",
               })}
             >
-              The mortgage disappeared from your wealth &mdash; but the risk bar didn&apos;t change.
-              The mortgage was never the source of uncertainty.
+              The mortgage disappeared from your wealth &mdash; but the risk bar didn&apos;t change. The mortgage was
+              never the source of uncertainty.
             </p>
           )}
         </div>
@@ -486,9 +483,9 @@ export default function RiskReality() {
                 paddingLeft: "1.75rem",
               })}
             >
-              The risk bar got shorter. If house prices drop 20%, your mortgage payment stays the same.
-              If rents rise 30%, you don&apos;t pay them. As someone who lives in their home,
-              these price swings matter much less than they look on paper.
+              The risk bar got shorter. If house prices drop 20%, your mortgage payment stays the same. If rents rise
+              30%, you don&apos;t pay them. As someone who lives in their home, these price swings matter much less than
+              they look on paper.
             </p>
           )}
         </div>
@@ -573,7 +570,7 @@ export default function RiskReality() {
               After
             </p>
             <StackedBar segments={absAfterSegments} height="36px" />
-            <Legend segments={scenario.segments} />
+            <Legend segments={absAfterSegments} />
           </>
         ) : (
           <>
@@ -641,9 +638,21 @@ export default function RiskReality() {
           </thead>
           <tbody>
             {[
-              { label: "Your home", emoji: "\u{1F3E0}", color: "#f97316", value: property, ...scenario.breakdown.house },
+              {
+                label: "Your home",
+                emoji: "\u{1F3E0}",
+                color: "#f97316",
+                value: property,
+                ...scenario.breakdown.house,
+              },
               { label: "Cash", emoji: "\u{1F4B5}", color: "#22c55e", value: cash, ...scenario.breakdown.cash },
-              { label: "Investments", emoji: "\u{1F4C8}", color: "#3b82f6", value: investments, ...scenario.breakdown.investments },
+              {
+                label: "Investments",
+                emoji: "\u{1F4C8}",
+                color: "#3b82f6",
+                value: investments,
+                ...scenario.breakdown.investments,
+              },
             ].map((row) => (
               <tr key={row.label}>
                 <td className={css({ padding: "0.3rem 0", color: "#374151" })}>

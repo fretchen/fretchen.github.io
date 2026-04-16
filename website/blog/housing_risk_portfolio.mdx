@@ -2,12 +2,13 @@
 title: "What Actually Protects Your Home?"
 publishing_date: "2026-04-08"
 category: "others"
-description: "A dinner conversation between two friends reveals why paying off your mortgage faster isn't always the safest strategy — and what actually protects your home when life goes wrong."
+description: "A dinner conversation reveals why paying off your mortgage faster isn't always the safest strategy — and what actually protects your home when life goes wrong."
 ---
 
 import ShockCalculator from "../components/blog/ShockCalculator";
 import RiskReality from "../components/blog/RiskReality";
 
+## Prologue
 
 In this blog post, I explore what ways to protect your home financially when life goes wrong — and why paying off the mortgage faster isn't always the answer. 
 To make the arguments less abstract and easier to follow, I embedded them into a conversation between two friends over dinner.
@@ -36,7 +37,7 @@ Amara had owned a small apartment in Tunis — two rooms near the Medina, her ba
 
 "Month two, I couldn't cover the rate. The bank said: the payments you've already made are gone. The money was in the walls. And I needed it in my account."
 
-Her sister lent her money — barely enough. The bank offered a two-month payment pause, but with no income and an emergency repair on top, two months wasn't enough.
+The bank offered a two-month payment pause. Then a pipe burst — €4,000 she didn't have. Her sister lent her money for the repair. But with no income returning, two months wasn't enough.
 
 She looks at Sofia's bathroom door. "The money in the walls can't help you. The money outside the walls can."
 
@@ -53,13 +54,17 @@ She updates the spreadsheet with Sofia's numbers. Apartment: €380,000. Mortgag
 
 Sofia points at the savings. "That's what they're for."
 
-"Now imagine something breaks on top of a job loss," Amara says. "At my place it was a burst pipe. Two weeks after the contract ended. €4,000."
+"Now imagine something breaks on top of a job loss," Amara says. "You saw what happened to me — job loss and a repair bill at the same time."
 
 Enter your own numbers below — then toggle the shocks.
 
 <ShockCalculator />
 
 Amara: "Now you see what I saw."
+
+Sofia nods slowly. "So cash is what protects the house."
+
+"Exactly. But that raises a question you haven't asked yet: if the mortgage isn't the danger — what is? Where does the risk actually sit?"
 
 ## Where your financial risk actually comes from
 
@@ -73,7 +78,7 @@ The mortgage, it turned out, couldn't. Fixed rate, fixed monthly payment, known 
 
 "It's fixed. Zero surprise. The house price is where all the uncertainty sits."
 
-The tool below shows the same breakdown for your numbers. Enter your home value, mortgage, and savings — then try the two toggles.
+The tool below shows the same breakdown for your numbers. Enter your numbers — then try the two toggles.
 
 <RiskReality />
 
@@ -81,9 +86,11 @@ Sofia: "So paying it all off doesn't make me safer?"
 
 Amara: "It makes your balance smaller. It doesn't make the risk smaller."
 
-Sofia stares at her plate. "So I made a mistake buying?"
+Sofia stares at her plate. The kitchen timer ticks.
 
-"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes — look at the risk bar again."
+"So I made a mistake buying?"
+
+"No — your instinct was right," Amara says. "You don't pay rent. If rents go up, you're unaffected. That's what staying changes."
 
 "The risk is real, but smaller than it looked — because you bought for the right reason."
 
@@ -97,11 +104,15 @@ Sofia straightens up. "Okay. I have €300 a month after everything. What do I _
 
 "Build savings outside the walls," Amara says. "Every euro you keep liquid is a euro that doesn't depend on what happens to the housing market — and a euro you can actually reach if you need it."
 
+Sofia: "How much?"
+
+"Remember what we just saw? Six months of mortgage payments in savings you can reach. That's the first goal."
+
 Sofia: "But extra repayment saves me 3.5%."
 
-"It does. And at some point that's the right move. But the first euros outside the house do something extra repayment can't: they reduce your dependence on a single asset."
+"It does. And once the buffer is there, every extra euro should go right back to repayment. But the first six months are worth more than any interest saving — because they're what keeps you in the apartment if something goes wrong."
 
-"And once you want to go beyond a savings account — investing without just adding more concentration — [that's a separate conversation](/blog/etf_diversification_interactive)," Amara says.
+"And once you want to go beyond a savings account — investing without putting all your eggs in one basket — [that's a separate conversation](/blog/etf_diversification_interactive)," Amara says.
 
 Sofia looks down the hallway at the bathroom. "I'm keeping the extra repayment. But I'm building savings first."
 
@@ -113,7 +124,7 @@ She pauses. "And _then_ I'm fixing that bathroom."
 
 2. **The mortgage adds almost no financial risk.** It drops by the same amount every month — completely predictable. The actual uncertainty comes from your house price — and if you're staying, that risk is smaller than it looks because you save rent.
 
-3. **Liquid savings diversify you away from the house.** Your biggest asset is one apartment. Cash you can reach reduces that concentration. To go beyond cash, [start here](/blog/etf_diversification_interactive).
+3. **Liquid savings are money that doesn't depend on the housing market.** Your biggest asset is one apartment. Cash you can reach gives you options that the house can't — and it's the first step before [going further](/blog/etf_diversification_interactive).
 
 ## Technical appendix
 
@@ -124,7 +135,7 @@ The **RiskReality** widget estimates each asset's contribution to your total fin
 **Your inputs:**
 - Home value, mortgage remaining, cash savings, investments
 
-**Model:** Each asset's annual euro risk is its value times its volatility: `euroVol = value × σ`. The risk bar shows how much each asset contributes to total risk. The "share of risk" in the table is each asset's variance share: `(weight × σ)² / Σ(weight × σ)²`, where `weight = value / total assets`.
+**Model:** Each asset's annual euro risk is its value times its volatility: `euroVol = value × σ`. The risk bar shows how much each asset contributes to total risk. The "share of risk" in the table is each asset's variance share: $(\text{weight} \times \sigma)^2 \,/\, \Sigma(\text{weight} \times \sigma)^2$, where weight = value / total assets.
 
 **Parameters** (from the [housing analysis notebooks](https://github.com/fretchen/retail-portfolio-analysis/tree/main/notebooks/housing), based on GREIX Frankfurt quarterly data 2008–2022):
 

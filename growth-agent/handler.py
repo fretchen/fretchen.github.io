@@ -1,6 +1,6 @@
-"""Scaleway Function entry point — daily cron handler for the Growth Agent.
+"""Scaleway Container entry point — daily cron handler for the Growth Agent.
 
-Triggered daily at 08:00 UTC via Scaleway Cron.
+Triggered daily at 08:00 UTC via Scaleway Container Cron (HTTP POST to /).
 
 Daily tasks:
   - Analytics ingest (Umami + social metrics)
@@ -21,30 +21,24 @@ import traceback
 from datetime import datetime, timedelta, timezone
 from math import ceil
 
-# Guarded imports — collect errors instead of crashing the module
-_import_errors: list[str] = []
-
-try:
-    from agent.llm_client import LLMClient
-    from agent.models import (
-        ContentQueue,
-        Draft,
-        Insights,
-        LLMAnalysis,
-        Performance,
-        PostMetrics,
-        SocialMetrics,
-        Strategy,
-        WebsiteAnalytics,
-    )
-    from agent.page_meta import fetch_pages_meta
-    from agent.platforms.bluesky import BlueskyClient
-    from agent.platforms.mastodon import MastodonClient
-    from agent.publisher import publish_draft
-    from agent.storage import S3Storage
-    from agent.umami_client import UmamiClient, ms_timestamp
-except ImportError:
-    _import_errors.append(traceback.format_exc())
+from agent.llm_client import LLMClient
+from agent.models import (
+    ContentQueue,
+    Draft,
+    Insights,
+    LLMAnalysis,
+    Performance,
+    PostMetrics,
+    SocialMetrics,
+    Strategy,
+    WebsiteAnalytics,
+)
+from agent.page_meta import fetch_pages_meta
+from agent.platforms.bluesky import BlueskyClient
+from agent.platforms.mastodon import MastodonClient
+from agent.publisher import publish_draft
+from agent.storage import S3Storage
+from agent.umami_client import UmamiClient, ms_timestamp
 
 logger = logging.getLogger("growth-agent")
 logger.setLevel(logging.INFO)
@@ -559,7 +553,7 @@ Return ONLY the post text, nothing else."""
 
 
 def handle(event, _context):
-    """Scaleway Function handler — cron entry point.
+    """Cron entry point.
 
     Daily (every run):
       1. Analytics ingest
@@ -569,13 +563,6 @@ def handle(event, _context):
     Weekly (Monday only):
       4. LLM insight generation (persisted for daily reuse)
     """
-    # If module-level imports failed, report them immediately
-    if _import_errors:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"import_errors": _import_errors}),
-        }
-
     logger.info("Growth Agent cron started")
 
     storage = _get_storage()
@@ -660,11 +647,61 @@ def handle(event, _context):
     }
 
 
+# ---------------------------------------------------------------------------
+# HTTP Server (Scaleway Container runtime)
+# ---------------------------------------------------------------------------
+
+
+def _run_server():
+    """Start an HTTP server for the Scaleway Container runtime.
+
+    Scaleway Container Cron sends POST / with a JSON body.
+    GET /health returns 200 for health checks.
+    """
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    port = int(os.environ.get("PORT", "8080"))
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status":"ok"}')
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):
+            # Read body (Scaleway sends JSON args from cron config)
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length else b"{}"
+            try:
+                event = json.loads(body)
+            except json.JSONDecodeError:
+                event = {}
+
+            result = handle(event, None)
+            status_code = result.get("statusCode", 200)
+            response_body = result.get("body", "{}")
+
+            self.send_response(status_code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_body.encode())
+
+        def log_message(self, format, *args):
+            logger.info(format, *args)
+
+    server = HTTPServer(("0.0.0.0", port), _Handler)
+    logger.info("Growth Agent HTTP server listening on port %d", port)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
     from dotenv import load_dotenv
 
     load_dotenv()
 
-    from scaleway_functions_python import local
-
-    local.serve_handler(handle, port=8080)
+    _run_server()

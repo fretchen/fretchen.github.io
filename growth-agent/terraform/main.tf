@@ -24,7 +24,14 @@ provider "scaleway" {
   zone   = "fr-par-1"
 }
 
-# --- Container Registry & Namespace ---
+# --- Container Registry (for docker push) ---
+
+resource "scaleway_registry_namespace" "growth_agent" {
+  name        = "growth-agent"
+  is_public   = false
+}
+
+# --- Serverless Container Namespace ---
 
 resource "scaleway_container_namespace" "growth_agent" {
   name = "growth-agent"
@@ -43,7 +50,7 @@ resource "scaleway_container" "growth_agent" {
   min_scale      = 0
   max_scale      = 1
   timeout        = 900
-  privacy        = "private"
+  privacy        = "public"
   deploy         = true
 
   environment_variables = {
@@ -80,6 +87,6 @@ output "container_url" {
 }
 
 output "registry_endpoint" {
-  value       = scaleway_container_namespace.growth_agent.registry_endpoint
+  value       = scaleway_registry_namespace.growth_agent.endpoint
   description = "Container registry endpoint for docker push"
 }

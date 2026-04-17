@@ -700,8 +700,11 @@ def _run_server():
 
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
+    try:
+        from dotenv import load_dotenv
 
-    load_dotenv()
+        load_dotenv()
+    except ImportError:
+        pass  # python-dotenv not installed in container — env vars set by platform
 
     _run_server()

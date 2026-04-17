@@ -1,6 +1,7 @@
 variable "registry_image" {
-  description = "Full registry image path including tag"
+  description = "Full registry image path including tag (set at deploy time)"
   type        = string
+  default     = "placeholder"
 }
 
 variable "umami_website_id" {

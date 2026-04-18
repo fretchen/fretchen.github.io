@@ -1,6 +1,6 @@
 # Growth Agent
 
-AI-powered social media growth pipeline for [fretchen.eu](https://fretchen.eu). Runs as a Scaleway Python Function triggered daily via cron.
+AI-powered social media growth pipeline for [fretchen.eu](https://fretchen.eu). Runs as a Scaleway Serverless Container triggered daily via cron.
 
 ## What it does
 
@@ -21,7 +21,7 @@ State is stored as JSON files in Scaleway S3 (`my-imagestore` bucket, `growth-ag
 
 | Component | Technology |
 |---|---|
-| Runtime | Python 3.11 (Scaleway Functions) |
+| Runtime | Python 3.11 (Scaleway Serverless Container) |
 | LLM | IONOS AI Model Hub (Llama 3.3 70B) |
 | Analytics | Umami Cloud |
 | Social | Mastodon REST API, Bluesky AT Protocol |
@@ -47,18 +47,18 @@ uv run ruff format .
 ## Deploy
 
 ```bash
-npm install              # serverless plugin (one-time)
-npx serverless deploy    # deploy to Scaleway
+bash bin/deploy.sh       # build, push, tofu apply
 ```
 
-Secrets are loaded from `.env` via `useDotenv: true` in `serverless.yml`. See `.env.example` for required variables.
+Requires Docker (Colima) and OpenTofu. Secrets are in `terraform/terraform.tfvars` (gitignored). See `.env.example` for required variables.
 
 ## Project structure
 
 ```
-handler.py          # Scaleway Function entry point (cron handler)
-serverless.yml      # Scaleway deployment config
-requirements.txt    # Pinned deps for Scaleway (via uv export)
+handler.py          # Container entry point (HTTP server + cron handler)
+Dockerfile          # Container image (uv + Python 3.11)
+bin/deploy.sh       # Build, push, tofu apply
+terraform/          # OpenTofu config (container, cron, secrets)
 agent/
   models.py         # Pydantic state models
   llm_client.py     # IONOS LLM client
@@ -115,11 +115,11 @@ These execute against the real S3 state and platform APIs (Mastodon/Bluesky), so
 ### 3. Run the full handler locally (simulates Scaleway cron)
 
 ```bash
-# Start the local HTTP server (uses scaleway-functions-python)
+# Start the local HTTP server
 uv run python handler.py &
 
-# Trigger the handler (same as Scaleway cron would)
-curl http://localhost:8080
+# Trigger the handler (same as Scaleway Container Cron would)
+curl -X POST http://localhost:8080/
 
 # Stop the server
 kill %1
@@ -129,7 +129,7 @@ This runs all daily tasks (analytics, publish, pipeline refill) and weekly tasks
 
 ### Common issues
 
-- **No log for today**: Scaleway cron didn't fire. Check the Scaleway Console → Functions → Cron Triggers. Try redeploying with `npx serverless deploy`.
+- **No log for today**: Scaleway cron didn't fire. Check the Scaleway Console → Containers → Cron Triggers. Try redeploying with `bash bin/deploy.sh`.
 - **`status: started`**: Function timed out. Check `memoryLimit` in `serverless.yml` (currently 1024 MB). LLM insight generation is the heaviest task.
 - **`status: crashed`**: Read the error in the log. Common causes: expired API tokens, S3 permission issues, platform API changes.
 - **Draft not published**: Content may exceed character limits (Mastodon: 500, Bluesky: 300). Check the approval UI for warnings.

@@ -557,6 +557,7 @@ def handle(event, _context):
         "insights": False,
         "drafts_created": 0,
     }
+    crashed = False
 
     try:
         # --- Daily tasks ---
@@ -608,6 +609,7 @@ def handle(event, _context):
         logger.exception("Handler crashed unexpectedly")
         import traceback
 
+        crashed = True
         storage.write(
             log_key,
             {
@@ -619,8 +621,9 @@ def handle(event, _context):
         )
 
     logger.info("Growth Agent cron finished: %s", result)
+
     return {
-        "statusCode": 200,
+        "statusCode": 500 if crashed else 200,
         "body": json.dumps(result, default=str),
     }
 
@@ -630,15 +633,12 @@ def handle(event, _context):
 # ---------------------------------------------------------------------------
 
 
-def _run_server():
-    """Start an HTTP server for the Scaleway Container runtime.
+def _create_server(port: int = 8080):
+    """Create the HTTP server without starting it.
 
-    Scaleway Container Cron sends POST / with a JSON body.
-    GET /health returns 200 for health checks.
+    Returns the HTTPServer instance. Call .serve_forever() to start.
     """
     from http.server import BaseHTTPRequestHandler, HTTPServer
-
-    port = int(os.environ.get("PORT", "8080"))
 
     class _Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -652,13 +652,22 @@ def _run_server():
                 self.end_headers()
 
         def do_POST(self):
+            if self.path != "/":
+                self.send_response(404)
+                self.end_headers()
+                return
+
             # Read body (Scaleway sends JSON args from cron config)
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length) if content_length else b"{}"
             try:
                 event = json.loads(body)
             except json.JSONDecodeError:
-                event = {}
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"error":"invalid JSON"}')
+                return
 
             result = handle(event, None)
             status_code = result.get("statusCode", 200)
@@ -672,7 +681,17 @@ def _run_server():
         def log_message(self, format, *args):
             logger.info(format, *args)
 
-    server = HTTPServer(("0.0.0.0", port), _Handler)
+    return HTTPServer(("0.0.0.0", port), _Handler)
+
+
+def _run_server():
+    """Start an HTTP server for the Scaleway Container runtime.
+
+    Scaleway Container Cron sends POST / with a JSON body.
+    GET /health returns 200 for health checks.
+    """
+    port = int(os.environ.get("PORT", "8080"))
+    server = _create_server(port)
     logger.info("Growth Agent HTTP server listening on port %d", port)
     server.serve_forever()
 

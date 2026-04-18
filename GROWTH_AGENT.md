@@ -157,7 +157,7 @@ growth-agent/
 │   ├── platforms/           # (Phase 1a)
 │   │   ├── mastodon.py     # Mastodon REST API client (httpx)
 │   │   └── bluesky.py      # AT Protocol client (httpx)
-│   └── graph.py            # (Phase 2) LangGraph workflow definition
+│   └── graph.py            # (Phase 2a) LangGraph StateGraph — 4 nodes, conditional weekly edge
 │
 ├── notebooks/
 │   ├── 01_umami_ingest.ipynb
@@ -1085,17 +1085,166 @@ Use `uv` directly in the Docker image (no `requirements.txt` needed).
 - `scw_js/growth_api.ts` (approval API stays as Scaleway Function)
 - `website/pages/growth/` (approval UI unchanged)
 
-## Phase 2 — Performance Feedback & Intelligence
+## Phase 2a — KISS Cleanup & LangGraph Migration (PR: `growth-agent/`)
+
+Goal: Simplify existing code (KISS), then migrate the linear orchestration in `handle()`
+to a minimal LangGraph StateGraph — **without changing behavior**. No new features,
+no feedback loops, no quality gates. Just a clean graph that does exactly what the
+current sequential code does.
+
+**Why KISS first:** The current `handler.py` has accumulated complexity (dual HTTP clients,
+duplicated prompts, per-draft client creation, unused model fields). Cleaning this up
+before introducing LangGraph avoids baking tech debt into graph nodes.
+
+**Why 1:1 migration:** A minimal graph that reproduces existing behavior is easy to verify
+(same tests, same S3 output). Once stable, it becomes the foundation for Phase 2b additions
+(feedback loops, quality gates, deepeval).
+
+### Step 1: Remove Unused Model Fields (`agent/models.py`)
+
+- [ ] Delete `EventFunnel` model (never set)
+- [ ] Delete `SocialMetrics.engagement_rate` and `SocialMetrics.top_posts` (never set)
+- [ ] Delete `Strategy.last_updated` (never read)
+- [ ] Delete `Draft.hashtags` (always `[]`, LLM generates inline)
+- [ ] Comment out `PostMetrics` detail fields (reblogs, favourites, replies, link_clicks,
+  website_referral_sessions) — not yet populated, needed in Phase 2b
+
+### Step 2: Unify LLM Client (`agent/llm_client.py`)
+
+- [ ] Remove dual HTTP client (httpx + ChatOpenAI) — use ChatOpenAI only
+- [ ] `chat()` uses `self._model.invoke()` instead of raw `httpx.post()`
+- [ ] Delete `self.client = httpx.Client(...)` and related endpoint config
+- [ ] `close()` becomes a no-op (LangChain manages lifecycle)
+
+### Step 3: Simplify `handler.py` Orchestration
+
+- [ ] **Client reuse:** Open Mastodon/Bluesky clients once per batch in
+  `publish_approved_drafts()` instead of per-draft
+- [ ] **Prompt consolidation:** Extract `PROMPT_TEMPLATES` dict + `get_draft_prompt()`
+  function, replacing duplicated if/else per language/platform
+- [ ] **Scheduling extraction:** Move scheduling math to standalone
+  `plan_draft_schedule(queue, needed)` function (testable independently)
+
+### Step 4: Remove Unused Dependencies (`pyproject.toml`)
+
+- [ ] Remove `eth-account` (not imported anywhere)
+- [ ] Remove `scaleway-functions-python` (no longer needed after container migration)
+
+### Step 5: Add LangGraph Dependency
+
+- [ ] Add `langgraph>=0.2` to `pyproject.toml` dependencies
+- [ ] `uv sync`
+
+### Step 6: Define Agent State & Graph (`agent/graph.py`)
+
+- [ ] Create `AgentState(TypedDict)`:
+  ```python
+  class AgentState(TypedDict):
+      storage: Any           # S3Storage instance (injected, not serialized)
+      insights: Insights | None
+      analysis: LLMAnalysis | None
+      published_ids: list[str]
+      drafts_created: int
+      is_monday: bool
+  ```
+- [ ] Create node functions wrapping existing logic:
+  - `ingest_node(state)` → calls `ingest_analytics(storage)`
+  - `publish_node(state)` → calls `publish_approved_drafts(storage)`
+  - `insights_node(state)` → calls `generate_insights(storage)`
+  - `drafts_node(state)` → calls `create_drafts(storage, analysis)`
+- [ ] Define `StateGraph` with edges:
+  ```
+  START → ingest → publish → route_weekly
+    route_weekly(is_monday=True)  → insights → drafts → END
+    route_weekly(is_monday=False) → drafts → END
+  ```
+- [ ] Compile graph: `graph = builder.compile()`
+
+### Step 7: Wire Graph into `handler.py`
+
+- [ ] `handle()` builds initial state, calls `graph.invoke(state)`
+- [ ] HTTP server (`_create_server`, `_run_server`) stays unchanged
+- [ ] Error handling: `graph.invoke()` wrapped in try/except, `crashed` flag preserved
+- [ ] Return same JSON structure as before (`statusCode`, `body` with task results)
+
+### Step 8: Update Tests
+
+- [ ] Existing `test_handle_*` tests adapted to mock graph node functions
+- [ ] New unit tests for each node function individually
+- [ ] New test for `plan_draft_schedule()` (extracted scheduling logic)
+- [ ] `uv run pytest` — all tests green
+
+### Step 9: Deploy & Verify
+
+- [ ] `bash bin/deploy.sh`
+- [ ] Manual test: `curl -X POST <container-url>` → same JSON result as before
+- [ ] Verify S3 logs: graph execution produces identical state files
+- [ ] Wait for cron: next day's log should show successful graph run
+
+### Verification Criteria
+
+- [ ] `uv run pytest` — all existing tests pass (behavior unchanged)
+- [ ] S3 output identical: same `insights.json`, `content_queue.json`, `llm_analysis.json`
+- [ ] `uv run ruff check .` — lint clean
+- [ ] Deployed container produces same cron results
+
+### What Changes
+
+| Component | Before | After |
+|-----------|--------|-------|
+| `handler.py` handle() | 4 functions called sequentially | `graph.invoke(state)` |
+| `agent/models.py` | 15+ unused fields | Cleaned up |
+| `agent/llm_client.py` | Dual HTTP clients (httpx + LangChain) | ChatOpenAI only |
+| `agent/graph.py` | Empty `nodes/` directory | StateGraph with 4 nodes |
+| Prompts | Inline if/else in handler.py | `PROMPT_TEMPLATES` dict |
+| Scheduling | Embedded in `create_drafts()` | Standalone `plan_draft_schedule()` |
+
+### What Stays Unchanged
+
+- All external behavior (S3 state, social media posting, analytics ingest)
+- HTTP server (`_create_server`, `_run_server`)
+- `run_local.py`, notebooks, storage layer
+- `scw_js/growth_api.ts`, `website/pages/growth/`
+- Cron schedule, environment variables, secrets
+
+## Phase 2b — Performance Feedback & Intelligence
+
+Depends on Phase 2a (stable graph required).
 
 - [ ] Performance tracking: fetch Mastodon/Bluesky metrics for published posts
 - [ ] UTM attribution: correlate Umami referrals → social posts
 - [ ] Feedback loop: top-performing post styles influence future generation
-- [ ] LangGraph workflow (multi-node graph with conditional edges)
 - [ ] Strategy auto-adjustment based on performance data
+- [ ] Re-enable `PostMetrics` detail fields (reblogs, favourites, replies)
+
+## Phase 2c — LLM Evaluation with deepeval
+
+Depends on Phase 2a (stable graph with clear node boundaries required).
+
+**Why deepeval:** LLM-as-Judge framework for automated post quality assessment.
+Replaces manual "does this post look good?" with measurable metrics.
+Runs locally with pytest integration, uses LLM API for evaluation.
+
+- [ ] Add `deepeval` to `pyproject.toml` (dev dependency)
+- [ ] Create golden set: 10–20 manually rated posts as quality baseline
+- [ ] Define custom G-Eval metrics for social posts:
+  - Tone appropriateness (platform-specific)
+  - Engagement potential (hook quality, call-to-action)
+  - Faithfulness to source page (no hallucinated claims)
+  - Length compliance (within platform char limits)
+- [ ] Add `@observe` decorator on `drafts_node` for component-level tracing
+- [ ] Create `test/test_post_quality.py` — pytest-compatible eval suite
+- [ ] Evaluate: can IONOS serve as judge LLM, or is OpenAI needed?
+- [ ] Optional: Confident AI cloud for regression tracking across prompt changes
+
+> **Note:** deepeval metrics require an LLM API for evaluation (LLM-as-Judge).
+> Most metrics use OpenAI by default but can be configured for other providers.
+> The evaluation runs locally — no data leaves the machine except LLM API calls.
 
 ## Phase 3 — Optimization
 
 - [ ] A/B test post variants (time, tone, language)
+- [ ] Draft quality gate: deepeval score threshold before entering `approved` queue
 - [ ] Threads integration (if Meta API access secured)
 - [ ] LLM provider switch if quality insufficient (Anthropic, OpenAI)
 - [ ] Newsletter integration (optional)
@@ -1202,7 +1351,7 @@ langchain-openai>=0.2    # Structured output via ChatOpenAI.with_structured_outp
 # Phase 1a (no additional deps — clients use httpx directly)
 # atproto, Mastodon.py SDKs not needed
 
-# Phase 2
+# Phase 2a
 langgraph>=0.2           # Multi-step workflow orchestration
 
 # Dev (installed)
@@ -1211,6 +1360,7 @@ ruff>=0.4
 jupyter>=1.0
 ipykernel>=6.0
 python-dotenv>=1.0
+deepeval>=1.0            # Phase 2c — LLM evaluation framework
 ```
 
 ## TypeScript Dependencies (Phase 1c — no new packages needed)

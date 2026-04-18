@@ -50,7 +50,7 @@ resource "scaleway_container" "growth_agent" {
   min_scale      = 0
   max_scale      = 1
   timeout        = 900
-  privacy        = "public"
+  privacy        = "private"
   deploy         = true
 
   environment_variables = {

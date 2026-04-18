@@ -23,7 +23,7 @@ Build an AI-powered **Social Media Growth Agent** that:
 * **State-driven system**: JSON files as the source of truth
 * **Human-in-the-loop**: Approval before publishing (initially)
 * **Iterative learning loop**: Continuous optimization based on performance
-* **Consistent stack**: Python Scaleway Function, matching existing deployment patterns
+* **Consistent stack**: Python Scaleway Container, matching existing deployment patterns
 * **Blog is read-only**: Agent reads blog content as input, but never publishes to the blog
 
 ---
@@ -40,7 +40,7 @@ Build an AI-powered **Social Media Growth Agent** that:
          ▼                      ▼
 ┌─────────────────────────────────────────┐
 │  growth-agent/ (Python 3.11, Cron)      │
-│  Scaleway Function — Daily 08:00 UTC    │
+│  Scaleway Container — Daily 08:00 UTC   │
 │                                         │
 │  ┌─────────────┐  ┌──────────────────┐  │
 │  │ Analytics    │→ │ Insight          │  │
@@ -74,7 +74,7 @@ Build an AI-powered **Social Media Growth Agent** that:
                │
 ┌──────────────┴──────────────────────────┐
 │  scw_js/growth_api.ts (Node 22, HTTP)   │
-│  Draft Approval API — Scaleway Function │
+│  Draft Approval API — Scaleway Function  │
 │                                         │
 │  ┌──────────────────────────────────┐   │
 │  │ Path-based routing:              │   │
@@ -101,11 +101,12 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 | Component       | Technology                      | Justification                                       |
 | --------------- | ------------------------------- | --------------------------------------------------- |
-| Runtime (Cron)  | Python 3.11 (Scaleway Function) | LLM ecosystem, social media libraries                |
-| Runtime (API)   | Node 22 (Scaleway Function)     | Reuses scw_js/ — viem, S3, pino already available    |
+| Runtime (Cron)  | Python 3.11 (Scaleway Container) | LLM ecosystem, social media libraries               |
+| Runtime (API)   | Node 22 (Scaleway Function)      | Reuses scw_js/ — viem, S3, pino already available   |
 | Dep Management  | `uv` (Python), `npm` (TypeScript) | Separate toolchains per runtime                    |
-| Deployment      | `serverless-scaleway-functions` | Two namespaces: growth-agent (Python), scw_js (Node) |
-| Trigger         | Scaleway Cron (daily)           | Serverless, no persistent infrastructure             |
+| Deployment      | OpenTofu (Container), `serverless-scaleway-functions` (API) | IaC for container, serverless for Node |
+| Container Build | Colima + Docker CLI              | Lightweight Docker-compatible runtime for macOS     |
+| Trigger         | Scaleway Container Cron (daily)  | HTTP POST to container, serverless scale-to-zero    |
 | State Storage   | S3 (`my-imagestore` bucket)     | Already used by scw_js/ for Merkle tree data         |
 | LLM             | IONOS AI Model Hub              | Existing integration, OpenAI-compatible API          |
 | LLM Model       | `meta-llama/Llama-3.3-70B-Instruct` | Already in use by scw_js/llm_service.js         |
@@ -166,8 +167,16 @@ growth-agent/
 │   ├── 05_social_posting.ipynb
 │   └── 06_approval.ipynb          # Phase 1a: review, edit & approve drafts
 │
-├── handler.py              # (Phase 1b) Scaleway Function entry point (cron only, no API)
-├── serverless.yml          # (Phase 1b) Scaleway deployment config (Python runtime)
+├── handler.py              # Scaleway Container entry point (HTTP server + cron handler)
+├── Dockerfile              # (Phase 1f) Container image definition (uv + Python 3.11)
+├── .dockerignore           # (Phase 1f) Excludes .venv, tests, notebooks from image
+│
+├── terraform/              # (Phase 1f) OpenTofu infrastructure
+│   ├── main.tf             # Container + cron + secrets
+│   ├── variables.tf        # Secret variable declarations
+│   └── .gitignore          # .terraform/, *.tfstate*, *.tfvars
+├── bin/
+│   └── deploy.sh           # (Phase 1f) Build + push + tofu apply
 │
 └── test/
     └── ...
@@ -204,53 +213,31 @@ website/pages/growth/
 
 # 6. Scaleway Deployment
 
-## growth-agent/serverless.yml (Python — Cron only)
+## growth-agent/ (Python — Scaleway Serverless Container)
 
-```yaml
-service: growth-agent
-configValidationMode: off
-provider:
-  name: scaleway
-  runtime: python311
-  secret:
-    IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
-    MASTODON_ACCESS_TOKEN: ${env:MASTODON_ACCESS_TOKEN}
-    BLUESKY_APP_PASSWORD: ${env:BLUESKY_APP_PASSWORD}
-    UMAMI_API_TOKEN: ${env:UMAMI_API_TOKEN}
-    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
-    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
-  env:
-    MASTODON_INSTANCE: "https://mastodon.social"
-    BLUESKY_HANDLE: "fretchen.eu"
-    UMAMI_WEBSITE_ID: "e41ae7d9-a536-426d-b40e-f2488b11bf95"
-    S3_BUCKET: "my-imagestore"
-    S3_STATE_PREFIX: "growth-agent/"
+**Status:** Migrating from Scaleway Functions to Serverless Containers (see Phase 1f).
 
-plugins:
-  - serverless-scaleway-functions
+**Why Containers instead of Functions:**
+Scaleway Python Functions require vendoring all dependencies into a `package/` directory
+(`pip install --target ./package`). With ~40 dependencies including C-extensions
+(tiktoken, pydantic-core), this is fragile and error-prone. Containers solve this
+with a standard Dockerfile and `uv sync`.
 
-package:
-  patterns:
-    - "!node_modules/**"
-    - "!.env"
-    - "!test/**"
-    - "!notebooks/**"
+**Architecture:**
+- Docker image built with `uv` (no `requirements.txt` needed)
+- Scaleway Container Registry for image storage
+- Scaleway Serverless Container with `min_scale=0` (scale-to-zero)
+- Cron trigger sends HTTP POST to `/` daily at 08:00 UTC
+- OpenTofu manages all infrastructure (container, cron, secrets)
 
-functions:
-  growth-agent:
-    handler: handler.handle
-    description: "AI Growth Agent - daily content pipeline + scheduled publishing"
-    min_scale: 0
-    max_scale: 1
-    memory_limit: 1024
-    timeout: 300
-    # Cron: daily at 08:00 UTC
-    # Configure via Scaleway Console → Triggers → CRON
-    # Expression: 0 8 * * *
-```
+**Container Runtime:**
+- Port: `$PORT` (set by Scaleway), fallback `8080`
+- Cron sends POST with JSON body to `/`
+- Health check: `GET /health` → 200
+- Retry: up to 3 attempts on status ≥ 300 (handler is idempotent)
 
-> **Note:** This namespace contains **only** the Python cron function.
-> No API handler — the approval API lives in `scw_js/`.
+> **Note:** The container namespace is separate from `scw_js/`.
+> The approval API remains in `scw_js/` as a Node 22 Function.
 
 ## scw_js/serverless.yml additions (TypeScript — API)
 
@@ -792,9 +779,9 @@ Goal: Deploy the AI pipeline as a Scaleway Python Function with cron trigger.
 - [x] Implement Umami analytics ingestion ✅
 - [x] LLM insight generation with structured output ✅
 - [x] Content planning + draft generation with page descriptions ✅
-- [x] `handler.py` — Scaleway Function entry point (cron handler only) ✅
-- [x] `serverless.yml` — Python 3.11, single function, no API handler ✅
-- [x] `requirements.txt` via `uv export` for Scaleway packaging ✅
+- [x] `handler.py` — Scaleway entry point (cron handler) ✅
+- [x] `serverless.yml` — Python 3.11 deployment config ✅ (wird in Phase 1f durch Container/OpenTofu ersetzt)
+- [x] `requirements.txt` via `uv export` for Scaleway packaging ✅ (wird in Phase 1f durch Dockerfile/uv sync ersetzt)
 - [x] Tests for handler (cron logic, S3 mocking) ✅
 - [x] Daily Cron trigger (Scaleway Console → `0 8 * * *`) ✅
 
@@ -834,7 +821,7 @@ No new dependencies — uses existing Wagmi, Panda CSS, `useUmami`.
 - [x] `website/test/GrowthPage.test.tsx` — 8 tests (wallet states, draft actions) ✅
 - [x] 22/22 tests passing, lint clean ✅
 
-## Phase 1e — Auto-Scheduling & Pipeline Depth (PR: `growth-agent/` + `website/`)
+## Phase 1e — Auto-Scheduling & Pipeline Depth (PR: `growth-agent/` + `website/`) ✅ COMPLETE
 
 Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draft creation,
 10-post pipeline maintained. Draft generation moves from weekly to daily with pipeline guard.
@@ -900,6 +887,204 @@ Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draf
 - [ ] Website: approve flow shows pre-filled schedule date
 - [ ] `npm test` in `website/` → all tests pass
 
+## Phase 1f — Container Migration (PR: `growth-agent/`)
+
+Goal: Migrate from Scaleway Functions to Serverless Containers for reliable
+Python dependency management. Replace `serverless-scaleway-functions` with
+OpenTofu. No functional changes to the agent logic.
+
+**Why this migration:**
+Scaleway Python Functions silently fail when dependencies aren't vendored
+into `package/`. The Growth Agent has ~40 deps (langchain, boto3, tiktoken)
+with C-extensions that require platform-specific compilation. A Docker container
+with `uv sync` handles this natively.
+
+### Prerequisites
+
+- [ ] Install Colima: `brew install colima docker`
+- [ ] Start Colima: `colima start` (creates a Linux VM with Docker daemon)
+- [ ] Install OpenTofu: `brew install opentofu`
+- [ ] Create Scaleway Container Registry namespace (Console or `tofu apply`)
+
+> **Colima** is a free, lightweight Docker-compatible runtime for macOS.
+> It runs a Linux VM that provides the Docker daemon. The `docker` CLI
+> commands work identically to Docker Desktop. No license required.
+
+### Step 1: HTTP Server in handler.py
+
+Replace the `scaleway_functions_python` local server with a stdlib HTTP server.
+Scaleway Container Cron sends `POST /` with a JSON body.
+
+- [ ] Add `_run_server()` function using `http.server.HTTPServer`
+- [ ] `POST /` → call `handle(event, _context)`, return JSON result
+- [ ] `GET /health` → return 200 OK
+- [ ] Read port from `$PORT` env var (Scaleway sets this), fallback `8080`
+- [ ] Replace `__main__` block: `_run_server()` instead of `local.serve_handler()`
+- [ ] Remove guarded-import hack (the `try/except ImportError` diagnostic)
+
+No new dependencies — uses Python stdlib `http.server`.
+
+### Step 2: Dockerfile
+
+Use `uv` directly in the Docker image (no `requirements.txt` needed).
+
+- [ ] Create `growth-agent/Dockerfile`:
+  ```dockerfile
+  FROM ghcr.io/astral-sh/uv:python3.11-trixie-slim
+
+  WORKDIR /app
+
+  # Install dependencies first (cache layer)
+  COPY pyproject.toml uv.lock ./
+  RUN uv sync --locked --no-install-project --no-dev
+
+  # Copy application code
+  COPY handler.py ./
+  COPY agent/ ./agent/
+
+  # Activate the virtual environment
+  ENV PATH="/app/.venv/bin:$PATH"
+
+  EXPOSE 8080
+  CMD ["python", "handler.py"]
+  ```
+- [ ] Create `growth-agent/.dockerignore`:
+  ```
+  .venv/
+  .env
+  node_modules/
+  test/
+  notebooks/
+  state/
+  .git/
+  .serverless/
+  __pycache__/
+  *.md
+  ```
+- [ ] Verify: `docker build --platform linux/amd64 -t growth-agent .`
+- [ ] Verify: `docker run --env-file .env -p 8080:8080 growth-agent`
+- [ ] Verify: `curl -X POST localhost:8080` returns JSON result
+
+> **Apple Silicon note:** `--platform linux/amd64` is required because
+> Scaleway runs `linux/amd64`. Cross-compilation of C-extensions (tiktoken)
+> may need the full `python3.11-trixie` image instead of `-slim`.
+
+### Step 3: OpenTofu Configuration
+
+- [ ] Create `growth-agent/terraform/main.tf`:
+  ```hcl
+  terraform {
+    required_providers {
+      scaleway = {
+        source = "scaleway/scaleway"
+      }
+    }
+    backend "s3" {
+      bucket   = "my-imagestore"
+      key      = "terraform/growth-agent.tfstate"
+      region   = "nl-ams"
+      endpoint = "s3.nl-ams.scw.cloud"
+      # ... Scaleway S3 backend config
+    }
+  }
+
+  resource "scaleway_container_namespace" "growth_agent" {
+    name = "growth-agent"
+  }
+
+  resource "scaleway_container" "growth_agent" {
+    name           = "growth-agent"
+    namespace_id   = scaleway_container_namespace.growth_agent.id
+    registry_image = var.registry_image
+    port           = 8080
+    cpu_limit      = 560
+    memory_limit   = 1024
+    min_scale      = 0
+    max_scale      = 1
+    timeout        = 900
+    privacy        = "private"
+    deploy         = true
+
+    environment_variables = {
+      MASTODON_INSTANCE = "https://mastodon.social"
+      BLUESKY_HANDLE    = "fretchen.eu"
+      UMAMI_WEBSITE_ID  = var.umami_website_id
+      S3_BUCKET         = "my-imagestore"
+      S3_STATE_PREFIX   = "growth-agent/"
+    }
+
+    secret_environment_variables = {
+      IONOS_API_TOKEN        = var.ionos_api_token
+      MASTODON_ACCESS_TOKEN  = var.mastodon_access_token
+      BLUESKY_APP_PASSWORD   = var.bluesky_app_password
+      UMAMI_API_KEY          = var.umami_api_key
+      SCW_ACCESS_KEY         = var.scw_access_key
+      SCW_SECRET_KEY         = var.scw_secret_key
+    }
+  }
+
+  resource "scaleway_container_cron" "daily" {
+    container_id = scaleway_container.growth_agent.id
+    schedule     = "0 8 * * *"
+    args         = jsonencode({ source = "cron" })
+  }
+  ```
+- [ ] Create `growth-agent/terraform/variables.tf` with all secret vars
+- [ ] Create `growth-agent/terraform/.gitignore` (`.terraform/`, `*.tfstate*`, `*.tfvars`)
+- [ ] Load secrets from `.env` into `terraform.tfvars` or use env vars
+
+### Step 4: Deploy Script
+
+- [ ] Create `growth-agent/bin/deploy.sh`:
+  ```bash
+  #!/bin/bash
+  set -euo pipefail
+  REGISTRY="rg.fr-par.scw.cloud/<namespace>"
+  TAG=$(date +%Y%m%d-%H%M%S)
+
+  docker build --platform linux/amd64 -t "$REGISTRY/growth-agent:$TAG" .
+  docker push "$REGISTRY/growth-agent:$TAG"
+  docker tag "$REGISTRY/growth-agent:$TAG" "$REGISTRY/growth-agent:latest"
+  docker push "$REGISTRY/growth-agent:latest"
+
+  cd terraform
+  tofu apply -var="registry_image=$REGISTRY/growth-agent:$TAG" -auto-approve
+  ```
+
+### Step 5: Deploy & Verify
+
+- [ ] First deploy: `bash bin/deploy.sh`
+- [ ] Manual test: `curl -X POST <container-url>` → JSON result
+- [ ] Check S3 log: `uv run python run_local.py --diagnose` → new log with `status: completed`
+- [ ] Wait one day, verify cron produced a log entry for the next day
+
+### Step 6: Cleanup (after cron verified)
+
+- [ ] Delete old Scaleway Function: `npx serverless remove` or Console
+- [ ] Remove `serverless.yml`, `package.json`, `package-lock.json`, `node_modules/`
+- [ ] Remove `requirements.txt` (uv.lock + pyproject.toml are the source of truth)
+- [ ] Update README.md with new deploy instructions
+
+### Risks
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| C-extension cross-compilation (Apple Silicon → amd64) | High | Use full `python3.11-trixie` image if slim fails. Colima handles emulation via QEMU. |
+| Cold start after scale-to-zero | Low | ~5-15s, irrelevant for daily cron job |
+| OpenTofu state management | Low | Remote state in S3, same bucket as agent data |
+| Colima VM resource usage | Low | Minimal (~1GB RAM), only runs during build |
+
+### What stays unchanged
+
+- `handler.py` logic (all tasks: analytics, publish, insights, drafts)
+- `agent/` module (models, LLM, platforms, storage)
+- `run_local.py` (imports directly, no container needed)
+- `test/test_handler.py` (runs via `uv run pytest`, no container needed)
+- S3 state (same bucket, same keys, same prefix)
+- All environment variable names and values
+- `scw_js/growth_api.ts` (approval API stays as Scaleway Function)
+- `website/pages/growth/` (approval UI unchanged)
+
 ## Phase 2 — Performance Feedback & Intelligence
 
 - [ ] Performance tracking: fetch Mastodon/Bluesky metrics for published posts
@@ -927,8 +1112,8 @@ Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draf
 | Bluesky API changes            | atproto is versioned, pin SDK version              |
 | Threads API access denied      | Phase 3 only, Mastodon/Bluesky are sufficient MVP  |
 | LLM hallucination in posts     | Human edit step, factual grounding via page descriptions |
-| ~~Umami free plan limitations~~ | ~~Resolved: API key generated, REST API available~~ |
-| Scaleway Python cold starts    | Acceptable for daily cron (not latency-sensitive)  |
+| Scaleway container cold start  | ~5-15s after scale-to-zero, acceptable for daily cron |
+| C-extension cross-compile      | Use full python3.11-trixie image if slim fails     |
 | Bridgy conflict                | Both can coexist — Bridgy for webmentions, agent for original posts |
 | S3 state race condition        | Cron runs daily at fixed time, API writes are rare — low conflict risk. S3 is eventually consistent but sufficient for single-user admin workflow |
 
@@ -944,7 +1129,7 @@ Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draf
 4. ~~**Mastodon OAuth App**~~ — ✅ Created.
 5. ~~**Bluesky App Password**~~ — ✅ Generated.
 6. ~~**S3 prefix permissions**~~ — ✅ Confirmed working in production.
-7. ~~**Scaleway Python packaging with uv**~~ — ✅ Using `uv export > requirements.txt`.
+7. ~~**Scaleway Python packaging with uv**~~ — ✅ Migrating to Serverless Container with `uv sync` in Dockerfile (Phase 1f). Functions required vendoring into `package/` which failed silently.
 8. ~~**LLM structured output**~~ — ✅ IONOS supports `json_schema` response format.
    Using `langchain-openai` `ChatOpenAI.with_structured_output()` with Pydantic models.
 9. ~~**Page content for post generation**~~ — ✅ Solved via HTTP-based `page_meta.py`.
@@ -984,7 +1169,9 @@ Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draf
 
 ## Environment Variables (Scaleway Console → Secrets)
 
-### growth-agent namespace (Python)
+### growth-agent namespace (Python — migrating to Container)
+
+Currently set via Scaleway Console (Functions). After Phase 1f, managed by OpenTofu.
 
 ```
 IONOS_API_TOKEN          # Existing — IONOS AI Model Hub
@@ -1059,6 +1246,7 @@ pino                     # Structured logging
 │       ▼             │                                            │
 │  growth-agent/      │                                            │
 │  (Python 3.11, uv)  │                                            │
+│  Scaleway Container  │                                           │
 │  Cron: AI pipeline   │                                           │
 │  Reads: Umami API   │                                            │
 │  Writes: Mastodon,  ├──── shared S3 state ────→ S3 bucket        │
@@ -1074,6 +1262,7 @@ PR Boundary Map:
   Phase 1c PR: scw_js/ (TypeScript API) ✅ COMPLETE
   Phase 1d PR: website/ (approval page) ✅ COMPLETE
   Phase 1e PR: growth-agent/ + website/ (auto-scheduling & pipeline)
+  Phase 1f PR: growth-agent/ (container migration)
 ```
 └──────────────────────────────────────────────────────────────────┘
 ```

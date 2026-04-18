@@ -1,6 +1,6 @@
-"""Scaleway Function entry point — daily cron handler for the Growth Agent.
+"""Scaleway Container entry point — daily cron handler for the Growth Agent.
 
-Triggered daily at 08:00 UTC via Scaleway Cron.
+Triggered daily at 08:00 UTC via Scaleway Container Cron (HTTP POST to /).
 
 Daily tasks:
   - Analytics ingest (Umami + social metrics)
@@ -531,7 +531,7 @@ Return ONLY the post text, nothing else."""
 
 
 def handle(event, _context):
-    """Scaleway Function handler — cron entry point.
+    """Cron entry point.
 
     Daily (every run):
       1. Analytics ingest
@@ -544,70 +544,164 @@ def handle(event, _context):
     logger.info("Growth Agent cron started")
 
     storage = _get_storage()
+    now = datetime.now(timezone.utc)
+    log_key = f"logs/{now.strftime('%Y-%m-%d')}.json"
+
+    # Write a "started" marker so we know the function was invoked,
+    # even if it crashes before reaching the end.
+    storage.write(log_key, {"timestamp": now.isoformat(), "status": "started"})
+
     result = {
         "analytics": False,
         "published": [],
         "insights": False,
         "drafts_created": 0,
     }
-
-    # --- Daily tasks ---
-    try:
-        ingest_analytics(storage)
-        result["analytics"] = True
-    except Exception:
-        logger.exception("Analytics ingest failed")
+    crashed = False
 
     try:
-        published = publish_approved_drafts(storage)
-        result["published"] = published
-    except Exception:
-        logger.exception("Publishing failed")
-
-    # --- Weekly tasks (Monday): LLM insight generation ---
-    now = datetime.now(timezone.utc)
-    if now.weekday() == 0:  # Monday
-        logger.info("Monday — running weekly insight generation")
+        # --- Daily tasks ---
         try:
-            analysis = generate_insights(storage)
-            result["insights"] = analysis is not None
+            ingest_analytics(storage)
+            result["analytics"] = True
         except Exception:
-            logger.exception("Insight generation failed")
+            logger.exception("Analytics ingest failed")
 
-    # --- Daily: Pipeline refill (uses last saved analysis) ---
-    try:
-        analysis_data = storage.read("llm_analysis.json")
-        if analysis_data:
-            analysis = LLMAnalysis.model_validate(analysis_data)
-            count = create_drafts(storage, analysis)
-            result["drafts_created"] = count
-        else:
-            logger.info("No saved LLM analysis — skipping draft creation")
+        try:
+            published = publish_approved_drafts(storage)
+            result["published"] = published
+        except Exception:
+            logger.exception("Publishing failed")
+
+        # --- Weekly tasks (Monday): LLM insight generation ---
+        if now.weekday() == 0:  # Monday
+            logger.info("Monday — running weekly insight generation")
+            try:
+                analysis = generate_insights(storage)
+                result["insights"] = analysis is not None
+            except Exception:
+                logger.exception("Insight generation failed")
+
+        # --- Daily: Pipeline refill (uses last saved analysis) ---
+        try:
+            analysis_data = storage.read("llm_analysis.json")
+            if analysis_data:
+                analysis = LLMAnalysis.model_validate(analysis_data)
+                count = create_drafts(storage, analysis)
+                result["drafts_created"] = count
+            else:
+                logger.info("No saved LLM analysis — skipping draft creation")
+        except Exception:
+            logger.exception("Draft pipeline refill failed")
+
+        # Write final success log
+        storage.write(
+            log_key,
+            {
+                "timestamp": now.isoformat(),
+                "status": "completed",
+                "result": result,
+            },
+        )
+
     except Exception:
-        logger.exception("Draft pipeline refill failed")
+        # Catch-all: write crash info to S3 so we have evidence
+        logger.exception("Handler crashed unexpectedly")
+        import traceback
 
-    # Write run log
-    log_key = f"logs/{now.strftime('%Y-%m-%d')}.json"
-    storage.write(
-        log_key,
-        {
-            "timestamp": now.isoformat(),
-            "result": result,
-        },
-    )
+        crashed = True
+        storage.write(
+            log_key,
+            {
+                "timestamp": now.isoformat(),
+                "status": "crashed",
+                "error": traceback.format_exc(),
+                "result": result,
+            },
+        )
 
     logger.info("Growth Agent cron finished: %s", result)
+
     return {
-        "statusCode": 200,
+        "statusCode": 500 if crashed else 200,
         "body": json.dumps(result, default=str),
     }
 
 
+# ---------------------------------------------------------------------------
+# HTTP Server (Scaleway Container runtime)
+# ---------------------------------------------------------------------------
+
+
+def _create_server(port: int = 8080):
+    """Create the HTTP server without starting it.
+
+    Returns the HTTPServer instance. Call .serve_forever() to start.
+    """
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status":"ok"}')
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):
+            if self.path != "/":
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            # Read body (Scaleway sends JSON args from cron config)
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length else b"{}"
+            try:
+                event = json.loads(body)
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"error":"invalid JSON"}')
+                return
+
+            result = handle(event, None)
+            status_code = result.get("statusCode", 200)
+            response_body = result.get("body", "{}")
+
+            self.send_response(status_code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_body.encode())
+
+        def log_message(self, format, *args):
+            logger.info(format, *args)
+
+    return HTTPServer(("0.0.0.0", port), _Handler)
+
+
+def _run_server():
+    """Start an HTTP server for the Scaleway Container runtime.
+
+    Scaleway Container Cron sends POST / with a JSON body.
+    GET /health returns 200 for health checks.
+    """
+    port = int(os.environ.get("PORT", "8080"))
+    server = _create_server(port)
+    logger.info("Growth Agent HTTP server listening on port %d", port)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
-    from dotenv import load_dotenv
+    try:
+        from dotenv import load_dotenv
 
-    load_dotenv()
+        load_dotenv()
+    except ImportError:
+        pass  # python-dotenv not installed in container — env vars set by platform
 
-    from scaleway_functions_python import local
-
-    local.serve_handler(handle, port=8080)
+    _run_server()

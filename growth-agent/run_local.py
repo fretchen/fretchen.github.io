@@ -70,15 +70,21 @@ def diagnose() -> None:
     for key in log_keys[:5]:
         data = storage.read(key)
         if data:
+            status = data.get("status", "unknown")
             r = data.get("result", {})
             published = r.get("published", [])
             drafts = r.get("drafts_created", 0)
             analytics = r.get("analytics", False)
             insights = r.get("insights", False)
-            print(
-                f"  {key}: analytics={analytics}, published={published}, "
-                f"drafts_created={drafts}, insights={insights}"
+            line = (
+                f"  {key}: status={status}, analytics={analytics}, "
+                f"published={published}, drafts_created={drafts}, insights={insights}"
             )
+            if status == "crashed":
+                line += f"\n    ERROR: {data.get('error', '?')[:200]}"
+            elif status == "started":
+                line += "\n    ⚠️  Function started but never completed!"
+            print(line)
 
 
 def run_publish() -> None:

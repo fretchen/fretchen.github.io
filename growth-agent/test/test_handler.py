@@ -16,6 +16,7 @@ from agent.models import (
 )
 from handler import (
     PIPELINE_TARGET,
+    _create_server,
     _find_last_scheduled_at,
     create_drafts,
     generate_insights,
@@ -730,3 +731,68 @@ def test_handle_no_analysis_skips_drafts(mock_get_storage, mock_ingest, mock_pub
     assert result["statusCode"] == 200
     body = json.loads(result["body"])
     assert body["drafts_created"] == 0
+
+
+# ---------------------------------------------------------------------------
+# HTTP Server Tests
+# ---------------------------------------------------------------------------
+
+
+class TestRunServer:
+    """Tests for the HTTP server endpoints."""
+
+    @pytest.fixture()
+    def server(self):
+        """Start server on ephemeral port, yield (server, port), then shutdown."""
+        import threading
+
+        srv = _create_server(port=0)  # OS picks a free port
+        port = srv.server_address[1]
+        thread = threading.Thread(target=srv.serve_forever, daemon=True)
+        thread.start()
+        yield srv, port
+        srv.shutdown()
+        srv.server_close()
+
+    def test_health_endpoint(self, server):
+        """GET /health returns 200 with status ok."""
+        import http.client
+
+        _srv, port = server
+        conn = http.client.HTTPConnection("localhost", port, timeout=5)
+        conn.request("GET", "/health")
+        resp = conn.getresponse()
+        assert resp.status == 200
+        body = json.loads(resp.read())
+        assert body["status"] == "ok"
+        conn.close()
+
+    def test_post_root_calls_handle(self, server):
+        """POST / invokes handle() and returns its result."""
+        import http.client
+
+        _srv, port = server
+        with patch(
+            "handler.handle",
+            return_value={
+                "statusCode": 200,
+                "body": json.dumps({"test": True}),
+            },
+        ) as mock_handle:
+            conn = http.client.HTTPConnection("localhost", port, timeout=5)
+            payload = json.dumps({"source": "cron"})
+            conn.request(
+                "POST",
+                "/",
+                body=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Content-Length": str(len(payload)),
+                },
+            )
+            resp = conn.getresponse()
+            assert resp.status == 200
+            body = json.loads(resp.read())
+            assert body["test"] is True
+            mock_handle.assert_called_once()
+            conn.close()

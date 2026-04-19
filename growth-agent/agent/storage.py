@@ -77,12 +77,8 @@ class S3Storage:
         )
 
     def list_keys(self, prefix: str = "") -> list[str]:
-        response = self.s3.list_objects_v2(
-            Bucket=self.bucket, Prefix=self.prefix + prefix
-        )
-        return [
-            obj["Key"].removeprefix(self.prefix) for obj in response.get("Contents", [])
-        ]
+        response = self.s3.list_objects_v2(Bucket=self.bucket, Prefix=self.prefix + prefix)
+        return [obj["Key"].removeprefix(self.prefix) for obj in response.get("Contents", [])]
 
 
 def load_model(storage, key: str, model_cls):

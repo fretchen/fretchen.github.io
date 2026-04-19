@@ -21,9 +21,7 @@ def ingest_analytics(storage) -> Insights:
     # Umami
     umami = UmamiClient(
         api_key=os.environ["UMAMI_API_KEY"],
-        website_id=os.environ.get(
-            "UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"
-        ),
+        website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
     )
     try:
         start_at = ms_timestamp(days_ago=7)

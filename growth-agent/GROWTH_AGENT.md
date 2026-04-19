@@ -36,40 +36,34 @@ The agent follows an **OODA (Observe → Orient → Decide → Act)** architectu
 the state-of-the-art for autonomous growth agents. Each OODA phase maps to
 LangGraph nodes in `agent/graph.py`:
 
-| OODA Phase | Nodes | Status |
-|---|---|---|
-| **Observe** | Ingest Analytics, Evaluate Performance | Ingest ✅, Performance Phase 2b |
-| **Orient** | Generate Insights | ✅ |
-| **Decide** | Update Strategy, Plan Content | Strategy Phase 2b, Planning ✅ (in drafts) |
-| **Act** | Create Draft, Publish | ✅ |
+| OODA Phase | Node | Responsibility | Status |
+|---|---|---|---|
+| **Observe** | `ingest` | Umami analytics + social follower counts + post engagement metrics | ✅ (engagement Phase 2b) |
+| **Orient** | `insights` | LLM analyses patterns in all observed data | ✅ (Monday only) |
+| **Decide** | `strategy` | LLM adjusts strategy based on insights + performance | Phase 2b |
+| **Decide** | `plan` | Select pages, assign channels + schedule | Phase 2b (currently in drafts) |
+| **Act** | `drafts` | LLM generates platform-specific post content | ✅ |
+| **Act** | `publish` | Post to Mastodon/Bluesky, record metrics | ✅ |
 
 **Current graph (Phase 2a):**
 ```
-START → [Ingest Analytics] → [Publish Approved] → (Monday? → [Generate Insights]) → [Create Drafts] → END
+START → [Ingest] → [Publish] → (Monday? → [Insights]) → [Drafts] → END
 ```
 
 **Target graph (end of Phase 2b):**
 ```
-[Evaluate Performance]
-        ↓
-[Ingest Analytics]
-        ↓
-[Generate Insights]
-        ↓
-[Update Strategy]
-        ↓
-[Plan Content]
-        ↓
-[Create Draft]
-        ↓
-[Publish Approved]
-        ↓
-       END
+START → [Ingest] → (Monday? → [Insights] → [Strategy]) → [Plan] → [Drafts] → [Publish] → END
 ```
 
-> **Why Performance before Insights:** Engagement data from published posts feeds into
-> the insight generation, closing the feedback loop. Without this ordering, insights
-> are generated blind to what actually worked.
+> **Why no separate Performance node:** Post engagement metrics (likes, reblogs,
+> click-through) are just another data source — like Umami or follower counts.
+> Adding them to `ingest` keeps the graph simple. A separate node would be
+> over-engineering with no architectural benefit.
+>
+> **Why Plan is separate from Drafts:** Plan decides *what* to post (which pages,
+> which channels, when). Drafts decides *how* to say it (LLM content generation).
+> This separation enables strategy to influence planning without touching content
+> generation, and makes each node independently testable.
 
 ## System Overview
 
@@ -928,46 +922,121 @@ Moved all business logic from `handler.py` (~400 lines) into dedicated node modu
 - `scw_js/growth_api.ts`, `website/pages/growth/`
 - Cron schedule, environment variables, secrets
 
-## Phase 2b — Performance Feedback & Strategy (OODA Loop Completion)
+## Phase 2b — OODA Graph Reorder & New Nodes
 
-Depends on Phase 2a (stable graph required). Completes the OODA loop by adding
-**Observe** (performance evaluation) and **Decide** (strategy update) nodes.
+Depends on Phase 2a (stable graph required). Establishes the correct OODA node
+ordering and adds the missing **Strategy** and **Plan** nodes.
 
-### Step 1: Performance Node (`agent/nodes/performance.py`)
+**Guiding principle:** Each step is independently deployable and testable.
+The graph stays green after every step.
 
-Closes the feedback loop — fetches engagement metrics for published posts.
+### Step 1: Move Publish to End of Graph
 
-- [ ] Fetch Mastodon post metrics (reblogs, favourites, replies) via REST API
-- [ ] Fetch Bluesky post metrics (likes, reposts, replies) via AT Protocol
-- [ ] Correlate with Umami UTM referral data (social post → website visit)
-- [ ] Re-enable `PostMetrics` detail fields (reblogs, favourites, replies)
+Fix the most obvious OODA violation — publish must be the last action.
+
+- [ ] Reorder graph: `START → ingest → (Monday? → insights) → drafts → publish → END`
+- [ ] Update `AgentState` if needed (no new fields expected)
+- [ ] Update integration tests (`test_handle_*`) for new node ordering
+- [ ] Verify: `uv run pytest && uv run mypy .`
+- [ ] Export graph: `uv run python run_local.py --graph`
+
+### Step 2: Extract Plan Node from Drafts
+
+Split `drafts.py` into **Plan** (what to post) and **Drafts** (how to say it).
+
+**`agent/nodes/plan.py` — new node:**
+- [ ] Extract from `create_drafts()`: pipeline depth check, `plan_draft_schedule()`,
+      page selection logic (`best_pages_for_social[:ceil(needed/2)]`)
+- [ ] `plan_node(state)` reads `llm_analysis.json` + `content_queue.json` + `strategy.json`
+- [ ] Writes `content_plan.json`: list of `{page, channel, scheduled_at, page_title, page_description}`
+- [ ] Returns `{"plan_created": True/False}` to state
+- [ ] If pipeline full → writes empty plan, logs, returns `{"plan_created": False}`
+
+**Update `agent/nodes/drafts.py`:**
+- [ ] `drafts_node` reads `content_plan.json` instead of `llm_analysis.json`
+- [ ] Iterates over plan items, generates LLM content for each
+- [ ] No longer does scheduling or page selection — that's Plan's job
+- [ ] `plan_draft_schedule()` and `_find_last_scheduled_at()` move to `plan.py`
+
+**Update graph:**
+- [ ] `START → ingest → (Monday? → insights) → plan → drafts → publish → END`
+- [ ] Add `plan_created: bool` to `AgentState`
+
+**Tests:**
+- [ ] Move `test_plan_draft_schedule_*` and `test_find_last_scheduled_at_*` tests
+      to target `agent.nodes.plan`
+- [ ] New unit tests for `plan_node`: full pipeline, empty pipeline, no analysis
+- [ ] Update `drafts_node` tests to mock `content_plan.json` instead of `llm_analysis.json`
+- [ ] Integration tests: verify plan → drafts → publish ordering
+- [ ] Verify: `uv run pytest && uv run mypy .`
+
+### Step 3: Add Post Engagement Metrics to Ingest
+
+Extend `ingest_node` to close the feedback loop — fetch how published posts performed.
+
+- [ ] Extend `MastodonClient`: `get_status(id)` → returns reblogs, favourites, replies
+- [ ] Extend `BlueskyClient`: `get_post_thread(uri)` → returns likes, reposts, replies
+- [ ] In `ingest_analytics()`: iterate `performance.json` posts from last 7 days,
+      fetch engagement metrics, update `PostMetrics` detail fields
+- [ ] Cross-reference Umami UTM referral data with published post UTM tags
+      (per-post click-through rate)
+- [ ] Re-enable `PostMetrics` fields: `reblogs`, `favourites`, `replies`, `clicks`
 - [ ] Persist updated `performance.json` with engagement data
-- [ ] Add `_performance_node` to graph — runs **before** ingest (see OODA ordering)
+- [ ] New tests: mock platform API responses, verify metrics aggregation
+- [ ] Verify: `uv run pytest && uv run mypy .`
 
-### Step 2: Strategy Node (`agent/nodes/strategy.py`)
+### Step 4: Add Strategy Node
 
-Introduces the **Decide** phase — LLM adjusts strategy based on performance data.
+Introduce the **Decide** phase — LLM adjusts strategy based on performance + insights.
 
-- [ ] `update_strategy(storage)` — reads `performance.json` + `insights.json`, updates `strategy.json`
+**`agent/nodes/strategy.py` — new node:**
+- [ ] `strategy_node(state)` reads `performance.json` + `insights.json` + `strategy.json`
+- [ ] LLM prompt: "Given these engagement results and insights, should we adjust
+      the content strategy?" with current strategy as context
 - [ ] Constraints: max 1 pillar change + 1 frequency adjustment per run
-- [ ] Audit log: every change persisted with reason
-- [ ] Strategy remains read-write via S3 (no longer hardcoded defaults only)
-- [ ] Add `_strategy_node` to graph — runs after insights, before content planning
+- [ ] Audit log: append `{timestamp, field, old_value, new_value, reason}` to
+      `strategy.json.changes` array
+- [ ] Returns `{"strategy_updated": True/False}` to state
 
-### Step 3: Reorder Graph to OODA
+**Update graph:**
+- [ ] `START → ingest → (Monday? → insights → strategy) → plan → drafts → publish → END`
+- [ ] Add `strategy_updated: bool` to `AgentState`
+- [ ] Strategy only runs on Mondays (same conditional as insights)
 
-Update `agent/graph.py` to match the target OODA architecture:
+**Tests:**
+- [ ] Unit tests: strategy unchanged (no performance data), single pillar change,
+      constraint enforcement (max 1 change), audit log written
+- [ ] Integration test: Monday run with performance data → strategy updated → plan
+      uses new strategy
+- [ ] Verify: `uv run pytest && uv run mypy .`
 
-```
-START → [Evaluate Performance] → [Ingest Analytics] → [Publish Approved]
-      → (Monday? → [Generate Insights] → [Update Strategy]) → [Create Drafts] → END
-```
+### Step 5: Verify Full OODA Graph
 
-### Step 4: UTM Attribution
+- [ ] Export graph: `uv run python run_local.py --graph`
+- [ ] Verify final graph matches target:
+      `START → ingest → (Monday? → insights → strategy) → plan → drafts → publish → END`
+- [ ] End-to-end test: full Monday run with mocked APIs
+- [ ] End-to-end test: full non-Monday run (ingest → plan → drafts → publish)
+- [ ] Deploy & verify: `bash bin/deploy.sh`, manual trigger, check S3 state
 
-- [ ] Cross-reference Umami referral data with published post UTM tags
-- [ ] Compute per-post: click-through rate, website visit conversion
-- [ ] Feed attribution data into performance evaluation
+### Verification Criteria
+
+- [ ] `uv run pytest` — all tests pass after each step
+- [ ] `uv run mypy .` — no type errors
+- [ ] `uv run ruff check .` — lint clean
+- [ ] Graph PNG matches target OODA architecture
+- [ ] Monday run: all 6 nodes execute in order
+- [ ] Non-Monday run: ingest → plan → drafts → publish (4 nodes)
+
+### What Changes per Step
+
+| Step | Files Changed | New Files | Risk |
+|------|--------------|-----------|------|
+| 1. Publish to end | `graph.py`, tests | — | Low (edge reorder only) |
+| 2. Extract Plan | `drafts.py`, tests | `plan.py` | Medium (logic split) |
+| 3. Engagement metrics | `ingest.py`, platform clients | — | Medium (new API calls) |
+| 4. Strategy node | `graph.py`, tests | `strategy.py` | Medium (new LLM node) |
+| 5. Verify | tests | — | Low (validation only) |
 
 ## Phase 2c — LLM Evaluation with deepeval
 

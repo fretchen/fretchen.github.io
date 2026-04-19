@@ -1,4 +1,4 @@
-"""Tests for handler.py — the Scaleway Function cron entry point."""
+"""Tests for growth-agent — nodes, graph, and handler."""
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -14,16 +14,18 @@ from agent.models import (
     PageForSocial,
     WebsiteAnalytics,
 )
-from handler import (
+from agent.nodes import (
     PIPELINE_TARGET,
-    _create_server,
     _find_last_scheduled_at,
     create_drafts,
     generate_insights,
-    handle,
     ingest_analytics,
     plan_draft_schedule,
     publish_approved_drafts,
+)
+from handler import (
+    _create_server,
+    handle,
 )
 
 # ---------------------------------------------------------------------------
@@ -76,9 +78,9 @@ def mock_storage():
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.BlueskyClient")
-@patch("handler.MastodonClient")
-@patch("handler.UmamiClient")
+@patch("agent.nodes.ingest.BlueskyClient")
+@patch("agent.nodes.ingest.MastodonClient")
+@patch("agent.nodes.ingest.UmamiClient")
 def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
     storage, store = mock_storage
 
@@ -115,9 +117,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
     assert "insights.json" in store
 
 
-@patch("handler.BlueskyClient")
-@patch("handler.MastodonClient")
-@patch("handler.UmamiClient")
+@patch("agent.nodes.ingest.BlueskyClient")
+@patch("agent.nodes.ingest.MastodonClient")
+@patch("agent.nodes.ingest.UmamiClient")
 def test_ingest_analytics_old_umami_format(
     MockUmami, MockMasto, MockBsky, mock_storage
 ):
@@ -155,9 +157,9 @@ def test_ingest_analytics_old_umami_format(
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.publish_draft")
-@patch("handler.BlueskyClient")
-@patch("handler.MastodonClient")
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.BlueskyClient")
+@patch("agent.nodes.publish.MastodonClient")
 def test_publish_approved_drafts_publishes_due(
     MockMasto, MockBsky, mock_publish, mock_storage
 ):
@@ -199,8 +201,8 @@ def test_publish_approved_drafts_publishes_due(
     assert updated_queue.published[0].id == "d1"
 
 
-@patch("handler.publish_draft")
-@patch("handler.MastodonClient")
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.MastodonClient")
 def test_publish_no_scheduled_at_publishes_immediately(
     MockMasto, mock_publish, mock_storage
 ):
@@ -261,8 +263,8 @@ def test_publish_skips_oversized_content(mock_storage):
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.fetch_pages_meta")
-@patch("handler.LLMClient")
+@patch("agent.nodes.insights.fetch_pages_meta")
+@patch("agent.nodes.insights.LLMClient")
 def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     storage, store = mock_storage
 
@@ -321,8 +323,8 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.fetch_pages_meta")
-@patch("handler.LLMClient")
+@patch("agent.nodes.drafts.fetch_pages_meta")
+@patch("agent.nodes.drafts.LLMClient")
 def test_create_drafts(MockLLM, mock_fetch, mock_storage):
     storage, store = mock_storage
 
@@ -380,10 +382,10 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.create_drafts")
-@patch("handler.generate_insights")
-@patch("handler.publish_approved_drafts")
-@patch("handler.ingest_analytics")
+@patch("agent.graph.create_drafts")
+@patch("agent.graph.generate_insights")
+@patch("agent.graph.publish_approved_drafts")
+@patch("agent.graph.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_daily_not_monday(
     mock_get_storage, mock_ingest, mock_publish, mock_insights, mock_drafts
@@ -420,10 +422,10 @@ def test_handle_daily_not_monday(
     mock_drafts.assert_called_once()
 
 
-@patch("handler.create_drafts")
-@patch("handler.generate_insights")
-@patch("handler.publish_approved_drafts")
-@patch("handler.ingest_analytics")
+@patch("agent.graph.create_drafts")
+@patch("agent.graph.generate_insights")
+@patch("agent.graph.publish_approved_drafts")
+@patch("agent.graph.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
     mock_get_storage, mock_ingest, mock_publish, mock_insights, mock_drafts
@@ -460,8 +462,8 @@ def test_handle_weekly_on_monday(
     mock_drafts.assert_called_once()
 
 
-@patch("handler.publish_approved_drafts")
-@patch("handler.ingest_analytics")
+@patch("agent.graph.publish_approved_drafts")
+@patch("agent.graph.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_resilient_on_failure(mock_get_storage, mock_ingest, mock_publish):
     """Handler continues even if analytics fails."""
@@ -594,8 +596,8 @@ def test_find_last_scheduled_at_across_drafts_and_approved():
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.fetch_pages_meta")
-@patch("handler.LLMClient")
+@patch("agent.nodes.drafts.fetch_pages_meta")
+@patch("agent.nodes.drafts.LLMClient")
 def test_create_drafts_pipeline_full(MockLLM, mock_fetch, mock_storage):
     """When pipeline >= PIPELINE_TARGET, no new drafts are created."""
     storage, store = mock_storage
@@ -624,8 +626,8 @@ def test_create_drafts_pipeline_full(MockLLM, mock_fetch, mock_storage):
     MockLLM.assert_not_called()
 
 
-@patch("handler.fetch_pages_meta")
-@patch("handler.LLMClient")
+@patch("agent.nodes.drafts.fetch_pages_meta")
+@patch("agent.nodes.drafts.LLMClient")
 def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
     """When pipeline has 7 drafts, only 3 new ones are created."""
     storage, store = mock_storage
@@ -677,8 +679,8 @@ def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
     assert len(updated_queue.drafts) == 10  # 7 existing + 3 new
 
 
-@patch("handler.fetch_pages_meta")
-@patch("handler.LLMClient")
+@patch("agent.nodes.drafts.fetch_pages_meta")
+@patch("agent.nodes.drafts.LLMClient")
 def test_create_drafts_scheduling_continues_from_last(
     MockLLM, mock_fetch, mock_storage
 ):
@@ -731,8 +733,8 @@ def test_create_drafts_scheduling_continues_from_last(
     assert new_drafts[1].channel == "mastodon"
 
 
-@patch("handler.fetch_pages_meta")
-@patch("handler.LLMClient")
+@patch("agent.nodes.drafts.fetch_pages_meta")
+@patch("agent.nodes.drafts.LLMClient")
 def test_create_drafts_empty_queue_schedules_from_tomorrow(
     MockLLM, mock_fetch, mock_storage
 ):
@@ -763,7 +765,7 @@ def test_create_drafts_empty_queue_schedules_from_tomorrow(
 
     # Freeze time so create_drafts() and the assertion use the same "now"
     frozen_now = datetime(2025, 6, 10, 14, 30, 0, tzinfo=timezone.utc)
-    with patch("handler.datetime") as mock_dt:
+    with patch("agent.nodes.drafts.datetime") as mock_dt:
         mock_dt.now.return_value = frozen_now
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
         create_drafts(storage, analysis)
@@ -780,8 +782,8 @@ def test_create_drafts_empty_queue_schedules_from_tomorrow(
 # ---------------------------------------------------------------------------
 
 
-@patch("handler.publish_approved_drafts")
-@patch("handler.ingest_analytics")
+@patch("agent.graph.publish_approved_drafts")
+@patch("agent.graph.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_no_analysis_skips_drafts(mock_get_storage, mock_ingest, mock_publish):
     """When no saved LLM analysis exists, pipeline refill is skipped gracefully."""

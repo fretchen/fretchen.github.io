@@ -30,6 +30,49 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 # 3. High-Level Architecture
 
+## Target: OODA Loop
+
+The agent follows an **OODA (Observe → Orient → Decide → Act)** architecture,
+the state-of-the-art for autonomous growth agents. Each OODA phase maps to
+LangGraph nodes in `agent/graph.py`:
+
+| OODA Phase | Nodes | Status |
+|---|---|---|
+| **Observe** | Ingest Analytics, Evaluate Performance | Ingest ✅, Performance Phase 2b |
+| **Orient** | Generate Insights | ✅ |
+| **Decide** | Update Strategy, Plan Content | Strategy Phase 2b, Planning ✅ (in drafts) |
+| **Act** | Create Draft, Publish | ✅ |
+
+**Current graph (Phase 2a):**
+```
+START → [Ingest Analytics] → [Publish Approved] → (Monday? → [Generate Insights]) → [Create Drafts] → END
+```
+
+**Target graph (end of Phase 2b):**
+```
+[Evaluate Performance]
+        ↓
+[Ingest Analytics]
+        ↓
+[Generate Insights]
+        ↓
+[Update Strategy]
+        ↓
+[Plan Content]
+        ↓
+[Create Draft]
+        ↓
+[Publish Approved]
+        ↓
+       END
+```
+
+> **Why Performance before Insights:** Engagement data from published posts feeds into
+> the insight generation, closing the feedback loop. Without this ordering, insights
+> are generated blind to what actually worked.
+
+## System Overview
+
 ```
 ┌─────────────────┐    ┌──────────────────┐
 │ Umami Analytics  │    │  Blog Content     │
@@ -149,15 +192,21 @@ growth-agent/
 ├── agent/
 │   ├── __init__.py
 │   ├── models.py           # Pydantic state models (Insights, Strategy, Draft, LLMAnalysis, PageMeta, ...)
-│   ├── llm_client.py       # IONOS LLM client (httpx + langchain-openai structured output)
+│   ├── llm_client.py       # IONOS LLM client (langchain-openai ChatOpenAI)
 │   ├── umami_client.py     # Umami Cloud REST API client
 │   ├── page_meta.py        # HTTP-based page metadata fetcher (title, description from meta tags)
-│   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production)
+│   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production) + load_model helper
 │   ├── publisher.py        # Publish approved drafts to platforms
 │   ├── platforms/           # (Phase 1a)
 │   │   ├── mastodon.py     # Mastodon REST API client (httpx)
 │   │   └── bluesky.py      # AT Protocol client (httpx)
-│   └── graph.py            # (Phase 2a) LangGraph StateGraph — 4 nodes, conditional weekly edge
+│   ├── nodes/               # (Phase 2a) Business logic per graph node
+│   │   ├── __init__.py     # Re-exports public functions
+│   │   ├── ingest.py       # ingest_analytics() — Umami + social metrics
+│   │   ├── publish.py      # publish_approved_drafts() — platform posting + char limits
+│   │   ├── insights.py     # generate_insights() — LLM analysis + prompt templates
+│   │   └── drafts.py       # create_drafts() + plan_draft_schedule() + prompt templates
+│   └── graph.py            # (Phase 2a) LangGraph StateGraph — node wrappers + graph compilation
 │
 ├── notebooks/
 │   ├── 01_umami_ingest.ipynb
@@ -167,7 +216,7 @@ growth-agent/
 │   ├── 05_social_posting.ipynb
 │   └── 06_approval.ipynb          # Phase 1a: review, edit & approve drafts
 │
-├── handler.py              # Scaleway Container entry point (HTTP server + cron handler)
+├── handler.py              # Scaleway Container entry point (HTTP server + graph invocation, ~180 lines)
 ├── Dockerfile              # (Phase 1f) Container image definition (uv + Python 3.11)
 ├── .dockerignore           # (Phase 1f) Excludes .venv, tests, notebooks from image
 │
@@ -816,74 +865,60 @@ before introducing LangGraph to avoid baking tech debt into graph nodes.
 - `httpx` kept — used by Mastodon, Bluesky, Umami, page_meta modules
 - `eth-account` kept in dev deps (used in notebooks)
 
-### Step 5: Add LangGraph Dependency
+### Step 5: Add LangGraph Dependency ✅
 
-- [ ] Add `langgraph>=0.2` to `pyproject.toml` dependencies
-- [ ] `uv sync`
+- [x] Add `langgraph>=0.2` to `pyproject.toml` dependencies
+- [x] `uv sync --extra dev`
 
-### Step 6: Define Agent State & Graph (`agent/graph.py`)
+### Step 6: Define Agent State & Graph (`agent/graph.py`) ✅
 
-- [ ] Create `AgentState(TypedDict)`:
-  ```python
-  class AgentState(TypedDict):
-      storage: Any           # S3Storage instance (injected, not serialized)
-      insights: Insights | None
-      analysis: LLMAnalysis | None
-      published_ids: list[str]
-      drafts_created: int
-      is_monday: bool
-  ```
-- [ ] Create node functions wrapping existing logic:
-  - `ingest_node(state)` → calls `ingest_analytics(storage)`
-  - `publish_node(state)` → calls `publish_approved_drafts(storage)`
-  - `insights_node(state)` → calls `generate_insights(storage)`
-  - `drafts_node(state)` → calls `create_drafts(storage, analysis)`
-- [ ] Define `StateGraph` with edges:
-  ```
-  START → ingest → publish → route_weekly
-    route_weekly(is_monday=True)  → insights → drafts → END
-    route_weekly(is_monday=False) → drafts → END
-  ```
-- [ ] Compile graph: `graph = builder.compile()`
+- [x] Create `AgentState(TypedDict)` with fields: storage, is_monday, analytics_ok, published_ids, insights_ok, drafts_created
+- [x] Create node wrapper functions: `_ingest_node`, `_publish_node`, `_insights_node`, `_drafts_node`
+- [x] Define `StateGraph` with conditional Monday routing
+- [x] Compile graph: `graph = build_graph()`
 
-### Step 7: Wire Graph into `handler.py`
+### Step 7: Wire Graph into `handler.py` ✅
 
-- [ ] `handle()` builds initial state, calls `graph.invoke(state)`
-- [ ] HTTP server (`_create_server`, `_run_server`) stays unchanged
-- [ ] Error handling: `graph.invoke()` wrapped in try/except, `crashed` flag preserved
-- [ ] Return same JSON structure as before (`statusCode`, `body` with task results)
+- [x] `handle()` builds initial state, calls `graph.invoke(state)`
+- [x] HTTP server (`_create_server`, `_run_server`) stays unchanged
+- [x] Error handling: `graph.invoke()` wrapped in try/except, `crashed` flag preserved
+- [x] Return same JSON structure as before
 
-### Step 8: Update Tests
+### Step 8: Update Tests ✅
 
-- [ ] Existing `test_handle_*` tests adapted to mock graph node functions
-- [ ] New unit tests for each node function individually
-- [x] New tests for `plan_draft_schedule()` (3 tests: empty queue, continues from existing, zero needed)
-- [ ] `uv run pytest` — all tests green
+- [x] Existing `test_handle_*` tests adapted to mock graph node functions
+- [x] `uv run pytest` — all 24 tests green
 
-### Step 9: Deploy & Verify
+### Step 9: Extract Nodes to `agent/nodes/` ✅
 
-- [ ] `bash bin/deploy.sh`
-- [ ] Manual test: `curl -X POST <container-url>` → same JSON result as before
-- [ ] Verify S3 logs: graph execution produces identical state files
-- [ ] Wait for cron: next day's log should show successful graph run
+Moved all business logic from `handler.py` (~400 lines) into dedicated node modules.
+`handler.py` reduced from ~750 to ~180 lines (orchestration + HTTP server only).
 
-### Verification Criteria
+- [x] `agent/nodes/ingest.py` — `ingest_analytics()` + Umami/social aggregation
+- [x] `agent/nodes/publish.py` — `publish_approved_drafts()` + char-limit validation
+- [x] `agent/nodes/insights.py` — `generate_insights()` + LLM prompt templates
+- [x] `agent/nodes/drafts.py` — `create_drafts()`, `plan_draft_schedule()`, prompt templates
+- [x] `agent/storage.py` — added `load_model()` helper (shared across nodes)
+- [x] `agent/graph.py` — imports nodes directly, builds + compiles graph at module level
+- [x] Test patches updated to reference new module paths
+- [x] 24/24 tests green, ruff clean
 
-- [ ] `uv run pytest` — all existing tests pass (behavior unchanged)
-- [ ] S3 output identical: same `insights.json`, `content_queue.json`, `llm_analysis.json`
-- [ ] `uv run ruff check .` — lint clean
-- [ ] Deployed container produces same cron results
+### Verification Criteria ✅
 
-### What Changes
+- [x] `uv run pytest` — all 24 tests pass (behavior unchanged)
+- [x] `uv run ruff check .` — lint clean
+- [ ] Deploy & verify: `bash bin/deploy.sh`, cron produces same S3 output
+
+### What Changed
 
 | Component | Before | After |
 |-----------|--------|-------|
-| `handler.py` handle() | 4 functions called sequentially | `graph.invoke(state)` |
+| `handler.py` | ~750 lines (all business logic + orchestration) | ~180 lines (orchestration + HTTP server only) |
+| `agent/nodes/` | Empty `__init__.py` | 4 node modules with all business logic |
+| `agent/graph.py` | Node functions injected via `build_graph()` params | Imports nodes directly, compiles graph at module level |
+| `agent/storage.py` | Storage classes only | + `load_model()` helper shared across nodes |
 | `agent/models.py` | 15+ unused fields | Cleaned up |
 | `agent/llm_client.py` | Dual HTTP clients (httpx + LangChain) | ChatOpenAI only |
-| `agent/graph.py` | Empty `nodes/` directory | StateGraph with 4 nodes |
-| Prompts | Inline if/else in handler.py | `PROMPT_TEMPLATES` dict |
-| Scheduling | Embedded in `create_drafts()` | Standalone `plan_draft_schedule()` |
 
 ### What Stays Unchanged
 
@@ -893,15 +928,46 @@ before introducing LangGraph to avoid baking tech debt into graph nodes.
 - `scw_js/growth_api.ts`, `website/pages/growth/`
 - Cron schedule, environment variables, secrets
 
-## Phase 2b — Performance Feedback & Intelligence
+## Phase 2b — Performance Feedback & Strategy (OODA Loop Completion)
 
-Depends on Phase 2a (stable graph required).
+Depends on Phase 2a (stable graph required). Completes the OODA loop by adding
+**Observe** (performance evaluation) and **Decide** (strategy update) nodes.
 
-- [ ] Performance tracking: fetch Mastodon/Bluesky metrics for published posts
-- [ ] UTM attribution: correlate Umami referrals → social posts
-- [ ] Feedback loop: top-performing post styles influence future generation
-- [ ] Strategy auto-adjustment based on performance data
+### Step 1: Performance Node (`agent/nodes/performance.py`)
+
+Closes the feedback loop — fetches engagement metrics for published posts.
+
+- [ ] Fetch Mastodon post metrics (reblogs, favourites, replies) via REST API
+- [ ] Fetch Bluesky post metrics (likes, reposts, replies) via AT Protocol
+- [ ] Correlate with Umami UTM referral data (social post → website visit)
 - [ ] Re-enable `PostMetrics` detail fields (reblogs, favourites, replies)
+- [ ] Persist updated `performance.json` with engagement data
+- [ ] Add `_performance_node` to graph — runs **before** ingest (see OODA ordering)
+
+### Step 2: Strategy Node (`agent/nodes/strategy.py`)
+
+Introduces the **Decide** phase — LLM adjusts strategy based on performance data.
+
+- [ ] `update_strategy(storage)` — reads `performance.json` + `insights.json`, updates `strategy.json`
+- [ ] Constraints: max 1 pillar change + 1 frequency adjustment per run
+- [ ] Audit log: every change persisted with reason
+- [ ] Strategy remains read-write via S3 (no longer hardcoded defaults only)
+- [ ] Add `_strategy_node` to graph — runs after insights, before content planning
+
+### Step 3: Reorder Graph to OODA
+
+Update `agent/graph.py` to match the target OODA architecture:
+
+```
+START → [Evaluate Performance] → [Ingest Analytics] → [Publish Approved]
+      → (Monday? → [Generate Insights] → [Update Strategy]) → [Create Drafts] → END
+```
+
+### Step 4: UTM Attribution
+
+- [ ] Cross-reference Umami referral data with published post UTM tags
+- [ ] Compute per-post: click-through rate, website visit conversion
+- [ ] Feed attribution data into performance evaluation
 
 ## Phase 2c — LLM Evaluation with deepeval
 

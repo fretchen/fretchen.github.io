@@ -48,9 +48,7 @@ def diagnose() -> None:
     if upcoming:
         print("\n  Next scheduled:")
         for d in upcoming[:5]:
-            print(
-                f"    {d.scheduled_at.isoformat()}  {d.channel:<10} [{d.status}] {d.id}"
-            )
+            print(f"    {d.scheduled_at.isoformat()}  {d.channel:<10} [{d.status}] {d.id}")
 
     # --- LLM Analysis ---
     analysis_data = storage.read("llm_analysis.json")
@@ -121,18 +119,31 @@ def run_analytics() -> None:
     print(json.dumps(result.model_dump(), indent=2, default=str)[:500])
 
 
+def show_graph(output: str = "graph.png") -> None:
+    """Export the LangGraph graph as PNG image."""
+    from agent.graph import graph
+
+    png_bytes = graph.get_graph().draw_mermaid_png()
+    with open(output, "wb") as f:
+        f.write(png_bytes)
+    print(f"Graph exported to {output}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Growth Agent local runner")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--diagnose", action="store_true", help="Read-only S3 state inspection"
-    )
+    group.add_argument("--diagnose", action="store_true", help="Read-only S3 state inspection")
     group.add_argument("--publish", action="store_true", help="Publish approved drafts")
-    group.add_argument(
-        "--refill", action="store_true", help="Pipeline refill (create drafts)"
-    )
+    group.add_argument("--refill", action="store_true", help="Pipeline refill (create drafts)")
     group.add_argument("--insights", action="store_true", help="Generate LLM insights")
     group.add_argument("--analytics", action="store_true", help="Ingest analytics")
+    group.add_argument(
+        "--graph",
+        nargs="?",
+        const="graph.png",
+        metavar="FILE",
+        help="Export graph as PNG (default: graph.png)",
+    )
     args = parser.parse_args()
 
     if args.diagnose:
@@ -145,6 +156,8 @@ def main() -> None:
         run_insights()
     elif args.analytics:
         run_analytics()
+    elif args.graph:
+        show_graph(args.graph)
 
 
 if __name__ == "__main__":

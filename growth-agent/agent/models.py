@@ -5,15 +5,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
-class EventFunnel(BaseModel):
-    """Metrics for a single event funnel."""
-
-    hovers: int = 0
-    clicks: int = 0
-    successes: int = 0
-    conversion: float = 0.0
-
-
 class WebsiteAnalytics(BaseModel):
     """Aggregated website analytics from Umami."""
 
@@ -25,7 +16,6 @@ class WebsiteAnalytics(BaseModel):
     top_pages: list[dict] = Field(default_factory=list)
     top_referrers: list[dict] = Field(default_factory=list)
     top_events: list[dict] = Field(default_factory=list)
-    event_funnels: dict[str, EventFunnel] = Field(default_factory=dict)
 
 
 class PageMeta(BaseModel):
@@ -40,8 +30,6 @@ class SocialMetrics(BaseModel):
     """Metrics for a single social platform."""
 
     followers: int = 0
-    engagement_rate: float = 0.0
-    top_posts: list[dict] = Field(default_factory=list)
 
 
 class PageForSocial(BaseModel):
@@ -94,7 +82,6 @@ class Strategy(BaseModel):
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"
     website_url: str = "https://fretchen.eu"
-    last_updated: datetime = Field(default_factory=datetime.now)
 
 
 class Draft(BaseModel):
@@ -128,11 +115,6 @@ class PostMetrics(BaseModel):
     channel: str
     published_at: datetime
     platform_id: str | None = None
-    reblogs: int = 0
-    favourites: int = 0
-    replies: int = 0
-    link_clicks: int | None = None
-    website_referral_sessions: int = 0
 
 
 class Performance(BaseModel):

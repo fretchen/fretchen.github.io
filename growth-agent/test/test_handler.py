@@ -22,6 +22,7 @@ from handler import (
     generate_insights,
     handle,
     ingest_analytics,
+    plan_draft_schedule,
     publish_approved_drafts,
 )
 
@@ -481,6 +482,42 @@ def test_handle_resilient_on_failure(mock_get_storage, mock_ingest, mock_publish
 def test_find_last_scheduled_at_empty():
     queue = ContentQueue()
     assert _find_last_scheduled_at(queue) is None
+
+
+# ---------------------------------------------------------------------------
+# plan_draft_schedule
+# ---------------------------------------------------------------------------
+
+
+def test_plan_draft_schedule_empty_queue():
+    """Empty queue → start from tomorrow 09:00 UTC, alternating mastodon/bluesky."""
+    now = datetime(2025, 6, 10, 14, 30, 0, tzinfo=timezone.utc)
+    schedule = plan_draft_schedule(ContentQueue(), 4, now=now)
+    assert len(schedule) == 4
+    assert schedule[0] == ("mastodon", datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc))
+    assert schedule[1] == ("bluesky", datetime(2025, 6, 12, 9, 0, 0, tzinfo=timezone.utc))
+    assert schedule[2] == ("mastodon", datetime(2025, 6, 13, 9, 0, 0, tzinfo=timezone.utc))
+    assert schedule[3] == ("bluesky", datetime(2025, 6, 14, 9, 0, 0, tzinfo=timezone.utc))
+
+
+def test_plan_draft_schedule_continues_from_existing():
+    """Continues alternation from last scheduled draft."""
+    last = datetime(2025, 4, 20, 9, 0, tzinfo=timezone.utc)
+    queue = ContentQueue(
+        drafts=[
+            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=last),
+        ]
+    )
+    schedule = plan_draft_schedule(queue, 2)
+    assert schedule[0][0] == "bluesky"  # alternates from mastodon
+    assert schedule[0][1] == last + timedelta(days=1)
+    assert schedule[1][0] == "mastodon"
+    assert schedule[1][1] == last + timedelta(days=2)
+
+
+def test_plan_draft_schedule_zero_needed():
+    """Requesting 0 drafts returns empty list."""
+    assert plan_draft_schedule(ContentQueue(), 0) == []
 
 
 def test_find_last_scheduled_at_from_drafts():

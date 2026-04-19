@@ -1,12 +1,28 @@
 """IONOS AI Model Hub LLM client (OpenAI-compatible)."""
 
-import httpx
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 IONOS_BASE_URL = "https://openai.inference.de-txl.ionos.com/v1"
-IONOS_ENDPOINT = f"{IONOS_BASE_URL}/chat/completions"
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+
+
+def _to_langchain_messages(messages: list[dict[str, str]]):
+    """Convert {role, content} dicts to LangChain message objects."""
+    result = []
+    for msg in messages:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "system":
+            result.append(SystemMessage(content=content))
+        elif role == "user":
+            result.append(HumanMessage(content=content))
+        elif role == "assistant":
+            result.append(AIMessage(content=content))
+        else:
+            raise ValueError(f"Unsupported message role: {role!r}")
+    return result
 
 
 class LLMClient:
@@ -15,19 +31,9 @@ class LLMClient:
     def __init__(
         self,
         api_token: str,
-        endpoint: str = IONOS_ENDPOINT,
         model: str = DEFAULT_MODEL,
     ):
-        self.endpoint = endpoint
         self.model = model
-        self.api_token = api_token
-        self.client = httpx.Client(
-            headers={
-                "Authorization": f"Bearer {api_token}",
-                "Content-Type": "application/json",
-            },
-            timeout=120.0,
-        )
         self._chat_model = ChatOpenAI(
             base_url=IONOS_BASE_URL,
             api_key=api_token,
@@ -50,25 +56,11 @@ class LLMClient:
             max_tokens: Maximum response tokens.
 
         Returns:
-            dict with 'content', 'usage', and 'model' keys.
+            dict with 'content' key.
         """
-        response = self.client.post(
-            self.endpoint,
-            json={
-                "model": self.model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
-
-        return {
-            "content": data["choices"][0]["message"]["content"],
-            "usage": data.get("usage", {}),
-            "model": data.get("model", self.model),
-        }
+        model = self._chat_model.bind(temperature=temperature, max_tokens=max_tokens)
+        result = model.invoke(_to_langchain_messages(messages))
+        return {"content": result.content}
 
     def structured_output(
         self,
@@ -88,26 +80,7 @@ class LLMClient:
             Parsed Pydantic model instance.
         """
         structured = self._chat_model.with_structured_output(schema)
-        langchain_messages = []
-        for msg in messages:
-            role = msg["role"]
-            content = msg["content"]
-            if role == "system":
-                from langchain_core.messages import SystemMessage
-
-                langchain_messages.append(SystemMessage(content=content))
-            elif role == "user":
-                from langchain_core.messages import HumanMessage
-
-                langchain_messages.append(HumanMessage(content=content))
-            elif role == "assistant":
-                from langchain_core.messages import AIMessage
-
-                langchain_messages.append(AIMessage(content=content))
-            else:
-                raise ValueError(f"Unsupported message role: {role!r}")
-
-        return structured.invoke(langchain_messages)
+        return structured.invoke(_to_langchain_messages(messages))
 
     def close(self):
-        self.client.close()
+        pass

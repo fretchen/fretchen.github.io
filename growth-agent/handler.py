@@ -70,6 +70,12 @@ PIPELINE_TARGET = 10
 # Keep in sync with website/types/growth.ts CHANNEL_CHAR_LIMITS
 CHAR_LIMITS = {"mastodon": 500, "bluesky": 300}
 
+# Channel-specific draft generation config
+CHANNEL_CONFIG = {
+    "mastodon": {"max_tokens": 300, "prompt_fn": "_mastodon_prompt"},
+    "bluesky": {"max_tokens": 200, "prompt_fn": "_bluesky_prompt"},
+}
+
 
 def _make_draft_id(channel: str, language: str, index: int = 0) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
@@ -83,6 +89,45 @@ def _find_last_scheduled_at(queue: ContentQueue) -> datetime | None:
         if draft.scheduled_at and (latest is None or draft.scheduled_at > latest):
             latest = draft.scheduled_at
     return latest
+
+
+def plan_draft_schedule(
+    queue: ContentQueue, needed: int, now: datetime | None = None
+) -> list[tuple[str, datetime]]:
+    """Plan (channel, scheduled_at) pairs for new drafts.
+
+    Returns a list of ``needed`` tuples, alternating Mastodon/Bluesky,
+    each scheduled 1 day apart starting from the latest existing slot + 1 day
+    (or tomorrow 09:00 UTC if no existing slots).
+    """
+    if needed <= 0:
+        return []
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    last_scheduled = _find_last_scheduled_at(queue)
+
+    if last_scheduled is None:
+        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        next_slot = tomorrow
+        next_channel = "mastodon"
+    else:
+        next_slot = last_scheduled + timedelta(days=1)
+        # Continue alternation from last scheduled draft's channel
+        next_channel = "mastodon"
+        for d in queue.drafts + queue.approved:
+            if d.scheduled_at and d.scheduled_at == last_scheduled:
+                next_channel = "bluesky" if d.channel == "mastodon" else "mastodon"
+                break
+
+    schedule: list[tuple[str, datetime]] = []
+    for _ in range(needed):
+        schedule.append((next_channel, next_slot))
+        next_slot += timedelta(days=1)
+        next_channel = "bluesky" if next_channel == "mastodon" else "mastodon"
+
+    return schedule
 
 
 # ---------------------------------------------------------------------------
@@ -350,22 +395,8 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
         logger.info("No pages to promote")
         return 0
 
-    # --- Find scheduling start point and next channel ---
-    last_scheduled = _find_last_scheduled_at(queue)
-    if last_scheduled is None:
-        # Start tomorrow at 09:00 UTC
-        tomorrow = datetime.now(timezone.utc).replace(hour=9, minute=0, second=0, microsecond=0)
-        tomorrow += timedelta(days=1)
-        next_slot = tomorrow
-        next_channel = "mastodon"
-    else:
-        next_slot = last_scheduled + timedelta(days=1)
-        # Continue alternation from last scheduled draft's channel
-        next_channel = "mastodon"
-        for d in queue.drafts + queue.approved:
-            if d.scheduled_at and d.scheduled_at == last_scheduled:
-                next_channel = "bluesky" if d.channel == "mastodon" else "mastodon"
-                break
+    # --- Plan schedule ---
+    schedule = plan_draft_schedule(queue, needed)
 
     # Fetch descriptions for pages to promote
     page_urls = [p.url for p in pages_to_promote]
@@ -374,6 +405,7 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     llm = LLMClient(api_token=os.environ["IONOS_API_TOKEN"])
     new_drafts: list[Draft] = []
     draft_index = 0
+    schedule_iter = iter(schedule)
 
     try:
         for page in pages_to_promote:
@@ -388,12 +420,11 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
                 if len(new_drafts) >= needed:
                     break
 
-                if next_channel == "mastodon":
-                    prompt = _mastodon_prompt(page, page_title, page_desc, "en", strategy)
-                    max_tokens = 300
-                else:
-                    prompt = _bluesky_prompt(page, page_title, page_desc, "en", strategy)
-                    max_tokens = 200
+                channel, slot = next(schedule_iter)
+                config = CHANNEL_CONFIG[channel]
+                prompt_fn = _mastodon_prompt if channel == "mastodon" else _bluesky_prompt
+                prompt = prompt_fn(page, page_title, page_desc, "en", strategy)
+                max_tokens = config["max_tokens"]
 
                 result = llm.chat(
                     messages=[
@@ -403,21 +434,18 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
                     temperature=0.8,
                     max_tokens=max_tokens,
                 )
-                utm = next_channel
                 new_drafts.append(
                     Draft(
-                        id=_make_draft_id(next_channel, "en", draft_index),
-                        channel=next_channel,
+                        id=_make_draft_id(channel, "en", draft_index),
+                        channel=channel,
                         language="en",
                         content=result["content"].strip(),
                         source_blog_post=page_title,
-                        link=f"{page.url}?utm_source={utm}&utm_campaign=growth-agent",
-                        scheduled_at=next_slot,
+                        link=f"{page.url}?utm_source={channel}&utm_campaign=growth-agent",
+                        scheduled_at=slot,
                     )
                 )
-                next_slot += timedelta(days=1)
                 draft_index += 1
-                next_channel = "bluesky" if next_channel == "mastodon" else "mastodon"
 
     except Exception:
         logger.exception("Draft creation failed")

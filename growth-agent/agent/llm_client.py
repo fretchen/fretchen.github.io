@@ -8,9 +8,11 @@ IONOS_BASE_URL = "https://openai.inference.de-txl.ionos.com/v1"
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
 
 
-def _to_langchain_messages(messages: list[dict[str, str]]):
+def _to_langchain_messages(
+    messages: list[dict[str, str]],
+) -> list[SystemMessage | HumanMessage | AIMessage]:
     """Convert {role, content} dicts to LangChain message objects."""
-    result = []
+    result: list[SystemMessage | HumanMessage | AIMessage] = []
     for msg in messages:
         role = msg["role"]
         content = msg["content"]
@@ -36,10 +38,10 @@ class LLMClient:
         self.model = model
         self._chat_model = ChatOpenAI(
             base_url=IONOS_BASE_URL,
-            api_key=api_token,
+            api_key=api_token,  # type: ignore[arg-type]
             model=model,
             temperature=0.3,
-            max_tokens=2048,
+            max_tokens=2048,  # type: ignore[call-arg]
         )
 
     def chat(
@@ -80,7 +82,9 @@ class LLMClient:
             Parsed Pydantic model instance.
         """
         structured = self._chat_model.with_structured_output(schema)
-        return structured.invoke(_to_langchain_messages(messages))
+        result = structured.invoke(_to_langchain_messages(messages))
+        assert isinstance(result, BaseModel)  # narrowing for mypy
+        return result
 
     def close(self):
         pass

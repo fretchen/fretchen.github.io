@@ -10,12 +10,23 @@ from agent.models import ContentQueue, Draft, Performance, PostMetrics
 from agent.platforms.bluesky import BlueskyClient
 from agent.platforms.mastodon import MastodonClient
 from agent.publisher import publish_draft
+from agent.state import AgentState
 from agent.storage import load_model
 
 logger = logging.getLogger("growth-agent")
 
 # Keep in sync with website/types/growth.ts CHANNEL_CHAR_LIMITS
 CHAR_LIMITS = {"mastodon": 500, "bluesky": 300}
+
+
+def publish_node(state: AgentState) -> dict:
+    """LangGraph node: publish approved drafts, update state."""
+    try:
+        published = publish_approved_drafts(state["storage"])
+        return {"published_ids": published}
+    except Exception:
+        logger.exception("Publishing failed")
+        return {"published_ids": []}
 
 
 def publish_approved_drafts(storage) -> list[str]:
@@ -53,7 +64,9 @@ def publish_approved_drafts(storage) -> list[str]:
             if draft.channel == "mastodon":
                 if mastodon_client is None:
                     mastodon_client = MastodonClient(
-                        instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
+                        instance=os.environ.get(
+                            "MASTODON_INSTANCE", "https://mastodon.social"
+                        ),
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
                 result = publish_draft(draft, mastodon_client)
@@ -67,7 +80,9 @@ def publish_approved_drafts(storage) -> list[str]:
                 result = publish_draft(draft, bluesky_client)
                 platform_id = result.get("uri")
             else:
-                logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
+                logger.warning(
+                    "Unknown channel %s for draft %s", draft.channel, draft.id
+                )
                 still_approved.append(draft)
                 continue
 

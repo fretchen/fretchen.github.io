@@ -30,8 +30,7 @@ def generate_insights(storage) -> LLMAnalysis | None:
         ]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
-            f"- {m.url}: {m.description or '(no description)'}"
-            for m in page_metas.values()
+            f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()
         )
 
         blog_url = strategy.website_url

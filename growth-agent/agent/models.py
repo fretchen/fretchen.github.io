@@ -44,7 +44,9 @@ class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
     top_topics: list[str] = Field(description="Most popular topics based on page views")
-    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
+    traffic_sources: list[str] = Field(
+        description="Key traffic sources and their significance"
+    )
     best_pages_for_social: list[PageForSocial] = Field(
         description="Blog pages best suited for social media promotion"
     )
@@ -77,7 +79,9 @@ class Strategy(BaseModel):
         ]
     )
     channels: list[str] = Field(default_factory=lambda: ["mastodon", "bluesky"])
-    posting_frequency: dict[str, int] = Field(default_factory=lambda: {"mastodon": 4, "bluesky": 3})
+    posting_frequency: dict[str, int] = Field(
+        default_factory=lambda: {"mastodon": 4, "bluesky": 3}
+    )
     tone: str = "insightful, technical, opinionated, accessible"
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"

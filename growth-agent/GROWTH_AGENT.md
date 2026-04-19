@@ -777,43 +777,44 @@ to a minimal LangGraph StateGraph — **without changing behavior**. No new feat
 no feedback loops, no quality gates. Just a clean graph that does exactly what the
 current sequential code does.
 
-**Why KISS first:** The current `handler.py` has accumulated complexity (dual HTTP clients,
-duplicated prompts, per-draft client creation, unused model fields). Cleaning this up
-before introducing LangGraph avoids baking tech debt into graph nodes.
+**Why KISS first:** The `handler.py` had accumulated complexity (dual HTTP clients,
+duplicated prompts, unused model fields). Steps 1–4 cleaned this up
+before introducing LangGraph to avoid baking tech debt into graph nodes.
 
 **Why 1:1 migration:** A minimal graph that reproduces existing behavior is easy to verify
 (same tests, same S3 output). Once stable, it becomes the foundation for Phase 2b additions
 (feedback loops, quality gates, deepeval).
 
-### Step 1: Remove Unused Model Fields (`agent/models.py`)
+### Step 1: Remove Unused Model Fields (`agent/models.py`) ✅
 
-- [ ] Delete `EventFunnel` model (never set)
-- [ ] Delete `SocialMetrics.engagement_rate` and `SocialMetrics.top_posts` (never set)
-- [ ] Delete `Strategy.last_updated` (never read)
-- [ ] Delete `Draft.hashtags` (always `[]`, LLM generates inline)
-- [ ] Comment out `PostMetrics` detail fields (reblogs, favourites, replies, link_clicks,
-  website_referral_sessions) — not yet populated, needed in Phase 2b
+- [x] Delete `EventFunnel` model (+ `WebsiteAnalytics.event_funnels`) — never set
+- [x] Delete `SocialMetrics.engagement_rate` and `SocialMetrics.top_posts` — never set
+- [x] Delete `Strategy.last_updated` — never read
+- [x] Delete `PostMetrics` detail fields (reblogs, favourites, replies, link_clicks,
+  website_referral_sessions) — not yet populated, re-enable in Phase 2b
+- `Draft.hashtags` kept — actively used in `scw_js/growth_service.ts` and `website/pages/growth/+Page.tsx`
 
-### Step 2: Unify LLM Client (`agent/llm_client.py`)
+### Step 2: Unify LLM Client (`agent/llm_client.py`) ✅
 
-- [ ] Remove dual HTTP client (httpx + ChatOpenAI) — use ChatOpenAI only
-- [ ] `chat()` uses `self._model.invoke()` instead of raw `httpx.post()`
-- [ ] Delete `self.client = httpx.Client(...)` and related endpoint config
-- [ ] `close()` becomes a no-op (LangChain manages lifecycle)
+- [x] Remove dual HTTP client (httpx + ChatOpenAI) — use ChatOpenAI only
+- [x] `chat()` uses `ChatOpenAI.bind().invoke()` instead of raw `httpx.post()`
+- [x] Delete `self.client = httpx.Client(...)` and `IONOS_ENDPOINT` constant
+- [x] `close()` becomes a no-op (LangChain manages lifecycle)
+- [x] Shared `_to_langchain_messages()` helper extracted
 
-### Step 3: Simplify `handler.py` Orchestration
+### Step 3: Simplify `handler.py` Orchestration ✅
 
-- [ ] **Client reuse:** Open Mastodon/Bluesky clients once per batch in
-  `publish_approved_drafts()` instead of per-draft
-- [ ] **Prompt consolidation:** Extract `PROMPT_TEMPLATES` dict + `get_draft_prompt()`
-  function, replacing duplicated if/else per language/platform
-- [ ] **Scheduling extraction:** Move scheduling math to standalone
-  `plan_draft_schedule(queue, needed)` function (testable independently)
+- Client reuse in `publish_approved_drafts()` was already done in Phase 1e (lazy init per batch)
+- [x] **Channel config:** `CHANNEL_CONFIG` dict replaces if/else for max_tokens per channel
+- [x] **Scheduling extraction:** `plan_draft_schedule(queue, needed, now)` as standalone
+  function with 3 dedicated unit tests (empty queue, continues from existing, zero needed)
+- [x] `create_drafts()` uses schedule iterator from `plan_draft_schedule()`
 
-### Step 4: Remove Unused Dependencies (`pyproject.toml`)
+### Step 4: Remove Unused Dependencies (`pyproject.toml`) ✅
 
-- [ ] Remove `eth-account` (not imported anywhere)
-- [ ] Remove `scaleway-functions-python` (no longer needed after container migration)
+- [x] Remove `scaleway-functions-python` from dev deps (container migration done)
+- `httpx` kept — used by Mastodon, Bluesky, Umami, page_meta modules
+- `eth-account` kept in dev deps (used in notebooks)
 
 ### Step 5: Add LangGraph Dependency
 
@@ -856,7 +857,7 @@ before introducing LangGraph avoids baking tech debt into graph nodes.
 
 - [ ] Existing `test_handle_*` tests adapted to mock graph node functions
 - [ ] New unit tests for each node function individually
-- [ ] New test for `plan_draft_schedule()` (extracted scheduling logic)
+- [x] New tests for `plan_draft_schedule()` (3 tests: empty queue, continues from existing, zero needed)
 - [ ] `uv run pytest` — all tests green
 
 ### Step 9: Deploy & Verify

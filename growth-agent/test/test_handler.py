@@ -118,7 +118,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("handler.BlueskyClient")
 @patch("handler.MastodonClient")
 @patch("handler.UmamiClient")
-def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
+def test_ingest_analytics_old_umami_format(
+    MockUmami, MockMasto, MockBsky, mock_storage
+):
     """Umami legacy format with {\"value\": n} dicts still works."""
     storage, store = mock_storage
 
@@ -156,7 +158,9 @@ def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_
 @patch("handler.publish_draft")
 @patch("handler.BlueskyClient")
 @patch("handler.MastodonClient")
-def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
+def test_publish_approved_drafts_publishes_due(
+    MockMasto, MockBsky, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -197,7 +201,9 @@ def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish
 
 @patch("handler.publish_draft")
 @patch("handler.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
+def test_publish_no_scheduled_at_publishes_immediately(
+    MockMasto, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -345,7 +351,9 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
     }
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.chat.return_value = {
+        "content": "Check out this post about quantum computing!"
+    }
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, analysis)
@@ -494,10 +502,22 @@ def test_plan_draft_schedule_empty_queue():
     now = datetime(2025, 6, 10, 14, 30, 0, tzinfo=timezone.utc)
     schedule = plan_draft_schedule(ContentQueue(), 4, now=now)
     assert len(schedule) == 4
-    assert schedule[0] == ("mastodon", datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc))
-    assert schedule[1] == ("bluesky", datetime(2025, 6, 12, 9, 0, 0, tzinfo=timezone.utc))
-    assert schedule[2] == ("mastodon", datetime(2025, 6, 13, 9, 0, 0, tzinfo=timezone.utc))
-    assert schedule[3] == ("bluesky", datetime(2025, 6, 14, 9, 0, 0, tzinfo=timezone.utc))
+    assert schedule[0] == (
+        "mastodon",
+        datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc),
+    )
+    assert schedule[1] == (
+        "bluesky",
+        datetime(2025, 6, 12, 9, 0, 0, tzinfo=timezone.utc),
+    )
+    assert schedule[2] == (
+        "mastodon",
+        datetime(2025, 6, 13, 9, 0, 0, tzinfo=timezone.utc),
+    )
+    assert schedule[3] == (
+        "bluesky",
+        datetime(2025, 6, 14, 9, 0, 0, tzinfo=timezone.utc),
+    )
 
 
 def test_plan_draft_schedule_continues_from_existing():
@@ -505,7 +525,13 @@ def test_plan_draft_schedule_continues_from_existing():
     last = datetime(2025, 4, 20, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=last),
+            Draft(
+                id="d1",
+                channel="mastodon",
+                language="en",
+                content="a",
+                scheduled_at=last,
+            ),
         ]
     )
     schedule = plan_draft_schedule(queue, 2)
@@ -525,8 +551,12 @@ def test_find_last_scheduled_at_from_drafts():
     t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
-            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
+            Draft(
+                id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1
+            ),
+            Draft(
+                id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2
+            ),
         ]
     )
     assert _find_last_scheduled_at(queue) == t2
@@ -649,7 +679,9 @@ def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
 
 @patch("handler.fetch_pages_meta")
 @patch("handler.LLMClient")
-def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts_scheduling_continues_from_last(
+    MockLLM, mock_fetch, mock_storage
+):
     """New drafts' scheduled_at starts from the latest existing scheduled_at + 1 day."""
     storage, store = mock_storage
 
@@ -701,7 +733,9 @@ def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_
 
 @patch("handler.fetch_pages_meta")
 @patch("handler.LLMClient")
-def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts_empty_queue_schedules_from_tomorrow(
+    MockLLM, mock_fetch, mock_storage
+):
     """With an empty queue, scheduling starts from tomorrow 09:00 UTC."""
     storage, store = mock_storage
 

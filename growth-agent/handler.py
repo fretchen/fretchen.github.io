@@ -20,6 +20,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from math import ceil
 
+from agent.graph import AgentState, build_graph
 from agent.llm_client import LLMClient
 from agent.models import (
     ContentQueue,
@@ -109,7 +110,9 @@ def plan_draft_schedule(
     last_scheduled = _find_last_scheduled_at(queue)
 
     if last_scheduled is None:
-        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(
+            days=1
+        )
         next_slot = tomorrow
         next_channel = "mastodon"
     else:
@@ -142,7 +145,9 @@ def ingest_analytics(storage: S3Storage) -> Insights:
     # Umami
     umami = UmamiClient(
         api_key=os.environ["UMAMI_API_KEY"],
-        website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
+        website_id=os.environ.get(
+            "UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"
+        ),
     )
     try:
         start_at = ms_timestamp(days_ago=7)
@@ -243,7 +248,9 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
             if draft.channel == "mastodon":
                 if mastodon_client is None:
                     mastodon_client = MastodonClient(
-                        instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
+                        instance=os.environ.get(
+                            "MASTODON_INSTANCE", "https://mastodon.social"
+                        ),
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
                 result = publish_draft(draft, mastodon_client)
@@ -257,7 +264,9 @@ def publish_approved_drafts(storage: S3Storage) -> list[str]:
                 result = publish_draft(draft, bluesky_client)
                 platform_id = result.get("uri")
             else:
-                logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
+                logger.warning(
+                    "Unknown channel %s for draft %s", draft.channel, draft.id
+                )
                 still_approved.append(draft)
                 continue
 
@@ -309,7 +318,8 @@ def generate_insights(storage: S3Storage) -> LLMAnalysis | None:
         ]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
-            f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()
+            f"- {m.url}: {m.description or '(no description)'}"
+            for m in page_metas.values()
         )
 
         blog_url = strategy.website_url
@@ -387,7 +397,9 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
     existing = len(queue.drafts) + len(queue.approved)
     needed = max(0, PIPELINE_TARGET - existing)
     if needed == 0:
-        logger.info("Pipeline full (%d pending+approved), skipping draft creation", existing)
+        logger.info(
+            "Pipeline full (%d pending+approved), skipping draft creation", existing
+        )
         return 0
 
     pages_to_promote = analysis.best_pages_for_social[: ceil(needed / 2)]
@@ -413,7 +425,9 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
                 break
 
             meta = page_metas.get(page.url)
-            page_desc = (meta.description or "(no description)") if meta else "(no description)"
+            page_desc = (
+                (meta.description or "(no description)") if meta else "(no description)"
+            )
             page_title = (meta.title or page.title) if meta else page.title
 
             for _ in range(2):  # up to 2 drafts per page
@@ -422,7 +436,9 @@ def create_drafts(storage: S3Storage, analysis: LLMAnalysis) -> int:
 
                 channel, slot = next(schedule_iter)
                 config = CHANNEL_CONFIG[channel]
-                prompt_fn = _mastodon_prompt if channel == "mastodon" else _bluesky_prompt
+                prompt_fn = (
+                    _mastodon_prompt if channel == "mastodon" else _bluesky_prompt
+                )
                 prompt = prompt_fn(page, page_title, page_desc, "en", strategy)
                 max_tokens = config["max_tokens"]
 
@@ -475,7 +491,9 @@ def _system_prompt(strategy: Strategy) -> str:
     )
 
 
-def _mastodon_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
+def _mastodon_prompt(
+    page, title: str, description: str, language: str, strategy: Strategy
+) -> str:
     url = f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Mastodon-Post (max 500 Zeichen) über diesen Blog-Artikel:
@@ -517,7 +535,9 @@ Do NOT use emojis excessively. One is fine.
 Return ONLY the post text, nothing else."""
 
 
-def _bluesky_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
+def _bluesky_prompt(
+    page, title: str, description: str, language: str, strategy: Strategy
+) -> str:
     url = f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Bluesky-Post (max 300 Zeichen) über diesen Blog-Artikel:
@@ -554,12 +574,68 @@ Return ONLY the post text, nothing else."""
 
 
 # ---------------------------------------------------------------------------
+# Graph nodes
+# ---------------------------------------------------------------------------
+
+
+def _ingest_node(state: AgentState) -> dict:
+    try:
+        ingest_analytics(state["storage"])
+        return {"analytics_ok": True}
+    except Exception:
+        logger.exception("Analytics ingest failed")
+        return {"analytics_ok": False}
+
+
+def _publish_node(state: AgentState) -> dict:
+    try:
+        published = publish_approved_drafts(state["storage"])
+        return {"published_ids": published}
+    except Exception:
+        logger.exception("Publishing failed")
+        return {"published_ids": []}
+
+
+def _insights_node(state: AgentState) -> dict:
+    try:
+        analysis = generate_insights(state["storage"])
+        return {"insights_ok": analysis is not None}
+    except Exception:
+        logger.exception("Insight generation failed")
+        return {"insights_ok": False}
+
+
+def _drafts_node(state: AgentState) -> dict:
+    storage = state["storage"]
+    try:
+        analysis_data = storage.read("llm_analysis.json")
+        if analysis_data:
+            analysis = LLMAnalysis.model_validate(analysis_data)
+            count = create_drafts(storage, analysis)
+            return {"drafts_created": count}
+        else:
+            logger.info("No saved LLM analysis — skipping draft creation")
+            return {"drafts_created": 0}
+    except Exception:
+        logger.exception("Draft pipeline refill failed")
+        return {"drafts_created": 0}
+
+
+_graph = build_graph(
+    ingest_node=_ingest_node,
+    publish_node=_publish_node,
+    insights_node=_insights_node,
+    drafts_node=_drafts_node,
+)
+
+
+# ---------------------------------------------------------------------------
 # Main handler
 # ---------------------------------------------------------------------------
 
 
 def handle(event, _context):
-    """Cron entry point.
+    """Cron entry point — invokes the LangGraph workflow.
 
     Daily (every run):
       1. Analytics ingest
@@ -575,54 +651,33 @@ def handle(event, _context):
     now = datetime.now(timezone.utc)
     log_key = f"logs/{now.strftime('%Y-%m-%d')}.json"
 
-    # Write a "started" marker so we know the function was invoked,
-    # even if it crashes before reaching the end.
     storage.write(log_key, {"timestamp": now.isoformat(), "status": "started"})
 
+    crashed = False
     result = {
         "analytics": False,
         "published": [],
         "insights": False,
         "drafts_created": 0,
     }
-    crashed = False
 
     try:
-        # --- Daily tasks ---
-        try:
-            ingest_analytics(storage)
-            result["analytics"] = True
-        except Exception:
-            logger.exception("Analytics ingest failed")
+        state = _graph.invoke({
+            "storage": storage,
+            "is_monday": now.weekday() == 0,
+            "analytics_ok": False,
+            "published_ids": [],
+            "insights_ok": False,
+            "drafts_created": 0,
+        })
 
-        try:
-            published = publish_approved_drafts(storage)
-            result["published"] = published
-        except Exception:
-            logger.exception("Publishing failed")
+        result = {
+            "analytics": state.get("analytics_ok", False),
+            "published": state.get("published_ids", []),
+            "insights": state.get("insights_ok", False),
+            "drafts_created": state.get("drafts_created", 0),
+        }
 
-        # --- Weekly tasks (Monday): LLM insight generation ---
-        if now.weekday() == 0:  # Monday
-            logger.info("Monday — running weekly insight generation")
-            try:
-                analysis = generate_insights(storage)
-                result["insights"] = analysis is not None
-            except Exception:
-                logger.exception("Insight generation failed")
-
-        # --- Daily: Pipeline refill (uses last saved analysis) ---
-        try:
-            analysis_data = storage.read("llm_analysis.json")
-            if analysis_data:
-                analysis = LLMAnalysis.model_validate(analysis_data)
-                count = create_drafts(storage, analysis)
-                result["drafts_created"] = count
-            else:
-                logger.info("No saved LLM analysis — skipping draft creation")
-        except Exception:
-            logger.exception("Draft pipeline refill failed")
-
-        # Write final success log
         storage.write(
             log_key,
             {
@@ -633,7 +688,6 @@ def handle(event, _context):
         )
 
     except Exception:
-        # Catch-all: write crash info to S3 so we have evidence
         logger.exception("Handler crashed unexpectedly")
         import traceback
 

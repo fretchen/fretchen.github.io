@@ -30,6 +30,49 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 # 3. High-Level Architecture
 
+## Target: OODA Loop
+
+The agent follows an **OODA (Observe → Orient → Decide → Act)** architecture,
+the state-of-the-art for autonomous growth agents. Each OODA phase maps to
+LangGraph nodes in `agent/graph.py`:
+
+| OODA Phase | Nodes | Status |
+|---|---|---|
+| **Observe** | Ingest Analytics, Evaluate Performance | Ingest ✅, Performance Phase 2b |
+| **Orient** | Generate Insights | ✅ |
+| **Decide** | Update Strategy, Plan Content | Strategy Phase 2b, Planning ✅ (in drafts) |
+| **Act** | Create Draft, Publish | ✅ |
+
+**Current graph (Phase 2a):**
+```
+START → [Ingest Analytics] → [Publish Approved] → (Monday? → [Generate Insights]) → [Create Drafts] → END
+```
+
+**Target graph (end of Phase 2b):**
+```
+[Evaluate Performance]
+        ↓
+[Ingest Analytics]
+        ↓
+[Generate Insights]
+        ↓
+[Update Strategy]
+        ↓
+[Plan Content]
+        ↓
+[Create Draft]
+        ↓
+[Publish Approved]
+        ↓
+       END
+```
+
+> **Why Performance before Insights:** Engagement data from published posts feeds into
+> the insight generation, closing the feedback loop. Without this ordering, insights
+> are generated blind to what actually worked.
+
+## System Overview
+
 ```
 ┌─────────────────┐    ┌──────────────────┐
 │ Umami Analytics  │    │  Blog Content     │
@@ -149,15 +192,21 @@ growth-agent/
 ├── agent/
 │   ├── __init__.py
 │   ├── models.py           # Pydantic state models (Insights, Strategy, Draft, LLMAnalysis, PageMeta, ...)
-│   ├── llm_client.py       # IONOS LLM client (httpx + langchain-openai structured output)
+│   ├── llm_client.py       # IONOS LLM client (langchain-openai ChatOpenAI)
 │   ├── umami_client.py     # Umami Cloud REST API client
 │   ├── page_meta.py        # HTTP-based page metadata fetcher (title, description from meta tags)
-│   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production)
+│   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production) + load_model helper
 │   ├── publisher.py        # Publish approved drafts to platforms
 │   ├── platforms/           # (Phase 1a)
 │   │   ├── mastodon.py     # Mastodon REST API client (httpx)
 │   │   └── bluesky.py      # AT Protocol client (httpx)
-│   └── graph.py            # (Phase 2) LangGraph workflow definition
+│   ├── nodes/               # (Phase 2a) Business logic per graph node
+│   │   ├── __init__.py     # Re-exports public functions
+│   │   ├── ingest.py       # ingest_analytics() — Umami + social metrics
+│   │   ├── publish.py      # publish_approved_drafts() — platform posting + char limits
+│   │   ├── insights.py     # generate_insights() — LLM analysis + prompt templates
+│   │   └── drafts.py       # create_drafts() + plan_draft_schedule() + prompt templates
+│   └── graph.py            # (Phase 2a) LangGraph StateGraph — node wrappers + graph compilation
 │
 ├── notebooks/
 │   ├── 01_umami_ingest.ipynb
@@ -167,7 +216,7 @@ growth-agent/
 │   ├── 05_social_posting.ipynb
 │   └── 06_approval.ipynb          # Phase 1a: review, edit & approve drafts
 │
-├── handler.py              # Scaleway Container entry point (HTTP server + cron handler)
+├── handler.py              # Scaleway Container entry point (HTTP server + graph invocation, ~180 lines)
 ├── Dockerfile              # (Phase 1f) Container image definition (uv + Python 3.11)
 ├── .dockerignore           # (Phase 1f) Excludes .venv, tests, notebooks from image
 │
@@ -707,39 +756,9 @@ as long as the cron hasn't published it yet.
 
 ## Phase 0 — Local Validation (Notebooks) ✅ COMPLETE
 
-Before any Scaleway deployment, validate each node interactively in Jupyter notebooks
-within the `growth-agent/` project. This follows the proven pattern from `notebooks/`
-(e.g. `ionos_llm.ipynb`, `x402_facilitator_demo.ipynb`).
-
-**Notebook: `growth-agent/notebooks/01_umami_ingest.ipynb`** ✅
-- [x] Call Umami REST API with token, inspect response structure
-- [x] Parse page views, referrers, event funnels
-- [x] Write parsed data to local JSON file (mock S3)
-
-**Notebook: `growth-agent/notebooks/02_llm_insights.ipynb`** ✅
-- [x] Load analytics JSON from previous notebook
-- [x] Call IONOS LLM API with insight prompt
-- [x] Structured output via `langchain-openai` (`ChatOpenAI.with_structured_output()`)
-- [x] Fetch page descriptions from live site (`page_meta.py`) for richer LLM context
-- [x] Validate typed `LLMAnalysis` Pydantic model output
-
-**Notebook: `growth-agent/notebooks/03_content_creation.ipynb`** ✅
-- [x] Load strategy + insights JSON
-- [x] Fetch page descriptions via HTTP (meta tags) for content-aware prompts
-- [x] Generate sample Mastodon/Bluesky posts (EN + DE)
-- [x] Manual review: quality requires significant editing (see lessons learned)
-
-**Notebook: `growth-agent/notebooks/04_s3_state.ipynb`** ✅
-- [x] Test S3 read/write with boto3 to `my-imagestore/growth-agent/`
-- [x] Round-trip: write state → read state → verify
-
-**Notebook: `growth-agent/notebooks/05_social_posting.ipynb`** (deferred to Phase 1a)
-- [ ] Test Mastodon API posting (once OAuth app created)
-- [ ] Test Bluesky atproto posting (once app password generated)
-
-> Each notebook imports directly from `growth-agent/agent/` modules.
-> This ensures the same code runs in notebooks and in the deployed function.
-> Jupyter kernel registered as `growth-agent` for VS Code.
+Validated each pipeline node interactively in Jupyter notebooks (`growth-agent/notebooks/`).
+Notebooks 01–04 cover Umami ingest, LLM insights, content creation, and S3 state.
+Social posting (notebook 05) was deferred to Phase 1a.
 
 ### Phase 0 Lessons Learned
 
@@ -757,345 +776,227 @@ within the `growth-agent/` project. This follows the proven pattern from `notebo
 
 ## Phase 1a — Notebook Approval, Posting & Scheduling ✅ COMPLETE
 
-Goal: Edit and approve drafts in a notebook, publish to Mastodon and Bluesky,
-with a scheduled publishing queue. No deployment required.
-
-- [x] Create Mastodon OAuth app (mastodon.social → Settings → Development) ✅
-- [x] Generate Bluesky app password (bsky.app → Settings → App Passwords) ✅
-- [x] Implement Mastodon posting client (`agent/platforms/mastodon.py`) ✅
-- [x] Implement Bluesky posting client (`agent/platforms/bluesky.py`) ✅
-- [x] Validate posting in `05_social_posting.ipynb` ✅
-- [x] Add `scheduled_at` field to `Draft` model (when to publish) ✅
-- [x] Create `06_approval.ipynb` — notebook-based draft review ✅
-- [x] Implement scheduled publisher: process approved drafts where `scheduled_at <= now` ✅
+Edit and approve drafts in a notebook, publish to Mastodon and Bluesky,
+with a scheduled publishing queue. Mastodon/Bluesky posting clients in `agent/platforms/`.
 
 ## Phase 1b — Python Cron Deployment (PR: `growth-agent/`) ✅ COMPLETE
 
-Goal: Deploy the AI pipeline as a Scaleway Python Function with cron trigger.
-**Cron only — no API, no wallet auth.** Self-contained PR touching only `growth-agent/`.
-
-- [x] Scaffold `growth-agent/` with pyproject.toml (uv) ✅
-- [x] Implement local state storage (read/write JSON) ✅
-- [x] Implement Umami analytics ingestion ✅
-- [x] LLM insight generation with structured output ✅
-- [x] Content planning + draft generation with page descriptions ✅
-- [x] `handler.py` — Scaleway entry point (cron handler) ✅
-- [x] `serverless.yml` — Python 3.11 deployment config ✅ (wird in Phase 1f durch Container/OpenTofu ersetzt)
-- [x] `requirements.txt` via `uv export` for Scaleway packaging ✅ (wird in Phase 1f durch Dockerfile/uv sync ersetzt)
-- [x] Tests for handler (cron logic, S3 mocking) ✅
-- [x] Daily Cron trigger (Scaleway Console → `0 8 * * *`) ✅
+Deployed the AI pipeline as a Scaleway Python Function with daily cron trigger (`0 8 * * *`).
+`handler.py` entry point, S3 state, Umami ingest, LLM insights, draft generation.
+Later replaced by container in Phase 1f.
 
 ## Phase 1c — Draft Approval API (PR: `scw_js/`) ✅ COMPLETE
 
-Goal: TypeScript API for draft management, deployed in the existing `scw_js/` namespace.
-Reuses `viem`, `@aws-sdk/client-s3`, `pino`. No new npm dependencies. Self-contained PR
-touching only `scw_js/`. Uses Scaleway-generated function domain (no custom domain needed).
-
-- [x] `growth_service.ts` — S3 read/write, business logic (approve/reject/update), wallet auth ✅
-- [x] `growth_api.ts` — Path-based routing handler with CORS + auth middleware ✅
-- [x] `tsup.config.js` — Added `growth_api.ts` to entry array ✅
-- [x] `serverless.yml` — Added `growthapi` function + `OWNER_ETH_ADDRESS` secret ✅
-- [x] `test/growth_api.test.ts` — 140 tests (auth, routing, S3 mocking, edge cases) ✅
-- [x] Deployed to Scaleway (`npx serverless deploy`) ✅
-- [x] Smoke test via curl ✅
+TypeScript API (`growth_api.ts`) for draft management in the `scw_js/` namespace.
+Path-based routing, CORS, wallet auth, S3 read/write. 140 tests.
 
 ## Phase 1d — Approval Website (PR: `website/`) ✅ COMPLETE
 
-Goal: Static prerendered approval page in the website, authenticated via ETH wallet.
-Depends on Phase 1c API being deployed. Self-contained PR touching only `website/`.
-No new dependencies — uses existing Wagmi, Panda CSS, `useUmami`.
+Static prerendered approval page (`/growth`), authenticated via ETH wallet.
+Uses existing Wagmi, Panda CSS, `useUmami`. 22 tests.
 
-**Implementation notes:**
-- **Auth caching** (4-min TTL) with in-flight promise deduplication — avoids MetaMask popup per action.
-  `pendingAuth` ref tracks both the promise and the address to prevent cross-address token reuse.
-- **Unlisted page** — no navigation link, access via direct URL `/growth` only (owner-only).
-- **Optimistic UI updates** — after approve/reject, move card immediately in the UI.
-- **`OWNER_ADDRESS`** centralized in `website/utils/getChain.ts`, imported by page and tests.
-- **Native `<input type="datetime-local">`** for scheduling — no date picker library.
-- **InsightsSection** uses defensive `?? []` and `?? {}` guards for null resilience.
-
-- [x] `website/types/growth.ts` — TypeScript interfaces (Draft, ContentQueue, Insights, Performance) ✅
-- [x] `website/hooks/useGrowthApi.ts` — API hook with 4-min auth cache + dedup, 6 methods via useMemo ✅
-- [x] `website/pages/growth/+Page.tsx` — Owner gate, tab bar, draft cards, edit/approve/reject, insights panel ✅
-- [x] `website/test/useGrowthApi.test.ts` — 14 tests (auth, API methods, error handling) ✅
-- [x] `website/test/GrowthPage.test.tsx` — 8 tests (wallet states, draft actions) ✅
-- [x] 22/22 tests passing, lint clean ✅
+**Key implementation patterns:**
+- Auth caching (4-min TTL) with in-flight promise deduplication
+- Unlisted page — access via direct URL only (owner-only)
+- Optimistic UI updates after approve/reject
+- `OWNER_ADDRESS` centralized in `website/utils/getChain.ts`
 
 ## Phase 1e — Auto-Scheduling & Pipeline Depth (PR: `growth-agent/` + `website/`) ✅ COMPLETE
 
-Goal: 1 post/day (alternating Mastodon/Bluesky), automatically scheduled at draft creation,
-10-post pipeline maintained. Draft generation moves from weekly to daily with pipeline guard.
+1 post/day (alternating Mastodon/Bluesky), auto-scheduled at draft creation,
+10-post pipeline maintained. Daily draft generation with pipeline guard,
+weekly insights (Monday only). LLMAnalysis persisted to S3 for reuse.
 
-**Decisions:**
-- **1 post/day total** — alternating Mastodon and Bluesky (not both per day).
-- **Auto-schedule at draft creation** — `scheduled_at` assigned when draft is generated.
-  Owner can override during approval.
-- **Pipeline depth: 10 posts** (7 + 3 backup) — `create_drafts()` only generates the difference.
-- **Draft generation daily** (not weekly) — pipeline check guards against overproduction.
-  Insights analysis remains weekly (Monday only).
-- **LLMAnalysis persisted to S3** — so daily draft generation can reuse last analysis.
+## Phase 1f — Container Migration (PR: `growth-agent/`) ✅ COMPLETE
 
-### Step 1: Pipeline Depth Check (`handler.py`)
+Migrated from Scaleway Functions to Serverless Containers for reliable Python
+dependency management. Docker image (`uv:python3.11-trixie-slim`), OpenTofu IaC
+(`growth-agent/terraform/`), deploy script (`bin/deploy.sh`).
 
-- [ ] In `create_drafts()`, count existing pending + approved drafts
-- [ ] Target pipeline depth: 10. Generate only `max(0, 10 - existing)` new drafts
-- [ ] If >= 10 already exist, skip generation entirely (log and return)
+**Why:** Scaleway Python Functions silently fail with ~40 deps (langchain, boto3,
+tiktoken) requiring C-extensions. Container with `uv sync` handles this natively.
 
-### Step 2: Auto-Schedule at Creation (`handler.py`)
+**What stayed unchanged:** `handler.py` logic, `agent/` module, `run_local.py`,
+tests, S3 state, env vars, `scw_js/growth_api.ts`, `website/pages/growth/`.
 
-- [ ] Find latest `scheduled_at` across all pending + approved drafts
-- [ ] If none: start at tomorrow 09:00 UTC
-- [ ] Each new draft gets `scheduled_at = last_slot + 1 day`
-- [ ] Alternate channels: Mastodon, Bluesky, Mastodon, Bluesky, ...
+## Phase 2a — KISS Cleanup & LangGraph Migration (PR: `growth-agent/`)
 
-### Step 3: Dynamic Page Count (`handler.py`)
+Goal: Simplify existing code (KISS), then migrate the linear orchestration in `handle()`
+to a minimal LangGraph StateGraph — **without changing behavior**. No new features,
+no feedback loops, no quality gates. Just a clean graph that does exactly what the
+current sequential code does.
 
-- [ ] Replace `pages_to_promote[:5]` with `pages_to_promote[:ceil(needed/2)]`
-  (each page generates 2 drafts: one Mastodon, one Bluesky)
+**Why KISS first:** The `handler.py` had accumulated complexity (dual HTTP clients,
+duplicated prompts, unused model fields). Steps 1–4 cleaned this up
+before introducing LangGraph to avoid baking tech debt into graph nodes.
 
-### Step 4: Draft-ID Collision Fix (`handler.py`)
+**Why 1:1 migration:** A minimal graph that reproduces existing behavior is easy to verify
+(same tests, same S3 output). Once stable, it becomes the foundation for Phase 2b additions
+(feedback loops, quality gates, deepeval).
 
-- [ ] `_make_draft_id()`: append index counter instead of relying only on seconds-timestamp
+### Step 1: Remove Unused Model Fields (`agent/models.py`) ✅
 
-### Step 5: Daily Draft Generation (`handler.py`)
+- [x] Delete `EventFunnel` model (+ `WebsiteAnalytics.event_funnels`) — never set
+- [x] Delete `SocialMetrics.engagement_rate` and `SocialMetrics.top_posts` — never set
+- [x] Delete `Strategy.last_updated` — never read
+- [x] Delete `PostMetrics` detail fields (reblogs, favourites, replies, link_clicks,
+  website_referral_sessions) — not yet populated, re-enable in Phase 2b
+- `Draft.hashtags` kept — actively used in `scw_js/growth_service.ts` and `website/pages/growth/+Page.tsx`
 
-- [ ] Move `create_drafts()` from weekly-only (Monday) to daily execution
-- [ ] Pipeline depth check (Step 1) serves as the guard against overproduction
-- [ ] Insights generation (`analyze()`) stays weekly (Monday only)
+### Step 2: Unify LLM Client (`agent/llm_client.py`) ✅
 
-### Step 6: Persist LLMAnalysis (`handler.py`)
+- [x] Remove dual HTTP client (httpx + ChatOpenAI) — use ChatOpenAI only
+- [x] `chat()` uses `ChatOpenAI.bind().invoke()` instead of raw `httpx.post()`
+- [x] Delete `self.client = httpx.Client(...)` and `IONOS_ENDPOINT` constant
+- [x] `close()` becomes a no-op (LangChain manages lifecycle)
+- [x] Shared `_to_langchain_messages()` helper extracted
 
-- [ ] Save LLMAnalysis to `growth-agent/llm_analysis.json` in S3 after weekly generation
-- [ ] Daily `create_drafts()` loads last saved analysis instead of regenerating
+### Step 3: Simplify `handler.py` Orchestration ✅
 
-### Step 7: Pre-fill Schedule in Approval UI (`website/`)
+- Client reuse in `publish_approved_drafts()` was already done in Phase 1e (lazy init per batch)
+- [x] **Channel config:** `CHANNEL_CONFIG` dict replaces if/else for max_tokens per channel
+- [x] **Scheduling extraction:** `plan_draft_schedule(queue, needed, now)` as standalone
+  function with 3 dedicated unit tests (empty queue, continues from existing, zero needed)
+- [x] `create_drafts()` uses schedule iterator from `plan_draft_schedule()`
 
-- [ ] `DraftCardView`: initialize `scheduleDate` from `draft.scheduled_at` if present
-- [ ] Auto-expand schedule picker when `scheduled_at` exists
+### Step 4: Remove Unused Dependencies (`pyproject.toml`) ✅
 
-### Step 8: Strategy Sync
+- [x] Remove `scaleway-functions-python` from dev deps (container migration done)
+- `httpx` kept — used by Mastodon, Bluesky, Umami, page_meta modules
+- `eth-account` kept in dev deps (used in notebooks)
 
-- [ ] Update `posting_frequency` defaults in Strategy model
-  (from `{"mastodon": 5, "bluesky": 5}` to values reflecting 1/day alternating)
+### Step 5: Add LangGraph Dependency ✅
 
-### Verification
+- [x] Add `langgraph>=0.2` to `pyproject.toml` dependencies
+- [x] `uv sync --extra dev`
 
-- [ ] pytest: `create_drafts()` with empty queue → 10 drafts, alternating channels, 1 day apart
-- [ ] pytest: `create_drafts()` with 7 existing → 3 new drafts
-- [ ] pytest: `create_drafts()` with >= 10 existing → 0 new drafts
-- [ ] pytest: scheduling starts from latest existing `scheduled_at` + 1 day
-- [ ] Website: approve flow shows pre-filled schedule date
-- [ ] `npm test` in `website/` → all tests pass
+### Step 6: Define Agent State & Graph (`agent/graph.py`) ✅
 
-## Phase 1f — Container Migration (PR: `growth-agent/`)
+- [x] Create `AgentState(TypedDict)` with fields: storage, is_monday, analytics_ok, published_ids, insights_ok, drafts_created
+- [x] Create node wrapper functions: `_ingest_node`, `_publish_node`, `_insights_node`, `_drafts_node`
+- [x] Define `StateGraph` with conditional Monday routing
+- [x] Compile graph: `graph = build_graph()`
 
-Goal: Migrate from Scaleway Functions to Serverless Containers for reliable
-Python dependency management. Replace `serverless-scaleway-functions` with
-OpenTofu. No functional changes to the agent logic.
+### Step 7: Wire Graph into `handler.py` ✅
 
-**Why this migration:**
-Scaleway Python Functions silently fail when dependencies aren't vendored
-into `package/`. The Growth Agent has ~40 deps (langchain, boto3, tiktoken)
-with C-extensions that require platform-specific compilation. A Docker container
-with `uv sync` handles this natively.
+- [x] `handle()` builds initial state, calls `graph.invoke(state)`
+- [x] HTTP server (`_create_server`, `_run_server`) stays unchanged
+- [x] Error handling: `graph.invoke()` wrapped in try/except, `crashed` flag preserved
+- [x] Return same JSON structure as before
 
-### Prerequisites
+### Step 8: Update Tests ✅
 
-- [ ] Install Colima: `brew install colima docker`
-- [ ] Start Colima: `colima start` (creates a Linux VM with Docker daemon)
-- [ ] Install OpenTofu: `brew install opentofu`
-- [ ] Create Scaleway Container Registry namespace (Console or `tofu apply`)
+- [x] Existing `test_handle_*` tests adapted to mock graph node functions
+- [x] `uv run pytest` — all 24 tests green
 
-> **Colima** is a free, lightweight Docker-compatible runtime for macOS.
-> It runs a Linux VM that provides the Docker daemon. The `docker` CLI
-> commands work identically to Docker Desktop. No license required.
+### Step 9: Extract Nodes to `agent/nodes/` ✅
 
-### Step 1: HTTP Server in handler.py
+Moved all business logic from `handler.py` (~400 lines) into dedicated node modules.
+`handler.py` reduced from ~750 to ~180 lines (orchestration + HTTP server only).
 
-Replace the `scaleway_functions_python` local server with a stdlib HTTP server.
-Scaleway Container Cron sends `POST /` with a JSON body.
+- [x] `agent/nodes/ingest.py` — `ingest_analytics()` + Umami/social aggregation
+- [x] `agent/nodes/publish.py` — `publish_approved_drafts()` + char-limit validation
+- [x] `agent/nodes/insights.py` — `generate_insights()` + LLM prompt templates
+- [x] `agent/nodes/drafts.py` — `create_drafts()`, `plan_draft_schedule()`, prompt templates
+- [x] `agent/storage.py` — added `load_model()` helper (shared across nodes)
+- [x] `agent/graph.py` — imports nodes directly, builds + compiles graph at module level
+- [x] Test patches updated to reference new module paths
+- [x] 24/24 tests green, ruff clean
 
-- [ ] Add `_run_server()` function using `http.server.HTTPServer`
-- [ ] `POST /` → call `handle(event, _context)`, return JSON result
-- [ ] `GET /health` → return 200 OK
-- [ ] Read port from `$PORT` env var (Scaleway sets this), fallback `8080`
-- [ ] Replace `__main__` block: `_run_server()` instead of `local.serve_handler()`
-- [ ] Remove guarded-import hack (the `try/except ImportError` diagnostic)
+### Verification Criteria ✅
 
-No new dependencies — uses Python stdlib `http.server`.
+- [x] `uv run pytest` — all 24 tests pass (behavior unchanged)
+- [x] `uv run ruff check .` — lint clean
+- [ ] Deploy & verify: `bash bin/deploy.sh`, cron produces same S3 output
 
-### Step 2: Dockerfile
+### What Changed
 
-Use `uv` directly in the Docker image (no `requirements.txt` needed).
+| Component | Before | After |
+|-----------|--------|-------|
+| `handler.py` | ~750 lines (all business logic + orchestration) | ~180 lines (orchestration + HTTP server only) |
+| `agent/nodes/` | Empty `__init__.py` | 4 node modules with all business logic |
+| `agent/graph.py` | Node functions injected via `build_graph()` params | Imports nodes directly, compiles graph at module level |
+| `agent/storage.py` | Storage classes only | + `load_model()` helper shared across nodes |
+| `agent/models.py` | 15+ unused fields | Cleaned up |
+| `agent/llm_client.py` | Dual HTTP clients (httpx + LangChain) | ChatOpenAI only |
 
-- [ ] Create `growth-agent/Dockerfile`:
-  ```dockerfile
-  FROM ghcr.io/astral-sh/uv:python3.11-trixie-slim
+### What Stays Unchanged
 
-  WORKDIR /app
+- All external behavior (S3 state, social media posting, analytics ingest)
+- HTTP server (`_create_server`, `_run_server`)
+- `run_local.py`, notebooks, storage layer
+- `scw_js/growth_api.ts`, `website/pages/growth/`
+- Cron schedule, environment variables, secrets
 
-  # Install dependencies first (cache layer)
-  COPY pyproject.toml uv.lock ./
-  RUN uv sync --locked --no-install-project --no-dev
+## Phase 2b — Performance Feedback & Strategy (OODA Loop Completion)
 
-  # Copy application code
-  COPY handler.py ./
-  COPY agent/ ./agent/
+Depends on Phase 2a (stable graph required). Completes the OODA loop by adding
+**Observe** (performance evaluation) and **Decide** (strategy update) nodes.
 
-  # Activate the virtual environment
-  ENV PATH="/app/.venv/bin:$PATH"
+### Step 1: Performance Node (`agent/nodes/performance.py`)
 
-  EXPOSE 8080
-  CMD ["python", "handler.py"]
-  ```
-- [ ] Create `growth-agent/.dockerignore`:
-  ```
-  .venv/
-  .env
-  node_modules/
-  test/
-  notebooks/
-  state/
-  .git/
-  .serverless/
-  __pycache__/
-  *.md
-  ```
-- [ ] Verify: `docker build --platform linux/amd64 -t growth-agent .`
-- [ ] Verify: `docker run --env-file .env -p 8080:8080 growth-agent`
-- [ ] Verify: `curl -X POST localhost:8080` returns JSON result
+Closes the feedback loop — fetches engagement metrics for published posts.
 
-> **Apple Silicon note:** `--platform linux/amd64` is required because
-> Scaleway runs `linux/amd64`. Cross-compilation of C-extensions (tiktoken)
-> may need the full `python3.11-trixie` image instead of `-slim`.
+- [ ] Fetch Mastodon post metrics (reblogs, favourites, replies) via REST API
+- [ ] Fetch Bluesky post metrics (likes, reposts, replies) via AT Protocol
+- [ ] Correlate with Umami UTM referral data (social post → website visit)
+- [ ] Re-enable `PostMetrics` detail fields (reblogs, favourites, replies)
+- [ ] Persist updated `performance.json` with engagement data
+- [ ] Add `_performance_node` to graph — runs **before** ingest (see OODA ordering)
 
-### Step 3: OpenTofu Configuration
+### Step 2: Strategy Node (`agent/nodes/strategy.py`)
 
-- [ ] Create `growth-agent/terraform/main.tf`:
-  ```hcl
-  terraform {
-    required_providers {
-      scaleway = {
-        source = "scaleway/scaleway"
-      }
-    }
-    backend "s3" {
-      bucket   = "my-imagestore"
-      key      = "terraform/growth-agent.tfstate"
-      region   = "nl-ams"
-      endpoint = "s3.nl-ams.scw.cloud"
-      # ... Scaleway S3 backend config
-    }
-  }
+Introduces the **Decide** phase — LLM adjusts strategy based on performance data.
 
-  resource "scaleway_container_namespace" "growth_agent" {
-    name = "growth-agent"
-  }
+- [ ] `update_strategy(storage)` — reads `performance.json` + `insights.json`, updates `strategy.json`
+- [ ] Constraints: max 1 pillar change + 1 frequency adjustment per run
+- [ ] Audit log: every change persisted with reason
+- [ ] Strategy remains read-write via S3 (no longer hardcoded defaults only)
+- [ ] Add `_strategy_node` to graph — runs after insights, before content planning
 
-  resource "scaleway_container" "growth_agent" {
-    name           = "growth-agent"
-    namespace_id   = scaleway_container_namespace.growth_agent.id
-    registry_image = var.registry_image
-    port           = 8080
-    cpu_limit      = 560
-    memory_limit   = 1024
-    min_scale      = 0
-    max_scale      = 1
-    timeout        = 900
-    privacy        = "private"
-    deploy         = true
+### Step 3: Reorder Graph to OODA
 
-    environment_variables = {
-      MASTODON_INSTANCE = "https://mastodon.social"
-      BLUESKY_HANDLE    = "fretchen.eu"
-      UMAMI_WEBSITE_ID  = var.umami_website_id
-      S3_BUCKET         = "my-imagestore"
-      S3_STATE_PREFIX   = "growth-agent/"
-    }
+Update `agent/graph.py` to match the target OODA architecture:
 
-    secret_environment_variables = {
-      IONOS_API_TOKEN        = var.ionos_api_token
-      MASTODON_ACCESS_TOKEN  = var.mastodon_access_token
-      BLUESKY_APP_PASSWORD   = var.bluesky_app_password
-      UMAMI_API_KEY          = var.umami_api_key
-      SCW_ACCESS_KEY         = var.scw_access_key
-      SCW_SECRET_KEY         = var.scw_secret_key
-    }
-  }
+```
+START → [Evaluate Performance] → [Ingest Analytics] → [Publish Approved]
+      → (Monday? → [Generate Insights] → [Update Strategy]) → [Create Drafts] → END
+```
 
-  resource "scaleway_container_cron" "daily" {
-    container_id = scaleway_container.growth_agent.id
-    schedule     = "0 8 * * *"
-    args         = jsonencode({ source = "cron" })
-  }
-  ```
-- [ ] Create `growth-agent/terraform/variables.tf` with all secret vars
-- [ ] Create `growth-agent/terraform/.gitignore` (`.terraform/`, `*.tfstate*`, `*.tfvars`)
-- [ ] Load secrets from `.env` into `terraform.tfvars` or use env vars
+### Step 4: UTM Attribution
 
-### Step 4: Deploy Script
+- [ ] Cross-reference Umami referral data with published post UTM tags
+- [ ] Compute per-post: click-through rate, website visit conversion
+- [ ] Feed attribution data into performance evaluation
 
-- [ ] Create `growth-agent/bin/deploy.sh`:
-  ```bash
-  #!/bin/bash
-  set -euo pipefail
-  REGISTRY="rg.fr-par.scw.cloud/<namespace>"
-  TAG=$(date +%Y%m%d-%H%M%S)
+## Phase 2c — LLM Evaluation with deepeval
 
-  docker build --platform linux/amd64 -t "$REGISTRY/growth-agent:$TAG" .
-  docker push "$REGISTRY/growth-agent:$TAG"
-  docker tag "$REGISTRY/growth-agent:$TAG" "$REGISTRY/growth-agent:latest"
-  docker push "$REGISTRY/growth-agent:latest"
+Depends on Phase 2a (stable graph with clear node boundaries required).
 
-  cd terraform
-  tofu apply -var="registry_image=$REGISTRY/growth-agent:$TAG" -auto-approve
-  ```
+**Why deepeval:** LLM-as-Judge framework for automated post quality assessment.
+Replaces manual "does this post look good?" with measurable metrics.
+Runs locally with pytest integration, uses LLM API for evaluation.
 
-### Step 5: Deploy & Verify
+- [ ] Add `deepeval` to `pyproject.toml` (dev dependency)
+- [ ] Create golden set: 10–20 manually rated posts as quality baseline
+- [ ] Define custom G-Eval metrics for social posts:
+  - Tone appropriateness (platform-specific)
+  - Engagement potential (hook quality, call-to-action)
+  - Faithfulness to source page (no hallucinated claims)
+  - Length compliance (within platform char limits)
+- [ ] Add `@observe` decorator on `drafts_node` for component-level tracing
+- [ ] Create `test/test_post_quality.py` — pytest-compatible eval suite
+- [ ] Evaluate: can IONOS serve as judge LLM, or is OpenAI needed?
+- [ ] Optional: Confident AI cloud for regression tracking across prompt changes
 
-- [ ] First deploy: `bash bin/deploy.sh`
-- [ ] Manual test: `curl -X POST <container-url>` → JSON result
-- [ ] Check S3 log: `uv run python run_local.py --diagnose` → new log with `status: completed`
-- [ ] Wait one day, verify cron produced a log entry for the next day
-
-### Step 6: Cleanup (after cron verified)
-
-- [ ] Delete old Scaleway Function: `npx serverless remove` or Console
-- [ ] Remove `serverless.yml`, `package.json`, `package-lock.json`, `node_modules/`
-- [ ] Remove `requirements.txt` (uv.lock + pyproject.toml are the source of truth)
-- [ ] Update README.md with new deploy instructions
-
-### Risks
-
-| Risk | Severity | Mitigation |
-|---|---|---|
-| C-extension cross-compilation (Apple Silicon → amd64) | High | Use full `python3.11-trixie` image if slim fails. Colima handles emulation via QEMU. |
-| Cold start after scale-to-zero | Low | ~5-15s, irrelevant for daily cron job |
-| OpenTofu state management | Low | Remote state in S3, same bucket as agent data |
-| Colima VM resource usage | Low | Minimal (~1GB RAM), only runs during build |
-
-### What stays unchanged
-
-- `handler.py` logic (all tasks: analytics, publish, insights, drafts)
-- `agent/` module (models, LLM, platforms, storage)
-- `run_local.py` (imports directly, no container needed)
-- `test/test_handler.py` (runs via `uv run pytest`, no container needed)
-- S3 state (same bucket, same keys, same prefix)
-- All environment variable names and values
-- `scw_js/growth_api.ts` (approval API stays as Scaleway Function)
-- `website/pages/growth/` (approval UI unchanged)
-
-## Phase 2 — Performance Feedback & Intelligence
-
-- [ ] Performance tracking: fetch Mastodon/Bluesky metrics for published posts
-- [ ] UTM attribution: correlate Umami referrals → social posts
-- [ ] Feedback loop: top-performing post styles influence future generation
-- [ ] LangGraph workflow (multi-node graph with conditional edges)
-- [ ] Strategy auto-adjustment based on performance data
+> **Note:** deepeval metrics require an LLM API for evaluation (LLM-as-Judge).
+> Most metrics use OpenAI by default but can be configured for other providers.
+> The evaluation runs locally — no data leaves the machine except LLM API calls.
 
 ## Phase 3 — Optimization
 
 - [ ] A/B test post variants (time, tone, language)
+- [ ] Draft quality gate: deepeval score threshold before entering `approved` queue
 - [ ] Threads integration (if Meta API access secured)
 - [ ] LLM provider switch if quality insufficient (Anthropic, OpenAI)
 - [ ] Newsletter integration (optional)
@@ -1202,7 +1103,7 @@ langchain-openai>=0.2    # Structured output via ChatOpenAI.with_structured_outp
 # Phase 1a (no additional deps — clients use httpx directly)
 # atproto, Mastodon.py SDKs not needed
 
-# Phase 2
+# Phase 2a
 langgraph>=0.2           # Multi-step workflow orchestration
 
 # Dev (installed)
@@ -1211,6 +1112,7 @@ ruff>=0.4
 jupyter>=1.0
 ipykernel>=6.0
 python-dotenv>=1.0
+deepeval>=1.0            # Phase 2c — LLM evaluation framework
 ```
 
 ## TypeScript Dependencies (Phase 1c — no new packages needed)

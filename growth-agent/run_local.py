@@ -21,14 +21,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from agent.models import ContentQueue, LLMAnalysis  # noqa: E402
-from handler import (  # noqa: E402
-    _get_storage,
-    _load_model,
-    create_drafts,
-    generate_insights,
-    ingest_analytics,
-    publish_approved_drafts,
-)
+from agent.nodes.drafts import create_drafts  # noqa: E402
+from agent.nodes.ingest import ingest_analytics  # noqa: E402
+from agent.nodes.insights import generate_insights  # noqa: E402
+from agent.nodes.publish import publish_approved_drafts  # noqa: E402
+from agent.storage import load_model  # noqa: E402
+from handler import _get_storage  # noqa: E402
 
 
 def diagnose() -> None:
@@ -36,7 +34,7 @@ def diagnose() -> None:
     storage = _get_storage()
 
     # --- Content Queue ---
-    queue = _load_model(storage, "content_queue.json", ContentQueue)
+    queue = load_model(storage, "content_queue.json", ContentQueue)
     print("=== Content Queue ===")
     print(f"  Pending:   {len(queue.drafts)}")
     print(f"  Approved:  {len(queue.approved)}")
@@ -69,7 +67,7 @@ def diagnose() -> None:
         print("  No logs found")
     for key in log_keys[:5]:
         data = storage.read(key)
-        if data:
+        if data and isinstance(data, dict):
             status = data.get("status", "unknown")
             r = data.get("result", {})
             published = r.get("published", [])
@@ -121,6 +119,16 @@ def run_analytics() -> None:
     print(json.dumps(result.model_dump(), indent=2, default=str)[:500])
 
 
+def show_graph(output: str = "graph.png") -> None:
+    """Export the LangGraph graph as PNG image."""
+    from agent.graph import graph
+
+    png_bytes = graph.get_graph().draw_mermaid_png()
+    with open(output, "wb") as f:
+        f.write(png_bytes)
+    print(f"Graph exported to {output}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Growth Agent local runner")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -129,6 +137,13 @@ def main() -> None:
     group.add_argument("--refill", action="store_true", help="Pipeline refill (create drafts)")
     group.add_argument("--insights", action="store_true", help="Generate LLM insights")
     group.add_argument("--analytics", action="store_true", help="Ingest analytics")
+    group.add_argument(
+        "--graph",
+        nargs="?",
+        const="graph.png",
+        metavar="FILE",
+        help="Export graph as PNG (default: graph.png)",
+    )
     args = parser.parse_args()
 
     if args.diagnose:
@@ -141,6 +156,8 @@ def main() -> None:
         run_insights()
     elif args.analytics:
         run_analytics()
+    elif args.graph:
+        show_graph(args.graph)
 
 
 if __name__ == "__main__":

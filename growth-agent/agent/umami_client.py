@@ -1,6 +1,7 @@
 """Umami Cloud API client for analytics ingestion."""
 
 import time
+from typing import Any
 
 import httpx
 
@@ -27,7 +28,7 @@ class UmamiClient:
             timeout=30.0,
         )
 
-    def _get(self, path: str, params: dict | None = None) -> dict | list:
+    def _get(self, path: str, params: dict | None = None) -> Any:
         response = self.client.get(path, params=params)
         response.raise_for_status()
         return response.json()

@@ -10,6 +10,7 @@ from math import ceil
 from agent.llm_client import LLMClient
 from agent.models import ContentQueue, Draft, LLMAnalysis, Strategy
 from agent.page_meta import fetch_pages_meta
+from agent.state import AgentState
 from agent.storage import load_model
 
 logger = logging.getLogger("growth-agent")
@@ -21,6 +22,23 @@ CHANNEL_CONFIG = {
     "mastodon": {"max_tokens": 300},
     "bluesky": {"max_tokens": 200},
 }
+
+
+def drafts_node(state: AgentState) -> dict:
+    """LangGraph node: create draft posts, update state."""
+    storage = state["storage"]
+    try:
+        analysis_data = storage.read("llm_analysis.json")
+        if analysis_data:
+            analysis = LLMAnalysis.model_validate(analysis_data)
+            count = create_drafts(storage, analysis)
+            return {"drafts_created": count}
+        else:
+            logger.info("No saved LLM analysis — skipping draft creation")
+            return {"drafts_created": 0}
+    except Exception:
+        logger.exception("Draft pipeline refill failed")
+        return {"drafts_created": 0}
 
 
 def _make_draft_id(channel: str, language: str, index: int = 0) -> str:
@@ -55,7 +73,9 @@ def plan_draft_schedule(
     last_scheduled = _find_last_scheduled_at(queue)
 
     if last_scheduled is None:
-        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(
+            days=1
+        )
         next_slot = tomorrow
         next_channel = "mastodon"
     else:
@@ -87,7 +107,9 @@ def _system_prompt(strategy: Strategy) -> str:
     )
 
 
-def _mastodon_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
+def _mastodon_prompt(
+    page, title: str, description: str, language: str, strategy: Strategy
+) -> str:
     url = f"{page.url}?utm_source=mastodon&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Mastodon-Post (max 500 Zeichen) über diesen Blog-Artikel:
@@ -129,7 +151,9 @@ Do NOT use emojis excessively. One is fine.
 Return ONLY the post text, nothing else."""
 
 
-def _bluesky_prompt(page, title: str, description: str, language: str, strategy: Strategy) -> str:
+def _bluesky_prompt(
+    page, title: str, description: str, language: str, strategy: Strategy
+) -> str:
     url = f"{page.url}?utm_source=bluesky&utm_campaign=growth-agent"
     if language == "de":
         return f"""Schreibe einen Bluesky-Post (max 300 Zeichen) über diesen Blog-Artikel:
@@ -179,7 +203,9 @@ def create_drafts(storage, analysis: LLMAnalysis) -> int:
     existing = len(queue.drafts) + len(queue.approved)
     needed = max(0, PIPELINE_TARGET - existing)
     if needed == 0:
-        logger.info("Pipeline full (%d pending+approved), skipping draft creation", existing)
+        logger.info(
+            "Pipeline full (%d pending+approved), skipping draft creation", existing
+        )
         return 0
 
     pages_to_promote = analysis.best_pages_for_social[: ceil(needed / 2)]
@@ -205,7 +231,9 @@ def create_drafts(storage, analysis: LLMAnalysis) -> int:
                 break
 
             meta = page_metas.get(page.url)
-            page_desc = (meta.description or "(no description)") if meta else "(no description)"
+            page_desc = (
+                (meta.description or "(no description)") if meta else "(no description)"
+            )
             page_title = (meta.title or page.title) if meta else page.title
 
             for _ in range(2):  # up to 2 drafts per page
@@ -214,7 +242,9 @@ def create_drafts(storage, analysis: LLMAnalysis) -> int:
 
                 channel, slot = next(schedule_iter)
                 config = CHANNEL_CONFIG[channel]
-                prompt_fn = _mastodon_prompt if channel == "mastodon" else _bluesky_prompt
+                prompt_fn = (
+                    _mastodon_prompt if channel == "mastodon" else _bluesky_prompt
+                )
                 prompt = prompt_fn(page, page_title, page_desc, "en", strategy)
                 max_tokens = config["max_tokens"]
 

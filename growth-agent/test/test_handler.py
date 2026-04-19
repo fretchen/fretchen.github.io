@@ -14,15 +14,15 @@ from agent.models import (
     PageForSocial,
     WebsiteAnalytics,
 )
-from agent.nodes import (
+from agent.nodes.drafts import (
     PIPELINE_TARGET,
     _find_last_scheduled_at,
     create_drafts,
-    generate_insights,
-    ingest_analytics,
     plan_draft_schedule,
-    publish_approved_drafts,
 )
+from agent.nodes.ingest import ingest_analytics
+from agent.nodes.insights import generate_insights
+from agent.nodes.publish import publish_approved_drafts
 from handler import (
     _create_server,
     handle,
@@ -120,7 +120,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("agent.nodes.ingest.BlueskyClient")
 @patch("agent.nodes.ingest.MastodonClient")
 @patch("agent.nodes.ingest.UmamiClient")
-def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
+def test_ingest_analytics_old_umami_format(
+    MockUmami, MockMasto, MockBsky, mock_storage
+):
     """Umami legacy format with {\"value\": n} dicts still works."""
     storage, store = mock_storage
 
@@ -158,7 +160,9 @@ def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.BlueskyClient")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
+def test_publish_approved_drafts_publishes_due(
+    MockMasto, MockBsky, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -199,7 +203,9 @@ def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish
 
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
+def test_publish_no_scheduled_at_publishes_immediately(
+    MockMasto, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -347,7 +353,9 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
     }
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.chat.return_value = {
+        "content": "Check out this post about quantum computing!"
+    }
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, analysis)
@@ -374,10 +382,10 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
 # ---------------------------------------------------------------------------
 
 
-@patch("agent.graph.create_drafts")
-@patch("agent.graph.generate_insights")
-@patch("agent.graph.publish_approved_drafts")
-@patch("agent.graph.ingest_analytics")
+@patch("agent.nodes.drafts.create_drafts")
+@patch("agent.nodes.insights.generate_insights")
+@patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_daily_not_monday(
     mock_get_storage, mock_ingest, mock_publish, mock_insights, mock_drafts
@@ -414,10 +422,10 @@ def test_handle_daily_not_monday(
     mock_drafts.assert_called_once()
 
 
-@patch("agent.graph.create_drafts")
-@patch("agent.graph.generate_insights")
-@patch("agent.graph.publish_approved_drafts")
-@patch("agent.graph.ingest_analytics")
+@patch("agent.nodes.drafts.create_drafts")
+@patch("agent.nodes.insights.generate_insights")
+@patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
     mock_get_storage, mock_ingest, mock_publish, mock_insights, mock_drafts
@@ -454,8 +462,8 @@ def test_handle_weekly_on_monday(
     mock_drafts.assert_called_once()
 
 
-@patch("agent.graph.publish_approved_drafts")
-@patch("agent.graph.ingest_analytics")
+@patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_resilient_on_failure(mock_get_storage, mock_ingest, mock_publish):
     """Handler continues even if analytics fails."""
@@ -545,8 +553,12 @@ def test_find_last_scheduled_at_from_drafts():
     t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
-            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
+            Draft(
+                id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1
+            ),
+            Draft(
+                id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2
+            ),
         ]
     )
     assert _find_last_scheduled_at(queue) == t2
@@ -669,7 +681,9 @@ def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
 
 @patch("agent.nodes.drafts.fetch_pages_meta")
 @patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts_scheduling_continues_from_last(
+    MockLLM, mock_fetch, mock_storage
+):
     """New drafts' scheduled_at starts from the latest existing scheduled_at + 1 day."""
     storage, store = mock_storage
 
@@ -721,7 +735,9 @@ def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_
 
 @patch("agent.nodes.drafts.fetch_pages_meta")
 @patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts_empty_queue_schedules_from_tomorrow(
+    MockLLM, mock_fetch, mock_storage
+):
     """With an empty queue, scheduling starts from tomorrow 09:00 UTC."""
     storage, store = mock_storage
 
@@ -766,8 +782,8 @@ def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, 
 # ---------------------------------------------------------------------------
 
 
-@patch("agent.graph.publish_approved_drafts")
-@patch("agent.graph.ingest_analytics")
+@patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_no_analysis_skips_drafts(mock_get_storage, mock_ingest, mock_publish):
     """When no saved LLM analysis exists, pipeline refill is skipped gracefully."""

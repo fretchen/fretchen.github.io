@@ -8,10 +8,21 @@ import os
 from agent.models import Insights, SocialMetrics, WebsiteAnalytics
 from agent.platforms.bluesky import BlueskyClient
 from agent.platforms.mastodon import MastodonClient
+from agent.state import AgentState
 from agent.storage import load_model
 from agent.umami_client import UmamiClient, ms_timestamp
 
 logger = logging.getLogger("growth-agent")
+
+
+def ingest_node(state: AgentState) -> dict:
+    """LangGraph node: ingest analytics, update state."""
+    try:
+        ingest_analytics(state["storage"])
+        return {"analytics_ok": True}
+    except Exception:
+        logger.exception("Analytics ingest failed")
+        return {"analytics_ok": False}
 
 
 def ingest_analytics(storage) -> Insights:
@@ -21,7 +32,9 @@ def ingest_analytics(storage) -> Insights:
     # Umami
     umami = UmamiClient(
         api_key=os.environ["UMAMI_API_KEY"],
-        website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
+        website_id=os.environ.get(
+            "UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"
+        ),
     )
     try:
         start_at = ms_timestamp(days_ago=7)

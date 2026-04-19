@@ -10,9 +10,20 @@ from datetime import datetime, timezone
 from agent.llm_client import LLMClient
 from agent.models import Insights, LLMAnalysis, Strategy
 from agent.page_meta import fetch_pages_meta
+from agent.state import AgentState
 from agent.storage import load_model
 
 logger = logging.getLogger("growth-agent")
+
+
+def insights_node(state: AgentState) -> dict:
+    """LangGraph node: generate LLM insights, update state."""
+    try:
+        analysis = generate_insights(state["storage"])
+        return {"insights_ok": analysis is not None}
+    except Exception:
+        logger.exception("Insight generation failed")
+        return {"insights_ok": False}
 
 
 def generate_insights(storage) -> LLMAnalysis | None:
@@ -30,7 +41,8 @@ def generate_insights(storage) -> LLMAnalysis | None:
         ]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
-            f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()
+            f"- {m.url}: {m.description or '(no description)'}"
+            for m in page_metas.values()
         )
 
         blog_url = strategy.website_url
@@ -69,7 +81,7 @@ Based on this data, identify:
 4. What content gaps exist — popular topics with no recent social posts?
 5. Suggest 3-5 specific, actionable growth opportunities for Mastodon and Bluesky."""
 
-        analysis = llm.structured_output(
+        result = llm.structured_output(
             schema=LLMAnalysis,
             messages=[
                 {
@@ -79,6 +91,8 @@ Based on this data, identify:
                 {"role": "user", "content": insight_prompt},
             ],
         )
+        assert isinstance(result, LLMAnalysis)
+        analysis = result
 
         insights.growth_opportunities = analysis.growth_opportunities
         insights.last_analysis = datetime.now(timezone.utc)

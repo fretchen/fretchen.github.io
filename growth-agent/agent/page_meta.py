@@ -31,6 +31,7 @@ def fetch_page_meta(url: str, client: httpx.Client | None = None) -> PageMeta | 
     if own_client:
         client = httpx.Client(timeout=15.0)
 
+    assert client is not None  # narrowing for mypy
     try:
         resp = client.get(url, follow_redirects=True)
         resp.raise_for_status()

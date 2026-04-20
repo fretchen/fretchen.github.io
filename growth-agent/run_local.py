@@ -101,9 +101,6 @@ def run_refill() -> None:
     analysis = LLMAnalysis.model_validate(analysis_data)
     plan = create_plan(storage, analysis)
     print(f"Plan created with {len(plan.items)} items")
-    from agent.models import ContentPlan
-
-    plan = load_model(storage, "content_plan.json", ContentPlan)
     count = create_drafts(storage, plan)
     print(f"Created {count} new drafts")
 

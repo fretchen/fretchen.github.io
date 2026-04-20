@@ -157,22 +157,3 @@ class ContentPlan(BaseModel):
     """Plan output: list of items to generate drafts for."""
 
     items: list[ContentPlanItem] = Field(default_factory=list)
-
-
-class PostMetrics(BaseModel):
-    """Performance metrics for a published post."""
-
-    id: str
-    channel: str
-    published_at: datetime
-    platform_id: str | None = None
-    reblogs: int = 0
-    favourites: int = 0
-    replies: int = 0
-    clicks: int = 0
-
-
-class Performance(BaseModel):
-    """Performance tracking state."""
-
-    posts: list[PostMetrics] = Field(default_factory=list)

@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from agent.models import ContentQueue, Draft, Performance, PostMetrics
+from agent.models import ContentQueue, Draft
 from agent.platforms.bluesky import BlueskyClient
 from agent.platforms.mastodon import MastodonClient
 from agent.publisher import publish_draft
@@ -32,7 +32,6 @@ def publish_node(state: AgentState) -> dict:
 def publish_approved_drafts(storage) -> list[str]:
     """Publish approved drafts where scheduled_at <= now. Returns published IDs."""
     queue = load_model(storage, "content_queue.json", ContentQueue)
-    performance = load_model(storage, "performance.json", Performance)
     now = datetime.now(timezone.utc)
 
     published_ids: list[str] = []
@@ -67,16 +66,14 @@ def publish_approved_drafts(storage) -> list[str]:
                         instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
-                result = publish_draft(draft, mastodon_client)
-                platform_id = result.get("id")
+                publish_draft(draft, mastodon_client)
             elif draft.channel == "bluesky":
                 if bluesky_client is None:
                     bluesky_client = BlueskyClient(
                         handle=os.environ.get("BLUESKY_HANDLE", "fretchen.eu"),
                         app_password=os.environ["BLUESKY_APP_PASSWORD"],
                     )
-                result = publish_draft(draft, bluesky_client)
-                platform_id = result.get("uri")
+                publish_draft(draft, bluesky_client)
             else:
                 logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
                 still_approved.append(draft)
@@ -84,14 +81,6 @@ def publish_approved_drafts(storage) -> list[str]:
 
             draft.status = "published"
             queue.published.append(draft)
-            performance.posts.append(
-                PostMetrics(
-                    id=draft.id,
-                    channel=draft.channel,
-                    published_at=now,
-                    platform_id=platform_id,
-                )
-            )
             published_ids.append(draft.id)
             logger.info("Published draft %s to %s", draft.id, draft.channel)
 
@@ -106,5 +95,4 @@ def publish_approved_drafts(storage) -> list[str]:
 
     queue.approved = still_approved
     storage.write("content_queue.json", queue)
-    storage.write("performance.json", performance)
     return published_ids

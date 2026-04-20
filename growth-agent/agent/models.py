@@ -44,7 +44,9 @@ class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
     top_topics: list[str] = Field(description="Most popular topics based on page views")
-    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
+    traffic_sources: list[str] = Field(
+        description="Key traffic sources and their significance"
+    )
     best_pages_for_social: list[PageForSocial] = Field(
         description="Blog pages best suited for social media promotion"
     )
@@ -77,7 +79,9 @@ class Strategy(BaseModel):
         ]
     )
     channels: list[str] = Field(default_factory=lambda: ["mastodon", "bluesky"])
-    posting_frequency: dict[str, int] = Field(default_factory=lambda: {"mastodon": 4, "bluesky": 3})
+    posting_frequency: dict[str, int] = Field(
+        default_factory=lambda: {"mastodon": 4, "bluesky": 3}
+    )
     tone: str = "insightful, technical, opinionated, accessible"
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"
@@ -108,6 +112,23 @@ class ContentQueue(BaseModel):
     rejected: list[Draft] = Field(default_factory=list)
 
 
+class ContentPlanItem(BaseModel):
+    """A single item in the content plan — what to post and when."""
+
+    page_url: str
+    page_title: str
+    page_description: str
+    reason: str
+    channel: str
+    scheduled_at: datetime
+
+
+class ContentPlan(BaseModel):
+    """Plan output: list of items to generate drafts for."""
+
+    items: list[ContentPlanItem] = Field(default_factory=list)
+
+
 class PostMetrics(BaseModel):
     """Performance metrics for a published post."""
 
@@ -115,6 +136,10 @@ class PostMetrics(BaseModel):
     channel: str
     published_at: datetime
     platform_id: str | None = None
+    reblogs: int = 0
+    favourites: int = 0
+    replies: int = 0
+    clicks: int = 0
 
 
 class Performance(BaseModel):

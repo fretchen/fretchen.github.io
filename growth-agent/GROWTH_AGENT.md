@@ -38,10 +38,10 @@ LangGraph nodes in `agent/graph.py`:
 
 | OODA Phase | Node | Responsibility | Status |
 |---|---|---|---|
-| **Observe** | `ingest` | Umami analytics + social follower counts + post engagement metrics | ✅ (engagement Phase 2b) |
+| **Observe** | `ingest` | Umami analytics + social follower counts | ✅ |
 | **Orient** | `insights` | LLM analyses patterns in all observed data | ✅ (Monday only) |
-| **Decide** | `strategy` | LLM adjusts strategy based on insights + performance | Phase 2b |
-| **Decide** | `plan` | Select pages, assign channels + schedule | Phase 2b (currently in drafts) |
+| **Decide** | `strategy` | LLM adjusts strategy based on insights + Umami data | Phase 2b |
+| **Decide** | `plan` | Select pages, assign channels + schedule | ✅ (Phase 2b) |
 | **Act** | `drafts` | LLM generates platform-specific post content | ✅ |
 | **Act** | `publish` | Post to Mastodon/Bluesky, record metrics | ✅ |
 
@@ -55,10 +55,11 @@ START → [Ingest] → [Publish] → (Monday? → [Insights]) → [Drafts] → E
 START → [Ingest] → (Monday? → [Insights] → [Strategy]) → [Plan] → [Drafts] → [Publish] → END
 ```
 
-> **Why no separate Performance node:** Post engagement metrics (likes, reblogs,
-> click-through) are just another data source — like Umami or follower counts.
-> Adding them to `ingest` keeps the graph simple. A separate node would be
-> over-engineering with no architectural benefit.
+> **Why no per-post engagement metrics in Phase 2b:** Umami already provides
+> UTM-based traffic data and follower counts close the feedback loop. Per-post
+> engagement (likes, reblogs) are vanity metrics that don't correlate directly
+> with the primary goal (traffic → website). Adding platform API calls increases
+> failure surface in the cron. Deferred to Phase 3 as optional refinement.
 >
 > **Why Plan is separate from Drafts:** Plan decides *what* to post (which pages,
 > which channels, when). Drafts decides *how* to say it (LLM content generation).
@@ -834,7 +835,7 @@ before introducing LangGraph to avoid baking tech debt into graph nodes.
 - [x] Delete `SocialMetrics.engagement_rate` and `SocialMetrics.top_posts` — never set
 - [x] Delete `Strategy.last_updated` — never read
 - [x] Delete `PostMetrics` detail fields (reblogs, favourites, replies, link_clicks,
-  website_referral_sessions) — not yet populated, re-enable in Phase 2b
+  website_referral_sessions) — not yet populated, re-enable in Phase 3
 - `Draft.hashtags` kept — actively used in `scw_js/growth_service.ts` and `website/pages/growth/+Page.tsx`
 
 ### Step 2: Unify LLM Client (`agent/llm_client.py`) ✅
@@ -970,29 +971,14 @@ Split `drafts.py` into **Plan** (what to post) and **Drafts** (how to say it).
 - [ ] Integration tests: verify plan → drafts → publish ordering
 - [ ] Verify: `uv run pytest && uv run mypy .`
 
-### Step 3: Add Post Engagement Metrics to Ingest
-
-Extend `ingest_node` to close the feedback loop — fetch how published posts performed.
-
-- [ ] Extend `MastodonClient`: `get_status(id)` → returns reblogs, favourites, replies
-- [ ] Extend `BlueskyClient`: `get_post_thread(uri)` → returns likes, reposts, replies
-- [ ] In `ingest_analytics()`: iterate `performance.json` posts from last 7 days,
-      fetch engagement metrics, update `PostMetrics` detail fields
-- [ ] Cross-reference Umami UTM referral data with published post UTM tags
-      (per-post click-through rate)
-- [ ] Re-enable `PostMetrics` fields: `reblogs`, `favourites`, `replies`, `clicks`
-- [ ] Persist updated `performance.json` with engagement data
-- [ ] New tests: mock platform API responses, verify metrics aggregation
-- [ ] Verify: `uv run pytest && uv run mypy .`
-
-### Step 4: Add Strategy Node
+### Step 3: Add Strategy Node
 
 Introduce the **Decide** phase — LLM adjusts strategy based on performance + insights.
 
 **`agent/nodes/strategy.py` — new node:**
-- [ ] `strategy_node(state)` reads `performance.json` + `insights.json` + `strategy.json`
-- [ ] LLM prompt: "Given these engagement results and insights, should we adjust
-      the content strategy?" with current strategy as context
+- [ ] `strategy_node(state)` reads `insights.json` + `strategy.json`
+- [ ] LLM prompt: "Given these analytics insights (Umami traffic, follower growth),
+      should we adjust the content strategy?" with current strategy as context
 - [ ] Constraints: max 1 pillar change + 1 frequency adjustment per run
 - [ ] Audit log: append `{timestamp, field, old_value, new_value, reason}` to
       `strategy.json.changes` array
@@ -1004,13 +990,12 @@ Introduce the **Decide** phase — LLM adjusts strategy based on performance + i
 - [ ] Strategy only runs on Mondays (same conditional as insights)
 
 **Tests:**
-- [ ] Unit tests: strategy unchanged (no performance data), single pillar change,
+- [ ] Unit tests: strategy unchanged (no data), single pillar change,
       constraint enforcement (max 1 change), audit log written
-- [ ] Integration test: Monday run with performance data → strategy updated → plan
-      uses new strategy
+- [ ] Integration test: Monday run → strategy updated → plan uses new strategy
 - [ ] Verify: `uv run pytest && uv run mypy .`
 
-### Step 5: Verify Full OODA Graph
+### Step 4: Verify Full OODA Graph
 
 - [ ] Export graph: `uv run python run_local.py --graph`
 - [ ] Verify final graph matches target:
@@ -1027,6 +1012,27 @@ Introduce the **Decide** phase — LLM adjusts strategy based on performance + i
 - [ ] Graph PNG matches target OODA architecture
 - [ ] Monday run: all 6 nodes execute in order
 - [ ] Non-Monday run: ingest → plan → drafts → publish (4 nodes)
+
+---
+
+## Phase 3 — Engagement Metrics & Refinements (optional)
+
+Once the OODA loop is closed and running in production, these refinements
+can improve decision quality. **Not required for the loop to function.**
+
+### Post Engagement Metrics in Ingest
+
+Fetch per-post performance from platform APIs to give Strategy finer-grained data.
+
+- [ ] Extend `MastodonClient`: `get_status(id)` → reblogs, favourites, replies
+- [ ] Extend `BlueskyClient`: `get_post_thread(uri)` → likes, reposts, replies
+- [ ] In `ingest_analytics()`: iterate `performance.json` posts from last 7 days,
+      fetch engagement, update `PostMetrics` detail fields
+- [ ] Cross-reference Umami UTM referral data with published post UTM tags
+      (per-post click-through rate)
+- [ ] Re-enable `PostMetrics` fields: `reblogs`, `favourites`, `replies`, `clicks`
+- [ ] Update Strategy prompt to incorporate per-post engagement data
+- [ ] New tests: mock platform API responses, verify metrics aggregation
 
 ### What Changes per Step
 

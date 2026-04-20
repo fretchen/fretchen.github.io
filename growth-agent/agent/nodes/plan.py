@@ -97,7 +97,11 @@ def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
     queue = load_model(storage, "content_queue.json", ContentQueue)
 
     # --- Pipeline depth check ---
-    existing = len(queue.drafts) + len(queue.approved)
+    # Exclude approved drafts due for publishing (scheduled_at <= now),
+    # since the publish node will remove them later in this same run.
+    now = datetime.now(timezone.utc)
+    future_approved = [d for d in queue.approved if d.scheduled_at and d.scheduled_at > now]
+    existing = len(queue.drafts) + len(future_approved)
     needed = max(0, PIPELINE_TARGET - existing)
     if needed == 0:
         logger.info("Pipeline full (%d pending+approved), skipping planning", existing)

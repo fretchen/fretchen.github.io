@@ -141,8 +141,13 @@ def create_drafts(storage, plan: ContentPlan) -> int:
     try:
         for item in plan.items:
             channel = item.channel
+            if channel not in CHANNEL_CONFIG:
+                logger.warning(
+                    "Unknown channel %r for plan item %s — skipping", channel, item.page_title
+                )
+                continue
             config = CHANNEL_CONFIG[channel]
-            prompt_fn = _mastodon_prompt if channel == "mastodon" else _bluesky_prompt
+            prompt_fn = {"mastodon": _mastodon_prompt, "bluesky": _bluesky_prompt}[channel]
             prompt = prompt_fn(item, "en", strategy)
             max_tokens = config["max_tokens"]
 

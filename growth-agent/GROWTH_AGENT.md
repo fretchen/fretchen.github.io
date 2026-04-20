@@ -36,40 +36,24 @@ The agent follows an **OODA (Observe → Orient → Decide → Act)** architectu
 the state-of-the-art for autonomous growth agents. Each OODA phase maps to
 LangGraph nodes in `agent/graph.py`:
 
-| OODA Phase | Nodes | Status |
-|---|---|---|
-| **Observe** | Ingest Analytics, Evaluate Performance | Ingest ✅, Performance Phase 2b |
-| **Orient** | Generate Insights | ✅ |
-| **Decide** | Update Strategy, Plan Content | Strategy Phase 2b, Planning ✅ (in drafts) |
-| **Act** | Create Draft, Publish | ✅ |
+| OODA Phase | Node | Responsibility | Status |
+|---|---|---|---|
+| **Observe** | `ingest` | Umami analytics + social follower counts | ✅ |
+| **Orient** | `insights` | LLM analyses patterns in all observed data | ✅ (Monday only) |
+| **Decide** | `strategy` | LLM adjusts strategy based on insights + Umami data | ✅ (Monday only) |
+| **Decide** | `plan` | Select pages, assign channels + schedule | ✅ |
+| **Act** | `drafts` | LLM generates platform-specific post content | ✅ |
+| **Act** | `publish` | Post to Mastodon/Bluesky, record metrics | ✅ |
 
-**Current graph (Phase 2a):**
+**Current graph:**
 ```
-START → [Ingest Analytics] → [Publish Approved] → (Monday? → [Generate Insights]) → [Create Drafts] → END
-```
-
-**Target graph (end of Phase 2b):**
-```
-[Evaluate Performance]
-        ↓
-[Ingest Analytics]
-        ↓
-[Generate Insights]
-        ↓
-[Update Strategy]
-        ↓
-[Plan Content]
-        ↓
-[Create Draft]
-        ↓
-[Publish Approved]
-        ↓
-       END
+START → [Ingest] → (Monday? → [Insights] → [Strategy]) → [Plan] → [Drafts] → [Publish] → END
 ```
 
-> **Why Performance before Insights:** Engagement data from published posts feeds into
-> the insight generation, closing the feedback loop. Without this ordering, insights
-> are generated blind to what actually worked.
+> **Why Plan is separate from Drafts:** Plan decides *what* to post (which pages,
+> which channels, when). Drafts decides *how* to say it (LLM content generation).
+> This separation enables strategy to influence planning without touching content
+> generation, and makes each node independently testable.
 
 ## System Overview
 
@@ -200,13 +184,16 @@ growth-agent/
 │   ├── platforms/           # (Phase 1a)
 │   │   ├── mastodon.py     # Mastodon REST API client (httpx)
 │   │   └── bluesky.py      # AT Protocol client (httpx)
-│   ├── nodes/               # (Phase 2a) Business logic per graph node
-│   │   ├── __init__.py     # Re-exports public functions
+│   ├── nodes/               # LangGraph node modules
+│   │   ├── __init__.py
 │   │   ├── ingest.py       # ingest_analytics() — Umami + social metrics
-│   │   ├── publish.py      # publish_approved_drafts() — platform posting + char limits
 │   │   ├── insights.py     # generate_insights() — LLM analysis + prompt templates
-│   │   └── drafts.py       # create_drafts() + plan_draft_schedule() + prompt templates
-│   └── graph.py            # (Phase 2a) LangGraph StateGraph — node wrappers + graph compilation
+│   │   ├── strategy.py     # adjust_strategy() — LLM strategy adjustments + audit log
+│   │   ├── plan.py         # create_plan() — page selection, scheduling, pipeline depth
+│   │   ├── drafts.py       # create_drafts() — LLM content generation per plan item
+│   │   └── publish.py      # publish_approved_drafts() — platform posting + char limits
+│   ├── state.py            # AgentState TypedDict (shared across graph and nodes)
+│   └── graph.py            # LangGraph StateGraph — OODA loop compilation
 │
 ├── notebooks/
 │   ├── 01_umami_ingest.ipynb
@@ -463,214 +450,21 @@ Available metrics:
 
 ---
 
-# 9. LangGraph Node Design
+# 9. Node Implementation Reference
 
-## Node 1: Analytics Ingest
+All node logic lives in `agent/nodes/`. Each module is self-contained with its
+own LLM prompts, storage I/O, and error handling. See Section 3 (OODA table)
+for responsibilities and Section 5 (folder structure) for file descriptions.
 
-**Input:** Umami API, Mastodon API, Bluesky API
-**Output:** Updated `insights.json` in S3
-
-Tasks:
-* Fetch Umami page views, referrers, event funnels (last 7 days)
-* Fetch Mastodon/Bluesky follower counts + recent post metrics
-* Compute deltas vs. previous run
-* Store snapshot
-
----
-
-## Node 2: Insight Generation (LLM)
-
-**Input:** `insights.json`, `strategy.json`
-**Output:** Updated `insights.growth_opportunities`
-
-LLM prompt pattern:
-```
-You are a social media growth analyst for a technical blog (fretchen.eu).
-
-Given the analytics data and current strategy, identify:
-1. Which blog topics drive the most social engagement?
-2. Which posting times/formats work best?
-3. What content gaps exist (popular pages with no social posts)?
-4. Follower growth trend — accelerating or stalling?
-
-Analytics data: {insights_json}
-Current strategy: {strategy_json}
-
-Return structured JSON with growth_opportunities array.
-```
+**Key design decisions:**
+- Prompts are inline in each node module (not externalized) — co-located with the logic that uses them
+- All nodes read/write state via `storage` (S3 in production, local in notebooks)
+- `load_model()` helper provides type-safe deserialization with Pydantic defaults
+- Strategy constraints (max 1 change per run) are enforced in code, not via prompts
 
 ---
 
-## Node 3: Strategy Update (LLM)
-
-**Input:** `insights.json`, `strategy.json`
-**Output:** Updated `strategy.json`
-
-Constraints:
-* Only modify small parts per run (max 1 pillar change, 1 frequency adjustment)
-* Preserve historical consistency
-* Log every change with reason
-
----
-
-## Node 4: Content Planning (LLM)
-
-**Input:** `strategy.json`, `insights.json`, blog content index
-**Output:** New entries in `content_queue.json` → `drafts`
-
-Tasks:
-* Read blog post titles + descriptions as content source
-* Generate social media post ideas that link back to blog
-* Assign channel (mastodon/bluesky) + language (de/en)
-* Prioritize by: blog performance × social opportunity
-
----
-
-## Node 5: Content Creation (LLM)
-
-**Input:** Selected idea from content plan
-**Output:** Draft post in `content_queue.json`
-
-Platform-specific formatting:
-* **Mastodon** — max 500 chars, hashtags, content warnings if needed
-* **Bluesky** — max 300 chars, facets for links/mentions, no hashtags (use alt text)
-* Always include link to relevant blog post with UTM tags
-
----
-
-## Node 6: Human Approval
-
-Three-stage approach: notebook-first for zero deployment overhead,
-then a TypeScript API in `scw_js/` for programmatic access,
-finally a wallet-authenticated website page for convenience.
-
-### Stage 1 — Notebook Approval (Phase 1a)
-
-**`06_approval.ipynb`** reads `content_queue.json`, displays pending drafts,
-and provides an interactive editing workflow:
-
-1. Load drafts with `status: pending_approval`
-2. Display each draft (channel, language, content, source link)
-3. Edit content inline in notebook cells
-4. Set `scheduled_at` datetime
-5. Mark approved or rejected → writes back to `content_queue.json`
-
-No API, no deployment, no server. Works with local state (notebooks) or S3.
-
-### Stage 2 — Draft Approval API in scw_js/ (Phase 1c)
-
-**`scw_js/growth_api.js`** — new function in the existing `scw_js/` namespace.
-
-- Path-based routing (same pattern as `x402_facilitator`)
-- S3 read/write for `growth-agent/content_queue.json`
-- Wallet auth via `viem.verifyMessage()` + `OWNER_ETH_ADDRESS` env var
-- CORS headers for `fretchen.eu` origin
-- No new dependencies — reuses `@aws-sdk/client-s3`, `viem`, `pino`
-
-### Stage 3 — Website Approval Page (Phase 1d)
-
-**Static page at `website/pages/growth/`** — ships with the main Vite+Vike build.
-
-- **Wallet auth:** Connect via Wagmi → verify `address === OWNER_ADDRESS`
-- **Draft list:** Fetches pending drafts from `growth.fretchen.eu/drafts` API
-- **Edit:** Inline textarea for each draft
-- **Schedule:** Set `scheduled_at` via datepicker
-- **Approve / Reject** buttons
-
-The page is purely a frontend — all state mutations go through the
-scw_js growth API, which verifies the caller's ETH wallet signature.
-
-### Scheduled Publishing
-
-The daily cron checks approved drafts where `scheduled_at <= now()`
-and publishes them. This allows building a queue of edited posts
-days or weeks in advance.
-
----
-
-## Node 7: Publishing
-
-**Input:** Approved drafts from `content_queue.json`
-**Output:** Published post IDs, updated `performance.json`
-
-Tasks:
-* Post to Mastodon via REST API (`POST /api/v1/statuses`)
-* Post to Bluesky via AT Protocol (`com.atproto.repo.createRecord`)
-* Store platform post IDs for later metrics retrieval
-* Coexists with existing Bridgy webmention cross-posting
-
----
-
-## Node 8: Performance Evaluation
-
-**Input:** `performance.json` + fresh API metrics
-**Output:** Updated metrics per published post
-
-Tasks:
-* Fetch engagement metrics for all published posts (last 30 days)
-* Correlate with Umami referral data (UTM tracking)
-* Compute: follower growth rate, engagement rate, click-through rate
-* Feed back into next Insight Generation cycle
-
----
-
-# 10. Prompt Templates
-
-## Social Post — Mastodon (EN)
-
-```
-Write a Mastodon post (max 500 characters) about this blog article:
-
-Title: {title}
-Description: {description}
-URL: {url}?utm_source=mastodon&utm_campaign=growth-agent
-
-Requirements:
-- Hook in the first line (question or bold claim)
-- Mention one specific insight from the article
-- Include the link
-- Add 2-3 relevant hashtags
-- Tone: technical but accessible, opinionated
-
-Do NOT use emojis excessively. One is fine.
-```
-
-## Social Post — Bluesky (EN)
-
-```
-Write a Bluesky post (max 300 characters) about this blog article:
-
-Title: {title}
-Description: {description}
-URL: {url}?utm_source=bluesky&utm_campaign=growth-agent
-
-Requirements:
-- Concise, punchy hook
-- Include the link
-- No hashtags (Bluesky culture)
-- Tone: conversational, insightful
-```
-
-## Social Post — DE variant
-
-```
-Schreibe einen {platform}-Post ({max_chars} Zeichen max) über diesen Blog-Artikel:
-
-Titel: {title}
-Beschreibung: {description}
-URL: {url}?utm_source={platform}&utm_campaign=growth-agent
-
-Anforderungen:
-- Hook im ersten Satz (Frage oder starke These)
-- Ein konkretes Insight aus dem Artikel erwähnen
-- Link einbinden
-- Duzen, nicht Siezen
-- Ton: technisch aber verständlich, meinungsstark
-```
-
----
-
-# 11. Execution Schedule
+# 10. Execution Schedule
 
 ## Daily Cron (08:00 UTC)
 
@@ -694,7 +488,7 @@ Anforderungen:
 
 ---
 
-# 12. API Endpoints — Phase 1c
+# 11. API Endpoints — Phase 1c
 
 These endpoints are served by the `growthapi` function in **`scw_js/`** (Node 22),
 accessible via the Scaleway-generated domain (no custom domain needed).
@@ -739,7 +533,7 @@ as long as the cron hasn't published it yet.
 
 ---
 
-# 13. Observability & Logging
+# 12. Observability & Logging
 
 * **S3 logs** — `growth-agent/logs/YYYY-MM-DD.json` per run
 * **Structured logging** — JSON format, matching scw_js/ pino pattern
@@ -752,7 +546,7 @@ as long as the cron hasn't published it yet.
 
 ---
 
-# 14. Phase Plan
+# 13. Phase Plan
 
 ## Phase 0 — Local Validation (Notebooks) ✅ COMPLETE
 
@@ -840,7 +634,7 @@ before introducing LangGraph to avoid baking tech debt into graph nodes.
 - [x] Delete `SocialMetrics.engagement_rate` and `SocialMetrics.top_posts` — never set
 - [x] Delete `Strategy.last_updated` — never read
 - [x] Delete `PostMetrics` detail fields (reblogs, favourites, replies, link_clicks,
-  website_referral_sessions) — not yet populated, re-enable in Phase 2b
+  website_referral_sessions) — not yet populated, re-enable in Phase 3
 - `Draft.hashtags` kept — actively used in `scw_js/growth_service.ts` and `website/pages/growth/+Page.tsx`
 
 ### Step 2: Unify LLM Client (`agent/llm_client.py`) ✅
@@ -928,46 +722,24 @@ Moved all business logic from `handler.py` (~400 lines) into dedicated node modu
 - `scw_js/growth_api.ts`, `website/pages/growth/`
 - Cron schedule, environment variables, secrets
 
-## Phase 2b — Performance Feedback & Strategy (OODA Loop Completion)
+## Phase 2b — OODA Graph Reorder & New Nodes ✅ COMPLETE
 
-Depends on Phase 2a (stable graph required). Completes the OODA loop by adding
-**Observe** (performance evaluation) and **Decide** (strategy update) nodes.
+Established the correct OODA node ordering and added the missing **Strategy** and
+**Plan** nodes. Each step was independently deployable and tested.
 
-### Step 1: Performance Node (`agent/nodes/performance.py`)
+**What changed:**
+1. **Publish moved to end** — correct OODA ordering (Act is last)
+2. **Plan node extracted** from Drafts — `plan.py` handles page selection, scheduling,
+   pipeline depth; `drafts.py` only does LLM content generation
+3. **Strategy node added** — Monday-only LLM evaluation of current strategy against
+   insights data. Max 1 pillar change + 1 frequency adjustment per run, with audit log
+   (`strategy.json.changes`). Conservative by design — no change if data doesn't warrant it.
 
-Closes the feedback loop — fetches engagement metrics for published posts.
+**Final graph:** `START → ingest → (Monday? → insights → strategy) → plan → drafts → publish → END`
 
-- [ ] Fetch Mastodon post metrics (reblogs, favourites, replies) via REST API
-- [ ] Fetch Bluesky post metrics (likes, reposts, replies) via AT Protocol
-- [ ] Correlate with Umami UTM referral data (social post → website visit)
-- [ ] Re-enable `PostMetrics` detail fields (reblogs, favourites, replies)
-- [ ] Persist updated `performance.json` with engagement data
-- [ ] Add `_performance_node` to graph — runs **before** ingest (see OODA ordering)
+**Result:** 30 tests green, mypy clean, ruff clean.
 
-### Step 2: Strategy Node (`agent/nodes/strategy.py`)
-
-Introduces the **Decide** phase — LLM adjusts strategy based on performance data.
-
-- [ ] `update_strategy(storage)` — reads `performance.json` + `insights.json`, updates `strategy.json`
-- [ ] Constraints: max 1 pillar change + 1 frequency adjustment per run
-- [ ] Audit log: every change persisted with reason
-- [ ] Strategy remains read-write via S3 (no longer hardcoded defaults only)
-- [ ] Add `_strategy_node` to graph — runs after insights, before content planning
-
-### Step 3: Reorder Graph to OODA
-
-Update `agent/graph.py` to match the target OODA architecture:
-
-```
-START → [Evaluate Performance] → [Ingest Analytics] → [Publish Approved]
-      → (Monday? → [Generate Insights] → [Update Strategy]) → [Create Drafts] → END
-```
-
-### Step 4: UTM Attribution
-
-- [ ] Cross-reference Umami referral data with published post UTM tags
-- [ ] Compute per-post: click-through rate, website visit conversion
-- [ ] Feed attribution data into performance evaluation
+---
 
 ## Phase 2c — LLM Evaluation with deepeval
 
@@ -993,80 +765,70 @@ Runs locally with pytest integration, uses LLM API for evaluation.
 > Most metrics use OpenAI by default but can be configured for other providers.
 > The evaluation runs locally — no data leaves the machine except LLM API calls.
 
-## Phase 3 — Optimization
+## Phase 3 — Refinements & Optimization
 
-- [ ] A/B test post variants (time, tone, language)
+Ideas for improving the OODA loop once it's stable in production.
+**Not required for the loop to function.**
+
+### Post Engagement Metrics
+
+Fetch per-post performance from platform APIs to give Strategy finer-grained data.
+Currently the loop uses Umami traffic + follower counts — engagement metrics
+(likes, reblogs) are vanity metrics but could improve strategy decisions.
+
+- [ ] Extend `MastodonClient`: `get_status(id)` → reblogs, favourites, replies
+- [ ] Extend `BlueskyClient`: `get_post_thread(uri)` → likes, reposts, replies
+- [ ] Re-enable `PostMetrics` fields, update Strategy prompt
+- [ ] Cross-reference Umami UTM data with post UTM tags (per-post CTR)
+
+### LLM Quality
+
+- [ ] deepeval integration for automated post quality scoring (see Phase 2c)
 - [ ] Draft quality gate: deepeval score threshold before entering `approved` queue
-- [ ] Threads integration (if Meta API access secured)
-- [ ] LLM provider switch if quality insufficient (Anthropic, OpenAI)
-- [ ] Newsletter integration (optional)
+- [ ] Evaluate LLM provider switch if quality insufficient (Anthropic, OpenAI)
+
+### Platform Expansion
+
+- [ ] Threads integration (requires Meta App Review + Instagram Business account)
+- [ ] DE language variants to expand pipeline
+- [ ] A/B test post variants (time, tone, language)
+
+### Other Ideas
+
+- [ ] Newsletter integration
+- [ ] Decide Bridgy coexistence: keep for webmentions + agent for original content?
 
 ---
 
-# 15. Key Risks & Mitigations
+# 14. Key Risks & Mitigations
 
 | Risk                           | Mitigation                                       |
 | ------------------------------ | ------------------------------------------------ |
 | Poor content quality           | Human edit + approval workflow, not just approve/reject |
-| Strategy drift                 | Max 1 change per run, audit log                   |
+| Strategy drift                 | Max 1 change per run, audit log in strategy.json  |
+| LLM hallucination in posts     | Human edit step, factual grounding via page descriptions |
 | API rate limits (Mastodon)     | Respect 300 req/5min, scheduled queue spreads posts |
 | Bluesky API changes            | atproto is versioned, pin SDK version              |
-| Threads API access denied      | Phase 3 only, Mastodon/Bluesky are sufficient MVP  |
-| LLM hallucination in posts     | Human edit step, factual grounding via page descriptions |
-| Scaleway container cold start  | ~5-15s after scale-to-zero, acceptable for daily cron |
-| C-extension cross-compile      | Use full python3.11-trixie image if slim fails     |
-| Bridgy conflict                | Both can coexist — Bridgy for webmentions, agent for original posts |
-| S3 state race condition        | Cron runs daily at fixed time, API writes are rare — low conflict risk. S3 is eventually consistent but sufficient for single-user admin workflow |
+| S3 state race condition        | Cron runs daily at fixed time, API writes are rare |
 
 ---
 
-# 16. Open Items & Decisions
+# 15. Open Items & Decisions
 
-### Resolved:
+### Open
 
-1. ~~**Umami API access**~~ — ✅ API key generated. Free plan includes REST API.
-2. ~~**Scaleway Python runtime**~~ — ✅ `python311` confirmed available.
-3. ~~**Dependency management**~~ — ✅ Using `uv` (not Poetry, not pip).
-4. ~~**Mastodon OAuth App**~~ — ✅ Created.
-5. ~~**Bluesky App Password**~~ — ✅ Generated.
-6. ~~**S3 prefix permissions**~~ — ✅ Confirmed working in production.
-7. ~~**Scaleway Python packaging with uv**~~ — ✅ Migrating to Serverless Container with `uv sync` in Dockerfile (Phase 1f). Functions required vendoring into `package/` which failed silently.
-8. ~~**LLM structured output**~~ — ✅ IONOS supports `json_schema` response format.
-   Using `langchain-openai` `ChatOpenAI.with_structured_output()` with Pydantic models.
-9. ~~**Page content for post generation**~~ — ✅ Solved via HTTP-based `page_meta.py`.
-   Fetches `<meta name="description">` from any page on fretchen.eu.
-10. ~~**Approval interface**~~ — ✅ Decided: Notebook approval (Phase 1a), TypeScript API
-    in `scw_js/` with `viem.verifyMessage()` wallet auth (Phase 1c), then
-    static website page (Phase 1d). No email notifications. No SIWE/web3.py.
-11. ~~**Auth caching (Phase 1d)**~~ — ✅ 4-min TTL with in-flight promise dedup.
-    Fresh signature per action not needed — cached token reused within window.
-12. ~~**OWNER_ADDRESS centralization**~~ — ✅ Moved to `website/utils/getChain.ts`.
-13. ~~**Scheduling approach**~~ — ✅ Decided: 1 post/day alternating Mastodon/Bluesky,
-    auto-scheduled at draft creation, 10-post pipeline. See Phase 1e.
-
-### Resolved before Phase 1a:
-
-11. ~~**Mastodon OAuth app creation**~~ — ✅ Created.
-12. ~~**Bluesky app password generation**~~ — ✅ Generated.
-
-### Decide during Phase 1e / Phase 2:
-
-8. ~~**Approval UI**~~ — ✅ Decided: Notebook (1a) → Python Cron (1b) → TypeScript API in scw_js (1c) → Website with wallet auth (1d).
-9. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
-10. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
-    Currently EN only. DE variants could expand pipeline.
-11. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
-    Or migrate fully to agent-managed posting?
-
-### Evaluate for Phase 3:
-
-12. **Threads API** — Apply for Meta App Review, test API limitations
-13. ~~**Auto-approval**~~ — Removed. Phase 0 showed posts consistently need human editing.
-    Revisit only if LLM quality improves significantly.
+1. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
+   Currently IONOS Llama 3.3 70B. Monitor post quality after strategy node is live.
+2. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
+   Currently EN only. DE variants could expand pipeline.
+3. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
+   Or migrate fully to agent-managed posting?
+4. **Threads API** — Apply for Meta App Review if Mastodon/Bluesky growth plateaus.
+5. **Deploy Phase 2b** — `bash bin/deploy.sh`, verify Monday cron triggers strategy node.
 
 ---
 
-# 17. Dependencies & Secrets
+# 16. Dependencies & Secrets
 
 ## Environment Variables (Scaleway Console → Secrets)
 
@@ -1130,7 +892,7 @@ pino                     # Structured logging
 
 ---
 
-# 18. Relationship to Existing Systems
+# 17. Relationship to Existing Systems
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -1141,7 +903,7 @@ pino                     # Structured logging
 │  Blog content ←──── LLM + Images     Payment facilitator        │
 │  Umami tracking     S3 storage ─────→ S3 bucket (shared)        │
 │       │             │                                            │
-│       │ reads       │ NEW: growth_api.ts                         │
+│       │ reads       │ growth_api.ts                              │
 │       │             │ Draft approval API                         │
 │       │             │ viem wallet auth                            │
 │       │             │ S3 read/write growth-agent/*.json           │
@@ -1163,10 +925,10 @@ PR Boundary Map:
   Phase 1b PR: growth-agent/ (Python cron) ✅ COMPLETE
   Phase 1c PR: scw_js/ (TypeScript API) ✅ COMPLETE
   Phase 1d PR: website/ (approval page) ✅ COMPLETE
-  Phase 1e PR: growth-agent/ + website/ (auto-scheduling & pipeline)
-  Phase 1f PR: growth-agent/ (container migration)
-```
-└──────────────────────────────────────────────────────────────────┘
+  Phase 1e PR: growth-agent/ + website/ (auto-scheduling & pipeline) ✅ COMPLETE
+  Phase 1f PR: growth-agent/ (container migration) ✅ COMPLETE
+  Phase 2a PR: growth-agent/ (KISS cleanup + LangGraph migration) ✅ COMPLETE
+  Phase 2b PR: growth-agent/ (OODA reorder + Strategy/Plan nodes) ✅ COMPLETE
 ```
 
 ---

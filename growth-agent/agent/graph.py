@@ -9,6 +9,7 @@ from agent.nodes.ingest import ingest_node
 from agent.nodes.insights import insights_node
 from agent.nodes.plan import plan_node
 from agent.nodes.publish import publish_node
+from agent.nodes.strategy import strategy_node
 from agent.state import AgentState
 
 logger = logging.getLogger("growth-agent")
@@ -27,21 +28,21 @@ def _route_weekly(state: AgentState) -> str:
 def build_graph():
     """Build and compile the growth-agent state graph.
 
-    START → ingest → (Monday? → insights) → plan → drafts → publish → END
+    START → ingest → (Monday? → insights → strategy) → plan → drafts → publish → END
     """
     builder = StateGraph(AgentState)
 
     builder.add_node("ingest", ingest_node)
     builder.add_node("insights", insights_node)
+    builder.add_node("strategy", strategy_node)
     builder.add_node("plan", plan_node)
     builder.add_node("drafts", drafts_node)
     builder.add_node("publish", publish_node)
 
     builder.add_edge(START, "ingest")
-    builder.add_conditional_edges(
-        "ingest", _route_weekly, {"insights": "insights", "plan": "plan"}
-    )
-    builder.add_edge("insights", "plan")
+    builder.add_conditional_edges("ingest", _route_weekly, {"insights": "insights", "plan": "plan"})
+    builder.add_edge("insights", "strategy")
+    builder.add_edge("strategy", "plan")
     builder.add_edge("plan", "drafts")
     builder.add_edge("drafts", "publish")
     builder.add_edge("publish", END)

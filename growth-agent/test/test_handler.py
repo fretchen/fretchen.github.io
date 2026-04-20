@@ -14,6 +14,8 @@ from agent.models import (
     Insights,
     LLMAnalysis,
     PageForSocial,
+    Strategy,
+    StrategyAdjustment,
     WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
@@ -28,6 +30,7 @@ from agent.nodes.plan import (
     plan_draft_schedule,
 )
 from agent.nodes.publish import publish_approved_drafts
+from agent.nodes.strategy import adjust_strategy
 from handler import (
     _create_server,
     handle,
@@ -125,9 +128,7 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("agent.nodes.ingest.BlueskyClient")
 @patch("agent.nodes.ingest.MastodonClient")
 @patch("agent.nodes.ingest.UmamiClient")
-def test_ingest_analytics_old_umami_format(
-    MockUmami, MockMasto, MockBsky, mock_storage
-):
+def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
     """Umami legacy format with {\"value\": n} dicts still works."""
     storage, store = mock_storage
 
@@ -165,9 +166,7 @@ def test_ingest_analytics_old_umami_format(
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.BlueskyClient")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_approved_drafts_publishes_due(
-    MockMasto, MockBsky, mock_publish, mock_storage
-):
+def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -208,9 +207,7 @@ def test_publish_approved_drafts_publishes_due(
 
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(
-    MockMasto, mock_publish, mock_storage
-):
+def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -355,9 +352,7 @@ def test_create_drafts(MockLLM, mock_storage):
     )
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {
-        "content": "Check out this post about quantum computing!"
-    }
+    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, plan)
@@ -377,6 +372,174 @@ def test_create_drafts(MockLLM, mock_storage):
     # Draft IDs should include index
     assert "_0" in updated_queue.drafts[0].id
     assert "_1" in updated_queue.drafts[1].id
+
+
+# ---------------------------------------------------------------------------
+# adjust_strategy
+# ---------------------------------------------------------------------------
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_no_change(MockLLM, mock_storage):
+    """When LLM says no adjustment needed, strategy remains unchanged."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=False,
+        reasoning="Current strategy is performing well",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is False
+    # strategy.json should NOT be written (no changes)
+    assert "strategy.json" not in store
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_pillar_change(MockLLM, mock_storage):
+    """When LLM recommends a pillar change, it's applied and logged."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        pillar_change="Data Science & ML",
+        pillar_to_replace="AI-Tools & Infrastruktur",
+        reasoning="AI-Tools content gets low engagement, ML topics trending",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is True
+    updated = Strategy.model_validate(store["strategy.json"])
+    assert "Data Science & ML" in updated.content_pillars
+    assert "AI-Tools & Infrastruktur" not in updated.content_pillars
+    assert len(updated.changes) == 1
+    assert updated.changes[0].field == "content_pillars"
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_frequency_change(MockLLM, mock_storage):
+    """When LLM recommends a frequency change, it's applied and logged."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        frequency_channel="mastodon",
+        frequency_new_value=5,
+        reasoning="Mastodon engagement is growing, increase frequency",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is True
+    updated = Strategy.model_validate(store["strategy.json"])
+    assert updated.posting_frequency["mastodon"] == 5
+    assert len(updated.changes) == 1
+    assert updated.changes[0].field == "posting_frequency.mastodon"
+    assert updated.changes[0].old_value == "4"
+    assert updated.changes[0].new_value == "5"
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_both_changes(MockLLM, mock_storage):
+    """LLM can recommend both a pillar and frequency change (max 1 each)."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        pillar_change="Data Science & ML",
+        pillar_to_replace="AI-Tools & Infrastruktur",
+        frequency_channel="bluesky",
+        frequency_new_value=4,
+        reasoning="Shift focus and increase Bluesky presence",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is True
+    updated = Strategy.model_validate(store["strategy.json"])
+    assert "Data Science & ML" in updated.content_pillars
+    assert updated.posting_frequency["bluesky"] == 4
+    # Both changes should be logged
+    assert len(updated.changes) == 2
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_invalid_pillar_ignored(MockLLM, mock_storage):
+    """If LLM suggests replacing a non-existent pillar, ignore that change."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        pillar_change="Data Science & ML",
+        pillar_to_replace="NonExistent Pillar",
+        reasoning="Replace old pillar",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    # No valid changes applied
+    assert result is False
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_invalid_channel_ignored(MockLLM, mock_storage):
+    """If LLM suggests frequency for non-existent channel, ignore that change."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        frequency_channel="twitter",
+        frequency_new_value=5,
+        reasoning="Increase Twitter",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is False
 
 
 # ---------------------------------------------------------------------------
@@ -455,17 +618,25 @@ def test_handle_daily_not_monday(
 @patch("agent.nodes.publish.publish_approved_drafts")
 @patch("agent.nodes.drafts.create_drafts")
 @patch("agent.nodes.plan.create_plan")
+@patch("agent.nodes.strategy.adjust_strategy")
 @patch("agent.nodes.insights.generate_insights")
 @patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
-    mock_get_storage, mock_ingest, mock_insights, mock_plan, mock_drafts, mock_publish
+    mock_get_storage,
+    mock_ingest,
+    mock_insights,
+    mock_strategy,
+    mock_plan,
+    mock_drafts,
+    mock_publish,
 ):
-    """On Monday, insight generation runs, then plan + drafts + publish."""
+    """On Monday, insight generation + strategy runs, then plan + drafts + publish."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_ingest.return_value = Insights()
     mock_publish.return_value = []
+    mock_strategy.return_value = False
 
     analysis = LLMAnalysis(
         top_topics=["q"],
@@ -513,6 +684,7 @@ def test_handle_weekly_on_monday(
     mock_ingest.assert_called_once()
     mock_publish.assert_called_once()
     mock_insights.assert_called_once()
+    mock_strategy.assert_called_once()
     mock_plan.assert_called_once()
     mock_drafts.assert_called_once()
 
@@ -608,12 +780,8 @@ def test_find_last_scheduled_at_from_drafts():
     t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(
-                id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1
-            ),
-            Draft(
-                id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2
-            ),
+            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
+            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
         ]
     )
     assert _find_last_scheduled_at(queue) == t2

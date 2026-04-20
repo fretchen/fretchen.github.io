@@ -24,6 +24,7 @@ from agent.models import ContentQueue, LLMAnalysis  # noqa: E402
 from agent.nodes.drafts import create_drafts  # noqa: E402
 from agent.nodes.ingest import ingest_analytics  # noqa: E402
 from agent.nodes.insights import generate_insights  # noqa: E402
+from agent.nodes.plan import create_plan  # noqa: E402
 from agent.nodes.publish import publish_approved_drafts  # noqa: E402
 from agent.storage import load_model  # noqa: E402
 from handler import _get_storage  # noqa: E402
@@ -100,7 +101,12 @@ def run_refill() -> None:
         print("ERROR: No llm_analysis.json in S3 — run --insights first")
         return
     analysis = LLMAnalysis.model_validate(analysis_data)
-    count = create_drafts(storage, analysis)
+    plan = create_plan(storage, analysis)
+    print(f"Plan created with {len(plan.items)} items")
+    from agent.models import ContentPlan
+
+    plan = load_model(storage, "content_plan.json", ContentPlan)
+    count = create_drafts(storage, plan)
     print(f"Created {count} new drafts")
 
 

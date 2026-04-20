@@ -68,6 +68,7 @@ def handle(event, _context):
         "analytics": False,
         "published": [],
         "insights": False,
+        "plan_created": False,
         "drafts_created": 0,
     }
 
@@ -79,6 +80,7 @@ def handle(event, _context):
                 "analytics_ok": False,
                 "published_ids": [],
                 "insights_ok": False,
+                "plan_created": False,
                 "drafts_created": 0,
             }
         )
@@ -87,6 +89,7 @@ def handle(event, _context):
             "analytics": state.get("analytics_ok", False),
             "published": state.get("published_ids", []),
             "insights": state.get("insights_ok", False),
+            "plan_created": state.get("plan_created", False),
             "drafts_created": state.get("drafts_created", 0),
         }
 

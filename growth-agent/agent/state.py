@@ -13,4 +13,5 @@ class AgentState(TypedDict, total=False):
     analytics_ok: bool
     published_ids: list[str]
     insights_ok: bool
+    plan_created: bool
     drafts_created: int

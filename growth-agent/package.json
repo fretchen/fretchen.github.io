@@ -2,8 +2,5 @@
   "name": "growth-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "AI Growth Agent — Scaleway Python Function (cron only)",
-  "devDependencies": {
-    "serverless-scaleway-functions": ">=0.4.16"
-  }
+  "description": "AI Growth Agent — Scaleway Serverless Container (cron only)"
 }

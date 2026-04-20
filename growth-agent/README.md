@@ -50,7 +50,7 @@ uv run ruff format .
 bash bin/deploy.sh       # build, push, tofu apply
 ```
 
-Requires Docker (Colima) and OpenTofu. Secrets are in `terraform/terraform.tfvars` (gitignored). See `.env.example` for required variables.
+Requires Docker with buildx and OpenTofu. Secrets are passed via `TF_VAR_*` environment variables — see `.env.example` for required variables.
 
 ## Project structure
 
@@ -130,6 +130,6 @@ This runs all daily tasks (analytics, publish, pipeline refill) and weekly tasks
 ### Common issues
 
 - **No log for today**: Scaleway cron didn't fire. Check the Scaleway Console → Containers → Cron Triggers. Try redeploying with `bash bin/deploy.sh`.
-- **`status: started`**: Function timed out. Check `memoryLimit` in `serverless.yml` (currently 1024 MB). LLM insight generation is the heaviest task.
+- **`status: started`**: Function timed out. Check `memory_limit` in `terraform/main.tf` (currently 1024 MB). LLM insight generation is the heaviest task.
 - **`status: crashed`**: Read the error in the log. Common causes: expired API tokens, S3 permission issues, platform API changes.
 - **Draft not published**: Content may exceed character limits (Mastodon: 500, Bluesky: 300). Check the approval UI for warnings.

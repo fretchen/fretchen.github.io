@@ -44,9 +44,7 @@ class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
     top_topics: list[str] = Field(description="Most popular topics based on page views")
-    traffic_sources: list[str] = Field(
-        description="Key traffic sources and their significance"
-    )
+    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
     best_pages_for_social: list[PageForSocial] = Field(
         description="Blog pages best suited for social media promotion"
     )
@@ -67,6 +65,39 @@ class Insights(BaseModel):
     last_analysis: datetime | None = None
 
 
+class StrategyChange(BaseModel):
+    """Audit log entry for a strategy adjustment."""
+
+    timestamp: datetime
+    field: str
+    old_value: str
+    new_value: str
+    reason: str
+
+
+class StrategyAdjustment(BaseModel):
+    """Structured LLM output for strategy adjustments."""
+
+    should_adjust: bool = Field(description="Whether any adjustment is recommended")
+    pillar_change: str | None = Field(
+        default=None,
+        description="New content pillar to replace the least effective one, or null",
+    )
+    pillar_to_replace: str | None = Field(
+        default=None,
+        description="Which existing pillar to replace, or null",
+    )
+    frequency_channel: str | None = Field(
+        default=None,
+        description="Channel to adjust frequency for, or null",
+    )
+    frequency_new_value: int | None = Field(
+        default=None,
+        description="New posting frequency for that channel, or null",
+    )
+    reasoning: str = Field(description="Brief explanation for the recommendation")
+
+
 class Strategy(BaseModel):
     """Content strategy state."""
 
@@ -79,13 +110,12 @@ class Strategy(BaseModel):
         ]
     )
     channels: list[str] = Field(default_factory=lambda: ["mastodon", "bluesky"])
-    posting_frequency: dict[str, int] = Field(
-        default_factory=lambda: {"mastodon": 4, "bluesky": 3}
-    )
+    posting_frequency: dict[str, int] = Field(default_factory=lambda: {"mastodon": 4, "bluesky": 3})
     tone: str = "insightful, technical, opinionated, accessible"
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"
     website_url: str = "https://fretchen.eu"
+    changes: list[StrategyChange] = Field(default_factory=list)
 
 
 class Draft(BaseModel):

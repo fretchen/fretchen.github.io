@@ -10,9 +10,7 @@ from agent.models import (
     ContentPlan,
     ContentPlanItem,
     ContentQueue,
-    Draft,
     LLMAnalysis,
-    Strategy,
 )
 from agent.page_meta import fetch_pages_meta
 from agent.state import AgentState
@@ -69,9 +67,7 @@ def plan_draft_schedule(
     last_scheduled = _find_last_scheduled_at(queue)
 
     if last_scheduled is None:
-        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(
-            days=1
-        )
+        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
         next_slot = tomorrow
         next_channel = "mastodon"
     else:
@@ -131,9 +127,7 @@ def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
             break
 
         meta = page_metas.get(page.url)
-        page_desc = (
-            (meta.description or "(no description)") if meta else "(no description)"
-        )
+        page_desc = (meta.description or "(no description)") if meta else "(no description)"
         page_title = (meta.title or page.title) if meta else page.title
 
         for _ in range(2):  # up to 2 items per page (one per channel)

@@ -741,34 +741,67 @@ Established the correct OODA node ordering and added the missing **Strategy** an
 
 ---
 
-## Phase 2c — LLM Evaluation with deepeval
+## Phase 2c — Draft Quality Evaluation
 
-Depends on Phase 2a (stable graph with clear node boundaries required).
+Depends on Phase 2b (stable graph with clear node boundaries required).
 
 **Why deepeval:** LLM-as-Judge framework for automated post quality assessment.
 Replaces manual "does this post look good?" with measurable metrics.
 Runs locally with pytest integration, uses LLM API for evaluation.
 
-- [ ] Add `deepeval` to `pyproject.toml` (dev dependency)
-- [ ] Create golden set: 10–20 manually rated posts as quality baseline
-- [ ] Define custom G-Eval metrics for social posts:
-  - Tone appropriateness (platform-specific)
-  - Engagement potential (hook quality, call-to-action)
-  - Faithfulness to source page (no hallucinated claims)
-  - Length compliance (within platform char limits)
-- [ ] Add `@observe` decorator on `drafts_node` for component-level tracing
-- [ ] Create `test/test_post_quality.py` — pytest-compatible eval suite
-- [ ] Evaluate: can IONOS serve as judge LLM, or is OpenAI needed?
-- [ ] Optional: Confident AI cloud for regression tracking across prompt changes
+### SOTA: Self-Refine Pattern
+
+The standard approach for draft improvement is **Self-Refine** — an internal
+critique-and-revise loop *inside* the generation node, not a separate graph step:
+
+```
+drafts_node internally:
+  1. Generate initial draft
+  2. Self-critique (same LLM, critique prompt)
+  3. If issues found: single refine pass (max 1 iteration)
+  4. Output final draft with quality_score attached
+```
+
+This avoids graph complexity while ensuring every draft gets reviewed once.
+A separate `review` node would be over-engineering for short social posts.
+
+### Steps
+
+- [ ] **Step 1: deepeval setup** — Add `deepeval` to `pyproject.toml` (dev dependency).
+      Create golden set: 10–20 manually rated posts as quality baseline.
+- [ ] **Step 2: Quality metrics** — Define custom G-Eval metrics for social posts:
+      faithfulness (no hallucination), platform fit, hook quality, length compliance.
+- [ ] **Step 3: Test suite** — Create `test/test_post_quality.py` with deepeval
+      integration. Runs on `uv run pytest test/test_post_quality.py`.
+- [ ] **Step 4: Self-Refine in drafts_node** — Add optional self-critique step
+      inside `create_drafts()`. Single refine pass if critique finds issues.
+      Populate `Draft.quality_score` and `Draft.quality_issues` fields.
+
+### Out of Scope (deferred to Phase 3)
+
+- Separate `review` graph node (Self-Refine pattern is sufficient)
+- Automatic publish-blocking based on quality score
+- Topic diversity enforcement (small fix in insights/plan prompts, not a phase)
+- Post-engagement metrics from platform APIs
+- Multi-iteration refinement loops
 
 > **Note:** deepeval metrics require an LLM API for evaluation (LLM-as-Judge).
-> Most metrics use OpenAI by default but can be configured for other providers.
-> The evaluation runs locally — no data leaves the machine except LLM API calls.
+> Evaluate whether IONOS can serve as judge LLM, or if OpenAI is needed.
 
 ## Phase 3 — Refinements & Optimization
 
 Ideas for improving the OODA loop once it's stable in production.
 **Not required for the loop to function.**
+
+### Topic Diversity
+
+Current planning can collapse onto a narrow topic set when `best_pages_for_social`
+clusters around trending content. Two small fixes (no new phase needed):
+
+1. **Insights prompt** — Add explicit instruction to recommend pages spanning
+   different content_pillars, not just highest-traffic pages.
+2. **Plan sampling** — Add diversity cap in `create_plan()`: max 2 items per
+   URL-inferred pillar per run (round-robin or cap logic).
 
 ### Post Engagement Metrics
 
@@ -781,9 +814,8 @@ Currently the loop uses Umami traffic + follower counts — engagement metrics
 - [ ] Re-enable `PostMetrics` fields, update Strategy prompt
 - [ ] Cross-reference Umami UTM data with post UTM tags (per-post CTR)
 
-### LLM Quality
+### Quality Gates
 
-- [ ] deepeval integration for automated post quality scoring (see Phase 2c)
 - [ ] Draft quality gate: deepeval score threshold before entering `approved` queue
 - [ ] Evaluate LLM provider switch if quality insufficient (Anthropic, OpenAI)
 

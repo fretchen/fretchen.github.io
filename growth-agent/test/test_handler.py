@@ -7,22 +7,30 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agent.models import (
+    ContentPlan,
+    ContentPlanItem,
     ContentQueue,
     Draft,
     Insights,
     LLMAnalysis,
     PageForSocial,
+    Strategy,
+    StrategyAdjustment,
     WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
-    PIPELINE_TARGET,
-    _find_last_scheduled_at,
     create_drafts,
-    plan_draft_schedule,
 )
 from agent.nodes.ingest import ingest_analytics
 from agent.nodes.insights import generate_insights
+from agent.nodes.plan import (
+    PIPELINE_TARGET,
+    _find_last_scheduled_at,
+    create_plan,
+    plan_draft_schedule,
+)
 from agent.nodes.publish import publish_approved_drafts
+from agent.nodes.strategy import adjust_strategy
 from handler import (
     _create_server,
     handle,
@@ -317,42 +325,39 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
 # ---------------------------------------------------------------------------
 
 
-@patch("agent.nodes.drafts.fetch_pages_meta")
 @patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts(MockLLM, mock_fetch, mock_storage):
+def test_create_drafts(MockLLM, mock_storage):
     storage, store = mock_storage
 
-    analysis = LLMAnalysis(
-        top_topics=["quantum"],
-        traffic_sources=["organic"],
-        best_pages_for_social=[
-            PageForSocial(
-                url="https://fretchen.eu/quantum",
-                title="Quantum",
+    now = datetime(2025, 6, 10, 14, 0, 0, tzinfo=timezone.utc)
+    plan = ContentPlan(
+        items=[
+            ContentPlanItem(
+                page_url="https://fretchen.eu/quantum",
+                page_title="Quantum Blog",
+                page_description="Quantum computing intro",
                 reason="High traffic",
-            )
-        ],
-        content_gaps=[],
-        growth_opportunities=[],
+                channel="mastodon",
+                scheduled_at=now + timedelta(days=1),
+            ),
+            ContentPlanItem(
+                page_url="https://fretchen.eu/quantum",
+                page_title="Quantum Blog",
+                page_description="Quantum computing intro",
+                reason="High traffic",
+                channel="bluesky",
+                scheduled_at=now + timedelta(days=2),
+            ),
+        ]
     )
-
-    from agent.models import PageMeta
-
-    mock_fetch.return_value = {
-        "https://fretchen.eu/quantum": PageMeta(
-            url="https://fretchen.eu/quantum",
-            title="Quantum Blog",
-            description="Quantum computing intro",
-        )
-    }
 
     llm_inst = MockLLM.return_value
     llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
     llm_inst.close.return_value = None
 
-    count = create_drafts(storage, analysis)
+    count = create_drafts(storage, plan)
 
-    # 1 page → mastodon EN + bluesky EN = 2 drafts
+    # 2 plan items → 2 drafts
     assert count == 2
     updated_queue = ContentQueue.model_validate(store["content_queue.json"])
     assert len(updated_queue.drafts) == 2
@@ -370,31 +375,226 @@ def test_create_drafts(MockLLM, mock_fetch, mock_storage):
 
 
 # ---------------------------------------------------------------------------
+# adjust_strategy
+# ---------------------------------------------------------------------------
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_no_change(MockLLM, mock_storage):
+    """When LLM says no adjustment needed, strategy remains unchanged."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=False,
+        reasoning="Current strategy is performing well",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is False
+    # strategy.json should NOT be written (no changes)
+    assert "strategy.json" not in store
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_pillar_change(MockLLM, mock_storage):
+    """When LLM recommends a pillar change, it's applied and logged."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        pillar_change="Data Science & ML",
+        pillar_to_replace="AI-Tools & Infrastruktur",
+        reasoning="AI-Tools content gets low engagement, ML topics trending",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is True
+    updated = Strategy.model_validate(store["strategy.json"])
+    assert "Data Science & ML" in updated.content_pillars
+    assert "AI-Tools & Infrastruktur" not in updated.content_pillars
+    assert len(updated.changes) == 1
+    assert updated.changes[0].field == "content_pillars"
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_frequency_change(MockLLM, mock_storage):
+    """When LLM recommends a frequency change, it's applied and logged."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        frequency_channel="mastodon",
+        frequency_new_value=5,
+        reasoning="Mastodon engagement is growing, increase frequency",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is True
+    updated = Strategy.model_validate(store["strategy.json"])
+    assert updated.posting_frequency["mastodon"] == 5
+    assert len(updated.changes) == 1
+    assert updated.changes[0].field == "posting_frequency.mastodon"
+    assert updated.changes[0].old_value == "4"
+    assert updated.changes[0].new_value == "5"
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_both_changes(MockLLM, mock_storage):
+    """LLM can recommend both a pillar and frequency change (max 1 each)."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        pillar_change="Data Science & ML",
+        pillar_to_replace="AI-Tools & Infrastruktur",
+        frequency_channel="bluesky",
+        frequency_new_value=4,
+        reasoning="Shift focus and increase Bluesky presence",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is True
+    updated = Strategy.model_validate(store["strategy.json"])
+    assert "Data Science & ML" in updated.content_pillars
+    assert updated.posting_frequency["bluesky"] == 4
+    # Both changes should be logged
+    assert len(updated.changes) == 2
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_invalid_pillar_ignored(MockLLM, mock_storage):
+    """If LLM suggests replacing a non-existent pillar, ignore that change."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        pillar_change="Data Science & ML",
+        pillar_to_replace="NonExistent Pillar",
+        reasoning="Replace old pillar",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    # No valid changes applied
+    assert result is False
+
+
+@patch("agent.nodes.strategy.LLMClient")
+def test_adjust_strategy_invalid_channel_ignored(MockLLM, mock_storage):
+    """If LLM suggests frequency for non-existent channel, ignore that change."""
+    storage, store = mock_storage
+
+    insights = Insights(
+        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
+    )
+    storage.write("insights.json", insights)
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.return_value = StrategyAdjustment(
+        should_adjust=True,
+        frequency_channel="twitter",
+        frequency_new_value=5,
+        reasoning="Increase Twitter",
+    )
+    llm_inst.close.return_value = None
+
+    result = adjust_strategy(storage)
+
+    assert result is False
+
+
+# ---------------------------------------------------------------------------
 # handle() — integration-level tests
 # ---------------------------------------------------------------------------
 
 
-@patch("agent.nodes.drafts.create_drafts")
-@patch("agent.nodes.insights.generate_insights")
 @patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.drafts.create_drafts")
+@patch("agent.nodes.plan.create_plan")
+@patch("agent.nodes.insights.generate_insights")
 @patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_daily_not_monday(
-    mock_get_storage, mock_ingest, mock_publish, mock_insights, mock_drafts
+    mock_get_storage, mock_ingest, mock_insights, mock_plan, mock_drafts, mock_publish
 ):
     """On a non-Monday, daily tasks + pipeline refill run, but not insight generation."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_ingest.return_value = Insights()
     mock_publish.return_value = ["d1"]
-    # Simulate saved LLM analysis in S3
-    fake_storage.read.return_value = LLMAnalysis(
+
+    analysis_dict = LLMAnalysis(
         top_topics=["q"],
         traffic_sources=["o"],
         best_pages_for_social=[],
         content_gaps=[],
         growth_opportunities=[],
     ).model_dump()
+    plan = ContentPlan(
+        items=[
+            ContentPlanItem(
+                page_url="https://fretchen.eu/q",
+                page_title="Q",
+                page_description="desc",
+                reason="test",
+                channel="mastodon",
+                scheduled_at=datetime(2025, 1, 9, 9, 0, tzinfo=timezone.utc),
+            )
+        ]
+    )
+
+    # Return different data per key
+    storage_data: dict = {"llm_analysis.json": analysis_dict}
+
+    def plan_side_effect(storage, analysis):
+        storage_data["content_plan.json"] = plan.model_dump()
+        return plan
+
+    mock_plan.side_effect = plan_side_effect
+
+    def fake_read(key):
+        return storage_data.get(key)
+
+    fake_storage.read.side_effect = fake_read
     mock_drafts.return_value = 0
 
     # Patch datetime to a Wednesday
@@ -407,26 +607,36 @@ def test_handle_daily_not_monday(
 
     assert result["statusCode"] == 200
     mock_ingest.assert_called_once()
+    mock_plan.assert_called_once()
     mock_publish.assert_called_once()
     # Insight generation should NOT run on non-Monday
     mock_insights.assert_not_called()
-    # But pipeline refill should run (reads from S3)
+    # Pipeline refill should run (plan has items)
     mock_drafts.assert_called_once()
 
 
-@patch("agent.nodes.drafts.create_drafts")
-@patch("agent.nodes.insights.generate_insights")
 @patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.drafts.create_drafts")
+@patch("agent.nodes.plan.create_plan")
+@patch("agent.nodes.strategy.adjust_strategy")
+@patch("agent.nodes.insights.generate_insights")
 @patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
-    mock_get_storage, mock_ingest, mock_publish, mock_insights, mock_drafts
+    mock_get_storage,
+    mock_ingest,
+    mock_insights,
+    mock_strategy,
+    mock_plan,
+    mock_drafts,
+    mock_publish,
 ):
-    """On Monday, insight generation runs, then pipeline refill uses the (new) analysis."""
+    """On Monday, insight generation + strategy runs, then plan + drafts + publish."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_ingest.return_value = Insights()
     mock_publish.return_value = []
+    mock_strategy.return_value = False
 
     analysis = LLMAnalysis(
         top_topics=["q"],
@@ -436,8 +646,31 @@ def test_handle_weekly_on_monday(
         growth_opportunities=[],
     )
     mock_insights.return_value = analysis
-    # Simulate S3 read for pipeline refill returning the saved analysis
-    fake_storage.read.return_value = analysis.model_dump()
+
+    plan = ContentPlan(
+        items=[
+            ContentPlanItem(
+                page_url="https://fretchen.eu/q",
+                page_title="Q",
+                page_description="desc",
+                reason="test",
+                channel="mastodon",
+                scheduled_at=datetime(2025, 1, 7, 9, 0, tzinfo=timezone.utc),
+            )
+        ]
+    )
+    storage_data: dict = {"llm_analysis.json": analysis.model_dump()}
+
+    def plan_side_effect(storage, analysis):
+        storage_data["content_plan.json"] = plan.model_dump()
+        return plan
+
+    mock_plan.side_effect = plan_side_effect
+
+    def fake_read(key):
+        return storage_data.get(key)
+
+    fake_storage.read.side_effect = fake_read
     mock_drafts.return_value = 3
 
     monday = datetime(2025, 1, 6, 8, 0, 0, tzinfo=timezone.utc)  # Monday
@@ -451,6 +684,8 @@ def test_handle_weekly_on_monday(
     mock_ingest.assert_called_once()
     mock_publish.assert_called_once()
     mock_insights.assert_called_once()
+    mock_strategy.assert_called_once()
+    mock_plan.assert_called_once()
     mock_drafts.assert_called_once()
 
 
@@ -580,14 +815,13 @@ def test_find_last_scheduled_at_across_drafts_and_approved():
 
 
 # ---------------------------------------------------------------------------
-# create_drafts — pipeline behavior
+# create_plan — pipeline behavior
 # ---------------------------------------------------------------------------
 
 
-@patch("agent.nodes.drafts.fetch_pages_meta")
-@patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts_pipeline_full(MockLLM, mock_fetch, mock_storage):
-    """When pipeline >= PIPELINE_TARGET, no new drafts are created."""
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_pipeline_full(mock_fetch, mock_storage):
+    """When pipeline >= PIPELINE_TARGET, no plan items are created."""
     storage, store = mock_storage
 
     # Pre-fill queue with PIPELINE_TARGET drafts
@@ -608,16 +842,15 @@ def test_create_drafts_pipeline_full(MockLLM, mock_fetch, mock_storage):
         growth_opportunities=[],
     )
 
-    count = create_drafts(storage, analysis)
-    assert count == 0
-    # LLM should never be called
-    MockLLM.assert_not_called()
+    plan = create_plan(storage, analysis)
+    assert len(plan.items) == 0
+    # fetch_pages_meta should never be called
+    mock_fetch.assert_not_called()
 
 
-@patch("agent.nodes.drafts.fetch_pages_meta")
-@patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
-    """When pipeline has 7 drafts, only 3 new ones are created."""
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_pipeline_partial(mock_fetch, mock_storage):
+    """When pipeline has 7 drafts, only 3 plan items are created."""
     storage, store = mock_storage
 
     existing_drafts = [
@@ -633,7 +866,7 @@ def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
     queue = ContentQueue(drafts=existing_drafts)
     storage.write("content_queue.json", queue)
 
-    # Provide enough pages (2 pages → 4 potential drafts, but only 3 needed)
+    # Provide enough pages (2 pages → 4 potential items, but only 3 needed)
     analysis = LLMAnalysis(
         top_topics=["quantum"],
         traffic_sources=["organic"],
@@ -656,21 +889,17 @@ def test_create_drafts_pipeline_partial(MockLLM, mock_fetch, mock_storage):
         ),
     }
 
-    llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "New post content"}
-    llm_inst.close.return_value = None
+    plan = create_plan(storage, analysis)
 
-    count = create_drafts(storage, analysis)
-
-    assert count == 3  # needed = 10 - 7 = 3
-    updated_queue = ContentQueue.model_validate(store["content_queue.json"])
-    assert len(updated_queue.drafts) == 10  # 7 existing + 3 new
+    assert len(plan.items) == 3  # needed = 10 - 7 = 3
+    # Plan should be persisted
+    persisted = ContentPlan.model_validate(store["content_plan.json"])
+    assert len(persisted.items) == 3
 
 
-@patch("agent.nodes.drafts.fetch_pages_meta")
-@patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_storage):
-    """New drafts' scheduled_at starts from the latest existing scheduled_at + 1 day."""
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_scheduling_continues_from_last(mock_fetch, mock_storage):
+    """Plan items' scheduled_at starts from the latest existing scheduled_at + 1 day."""
     storage, store = mock_storage
 
     last_scheduled = datetime(2025, 4, 20, 9, 0, tzinfo=timezone.utc)
@@ -704,24 +933,17 @@ def test_create_drafts_scheduling_continues_from_last(MockLLM, mock_fetch, mock_
         ),
     }
 
-    llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Content"}
-    llm_inst.close.return_value = None
+    plan = create_plan(storage, analysis)
 
-    create_drafts(storage, analysis)
-
-    updated_queue = ContentQueue.model_validate(store["content_queue.json"])
-    new_drafts = updated_queue.drafts[1:]  # skip existing
-    assert new_drafts[0].scheduled_at == last_scheduled + timedelta(days=1)
-    assert new_drafts[1].scheduled_at == last_scheduled + timedelta(days=2)
-    # Existing draft is mastodon → new drafts alternate starting with bluesky
-    assert new_drafts[0].channel == "bluesky"
-    assert new_drafts[1].channel == "mastodon"
+    assert plan.items[0].scheduled_at == last_scheduled + timedelta(days=1)
+    assert plan.items[1].scheduled_at == last_scheduled + timedelta(days=2)
+    # Existing draft is mastodon → plan alternates starting with bluesky
+    assert plan.items[0].channel == "bluesky"
+    assert plan.items[1].channel == "mastodon"
 
 
-@patch("agent.nodes.drafts.fetch_pages_meta")
-@patch("agent.nodes.drafts.LLMClient")
-def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, mock_storage):
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storage):
     """With an empty queue, scheduling starts from tomorrow 09:00 UTC."""
     storage, store = mock_storage
 
@@ -743,22 +965,16 @@ def test_create_drafts_empty_queue_schedules_from_tomorrow(MockLLM, mock_fetch, 
         ),
     }
 
-    llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Content"}
-    llm_inst.close.return_value = None
-
-    # Freeze time so create_drafts() and the assertion use the same "now"
+    # Freeze time
     frozen_now = datetime(2025, 6, 10, 14, 30, 0, tzinfo=timezone.utc)
-    with patch("agent.nodes.drafts.datetime") as mock_dt:
+    with patch("agent.nodes.plan.datetime") as mock_dt:
         mock_dt.now.return_value = frozen_now
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-        create_drafts(storage, analysis)
+        plan = create_plan(storage, analysis)
 
-    updated_queue = ContentQueue.model_validate(store["content_queue.json"])
-    first_draft = updated_queue.drafts[0]
-    # Should be scheduled for tomorrow at 09:00 UTC
+    first_item = plan.items[0]
     expected_date = datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc)
-    assert first_draft.scheduled_at == expected_date
+    assert first_item.scheduled_at == expected_date
 
 
 # ---------------------------------------------------------------------------

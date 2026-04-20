@@ -1,0 +1,124 @@
+{
+  "description": "Golden set of manually rated social media posts for deepeval baseline testing",
+  "version": "1.0",
+  "posts": [
+    {
+      "id": "golden_mastodon_1",
+      "channel": "mastodon",
+      "content": "Ever wondered why politicians claim to want cooperation but keep blocking each other?\n\nGame theory explains it: the Prisoner's Dilemma. Short-term gains from defection beat long-term cooperation benefits.\n\nhttps://fretchen.eu/blog/prisoners-dilemma/?utm_source=mastodon\n\n#GameTheory #Politics #Economics",
+      "source_blog_post": "Prisoner's Dilemma in Politics",
+      "link": "https://fretchen.eu/blog/prisoners-dilemma/",
+      "quality_score": 85,
+      "quality_issues": [],
+      "notes": "Good hook, clear insight, proper hashtags"
+    },
+    {
+      "id": "golden_mastodon_2",
+      "channel": "mastodon",
+      "content": "Quantum computing isn't magic — it's clever math with qubits.\n\nMy latest tutorial walks through building your first quantum circuit, step by step. No PhD required.\n\nhttps://fretchen.eu/quantum/qml/qml_101/?utm_source=mastodon\n\n#QuantumComputing #QML #Tutorial",
+      "source_blog_post": "QML 101: Your First Quantum Circuit",
+      "link": "https://fretchen.eu/quantum/qml/qml_101/",
+      "quality_score": 90,
+      "quality_issues": [],
+      "notes": "Excellent hook, accessible tone, clear value proposition"
+    },
+    {
+      "id": "golden_mastodon_3",
+      "channel": "mastodon",
+      "content": "New blog post about blockchain stuff. Check it out if you want.\n\nhttps://fretchen.eu/blog/x402/\n\n#blockchain",
+      "source_blog_post": "Understanding x402 Protocol",
+      "link": "https://fretchen.eu/blog/x402/",
+      "quality_score": 25,
+      "quality_issues": ["no_hook", "vague_content", "low_engagement_potential"],
+      "notes": "Bad example: no hook, generic, doesn't mention any insight"
+    },
+    {
+      "id": "golden_bluesky_1",
+      "channel": "bluesky",
+      "content": "The tragedy of the commons isn't inevitable. Game theory shows how communities can avoid it — if they design the right incentives.\n\nhttps://fretchen.eu/blog/tragedy-of-commons/",
+      "source_blog_post": "Tragedy of the Commons: A Game Theory Perspective",
+      "link": "https://fretchen.eu/blog/tragedy-of-commons/",
+      "quality_score": 88,
+      "quality_issues": [],
+      "notes": "Strong hook, insight teased, correct Bluesky format (no hashtags)"
+    },
+    {
+      "id": "golden_bluesky_2",
+      "channel": "bluesky",
+      "content": "Why do smart contracts need NFTs? They don't — but combining them unlocks new patterns for AI-generated content ownership.\n\nhttps://fretchen.eu/blog/genimg-nft/",
+      "source_blog_post": "GenImg NFT: AI Art on Chain",
+      "link": "https://fretchen.eu/blog/genimg-nft/",
+      "quality_score": 82,
+      "quality_issues": [],
+      "notes": "Provocative hook, clear insight, good length"
+    },
+    {
+      "id": "golden_bluesky_3",
+      "channel": "bluesky",
+      "content": "I wrote something. Here's a link.\n\nhttps://fretchen.eu/blog/something/",
+      "source_blog_post": "Some Blog Post",
+      "link": "https://fretchen.eu/blog/something/",
+      "quality_score": 15,
+      "quality_issues": ["no_hook", "no_insight", "low_engagement_potential", "too_short"],
+      "notes": "Bad example: zero effort, no value"
+    },
+    {
+      "id": "golden_mastodon_4",
+      "channel": "mastodon",
+      "content": "ETF diversification is overrated. Here's the math showing why adding more assets doesn't always reduce risk — and when it backfires.\n\nhttps://fretchen.eu/blog/etf-diversification/?utm_source=mastodon\n\n#Investing #ETF #PortfolioTheory",
+      "source_blog_post": "ETF Diversification: The Math Behind the Hype",
+      "link": "https://fretchen.eu/blog/etf-diversification/",
+      "quality_score": 87,
+      "quality_issues": [],
+      "notes": "Contrarian hook, specific claim, good hashtags"
+    },
+    {
+      "id": "golden_mastodon_5",
+      "channel": "mastodon",
+      "content": "🚀🔥 AMAZING new post about QUANTUM COMPUTING!!! 🤯🤯🤯\n\nYou WON'T BELIEVE what qubits can do!!!\n\nCLICK HERE 👉 https://fretchen.eu/quantum/\n\n#quantum #amazing #mindblown #tech #science #wow",
+      "source_blog_post": "Quantum Computing Basics",
+      "link": "https://fretchen.eu/quantum/",
+      "quality_score": 20,
+      "quality_issues": ["excessive_emojis", "clickbait", "too_many_hashtags", "no_insight"],
+      "notes": "Bad example: spammy, clickbait, wrong tone for technical audience"
+    },
+    {
+      "id": "golden_bluesky_4",
+      "channel": "bluesky",
+      "content": "Budget gridlock in the EU isn't dysfunction — it's game theory in action. Each member state plays for their own optimal outcome.\n\nhttps://fretchen.eu/blog/budget-gridlock/",
+      "source_blog_post": "EU Budget Gridlock: A Game Theory Analysis",
+      "link": "https://fretchen.eu/blog/budget-gridlock/",
+      "quality_score": 85,
+      "quality_issues": [],
+      "notes": "Reframe hook, concrete insight, appropriate length"
+    },
+    {
+      "id": "golden_mastodon_6",
+      "channel": "mastodon",
+      "content": "The x402 protocol lets you pay for API calls with cryptocurrency — no subscription, no account needed.\n\nI built a facilitator service that handles the payment verification. Here's how it works under the hood.\n\nhttps://fretchen.eu/blog/x402-facilitator/?utm_source=mastodon\n\n#Web3 #Crypto #APIs",
+      "source_blog_post": "Building an x402 Facilitator",
+      "link": "https://fretchen.eu/blog/x402-facilitator/",
+      "quality_score": 83,
+      "quality_issues": [],
+      "notes": "Clear explanation, personal angle, technical but accessible"
+    }
+  ],
+  "metrics": {
+    "faithfulness": {
+      "description": "Does the post accurately represent the source article without hallucinating claims?",
+      "weight": 0.3
+    },
+    "platform_fit": {
+      "description": "Does the post follow platform conventions? (hashtags for Mastodon, none for Bluesky; character limits)",
+      "weight": 0.2
+    },
+    "hook_quality": {
+      "description": "Does the first line grab attention with a question, bold claim, or surprising insight?",
+      "weight": 0.3
+    },
+    "engagement_potential": {
+      "description": "Would the target audience (tech-curious academics, developers) want to click and share?",
+      "weight": 0.2
+    }
+  }
+}

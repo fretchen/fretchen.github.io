@@ -2,7 +2,6 @@
 .env
 .env.example
 node_modules/
-.serverless/
 test/
 notebooks/
 state/
@@ -13,7 +12,6 @@ __pycache__/
 *.md
 package.json
 package-lock.json
-serverless.yml
 requirements.txt
 run_local.py
 prompts/

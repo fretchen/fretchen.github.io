@@ -143,7 +143,9 @@ def create_drafts(storage, plan: ContentPlan) -> int:
             channel = item.channel
             if channel not in CHANNEL_CONFIG:
                 logger.warning(
-                    "Unknown channel %r for plan item %s — skipping", channel, item.page_title
+                    "Unknown channel %r for plan item %s — skipping",
+                    channel,
+                    item.page_title,
                 )
                 continue
             config = CHANNEL_CONFIG[channel]

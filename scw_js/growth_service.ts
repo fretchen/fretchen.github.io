@@ -21,6 +21,9 @@ export interface Draft {
   link: string | null;
   status: string;
   scheduled_at: string | null;
+  review_outcome?: string | null;
+  review_comment?: string | null;
+  reviewed_at?: string | null;
 }
 
 export interface ContentQueue {
@@ -167,13 +170,20 @@ function findAndRemoveDraft(
   return null;
 }
 
-export async function approveDraft(id: string, scheduledAt?: string): Promise<Draft> {
+export async function approveDraft(
+  id: string,
+  scheduledAt?: string,
+  reviewComment?: string,
+): Promise<Draft> {
   const queue = await getContentQueue();
   const result = findAndRemoveDraft(queue, id, ["drafts"]);
   if (!result) {
     throw new NotFoundError(`Draft not found: ${id}`);
   }
   result.draft.status = "approved";
+  result.draft.review_outcome = "approved";
+  result.draft.review_comment = reviewComment ?? null;
+  result.draft.reviewed_at = new Date().toISOString();
   if (scheduledAt) {
     result.draft.scheduled_at = scheduledAt;
   }
@@ -183,13 +193,16 @@ export async function approveDraft(id: string, scheduledAt?: string): Promise<Dr
   return result.draft;
 }
 
-export async function rejectDraft(id: string): Promise<Draft> {
+export async function rejectDraft(id: string, reviewComment?: string): Promise<Draft> {
   const queue = await getContentQueue();
   const result = findAndRemoveDraft(queue, id, ["drafts"]);
   if (!result) {
     throw new NotFoundError(`Draft not found: ${id}`);
   }
   result.draft.status = "rejected";
+  result.draft.review_outcome = "rejected";
+  result.draft.review_comment = reviewComment ?? null;
+  result.draft.reviewed_at = new Date().toISOString();
   queue.rejected.push(result.draft);
   await saveContentQueue(queue);
   logger.info({ draftId: id }, "Draft rejected");

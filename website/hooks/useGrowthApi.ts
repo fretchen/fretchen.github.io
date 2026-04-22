@@ -40,8 +40,8 @@ export interface UseGrowthApi {
   fetchInsights: () => Promise<Insights>;
   fetchPerformance: () => Promise<Performance>;
   updateDraft: (id: string, body: Partial<Draft>) => Promise<Draft>;
-  approveDraft: (id: string, scheduledAt?: string) => Promise<Draft>;
-  rejectDraft: (id: string) => Promise<Draft>;
+  approveDraft: (id: string, scheduledAt?: string, reviewComment?: string) => Promise<Draft>;
+  rejectDraft: (id: string, reviewComment?: string) => Promise<Draft>;
 }
 
 export function useGrowthApi(): UseGrowthApi {
@@ -105,21 +105,29 @@ export function useGrowthApi(): UseGrowthApi {
   );
 
   const approveDraft = useCallback(
-    async (id: string, scheduledAt?: string) => {
+    async (id: string, scheduledAt?: string, reviewComment?: string) => {
       const auth = await getAuth();
+      const body: Record<string, string> = {};
+      if (scheduledAt) {
+        body.scheduled_at = scheduledAt;
+      }
+      if (reviewComment) {
+        body.review_comment = reviewComment;
+      }
       return apiFetch<Draft>(`drafts/${encodeURIComponent(id)}/approve`, auth, {
         method: "POST",
-        body: scheduledAt ? JSON.stringify({ scheduled_at: scheduledAt }) : undefined,
+        body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
       });
     },
     [getAuth],
   );
 
   const rejectDraft = useCallback(
-    async (id: string) => {
+    async (id: string, reviewComment?: string) => {
       const auth = await getAuth();
       return apiFetch<Draft>(`drafts/${encodeURIComponent(id)}/reject`, auth, {
         method: "POST",
+        body: reviewComment ? JSON.stringify({ review_comment: reviewComment }) : undefined,
       });
     },
     [getAuth],

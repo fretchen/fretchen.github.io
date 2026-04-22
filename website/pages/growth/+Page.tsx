@@ -189,6 +189,20 @@ const editTextarea = css({
   _focus: { borderColor: "blue.500", outline: "none" },
 });
 
+const reviewTextarea = css({
+  width: "100%",
+  padding: "sm md",
+  border: "1px solid",
+  borderColor: "gray.300",
+  borderRadius: "md",
+  fontSize: "sm",
+  minHeight: "80px",
+  resize: "vertical",
+  fontFamily: "inherit",
+  mb: "sm",
+  _focus: { borderColor: "blue.500", outline: "none" },
+});
+
 const editInput = css({
   width: "100%",
   padding: "sm md",
@@ -279,6 +293,13 @@ const connectButton = css({
   _hover: { backgroundColor: "blue.700" },
 });
 
+const reviewMeta = css({
+  fontSize: "xs",
+  color: "gray.600",
+  mb: "sm",
+  whiteSpace: "pre-wrap",
+});
+
 // ===== Sub-components =====
 
 function DraftCardView({
@@ -291,8 +312,8 @@ function DraftCardView({
 }: {
   draft: Draft;
   showActions: boolean;
-  onApprove: (id: string, scheduledAt?: string) => Promise<void>;
-  onReject: (id: string) => Promise<void>;
+  onApprove: (id: string, scheduledAt?: string, reviewComment?: string) => Promise<void>;
+  onReject: (id: string, reviewComment?: string) => Promise<void>;
   onUpdate: (id: string, body: Partial<Draft>) => Promise<void>;
   busy: boolean;
 }) {
@@ -307,6 +328,7 @@ function DraftCardView({
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   });
   const [showSchedule, setShowSchedule] = useState(!!draft.scheduled_at);
+  const [reviewComment, setReviewComment] = useState(draft.review_comment ?? "");
 
   const limit = CHANNEL_CHAR_LIMITS[draft.channel] ?? 500;
 
@@ -323,16 +345,20 @@ function DraftCardView({
 
   const handleApprove = async () => {
     if (showSchedule && scheduleDate) {
-      await onApprove(draft.id, new Date(scheduleDate).toISOString());
+      await onApprove(draft.id, new Date(scheduleDate).toISOString(), reviewComment.trim() || undefined);
     } else if (showSchedule) {
       // Schedule shown but no date — approve without schedule
-      await onApprove(draft.id);
+      await onApprove(draft.id, undefined, reviewComment.trim() || undefined);
     } else {
       setShowSchedule(true);
       return; // show schedule input first
     }
     setShowSchedule(false);
     setScheduleDate("");
+  };
+
+  const handleReject = async () => {
+    await onReject(draft.id, reviewComment.trim() || undefined);
   };
 
   return (
@@ -399,8 +425,22 @@ function DraftCardView({
               {draft.source_blog_post || draft.link}
             </a>
           )}
+          {draft.review_outcome && (
+            <div className={reviewMeta}>
+              Review: {draft.review_outcome}
+              {draft.reviewed_at ? ` at ${new Date(draft.reviewed_at).toLocaleString()}` : ""}
+              {draft.review_comment ? `\nComment: ${draft.review_comment}` : ""}
+            </div>
+          )}
           {showActions && (
-            <div className={cardActions}>
+            <>
+              <textarea
+                className={reviewTextarea}
+                placeholder="Optional review comment"
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+              />
+              <div className={cardActions}>
               <button className={`${actionButton} ${editButton}`} onClick={() => setEditing(true)} disabled={busy}>
                 Edit
               </button>
@@ -437,13 +477,14 @@ function DraftCardView({
               {draft.status !== "rejected" && draft.status !== "published" && (
                 <button
                   className={`${actionButton} ${rejectButton}`}
-                  onClick={() => onReject(draft.id)}
+                  onClick={handleReject}
                   disabled={busy}
                 >
                   Reject
                 </button>
               )}
-            </div>
+              </div>
+            </>
           )}
         </>
       )}
@@ -526,17 +567,17 @@ export default function Page() {
     }
   }, [isOwner, loadData]);
 
-  const handleApprove = async (id: string, scheduledAt?: string) => {
+  const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     setBusy(true);
     setError(null);
     try {
-      await apiApprove(id, scheduledAt);
+      const response = await apiApprove(id, scheduledAt, reviewComment);
       // Optimistic update
       setQueue((prev) => {
         if (!prev) return prev;
         const draft = prev.drafts.find((d) => d.id === id);
         if (!draft) return prev;
-        const updated = { ...draft, status: "approved", scheduled_at: scheduledAt ?? draft.scheduled_at };
+        const updated = { ...draft, ...response };
         return {
           ...prev,
           drafts: prev.drafts.filter((d) => d.id !== id),
@@ -550,17 +591,17 @@ export default function Page() {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (id: string, reviewComment?: string) => {
     setBusy(true);
     setError(null);
     try {
-      await apiReject(id);
+      const response = await apiReject(id, reviewComment);
       // Optimistic update
       setQueue((prev) => {
         if (!prev) return prev;
         const draft = prev.drafts.find((d) => d.id === id) || prev.approved.find((d) => d.id === id);
         if (!draft) return prev;
-        const updated = { ...draft, status: "rejected" };
+        const updated = { ...draft, ...response };
         return {
           ...prev,
           drafts: prev.drafts.filter((d) => d.id !== id),

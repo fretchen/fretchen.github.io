@@ -904,6 +904,83 @@ clusters around trending content. Two small fixes (no new phase needed):
 2. **Plan sampling** — Add diversity cap in `create_plan()`: max 2 items per
    URL-inferred pillar per run (round-robin or cap logic).
 
+### Broader Candidate Selection Plan
+
+The current problem is not just weak diversity rules in `create_plan()`.
+The deeper issue is that the planner sees too narrow a candidate set too early,
+then reuses the same pages too aggressively.
+
+Today the flow collapses like this:
+
+1. `ingest.py` only loads a small top-pages slice from Umami.
+2. `insights.py` passes only a narrow subset of those pages to the LLM.
+3. `plan.py` takes the first items from `best_pages_for_social` and may reuse
+  the same URL multiple times in one planning run.
+
+That behavior is too exploitative for an early-stage blog where the strongest
+topics are not clear yet. The next change should therefore bias the system
+toward exploration before optimization.
+
+#### KISS implementation plan
+
+1. **Widen the raw page pool in ingest**
+  Increase the Umami `top_pages` limit in `agent/nodes/ingest.py` so the
+  downstream system sees a broader candidate set. The goal is not perfect
+  coverage, just a meaningfully larger set than the current top slice.
+2. **Feed more candidates into insights**
+  In `agent/nodes/insights.py`, pass a broader set of candidate pages to the
+  LLM instead of only the very top performers. Also fetch metadata for a wider
+  set so weaker but still relevant pages are visible to the prompt.
+3. **Change the prompt from "best pages" to "balanced candidates"**
+  Update the insights prompt so the LLM is asked to recommend:
+  - proven pages with clear audience interest
+  - emerging pages with some signal but limited history
+  - underexplored pages from other parts of the blog worth testing
+  The point is to generate a mixed candidate list, not just a leaderboard.
+4. **Stop duplicating the same URL by default**
+  In `agent/nodes/plan.py`, remove the current default behavior of assigning up
+  to two items per page in the same run. In the early stage, use at most one
+  post per URL per planning cycle.
+5. **Add a simple exploration mix in the planner**
+  Make `create_plan()` intentionally mix safer and broader choices. A simple
+  rule is enough: most slots come from the top of the candidate list, but a
+  smaller fraction should come from the broader remainder.
+6. **Add a lightweight diversity rule**
+  Prevent back-to-back selections from the same narrow topic cluster when
+  possible. This does not need a full taxonomy in the first version; even a
+  simple URL or heuristic grouping is enough to reduce obvious collapse.
+
+#### Slightly cleaner version (optional follow-up)
+
+If the KISS version works but still feels opaque, extend `PageForSocial` with a
+small field such as `selection_type` or `selection_bucket`, for example:
+
+- `proven`
+- `exploratory`
+
+Then `insights.py` can explicitly label why a page was selected, and `plan.py`
+can mix the buckets intentionally instead of inferring diversity from ordering.
+This is cleaner than free-form reasoning, but should only be added if the plain
+KISS version proves too fuzzy.
+
+#### What should be tested before implementation is considered done
+
+1. `create_plan()` should no longer emit duplicate URLs by default in one run.
+2. A broader `best_pages_for_social` set should still produce a valid plan when
+  metadata is missing for some pages.
+3. The planner should continue to fill the pipeline target while producing a
+  visibly more varied mix of pages.
+4. Diversity rules should not break scheduling continuity or the existing queue
+  depth logic.
+
+#### Explicitly out of scope for this change
+
+- Full recommender system
+- Automatic pillar classification service
+- Post-performance feedback loop from platform APIs
+- New graph node for exploration vs. exploitation
+- Hard quality or diversity gates before approval
+
 ### Post Engagement Metrics
 
 Fetch per-post performance from platform APIs to give Strategy finer-grained data.

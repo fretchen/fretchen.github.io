@@ -339,6 +339,7 @@ function DraftCardView({
         .split(",")
         .map((h) => h.trim())
         .filter(Boolean),
+      scheduled_at: scheduleDate ? new Date(scheduleDate).toISOString() : null,
     });
     setEditing(false);
   };
@@ -393,6 +394,12 @@ function DraftCardView({
             onChange={(e) => setEditHashtags(e.target.value)}
             placeholder="Hashtags (comma-separated)"
           />
+          <input
+            className={editInput}
+            type="datetime-local"
+            value={scheduleDate}
+            onChange={(e) => setScheduleDate(e.target.value)}
+          />
           <div className={cardActions}>
             <button
               className={`${actionButton} ${saveButton}`}
@@ -441,48 +448,48 @@ function DraftCardView({
                 onChange={(e) => setReviewComment(e.target.value)}
               />
               <div className={cardActions}>
-              <button className={`${actionButton} ${editButton}`} onClick={() => setEditing(true)} disabled={busy}>
-                Edit
-              </button>
-              {draft.status !== "approved" && draft.status !== "published" && (
-                <>
-                  <button
-                    className={`${actionButton} ${approveButton}`}
-                    onClick={handleApprove}
-                    disabled={busy || draft.content.length > limit}
-                  >
-                    {showSchedule ? "Confirm Approve" : "Approve"}
-                  </button>
-                  {showSchedule && (
-                    <input
-                      className={scheduleInput}
-                      type="datetime-local"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                    />
-                  )}
-                  {showSchedule && (
-                    <button
-                      className={`${actionButton} ${cancelButton}`}
-                      onClick={() => {
-                        setShowSchedule(false);
-                        setScheduleDate("");
-                      }}
-                    >
-                      Skip Schedule
-                    </button>
-                  )}
-                </>
-              )}
-              {draft.status !== "rejected" && draft.status !== "published" && (
-                <button
-                  className={`${actionButton} ${rejectButton}`}
-                  onClick={handleReject}
-                  disabled={busy}
-                >
-                  Reject
+                <button className={`${actionButton} ${editButton}`} onClick={() => setEditing(true)} disabled={busy}>
+                  Edit
                 </button>
-              )}
+                {draft.status !== "approved" && draft.status !== "published" && (
+                  <>
+                    <button
+                      className={`${actionButton} ${approveButton}`}
+                      onClick={handleApprove}
+                      disabled={busy || draft.content.length > limit}
+                    >
+                      {showSchedule ? "Confirm Approve" : "Approve"}
+                    </button>
+                    {showSchedule && (
+                      <input
+                        className={scheduleInput}
+                        type="datetime-local"
+                        value={scheduleDate}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                      />
+                    )}
+                    {showSchedule && (
+                      <button
+                        className={`${actionButton} ${cancelButton}`}
+                        onClick={() => {
+                          setShowSchedule(false);
+                          setScheduleDate("");
+                        }}
+                      >
+                        Skip Schedule
+                      </button>
+                    )}
+                  </>
+                )}
+                {draft.status !== "rejected" && draft.status !== "published" && (
+                  <button
+                    className={`${actionButton} ${rejectButton}`}
+                    onClick={handleReject}
+                    disabled={busy}
+                  >
+                    Reject
+                  </button>
+                )}
               </div>
             </>
           )}

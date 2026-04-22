@@ -21,6 +21,8 @@ export interface Draft {
   link: string | null;
   status: string;
   scheduled_at: string | null;
+  quality_score?: number | null;
+  quality_issues?: string[];
   review_outcome?: string | null;
   review_comment?: string | null;
   reviewed_at?: string | null;

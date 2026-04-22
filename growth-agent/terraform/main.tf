@@ -54,11 +54,11 @@ resource "scaleway_container" "growth_agent" {
   deploy         = true
 
   environment_variables = {
-    MASTODON_INSTANCE = "https://mastodon.social"
-    BLUESKY_HANDLE    = "fretchen.eu"
+    MASTODON_INSTANCE = var.mastodon_instance
+    BLUESKY_HANDLE    = var.bluesky_handle
     UMAMI_WEBSITE_ID  = var.umami_website_id
-    S3_BUCKET         = "my-imagestore"
-    S3_STATE_PREFIX   = "growth-agent/"
+    S3_BUCKET         = var.s3_bucket
+    S3_STATE_PREFIX   = var.s3_state_prefix
   }
 
   secret_environment_variables = {

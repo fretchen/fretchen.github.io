@@ -45,3 +45,29 @@ variable "scw_secret_key" {
   type        = string
   sensitive   = true
 }
+
+# --- Non-sensitive configuration ---
+
+variable "s3_bucket" {
+  description = "S3 bucket name for state storage"
+  type        = string
+  default     = "my-imagestore"
+}
+
+variable "s3_state_prefix" {
+  description = "S3 prefix for growth-agent state files"
+  type        = string
+  default     = "growth-agent/"
+}
+
+variable "mastodon_instance" {
+  description = "Mastodon instance URL"
+  type        = string
+  default     = "https://mastodon.social"
+}
+
+variable "bluesky_handle" {
+  description = "Bluesky handle"
+  type        = string
+  default     = "fretchen.eu"
+}

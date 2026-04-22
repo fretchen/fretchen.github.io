@@ -741,34 +741,245 @@ Established the correct OODA node ordering and added the missing **Strategy** an
 
 ---
 
-## Phase 2c — LLM Evaluation with deepeval
+## Phase 2c — Draft Quality Evaluation
 
-Depends on Phase 2a (stable graph with clear node boundaries required).
+Depends on Phase 2b (stable graph with clear node boundaries required).
 
 **Why deepeval:** LLM-as-Judge framework for automated post quality assessment.
 Replaces manual "does this post look good?" with measurable metrics.
 Runs locally with pytest integration, uses LLM API for evaluation.
 
-- [ ] Add `deepeval` to `pyproject.toml` (dev dependency)
-- [ ] Create golden set: 10–20 manually rated posts as quality baseline
-- [ ] Define custom G-Eval metrics for social posts:
-  - Tone appropriateness (platform-specific)
-  - Engagement potential (hook quality, call-to-action)
-  - Faithfulness to source page (no hallucinated claims)
-  - Length compliance (within platform char limits)
-- [ ] Add `@observe` decorator on `drafts_node` for component-level tracing
-- [ ] Create `test/test_post_quality.py` — pytest-compatible eval suite
-- [ ] Evaluate: can IONOS serve as judge LLM, or is OpenAI needed?
-- [ ] Optional: Confident AI cloud for regression tracking across prompt changes
+**Status:** Step 1 to 4 are already implemented.
+The next goal is to feed this evaluation with real labeled review data from the
+existing approval workflow.
 
-> **Note:** deepeval metrics require an LLM API for evaluation (LLM-as-Judge).
-> Most metrics use OpenAI by default but can be configured for other providers.
-> The evaluation runs locally — no data leaves the machine except LLM API calls.
+### SOTA: Self-Refine Pattern
+
+The standard approach for draft improvement is **Self-Refine** — an internal
+critique-and-revise loop *inside* the generation node, not a separate graph step:
+
+```
+drafts_node internally:
+  1. Generate initial draft
+  2. Self-critique (same LLM, critique prompt)
+  3. If issues found: single refine pass (max 1 iteration)
+  4. Output final draft with quality_score attached
+```
+
+This avoids graph complexity while ensuring every draft gets reviewed once.
+A separate `review` node would be over-engineering for short social posts.
+
+### Steps
+
+- [x] **Step 1: deepeval setup** — Add `deepeval` to `pyproject.toml` (dev dependency).
+      Create golden set: 10–20 manually rated posts as quality baseline.
+- [x] **Step 2: Quality metrics** — Define custom G-Eval metrics for social posts:
+      faithfulness (no hallucination), platform fit, hook quality, length compliance.
+- [x] **Step 3: Test suite** — Create `test/test_post_quality.py` with deepeval
+      integration. Runs on `uv run pytest test/test_post_quality.py`.
+- [x] **Step 4: Self-Refine in drafts_node** — Add optional self-critique step
+      inside `create_drafts()`. Single refine pass if critique finds issues.
+      Populate `Draft.quality_score` and `Draft.quality_issues` fields.
+- [ ] **Step 5: Approval comments** — Extend the existing approve/reject flow to
+  capture a short human review comment. Approve comments can stay optional.
+  Reject comments should be strongly encouraged.
+- [ ] **Step 6: Persist review comments** — Store `review_outcome`,
+  `review_comment`, and `reviewed_at` on the draft so real labeled production
+  data accumulates over time.
+- [ ] **Step 7: Review rejected drafts first** — Start with comments mainly on
+  rejected drafts. This keeps the human workflow light while still collecting
+  the most useful failure examples for eval.
+- [ ] **Step 8: Use real comments for eval calibration** — Once enough reviewed
+  drafts exist, compare human review outcomes and comments against deepeval
+  scores and use that data to improve prompts and thresholds.
+
+### Detailed implementation plan for Steps 5 to 8
+
+The goal of these steps is deliberately narrow: keep the existing approval flow,
+but make every human review decision usable as labeled eval data.
+No extra graph node, no separate review service, no automatic quality gate.
+
+#### Step 5 — Approval comments
+
+Add the smallest possible extension to the current approve/reject flow:
+
+1. **Request payloads**
+  Extend `POST /drafts/:id/approve` and `POST /drafts/:id/reject` to accept an
+  optional `review_comment` string.
+2. **Service layer**
+  Pass `review_comment` through `scw_js/growth_api.ts` into
+  `scw_js/growth_service.ts` when moving drafts between `pending_approval`,
+  `approved`, and `rejected`.
+3. **UI**
+  In `website/pages/growth/+Page.tsx`, add a small textarea to the existing
+  approval form. Keep approve lightweight: comment optional. Keep reject
+  useful: comment strongly encouraged.
+4. **Tests**
+  Extend `scw_js/test/growth_api.test.ts` to cover approve/reject with and
+  without `review_comment`.
+
+#### Step 6 — Persist review comments
+
+Store review information directly on the draft first. This is the KISS path.
+
+1. **Draft model**
+  Extend the draft schema in `growth-agent/agent/models.py` with optional
+  fields:
+  - `review_outcome`
+  - `review_comment`
+  - `reviewed_at`
+2. **Persistence**
+  When approve/reject is called, write those fields back into the existing
+  `content_queue.json` record before moving or updating the draft.
+3. **Backwards compatibility**
+  All new fields must be optional so old queue files still load without
+  migration work.
+4. **No extra storage yet**
+  Do not introduce a separate review events file in this step. If later needed,
+  it can be added once enough review activity exists.
+
+#### Step 7 — Review rejected drafts first
+
+Keep the human workflow as light as possible.
+
+1. **Primary focus**
+  Start by collecting comments mainly for rejected drafts, since these contain
+  the highest-value failure examples for evaluation.
+2. **Approve flow**
+  Keep approve comments optional so the review UI does not become annoying for
+  drafts that are already good enough.
+3. **Reject flow**
+  Strongly encourage a short reason such as what was wrong with the draft or
+  what would have needed to change.
+4. **Practical result**
+  This yields useful labeled data quickly without forcing the reviewer to fully
+  annotate every single draft.
+
+#### Step 8 — Use real comments for eval calibration
+
+Only start this step after enough reviewed drafts exist.
+
+1. **Minimal threshold for usefulness**
+  Wait until there are at least a few dozen reviewed drafts before drawing any
+  conclusions from the labels.
+2. **First comparison**
+  Compare human `review_outcome` against `quality_score` and
+  `quality_issues` already produced by `drafts.py`, then read the saved review
+  comments to understand where the automatic eval missed the real problem.
+3. **Questions to answer**
+  - Are low-scoring drafts actually rejected?
+  - Which rejection reasons appear most often in human comments?
+  - Which accepted drafts still required heavy manual edits?
+4. **Use of results**
+  Use these findings to improve prompts, refine the existing critique prompt,
+  and tune score thresholds. Do not automatically block publishing in this
+  phase.
+5. **Execution format**
+  Keep this first calibration step offline: notebook, script, or test fixture
+  is enough. No dashboard or ongoing analytics pipeline is required yet.
+
+### Out of Scope (deferred to Phase 3)
+
+- Separate `review` graph node (Self-Refine pattern is sufficient)
+- Automatic publish-blocking based on quality score
+- Topic diversity enforcement (small fix in insights/plan prompts, not a phase)
+- Post-engagement metrics from platform APIs
+- Multi-iteration refinement loops
+
+> **Note:** deepeval is already in place as an offline evaluation tool.
+> The next step in Phase 2c is to collect real human labels from the approval UI.
 
 ## Phase 3 — Refinements & Optimization
 
 Ideas for improving the OODA loop once it's stable in production.
 **Not required for the loop to function.**
+
+### Topic Diversity
+
+Current planning can collapse onto a narrow topic set when `best_pages_for_social`
+clusters around trending content. Two small fixes (no new phase needed):
+
+1. **Insights prompt** — Add explicit instruction to recommend pages spanning
+   different content_pillars, not just highest-traffic pages.
+2. **Plan sampling** — Add diversity cap in `create_plan()`: max 2 items per
+   URL-inferred pillar per run (round-robin or cap logic).
+
+### Broader Candidate Selection Plan
+
+The current problem is not just weak diversity rules in `create_plan()`.
+The deeper issue is that the planner sees too narrow a candidate set too early,
+then reuses the same pages too aggressively.
+
+Today the flow collapses like this:
+
+1. `ingest.py` only loads a small top-pages slice from Umami.
+2. `insights.py` passes only a narrow subset of those pages to the LLM.
+3. `plan.py` takes the first items from `best_pages_for_social` and may reuse
+  the same URL multiple times in one planning run.
+
+That behavior is too exploitative for an early-stage blog where the strongest
+topics are not clear yet. The next change should therefore bias the system
+toward exploration before optimization.
+
+#### KISS implementation plan
+
+1. **Widen the raw page pool in ingest**
+  Increase the Umami `top_pages` limit in `agent/nodes/ingest.py` so the
+  downstream system sees a broader candidate set. The goal is not perfect
+  coverage, just a meaningfully larger set than the current top slice.
+2. **Feed more candidates into insights**
+  In `agent/nodes/insights.py`, pass a broader set of candidate pages to the
+  LLM instead of only the very top performers. Also fetch metadata for a wider
+  set so weaker but still relevant pages are visible to the prompt.
+3. **Change the prompt from "best pages" to "balanced candidates"**
+  Update the insights prompt so the LLM is asked to recommend:
+  - proven pages with clear audience interest
+  - emerging pages with some signal but limited history
+  - underexplored pages from other parts of the blog worth testing
+  The point is to generate a mixed candidate list, not just a leaderboard.
+4. **Stop duplicating the same URL by default**
+  In `agent/nodes/plan.py`, remove the current default behavior of assigning up
+  to two items per page in the same run. In the early stage, use at most one
+  post per URL per planning cycle.
+5. **Add a simple exploration mix in the planner**
+  Make `create_plan()` intentionally mix safer and broader choices. A simple
+  rule is enough: most slots come from the top of the candidate list, but a
+  smaller fraction should come from the broader remainder.
+6. **Add a lightweight diversity rule**
+  Prevent back-to-back selections from the same narrow topic cluster when
+  possible. This does not need a full taxonomy in the first version; even a
+  simple URL or heuristic grouping is enough to reduce obvious collapse.
+
+#### Slightly cleaner version (optional follow-up)
+
+If the KISS version works but still feels opaque, extend `PageForSocial` with a
+small field such as `selection_type` or `selection_bucket`, for example:
+
+- `proven`
+- `exploratory`
+
+Then `insights.py` can explicitly label why a page was selected, and `plan.py`
+can mix the buckets intentionally instead of inferring diversity from ordering.
+This is cleaner than free-form reasoning, but should only be added if the plain
+KISS version proves too fuzzy.
+
+#### What should be tested before implementation is considered done
+
+1. `create_plan()` should no longer emit duplicate URLs by default in one run.
+2. A broader `best_pages_for_social` set should still produce a valid plan when
+  metadata is missing for some pages.
+3. The planner should continue to fill the pipeline target while producing a
+  visibly more varied mix of pages.
+4. Diversity rules should not break scheduling continuity or the existing queue
+  depth logic.
+
+#### Explicitly out of scope for this change
+
+- Full recommender system
+- Automatic pillar classification service
+- Post-performance feedback loop from platform APIs
+- New graph node for exploration vs. exploitation
+- Hard quality or diversity gates before approval
 
 ### Post Engagement Metrics
 
@@ -781,9 +992,8 @@ Currently the loop uses Umami traffic + follower counts — engagement metrics
 - [ ] Re-enable `PostMetrics` fields, update Strategy prompt
 - [ ] Cross-reference Umami UTM data with post UTM tags (per-post CTR)
 
-### LLM Quality
+### Quality Gates
 
-- [ ] deepeval integration for automated post quality scoring (see Phase 2c)
 - [ ] Draft quality gate: deepeval score threshold before entering `approved` queue
 - [ ] Evaluate LLM provider switch if quality insufficient (Anthropic, OpenAI)
 

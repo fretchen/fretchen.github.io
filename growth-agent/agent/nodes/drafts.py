@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timezone
 
 from agent.llm_client import LLMClient
-from agent.models import ContentPlan, ContentQueue, Draft, Strategy
+from agent.models import ContentPlan, ContentQueue, Draft, DraftCritique, Strategy
 from agent.state import AgentState
 from agent.storage import load_model
 
@@ -129,8 +129,64 @@ Requirements:
 Return ONLY the post text, nothing else."""
 
 
+def _critique_prompt(draft_content: str, channel: str, strategy: Strategy) -> str:
+    """Generate a critique prompt for self-refine pattern."""
+    platform_rules = (
+        "Mastodon: max 500 chars, 2-3 hashtags, no excessive emojis"
+        if channel == "mastodon"
+        else "Bluesky: max 300 chars, NO hashtags, concise and punchy"
+    )
+    return f"""Critique this {channel} post for a technical blog.
+
+Post to critique:
+---
+{draft_content}
+---
+
+Target audience: {strategy.target_audience}
+Expected tone: {strategy.tone}
+Platform rules: {platform_rules}
+
+Evaluate:
+1. Does the first line have a strong hook (question, bold claim, or surprising insight)?
+2. Does it follow {channel} platform conventions?
+3. Does it mention a specific insight or value proposition?
+4. Is the link included?
+5. Is the tone appropriate for the target audience?
+
+Provide an overall quality score (0-100) and list any specific issues."""
+
+
+def _refine_prompt(
+    original_draft: str, critique: DraftCritique, channel: str, strategy: Strategy
+) -> str:
+    """Generate a refinement prompt based on critique feedback."""
+    issues_str = ", ".join(critique.issues) if critique.issues else "minor improvements needed"
+    return f"""Improve this {channel} post based on the critique.
+
+Original post:
+---
+{original_draft}
+---
+
+Issues identified: {issues_str}
+Suggestion: {critique.suggested_improvement}
+
+Requirements:
+- Fix the identified issues
+- Keep the same link and core message
+- Target audience: {strategy.target_audience}
+- Tone: {strategy.tone}
+- {"Max 500 chars, 2-3 hashtags" if channel == "mastodon" else "Max 300 chars, NO hashtags"}
+
+Return ONLY the improved post text, nothing else."""
+
+
 def create_drafts(storage, plan: ContentPlan) -> int:
-    """Generate social media draft posts from a content plan. Returns count."""
+    """Generate social media draft posts from a content plan. Returns count.
+
+    Uses Self-Refine pattern: generate → critique → refine (max 1 iteration).
+    """
     strategy = load_model(storage, "strategy.json", Strategy)
     queue = load_model(storage, "content_queue.json", ContentQueue)
 
@@ -143,7 +199,9 @@ def create_drafts(storage, plan: ContentPlan) -> int:
             channel = item.channel
             if channel not in CHANNEL_CONFIG:
                 logger.warning(
-                    "Unknown channel %r for plan item %s — skipping", channel, item.page_title
+                    "Unknown channel %r for plan item %s — skipping",
+                    channel,
+                    item.page_title,
                 )
                 continue
             config = CHANNEL_CONFIG[channel]
@@ -151,6 +209,7 @@ def create_drafts(storage, plan: ContentPlan) -> int:
             prompt = prompt_fn(item, "en", strategy)
             max_tokens = config["max_tokens"]
 
+            # Step 1: Generate initial draft
             result = llm.chat(
                 messages=[
                     {"role": "system", "content": _system_prompt(strategy)},
@@ -159,15 +218,48 @@ def create_drafts(storage, plan: ContentPlan) -> int:
                 temperature=0.8,
                 max_tokens=max_tokens,
             )
+            draft_content = result["content"].strip()
+
+            # Step 2: Self-critique
+            critique = _critique_draft(llm, draft_content, channel, strategy)
+
+            # Step 3: Refine if quality is below threshold
+            quality_score = critique.overall_score
+            quality_issues = critique.issues
+
+            if critique.overall_score < 70 and critique.issues:
+                logger.info(
+                    "Draft for %s scored %d, refining (issues: %s)",
+                    item.page_title,
+                    critique.overall_score,
+                    critique.issues,
+                )
+                refined_content = _refine_draft(
+                    llm, draft_content, critique, channel, strategy, max_tokens
+                )
+                if refined_content:
+                    draft_content = refined_content
+                    # Re-critique to get updated score
+                    new_critique = _critique_draft(llm, draft_content, channel, strategy)
+                    quality_score = new_critique.overall_score
+                    quality_issues = new_critique.issues
+                    logger.info(
+                        "Refined draft for %s, new score: %d",
+                        item.page_title,
+                        quality_score,
+                    )
+
             new_drafts.append(
                 Draft(
                     id=_make_draft_id(channel, "en", draft_index),
                     channel=channel,
                     language="en",
-                    content=result["content"].strip(),
+                    content=draft_content,
                     source_blog_post=item.page_title,
                     link=f"{item.page_url}?utm_source={channel}&utm_campaign=growth-agent",
                     scheduled_at=item.scheduled_at,
+                    quality_score=quality_score,
+                    quality_issues=quality_issues,
                 )
             )
             draft_index += 1
@@ -181,3 +273,65 @@ def create_drafts(storage, plan: ContentPlan) -> int:
     storage.write("content_queue.json", queue)
     logger.info("Created %d new drafts", len(new_drafts))
     return len(new_drafts)
+
+
+def _critique_draft(
+    llm: LLMClient, content: str, channel: str, strategy: Strategy
+) -> DraftCritique:
+    """Critique a draft using structured output."""
+    try:
+        critique = llm.structured_output(
+            schema=DraftCritique,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a social media quality reviewer. "
+                    "Be constructive but honest.",
+                },
+                {
+                    "role": "user",
+                    "content": _critique_prompt(content, channel, strategy),
+                },
+            ],
+        )
+        assert isinstance(critique, DraftCritique)
+        return critique
+    except Exception:
+        logger.exception("Draft critique failed, using default")
+        return DraftCritique(
+            has_strong_hook=True,
+            follows_platform_conventions=True,
+            mentions_specific_insight=True,
+            includes_link=True,
+            appropriate_tone=True,
+            overall_score=70,
+            issues=[],
+            suggested_improvement="",
+        )
+
+
+def _refine_draft(
+    llm: LLMClient,
+    original: str,
+    critique: DraftCritique,
+    channel: str,
+    strategy: Strategy,
+    max_tokens: int,
+) -> str | None:
+    """Refine a draft based on critique feedback. Returns None on failure."""
+    try:
+        result = llm.chat(
+            messages=[
+                {"role": "system", "content": _system_prompt(strategy)},
+                {
+                    "role": "user",
+                    "content": _refine_prompt(original, critique, channel, strategy),
+                },
+            ],
+            temperature=0.7,
+            max_tokens=max_tokens,
+        )
+        return result["content"].strip()
+    except Exception:
+        logger.exception("Draft refinement failed")
+        return None

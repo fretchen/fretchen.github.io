@@ -977,6 +977,158 @@ def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storag
     assert first_item.scheduled_at == expected_date
 
 
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_prefers_unique_urls_when_enough_candidates(mock_fetch, mock_storage):
+    """When enough unique pages exist, the plan should avoid duplicate URLs."""
+    storage, _store = mock_storage
+
+    existing_drafts = [
+        Draft(
+            id=f"d{i}",
+            channel="mastodon",
+            language="en",
+            content=f"Post {i}",
+            scheduled_at=datetime(2025, 4, 10 + i, 9, 0, tzinfo=timezone.utc),
+        )
+        for i in range(5)
+    ]
+    storage.write("content_queue.json", ContentQueue(drafts=existing_drafts))
+
+    analysis = LLMAnalysis(
+        top_topics=["quantum"],
+        traffic_sources=["organic"],
+        best_pages_for_social=[
+            PageForSocial(
+                url="https://fretchen.eu/q1",
+                title="Q1",
+                reason="Test",
+                selection_type="proven",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/q1",
+                title="Q1 dup",
+                reason="Test",
+                selection_type="proven",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/q2",
+                title="Q2",
+                reason="Test",
+                selection_type="proven",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/q3",
+                title="Q3",
+                reason="Test",
+                selection_type="exploratory",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/q4",
+                title="Q4",
+                reason="Test",
+                selection_type="proven",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/q5",
+                title="Q5",
+                reason="Test",
+                selection_type="exploratory",
+            ),
+        ],
+        content_gaps=[],
+        growth_opportunities=[],
+    )
+
+    from agent.models import PageMeta
+
+    mock_fetch.return_value = {
+        f"https://fretchen.eu/q{i}": PageMeta(
+            url=f"https://fretchen.eu/q{i}", title=f"Q{i}", description=f"Desc {i}"
+        )
+        for i in range(1, 6)
+    }
+
+    plan = create_plan(storage, analysis)
+    urls = [item.page_url for item in plan.items]
+
+    assert len(plan.items) == 5
+    assert len(set(urls)) == 5
+
+
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_includes_exploratory_page_when_available(mock_fetch, mock_storage):
+    """The planner should mix in exploratory pages when data allows it."""
+    storage, _store = mock_storage
+
+    existing_drafts = [
+        Draft(
+            id=f"d{i}",
+            channel="mastodon",
+            language="en",
+            content=f"Post {i}",
+            scheduled_at=datetime(2025, 4, 10 + i, 9, 0, tzinfo=timezone.utc),
+        )
+        for i in range(7)
+    ]
+    storage.write("content_queue.json", ContentQueue(drafts=existing_drafts))
+
+    analysis = LLMAnalysis(
+        top_topics=["quantum"],
+        traffic_sources=["organic"],
+        best_pages_for_social=[
+            PageForSocial(
+                url="https://fretchen.eu/p1",
+                title="P1",
+                reason="Test",
+                selection_type="proven",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/p2",
+                title="P2",
+                reason="Test",
+                selection_type="proven",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/e1",
+                title="E1",
+                reason="Test",
+                selection_type="exploratory",
+            ),
+            PageForSocial(
+                url="https://fretchen.eu/p3",
+                title="P3",
+                reason="Test",
+                selection_type="proven",
+            ),
+        ],
+        content_gaps=[],
+        growth_opportunities=[],
+    )
+
+    from agent.models import PageMeta
+
+    mock_fetch.return_value = {
+        "https://fretchen.eu/p1": PageMeta(
+            url="https://fretchen.eu/p1", title="P1", description="Desc"
+        ),
+        "https://fretchen.eu/p2": PageMeta(
+            url="https://fretchen.eu/p2", title="P2", description="Desc"
+        ),
+        "https://fretchen.eu/e1": PageMeta(
+            url="https://fretchen.eu/e1", title="E1", description="Desc"
+        ),
+        "https://fretchen.eu/p3": PageMeta(
+            url="https://fretchen.eu/p3", title="P3", description="Desc"
+        ),
+    }
+
+    plan = create_plan(storage, analysis)
+    urls = [item.page_url for item in plan.items]
+
+    assert len(plan.items) == 3
+    assert "https://fretchen.eu/e1" in urls
+
+
 # ---------------------------------------------------------------------------
 # handle() — daily pipeline refill without saved analysis
 # ---------------------------------------------------------------------------

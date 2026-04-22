@@ -15,6 +15,9 @@ from agent.storage import load_model
 
 logger = logging.getLogger("growth-agent")
 
+INSIGHTS_TOP_PAGES_LIMIT = 30
+INSIGHTS_CANDIDATE_TARGET = 15
+
 
 def insights_node(state: AgentState) -> dict:
     """LangGraph node: generate LLM insights, update state."""
@@ -33,10 +36,10 @@ def generate_insights(storage) -> LLMAnalysis | None:
 
     llm = LLMClient(api_token=os.environ["IONOS_API_TOKEN"])
     try:
-        # Fetch page descriptions for the top pages
+        # Fetch page descriptions for a broader candidate set, not only the top winners.
         page_urls = [
             f"https://fretchen.eu{p.get('x', p.get('name', ''))}"
-            for p in insights.website_analytics.top_pages[:10]
+            for p in insights.website_analytics.top_pages[:INSIGHTS_TOP_PAGES_LIMIT]
             if p.get("x") or p.get("name")
         ]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
@@ -62,7 +65,7 @@ Summary:
 - Bounces: {insights.website_analytics.bounces}
 
 Top pages:
-{json.dumps(insights.website_analytics.top_pages[:10], indent=2)}
+{json.dumps(insights.website_analytics.top_pages[:INSIGHTS_TOP_PAGES_LIMIT], indent=2)}
 
 Page descriptions (from the site):
 {page_desc_block}
@@ -76,9 +79,22 @@ Tracked events (user engagement funnels):
 Based on this data, identify:
 1. Which blog topics have the most visitor interest?
 2. Where is traffic coming from? Any social media referrals?
-3. Which pages would make the best social media content to share?
+3. Which pages should be tested on social media next?
 4. What content gaps exist — popular topics with no recent social posts?
 5. Suggest 3-5 specific, actionable growth opportunities for Mastodon and Bluesky."""
+
+        insight_prompt += f"""
+
+For `best_pages_for_social`, return up to {INSIGHTS_CANDIDATE_TARGET} candidate pages.
+Do not return only the highest-traffic pages.
+Build a balanced candidate list with:
+- `proven` pages: clear audience interest and strong existing signal
+- `exploratory` pages: relevant but less-tested or underrepresented topics worth trying
+
+Set `selection_type` on each page to either `proven` or `exploratory`.
+Aim for a mix that is mostly proven while still including exploratory
+candidates when the data allows it.
+"""
 
         result = llm.structured_output(
             schema=LLMAnalysis,

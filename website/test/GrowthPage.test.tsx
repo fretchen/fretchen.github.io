@@ -159,7 +159,7 @@ describe("Growth Page", () => {
     fireEvent.click(screen.getByText("Confirm Approve"));
 
     await waitFor(() => {
-      expect(mockApproveDraft).toHaveBeenCalledWith("draft_1", undefined);
+      expect(mockApproveDraft).toHaveBeenCalledWith("draft_1", undefined, undefined);
     });
   });
 
@@ -179,7 +179,7 @@ describe("Growth Page", () => {
     fireEvent.click(screen.getByText("Reject"));
 
     await waitFor(() => {
-      expect(mockRejectDraft).toHaveBeenCalledWith("draft_1");
+      expect(mockRejectDraft).toHaveBeenCalledWith("draft_1", undefined);
     });
   });
 

@@ -378,13 +378,19 @@ describe("growth_api", () => {
       mockS3Read(sampleQueue);
       mockS3Write();
       const event = makeEvent("POST", "drafts/draft_mastodon_en_20260413/approve", {
-        body: { scheduled_at: "2026-04-15T09:00:00Z" },
+        body: {
+          scheduled_at: "2026-04-15T09:00:00Z",
+          review_comment: "Looks ready to publish.",
+        },
       });
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
       expect(body.status).toBe("approved");
       expect(body.scheduled_at).toBe("2026-04-15T09:00:00Z");
+      expect(body.review_outcome).toBe("approved");
+      expect(body.review_comment).toBe("Looks ready to publish.");
+      expect(body.reviewed_at).toBeTruthy();
     });
 
     test("approves without scheduled_at", async () => {
@@ -420,10 +426,27 @@ describe("growth_api", () => {
     test("rejects a draft and moves to rejected queue", async () => {
       mockS3Read(sampleQueue);
       mockS3Write();
+      const event = makeEvent("POST", "drafts/draft_bluesky_en_20260413/reject", {
+        body: { review_comment: "Too generic, needs a stronger hook." },
+      });
+      const res = (await handle(event, {})) as { statusCode: number; body: string };
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.status).toBe("rejected");
+      expect(body.review_outcome).toBe("rejected");
+      expect(body.review_comment).toBe("Too generic, needs a stronger hook.");
+      expect(body.reviewed_at).toBeTruthy();
+    });
+
+    test("rejects a draft without comment", async () => {
+      mockS3Read(sampleQueue);
+      mockS3Write();
       const event = makeEvent("POST", "drafts/draft_bluesky_en_20260413/reject");
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(200);
-      expect(JSON.parse(res.body).status).toBe("rejected");
+      const body = JSON.parse(res.body);
+      expect(body.status).toBe("rejected");
+      expect(body.review_comment).toBeNull();
     });
 
     test("returns 404 for unknown draft", async () => {

@@ -134,6 +134,9 @@ class Draft(BaseModel):
     # Quality evaluation fields (Phase 2c)
     quality_score: int | None = None  # 0-100, from self-refine critique
     quality_issues: list[str] = Field(default_factory=list)  # e.g. ["no_hook", "too_long"]
+    review_outcome: str | None = None
+    review_comment: str | None = None
+    reviewed_at: datetime | None = None
 
 
 class ContentQueue(BaseModel):

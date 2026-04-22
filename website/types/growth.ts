@@ -17,6 +17,9 @@ export interface Draft {
   link: string | null;
   status: string;
   scheduled_at: string | null;
+  review_outcome?: string | null;
+  review_comment?: string | null;
+  reviewed_at?: string | null;
 }
 
 export interface ContentQueue {

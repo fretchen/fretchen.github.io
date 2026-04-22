@@ -1,6 +1,7 @@
 """Pydantic models for Growth Agent state."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -38,7 +39,7 @@ class PageForSocial(BaseModel):
     url: str
     title: str
     reason: str
-    selection_type: str | None = None
+    selection_type: Literal["proven", "exploratory"] | None = None
 
 
 class LLMAnalysis(BaseModel):

@@ -38,6 +38,7 @@ class PageForSocial(BaseModel):
     url: str
     title: str
     reason: str
+    selection_type: str | None = None
 
 
 class LLMAnalysis(BaseModel):

@@ -195,7 +195,7 @@ export async function approveDraft(
 
 export async function rejectDraft(id: string, reviewComment?: string): Promise<Draft> {
   const queue = await getContentQueue();
-  const result = findAndRemoveDraft(queue, id, ["drafts"]);
+  const result = findAndRemoveDraft(queue, id, ["drafts", "approved"]);
   if (!result) {
     throw new NotFoundError(`Draft not found: ${id}`);
   }

@@ -155,7 +155,8 @@ export async function handle(
       const id = decodeURIComponent(approveMatch[1]);
       const body = parseJsonBody(event.body);
       const scheduledAt = typeof body?.scheduled_at === "string" ? body.scheduled_at : undefined;
-      const reviewComment = typeof body?.review_comment === "string" ? body.review_comment : undefined;
+      const reviewComment =
+        typeof body?.review_comment === "string" ? body.review_comment : undefined;
       const draft = await approveDraft(id, scheduledAt, reviewComment);
       return jsonResponse(200, draft);
     }
@@ -165,7 +166,8 @@ export async function handle(
     if (method === "POST" && rejectMatch) {
       const id = decodeURIComponent(rejectMatch[1]);
       const body = parseJsonBody(event.body);
-      const reviewComment = typeof body?.review_comment === "string" ? body.review_comment : undefined;
+      const reviewComment =
+        typeof body?.review_comment === "string" ? body.review_comment : undefined;
       const draft = await rejectDraft(id, reviewComment);
       return jsonResponse(200, draft);
     }

@@ -130,9 +130,7 @@ def get_hook_quality_metric(model: DeepEvalBaseLLM | None = None) -> GEval:
     )
 
 
-def get_platform_fit_metric(
-    channel: str, model: DeepEvalBaseLLM | None = None
-) -> GEval:
+def get_platform_fit_metric(channel: str, model: DeepEvalBaseLLM | None = None) -> GEval:
     """Metric: Does the post follow platform conventions?"""
     if channel == "mastodon":
         criteria = (
@@ -211,9 +209,7 @@ def get_faithfulness_metric(model: DeepEvalBaseLLM | None = None) -> GEval:
 class TestGoldenSetQuality:
     """Test that good posts pass quality metrics and bad posts fail."""
 
-    def test_good_posts_have_hooks(
-        self, good_posts: list[dict], ionos_llm: IONOSEvalLLM
-    ) -> None:
+    def test_good_posts_have_hooks(self, good_posts: list[dict], ionos_llm: IONOSEvalLLM) -> None:
         """Good posts should have strong opening hooks."""
         metric = get_hook_quality_metric(model=ionos_llm)
         test_cases = [
@@ -225,13 +221,9 @@ class TestGoldenSetQuality:
         ]
         results = evaluate(test_cases, [metric])
         passed = sum(1 for r in results.test_results if r.success)
-        assert (
-            passed >= 2
-        ), f"Expected at least 2/3 good posts to have hooks, got {passed}"
+        assert passed >= 2, f"Expected at least 2/3 good posts to have hooks, got {passed}"
 
-    def test_bad_posts_lack_hooks(
-        self, bad_posts: list[dict], ionos_llm: IONOSEvalLLM
-    ) -> None:
+    def test_bad_posts_lack_hooks(self, bad_posts: list[dict], ionos_llm: IONOSEvalLLM) -> None:
         """Bad posts should fail the hook quality metric."""
         metric = get_hook_quality_metric(model=ionos_llm)
         test_cases = [
@@ -243,13 +235,9 @@ class TestGoldenSetQuality:
         ]
         results = evaluate(test_cases, [metric])
         failed = sum(1 for r in results.test_results if not r.success)
-        assert (
-            failed >= 1
-        ), f"Expected at least 1/2 bad posts to fail hook, got {failed}"
+        assert failed >= 1, f"Expected at least 1/2 bad posts to fail hook, got {failed}"
 
-    def test_platform_fit_mastodon(
-        self, good_posts: list[dict], ionos_llm: IONOSEvalLLM
-    ) -> None:
+    def test_platform_fit_mastodon(self, good_posts: list[dict], ionos_llm: IONOSEvalLLM) -> None:
         """Good Mastodon posts should follow platform conventions."""
         mastodon_posts = [p for p in good_posts if p["channel"] == "mastodon"][:2]
         if not mastodon_posts:
@@ -265,13 +253,9 @@ class TestGoldenSetQuality:
         ]
         results = evaluate(test_cases, [metric])
         passed = sum(1 for r in results.test_results if r.success)
-        assert (
-            passed >= 1
-        ), "Expected at least 1 good Mastodon post to pass platform fit"
+        assert passed >= 1, "Expected at least 1 good Mastodon post to pass platform fit"
 
-    def test_platform_fit_bluesky(
-        self, good_posts: list[dict], ionos_llm: IONOSEvalLLM
-    ) -> None:
+    def test_platform_fit_bluesky(self, good_posts: list[dict], ionos_llm: IONOSEvalLLM) -> None:
         """Good Bluesky posts should follow platform conventions."""
         bluesky_posts = [p for p in good_posts if p["channel"] == "bluesky"][:2]
         if not bluesky_posts:

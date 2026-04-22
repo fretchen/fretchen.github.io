@@ -482,11 +482,7 @@ function DraftCardView({
                   </>
                 )}
                 {draft.status !== "rejected" && draft.status !== "published" && (
-                  <button
-                    className={`${actionButton} ${rejectButton}`}
-                    onClick={handleReject}
-                    disabled={busy}
-                  >
+                  <button className={`${actionButton} ${rejectButton}`} onClick={handleReject} disabled={busy}>
                     Reject
                   </button>
                 )}

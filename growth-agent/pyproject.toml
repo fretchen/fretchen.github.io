@@ -20,6 +20,7 @@ dev = [
     "ipykernel>=6.0",
     "python-dotenv>=1.0",
     "eth-account>=0.13.7",
+    "deepeval>=2.0",
 ]
 
 [tool.ruff]
@@ -33,8 +34,20 @@ select = ["E", "F", "I", "W"]
 [tool.pytest.ini_options]
 testpaths = ["test"]
 pythonpath = ["."]
+addopts = "-m 'not llm_eval'"
+markers = [
+    "llm_eval: expensive LLM-based evaluation tests (deselected by default)",
+]
 
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "deepeval.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "test_post_quality"
+ignore_errors = true

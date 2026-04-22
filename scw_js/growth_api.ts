@@ -154,7 +154,10 @@ export async function handle(
     if (method === "POST" && approveMatch) {
       const id = decodeURIComponent(approveMatch[1]);
       const body = parseJsonBody(event.body);
-      const draft = await approveDraft(id, body?.scheduled_at);
+      const scheduledAt = typeof body?.scheduled_at === "string" ? body.scheduled_at : undefined;
+      const reviewComment =
+        typeof body?.review_comment === "string" ? body.review_comment : undefined;
+      const draft = await approveDraft(id, scheduledAt, reviewComment);
       return jsonResponse(200, draft);
     }
 
@@ -162,7 +165,10 @@ export async function handle(
     const rejectMatch = path.match(/^drafts\/(.+)\/reject$/);
     if (method === "POST" && rejectMatch) {
       const id = decodeURIComponent(rejectMatch[1]);
-      const draft = await rejectDraft(id);
+      const body = parseJsonBody(event.body);
+      const reviewComment =
+        typeof body?.review_comment === "string" ? body.review_comment : undefined;
+      const draft = await rejectDraft(id, reviewComment);
       return jsonResponse(200, draft);
     }
 

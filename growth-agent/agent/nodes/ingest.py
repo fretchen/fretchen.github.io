@@ -14,6 +14,8 @@ from agent.umami_client import UmamiClient, ms_timestamp
 
 logger = logging.getLogger("growth-agent")
 
+TOP_PAGES_LIMIT = 50
+
 
 def ingest_node(state: AgentState) -> dict:
     """LangGraph node: ingest analytics, update state."""
@@ -39,7 +41,7 @@ def ingest_analytics(storage) -> Insights:
         end_at = ms_timestamp(days_ago=0)
 
         stats = umami.get_stats(start_at, end_at)
-        top_pages = umami.get_metrics(start_at, end_at, "path", limit=20)
+        top_pages = umami.get_metrics(start_at, end_at, "path", limit=TOP_PAGES_LIMIT)
         top_referrers = umami.get_metrics(start_at, end_at, "referrer", limit=10)
         top_events = umami.get_metrics(start_at, end_at, "event", limit=20)
 

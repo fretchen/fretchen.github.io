@@ -1,6 +1,7 @@
 """Pydantic models for Growth Agent state."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -38,6 +39,7 @@ class PageForSocial(BaseModel):
     url: str
     title: str
     reason: str
+    selection_type: Literal["proven", "exploratory"] | None = None
 
 
 class LLMAnalysis(BaseModel):
@@ -131,6 +133,12 @@ class Draft(BaseModel):
     link: str | None = None
     status: str = "pending_approval"
     scheduled_at: datetime | None = None
+    # Quality evaluation fields (Phase 2c)
+    quality_score: int | None = None  # 0-100, from self-refine critique
+    quality_issues: list[str] = Field(default_factory=list)  # e.g. ["no_hook", "too_long"]
+    review_outcome: str | None = None
+    review_comment: str | None = None
+    reviewed_at: datetime | None = None
 
 
 class ContentQueue(BaseModel):
@@ -157,3 +165,24 @@ class ContentPlan(BaseModel):
     """Plan output: list of items to generate drafts for."""
 
     items: list[ContentPlanItem] = Field(default_factory=list)
+
+
+class DraftCritique(BaseModel):
+    """Structured critique output for self-refine pattern."""
+
+    has_strong_hook: bool = Field(description="Does the first line grab attention?")
+    follows_platform_conventions: bool = Field(description="Correct hashtag usage, length, tone?")
+    mentions_specific_insight: bool = Field(
+        description="Does it reference a concrete article insight?"
+    )
+    includes_link: bool = Field(description="Is the blog link present?")
+    appropriate_tone: bool = Field(description="Matches target audience and strategy tone?")
+    overall_score: int = Field(description="Quality score 0-100")
+    issues: list[str] = Field(
+        default_factory=list,
+        description="List of specific issues: weak_hook, too_long, no_insight, wrong_tone, etc.",
+    )
+    suggested_improvement: str = Field(
+        default="",
+        description="Brief suggestion for how to improve the draft, if needed",
+    )

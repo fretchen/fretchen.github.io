@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from math import ceil
 
 from agent.models import (
     ContentPlan,
     ContentPlanItem,
     ContentQueue,
     LLMAnalysis,
+    PageForSocial,
 )
 from agent.page_meta import fetch_pages_meta
 from agent.state import AgentState
@@ -19,6 +19,73 @@ from agent.storage import load_model
 logger = logging.getLogger("growth-agent")
 
 PIPELINE_TARGET = 10
+EXPLORATORY_FRACTION = 0.3
+
+
+def _dedupe_pages(pages: list[PageForSocial]) -> list[PageForSocial]:
+    """Keep first occurrence of each URL."""
+    unique: list[PageForSocial] = []
+    seen_urls: set[str] = set()
+    for page in pages:
+        if page.url in seen_urls:
+            continue
+        seen_urls.add(page.url)
+        unique.append(page)
+    return unique
+
+
+def _select_pages_to_promote(candidates: list[PageForSocial], needed: int) -> list[PageForSocial]:
+    """Select a broader mix of proven and exploratory pages.
+
+    Prefer unique URLs first. Only fall back to duplicates when the candidate
+    pool is too small to fill the pipeline.
+    """
+    if needed <= 0 or not candidates:
+        return []
+
+    unique_candidates = _dedupe_pages(candidates)
+    proven = [p for p in unique_candidates if p.selection_type != "exploratory"]
+    exploratory = [p for p in unique_candidates if p.selection_type == "exploratory"]
+
+    target_unique = min(len(unique_candidates), needed)
+    exploratory_target = 0
+    if proven and exploratory:
+        exploratory_target = min(
+            len(exploratory),
+            max(1, round(target_unique * EXPLORATORY_FRACTION)),
+        )
+    elif exploratory:
+        exploratory_target = min(len(exploratory), target_unique)
+    proven_target = min(len(proven), target_unique - exploratory_target)
+
+    selected: list[PageForSocial] = []
+    proven_pool = proven[:proven_target]
+    exploratory_pool = exploratory[:exploratory_target]
+
+    while len(selected) < target_unique and (proven_pool or exploratory_pool):
+        if proven_pool:
+            selected.append(proven_pool.pop(0))
+        if len(selected) >= target_unique:
+            break
+        if proven_pool:
+            selected.append(proven_pool.pop(0))
+        if len(selected) >= target_unique:
+            break
+        if exploratory_pool:
+            selected.append(exploratory_pool.pop(0))
+
+    remaining_unique = [p for p in unique_candidates if p.url not in {s.url for s in selected}]
+    for page in remaining_unique:
+        if len(selected) >= target_unique:
+            break
+        selected.append(page)
+
+    fallback_index = 0
+    while len(selected) < needed and candidates:
+        selected.append(candidates[fallback_index % len(candidates)])
+        fallback_index += 1
+
+    return selected
 
 
 def plan_node(state: AgentState) -> dict:
@@ -109,7 +176,7 @@ def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
         storage.write("content_plan.json", plan)
         return plan
 
-    pages_to_promote = analysis.best_pages_for_social[: ceil(needed / 2)]
+    pages_to_promote = _select_pages_to_promote(analysis.best_pages_for_social, needed)
     if not pages_to_promote:
         logger.info("No pages to promote")
         plan = ContentPlan()
@@ -120,7 +187,7 @@ def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
     schedule = plan_draft_schedule(queue, needed)
 
     # Fetch descriptions for pages to promote
-    page_urls = [p.url for p in pages_to_promote]
+    page_urls = list(dict.fromkeys(p.url for p in pages_to_promote))
     page_metas = fetch_pages_meta(page_urls)
 
     items: list[ContentPlanItem] = []
@@ -134,21 +201,17 @@ def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
         page_desc = (meta.description or "(no description)") if meta else "(no description)"
         page_title = (meta.title or page.title) if meta else page.title
 
-        for _ in range(2):  # up to 2 items per page (one per channel)
-            if len(items) >= needed:
-                break
-
-            channel, slot = next(schedule_iter)
-            items.append(
-                ContentPlanItem(
-                    page_url=page.url,
-                    page_title=page_title,
-                    page_description=page_desc,
-                    reason=page.reason,
-                    channel=channel,
-                    scheduled_at=slot,
-                )
+        channel, slot = next(schedule_iter)
+        items.append(
+            ContentPlanItem(
+                page_url=page.url,
+                page_title=page_title,
+                page_description=page_desc,
+                reason=page.reason,
+                channel=channel,
+                scheduled_at=slot,
             )
+        )
 
     plan = ContentPlan(items=items)
     storage.write("content_plan.json", plan)

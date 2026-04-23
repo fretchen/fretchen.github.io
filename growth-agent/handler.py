@@ -2,13 +2,11 @@
 
 Triggered daily at 08:00 UTC via Scaleway Container Cron (HTTP POST to /).
 
-Daily tasks:
-  - Analytics ingest (Umami + social metrics)
-  - Publish approved drafts where scheduled_at <= now
-  - Pipeline refill: generate drafts if pipeline < PIPELINE_TARGET
-
-Weekly tasks (Monday only):
-  - LLM insight generation (persisted to S3 for daily reuse)
+Run sequence:
+    - Insights node (best-effort)
+    - Plan node (simple weighted random planner)
+    - Draft generation from content plan
+    - Publish approved drafts where scheduled_at <= now
 """
 
 from __future__ import annotations
@@ -47,13 +45,11 @@ def _get_storage() -> S3Storage:
 def handle(event, _context):
     """Cron entry point — invokes the LangGraph workflow.
 
-    Daily (every run):
-      1. Analytics ingest
-      2. Publish approved drafts
-      3. Pipeline refill (generate drafts if pipeline < PIPELINE_TARGET)
-
-    Weekly (Monday only):
-      4. LLM insight generation (persisted for daily reuse)
+        Every run:
+            1. Insights (best effort)
+            2. Plan creation
+            3. Draft generation
+            4. Publishing
     """
     logger.info("Growth Agent cron started")
 
@@ -65,10 +61,8 @@ def handle(event, _context):
 
     crashed = False
     result = {
-        "analytics": False,
         "published": [],
         "insights": False,
-        "strategy_updated": False,
         "plan_created": False,
         "drafts_created": 0,
     }
@@ -78,20 +72,16 @@ def handle(event, _context):
             {
                 "storage": storage,
                 "is_monday": now.weekday() == 0,
-                "analytics_ok": False,
                 "published_ids": [],
                 "insights_ok": False,
-                "strategy_updated": False,
                 "plan_created": False,
                 "drafts_created": 0,
             }
         )
 
         result = {
-            "analytics": state.get("analytics_ok", False),
             "published": state.get("published_ids", []),
             "insights": state.get("insights_ok", False),
-            "strategy_updated": state.get("strategy_updated", False),
             "plan_created": state.get("plan_created", False),
             "drafts_created": state.get("drafts_created", 0),
         }

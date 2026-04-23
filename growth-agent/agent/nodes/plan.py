@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import logging
+import math
+import os
+import random
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlsplit, urlunsplit
 
 from agent.models import (
     ContentPlan,
     ContentPlanItem,
     ContentQueue,
-    LLMAnalysis,
-    PageForSocial,
-    PlanningMemory,
-    PlanningMemoryEntry,
-    Strategy,
 )
 from agent.page_meta import fetch_pages_meta
 from agent.state import AgentState
@@ -22,135 +21,109 @@ from agent.storage import load_model
 logger = logging.getLogger("growth-agent")
 
 PIPELINE_TARGET = 10
-EXPLORATORY_FRACTION = 0.3
-PLANNING_MEMORY_MAX_ENTRIES = 50
+HALF_LIFE_DAYS = 30.0
+DEFAULT_CHANNELS = ["mastodon", "bluesky"]
+REGISTRY_KEYS = [
+    "simple_planner/registry_clean.json",
+    "simple_planner/registry.json",
+]
 
 
-def _dedupe_pages(pages: list[PageForSocial]) -> list[PageForSocial]:
-    """Keep first occurrence of each URL."""
-    unique: list[PageForSocial] = []
-    seen_urls: set[str] = set()
-    for page in pages:
-        if page.url in seen_urls:
+def _normalize_url(url: str) -> str:
+    parts = urlsplit(url.strip())
+    path = parts.path or "/"
+    if path != "/" and path.endswith("/"):
+        path = path[:-1]
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, "", ""))
+
+
+def _page_title_from_url(url: str) -> str:
+    path = urlsplit(url).path.strip("/")
+    if not path:
+        return "Home"
+    return path.split("/")[-1].replace("-", " ").title()
+
+
+def _load_registry_urls(storage) -> list[str]:
+    for key in REGISTRY_KEYS:
+        data = storage.read(key)
+        if isinstance(data, dict) and isinstance(data.get("urls"), list):
+            urls = [_normalize_url(u) for u in data["urls"] if isinstance(u, str) and u.strip()]
+            # Keep first occurrence only
+            seen: set[str] = set()
+            unique: list[str] = []
+            for u in urls:
+                if u in seen:
+                    continue
+                seen.add(u)
+                unique.append(u)
+            return unique
+    return []
+
+
+def _last_published_days(queue: ContentQueue, now: datetime) -> dict[str, float]:
+    """Return days since last publication per page URL from queue.published."""
+    latest_by_url: dict[str, datetime] = {}
+    for draft in queue.published:
+        if not draft.link:
             continue
-        seen_urls.add(page.url)
-        unique.append(page)
-    return unique
-
-
-def _select_pages_to_promote(
-    candidates: list[PageForSocial], needed: int, exploratory_fraction: float
-) -> list[PageForSocial]:
-    """Select a broader mix of proven and exploratory pages.
-
-    Prefer unique URLs first. Only fall back to duplicates when the candidate
-    pool is too small to fill the pipeline.
-    """
-    if needed <= 0 or not candidates:
-        return []
-
-    unique_candidates = _dedupe_pages(candidates)
-    proven = [p for p in unique_candidates if p.selection_type != "exploratory"]
-    exploratory = [p for p in unique_candidates if p.selection_type == "exploratory"]
-
-    target_unique = min(len(unique_candidates), needed)
-    exploratory_target = 0
-    if proven and exploratory:
-        exploratory_target = min(
-            len(exploratory),
-            max(1, round(target_unique * exploratory_fraction)),
-        )
-    elif exploratory:
-        exploratory_target = min(len(exploratory), target_unique)
-    proven_target = min(len(proven), target_unique - exploratory_target)
-
-    selected: list[PageForSocial] = []
-    proven_pool = proven[:proven_target]
-    exploratory_pool = exploratory[:exploratory_target]
-
-    while len(selected) < target_unique and (proven_pool or exploratory_pool):
-        if proven_pool:
-            selected.append(proven_pool.pop(0))
-        if len(selected) >= target_unique:
-            break
-        if proven_pool:
-            selected.append(proven_pool.pop(0))
-        if len(selected) >= target_unique:
-            break
-        if exploratory_pool:
-            selected.append(exploratory_pool.pop(0))
-
-    remaining_unique = [
-        p for p in unique_candidates if p.url not in {s.url for s in selected}
-    ]
-    for page in remaining_unique:
-        if len(selected) >= target_unique:
-            break
-        selected.append(page)
-
-    fallback_index = 0
-    while len(selected) < needed and candidates:
-        selected.append(candidates[fallback_index % len(candidates)])
-        fallback_index += 1
-
-    return selected
-
-
-def _collect_recent_urls(
-    queue: ContentQueue,
-    planning_memory: PlanningMemory,
-    now: datetime,
-    cooldown_days: int,
-) -> set[str]:
-    """Collect URLs that should be cooled down based on recent queue/memory usage."""
-    if cooldown_days <= 0:
-        return set()
-
-    cutoff = now - timedelta(days=cooldown_days)
-    recent_urls: set[str] = set()
-
-    for draft in queue.drafts + queue.approved + queue.published:
-        url = draft.link
-        if not url:
-            continue
+        page_url = _normalize_url(draft.link)
         ts = draft.scheduled_at or draft.created
-        if ts and ts >= cutoff:
-            recent_urls.add(url.split("?")[0])
+        if page_url not in latest_by_url or ts > latest_by_url[page_url]:
+            latest_by_url[page_url] = ts
 
-    for entry in planning_memory.entries:
-        if entry.run_at >= cutoff:
-            recent_urls.update(entry.selected_urls)
+    return {
+        page_url: (now - last_ts).total_seconds() / 86400.0
+        for page_url, last_ts in latest_by_url.items()
+    }
 
-    return recent_urls
+
+def _weight_for_days(t_days: float | None, half_life_days: float) -> float:
+    if t_days is None:
+        return 1.0
+    weight = 1.0 - math.pow(2.0, -t_days / half_life_days)
+    return max(0.0, weight)
 
 
-def _filter_recent_candidates(
-    candidates: list[PageForSocial], recent_urls: set[str]
-) -> tuple[list[PageForSocial], list[PageForSocial]]:
-    """Filter candidates that were recently used; return kept and blocked lists."""
-    kept: list[PageForSocial] = []
-    blocked: list[PageForSocial] = []
-    for page in candidates:
-        if page.url in recent_urls:
-            blocked.append(page)
-        else:
-            kept.append(page)
-    return kept, blocked
+def _weighted_draw(
+    registry_urls: list[str],
+    last_days_by_url: dict[str, float],
+    needed: int,
+    half_life_days: float,
+    seed: int | None,
+) -> list[dict[str, str | float | None]]:
+    weighted_candidates = [
+        {
+            "page_url": page_url,
+            "t_days": last_days_by_url.get(page_url),
+            "weight": _weight_for_days(last_days_by_url.get(page_url), half_life_days),
+        }
+        for page_url in registry_urls
+    ]
+
+    # If all weights are zero (edge case), fall back to uniform sampling.
+    if all(c["weight"] <= 0 for c in weighted_candidates):
+        for c in weighted_candidates:
+            c["weight"] = 1.0
+
+    rng = random.Random(seed)
+    chosen: list[dict[str, str | float | None]] = []
+    pool = weighted_candidates.copy()
+    for _ in range(min(needed, len(pool))):
+        weights = [float(c["weight"]) for c in pool]
+        picked = rng.choices(pool, weights=weights, k=1)[0]
+        chosen.append(picked)
+        pool = [c for c in pool if c["page_url"] != picked["page_url"]]
+
+    return chosen
 
 
 def plan_node(state: AgentState) -> dict:
     """LangGraph node: plan which pages to promote and when."""
     storage = state["storage"]
     try:
-        analysis_data = storage.read("llm_analysis.json")
-        if analysis_data:
-            analysis = LLMAnalysis.model_validate(analysis_data)
-            plan = create_plan(storage, analysis)
-            return {"plan_created": len(plan.items) > 0}
-        else:
-            logger.info("No saved LLM analysis — skipping planning")
-            storage.write("content_plan.json", ContentPlan())
-            return {"plan_created": False}
+        plan = create_plan(storage)
+        return {"plan_created": len(plan.items) > 0}
     except Exception:
         logger.exception("Plan creation failed")
         storage.write("content_plan.json", ContentPlan())
@@ -217,19 +190,10 @@ def plan_draft_schedule(
     return schedule
 
 
-def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
-    """Create a content plan: decide what to post, when, on which channel.
-
-    Checks pipeline depth, selects pages, schedules slots, fetches metadata.
-    Writes content_plan.json for the drafts node to consume.
-    """
+def create_plan(storage) -> ContentPlan:
+    """Create a content plan using half-life weighted random page sampling."""
     queue = load_model(storage, "content_queue.json", ContentQueue)
-    strategy = load_model(storage, "strategy.json", Strategy)
-    planning_memory = load_model(storage, "planning_memory.json", PlanningMemory)
 
-    # --- Pipeline depth check ---
-    # Exclude approved drafts due for publishing (scheduled_at <= now),
-    # since the publish node will remove them later in this same run.
     now = datetime.now(timezone.utc)
     future_approved = [
         d for d in queue.approved if d.scheduled_at and d.scheduled_at > now
@@ -242,114 +206,80 @@ def create_plan(storage, analysis: LLMAnalysis) -> ContentPlan:
         storage.write("content_plan.json", plan)
         return plan
 
-    recent_urls = _collect_recent_urls(
-        queue,
-        planning_memory,
-        now,
-        max(0, strategy.planning_cooldown_days),
-    )
-    filtered_candidates, blocked_candidates = _filter_recent_candidates(
-        analysis.best_pages_for_social,
-        recent_urls,
-    )
-    selection_candidates = filtered_candidates or analysis.best_pages_for_social
-
-    exploratory_fraction = strategy.planning_exploratory_fraction
-    if exploratory_fraction < 0:
-        exploratory_fraction = 0.0
-    if exploratory_fraction > 1:
-        exploratory_fraction = 1.0
-
-    pages_to_promote = _select_pages_to_promote(
-        selection_candidates,
-        needed,
-        exploratory_fraction,
-    )
-    if not pages_to_promote:
-        logger.info("No pages to promote")
+    registry_urls = _load_registry_urls(storage)
+    if not registry_urls:
+        logger.info("No registry URLs found, skipping planning")
         plan = ContentPlan()
         storage.write("content_plan.json", plan)
         return plan
 
-    # --- Plan schedule ---
-    schedule = plan_draft_schedule(queue, needed, channels=strategy.channels)
+    seed_str = os.environ.get("PLAN_RANDOM_SEED")
+    seed = int(seed_str) if seed_str else None
+    last_days_by_url = _last_published_days(queue, now)
+    chosen = _weighted_draw(
+        registry_urls,
+        last_days_by_url,
+        needed,
+        HALF_LIFE_DAYS,
+        seed,
+    )
 
-    # Fetch descriptions for pages to promote
-    page_urls = list(dict.fromkeys(p.url for p in pages_to_promote))
+    if not chosen:
+        logger.info("No pages sampled, skipping planning")
+        plan = ContentPlan()
+        storage.write("content_plan.json", plan)
+        return plan
+
+    schedule = plan_draft_schedule(queue, len(chosen), channels=DEFAULT_CHANNELS)
+
+    page_urls = [str(c["page_url"]) for c in chosen]
     page_metas = fetch_pages_meta(page_urls)
 
     items: list[ContentPlanItem] = []
-    schedule_iter = iter(schedule)
-
-    for page in pages_to_promote:
-        if len(items) >= needed:
-            break
-
-        meta = page_metas.get(page.url)
+    for sampled, (channel, slot) in zip(chosen, schedule):
+        page_url = str(sampled["page_url"])
+        meta = page_metas.get(page_url)
         page_desc = (
             (meta.description or "(no description)") if meta else "(no description)"
         )
-        page_title = (meta.title or page.title) if meta else page.title
-
-        channel, slot = next(schedule_iter)
+        page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
+        t_days = sampled["t_days"]
+        if t_days is None:
+            reason = "random draw from registry (unpublished page)"
+        else:
+            reason = (
+                "random draw with half-life weighting "
+                f"(last published {float(t_days):.1f} days ago)"
+            )
         items.append(
             ContentPlanItem(
-                page_url=page.url,
+                page_url=page_url,
                 page_title=page_title,
                 page_description=page_desc,
-                reason=page.reason,
+                reason=reason,
                 channel=channel,
                 scheduled_at=slot,
             )
         )
 
-    selected_urls = list(dict.fromkeys([item.page_url for item in items]))
-    selected_exploratory = sum(
-        1 for p in pages_to_promote if p.selection_type == "exploratory"
-    )
     diagnostics: dict[str, int | float | bool | str] = {
         "needed": needed,
         "existing_pipeline": existing,
-        "candidate_total": len(analysis.best_pages_for_social),
-        "candidate_after_cooldown": len(filtered_candidates),
-        "blocked_recent": len({p.url for p in blocked_candidates}),
+        "registry_total": len(registry_urls),
+        "history_pages": len(last_days_by_url),
         "selected_items": len(items),
-        "selected_unique_urls": len(selected_urls),
-        "selected_exploratory": selected_exploratory,
-        "selected_proven": max(0, len(pages_to_promote) - selected_exploratory),
-        "cooldown_days": max(0, strategy.planning_cooldown_days),
-        "exploratory_fraction": exploratory_fraction,
-        "used_fallback_candidates": bool(
-            not filtered_candidates and blocked_candidates
-        ),
-        "strategy_channels": ",".join(strategy.channels),
+        "selected_unique_urls": len({i.page_url for i in items}),
+        "half_life_days": HALF_LIFE_DAYS,
+        "channels": ",".join(DEFAULT_CHANNELS),
     }
 
     plan = ContentPlan(items=items, diagnostics=diagnostics)
     storage.write("content_plan.json", plan)
 
-    planning_memory.entries.append(
-        PlanningMemoryEntry(
-            run_at=now,
-            needed=needed,
-            selected_urls=selected_urls,
-            blocked_recent_urls=sorted({p.url for p in blocked_candidates}),
-            policy_snapshot={
-                "planning_cooldown_days": max(0, strategy.planning_cooldown_days),
-                "planning_exploratory_fraction": exploratory_fraction,
-                "channels": ",".join(strategy.channels),
-            },
-            diagnostics=diagnostics,
-        )
-    )
-    planning_memory.entries = planning_memory.entries[-PLANNING_MEMORY_MAX_ENTRIES:]
-    storage.write("planning_memory.json", planning_memory)
-
     logger.info(
-        "Content plan created with %d items (pipeline: %d/%d, blocked_recent=%d)",
+        "Content plan created with %d items (pipeline: %d/%d)",
         len(items),
         existing,
         PIPELINE_TARGET,
-        diagnostics["blocked_recent"],
     )
     return plan

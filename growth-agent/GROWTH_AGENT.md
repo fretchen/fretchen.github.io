@@ -55,6 +55,358 @@ START → [Ingest] → (Monday? → [Insights] → [Strategy]) → [Plan] → [D
 > This separation enables strategy to influence planning without touching content
 > generation, and makes each node independently testable.
 
+## 3.1 IST Analysis: `insights`, `strategy`, `plan`
+
+This section documents the current (as-is) behavior of the three core nodes,
+which files they use, and how well they map to the originally intended OODA
+loop.
+
+### Node responsibilities and file usage (as-is)
+
+| Node | OODA role | What it does today | Reads | Writes | Code entrypoint |
+|---|---|---|---|---|---|
+| `insights` | **Orient** | Interprets latest analytics/social data with LLM, proposes `best_pages_for_social`, `top_topics`, `content_gaps`, and `growth_opportunities` | `insights.json`, `strategy.json` | `llm_analysis.json`, updated `insights.json` | `agent/nodes/insights.py` |
+| `strategy` | **Decide** (strategic) | Asks LLM whether to adjust strategy and applies at most one pillar replacement plus one posting frequency change | `insights.json`, `strategy.json` | updated `strategy.json` (with `changes` audit log) | `agent/nodes/strategy.py` |
+| `plan` | **Decide** (operational) | Computes pipeline depth, selects pages from `llm_analysis`, assigns channel/time slots, and writes a concrete plan for draft generation | `llm_analysis.json`, `content_queue.json` | `content_plan.json` | `agent/nodes/plan.py` |
+
+Additional runtime dependencies:
+
+- `agent/graph.py`: controls routing (`ingest -> insights -> strategy -> plan` on Monday, otherwise `ingest -> plan`).
+- `agent/storage.py`: `load_model()` + storage read/write abstraction used by all nodes.
+- `agent/models.py`: schema contracts (`LLMAnalysis`, `Strategy`, `ContentQueue`, `ContentPlan`).
+- `agent/page_meta.py`: used by `insights` and `plan` to fetch page metadata.
+- `agent/llm_client.py`: used by `insights` and `strategy` only.
+
+### Detailed current behavior per node
+
+#### `insights` node (Orient)
+
+1. Loads `insights.json` and `strategy.json`.
+2. Builds a broad analytics prompt (top pages, referrers, events, social summary).
+3. Calls LLM with `LLMAnalysis` schema.
+4. Persists full model output to `llm_analysis.json`.
+5. Updates `insights.json` with `growth_opportunities` and `last_analysis`.
+
+Role fulfillment (as-is):
+
+- Strong on interpretation/synthesis of observed data.
+- Uses strategy context in the prompt, so orientation is not purely reactive.
+- Diversity intent exists in prompt instructions, but enforcement is not hard at this step.
+
+#### `strategy` node (Decide, strategic)
+
+1. Loads `insights.json` and current `strategy.json`.
+2. Calls LLM with conservative adjustment rules.
+3. Applies up to one content pillar replacement and up to one frequency change.
+4. Appends `StrategyChange` entries with timestamp/reason.
+5. Persists updated `strategy.json` only if a change is applied.
+
+Role fulfillment (as-is):
+
+- Clearly acts as a strategic decision layer.
+- Has a bounded-change policy and audit trail.
+- Produces durable policy state (`strategy.json`), but downstream operational enforcement is partial.
+
+#### `plan` node (Decide, operational)
+
+1. Loads `llm_analysis.json` and queue state (`content_queue.json`).
+2. Computes `needed` based on pipeline depth (`drafts` + future `approved`).
+3. Selects candidate pages using local heuristic (`proven`/`exploratory` mix + dedupe in candidate set).
+4. Builds schedule (alternating channel, one-day spacing).
+5. Builds `ContentPlanItem[]` and writes `content_plan.json`.
+
+Role fulfillment (as-is):
+
+- Clearly turns analysis into executable operational decisions.
+- Deterministic scheduling and pipeline-fill behavior are implemented.
+- Selection focuses on current candidate list; history-aware anti-repeat guarantees are limited.
+
+### Flow visualization (current implementation)
+
+```mermaid
+flowchart TD
+  A[ingest node] --> B{Monday?}
+  B -- yes --> C[insights node]
+  B -- no --> E[plan node]
+  C --> D[strategy node]
+  D --> E
+  E --> F[drafts node]
+  F --> G[publish node]
+
+  H[(insights.json)] --> C
+  I[(strategy.json)] --> C
+  C --> J[(llm_analysis.json)]
+  C --> H
+
+  H --> D
+  I --> D
+  D --> I
+
+  J --> E
+  K[(content_queue.json)] --> E
+  E --> L[(content_plan.json)]
+```
+
+### OODA fit: precise IST + GAP
+
+#### Intended mapping (documented)
+
+- Observe: `ingest`
+- Orient: `insights`
+- Decide: `strategy` + `plan`
+- Act: `drafts` + `publish`
+
+#### As-is fit
+
+1. **Observe -> Orient** is present and functional: `insights` consumes observed data and transforms it into structured interpretation.
+2. **Orient -> Decide (strategic)** is present and functional: `strategy` applies bounded, auditable policy changes.
+3. **Decide (operational) -> Act** is present and functional: `plan` emits concrete, schedulable work for `drafts`/`publish`.
+
+#### Gaps against a fully closed OODA decision loop
+
+1. **Strategic decision propagation gap**: `strategy.json` is updated, but `plan` relies primarily on `llm_analysis.json` + queue state and does not consume strategy as a strict operational policy contract.
+2. **Decision traceability gap**: there is no explicit persisted explanation linking each `content_plan.json` item back to strategy constraints vs. insights evidence.
+3. **History-aware decision guarantee gap**: operational selection enforces local candidate heuristics, but does not enforce a strong cross-run anti-repeat policy over published history.
+
+Conclusion (as-is): the architecture follows OODA structurally, but the Decide phase is split into strategic and operational layers with only partial hard coupling between them.
+
+## 3.2 Memory Handling in Orient/Decide (IS vs SHOULD)
+
+This section focuses only on memory handling in the Orient (`insights`) and
+Decide (`strategy`, `plan`) phases.
+
+Scope:
+
+- IS analysis: current persisted state and read/write flows.
+- SHOULD analysis: conceptual target shape based on LangChain memory concepts
+  (short-term state + long-term memory store with semantic, episodic, and
+  procedural memory).
+- Gap analysis: biggest gaps only, no implementation recommendations.
+
+### Memory model (IS)
+
+Current memory is JSON-file centric and node-local:
+
+- `insights` reads `insights.json` and `strategy.json`, then writes
+  `llm_analysis.json` and updates `insights.json`.
+- `strategy` reads `insights.json` and `strategy.json`, then conditionally writes
+  `strategy.json`.
+- `plan` reads `llm_analysis.json` and `content_queue.json`, then writes
+  `content_plan.json`.
+
+Properties of the current model:
+
+- Persistence exists (files in S3/local), but memory is mostly artifact-based.
+- There is no explicit memory taxonomy (semantic/episodic/procedural) in storage.
+- There is no explicit retrieval layer; each node directly loads specific files.
+- Cross-node state transfer is file-to-file, not namespace/query-based memory recall.
+
+### Memory flow (IS) - detailed graph
+
+```mermaid
+flowchart LR
+  subgraph O[Orient: insights node]
+    O1[Read insights.json]
+    O2[Read strategy.json]
+    O3[LLM interpretation]
+    O4[Write llm_analysis.json]
+    O5[Update insights.json]
+    O1 --> O3
+    O2 --> O3
+    O3 --> O4
+    O3 --> O5
+  end
+
+  subgraph D1[Decide: strategy node]
+    S1[Read insights.json]
+    S2[Read strategy.json]
+    S3[LLM adjustment decision]
+    S4[Update strategy.json]
+    S1 --> S3
+    S2 --> S3
+    S3 --> S4
+  end
+
+  subgraph D2[Decide: plan node]
+    P1[Read llm_analysis.json]
+    P2[Read content_queue.json]
+    P3[Heuristic selection + scheduling]
+    P4[Write content_plan.json]
+    P1 --> P3
+    P2 --> P3
+    P3 --> P4
+  end
+
+  O5 --> S1
+  O4 --> P1
+  S4 -. weak/indirect influence .-> P3
+```
+
+### Memory model (SHOULD, conceptual)
+
+Based on LangChain memory concepts, orient/decide memory ideally has two layers:
+
+1. Short-term memory (thread/run scoped state):
+  per-run working state used by nodes during one invocation.
+2. Long-term memory (cross-run store, namespaced):
+  persistent memory with explicit memory types.
+
+Conceptual long-term memory types for this workflow:
+
+- Semantic memory (facts): topic performance facts, stable page/topic metadata,
+  recurring audience signals.
+- Episodic memory (experiences): prior planning/publishing episodes, selected
+  topics/channels/timing and observed outcomes.
+- Procedural memory (rules): strategy and planning constraints (policy-level
+  rules and stable operating instructions).
+
+### Memory flow (SHOULD, conceptual graph)
+
+```mermaid
+flowchart LR
+  subgraph ST[Short-term memory: run state]
+    ST1[Observe snapshot]
+    ST2[Orient working context]
+    ST3[Decide working context]
+  end
+
+  subgraph LT[Long-term memory store: namespaced]
+    M1[Semantic memory\nFacts and concepts]
+    M2[Episodic memory\nPast runs and outcomes]
+    M3[Procedural memory\nRules and policies]
+  end
+
+  subgraph O2[Orient]
+    O21[Read ST + recall LT semantic/episodic/procedural]
+    O22[Generate interpretation and candidate set]
+    O23[Write back new facts/episode signals]
+    O21 --> O22 --> O23
+  end
+
+  subgraph D3[Decide: strategy + plan]
+    D31[Read ST + recall LT]
+    D32[Apply procedural rules + episodic context]
+    D33[Emit decisions and plan]
+    D34[Write decision trace as episodic memory]
+    D31 --> D32 --> D33 --> D34
+  end
+
+  ST1 --> ST2 --> ST3
+  M1 --> O21
+  M2 --> O21
+  M3 --> O21
+  M1 --> D31
+  M2 --> D31
+  M3 --> D31
+  O23 --> M1
+  O23 --> M2
+  D34 --> M2
+```
+
+### Biggest gaps (IS vs SHOULD)
+
+1. Memory taxonomy gap:
+  current storage does not explicitly separate semantic, episodic, and
+  procedural memory; information is spread across operational JSON artifacts.
+2. Retrieval gap:
+  orient/decide do not perform explicit memory recall across namespaces/types;
+  they load fixed files only.
+3. Strategy-to-plan transmission gap:
+  strategic memory (`strategy.json`) is not consumed by `plan` as a strict
+  decision policy input.
+4. Episodic continuity gap:
+  there is no explicit decision-trace memory linking prior decisions,
+  rationales, and outcomes into reusable episodic context for the next run.
+5. Memory write-path clarity gap:
+  writes are artifact updates (`*.json`) but not clearly modeled as hot-path vs
+  background memory formation with typed memory objectives.
+6. Cross-run grounding gap:
+  plan decisions are grounded mainly in latest analysis artifact and queue state,
+  not in a first-class long-term memory retrieval step.
+
+## 3.3 Priority Fixes and Complexity-Benefit Analysis (Orient/Decide Memory)
+
+This section prioritizes the biggest problems to fix now, compares solution
+options by implementation complexity vs expected benefit, and identifies the
+closest KISS path for closing the most critical gaps.
+
+### Biggest problems to fix first (priority order)
+
+1. Strategy-to-plan transmission gap
+  The strategic memory exists (`strategy.json`) but is not used by plan as a
+  strict decision policy input. This weakens the entire Decide phase.
+2. Episodic continuity gap
+  There is no explicit memory of prior planning decisions and outcomes that can
+  be recalled in later runs.
+3. Cross-run grounding gap
+  Plan is grounded mostly in current `llm_analysis.json` + queue state, not in
+  explicit long-term memory recall.
+4. Retrieval gap
+  Orient/Decide nodes load fixed files directly and cannot query memory by type
+  or intent.
+5. Memory write-path clarity gap
+  Memory updates are not modeled explicitly as hot-path vs background memory
+  writes.
+6. Memory taxonomy gap
+  Semantic, episodic, and procedural memory are not explicitly separated.
+
+### Option analysis by complexity vs benefit
+
+Scale used:
+
+- Complexity: Low / Medium / High
+- Benefit: Low / Medium / High
+
+| Option | Description | Complexity | Benefit | Biggest gaps addressed |
+|---|---|---|---|---|
+| A | Minimal policy propagation: strategy constraints are explicitly consumed in plan input before selection/scheduling | Low | High | #1, partially #3 |
+| B | Episodic decision log artifact (separate memory file for planning decisions + outcomes) used by orient/decide recall | Low-Medium | High | #2, #3, partially #4 |
+| C | Typed memory split over current JSON storage (semantic/episodic/procedural artifacts with explicit ownership) | Medium | Medium-High | #2, #5, #6 |
+| D | Add retrieval layer on top of file artifacts (namespace/type-based recall abstraction) | Medium | High | #3, #4, partially #6 |
+| E | Full long-term memory store with namespaced documents and search | High | High | #2, #3, #4, #5, #6 |
+| F | Introduce hot-path plus background memory writing model | High | Medium-High | #2, #5 |
+
+### Complexity-benefit interpretation
+
+1. Option A has the best immediate ratio:
+  low implementation complexity with direct impact on the most critical Decide
+  coupling gap.
+2. Option B is the next strongest leverage:
+  still relatively lightweight, but significantly improves cross-run continuity
+  and decision grounding.
+3. Option D adds strong architectural value at moderate cost:
+  improves memory recall quality without requiring a full memory platform
+  migration.
+4. Options E/F are powerful but not KISS:
+  high implementation effort and operational complexity.
+
+### Closest KISS path for biggest gap closure (analysis only)
+
+From a complexity-benefit perspective, the closest KISS path is:
+
+1. First layer: Option A
+  ensure strategy memory is a direct policy input to plan decisions.
+2. Second layer: Option B
+  establish explicit episodic continuity between runs.
+3. Third layer: Option D (only if needed)
+  add a lightweight retrieval abstraction when fixed-file loading becomes a
+  bottleneck.
+
+Why this is the closest KISS trajectory:
+
+- It addresses the top two high-impact gaps first (#1 and #2).
+- It preserves the current file-based architecture initially.
+- It delays high-complexity memory platform work until there is evidence that
+  lightweight recall abstractions are insufficient.
+
+### Summary table (what to fix now vs later)
+
+| Horizon | Focus | Rationale |
+|---|---|---|
+| Now | Strategy-to-plan propagation + episodic continuity | Highest impact, lowest complexity |
+| Next | Retrieval abstraction over memory artifacts | Improves grounding and recall quality |
+| Later | Full memory store + hot/background memory pipeline | High value, but only justified after simpler layers saturate |
+
 ## System Overview
 
 ```
@@ -888,6 +1240,223 @@ Only start this step after enough reviewed drafts exist.
 
 > **Note:** deepeval is already in place as an offline evaluation tool.
 > The next step in Phase 2c is to collect real human labels from the approval UI.
+
+## Phase 2d — Orient & Decide Memory
+
+Depends on Phase 2c (stable approval data flow and clear node boundaries).
+
+Goal: make memory handling in Orient/Decide explicit, traceable, and reusable
+across runs, while staying close to a KISS path identified in Section 3.3.
+
+### Why this phase
+
+The current OODA flow is structurally correct, but memory handling in
+`insights`, `strategy`, and `plan` is mostly artifact-based and weakly coupled.
+Phase 2d introduces explicit memory contracts for these nodes so decisions are
+grounded in:
+
+1. current observations,
+2. strategic policy memory,
+3. episodic decision history.
+
+### Target outcomes
+
+1. **Strategy-to-plan propagation is explicit**
+  `plan` must consume strategy policy memory as a direct input contract.
+2. **Episodic continuity exists across runs**
+  planning decisions and outcomes are persisted in a reusable memory artifact.
+3. **Orient/Decide memory boundaries are clear**
+  semantic, episodic, and procedural memory responsibilities are documented and
+  represented in storage artifacts.
+4. **Decision traceability is first-class**
+  each planned item can be traced to candidate evidence + policy constraints.
+
+### Scope (in / out)
+
+In scope:
+
+- Memory contracts for `insights`, `strategy`, `plan`
+- Strategy policy propagation into plan input
+- Episodic decision memory artifact and write/read flow
+- Decision diagnostics in planning output
+- Tests for continuity and determinism
+
+Out of scope:
+
+- Full memory-store platform migration
+- Vector search / semantic retrieval infrastructure
+- New graph nodes (no topology change in this phase)
+- Fully automated quality/topic gates
+
+### Memory contract for Orient/Decide (Phase 2d)
+
+#### Procedural memory (policy)
+
+- Primary artifact: `strategy.json`
+- New role: strict policy input for `plan` (not only context for `insights`)
+- Typical policy fields consumed by `plan`: channel mix, scheduling constraints,
+  diversity/cooldown parameters (where defined)
+
+#### Episodic memory (decision history)
+
+- New artifact: `planning_memory.json`
+- Contents (conceptual): prior plan decisions, selected/rejected candidate URLs,
+  policy snapshot used, and run metadata (timestamp/run id)
+- Consumers: `insights` (context), `plan` (anti-repeat + continuity)
+
+#### Semantic memory (facts)
+
+- Existing artifacts remain source of truth in this phase:
+  `insights.json`, `llm_analysis.json`, `content_queue.json`
+- No dedicated memory store yet; semantic memory remains file-based.
+
+### Steps
+
+- [ ] **Step 1: Define memory schemas (Pydantic)**
+  Add explicit schema models for planning memory and diagnostics in
+  `agent/models.py`.
+  Minimum fields:
+  - run metadata (`run_at`, optional `run_id`)
+  - selected items (url/channel/scheduled_at)
+  - blocked items with reason codes
+  - policy snapshot used for the run
+  - aggregate counters for diagnostics
+
+- [ ] **Step 2: Add planning memory artifact lifecycle**
+  In `agent/nodes/plan.py`, load `planning_memory.json` if present and write it
+  at the end of every successful planning run.
+  Keep append/rotate behavior simple and deterministic.
+
+- [ ] **Step 3: Strategy as strict plan input**
+  Ensure `plan` loads `strategy.json` directly and uses it as policy input
+  (not as optional context).
+  Persist the effective policy snapshot in planning memory and plan diagnostics.
+
+- [ ] **Step 4: Add episodic continuity in plan selection path**
+  Integrate prior decision history (`planning_memory.json` + queue state) into
+  candidate filtering/selection, with explicit reason tagging for blocked items.
+
+- [ ] **Step 5: Add plan diagnostics to output artifact**
+  Extend `content_plan.json` model/output with diagnostics that explain:
+  - candidate counts before/after filtering
+  - selected proven/exploratory counts
+  - policy parameters used
+  - fallback/degradation flags when constraints cannot be satisfied
+
+- [ ] **Step 6: Orient memory read integration**
+  In `agent/nodes/insights.py`, read a bounded slice of episodic planning
+  memory for context (recent runs only), and include it as explicit analysis
+  context for candidate generation.
+
+- [ ] **Step 7: Tests (unit + integration)**
+  Add tests for:
+  - deterministic plan decisions given same inputs
+  - strategy policy propagation into plan behavior
+  - episodic anti-repeat continuity across consecutive runs
+  - diagnostics completeness and reason-code correctness
+
+- [ ] **Step 8: Documentation and runbook updates**
+  Update architecture and state sections in this document to include
+  `planning_memory.json`, ownership, and read/write semantics for Orient/Decide.
+
+### Detailed implementation plan by work package
+
+#### WP-A — Data contracts and storage (foundation)
+
+Files:
+
+- `growth-agent/agent/models.py`
+- `growth-agent/agent/nodes/plan.py`
+
+Deliverables:
+
+1. `PlanningMemoryEntry` and `PlanningMemory` models.
+2. `PlanDiagnostics` model attached to `ContentPlan`.
+3. Read/write support for `planning_memory.json` in plan node path.
+
+Acceptance checks:
+
+1. Empty/missing memory file loads safely.
+2. New artifact is persisted on every planning run.
+3. Pydantic validation catches malformed memory records.
+
+#### WP-B — Decide memory coupling (strategy -> plan)
+
+Files:
+
+- `growth-agent/agent/nodes/plan.py`
+- `growth-agent/agent/models.py`
+
+Deliverables:
+
+1. Plan always loads strategy policy before candidate selection.
+2. Effective policy snapshot is persisted with the run decision record.
+3. Plan diagnostics reference policy values used for this run.
+
+Acceptance checks:
+
+1. Changing strategy policy changes plan behavior in tests.
+2. Plan record can be audited without recomputing hidden state.
+
+#### WP-C — Episodic continuity in Orient and Decide
+
+Files:
+
+- `growth-agent/agent/nodes/insights.py`
+- `growth-agent/agent/nodes/plan.py`
+
+Deliverables:
+
+1. Insights reads bounded recent planning episodes as context.
+2. Plan reads episodic history to enforce continuity constraints.
+3. Blocked/selected decisions are reason-coded in memory.
+
+Acceptance checks:
+
+1. Consecutive runs demonstrate continuity behavior in test fixtures.
+2. Reason codes are present and stable across runs.
+
+#### WP-D — Observability and verification
+
+Files:
+
+- `growth-agent/test/*`
+- `growth-agent/GROWTH_AGENT.md`
+
+Deliverables:
+
+1. Unit/integration tests for memory coupling and continuity.
+2. Updated architecture docs for the Orient/Decide memory model.
+
+Acceptance checks:
+
+1. Test suite remains green (`pytest`, `ruff`).
+2. Local diagnose flow exposes enough state to inspect memory behavior.
+
+### Suggested execution order (KISS-first)
+
+1. WP-A (contracts + persistence)
+2. WP-B (strategy-to-plan coupling)
+3. WP-C (episodic continuity)
+4. WP-D (tests + docs)
+
+This sequence follows the complexity-benefit analysis in Section 3.3: first fix
+the highest-impact, lowest-complexity gaps, then add broader recall continuity.
+
+### Verification criteria for Phase 2d completion
+
+1. Plan decisions are auditable via persisted diagnostics and episodic records.
+2. Strategy policy is a direct and test-verified plan input.
+3. Orient and Decide read from a shared episodic memory artifact.
+4. Consecutive runs show memory continuity in deterministic tests.
+5. Documentation reflects final memory contracts and ownership.
+
+### Exit criteria
+
+- [ ] `planning_memory.json` is in active use in Orient/Decide paths.
+- [ ] `content_plan.json` includes plan diagnostics.
+- [ ] Strategy-to-plan policy coupling verified by tests.
+- [ ] Updated architecture + state docs merged.
 
 ## Phase 3 — Refinements & Optimization
 

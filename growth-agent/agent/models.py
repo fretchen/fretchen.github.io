@@ -46,7 +46,9 @@ class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
     top_topics: list[str] = Field(description="Most popular topics based on page views")
-    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
+    traffic_sources: list[str] = Field(
+        description="Key traffic sources and their significance"
+    )
     best_pages_for_social: list[PageForSocial] = Field(
         description="Blog pages best suited for social media promotion"
     )
@@ -112,11 +114,15 @@ class Strategy(BaseModel):
         ]
     )
     channels: list[str] = Field(default_factory=lambda: ["mastodon", "bluesky"])
-    posting_frequency: dict[str, int] = Field(default_factory=lambda: {"mastodon": 4, "bluesky": 3})
+    posting_frequency: dict[str, int] = Field(
+        default_factory=lambda: {"mastodon": 4, "bluesky": 3}
+    )
     tone: str = "insightful, technical, opinionated, accessible"
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"
     website_url: str = "https://fretchen.eu"
+    planning_exploratory_fraction: float = 0.3
+    planning_cooldown_days: int = 14
     changes: list[StrategyChange] = Field(default_factory=list)
 
 
@@ -135,7 +141,9 @@ class Draft(BaseModel):
     scheduled_at: datetime | None = None
     # Quality evaluation fields (Phase 2c)
     quality_score: int | None = None  # 0-100, from self-refine critique
-    quality_issues: list[str] = Field(default_factory=list)  # e.g. ["no_hook", "too_long"]
+    quality_issues: list[str] = Field(
+        default_factory=list
+    )  # e.g. ["no_hook", "too_long"]
     review_outcome: str | None = None
     review_comment: str | None = None
     reviewed_at: datetime | None = None
@@ -165,18 +173,40 @@ class ContentPlan(BaseModel):
     """Plan output: list of items to generate drafts for."""
 
     items: list[ContentPlanItem] = Field(default_factory=list)
+    diagnostics: dict[str, int | float | bool | str] = Field(default_factory=dict)
+
+
+class PlanningMemoryEntry(BaseModel):
+    """Single planning run memory entry for episodic continuity."""
+
+    run_at: datetime
+    needed: int
+    selected_urls: list[str] = Field(default_factory=list)
+    blocked_recent_urls: list[str] = Field(default_factory=list)
+    policy_snapshot: dict[str, int | float | str | bool] = Field(default_factory=dict)
+    diagnostics: dict[str, int | float | bool | str] = Field(default_factory=dict)
+
+
+class PlanningMemory(BaseModel):
+    """Rolling memory of recent planning runs."""
+
+    entries: list[PlanningMemoryEntry] = Field(default_factory=list)
 
 
 class DraftCritique(BaseModel):
     """Structured critique output for self-refine pattern."""
 
     has_strong_hook: bool = Field(description="Does the first line grab attention?")
-    follows_platform_conventions: bool = Field(description="Correct hashtag usage, length, tone?")
+    follows_platform_conventions: bool = Field(
+        description="Correct hashtag usage, length, tone?"
+    )
     mentions_specific_insight: bool = Field(
         description="Does it reference a concrete article insight?"
     )
     includes_link: bool = Field(description="Is the blog link present?")
-    appropriate_tone: bool = Field(description="Matches target audience and strategy tone?")
+    appropriate_tone: bool = Field(
+        description="Matches target audience and strategy tone?"
+    )
     overall_score: int = Field(description="Quality score 0-100")
     issues: list[str] = Field(
         default_factory=list,

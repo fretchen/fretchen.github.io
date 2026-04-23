@@ -47,10 +47,31 @@ uv run ruff format .
 ## Deploy
 
 ```bash
-bash bin/deploy.sh       # build, push, tofu apply
+bash bin/deploy.sh       # bootstrap registry, build/push image, tofu apply app stack
 ```
 
-Requires Docker with buildx and OpenTofu. Secrets are passed via `TF_VAR_*` environment variables — see `.env.example` for required variables.
+Requires Docker with buildx and OpenTofu. Deploy context comes from your active Scaleway profile in `~/.config/scw/config.yaml`, consistent with the serverless subprojects. Runtime/app variables remain separate and can be provided via `.env`, `terraform/terraform.tfvars`, or `TF_VAR_*`.
+
+### One-time migration for existing checkouts
+
+If your previous setup managed `scaleway_registry_namespace.growth_agent` in `terraform/`, run this once before using `bin/deploy.sh`:
+
+```bash
+# 1) Read existing registry namespace ID from old state
+cd terraform
+REGISTRY_ID=$(tofu state show scaleway_registry_namespace.growth_agent | awk -F '"' '/^[[:space:]]*id[[:space:]]*=/{print $2; exit}')
+
+# 2) Import into bootstrap state
+cd ../terraform-bootstrap
+tofu init -input=false
+tofu import scaleway_registry_namespace.growth_agent "$REGISTRY_ID"
+
+# 3) Remove from old state
+cd ../terraform
+tofu state rm scaleway_registry_namespace.growth_agent
+```
+
+After this migration, `bin/deploy.sh` runs normally without `-target` warnings and without namespace conflicts.
 
 ## Project structure
 
@@ -58,6 +79,7 @@ Requires Docker with buildx and OpenTofu. Secrets are passed via `TF_VAR_*` envi
 handler.py          # Container entry point (HTTP server + cron handler)
 Dockerfile          # Container image (uv + Python 3.11)
 bin/deploy.sh       # Build, push, tofu apply
+terraform-bootstrap/ # OpenTofu bootstrap (registry namespace only)
 terraform/          # OpenTofu config (container, cron, secrets)
 agent/
   models.py         # Pydantic state models

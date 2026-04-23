@@ -6,3 +6,4 @@ __pycache__/
 .deepeval/
 state/
 node_modules/
+terraform-bootstrap/.terraform/

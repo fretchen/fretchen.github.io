@@ -50,7 +50,7 @@ uv run ruff format .
 bash bin/deploy.sh       # bootstrap registry, build/push image, tofu apply app stack
 ```
 
-Requires Docker with buildx and OpenTofu. Deploy context comes from your active Scaleway profile in `~/.config/scw/config.yaml`, consistent with the serverless subprojects. Runtime/app variables remain separate and can be provided via `.env`, `terraform/terraform.tfvars`, or `TF_VAR_*`.
+Requires Docker with buildx and OpenTofu. Deploy context comes from your active Scaleway profile in `~/.config/scw/config.yaml`, consistent with the serverless subprojects. `bin/deploy.sh` does not load `.env`; OpenTofu input variables are taken from `terraform/terraform.tfvars` or exported `TF_VAR_*` values.
 
 ### One-time migration for existing checkouts
 

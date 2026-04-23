@@ -14,6 +14,7 @@ from agent.models import (
     Insights,
     LLMAnalysis,
     PageForSocial,
+    PlanningMemory,
     Strategy,
     StrategyAdjustment,
     WebsiteAnalytics,
@@ -128,7 +129,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("agent.nodes.ingest.BlueskyClient")
 @patch("agent.nodes.ingest.MastodonClient")
 @patch("agent.nodes.ingest.UmamiClient")
-def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
+def test_ingest_analytics_old_umami_format(
+    MockUmami, MockMasto, MockBsky, mock_storage
+):
     """Umami legacy format with {\"value\": n} dicts still works."""
     storage, store = mock_storage
 
@@ -166,7 +169,9 @@ def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.BlueskyClient")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
+def test_publish_approved_drafts_publishes_due(
+    MockMasto, MockBsky, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -207,7 +212,9 @@ def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish
 
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
+def test_publish_no_scheduled_at_publishes_immediately(
+    MockMasto, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -352,7 +359,9 @@ def test_create_drafts(MockLLM, mock_storage):
     )
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.chat.return_value = {
+        "content": "Check out this post about quantum computing!"
+    }
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, plan)
@@ -780,8 +789,12 @@ def test_find_last_scheduled_at_from_drafts():
     t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
-            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
+            Draft(
+                id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1
+            ),
+            Draft(
+                id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2
+            ),
         ]
     )
     assert _find_last_scheduled_at(queue) == t2
@@ -978,7 +991,9 @@ def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storag
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
-def test_create_plan_prefers_unique_urls_when_enough_candidates(mock_fetch, mock_storage):
+def test_create_plan_prefers_unique_urls_when_enough_candidates(
+    mock_fetch, mock_storage
+):
     """When enough unique pages exist, the plan should avoid duplicate URLs."""
     storage, _store = mock_storage
 
@@ -1127,6 +1142,106 @@ def test_create_plan_includes_exploratory_page_when_available(mock_fetch, mock_s
 
     assert len(plan.items) == 3
     assert "https://fretchen.eu/e1" in urls
+
+
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_uses_strategy_channels_for_schedule(mock_fetch, mock_storage):
+    """Plan scheduling should follow channels from strategy policy."""
+    storage, _store = mock_storage
+
+    storage.write(
+        "strategy.json",
+        Strategy(channels=["bluesky"], posting_frequency={"bluesky": 7}),
+    )
+
+    analysis = LLMAnalysis(
+        top_topics=["quantum"],
+        traffic_sources=["organic"],
+        best_pages_for_social=[
+            PageForSocial(url="https://fretchen.eu/a", title="A", reason="Test"),
+            PageForSocial(url="https://fretchen.eu/b", title="B", reason="Test"),
+        ],
+        content_gaps=[],
+        growth_opportunities=[],
+    )
+
+    from agent.models import PageMeta
+
+    mock_fetch.return_value = {
+        "https://fretchen.eu/a": PageMeta(
+            url="https://fretchen.eu/a", title="A", description="Desc"
+        ),
+        "https://fretchen.eu/b": PageMeta(
+            url="https://fretchen.eu/b", title="B", description="Desc"
+        ),
+    }
+
+    plan = create_plan(storage, analysis)
+    assert plan.items
+    assert all(item.channel == "bluesky" for item in plan.items)
+
+
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_filters_recent_urls_and_writes_planning_memory(
+    mock_fetch, mock_storage
+):
+    """Recent published URLs should be cooled down and planning memory must be persisted."""
+    storage, store = mock_storage
+
+    now = datetime(2026, 4, 23, 8, 0, tzinfo=timezone.utc)
+    recently_published = Draft(
+        id="p1",
+        channel="mastodon",
+        language="en",
+        content="old",
+        status="published",
+        scheduled_at=now - timedelta(days=2),
+        link="https://fretchen.eu/repeat?utm_source=mastodon&utm_campaign=growth-agent",
+    )
+    storage.write("content_queue.json", ContentQueue(published=[recently_published]))
+    storage.write(
+        "strategy.json",
+        Strategy(planning_cooldown_days=14, planning_exploratory_fraction=0.3),
+    )
+
+    analysis = LLMAnalysis(
+        top_topics=["x"],
+        traffic_sources=["organic"],
+        best_pages_for_social=[
+            PageForSocial(
+                url="https://fretchen.eu/repeat", title="Repeat", reason="old"
+            ),
+            PageForSocial(url="https://fretchen.eu/new", title="New", reason="fresh"),
+        ],
+        content_gaps=[],
+        growth_opportunities=[],
+    )
+
+    from agent.models import PageMeta
+
+    mock_fetch.return_value = {
+        "https://fretchen.eu/new": PageMeta(
+            url="https://fretchen.eu/new", title="New", description="Desc"
+        ),
+        "https://fretchen.eu/repeat": PageMeta(
+            url="https://fretchen.eu/repeat", title="Repeat", description="Desc"
+        ),
+    }
+
+    with patch("agent.nodes.plan.datetime") as mock_dt:
+        mock_dt.now.return_value = now
+        mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+        plan = create_plan(storage, analysis)
+
+    assert plan.items
+    assert plan.items[0].page_url == "https://fretchen.eu/new"
+    assert plan.diagnostics.get("blocked_recent", 0) >= 1
+
+    planning_memory = PlanningMemory.model_validate(store["planning_memory.json"])
+    assert planning_memory.entries
+    assert (
+        "https://fretchen.eu/repeat" in planning_memory.entries[-1].blocked_recent_urls
+    )
 
 
 # ---------------------------------------------------------------------------

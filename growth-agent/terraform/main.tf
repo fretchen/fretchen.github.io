@@ -19,17 +19,7 @@ terraform {
   }
 }
 
-provider "scaleway" {
-  region = "fr-par"
-  zone   = "fr-par-1"
-}
-
-# --- Container Registry (for docker push) ---
-
-resource "scaleway_registry_namespace" "growth_agent" {
-  name        = "growth-agent"
-  is_public   = false
-}
+provider "scaleway" {}
 
 # --- Serverless Container Namespace ---
 
@@ -84,9 +74,4 @@ resource "scaleway_container_cron" "daily" {
 output "container_url" {
   value       = scaleway_container.growth_agent.domain_name
   description = "The container endpoint URL"
-}
-
-output "registry_endpoint" {
-  value       = scaleway_registry_namespace.growth_agent.endpoint
-  description = "Container registry endpoint for docker push"
 }

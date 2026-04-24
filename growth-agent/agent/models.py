@@ -117,6 +117,8 @@ class Strategy(BaseModel):
     languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"
     website_url: str = "https://fretchen.eu"
+    planning_exploratory_fraction: float = 0.3
+    planning_cooldown_days: int = 14
     changes: list[StrategyChange] = Field(default_factory=list)
 
 
@@ -165,6 +167,24 @@ class ContentPlan(BaseModel):
     """Plan output: list of items to generate drafts for."""
 
     items: list[ContentPlanItem] = Field(default_factory=list)
+    diagnostics: dict[str, int | float | bool | str] = Field(default_factory=dict)
+
+
+class PlanningMemoryEntry(BaseModel):
+    """Single planning run memory entry for episodic continuity."""
+
+    run_at: datetime
+    needed: int
+    selected_urls: list[str] = Field(default_factory=list)
+    blocked_recent_urls: list[str] = Field(default_factory=list)
+    policy_snapshot: dict[str, int | float | str | bool] = Field(default_factory=dict)
+    diagnostics: dict[str, int | float | bool | str] = Field(default_factory=dict)
+
+
+class PlanningMemory(BaseModel):
+    """Rolling memory of recent planning runs."""
+
+    entries: list[PlanningMemoryEntry] = Field(default_factory=list)
 
 
 class DraftCritique(BaseModel):

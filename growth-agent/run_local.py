@@ -94,12 +94,7 @@ def run_publish() -> None:
 
 def run_refill() -> None:
     storage = _get_storage()
-    analysis_data = storage.read("llm_analysis.json")
-    if not analysis_data:
-        print("ERROR: No llm_analysis.json in S3 — run --insights first")
-        return
-    analysis = LLMAnalysis.model_validate(analysis_data)
-    plan = create_plan(storage, analysis)
+    plan = create_plan(storage)
     print(f"Plan created with {len(plan.items)} items")
     count = create_drafts(storage, plan)
     print(f"Created {count} new drafts")

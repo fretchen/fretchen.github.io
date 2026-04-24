@@ -7,6 +7,7 @@ import math
 import os
 import random
 from datetime import datetime, timedelta, timezone
+from typing import TypedDict
 from urllib.parse import urlsplit, urlunsplit
 
 from agent.models import (
@@ -28,7 +29,11 @@ REGISTRY_KEYS = [
     "simple_planner/registry.json",
 ]
 
-SelectedPage = dict[str, str | float | None]
+
+class SelectedPage(TypedDict):
+    page_url: str
+    t_days: float | None
+    weight: float
 
 
 def _normalize_url(url: str) -> str:
@@ -94,7 +99,7 @@ def _weighted_draw(
     half_life_days: float,
     seed: int | None,
 ) -> list[SelectedPage]:
-    weighted_candidates = [
+    weighted_candidates: list[SelectedPage] = [
         {
             "page_url": page_url,
             "t_days": last_days_by_url.get(page_url),

@@ -49,7 +49,9 @@ def diagnose() -> None:
     if upcoming:
         print("\n  Next scheduled:")
         for d in upcoming[:5]:
-            print(f"    {d.scheduled_at.isoformat()}  {d.channel:<10} [{d.status}] {d.id}")
+            print(
+                f"    {d.scheduled_at.isoformat()}  {d.channel:<10} [{d.status}] {d.id}"
+            )
 
     # --- LLM Analysis ---
     analysis_data = storage.read("llm_analysis.json")
@@ -60,6 +62,35 @@ def diagnose() -> None:
         print(f"  Pages for social: {len(analysis.best_pages_for_social)}")
     else:
         print("  NOT FOUND — pipeline refill will be skipped!")
+
+    # --- Registry (Option 2: top-level keys) ---
+    print("\n=== Registry ===")
+    registry_clean = storage.read("registry_clean.json")
+    registry_raw = storage.read("registry.json")
+    registry_excluded = storage.read("registry_excluded.json")
+
+    if isinstance(registry_clean, dict) and isinstance(
+        registry_clean.get("urls"), list
+    ):
+        print(f"  registry_clean.json: {len(registry_clean['urls'])} urls")
+    else:
+        print("  registry_clean.json: MISSING")
+
+    if isinstance(registry_raw, dict) and isinstance(registry_raw.get("urls"), list):
+        print(f"  registry.json:       {len(registry_raw['urls'])} urls")
+    else:
+        print("  registry.json:       MISSING")
+
+    if isinstance(registry_excluded, dict):
+        excluded_urls = registry_excluded.get("urls", [])
+        excluded_prefixes = registry_excluded.get("prefixes", [])
+        print(
+            "  registry_excluded.json: "
+            f"urls={len(excluded_urls) if isinstance(excluded_urls, list) else 0}, "
+            f"prefixes={len(excluded_prefixes) if isinstance(excluded_prefixes, list) else 0}"
+        )
+    else:
+        print("  registry_excluded.json: MISSING (defaults to no exclusions)")
 
     # --- Recent Logs ---
     print("\n=== Recent Logs ===")
@@ -130,9 +161,13 @@ def show_graph(output: str = "graph.png") -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Growth Agent local runner")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--diagnose", action="store_true", help="Read-only S3 state inspection")
+    group.add_argument(
+        "--diagnose", action="store_true", help="Read-only S3 state inspection"
+    )
     group.add_argument("--publish", action="store_true", help="Publish approved drafts")
-    group.add_argument("--refill", action="store_true", help="Pipeline refill (create drafts)")
+    group.add_argument(
+        "--refill", action="store_true", help="Pipeline refill (create drafts)"
+    )
     group.add_argument("--insights", action="store_true", help="Generate LLM insights")
     group.add_argument("--analytics", action="store_true", help="Ingest analytics")
     group.add_argument(

@@ -380,9 +380,7 @@ def test_create_drafts(MockLLM, mock_storage):
 @patch("agent.nodes.publish.publish_approved_drafts")
 @patch("agent.nodes.insights.generate_insights")
 @patch("handler._get_storage")
-def test_handle_daily_not_monday(
-    mock_get_storage, mock_insights, mock_publish
-):
+def test_handle_daily_not_monday(mock_get_storage, mock_insights, mock_publish):
     """On a non-Monday, graph still runs insights -> plan -> drafts -> publish."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage

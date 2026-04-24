@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import math
-import os
 import random
 from datetime import datetime, timedelta, timezone
 from typing import TypedDict
@@ -70,12 +69,18 @@ def _load_registry_urls(storage) -> list[str]:
 
 def _last_published_days(queue: ContentQueue, now: datetime) -> dict[str, float]:
     """Return days since last publication per page URL from queue.published."""
+
+    def _to_utc_aware(ts: datetime) -> datetime:
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
+
     latest_by_url: dict[str, datetime] = {}
     for draft in queue.published:
         if not draft.link:
             continue
         page_url = _normalize_url(draft.link)
-        ts = draft.scheduled_at or draft.created
+        ts = _to_utc_aware(draft.scheduled_at or draft.created)
         if page_url not in latest_by_url or ts > latest_by_url[page_url]:
             latest_by_url[page_url] = ts
 
@@ -97,7 +102,6 @@ def _weighted_draw(
     last_days_by_url: dict[str, float],
     needed: int,
     half_life_days: float,
-    seed: int | None,
 ) -> list[SelectedPage]:
     weighted_candidates: list[SelectedPage] = [
         {
@@ -113,7 +117,7 @@ def _weighted_draw(
         for c in weighted_candidates:
             c["weight"] = 1.0
 
-    rng = random.Random(seed)
+    rng = random.Random()
     chosen: list[SelectedPage] = []
     pool = weighted_candidates.copy()
     for _ in range(min(needed, len(pool))):
@@ -200,6 +204,25 @@ def _find_last_scheduled_at(queue: ContentQueue) -> datetime | None:
     return latest
 
 
+def _pending_pipeline_urls(queue: ContentQueue, now: datetime) -> set[str]:
+    """URLs already represented in pending pipeline items.
+
+    Includes all draft links and only future approved links because those still
+    occupy upcoming schedule slots.
+    """
+    blocked: set[str] = set()
+
+    for draft in queue.drafts:
+        if draft.link:
+            blocked.add(_normalize_url(draft.link))
+
+    for draft in queue.approved:
+        if draft.link and draft.scheduled_at and draft.scheduled_at > now:
+            blocked.add(_normalize_url(draft.link))
+
+    return blocked
+
+
 def select_pages_for_plan(
     storage,
     queue: ContentQueue,
@@ -217,15 +240,15 @@ def select_pages_for_plan(
     if not registry_urls:
         return [], 0, 0
 
-    seed_str = os.environ.get("PLAN_RANDOM_SEED")
-    seed = int(seed_str) if seed_str else None
+    blocked_urls = _pending_pipeline_urls(queue, now)
+    draw_urls = [url for url in registry_urls if url not in blocked_urls]
+
     last_days_by_url = _last_published_days(queue, now)
     chosen = _weighted_draw(
-        registry_urls,
+        draw_urls,
         last_days_by_url,
         needed,
         HALF_LIFE_DAYS,
-        seed,
     )
     return chosen, len(registry_urls), len(last_days_by_url)
 

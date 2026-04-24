@@ -581,7 +581,7 @@ def test_create_plan_pipeline_full(mock_fetch, mock_storage):
     queue = ContentQueue(drafts=existing_drafts)
     storage.write("content_queue.json", queue)
 
-    storage.write("simple_planner/registry_clean.json", {"urls": ["https://fretchen.eu/q"]})
+    storage.write("registry_clean.json", {"urls": ["https://fretchen.eu/q"]})
 
     plan = create_plan(storage)
     assert len(plan.items) == 0
@@ -608,7 +608,7 @@ def test_create_plan_pipeline_partial(mock_fetch, mock_storage):
     storage.write("content_queue.json", queue)
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {
             "urls": [
                 "https://fretchen.eu/q1",
@@ -657,7 +657,7 @@ def test_create_plan_scheduling_continues_from_last(mock_fetch, mock_storage):
     storage.write("content_queue.json", queue)
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/q", "https://fretchen.eu/r"]},
     )
 
@@ -684,7 +684,7 @@ def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storag
     storage, store = mock_storage
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/q", "https://fretchen.eu/r"]},
     )
 
@@ -714,7 +714,7 @@ def test_create_plan_uses_default_channels_for_schedule(mock_fetch, mock_storage
     storage, _store = mock_storage
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/a", "https://fretchen.eu/b"]},
     )
 
@@ -740,9 +740,9 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
     """Planner prefers registry_clean.json when both registry files exist."""
     storage, store = mock_storage
 
-    storage.write("simple_planner/registry.json", {"urls": ["https://fretchen.eu/from-registry"]})
+    storage.write("registry.json", {"urls": ["https://fretchen.eu/from-registry"]})
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/from-clean"]},
     )
 
@@ -791,7 +791,7 @@ def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_
     )
     storage.write("content_queue.json", queue)
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {
             "urls": [
                 "https://fretchen.eu/blocked-draft",

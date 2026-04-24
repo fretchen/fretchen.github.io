@@ -8,6 +8,9 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 from urllib.parse import urlsplit, urlunsplit
+from urllib.request import urlopen
+
+from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
 
 from agent.models import (
     ContentPlan,
@@ -23,10 +26,10 @@ logger = logging.getLogger("growth-agent")
 PIPELINE_TARGET = 10
 HALF_LIFE_DAYS = 30.0
 DEFAULT_CHANNELS = ["mastodon", "bluesky"]
-REGISTRY_KEYS = [
-    "simple_planner/registry_clean.json",
-    "simple_planner/registry.json",
-]
+SITEMAP_URL = "https://www.fretchen.eu/sitemap.xml"
+REGISTRY_KEY = "registry.json"
+REGISTRY_CLEAN_KEY = "registry_clean.json"
+REGISTRY_EXCLUDED_KEY = "registry_excluded.json"
 
 
 class SelectedPage(TypedDict):
@@ -50,21 +53,102 @@ def _page_title_from_url(url: str) -> str:
     return path.split("/")[-1].replace("-", " ").title()
 
 
-def _load_registry_urls(storage) -> list[str]:
-    for key in REGISTRY_KEYS:
-        data = storage.read(key)
-        if isinstance(data, dict) and isinstance(data.get("urls"), list):
-            urls = [_normalize_url(u) for u in data["urls"] if isinstance(u, str) and u.strip()]
-            # Keep first occurrence only
-            seen: set[str] = set()
-            unique: list[str] = []
-            for u in urls:
-                if u in seen:
-                    continue
-                seen.add(u)
-                unique.append(u)
-            return unique
-    return []
+def _dedupe_urls(urls: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        unique.append(url)
+    return unique
+
+
+def _urls_from_payload(data: dict | None) -> list[str]:
+    if not isinstance(data, dict) or not isinstance(data.get("urls"), list):
+        return []
+    urls = [_normalize_url(u) for u in data["urls"] if isinstance(u, str) and u.strip()]
+    return _dedupe_urls(urls)
+
+
+def _load_excluded_rules(storage) -> tuple[set[str], list[str]]:
+    data = storage.read(REGISTRY_EXCLUDED_KEY)
+    if not isinstance(data, dict):
+        return set(), []
+
+    excluded_urls = {
+        _normalize_url(u) for u in data.get("urls", []) if isinstance(u, str) and u.strip()
+    }
+    prefixes = [p.strip() for p in data.get("prefixes", []) if isinstance(p, str) and p.strip()]
+    return excluded_urls, prefixes
+
+
+def _is_excluded(url: str, excluded_urls: set[str], prefixes: list[str]) -> bool:
+    if url in excluded_urls:
+        return True
+    path = urlsplit(url).path or "/"
+    return any(path.startswith(prefix) for prefix in prefixes)
+
+
+def _fetch_sitemap_urls() -> list[str]:
+    with urlopen(SITEMAP_URL) as response:
+        raw_xml = response.read()
+
+    root = ET.fromstring(raw_xml)
+    ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    loc_nodes = root.findall("sm:url/sm:loc", ns)
+    urls = [_normalize_url(node.text or "") for node in loc_nodes]
+    urls = [u for u in urls if u]
+    return _dedupe_urls(urls)
+
+
+def _prepare_registry_urls(storage) -> tuple[list[str], bool, int]:
+    """Return cleaned registry URLs, refresh flag, and excluded_count.
+
+    Option 2 storage convention uses top-level keys in growth-agent prefix.
+    """
+    clean_data = storage.read(REGISTRY_CLEAN_KEY)
+    clean_urls = _urls_from_payload(clean_data)
+    if clean_urls:
+        excluded_count = 0
+        if isinstance(clean_data, dict) and isinstance(clean_data.get("excluded_count"), int):
+            excluded_count = clean_data["excluded_count"]
+        return clean_urls, False, excluded_count
+
+    # Build fresh registry from sitemap for MVP.
+    try:
+        registry_urls = _fetch_sitemap_urls()
+    except Exception:
+        logger.exception("Failed to build registry from sitemap")
+        return [], False, 0
+
+    excluded_urls, excluded_prefixes = _load_excluded_rules(storage)
+    clean_urls = [
+        url for url in registry_urls if not _is_excluded(url, excluded_urls, excluded_prefixes)
+    ]
+    excluded_count = len(registry_urls) - len(clean_urls)
+
+    raw_payload = {
+        "source": SITEMAP_URL,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(registry_urls),
+        "urls": registry_urls,
+    }
+    clean_payload = {
+        "source": SITEMAP_URL,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(clean_urls),
+        "urls": clean_urls,
+        "excluded_count": excluded_count,
+    }
+    storage.write(REGISTRY_KEY, raw_payload)
+    storage.write(REGISTRY_CLEAN_KEY, clean_payload)
+    logger.info(
+        "Registry rebuilt from sitemap (raw=%d, clean=%d)",
+        len(registry_urls),
+        len(clean_urls),
+    )
+    return clean_urls, True, excluded_count
 
 
 def _last_published_days(queue: ContentQueue, now: datetime) -> dict[str, float]:
@@ -147,11 +231,13 @@ def plan_node(state: AgentState) -> dict:
             return {"plan_created": False}
 
         # Step 1: Draw new items.
-        chosen, registry_total, history_pages = select_pages_for_plan(
-            storage=storage,
-            queue=queue,
-            needed=needed,
-            now=now,
+        chosen, registry_total, history_pages, registry_refreshed, excluded_count = (
+            select_pages_for_plan(
+                storage=storage,
+                queue=queue,
+                needed=needed,
+                now=now,
+            )
         )
 
         if registry_total == 0:
@@ -172,6 +258,8 @@ def plan_node(state: AgentState) -> dict:
             "needed": needed,
             "existing_pipeline": existing,
             "registry_total": registry_total,
+            "registry_refreshed": registry_refreshed,
+            "excluded_count": excluded_count,
             "history_pages": history_pages,
             "selected_items": len(items),
             "selected_unique_urls": len({i.page_url for i in items}),
@@ -228,7 +316,7 @@ def select_pages_for_plan(
     queue: ContentQueue,
     needed: int,
     now: datetime,
-) -> tuple[list[SelectedPage], int, int]:
+) -> tuple[list[SelectedPage], int, int, bool, int]:
     """Step 1: select page URLs to promote using half-life weighted sampling.
 
     Returns:
@@ -236,9 +324,9 @@ def select_pages_for_plan(
     - registry size
     - number of pages with publication history
     """
-    registry_urls = _load_registry_urls(storage)
+    registry_urls, registry_refreshed, excluded_count = _prepare_registry_urls(storage)
     if not registry_urls:
-        return [], 0, 0
+        return [], 0, 0, registry_refreshed, excluded_count
 
     blocked_urls = _pending_pipeline_urls(queue, now)
     draw_urls = [url for url in registry_urls if url not in blocked_urls]
@@ -250,7 +338,13 @@ def select_pages_for_plan(
         needed,
         HALF_LIFE_DAYS,
     )
-    return chosen, len(registry_urls), len(last_days_by_url)
+    return (
+        chosen,
+        len(registry_urls),
+        len(last_days_by_url),
+        registry_refreshed,
+        excluded_count,
+    )
 
 
 def build_plan_items(

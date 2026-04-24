@@ -61,6 +61,33 @@ def diagnose() -> None:
     else:
         print("  NOT FOUND — pipeline refill will be skipped!")
 
+    # --- Registry (Option 2: top-level keys) ---
+    print("\n=== Registry ===")
+    registry_clean = storage.read("registry_clean.json")
+    registry_raw = storage.read("registry.json")
+    registry_excluded = storage.read("registry_excluded.json")
+
+    if isinstance(registry_clean, dict) and isinstance(registry_clean.get("urls"), list):
+        print(f"  registry_clean.json: {len(registry_clean['urls'])} urls")
+    else:
+        print("  registry_clean.json: MISSING")
+
+    if isinstance(registry_raw, dict) and isinstance(registry_raw.get("urls"), list):
+        print(f"  registry.json:       {len(registry_raw['urls'])} urls")
+    else:
+        print("  registry.json:       MISSING")
+
+    if isinstance(registry_excluded, dict):
+        excluded_urls = registry_excluded.get("urls", [])
+        excluded_prefixes = registry_excluded.get("prefixes", [])
+        print(
+            "  registry_excluded.json: "
+            f"urls={len(excluded_urls) if isinstance(excluded_urls, list) else 0}, "
+            f"prefixes={len(excluded_prefixes) if isinstance(excluded_prefixes, list) else 0}"
+        )
+    else:
+        print("  registry_excluded.json: MISSING (defaults to no exclusions)")
+
     # --- Recent Logs ---
     print("\n=== Recent Logs ===")
     log_keys = sorted(storage.list_keys("logs/"), reverse=True)

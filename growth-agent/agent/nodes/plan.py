@@ -80,13 +80,9 @@ def _load_excluded_rules(storage) -> tuple[set[str], list[str]]:
         return set(), []
 
     excluded_urls = {
-        _normalize_url(u)
-        for u in data.get("urls", [])
-        if isinstance(u, str) and u.strip()
+        _normalize_url(u) for u in data.get("urls", []) if isinstance(u, str) and u.strip()
     }
-    prefixes = [
-        p.strip() for p in data.get("prefixes", []) if isinstance(p, str) and p.strip()
-    ]
+    prefixes = [p.strip() for p in data.get("prefixes", []) if isinstance(p, str) and p.strip()]
     return excluded_urls, prefixes
 
 
@@ -118,9 +114,7 @@ def _prepare_registry_urls(storage) -> tuple[list[str], bool, int]:
     clean_urls = _urls_from_payload(clean_data)
     if clean_urls:
         excluded_count = 0
-        if isinstance(clean_data, dict) and isinstance(
-            clean_data.get("excluded_count"), int
-        ):
+        if isinstance(clean_data, dict) and isinstance(clean_data.get("excluded_count"), int):
             excluded_count = clean_data["excluded_count"]
         return clean_urls, False, excluded_count
 
@@ -154,9 +148,7 @@ def _prepare_registry_urls(storage) -> tuple[list[str], bool, int]:
 
     excluded_urls, excluded_prefixes = _load_excluded_rules(storage)
     clean_urls = [
-        url
-        for url in registry_urls
-        if not _is_excluded(url, excluded_urls, excluded_prefixes)
+        url for url in registry_urls if not _is_excluded(url, excluded_urls, excluded_prefixes)
     ]
     excluded_count = len(registry_urls) - len(clean_urls)
 
@@ -254,15 +246,11 @@ def plan_node(state: AgentState) -> dict:
         now = datetime.now(timezone.utc)
 
         # Only future-approved posts still occupy upcoming pipeline slots.
-        future_approved = [
-            d for d in queue.approved if d.scheduled_at and d.scheduled_at > now
-        ]
+        future_approved = [d for d in queue.approved if d.scheduled_at and d.scheduled_at > now]
         existing = len(queue.drafts) + len(future_approved)
         needed = max(0, PIPELINE_TARGET - existing)
         if needed == 0:
-            logger.info(
-                "Pipeline full (%d pending+approved), skipping planning", existing
-            )
+            logger.info("Pipeline full (%d pending+approved), skipping planning", existing)
             storage.write("content_plan.json", ContentPlan())
             return {"plan_created": False}
 
@@ -390,9 +378,7 @@ def build_plan_items(
     if not selected_pages:
         return []
 
-    schedule = plan_draft_schedule(
-        queue, len(selected_pages), channels=DEFAULT_CHANNELS
-    )
+    schedule = plan_draft_schedule(queue, len(selected_pages), channels=DEFAULT_CHANNELS)
     page_urls = [str(c["page_url"]) for c in selected_pages]
     page_metas = fetch_pages_meta(page_urls)
 
@@ -400,9 +386,7 @@ def build_plan_items(
     for sampled, (channel, slot) in zip(selected_pages, schedule):
         page_url = str(sampled["page_url"])
         meta = page_metas.get(page_url)
-        page_desc = (
-            (meta.description or "(no description)") if meta else "(no description)"
-        )
+        page_desc = (meta.description or "(no description)") if meta else "(no description)"
         page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
         t_days = sampled["t_days"]
         if t_days is None:
@@ -453,9 +437,7 @@ def plan_draft_schedule(
     last_scheduled = _find_last_scheduled_at(queue)
 
     if last_scheduled is None:
-        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(
-            days=1
-        )
+        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
         next_slot = tomorrow
         next_channel_idx = 0
     else:

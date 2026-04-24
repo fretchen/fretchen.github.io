@@ -48,7 +48,6 @@ ENV = {
     "MASTODON_INSTANCE": "https://mastodon.social",
     "BLUESKY_APP_PASSWORD": "test-bsky-pw",
     "BLUESKY_HANDLE": "test.bsky.social",
-    "PLAN_RANDOM_SEED": "42",
 }
 
 
@@ -760,6 +759,63 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
     assert plan.items[0].page_url == "https://fretchen.eu/from-clean"
     persisted = ContentPlan.model_validate(store["content_plan.json"])
     assert persisted.items[0].page_url == "https://fretchen.eu/from-clean"
+
+
+@patch("agent.nodes.plan.fetch_pages_meta")
+def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_storage):
+    """Planner should not re-select URLs already present in drafts/future approved."""
+    storage, _store = mock_storage
+
+    now = datetime(2026, 4, 23, 8, 0, tzinfo=timezone.utc)
+    queue = ContentQueue(
+        drafts=[
+            Draft(
+                id="d1",
+                channel="mastodon",
+                language="en",
+                content="pending",
+                link="https://fretchen.eu/blocked-draft?utm_source=test",
+            )
+        ],
+        approved=[
+            Draft(
+                id="a1",
+                channel="bluesky",
+                language="en",
+                content="future approved",
+                link="https://fretchen.eu/blocked-approved",
+                scheduled_at=now + timedelta(days=2),
+                status="approved",
+            )
+        ],
+    )
+    storage.write("content_queue.json", queue)
+    storage.write(
+        "simple_planner/registry_clean.json",
+        {
+            "urls": [
+                "https://fretchen.eu/blocked-draft",
+                "https://fretchen.eu/blocked-approved",
+                "https://fretchen.eu/allowed",
+            ]
+        },
+    )
+
+    from agent.models import PageMeta
+
+    mock_fetch.return_value = {
+        "https://fretchen.eu/allowed": PageMeta(
+            url="https://fretchen.eu/allowed", title="Allowed", description="Desc"
+        )
+    }
+
+    with patch("agent.nodes.plan.datetime") as mock_dt:
+        mock_dt.now.return_value = now
+        mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+        plan = create_plan(storage)
+
+    assert plan.items
+    assert all(item.page_url == "https://fretchen.eu/allowed" for item in plan.items)
 
 
 # ---------------------------------------------------------------------------

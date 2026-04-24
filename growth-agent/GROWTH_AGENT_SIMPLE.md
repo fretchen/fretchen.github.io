@@ -227,3 +227,110 @@ This approach prioritizes:
 2. reproducible experiments,
 3. low implementation complexity,
 4. fast iteration in notebooks before any production wiring.
+
+## New Implementation Step: Runtime Registry Management (MVP)
+
+Problem observed in production:
+
+1. Planning currently returns empty when no registry file exists in S3.
+2. Refill then creates 0 drafts even when pipeline has free capacity.
+
+MVP decision:
+
+1. No separate ensure_registry abstraction.
+2. Registry prep runs directly inside the plan node before drawing items.
+3. Keep diagnostics minimal.
+4. **Option 2 is mandatory:** registry artifacts live in the same S3 folder level as
+   `content_queue.json` and `content_plan.json`.
+
+### Storage key convention (Option 2)
+
+With S3 prefix `growth-agent/`, use these object keys:
+
+1. `registry.json`
+2. `registry_clean.json`
+3. `registry_excluded.json`
+
+Do not use the subfolder variant `simple_planner/...` in runtime code.
+
+### Runtime behavior in plan node
+
+Step A: Load queue and compute needed draft count.
+
+1. If needed is 0: write empty plan and return.
+
+Step B: Prepare registry in-place.
+
+1. Rebuild registry from sitemap URL.
+2. Apply excluded rules.
+3. Write both artifacts back to S3:
+   - `registry.json`
+   - `registry_clean.json`
+4. Continue planning immediately with cleaned URLs.
+
+Step C: Draw and schedule.
+
+1. Draw pages with half-life weighting.
+2. Schedule posts as today.
+3. Write `content_plan.json`.
+
+### Excluded management (required)
+
+Add one S3-managed config artifact:
+
+1. `registry_excluded.json`
+
+Structure:
+
+1. `urls`: exact URLs to remove.
+2. `prefixes`: optional path prefixes to remove.
+3. `updated_at`: metadata only.
+
+Rules:
+
+1. Normalize URLs before matching.
+2. Apply exact URL exclusions first.
+3. Apply prefix exclusions second.
+4. Keep deterministic output order for stable diffs.
+
+### Minimal diagnostics extension
+
+Only add these fields to plan diagnostics:
+
+1. `registry_total`
+2. `registry_refreshed` (true/false)
+3. `excluded_count`
+
+No extra telemetry for MVP.
+
+### Rollout sequence
+
+1. Implement registry prep in plan node.
+2. Add excluded config load + apply logic.
+3. Add one integration test:
+   - missing registry -> refresh -> non-empty plan when candidates exist.
+4. Backfill once in production by running one refill.
+
+### Further changes implied by Option 2
+
+1. Update runtime constants in `agent/nodes/plan.py`:
+   - from `simple_planner/registry_clean.json` and `simple_planner/registry.json`
+   - to `registry_clean.json` and `registry.json`.
+2. Add excluded artifact support in runtime:
+   - read `registry_excluded.json` (if missing: default empty exclusions).
+3. Update tests that currently seed old keys:
+   - replace `simple_planner/...` fixtures with top-level keys.
+4. Add one migration fallback during rollout (temporary):
+   - try top-level keys first,
+   - if missing, read old `simple_planner/...` once and rewrite to top-level.
+5. Update diagnostics tooling (`run_local.py --diagnose`):
+   - report top-level registry presence/count.
+6. Keep notebook/local prototype paths unchanged unless explicitly migrated.
+   Notebook artifacts under `state/simple_planner/` are local dev helpers,
+   not runtime S3 conventions.
+
+### Non-goals in MVP
+
+1. ETag/Last-Modified optimization.
+2. Scheduler for standalone registry refresh.
+3. Complex policy diagnostics.

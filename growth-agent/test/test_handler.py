@@ -125,7 +125,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("agent.nodes.ingest.BlueskyClient")
 @patch("agent.nodes.ingest.MastodonClient")
 @patch("agent.nodes.ingest.UmamiClient")
-def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
+def test_ingest_analytics_old_umami_format(
+    MockUmami, MockMasto, MockBsky, mock_storage
+):
     """Umami legacy format with {\"value\": n} dicts still works."""
     storage, store = mock_storage
 
@@ -163,7 +165,9 @@ def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.BlueskyClient")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
+def test_publish_approved_drafts_publishes_due(
+    MockMasto, MockBsky, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -204,7 +208,9 @@ def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish
 
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
+def test_publish_no_scheduled_at_publishes_immediately(
+    MockMasto, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -349,7 +355,9 @@ def test_create_drafts(MockLLM, mock_storage):
     )
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.chat.return_value = {
+        "content": "Check out this post about quantum computing!"
+    }
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, plan)
@@ -529,8 +537,12 @@ def test_find_last_scheduled_at_from_drafts():
     t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
-            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
+            Draft(
+                id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1
+            ),
+            Draft(
+                id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2
+            ),
         ]
     )
     assert _find_last_scheduled_at(queue) == t2
@@ -581,7 +593,7 @@ def test_create_plan_pipeline_full(mock_fetch, mock_storage):
     queue = ContentQueue(drafts=existing_drafts)
     storage.write("content_queue.json", queue)
 
-    storage.write("simple_planner/registry_clean.json", {"urls": ["https://fretchen.eu/q"]})
+    storage.write("registry_clean.json", {"urls": ["https://fretchen.eu/q"]})
 
     plan = create_plan(storage)
     assert len(plan.items) == 0
@@ -608,7 +620,7 @@ def test_create_plan_pipeline_partial(mock_fetch, mock_storage):
     storage.write("content_queue.json", queue)
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {
             "urls": [
                 "https://fretchen.eu/q1",
@@ -657,7 +669,7 @@ def test_create_plan_scheduling_continues_from_last(mock_fetch, mock_storage):
     storage.write("content_queue.json", queue)
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/q", "https://fretchen.eu/r"]},
     )
 
@@ -684,7 +696,7 @@ def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storag
     storage, store = mock_storage
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/q", "https://fretchen.eu/r"]},
     )
 
@@ -714,7 +726,7 @@ def test_create_plan_uses_default_channels_for_schedule(mock_fetch, mock_storage
     storage, _store = mock_storage
 
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/a", "https://fretchen.eu/b"]},
     )
 
@@ -740,9 +752,9 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
     """Planner prefers registry_clean.json when both registry files exist."""
     storage, store = mock_storage
 
-    storage.write("simple_planner/registry.json", {"urls": ["https://fretchen.eu/from-registry"]})
+    storage.write("registry.json", {"urls": ["https://fretchen.eu/from-registry"]})
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {"urls": ["https://fretchen.eu/from-clean"]},
     )
 
@@ -762,7 +774,9 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
-def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_storage):
+def test_create_plan_excludes_urls_already_in_pending_pipeline(
+    mock_fetch, mock_storage
+):
     """Planner should not re-select URLs already present in drafts/future approved."""
     storage, _store = mock_storage
 
@@ -791,7 +805,7 @@ def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_
     )
     storage.write("content_queue.json", queue)
     storage.write(
-        "simple_planner/registry_clean.json",
+        "registry_clean.json",
         {
             "urls": [
                 "https://fretchen.eu/blocked-draft",

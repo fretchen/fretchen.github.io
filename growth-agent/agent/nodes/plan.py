@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 import math
 import random
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 from urllib.parse import urlsplit, urlunsplit
+from urllib.request import urlopen
 
 from agent.models import (
     ContentPlan,
@@ -23,7 +25,11 @@ logger = logging.getLogger("growth-agent")
 PIPELINE_TARGET = 10
 HALF_LIFE_DAYS = 30.0
 DEFAULT_CHANNELS = ["mastodon", "bluesky"]
-REGISTRY_KEYS = [
+SITEMAP_URL = "https://www.fretchen.eu/sitemap.xml"
+REGISTRY_KEY = "registry.json"
+REGISTRY_CLEAN_KEY = "registry_clean.json"
+REGISTRY_EXCLUDED_KEY = "registry_excluded.json"
+LEGACY_REGISTRY_KEYS = [
     "simple_planner/registry_clean.json",
     "simple_planner/registry.json",
 ]
@@ -50,21 +56,131 @@ def _page_title_from_url(url: str) -> str:
     return path.split("/")[-1].replace("-", " ").title()
 
 
-def _load_registry_urls(storage) -> list[str]:
-    for key in REGISTRY_KEYS:
-        data = storage.read(key)
-        if isinstance(data, dict) and isinstance(data.get("urls"), list):
-            urls = [_normalize_url(u) for u in data["urls"] if isinstance(u, str) and u.strip()]
-            # Keep first occurrence only
-            seen: set[str] = set()
-            unique: list[str] = []
-            for u in urls:
-                if u in seen:
-                    continue
-                seen.add(u)
-                unique.append(u)
-            return unique
-    return []
+def _dedupe_urls(urls: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        unique.append(url)
+    return unique
+
+
+def _urls_from_payload(data: dict | None) -> list[str]:
+    if not isinstance(data, dict) or not isinstance(data.get("urls"), list):
+        return []
+    urls = [_normalize_url(u) for u in data["urls"] if isinstance(u, str) and u.strip()]
+    return _dedupe_urls(urls)
+
+
+def _load_excluded_rules(storage) -> tuple[set[str], list[str]]:
+    data = storage.read(REGISTRY_EXCLUDED_KEY)
+    if not isinstance(data, dict):
+        return set(), []
+
+    excluded_urls = {
+        _normalize_url(u)
+        for u in data.get("urls", [])
+        if isinstance(u, str) and u.strip()
+    }
+    prefixes = [
+        p.strip() for p in data.get("prefixes", []) if isinstance(p, str) and p.strip()
+    ]
+    return excluded_urls, prefixes
+
+
+def _is_excluded(url: str, excluded_urls: set[str], prefixes: list[str]) -> bool:
+    if url in excluded_urls:
+        return True
+    path = urlsplit(url).path or "/"
+    return any(path.startswith(prefix) for prefix in prefixes)
+
+
+def _fetch_sitemap_urls() -> list[str]:
+    with urlopen(SITEMAP_URL) as response:
+        raw_xml = response.read()
+
+    root = ET.fromstring(raw_xml)
+    ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    loc_nodes = root.findall("sm:url/sm:loc", ns)
+    urls = [_normalize_url(node.text or "") for node in loc_nodes]
+    urls = [u for u in urls if u]
+    return _dedupe_urls(urls)
+
+
+def _prepare_registry_urls(storage) -> tuple[list[str], bool, int]:
+    """Return cleaned registry URLs, refresh flag, and excluded_count.
+
+    Option 2 storage convention uses top-level keys in growth-agent prefix.
+    """
+    clean_data = storage.read(REGISTRY_CLEAN_KEY)
+    clean_urls = _urls_from_payload(clean_data)
+    if clean_urls:
+        excluded_count = 0
+        if isinstance(clean_data, dict) and isinstance(
+            clean_data.get("excluded_count"), int
+        ):
+            excluded_count = clean_data["excluded_count"]
+        return clean_urls, False, excluded_count
+
+    # One-time migration fallback from old simple_planner/* keys.
+    for legacy_key in LEGACY_REGISTRY_KEYS:
+        legacy_data = storage.read(legacy_key)
+        legacy_urls = _urls_from_payload(legacy_data)
+        if not legacy_urls:
+            continue
+        migrated = {
+            "source": "legacy_migration",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "count": len(legacy_urls),
+            "urls": legacy_urls,
+            "excluded_count": 0,
+        }
+        if legacy_key.endswith("registry_clean.json"):
+            storage.write(REGISTRY_CLEAN_KEY, migrated)
+        else:
+            storage.write(REGISTRY_KEY, migrated)
+            storage.write(REGISTRY_CLEAN_KEY, migrated)
+        logger.info("Migrated registry from %s to top-level keys", legacy_key)
+        return legacy_urls, True, 0
+
+    # Build fresh registry from sitemap for MVP.
+    try:
+        registry_urls = _fetch_sitemap_urls()
+    except Exception:
+        logger.exception("Failed to build registry from sitemap")
+        return [], False, 0
+
+    excluded_urls, excluded_prefixes = _load_excluded_rules(storage)
+    clean_urls = [
+        url
+        for url in registry_urls
+        if not _is_excluded(url, excluded_urls, excluded_prefixes)
+    ]
+    excluded_count = len(registry_urls) - len(clean_urls)
+
+    raw_payload = {
+        "source": SITEMAP_URL,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(registry_urls),
+        "urls": registry_urls,
+    }
+    clean_payload = {
+        "source": SITEMAP_URL,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(clean_urls),
+        "urls": clean_urls,
+        "excluded_count": excluded_count,
+    }
+    storage.write(REGISTRY_KEY, raw_payload)
+    storage.write(REGISTRY_CLEAN_KEY, clean_payload)
+    logger.info(
+        "Registry rebuilt from sitemap (raw=%d, clean=%d)",
+        len(registry_urls),
+        len(clean_urls),
+    )
+    return clean_urls, True, excluded_count
 
 
 def _last_published_days(queue: ContentQueue, now: datetime) -> dict[str, float]:
@@ -138,20 +254,26 @@ def plan_node(state: AgentState) -> dict:
         now = datetime.now(timezone.utc)
 
         # Only future-approved posts still occupy upcoming pipeline slots.
-        future_approved = [d for d in queue.approved if d.scheduled_at and d.scheduled_at > now]
+        future_approved = [
+            d for d in queue.approved if d.scheduled_at and d.scheduled_at > now
+        ]
         existing = len(queue.drafts) + len(future_approved)
         needed = max(0, PIPELINE_TARGET - existing)
         if needed == 0:
-            logger.info("Pipeline full (%d pending+approved), skipping planning", existing)
+            logger.info(
+                "Pipeline full (%d pending+approved), skipping planning", existing
+            )
             storage.write("content_plan.json", ContentPlan())
             return {"plan_created": False}
 
         # Step 1: Draw new items.
-        chosen, registry_total, history_pages = select_pages_for_plan(
-            storage=storage,
-            queue=queue,
-            needed=needed,
-            now=now,
+        chosen, registry_total, history_pages, registry_refreshed, excluded_count = (
+            select_pages_for_plan(
+                storage=storage,
+                queue=queue,
+                needed=needed,
+                now=now,
+            )
         )
 
         if registry_total == 0:
@@ -172,6 +294,8 @@ def plan_node(state: AgentState) -> dict:
             "needed": needed,
             "existing_pipeline": existing,
             "registry_total": registry_total,
+            "registry_refreshed": registry_refreshed,
+            "excluded_count": excluded_count,
             "history_pages": history_pages,
             "selected_items": len(items),
             "selected_unique_urls": len({i.page_url for i in items}),
@@ -228,7 +352,7 @@ def select_pages_for_plan(
     queue: ContentQueue,
     needed: int,
     now: datetime,
-) -> tuple[list[SelectedPage], int, int]:
+) -> tuple[list[SelectedPage], int, int, bool, int]:
     """Step 1: select page URLs to promote using half-life weighted sampling.
 
     Returns:
@@ -236,9 +360,9 @@ def select_pages_for_plan(
     - registry size
     - number of pages with publication history
     """
-    registry_urls = _load_registry_urls(storage)
+    registry_urls, registry_refreshed, excluded_count = _prepare_registry_urls(storage)
     if not registry_urls:
-        return [], 0, 0
+        return [], 0, 0, registry_refreshed, excluded_count
 
     blocked_urls = _pending_pipeline_urls(queue, now)
     draw_urls = [url for url in registry_urls if url not in blocked_urls]
@@ -250,7 +374,13 @@ def select_pages_for_plan(
         needed,
         HALF_LIFE_DAYS,
     )
-    return chosen, len(registry_urls), len(last_days_by_url)
+    return (
+        chosen,
+        len(registry_urls),
+        len(last_days_by_url),
+        registry_refreshed,
+        excluded_count,
+    )
 
 
 def build_plan_items(
@@ -260,7 +390,9 @@ def build_plan_items(
     if not selected_pages:
         return []
 
-    schedule = plan_draft_schedule(queue, len(selected_pages), channels=DEFAULT_CHANNELS)
+    schedule = plan_draft_schedule(
+        queue, len(selected_pages), channels=DEFAULT_CHANNELS
+    )
     page_urls = [str(c["page_url"]) for c in selected_pages]
     page_metas = fetch_pages_meta(page_urls)
 
@@ -268,7 +400,9 @@ def build_plan_items(
     for sampled, (channel, slot) in zip(selected_pages, schedule):
         page_url = str(sampled["page_url"])
         meta = page_metas.get(page_url)
-        page_desc = (meta.description or "(no description)") if meta else "(no description)"
+        page_desc = (
+            (meta.description or "(no description)") if meta else "(no description)"
+        )
         page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
         t_days = sampled["t_days"]
         if t_days is None:
@@ -319,7 +453,9 @@ def plan_draft_schedule(
     last_scheduled = _find_last_scheduled_at(queue)
 
     if last_scheduled is None:
-        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(
+            days=1
+        )
         next_slot = tomorrow
         next_channel_idx = 0
     else:

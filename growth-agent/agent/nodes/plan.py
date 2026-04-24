@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 import math
 import random
-import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import urlopen
+
+from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
 
 from agent.models import (
     ContentPlan,
@@ -29,10 +30,6 @@ SITEMAP_URL = "https://www.fretchen.eu/sitemap.xml"
 REGISTRY_KEY = "registry.json"
 REGISTRY_CLEAN_KEY = "registry_clean.json"
 REGISTRY_EXCLUDED_KEY = "registry_excluded.json"
-LEGACY_REGISTRY_KEYS = [
-    "simple_planner/registry_clean.json",
-    "simple_planner/registry.json",
-]
 
 
 class SelectedPage(TypedDict):
@@ -117,27 +114,6 @@ def _prepare_registry_urls(storage) -> tuple[list[str], bool, int]:
         if isinstance(clean_data, dict) and isinstance(clean_data.get("excluded_count"), int):
             excluded_count = clean_data["excluded_count"]
         return clean_urls, False, excluded_count
-
-    # One-time migration fallback from old simple_planner/* keys.
-    for legacy_key in LEGACY_REGISTRY_KEYS:
-        legacy_data = storage.read(legacy_key)
-        legacy_urls = _urls_from_payload(legacy_data)
-        if not legacy_urls:
-            continue
-        migrated = {
-            "source": "legacy_migration",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "count": len(legacy_urls),
-            "urls": legacy_urls,
-            "excluded_count": 0,
-        }
-        if legacy_key.endswith("registry_clean.json"):
-            storage.write(REGISTRY_CLEAN_KEY, migrated)
-        else:
-            storage.write(REGISTRY_KEY, migrated)
-            storage.write(REGISTRY_CLEAN_KEY, migrated)
-        logger.info("Migrated registry from %s to top-level keys", legacy_key)
-        return legacy_urls, True, 0
 
     # Build fresh registry from sitemap for MVP.
     try:

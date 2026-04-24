@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
-from agent.nodes.strategy import adjust_strategy
 
 from agent.models import (
     ContentPlan,
@@ -15,8 +14,6 @@ from agent.models import (
     Insights,
     LLMAnalysis,
     PageForSocial,
-    Strategy,
-    StrategyAdjustment,
     WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
@@ -376,226 +373,23 @@ def test_create_drafts(MockLLM, mock_storage):
 
 
 # ---------------------------------------------------------------------------
-# adjust_strategy
-# ---------------------------------------------------------------------------
-
-
-@patch("agent.nodes.strategy.LLMClient")
-def test_adjust_strategy_no_change(MockLLM, mock_storage):
-    """When LLM says no adjustment needed, strategy remains unchanged."""
-    storage, store = mock_storage
-
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
-    )
-    storage.write("insights.json", insights)
-
-    llm_inst = MockLLM.return_value
-    llm_inst.structured_output.return_value = StrategyAdjustment(
-        should_adjust=False,
-        reasoning="Current strategy is performing well",
-    )
-    llm_inst.close.return_value = None
-
-    result = adjust_strategy(storage)
-
-    assert result is False
-    # strategy.json should NOT be written (no changes)
-    assert "strategy.json" not in store
-
-
-@patch("agent.nodes.strategy.LLMClient")
-def test_adjust_strategy_pillar_change(MockLLM, mock_storage):
-    """When LLM recommends a pillar change, it's applied and logged."""
-    storage, store = mock_storage
-
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
-    )
-    storage.write("insights.json", insights)
-
-    llm_inst = MockLLM.return_value
-    llm_inst.structured_output.return_value = StrategyAdjustment(
-        should_adjust=True,
-        pillar_change="Data Science & ML",
-        pillar_to_replace="AI-Tools & Infrastruktur",
-        reasoning="AI-Tools content gets low engagement, ML topics trending",
-    )
-    llm_inst.close.return_value = None
-
-    result = adjust_strategy(storage)
-
-    assert result is True
-    updated = Strategy.model_validate(store["strategy.json"])
-    assert "Data Science & ML" in updated.content_pillars
-    assert "AI-Tools & Infrastruktur" not in updated.content_pillars
-    assert len(updated.changes) == 1
-    assert updated.changes[0].field == "content_pillars"
-
-
-@patch("agent.nodes.strategy.LLMClient")
-def test_adjust_strategy_frequency_change(MockLLM, mock_storage):
-    """When LLM recommends a frequency change, it's applied and logged."""
-    storage, store = mock_storage
-
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
-    )
-    storage.write("insights.json", insights)
-
-    llm_inst = MockLLM.return_value
-    llm_inst.structured_output.return_value = StrategyAdjustment(
-        should_adjust=True,
-        frequency_channel="mastodon",
-        frequency_new_value=5,
-        reasoning="Mastodon engagement is growing, increase frequency",
-    )
-    llm_inst.close.return_value = None
-
-    result = adjust_strategy(storage)
-
-    assert result is True
-    updated = Strategy.model_validate(store["strategy.json"])
-    assert updated.posting_frequency["mastodon"] == 5
-    assert len(updated.changes) == 1
-    assert updated.changes[0].field == "posting_frequency.mastodon"
-    assert updated.changes[0].old_value == "4"
-    assert updated.changes[0].new_value == "5"
-
-
-@patch("agent.nodes.strategy.LLMClient")
-def test_adjust_strategy_both_changes(MockLLM, mock_storage):
-    """LLM can recommend both a pillar and frequency change (max 1 each)."""
-    storage, store = mock_storage
-
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
-    )
-    storage.write("insights.json", insights)
-
-    llm_inst = MockLLM.return_value
-    llm_inst.structured_output.return_value = StrategyAdjustment(
-        should_adjust=True,
-        pillar_change="Data Science & ML",
-        pillar_to_replace="AI-Tools & Infrastruktur",
-        frequency_channel="bluesky",
-        frequency_new_value=4,
-        reasoning="Shift focus and increase Bluesky presence",
-    )
-    llm_inst.close.return_value = None
-
-    result = adjust_strategy(storage)
-
-    assert result is True
-    updated = Strategy.model_validate(store["strategy.json"])
-    assert "Data Science & ML" in updated.content_pillars
-    assert updated.posting_frequency["bluesky"] == 4
-    # Both changes should be logged
-    assert len(updated.changes) == 2
-
-
-@patch("agent.nodes.strategy.LLMClient")
-def test_adjust_strategy_invalid_pillar_ignored(MockLLM, mock_storage):
-    """If LLM suggests replacing a non-existent pillar, ignore that change."""
-    storage, store = mock_storage
-
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
-    )
-    storage.write("insights.json", insights)
-
-    llm_inst = MockLLM.return_value
-    llm_inst.structured_output.return_value = StrategyAdjustment(
-        should_adjust=True,
-        pillar_change="Data Science & ML",
-        pillar_to_replace="NonExistent Pillar",
-        reasoning="Replace old pillar",
-    )
-    llm_inst.close.return_value = None
-
-    result = adjust_strategy(storage)
-
-    # No valid changes applied
-    assert result is False
-
-
-@patch("agent.nodes.strategy.LLMClient")
-def test_adjust_strategy_invalid_channel_ignored(MockLLM, mock_storage):
-    """If LLM suggests frequency for non-existent channel, ignore that change."""
-    storage, store = mock_storage
-
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(pageviews=500, visitors=100),
-    )
-    storage.write("insights.json", insights)
-
-    llm_inst = MockLLM.return_value
-    llm_inst.structured_output.return_value = StrategyAdjustment(
-        should_adjust=True,
-        frequency_channel="twitter",
-        frequency_new_value=5,
-        reasoning="Increase Twitter",
-    )
-    llm_inst.close.return_value = None
-
-    result = adjust_strategy(storage)
-
-    assert result is False
-
-
-# ---------------------------------------------------------------------------
 # handle() — integration-level tests
 # ---------------------------------------------------------------------------
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
-@patch("agent.nodes.drafts.create_drafts")
-@patch("agent.nodes.plan.create_plan")
 @patch("agent.nodes.insights.generate_insights")
 @patch("handler._get_storage")
 def test_handle_daily_not_monday(
-    mock_get_storage, mock_insights, mock_plan, mock_drafts, mock_publish
+    mock_get_storage, mock_insights, mock_publish
 ):
     """On a non-Monday, graph still runs insights -> plan -> drafts -> publish."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = ["d1"]
 
-    analysis_dict = LLMAnalysis(
-        top_topics=["q"],
-        traffic_sources=["o"],
-        best_pages_for_social=[],
-        content_gaps=[],
-        growth_opportunities=[],
-    ).model_dump()
-    plan = ContentPlan(
-        items=[
-            ContentPlanItem(
-                page_url="https://fretchen.eu/q",
-                page_title="Q",
-                page_description="desc",
-                reason="test",
-                channel="mastodon",
-                scheduled_at=datetime(2025, 1, 9, 9, 0, tzinfo=timezone.utc),
-            )
-        ]
-    )
-
-    # Return different data per key
-    storage_data: dict = {"llm_analysis.json": analysis_dict}
-
-    def plan_side_effect(storage):
-        storage_data["content_plan.json"] = plan.model_dump()
-        return plan
-
-    mock_plan.side_effect = plan_side_effect
-
-    def fake_read(key):
-        return storage_data.get(key)
-
-    fake_storage.read.side_effect = fake_read
-    mock_drafts.return_value = 0
-
+    # No registry in this test fixture: plan node writes empty plan and flow continues.
+    fake_storage.read.return_value = None
     # Patch datetime to a Wednesday
     wednesday = datetime(2025, 1, 8, 8, 0, 0, tzinfo=timezone.utc)  # Wednesday
     with patch("handler.datetime") as mock_dt:
@@ -606,21 +400,17 @@ def test_handle_daily_not_monday(
 
     assert result["statusCode"] == 200
     mock_insights.assert_called_once()
-    mock_plan.assert_called_once()
     mock_publish.assert_called_once()
-    mock_drafts.assert_called_once()
+    body = json.loads(result["body"])
+    assert body["drafts_created"] == 0
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
-@patch("agent.nodes.drafts.create_drafts")
-@patch("agent.nodes.plan.create_plan")
 @patch("agent.nodes.insights.generate_insights")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
     mock_get_storage,
     mock_insights,
-    mock_plan,
-    mock_drafts,
     mock_publish,
 ):
     """On Monday, graph runs the same simplified flow insights -> plan -> drafts -> publish."""
@@ -637,32 +427,8 @@ def test_handle_weekly_on_monday(
     )
     mock_insights.return_value = analysis
 
-    plan = ContentPlan(
-        items=[
-            ContentPlanItem(
-                page_url="https://fretchen.eu/q",
-                page_title="Q",
-                page_description="desc",
-                reason="test",
-                channel="mastodon",
-                scheduled_at=datetime(2025, 1, 7, 9, 0, tzinfo=timezone.utc),
-            )
-        ]
-    )
-    storage_data: dict = {"llm_analysis.json": analysis.model_dump()}
-
-    def plan_side_effect(storage):
-        storage_data["content_plan.json"] = plan.model_dump()
-        return plan
-
-    mock_plan.side_effect = plan_side_effect
-
-    def fake_read(key):
-        return storage_data.get(key)
-
-    fake_storage.read.side_effect = fake_read
-    mock_drafts.return_value = 3
-
+    # No registry in this test fixture: plan node writes empty plan and flow continues.
+    fake_storage.read.return_value = None
     monday = datetime(2025, 1, 6, 8, 0, 0, tzinfo=timezone.utc)  # Monday
     with patch("handler.datetime") as mock_dt:
         mock_dt.now.return_value = monday
@@ -673,8 +439,8 @@ def test_handle_weekly_on_monday(
     assert result["statusCode"] == 200
     mock_publish.assert_called_once()
     mock_insights.assert_called_once()
-    mock_plan.assert_called_once()
-    mock_drafts.assert_called_once()
+    body = json.loads(result["body"])
+    assert body["drafts_created"] == 0
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")

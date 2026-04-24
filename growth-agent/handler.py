@@ -45,11 +45,11 @@ def _get_storage() -> S3Storage:
 def handle(event, _context):
     """Cron entry point — invokes the LangGraph workflow.
 
-        Every run:
-            1. Insights (best effort)
-            2. Plan creation
-            3. Draft generation
-            4. Publishing
+    Every run:
+        1. Insights (best effort)
+        2. Plan creation
+        3. Draft generation
+        4. Publishing
     """
     logger.info("Growth Agent cron started")
 

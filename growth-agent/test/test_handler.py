@@ -830,7 +830,9 @@ def test_create_plan_pipeline_full(mock_fetch, mock_storage):
     queue = ContentQueue(drafts=existing_drafts)
     storage.write("content_queue.json", queue)
 
-    storage.write("simple_planner/registry_clean.json", {"urls": ["https://fretchen.eu/q"]})
+    storage.write(
+        "simple_planner/registry_clean.json", {"urls": ["https://fretchen.eu/q"]}
+    )
 
     plan = create_plan(storage)
     assert len(plan.items) == 0
@@ -989,7 +991,9 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
     """Planner prefers registry_clean.json when both registry files exist."""
     storage, store = mock_storage
 
-    storage.write("simple_planner/registry.json", {"urls": ["https://fretchen.eu/from-registry"]})
+    storage.write(
+        "simple_planner/registry.json", {"urls": ["https://fretchen.eu/from-registry"]}
+    )
     storage.write(
         "simple_planner/registry_clean.json",
         {"urls": ["https://fretchen.eu/from-clean"]},

@@ -28,6 +28,8 @@ REGISTRY_KEYS = [
     "simple_planner/registry.json",
 ]
 
+SelectedPage = dict[str, str | float | None]
+
 
 def _normalize_url(url: str) -> str:
     parts = urlsplit(url.strip())
@@ -48,7 +50,11 @@ def _load_registry_urls(storage) -> list[str]:
     for key in REGISTRY_KEYS:
         data = storage.read(key)
         if isinstance(data, dict) and isinstance(data.get("urls"), list):
-            urls = [_normalize_url(u) for u in data["urls"] if isinstance(u, str) and u.strip()]
+            urls = [
+                _normalize_url(u)
+                for u in data["urls"]
+                if isinstance(u, str) and u.strip()
+            ]
             # Keep first occurrence only
             seen: set[str] = set()
             unique: list[str] = []
@@ -91,7 +97,7 @@ def _weighted_draw(
     needed: int,
     half_life_days: float,
     seed: int | None,
-) -> list[dict[str, str | float | None]]:
+) -> list[SelectedPage]:
     weighted_candidates = [
         {
             "page_url": page_url,
@@ -107,7 +113,7 @@ def _weighted_draw(
             c["weight"] = 1.0
 
     rng = random.Random(seed)
-    chosen: list[dict[str, str | float | None]] = []
+    chosen: list[SelectedPage] = []
     pool = weighted_candidates.copy()
     for _ in range(min(needed, len(pool))):
         weights = [float(c["weight"]) for c in pool]
@@ -122,7 +128,65 @@ def plan_node(state: AgentState) -> dict:
     """LangGraph node: plan which pages to promote and when."""
     storage = state["storage"]
     try:
-        plan = create_plan(storage)
+        # Queue is the current pipeline state: drafted, approved, and published posts.
+        queue = load_model(storage, "content_queue.json", ContentQueue)
+        now = datetime.now(timezone.utc)
+
+        # Only future-approved posts still occupy upcoming pipeline slots.
+        future_approved = [
+            d for d in queue.approved if d.scheduled_at and d.scheduled_at > now
+        ]
+        existing = len(queue.drafts) + len(future_approved)
+        needed = max(0, PIPELINE_TARGET - existing)
+        if needed == 0:
+            logger.info(
+                "Pipeline full (%d pending+approved), skipping planning", existing
+            )
+            storage.write("content_plan.json", ContentPlan())
+            return {"plan_created": False}
+
+        # Step 1: Draw new items.
+        chosen, registry_total, history_pages = select_pages_for_plan(
+            storage=storage,
+            queue=queue,
+            needed=needed,
+            now=now,
+        )
+
+        if registry_total == 0:
+            logger.info("No registry URLs found, skipping planning")
+            storage.write("content_plan.json", ContentPlan())
+            return {"plan_created": False}
+
+        if not chosen:
+            logger.info("No pages sampled, skipping planning")
+            storage.write("content_plan.json", ContentPlan())
+            return {"plan_created": False}
+
+        # Step 2: Schedule new items.
+        items = build_plan_items(queue=queue, selected_pages=chosen)
+
+        # Diagnostics are lightweight run metrics for observability/debugging.
+        diagnostics: dict[str, int | float | bool | str] = {
+            "needed": needed,
+            "existing_pipeline": existing,
+            "registry_total": registry_total,
+            "history_pages": history_pages,
+            "selected_items": len(items),
+            "selected_unique_urls": len({i.page_url for i in items}),
+            "half_life_days": HALF_LIFE_DAYS,
+            "channels": ",".join(DEFAULT_CHANNELS),
+        }
+
+        plan = ContentPlan(items=items, diagnostics=diagnostics)
+        storage.write("content_plan.json", plan)
+
+        logger.info(
+            "Content plan created with %d items (pipeline: %d/%d)",
+            len(items),
+            existing,
+            PIPELINE_TARGET,
+        )
         return {"plan_created": len(plan.items) > 0}
     except Exception:
         logger.exception("Plan creation failed")
@@ -137,6 +201,79 @@ def _find_last_scheduled_at(queue: ContentQueue) -> datetime | None:
         if draft.scheduled_at and (latest is None or draft.scheduled_at > latest):
             latest = draft.scheduled_at
     return latest
+
+
+def select_pages_for_plan(
+    storage,
+    queue: ContentQueue,
+    needed: int,
+    now: datetime,
+) -> tuple[list[SelectedPage], int, int]:
+    """Step 1: select page URLs to promote using half-life weighted sampling.
+
+    Returns:
+    - selected pages
+    - registry size
+    - number of pages with publication history
+    """
+    registry_urls = _load_registry_urls(storage)
+    if not registry_urls:
+        return [], 0, 0
+
+    seed_str = os.environ.get("PLAN_RANDOM_SEED")
+    seed = int(seed_str) if seed_str else None
+    last_days_by_url = _last_published_days(queue, now)
+    chosen = _weighted_draw(
+        registry_urls,
+        last_days_by_url,
+        needed,
+        HALF_LIFE_DAYS,
+        seed,
+    )
+    return chosen, len(registry_urls), len(last_days_by_url)
+
+
+def build_plan_items(
+    queue: ContentQueue, selected_pages: list[SelectedPage]
+) -> list[ContentPlanItem]:
+    """Step 2: assign channels/schedule and enrich selected pages to plan items."""
+    if not selected_pages:
+        return []
+
+    schedule = plan_draft_schedule(
+        queue, len(selected_pages), channels=DEFAULT_CHANNELS
+    )
+    page_urls = [str(c["page_url"]) for c in selected_pages]
+    page_metas = fetch_pages_meta(page_urls)
+
+    items: list[ContentPlanItem] = []
+    for sampled, (channel, slot) in zip(selected_pages, schedule):
+        page_url = str(sampled["page_url"])
+        meta = page_metas.get(page_url)
+        page_desc = (
+            (meta.description or "(no description)") if meta else "(no description)"
+        )
+        page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
+        t_days = sampled["t_days"]
+        if t_days is None:
+            reason = "random draw from registry (unpublished page)"
+        else:
+            reason = (
+                "random draw with half-life weighting "
+                f"(last published {float(t_days):.1f} days ago)"
+            )
+        items.append(
+            ContentPlanItem(
+                page_url=page_url,
+                page_title=page_title,
+                page_description=page_desc,
+                reason=reason,
+                channel=channel,
+                scheduled_at=slot,
+            )
+        )
+
+    return items
 
 
 def plan_draft_schedule(
@@ -191,95 +328,9 @@ def plan_draft_schedule(
 
 
 def create_plan(storage) -> ContentPlan:
-    """Create a content plan using half-life weighted random page sampling."""
-    queue = load_model(storage, "content_queue.json", ContentQueue)
+    """Compatibility wrapper used by tests and direct callers.
 
-    now = datetime.now(timezone.utc)
-    future_approved = [
-        d for d in queue.approved if d.scheduled_at and d.scheduled_at > now
-    ]
-    existing = len(queue.drafts) + len(future_approved)
-    needed = max(0, PIPELINE_TARGET - existing)
-    if needed == 0:
-        logger.info("Pipeline full (%d pending+approved), skipping planning", existing)
-        plan = ContentPlan()
-        storage.write("content_plan.json", plan)
-        return plan
-
-    registry_urls = _load_registry_urls(storage)
-    if not registry_urls:
-        logger.info("No registry URLs found, skipping planning")
-        plan = ContentPlan()
-        storage.write("content_plan.json", plan)
-        return plan
-
-    seed_str = os.environ.get("PLAN_RANDOM_SEED")
-    seed = int(seed_str) if seed_str else None
-    last_days_by_url = _last_published_days(queue, now)
-    chosen = _weighted_draw(
-        registry_urls,
-        last_days_by_url,
-        needed,
-        HALF_LIFE_DAYS,
-        seed,
-    )
-
-    if not chosen:
-        logger.info("No pages sampled, skipping planning")
-        plan = ContentPlan()
-        storage.write("content_plan.json", plan)
-        return plan
-
-    schedule = plan_draft_schedule(queue, len(chosen), channels=DEFAULT_CHANNELS)
-
-    page_urls = [str(c["page_url"]) for c in chosen]
-    page_metas = fetch_pages_meta(page_urls)
-
-    items: list[ContentPlanItem] = []
-    for sampled, (channel, slot) in zip(chosen, schedule):
-        page_url = str(sampled["page_url"])
-        meta = page_metas.get(page_url)
-        page_desc = (
-            (meta.description or "(no description)") if meta else "(no description)"
-        )
-        page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
-        t_days = sampled["t_days"]
-        if t_days is None:
-            reason = "random draw from registry (unpublished page)"
-        else:
-            reason = (
-                "random draw with half-life weighting "
-                f"(last published {float(t_days):.1f} days ago)"
-            )
-        items.append(
-            ContentPlanItem(
-                page_url=page_url,
-                page_title=page_title,
-                page_description=page_desc,
-                reason=reason,
-                channel=channel,
-                scheduled_at=slot,
-            )
-        )
-
-    diagnostics: dict[str, int | float | bool | str] = {
-        "needed": needed,
-        "existing_pipeline": existing,
-        "registry_total": len(registry_urls),
-        "history_pages": len(last_days_by_url),
-        "selected_items": len(items),
-        "selected_unique_urls": len({i.page_url for i in items}),
-        "half_life_days": HALF_LIFE_DAYS,
-        "channels": ",".join(DEFAULT_CHANNELS),
-    }
-
-    plan = ContentPlan(items=items, diagnostics=diagnostics)
-    storage.write("content_plan.json", plan)
-
-    logger.info(
-        "Content plan created with %d items (pipeline: %d/%d)",
-        len(items),
-        existing,
-        PIPELINE_TARGET,
-    )
-    return plan
+    Delegates orchestration to ``plan_node`` and returns the persisted plan model.
+    """
+    plan_node({"storage": storage})
+    return load_model(storage, "content_plan.json", ContentPlan)

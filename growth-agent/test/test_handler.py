@@ -11,12 +11,14 @@ from agent.models import (
     ContentPlanItem,
     ContentQueue,
     Draft,
+    DraftCritique,
     Insights,
     LLMAnalysis,
     PageForSocial,
     WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
+    MastodonDraftOutput,
     create_drafts,
 )
 from agent.nodes.ingest import ingest_analytics
@@ -350,6 +352,36 @@ def test_create_drafts(MockLLM, mock_storage):
 
     llm_inst = MockLLM.return_value
     llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.structured_output.side_effect = [
+        MastodonDraftOutput(
+            content=(
+                "Check out this post about quantum computing! "
+                "https://fretchen.eu/quantum?utm_source=mastodon&utm_campaign=growth-agent "
+                "#Quantum #AI"
+            ),
+            hashtags=["#Quantum", "#AI"],
+        ),
+        DraftCritique(
+            has_strong_hook=True,
+            follows_platform_conventions=True,
+            mentions_specific_insight=True,
+            includes_link=True,
+            appropriate_tone=True,
+            overall_score=85,
+            issues=[],
+            suggested_improvement="",
+        ),
+        DraftCritique(
+            has_strong_hook=True,
+            follows_platform_conventions=True,
+            mentions_specific_insight=True,
+            includes_link=True,
+            appropriate_tone=True,
+            overall_score=82,
+            issues=[],
+            suggested_improvement="",
+        ),
+    ]
     llm_inst.close.return_value = None
 
     count = create_drafts(storage, plan)
@@ -369,6 +401,9 @@ def test_create_drafts(MockLLM, mock_storage):
     # Draft IDs should include index
     assert "_0" in updated_queue.drafts[0].id
     assert "_1" in updated_queue.drafts[1].id
+    # Mastodon hashtags should be persisted separately; Bluesky remains empty
+    assert updated_queue.drafts[0].hashtags == ["#Quantum", "#AI"]
+    assert updated_queue.drafts[1].hashtags == []
 
 
 # ---------------------------------------------------------------------------

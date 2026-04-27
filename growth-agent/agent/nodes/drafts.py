@@ -6,6 +6,8 @@ import logging
 import os
 from datetime import datetime, timezone
 
+from pydantic import BaseModel, Field
+
 from agent.llm_client import LLMClient
 from agent.models import ContentPlan, ContentQueue, Draft, DraftCritique, Strategy
 from agent.state import AgentState
@@ -18,6 +20,16 @@ CHANNEL_CONFIG = {
     "mastodon": {"max_tokens": 300},
     "bluesky": {"max_tokens": 200},
 }
+
+
+class MastodonDraftOutput(BaseModel):
+    """Structured Mastodon draft output with explicit hashtag list."""
+
+    content: str = Field(description="Final Mastodon post text, including hashtags inline")
+    hashtags: list[str] = Field(
+        default_factory=list,
+        description="2-3 hashtags used in the post, each prefixed with #",
+    )
 
 
 def drafts_node(state: AgentState) -> dict:
@@ -182,6 +194,79 @@ Requirements:
 Return ONLY the improved post text, nothing else."""
 
 
+def _normalize_hashtags(hashtags: list[str]) -> list[str]:
+    """Normalize hashtag list to '#tag' format and preserve order."""
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for tag in hashtags:
+        cleaned = tag.strip()
+        if not cleaned:
+            continue
+        if not cleaned.startswith("#"):
+            cleaned = f"#{cleaned}"
+        key = cleaned.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(cleaned)
+    return normalized
+
+
+def _generate_mastodon_draft_structured(
+    llm: LLMClient,
+    prompt: str,
+    strategy: Strategy,
+) -> MastodonDraftOutput:
+    """Generate Mastodon draft with explicit hashtags via structured output."""
+    result = llm.structured_output(
+        schema=MastodonDraftOutput,
+        messages=[
+            {"role": "system", "content": _system_prompt(strategy)},
+            {
+                "role": "user",
+                "content": (
+                    f"{prompt}\n\n"
+                    "Return JSON with keys: content, hashtags. "
+                    "Include hashtags both in content and in hashtags list."
+                ),
+            },
+        ],
+    )
+    assert isinstance(result, MastodonDraftOutput)
+    result.hashtags = _normalize_hashtags(result.hashtags)
+    return result
+
+
+def _refine_mastodon_draft_structured(
+    llm: LLMClient,
+    original: str,
+    critique: DraftCritique,
+    strategy: Strategy,
+) -> MastodonDraftOutput | None:
+    """Refine Mastodon draft and keep explicit hashtag list."""
+    try:
+        result = llm.structured_output(
+            schema=MastodonDraftOutput,
+            messages=[
+                {"role": "system", "content": _system_prompt(strategy)},
+                {
+                    "role": "user",
+                    "content": (
+                        f"{_refine_prompt(original, critique, 'mastodon', strategy)}\n\n"
+                        "Return JSON with keys: content, hashtags. "
+                        "Include hashtags both in content and in hashtags list."
+                    ),
+                },
+            ],
+        )
+        assert isinstance(result, MastodonDraftOutput)
+        result.hashtags = _normalize_hashtags(result.hashtags)
+        return result
+    except Exception:
+        logger.exception("Mastodon draft refinement failed")
+        return None
+
+
 def create_drafts(storage, plan: ContentPlan) -> int:
     """Generate social media draft posts from a content plan. Returns count.
 
@@ -208,17 +293,23 @@ def create_drafts(storage, plan: ContentPlan) -> int:
             prompt_fn = {"mastodon": _mastodon_prompt, "bluesky": _bluesky_prompt}[channel]
             prompt = prompt_fn(item, "en", strategy)
             max_tokens = config["max_tokens"]
+            draft_hashtags: list[str] = []
 
             # Step 1: Generate initial draft
-            result = llm.chat(
-                messages=[
-                    {"role": "system", "content": _system_prompt(strategy)},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.8,
-                max_tokens=max_tokens,
-            )
-            draft_content = result["content"].strip()
+            if channel == "mastodon":
+                generated = _generate_mastodon_draft_structured(llm, prompt, strategy)
+                draft_content = generated.content.strip()
+                draft_hashtags = generated.hashtags
+            else:
+                result = llm.chat(
+                    messages=[
+                        {"role": "system", "content": _system_prompt(strategy)},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.8,
+                    max_tokens=max_tokens,
+                )
+                draft_content = result["content"].strip()
 
             # Step 2: Self-critique
             critique = _critique_draft(llm, draft_content, channel, strategy)
@@ -238,7 +329,17 @@ def create_drafts(storage, plan: ContentPlan) -> int:
                     llm, draft_content, critique, channel, strategy, max_tokens
                 )
                 if refined_content:
-                    draft_content = refined_content
+                    if channel == "mastodon":
+                        refined = _refine_mastodon_draft_structured(
+                            llm, draft_content, critique, strategy
+                        )
+                        if refined:
+                            draft_content = refined.content.strip()
+                            draft_hashtags = refined.hashtags
+                        else:
+                            draft_content = refined_content
+                    else:
+                        draft_content = refined_content
                     # Re-critique to get updated score
                     new_critique = _critique_draft(llm, draft_content, channel, strategy)
                     quality_score = new_critique.overall_score
@@ -256,6 +357,7 @@ def create_drafts(storage, plan: ContentPlan) -> int:
                     language="en",
                     content=draft_content,
                     source_blog_post=item.page_title,
+                    hashtags=draft_hashtags,
                     link=f"{item.page_url}?utm_source={channel}&utm_campaign=growth-agent",
                     scheduled_at=item.scheduled_at,
                     quality_score=quality_score,

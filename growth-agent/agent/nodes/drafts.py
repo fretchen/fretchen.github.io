@@ -25,9 +25,7 @@ CHANNEL_CONFIG = {
 class MastodonDraftOutput(BaseModel):
     """Structured Mastodon draft output with explicit hashtag list."""
 
-    content: str = Field(
-        description="Final Mastodon post text, including hashtags inline"
-    )
+    content: str = Field(description="Final Mastodon post text, including hashtags inline")
     hashtags: list[str] = Field(
         default_factory=list,
         description="2-3 hashtags used in the post, each prefixed with #",
@@ -175,9 +173,7 @@ def _refine_prompt(
     original_draft: str, critique: DraftCritique, channel: str, strategy: Strategy
 ) -> str:
     """Generate a refinement prompt based on critique feedback."""
-    issues_str = (
-        ", ".join(critique.issues) if critique.issues else "minor improvements needed"
-    )
+    issues_str = ", ".join(critique.issues) if critique.issues else "minor improvements needed"
     return f"""Improve this {channel} post based on the critique.
 
 Original post:
@@ -298,9 +294,7 @@ def create_drafts(storage, plan: ContentPlan) -> int:
                 )
                 continue
             config = CHANNEL_CONFIG[channel]
-            prompt_fn = {"mastodon": _mastodon_prompt, "bluesky": _bluesky_prompt}[
-                channel
-            ]
+            prompt_fn = {"mastodon": _mastodon_prompt, "bluesky": _bluesky_prompt}[channel]
             prompt = prompt_fn(item, "en", strategy)
             max_tokens = config["max_tokens"]
             draft_hashtags: list[str] = []
@@ -364,9 +358,7 @@ def create_drafts(storage, plan: ContentPlan) -> int:
 
                 if refined_applied:
                     # Re-critique to get updated score
-                    new_critique = _critique_draft(
-                        llm, draft_content, channel, strategy
-                    )
+                    new_critique = _critique_draft(llm, draft_content, channel, strategy)
                     quality_score = new_critique.overall_score
                     quality_issues = new_critique.issues
                     logger.info(

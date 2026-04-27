@@ -25,7 +25,6 @@ from agent.nodes.ingest import ingest_analytics
 from agent.nodes.insights import generate_insights
 from agent.nodes.plan import (
     PIPELINE_TARGET,
-    _find_last_scheduled_at,
     create_plan,
     plan_draft_schedule,
 )
@@ -496,16 +495,6 @@ def test_handle_resilient_on_failure(mock_get_storage, mock_publish):
 
 
 # ---------------------------------------------------------------------------
-# _find_last_scheduled_at
-# ---------------------------------------------------------------------------
-
-
-def test_find_last_scheduled_at_empty():
-    queue = ContentQueue()
-    assert _find_last_scheduled_at(queue) is None
-
-
-# ---------------------------------------------------------------------------
 # plan_draft_schedule
 # ---------------------------------------------------------------------------
 
@@ -533,9 +522,9 @@ def test_plan_draft_schedule_empty_queue():
     )
 
 
-def test_plan_draft_schedule_continues_from_existing():
-    """Continues alternation from last scheduled draft."""
-    last = datetime(2025, 4, 20, 9, 0, tzinfo=timezone.utc)
+def test_plan_draft_schedule_fills_earliest_free_days():
+    """Fills earliest free days instead of appending after the last slot."""
+    now = datetime(2025, 4, 10, 8, 0, tzinfo=timezone.utc)
     queue = ContentQueue(
         drafts=[
             Draft(
@@ -543,59 +532,26 @@ def test_plan_draft_schedule_continues_from_existing():
                 channel="mastodon",
                 language="en",
                 content="a",
-                scheduled_at=last,
+                scheduled_at=datetime(2025, 4, 11, 9, 0, tzinfo=timezone.utc),
             ),
-        ]
-    )
-    schedule = plan_draft_schedule(queue, 2)
-    assert schedule[0][0] == "bluesky"  # alternates from mastodon
-    assert schedule[0][1] == last + timedelta(days=1)
-    assert schedule[1][0] == "mastodon"
-    assert schedule[1][1] == last + timedelta(days=2)
-
-
-def test_plan_draft_schedule_zero_needed():
-    """Requesting 0 drafts returns empty list."""
-    assert plan_draft_schedule(ContentQueue(), 0) == []
-
-
-def test_find_last_scheduled_at_from_drafts():
-    t1 = datetime(2025, 4, 10, 9, 0, tzinfo=timezone.utc)
-    t2 = datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
-    queue = ContentQueue(
-        drafts=[
-            Draft(id="d1", channel="mastodon", language="en", content="a", scheduled_at=t1),
-            Draft(id="d2", channel="bluesky", language="en", content="b", scheduled_at=t2),
-        ]
-    )
-    assert _find_last_scheduled_at(queue) == t2
-
-
-def test_find_last_scheduled_at_across_drafts_and_approved():
-    t_draft = datetime(2025, 4, 10, 9, 0, tzinfo=timezone.utc)
-    t_approved = datetime(2025, 4, 15, 9, 0, tzinfo=timezone.utc)
-    queue = ContentQueue(
-        drafts=[
-            Draft(
-                id="d1",
-                channel="mastodon",
-                language="en",
-                content="a",
-                scheduled_at=t_draft,
-            ),
-        ],
-        approved=[
             Draft(
                 id="d2",
                 channel="bluesky",
                 language="en",
                 content="b",
-                scheduled_at=t_approved,
-                status="approved",
+                scheduled_at=datetime(2025, 4, 16, 9, 0, tzinfo=timezone.utc),
             ),
-        ],
+        ]
     )
-    assert _find_last_scheduled_at(queue) == t_approved
+    schedule = plan_draft_schedule(queue, 3, now=now)
+    assert schedule[0][1] == datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
+    assert schedule[1][1] == datetime(2025, 4, 13, 9, 0, tzinfo=timezone.utc)
+    assert schedule[2][1] == datetime(2025, 4, 14, 9, 0, tzinfo=timezone.utc)
+
+
+def test_plan_draft_schedule_zero_needed():
+    """Requesting 0 drafts returns empty list."""
+    assert plan_draft_schedule(ContentQueue(), 0) == []
 
 
 # ---------------------------------------------------------------------------
@@ -674,19 +630,26 @@ def test_create_plan_pipeline_partial(mock_fetch, mock_storage):
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
-def test_create_plan_scheduling_continues_from_last(mock_fetch, mock_storage):
-    """Plan items' scheduled_at starts from the latest existing scheduled_at + 1 day."""
+def test_create_plan_scheduling_fills_earliest_free_days(mock_fetch, mock_storage):
+    """Plan items are scheduled into earliest free days after tomorrow."""
     storage, store = mock_storage
 
-    last_scheduled = datetime(2025, 4, 20, 9, 0, tzinfo=timezone.utc)
+    frozen_now = datetime(2025, 4, 10, 8, 0, tzinfo=timezone.utc)
     existing_drafts = [
         Draft(
-            id="d_existing",
+            id="d_existing_1",
             channel="mastodon",
             language="en",
             content="Existing",
-            scheduled_at=last_scheduled,
-        )
+            scheduled_at=datetime(2025, 4, 11, 9, 0, tzinfo=timezone.utc),
+        ),
+        Draft(
+            id="d_existing_2",
+            channel="bluesky",
+            language="en",
+            content="Existing",
+            scheduled_at=datetime(2025, 4, 16, 9, 0, tzinfo=timezone.utc),
+        ),
     ]
     queue = ContentQueue(drafts=existing_drafts)
     storage.write("content_queue.json", queue)
@@ -702,15 +665,18 @@ def test_create_plan_scheduling_continues_from_last(mock_fetch, mock_storage):
         "https://fretchen.eu/q": PageMeta(
             url="https://fretchen.eu/q", title="Q", description="Desc"
         ),
+        "https://fretchen.eu/r": PageMeta(
+            url="https://fretchen.eu/r", title="R", description="Desc"
+        ),
     }
 
-    plan = create_plan(storage)
+    with patch("agent.nodes.plan.datetime") as mock_dt:
+        mock_dt.now.return_value = frozen_now
+        mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+        plan = create_plan(storage)
 
-    assert plan.items[0].scheduled_at == last_scheduled + timedelta(days=1)
-    assert plan.items[1].scheduled_at == last_scheduled + timedelta(days=2)
-    # Existing draft is mastodon → plan alternates starting with bluesky
-    assert plan.items[0].channel == "bluesky"
-    assert plan.items[1].channel == "mastodon"
+    assert plan.items[0].scheduled_at == datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
+    assert plan.items[1].scheduled_at == datetime(2025, 4, 13, 9, 0, tzinfo=timezone.utc)
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")

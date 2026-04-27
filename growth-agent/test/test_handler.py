@@ -126,7 +126,9 @@ def test_ingest_analytics(MockUmami, MockMasto, MockBsky, mock_storage):
 @patch("agent.nodes.ingest.BlueskyClient")
 @patch("agent.nodes.ingest.MastodonClient")
 @patch("agent.nodes.ingest.UmamiClient")
-def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_storage):
+def test_ingest_analytics_old_umami_format(
+    MockUmami, MockMasto, MockBsky, mock_storage
+):
     """Umami legacy format with {\"value\": n} dicts still works."""
     storage, store = mock_storage
 
@@ -164,7 +166,9 @@ def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.BlueskyClient")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish, mock_storage):
+def test_publish_approved_drafts_publishes_due(
+    MockMasto, MockBsky, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(hours=1)
@@ -205,7 +209,9 @@ def test_publish_approved_drafts_publishes_due(MockMasto, MockBsky, mock_publish
 
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_no_scheduled_at_publishes_immediately(MockMasto, mock_publish, mock_storage):
+def test_publish_no_scheduled_at_publishes_immediately(
+    MockMasto, mock_publish, mock_storage
+):
     storage, store = mock_storage
 
     queue = ContentQueue(
@@ -350,7 +356,9 @@ def test_create_drafts(MockLLM, mock_storage):
     )
 
     llm_inst = MockLLM.return_value
-    llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
+    llm_inst.chat.return_value = {
+        "content": "Check out this post about quantum computing!"
+    }
     llm_inst.structured_output.side_effect = [
         MastodonDraftOutput(
             content=(
@@ -403,6 +411,60 @@ def test_create_drafts(MockLLM, mock_storage):
     # Mastodon hashtags should be persisted separately; Bluesky remains empty
     assert updated_queue.drafts[0].hashtags == ["#Quantum", "#AI"]
     assert updated_queue.drafts[1].hashtags == []
+
+
+@patch("agent.nodes.drafts.LLMClient")
+def test_create_drafts_mastodon_refine_failure_keeps_original(
+    MockLLM, mock_storage
+):
+    storage, store = mock_storage
+
+    now = datetime(2025, 6, 10, 14, 0, 0, tzinfo=timezone.utc)
+    plan = ContentPlan(
+        items=[
+            ContentPlanItem(
+                page_url="https://fretchen.eu/quantum",
+                page_title="Quantum Blog",
+                page_description="Quantum computing intro",
+                reason="High traffic",
+                channel="mastodon",
+                scheduled_at=now + timedelta(days=1),
+            ),
+        ]
+    )
+
+    llm_inst = MockLLM.return_value
+    llm_inst.structured_output.side_effect = [
+        MastodonDraftOutput(
+            content=(
+                "Old framing about quantum "
+                "https://fretchen.eu/quantum?utm_source=mastodon&utm_campaign=growth-agent "
+                "#Old"
+            ),
+            hashtags=["#Old"],
+        ),
+        DraftCritique(
+            has_strong_hook=False,
+            follows_platform_conventions=True,
+            mentions_specific_insight=True,
+            includes_link=True,
+            appropriate_tone=True,
+            overall_score=60,
+            issues=["weak_hook"],
+            suggested_improvement="Use a stronger, different opening",
+        ),
+        Exception("structured refine failed"),
+    ]
+    llm_inst.close.return_value = None
+
+    count = create_drafts(storage, plan)
+
+    assert count == 1
+    updated_queue = ContentQueue.model_validate(store["content_queue.json"])
+    assert len(updated_queue.drafts) == 1
+    # No chat fallback for mastodon refinement: keep original structured draft.
+    assert updated_queue.drafts[0].content.startswith("Old framing about quantum")
+    assert updated_queue.drafts[0].hashtags == ["#Old"]
 
 
 # ---------------------------------------------------------------------------
@@ -675,8 +737,12 @@ def test_create_plan_scheduling_fills_earliest_free_days(mock_fetch, mock_storag
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
         plan = create_plan(storage)
 
-    assert plan.items[0].scheduled_at == datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
-    assert plan.items[1].scheduled_at == datetime(2025, 4, 13, 9, 0, tzinfo=timezone.utc)
+    assert plan.items[0].scheduled_at == datetime(
+        2025, 4, 12, 9, 0, tzinfo=timezone.utc
+    )
+    assert plan.items[1].scheduled_at == datetime(
+        2025, 4, 13, 9, 0, tzinfo=timezone.utc
+    )
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
@@ -763,7 +829,9 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
-def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_storage):
+def test_create_plan_excludes_urls_already_in_pending_pipeline(
+    mock_fetch, mock_storage
+):
     """Planner should not re-select URLs already present in drafts/future approved."""
     storage, _store = mock_storage
 

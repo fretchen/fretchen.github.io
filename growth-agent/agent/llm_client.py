@@ -68,6 +68,8 @@ class LLMClient:
         self,
         schema: type[BaseModel],
         messages: list[dict[str, str]],
+        temperature: float | None = None,
+        max_tokens: int | None = None,
     ) -> BaseModel:
         """Send a chat request and parse the response into a Pydantic model.
 
@@ -77,11 +79,20 @@ class LLMClient:
         Args:
             schema: Pydantic model class to parse the response into.
             messages: List of {role, content} dicts.
+            temperature: Optional sampling temperature override.
+            max_tokens: Optional maximum response tokens override.
 
         Returns:
             Parsed Pydantic model instance.
         """
+        bind_kwargs: dict[str, float | int] = {}
+        if temperature is not None:
+            bind_kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            bind_kwargs["max_tokens"] = max_tokens
         structured = self._chat_model.with_structured_output(schema)
+        if bind_kwargs:
+            structured = structured.bind(**bind_kwargs)
         result = structured.invoke(_to_langchain_messages(messages))
         assert isinstance(result, BaseModel)  # narrowing for mypy
         return result

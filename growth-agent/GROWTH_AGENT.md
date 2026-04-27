@@ -990,6 +990,215 @@ Out of scope:
 4. Lint/type checks remain green for touched modules.
 5. Reviewers can understand scope quickly from one canonical document.
 
+## Phase 2f — Former Posts Context for Drafting & Review
+
+Purpose: give both the draft generator and the growth review UI explicit context
+about what was already published, when it was published, and for which page,
+so duplicate messaging is reduced and human review becomes faster.
+
+This phase is intentionally scoped as a context layer, not a full ranking or
+embeddings system.
+
+### Why this phase exists
+
+Current behavior already uses publication history for planning probability
+(half-life weighting), but draft generation does not explicitly see former post
+content and the review UI does not show page-specific publication history next
+to each draft.
+
+Resulting pain points:
+
+1. AI can repeat hook patterns and phrasing for the same page.
+2. Reviewers need manual memory to detect near-duplicates.
+3. "When was this page last promoted?" is not obvious in one place.
+
+### Target behavior
+
+1. **Draft node context**
+  Before generating each draft, provide a compact "former posts for this page"
+  block (latest N records) including timestamp, channel, and short text excerpt.
+2. **UI context**
+  On each draft card, show a small "Previous posts for this page" panel with
+  publication dates and concise snippets.
+3. **Anti-duplication guardrail**
+  Add lightweight prompt constraints and an optional single retry when a draft
+  is overly similar to very recent posts for the same page.
+
+### Scope
+
+In scope:
+
+1. Add publish timestamp to published drafts in queue state.
+2. Build per-page historical context extraction in draft generation.
+3. Expose and render former-post context in Growth UI.
+4. Add focused tests in Python, API, and website layers.
+
+Out of scope:
+
+1. Vector database or semantic search infrastructure.
+2. Hard block on approval based solely on similarity score.
+3. Global cross-topic deduplication beyond same-page context.
+
+### Data contract changes (minimal)
+
+1. Extend `Draft` with optional `published_at` (ISO timestamp).
+2. On successful publish, set:
+  - `status = "published"`
+  - `published_at = now_utc_iso`
+3. Keep all new fields optional for backwards compatibility with old
+  `content_queue.json` state files.
+
+### Detailed implementation plan
+
+#### Work Package A — State model and publish timestamp
+
+Goal: make publication time available directly in queue history.
+
+Tasks:
+
+1. Add optional `published_at` to Python `Draft` model.
+2. Add optional `published_at` to TypeScript `Draft` interfaces in API and UI.
+3. Update publish node to populate `published_at` at publish success.
+4. Verify old queue payloads still deserialize without migration.
+
+Deliverable:
+
+- Published queue entries contain reliable publication time in the same object
+  used for planning and UI.
+
+#### Work Package B — Former-post context builder in draft node
+
+Goal: provide compact, deterministic history context to LLM prompts.
+
+Tasks:
+
+1. Add helper in drafts node:
+  - Input: queue, target page URL, channel
+  - Output: latest N former posts for same normalized page URL
+2. Normalize URL matching by stripping UTM query parts before comparing URLs.
+3. For each history entry, include compact fields:
+  - published_at (or fallback created)
+  - channel
+  - short content preview (e.g., first 140 chars)
+  - hashtags (if present)
+4. Inject history block into Mastodon and Bluesky prompts under explicit rules:
+  - Do not reuse opening hook from recent entries
+  - Avoid repeating same claim framing and hashtag combination
+5. Keep prompt size bounded (e.g., N=3..5) to control token costs.
+
+Deliverable:
+
+- Draft generation receives deterministic former-post context and explicit
+  anti-repetition instructions.
+
+#### Work Package C — Optional lightweight similarity retry
+
+Goal: reduce near-duplicate outputs without heavy infrastructure.
+
+Tasks:
+
+1. Implement simple lexical similarity check vs. recent same-page posts
+  (e.g., token Jaccard or normalized overlap).
+2. Define conservative threshold (example: >= 0.75).
+3. If threshold exceeded, run exactly one regeneration pass with stronger
+  "different angle" instruction.
+4. Persist final draft plus quality metadata as usual.
+
+Deliverable:
+
+- One-pass guardrail against obvious duplicates, bounded complexity.
+
+#### Work Package D — API and UI context presentation
+
+Goal: let reviewers see relevant history immediately on draft cards.
+
+Tasks:
+
+1. Reuse existing queue payload shape (no new endpoint required initially).
+2. In Growth UI, derive page-keyed history map from `queue.published`.
+3. For each draft card (pending/approved tabs), render a collapsible section:
+  - "Previous posts for this page"
+  - latest 3..5 items with date, channel, short preview
+4. Keep panel hidden by default to preserve dense review workflow.
+5. Add empty-state text when no former posts exist for that page.
+
+Deliverable:
+
+- Reviewer can assess novelty and spacing without leaving the draft card.
+
+#### Work Package E — Test and verification matrix
+
+Goal: lock behavior through focused tests across layers.
+
+Tasks:
+
+1. Python tests:
+  - publish sets `published_at`
+  - former-post extractor filters by normalized page URL
+  - bounded context size
+  - similarity retry path triggers once when threshold exceeded
+2. API tests:
+  - `GET /drafts` includes `published_at` when present
+  - backwards compatibility with older objects (no `published_at`)
+3. Website tests:
+  - draft card renders "Previous posts" section for matching page
+  - section hides when no history exists
+  - list ordering is newest-first
+
+Deliverable:
+
+- End-to-end confidence that context appears in both AI prompts and reviewer UI.
+
+### Rollout strategy
+
+1. **Step 1**: ship Work Package A first (state reliability).
+2. **Step 2**: ship Work Package B (prompt context) behind a small config flag if needed.
+3. **Step 3**: ship Work Package D (UI visibility for reviewers).
+4. **Step 4**: enable Work Package C only after baseline observation confirms
+  duplicate rate is still too high.
+
+### Effort estimate
+
+Assumptions: current architecture remains unchanged (`insights -> plan -> drafts -> publish`),
+no new services, and no additional infrastructure provisioning.
+
+1. Work Package A: **0.5-1.0 PT**
+2. Work Package B: **1.0-1.5 PT**
+3. Work Package C: **0.5-1.0 PT**
+4. Work Package D: **0.75-1.25 PT**
+5. Work Package E: **0.75-1.25 PT**
+
+Total:
+
+- **MVP (A+B+D+E, without C): 3.0-5.0 PT**
+- **Full phase (A+B+C+D+E): 3.5-6.0 PT**
+
+### Acceptance criteria
+
+1. Published drafts store a reliable `published_at` timestamp.
+2. Draft node prompt includes former-post context for same page URL.
+3. Growth UI shows page-specific former posts on draft cards.
+4. Duplicate phrasing incidence drops in reviewer feedback over at least one
+  weekly cycle.
+5. All added tests pass in Python, API, and website suites.
+
+### Risks and mitigations
+
+1. **Prompt bloat / higher token use**
+  Mitigation: cap history entries and preview length.
+2. **Over-constrained generation reduces creativity**
+  Mitigation: focus constraints on hook and framing, not core message.
+3. **Timestamp gaps in historical data**
+  Mitigation: fallback ordering to `created` when `published_at` missing.
+
+### Decision checkpoint before coding
+
+Before implementation starts, confirm:
+
+1. Include Work Package C (similarity retry) in first iteration, or defer.
+2. History window size (default proposed: 3 or 5 entries).
+3. UI default: collapsed vs. expanded former-post panel.
+
 ## Phase 3 — Refinements & Optimization
 
 Ideas for improving the OODA loop once it's stable in production.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import math
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import TypedDict
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import urlopen
@@ -283,15 +283,6 @@ def plan_node(state: AgentState) -> dict:
         return {"plan_created": False}
 
 
-def _find_last_scheduled_at(queue: ContentQueue) -> datetime | None:
-    """Find the latest scheduled_at across pending + approved drafts."""
-    latest: datetime | None = None
-    for draft in queue.drafts + queue.approved:
-        if draft.scheduled_at and (latest is None or draft.scheduled_at > latest):
-            latest = draft.scheduled_at
-    return latest
-
-
 def _pending_pipeline_urls(queue: ContentQueue, now: datetime) -> set[str]:
     """URLs already represented in pending pipeline items.
 
@@ -394,9 +385,12 @@ def plan_draft_schedule(
 ) -> list[tuple[str, datetime]]:
     """Plan (channel, scheduled_at) pairs for new drafts.
 
-    Returns a list of ``needed`` tuples, alternating Mastodon/Bluesky,
-    each scheduled 1 day apart starting from the latest existing slot + 1 day
-    (or tomorrow 09:00 UTC if no existing slots).
+    Returns a list of ``needed`` tuples, one slot per day, filling the earliest
+    free calendar holes from tomorrow 09:00 UTC onward.
+
+    Occupied days come from already scheduled drafts and future-approved drafts.
+    Channel assignment alternates deterministically and continues from channels
+    already present on occupied days where possible.
     """
     if needed <= 0:
         return []
@@ -410,23 +404,52 @@ def plan_draft_schedule(
     if now is None:
         now = datetime.now(timezone.utc)
 
-    last_scheduled = _find_last_scheduled_at(queue)
+    def _to_utc_aware(ts: datetime) -> datetime:
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
 
-    if last_scheduled is None:
-        tomorrow = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
-        next_slot = tomorrow
-        next_channel_idx = 0
-    else:
-        next_slot = last_scheduled + timedelta(days=1)
-        next_channel_idx = 0
-        for d in queue.drafts + queue.approved:
-            if d.scheduled_at and d.scheduled_at == last_scheduled:
-                if d.channel in channels:
-                    next_channel_idx = (channels.index(d.channel) + 1) % len(channels)
-                break
+    start_slot = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+
+    occupied_days: set[date] = set()
+    occupied_channel_by_day: dict[date, str] = {}
+
+    for d in queue.drafts:
+        if not d.scheduled_at:
+            continue
+        slot = _to_utc_aware(d.scheduled_at)
+        if slot.date() < start_slot.date():
+            continue
+        day = slot.date()
+        occupied_days.add(day)
+        if day not in occupied_channel_by_day and d.channel in channels:
+            occupied_channel_by_day[day] = d.channel
+
+    for d in queue.approved:
+        if not d.scheduled_at:
+            continue
+        slot = _to_utc_aware(d.scheduled_at)
+        if slot <= now:
+            continue
+        if slot.date() < start_slot.date():
+            continue
+        day = slot.date()
+        occupied_days.add(day)
+        if day not in occupied_channel_by_day and d.channel in channels:
+            occupied_channel_by_day[day] = d.channel
 
     schedule: list[tuple[str, datetime]] = []
-    for _ in range(needed):
+    next_slot = start_slot
+    next_channel_idx = 0
+    while len(schedule) < needed:
+        day = next_slot.date()
+        if day in occupied_days:
+            existing_channel = occupied_channel_by_day.get(day)
+            if existing_channel in channels:
+                next_channel_idx = (channels.index(existing_channel) + 1) % len(channels)
+            next_slot += timedelta(days=1)
+            continue
+
         next_channel = channels[next_channel_idx]
         schedule.append((next_channel, next_slot))
         next_slot += timedelta(days=1)

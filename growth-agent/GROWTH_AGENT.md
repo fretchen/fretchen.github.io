@@ -11,7 +11,7 @@ Build an AI-powered **Social Media Growth Agent** that:
 * Analyzes website traffic (Umami) and social media engagement
 * Generates social media posts (Mastodon, Bluesky, later Threads)
 * Drives followers from social networks to the website
-* Continuously improves strategy via feedback loops
+* Continuously improves planning quality via feedback loops
 
 **Primary goal:** Grow social media followers → drive traffic to fretchen.eu
 
@@ -30,382 +30,34 @@ Build an AI-powered **Social Media Growth Agent** that:
 
 # 3. High-Level Architecture
 
-## Target: OODA Loop
+## Current Runtime (Canonical)
 
-The agent follows an **OODA (Observe → Orient → Decide → Act)** architecture,
-the state-of-the-art for autonomous growth agents. Each OODA phase maps to
-LangGraph nodes in `agent/graph.py`:
+The current production flow is intentionally simple and deterministic:
 
-| OODA Phase | Node | Responsibility | Status |
-|---|---|---|---|
-| **Observe** | `ingest` | Umami analytics + social follower counts | ✅ |
-| **Orient** | `insights` | LLM analyses patterns in all observed data | ✅ (Monday only) |
-| **Decide** | `strategy` | LLM adjusts strategy based on insights + Umami data | ✅ (Monday only) |
-| **Decide** | `plan` | Select pages, assign channels + schedule | ✅ |
-| **Act** | `drafts` | LLM generates platform-specific post content | ✅ |
-| **Act** | `publish` | Post to Mastodon/Bluesky, record metrics | ✅ |
+`START -> insights -> plan -> drafts -> publish -> END`
 
-**Current graph:**
-```
-START → [Ingest] → (Monday? → [Insights] → [Strategy]) → [Plan] → [Drafts] → [Publish] → END
-```
+Node roles:
 
-> **Why Plan is separate from Drafts:** Plan decides *what* to post (which pages,
-> which channels, when). Drafts decides *how* to say it (LLM content generation).
-> This separation enables strategy to influence planning without touching content
-> generation, and makes each node independently testable.
+1. `insights` - refreshes/updates `llm_analysis.json` from current analytics.
+2. `plan` - selects pages and creates `content_plan.json`.
+3. `drafts` - generates social post drafts from the plan.
+4. `publish` - publishes approved drafts with due schedule.
 
-## 3.1 IST Analysis: `insights`, `strategy`, `plan`
+Core state artifacts used in this flow:
 
-This section documents the current (as-is) behavior of the three core nodes,
-which files they use, and how well they map to the originally intended OODA
-loop.
+1. `insights.json`
+2. `llm_analysis.json`
+3. `content_queue.json`
+4. `content_plan.json`
+5. `performance.json`
 
-### Node responsibilities and file usage (as-is)
+### OODA note (short)
 
-| Node | OODA role | What it does today | Reads | Writes | Code entrypoint |
-|---|---|---|---|---|---|
-| `insights` | **Orient** | Interprets latest analytics/social data with LLM, proposes `best_pages_for_social`, `top_topics`, `content_gaps`, and `growth_opportunities` | `insights.json`, `strategy.json` | `llm_analysis.json`, updated `insights.json` | `agent/nodes/insights.py` |
-| `strategy` | **Decide** (strategic) | Asks LLM whether to adjust strategy and applies at most one pillar replacement plus one posting frequency change | `insights.json`, `strategy.json` | updated `strategy.json` (with `changes` audit log) | `agent/nodes/strategy.py` |
-| `plan` | **Decide** (operational) | Computes pipeline depth, selects pages from `llm_analysis`, assigns channel/time slots, and writes a concrete plan for draft generation | `llm_analysis.json`, `content_queue.json` | `content_plan.json` | `agent/nodes/plan.py` |
-
-Additional runtime dependencies:
-
-- `agent/graph.py`: controls routing (`ingest -> insights -> strategy -> plan` on Monday, otherwise `ingest -> plan`).
-- `agent/storage.py`: `load_model()` + storage read/write abstraction used by all nodes.
-- `agent/models.py`: schema contracts (`LLMAnalysis`, `Strategy`, `ContentQueue`, `ContentPlan`).
-- `agent/page_meta.py`: used by `insights` and `plan` to fetch page metadata.
-- `agent/llm_client.py`: used by `insights` and `strategy` only.
-
-### Detailed current behavior per node
-
-#### `insights` node (Orient)
-
-1. Loads `insights.json` and `strategy.json`.
-2. Builds a broad analytics prompt (top pages, referrers, events, social summary).
-3. Calls LLM with `LLMAnalysis` schema.
-4. Persists full model output to `llm_analysis.json`.
-5. Updates `insights.json` with `growth_opportunities` and `last_analysis`.
-
-Role fulfillment (as-is):
-
-- Strong on interpretation/synthesis of observed data.
-- Uses strategy context in the prompt, so orientation is not purely reactive.
-- Diversity intent exists in prompt instructions, but enforcement is not hard at this step.
-
-#### `strategy` node (Decide, strategic)
-
-1. Loads `insights.json` and current `strategy.json`.
-2. Calls LLM with conservative adjustment rules.
-3. Applies up to one content pillar replacement and up to one frequency change.
-4. Appends `StrategyChange` entries with timestamp/reason.
-5. Persists updated `strategy.json` only if a change is applied.
-
-Role fulfillment (as-is):
-
-- Clearly acts as a strategic decision layer.
-- Has a bounded-change policy and audit trail.
-- Produces durable policy state (`strategy.json`), but downstream operational enforcement is partial.
-
-#### `plan` node (Decide, operational)
-
-1. Loads `llm_analysis.json` and queue state (`content_queue.json`).
-2. Computes `needed` based on pipeline depth (`drafts` + future `approved`).
-3. Selects candidate pages using local heuristic (`proven`/`exploratory` mix + dedupe in candidate set).
-4. Builds schedule (alternating channel, one-day spacing).
-5. Builds `ContentPlanItem[]` and writes `content_plan.json`.
-
-Role fulfillment (as-is):
-
-- Clearly turns analysis into executable operational decisions.
-- Deterministic scheduling and pipeline-fill behavior are implemented.
-- Selection focuses on current candidate list; history-aware anti-repeat guarantees are limited.
-
-### Flow visualization (current implementation)
-
-```mermaid
-flowchart TD
-  A[ingest node] --> B{Monday?}
-  B -- yes --> C[insights node]
-  B -- no --> E[plan node]
-  C --> D[strategy node]
-  D --> E
-  E --> F[drafts node]
-  F --> G[publish node]
-
-  H[(insights.json)] --> C
-  I[(strategy.json)] --> C
-  C --> J[(llm_analysis.json)]
-  C --> H
-
-  H --> D
-  I --> D
-  D --> I
-
-  J --> E
-  K[(content_queue.json)] --> E
-  E --> L[(content_plan.json)]
-```
-
-### OODA fit: precise IST + GAP
-
-#### Intended mapping (documented)
-
-- Observe: `ingest`
-- Orient: `insights`
-- Decide: `strategy` + `plan`
-- Act: `drafts` + `publish`
-
-#### As-is fit
-
-1. **Observe -> Orient** is present and functional: `insights` consumes observed data and transforms it into structured interpretation.
-2. **Orient -> Decide (strategic)** is present and functional: `strategy` applies bounded, auditable policy changes.
-3. **Decide (operational) -> Act** is present and functional: `plan` emits concrete, schedulable work for `drafts`/`publish`.
-
-#### Gaps against a fully closed OODA decision loop
-
-1. **Strategic decision propagation gap**: `strategy.json` is updated, but `plan` relies primarily on `llm_analysis.json` + queue state and does not consume strategy as a strict operational policy contract.
-2. **Decision traceability gap**: there is no explicit persisted explanation linking each `content_plan.json` item back to strategy constraints vs. insights evidence.
-3. **History-aware decision guarantee gap**: operational selection enforces local candidate heuristics, but does not enforce a strong cross-run anti-repeat policy over published history.
-
-Conclusion (as-is): the architecture follows OODA structurally, but the Decide phase is split into strategic and operational layers with only partial hard coupling between them.
-
-## 3.2 Memory Handling in Orient/Decide (IS vs SHOULD)
-
-This section focuses only on memory handling in the Orient (`insights`) and
-Decide (`strategy`, `plan`) phases.
-
-Scope:
-
-- IS analysis: current persisted state and read/write flows.
-- SHOULD analysis: conceptual target shape based on LangChain memory concepts
-  (short-term state + long-term memory store with semantic, episodic, and
-  procedural memory).
-- Gap analysis: biggest gaps only, no implementation recommendations.
-
-### Memory model (IS)
-
-Current memory is JSON-file centric and node-local:
-
-- `insights` reads `insights.json` and `strategy.json`, then writes
-  `llm_analysis.json` and updates `insights.json`.
-- `strategy` reads `insights.json` and `strategy.json`, then conditionally writes
-  `strategy.json`.
-- `plan` reads `llm_analysis.json` and `content_queue.json`, then writes
-  `content_plan.json`.
-
-Properties of the current model:
-
-- Persistence exists (files in S3/local), but memory is mostly artifact-based.
-- There is no explicit memory taxonomy (semantic/episodic/procedural) in storage.
-- There is no explicit retrieval layer; each node directly loads specific files.
-- Cross-node state transfer is file-to-file, not namespace/query-based memory recall.
-
-### Memory flow (IS) - detailed graph
-
-```mermaid
-flowchart LR
-  subgraph O[Orient: insights node]
-    O1[Read insights.json]
-    O2[Read strategy.json]
-    O3[LLM interpretation]
-    O4[Write llm_analysis.json]
-    O5[Update insights.json]
-    O1 --> O3
-    O2 --> O3
-    O3 --> O4
-    O3 --> O5
-  end
-
-  subgraph D1[Decide: strategy node]
-    S1[Read insights.json]
-    S2[Read strategy.json]
-    S3[LLM adjustment decision]
-    S4[Update strategy.json]
-    S1 --> S3
-    S2 --> S3
-    S3 --> S4
-  end
-
-  subgraph D2[Decide: plan node]
-    P1[Read llm_analysis.json]
-    P2[Read content_queue.json]
-    P3[Heuristic selection + scheduling]
-    P4[Write content_plan.json]
-    P1 --> P3
-    P2 --> P3
-    P3 --> P4
-  end
-
-  O5 --> S1
-  O4 --> P1
-  S4 -. weak/indirect influence .-> P3
-```
-
-### Memory model (SHOULD, conceptual)
-
-Based on LangChain memory concepts, orient/decide memory ideally has two layers:
-
-1. Short-term memory (thread/run scoped state):
-  per-run working state used by nodes during one invocation.
-2. Long-term memory (cross-run store, namespaced):
-  persistent memory with explicit memory types.
-
-Conceptual long-term memory types for this workflow:
-
-- Semantic memory (facts): topic performance facts, stable page/topic metadata,
-  recurring audience signals.
-- Episodic memory (experiences): prior planning/publishing episodes, selected
-  topics/channels/timing and observed outcomes.
-- Procedural memory (rules): strategy and planning constraints (policy-level
-  rules and stable operating instructions).
-
-### Memory flow (SHOULD, conceptual graph)
-
-```mermaid
-flowchart LR
-  subgraph ST[Short-term memory: run state]
-    ST1[Observe snapshot]
-    ST2[Orient working context]
-    ST3[Decide working context]
-  end
-
-  subgraph LT[Long-term memory store: namespaced]
-    M1[Semantic memory\nFacts and concepts]
-    M2[Episodic memory\nPast runs and outcomes]
-    M3[Procedural memory\nRules and policies]
-  end
-
-  subgraph O2[Orient]
-    O21[Read ST + recall LT semantic/episodic/procedural]
-    O22[Generate interpretation and candidate set]
-    O23[Write back new facts/episode signals]
-    O21 --> O22 --> O23
-  end
-
-  subgraph D3[Decide: strategy + plan]
-    D31[Read ST + recall LT]
-    D32[Apply procedural rules + episodic context]
-    D33[Emit decisions and plan]
-    D34[Write decision trace as episodic memory]
-    D31 --> D32 --> D33 --> D34
-  end
-
-  ST1 --> ST2 --> ST3
-  M1 --> O21
-  M2 --> O21
-  M3 --> O21
-  M1 --> D31
-  M2 --> D31
-  M3 --> D31
-  O23 --> M1
-  O23 --> M2
-  D34 --> M2
-```
-
-### Biggest gaps (IS vs SHOULD)
-
-1. Memory taxonomy gap:
-  current storage does not explicitly separate semantic, episodic, and
-  procedural memory; information is spread across operational JSON artifacts.
-2. Retrieval gap:
-  orient/decide do not perform explicit memory recall across namespaces/types;
-  they load fixed files only.
-3. Strategy-to-plan transmission gap:
-  strategic memory (`strategy.json`) is not consumed by `plan` as a strict
-  decision policy input.
-4. Episodic continuity gap:
-  there is no explicit decision-trace memory linking prior decisions,
-  rationales, and outcomes into reusable episodic context for the next run.
-5. Memory write-path clarity gap:
-  writes are artifact updates (`*.json`) but not clearly modeled as hot-path vs
-  background memory formation with typed memory objectives.
-6. Cross-run grounding gap:
-  plan decisions are grounded mainly in latest analysis artifact and queue state,
-  not in a first-class long-term memory retrieval step.
-
-## 3.3 Priority Fixes and Complexity-Benefit Analysis (Orient/Decide Memory)
-
-This section prioritizes the biggest problems to fix now, compares solution
-options by implementation complexity vs expected benefit, and identifies the
-closest KISS path for closing the most critical gaps.
-
-### Biggest problems to fix first (priority order)
-
-1. Strategy-to-plan transmission gap
-  The strategic memory exists (`strategy.json`) but is not used by plan as a
-  strict decision policy input. This weakens the entire Decide phase.
-2. Episodic continuity gap
-  There is no explicit memory of prior planning decisions and outcomes that can
-  be recalled in later runs.
-3. Cross-run grounding gap
-  Plan is grounded mostly in current `llm_analysis.json` + queue state, not in
-  explicit long-term memory recall.
-4. Retrieval gap
-  Orient/Decide nodes load fixed files directly and cannot query memory by type
-  or intent.
-5. Memory write-path clarity gap
-  Memory updates are not modeled explicitly as hot-path vs background memory
-  writes.
-6. Memory taxonomy gap
-  Semantic, episodic, and procedural memory are not explicitly separated.
-
-### Option analysis by complexity vs benefit
-
-Scale used:
-
-- Complexity: Low / Medium / High
-- Benefit: Low / Medium / High
-
-| Option | Description | Complexity | Benefit | Biggest gaps addressed |
-|---|---|---|---|---|
-| A | Minimal policy propagation: strategy constraints are explicitly consumed in plan input before selection/scheduling | Low | High | #1, partially #3 |
-| B | Episodic decision log artifact (separate memory file for planning decisions + outcomes) used by orient/decide recall | Low-Medium | High | #2, #3, partially #4 |
-| C | Typed memory split over current JSON storage (semantic/episodic/procedural artifacts with explicit ownership) | Medium | Medium-High | #2, #5, #6 |
-| D | Add retrieval layer on top of file artifacts (namespace/type-based recall abstraction) | Medium | High | #3, #4, partially #6 |
-| E | Full long-term memory store with namespaced documents and search | High | High | #2, #3, #4, #5, #6 |
-| F | Introduce hot-path plus background memory writing model | High | Medium-High | #2, #5 |
-
-### Complexity-benefit interpretation
-
-1. Option A has the best immediate ratio:
-  low implementation complexity with direct impact on the most critical Decide
-  coupling gap.
-2. Option B is the next strongest leverage:
-  still relatively lightweight, but significantly improves cross-run continuity
-  and decision grounding.
-3. Option D adds strong architectural value at moderate cost:
-  improves memory recall quality without requiring a full memory platform
-  migration.
-4. Options E/F are powerful but not KISS:
-  high implementation effort and operational complexity.
-
-### Closest KISS path for biggest gap closure (analysis only)
-
-From a complexity-benefit perspective, the closest KISS path is:
-
-1. First layer: Option A
-  ensure strategy memory is a direct policy input to plan decisions.
-2. Second layer: Option B
-  establish explicit episodic continuity between runs.
-3. Third layer: Option D (only if needed)
-  add a lightweight retrieval abstraction when fixed-file loading becomes a
-  bottleneck.
-
-Why this is the closest KISS trajectory:
-
-- It addresses the top two high-impact gaps first (#1 and #2).
-- It preserves the current file-based architecture initially.
-- It delays high-complexity memory platform work until there is evidence that
-  lightweight recall abstractions are insufficient.
-
-### Summary table (what to fix now vs later)
-
-| Horizon | Focus | Rationale |
-|---|---|---|
-| Now | Strategy-to-plan propagation + episodic continuity | Highest impact, lowest complexity |
-| Next | Retrieval abstraction over memory artifacts | Improves grounding and recall quality |
-| Later | Full memory store + hot/background memory pipeline | High value, but only justified after simpler layers saturate |
+OODA remains a useful conceptual lens, but the early Observe/strategic-control
+part proved too unstable and noisy for strict runtime control at this stage.
+Current production behavior therefore prioritizes a stable execution pipeline
+over full OODA enforcement, with explicit human review still acting as the main
+quality and risk-control mechanism.
 
 ## System Overview
 
@@ -421,26 +73,22 @@ Why this is the closest KISS trajectory:
 │  growth-agent/ (Python 3.11, Cron)      │
 │  Scaleway Container — Daily 08:00 UTC   │
 │                                         │
-│  ┌─────────────┐  ┌──────────────────┐  │
-│  │ Analytics    │→ │ Insight          │  │
-│  │ Ingest      │  │ Generation (LLM) │  │
-│  └─────────────┘  └───────┬──────────┘  │
-│                           ▼              │
-│  ┌─────────────┐  ┌──────────────────┐  │
-│  │ Strategy    │← │ Content Planning │  │
-│  │ State (S3)  │  │ (LLM)           │  │
-│  └─────────────┘  └───────┬──────────┘  │
-│                           ▼              │
-│                   ┌──────────────────┐   │
-│                   │ Content Creation │   │
-│                   │ (LLM)           │   │
-│                   └───────┬──────────┘   │
-│                           ▼              │
-│                   ┌──────────────────┐   │
-│                   │ Publishing       │   │
-│                   │ (Mastodon API,   │   │
-│                   │  Bluesky atproto)│   │
-│                   └──────────────────┘   │
+│  ┌──────────────────┐                    │
+│  │ Insights (LLM)   │                    │
+│  └───────┬──────────┘                    │
+│          ▼                               │
+│  ┌──────────────────┐                    │
+│  │ Planning         │                    │
+│  └───────┬──────────┘                    │
+│          ▼                               │
+│  ┌──────────────────┐                    │
+│  │ Draft Generation │                    │
+│  └───────┬──────────┘                    │
+│          ▼                               │
+│  ┌──────────────────┐                    │
+│  │ Publishing       │                    │
+│  │ (Mastodon/BSKY)  │                    │
+│  └──────────────────┘                    │
 └──────────────┬──────────────────────────┘
                │ reads/writes
                ▼
@@ -656,7 +304,10 @@ Additional secrets needed in the `scw_js/` provider block:
 
 # 7. State Schemas (stored in S3)
 
-## 7.1 strategy.json
+## 7.1 strategy.json (legacy/config artifact)
+
+This artifact is no longer part of the active runtime execution path.
+It may still exist for backward compatibility and historical runs.
 
 ```json
 {
@@ -825,13 +476,11 @@ for responsibilities and Section 5 (folder structure) for file descriptions.
 3. **Performance update** — refresh metrics for published posts
 4. **Pipeline refill** *(Phase 1e)* — count pending + approved drafts, generate new ones if < 10.
    Each new draft auto-scheduled at `last_slot + 1 day`, alternating Mastodon/Bluesky.
-   Uses last saved LLMAnalysis from S3 (no LLM call unless Monday).
+  Uses refreshed `llm_analysis.json` from the same run.
 
-## Weekly (Monday run, logic in agent)
+## Weekly
 
-5. **Insight Generation** — LLM analysis of weekly data, persisted to `growth-agent/llm_analysis.json`
-6. **Strategy Update** — adjust if data warrants it
-7. **Content Planning** — generate draft ideas (folded into pipeline refill step 4)
+No special strategy-only branch is required in the current runtime architecture.
 
 ## Human (async)
 
@@ -1074,20 +723,20 @@ Moved all business logic from `handler.py` (~400 lines) into dedicated node modu
 - `scw_js/growth_api.ts`, `website/pages/growth/`
 - Cron schedule, environment variables, secrets
 
-## Phase 2b — OODA Graph Reorder & New Nodes ✅ COMPLETE
+## Phase 2b — Legacy: OODA Graph Reorder & New Nodes ✅ COMPLETE
 
-Established the correct OODA node ordering and added the missing **Strategy** and
-**Plan** nodes. Each step was independently deployable and tested.
+Historical implementation note. Kept for traceability only.
+The active runtime has since been simplified and no longer uses a strategy node
+in the production execution path.
 
 **What changed:**
 1. **Publish moved to end** — correct OODA ordering (Act is last)
 2. **Plan node extracted** from Drafts — `plan.py` handles page selection, scheduling,
    pipeline depth; `drafts.py` only does LLM content generation
-3. **Strategy node added** — Monday-only LLM evaluation of current strategy against
-   insights data. Max 1 pillar change + 1 frequency adjustment per run, with audit log
-   (`strategy.json.changes`). Conservative by design — no change if data doesn't warrant it.
+3. **Strategy node added** — later treated as unstable in production and removed
+  from active runtime flow.
 
-**Final graph:** `START → ingest → (Monday? → insights → strategy) → plan → drafts → publish → END`
+**Historical graph:** `START -> ingest -> (Monday? -> insights -> strategy) -> plan -> drafts -> publish -> END`
 
 **Result:** 30 tests green, mypy clean, ruff clean.
 
@@ -1095,7 +744,7 @@ Established the correct OODA node ordering and added the missing **Strategy** an
 
 ## Phase 2c — Draft Quality Evaluation
 
-Depends on Phase 2b (stable graph with clear node boundaries required).
+Depends on stable node boundaries in the simplified runtime graph.
 
 **Why deepeval:** LLM-as-Judge framework for automated post quality assessment.
 Replaces manual "does this post look good?" with measurable metrics.
@@ -1241,222 +890,314 @@ Only start this step after enough reviewed drafts exist.
 > **Note:** deepeval is already in place as an offline evaluation tool.
 > The next step in Phase 2c is to collect real human labels from the approval UI.
 
-## Phase 2d — Orient & Decide Memory
+## Phase 2d — Legacy (deferred)
 
-Depends on Phase 2c (stable approval data flow and clear node boundaries).
+The earlier long "memory-coupling" design discussion is deferred. However,
+Phase 2d did produce concrete architecture that is currently in active use.
 
-Goal: make memory handling in Orient/Decide explicit, traceable, and reusable
-across runs, while staying close to a KISS path identified in Section 3.3.
+### Implemented trace (commits `6a9f3481`, `4734acca`)
 
-### Why this phase
+This is the practical architecture implemented in code, independent of the
+older KISS/OODA design discussion:
 
-The current OODA flow is structurally correct, but memory handling in
-`insights`, `strategy`, and `plan` is mostly artifact-based and weakly coupled.
-Phase 2d introduces explicit memory contracts for these nodes so decisions are
-grounded in:
+1. **Planless runtime graph simplification**
+  Runtime flow moved to `START -> insights -> plan -> drafts -> publish -> END`
+  with no strategy node in the active execution path.
+2. **Registry-driven planner input**
+  Planner no longer depends on ingest top-pages only. It uses a registry layer
+  with top-level S3 keys:
+  - `registry.json` (raw)
+  - `registry_clean.json` (filtered, primary read path)
+  - `registry_excluded.json` (optional exclusion rules)
+3. **On-demand registry bootstrap from sitemap**
+  If `registry_clean.json` is missing, planner rebuilds registry from
+  `https://www.fretchen.eu/sitemap.xml`, normalizes URLs, applies exclusions,
+  and persists raw + clean artifacts.
+4. **Half-life weighted random page selection**
+  Page selection is stochastic but controlled:
+  - unpublished pages get full base weight
+  - previously published pages recover probability by half-life decay
+  - URLs already in pending/future-approved pipeline are blocked
+5. **Deterministic scheduling contract preserved**
+  Selected pages are mapped to channel/time slots via existing schedule logic
+  (daily cadence, alternating channels, continuity from last scheduled slot).
+6. **Run diagnostics attached to plan output**
+  `content_plan.json` now carries lightweight diagnostics, e.g. registry size,
+  whether registry was refreshed, exclusions, selected counts, and planner
+  parameters like half-life days.
+7. **Local observability improvements**
+  `run_local.py --diagnose` now reports registry artifact health and queue
+  state; `--graph` exports the compiled runtime graph for quick verification.
+8. **Behavior locked by tests**
+  Test coverage was updated to assert the new planner contract, including:
+  registry precedence (`registry_clean.json`), no-registry fallback behavior,
+  and pipeline refill behavior under the simplified architecture.
 
-1. current observations,
-2. strategic policy memory,
-3. episodic decision history.
+### Why this trace is kept
 
-### Target outcomes
+These changes are the real architectural baseline implemented in production
+code. Keeping this trace avoids losing context on *what actually shipped* while
+separating it from deferred architecture discussion.
 
-1. **Strategy-to-plan propagation is explicit**
-  `plan` must consume strategy policy memory as a direct input contract.
-2. **Episodic continuity exists across runs**
-  planning decisions and outcomes are persisted in a reusable memory artifact.
-3. **Orient/Decide memory boundaries are clear**
-  semantic, episodic, and procedural memory responsibilities are documented and
-  represented in storage artifacts.
-4. **Decision traceability is first-class**
-  each planned item can be traced to candidate evidence + policy constraints.
+## Phase 2e — Simplified Architecture Consolidation PR
 
-### Scope (in / out)
+Purpose: make `GROWTH_AGENT.md` the single canonical architecture document and
+remove drift between docs and implementation. This phase is intentionally
+cleanup-focused: code cleanup, documentation cleanup, and a small set of agreed
+bug fixes. No new feature development.
+
+### Scope
 
 In scope:
 
-- Memory contracts for `insights`, `strategy`, `plan`
-- Strategy policy propagation into plan input
-- Episodic decision memory artifact and write/read flow
-- Decision diagnostics in planning output
-- Tests for continuity and determinism
+1. Consolidate simplified architecture documentation into `GROWTH_AGENT.md`.
+2. Make `GROWTH_AGENT_SIMPLE.md` obsolete by integrating relevant content and
+  marking it deprecated (or deleting it in a follow-up).
+3. Align architecture text/diagrams with the active runtime flow
+  (`insights -> plan -> drafts -> publish`).
+4. Remove or rewrite stale strategy-centric wording that no longer matches the
+  active execution path.
+5. Implement agreed low-risk bug fixes with focused tests.
 
 Out of scope:
 
-- Full memory-store platform migration
-- Vector search / semantic retrieval infrastructure
-- New graph nodes (no topology change in this phase)
-- Fully automated quality/topic gates
+1. New graph nodes or major topology changes.
+2. New strategic optimization features.
+3. Large refactors outside cleanup targets.
 
-### Memory contract for Orient/Decide (Phase 2d)
+### PR Todos
 
-#### Procedural memory (policy)
+1. Update architecture overview and flow diagrams to the simplified runtime
+  path.
+2. Add a short "Legacy Decision Record" section that explains why strategy-node
+  work was deferred and what remains intentionally out of scope.
+3. Merge any still-useful concise guidance from `GROWTH_AGENT_SIMPLE.md` into
+  `GROWTH_AGENT.md`.
+4. Mark `GROWTH_AGENT_SIMPLE.md` as deprecated and point all references to
+  `GROWTH_AGENT.md`.
+5. Clean obsolete references such as strategy-driven Monday routing assumptions
+  where they no longer apply.
+6. Align comments/docstrings in affected modules so terminology matches the
+  simplified architecture.
+7. Apply agreed bug fixes and add or update focused tests.
+8. Keep PR boundaries explicit: cleanup + bug fixes only.
 
-- Primary artifact: `strategy.json`
-- New role: strict policy input for `plan` (not only context for `insights`)
-- Typical policy fields consumed by `plan`: channel mix, scheduling constraints,
-  diversity/cooldown parameters (where defined)
+### Verification Criteria
 
-#### Episodic memory (decision history)
+1. `GROWTH_AGENT.md` reflects the actual runtime architecture.
+2. No contradictory architecture statements remain across docs.
+3. Tests for touched areas pass.
+4. Lint/type checks remain green for touched modules.
+5. Reviewers can understand scope quickly from one canonical document.
 
-- New artifact: `planning_memory.json`
-- Contents (conceptual): prior plan decisions, selected/rejected candidate URLs,
-  policy snapshot used, and run metadata (timestamp/run id)
-- Consumers: `insights` (context), `plan` (anti-repeat + continuity)
+## Phase 2f — Former Posts Context for Drafting & Review
 
-#### Semantic memory (facts)
+Purpose: give both the draft generator and the growth review UI explicit context
+about what was already published, when it was published, and for which page,
+so duplicate messaging is reduced and human review becomes faster.
 
-- Existing artifacts remain source of truth in this phase:
-  `insights.json`, `llm_analysis.json`, `content_queue.json`
-- No dedicated memory store yet; semantic memory remains file-based.
+This phase is intentionally scoped as a context layer, not a full ranking or
+embeddings system.
 
-### Steps
+### Why this phase exists
 
-- [ ] **Step 1: Define memory schemas (Pydantic)**
-  Add explicit schema models for planning memory and diagnostics in
-  `agent/models.py`.
-  Minimum fields:
-  - run metadata (`run_at`, optional `run_id`)
-  - selected items (url/channel/scheduled_at)
-  - blocked items with reason codes
-  - policy snapshot used for the run
-  - aggregate counters for diagnostics
+Current behavior already uses publication history for planning probability
+(half-life weighting), but draft generation does not explicitly see former post
+content and the review UI does not show page-specific publication history next
+to each draft.
 
-- [ ] **Step 2: Add planning memory artifact lifecycle**
-  In `agent/nodes/plan.py`, load `planning_memory.json` if present and write it
-  at the end of every successful planning run.
-  Keep append/rotate behavior simple and deterministic.
+Resulting pain points:
 
-- [ ] **Step 3: Strategy as strict plan input**
-  Ensure `plan` loads `strategy.json` directly and uses it as policy input
-  (not as optional context).
-  Persist the effective policy snapshot in planning memory and plan diagnostics.
+1. AI can repeat hook patterns and phrasing for the same page.
+2. Reviewers need manual memory to detect near-duplicates.
+3. "When was this page last promoted?" is not obvious in one place.
 
-- [ ] **Step 4: Add episodic continuity in plan selection path**
-  Integrate prior decision history (`planning_memory.json` + queue state) into
-  candidate filtering/selection, with explicit reason tagging for blocked items.
+### Target behavior
 
-- [ ] **Step 5: Add plan diagnostics to output artifact**
-  Extend `content_plan.json` model/output with diagnostics that explain:
-  - candidate counts before/after filtering
-  - selected proven/exploratory counts
-  - policy parameters used
-  - fallback/degradation flags when constraints cannot be satisfied
+1. **Draft node context**
+  Before generating each draft, provide a compact "former posts for this page"
+  block (latest N records) including timestamp, channel, and short text excerpt.
+2. **UI context**
+  On each draft card, show a small "Previous posts for this page" panel with
+  publication dates and concise snippets.
+3. **Anti-duplication guardrail**
+  Add lightweight prompt constraints and an optional single retry when a draft
+  is overly similar to very recent posts for the same page.
 
-- [ ] **Step 6: Orient memory read integration**
-  In `agent/nodes/insights.py`, read a bounded slice of episodic planning
-  memory for context (recent runs only), and include it as explicit analysis
-  context for candidate generation.
+### Scope
 
-- [ ] **Step 7: Tests (unit + integration)**
-  Add tests for:
-  - deterministic plan decisions given same inputs
-  - strategy policy propagation into plan behavior
-  - episodic anti-repeat continuity across consecutive runs
-  - diagnostics completeness and reason-code correctness
+In scope:
 
-- [ ] **Step 8: Documentation and runbook updates**
-  Update architecture and state sections in this document to include
-  `planning_memory.json`, ownership, and read/write semantics for Orient/Decide.
+1. Add publish timestamp to published drafts in queue state.
+2. Build per-page historical context extraction in draft generation.
+3. Expose and render former-post context in Growth UI.
+4. Add focused tests in Python, API, and website layers.
 
-### Detailed implementation plan by work package
+Out of scope:
 
-#### WP-A — Data contracts and storage (foundation)
+1. Vector database or semantic search infrastructure.
+2. Hard block on approval based solely on similarity score.
+3. Global cross-topic deduplication beyond same-page context.
 
-Files:
+### Data contract changes (minimal)
 
-- `growth-agent/agent/models.py`
-- `growth-agent/agent/nodes/plan.py`
+1. Extend `Draft` with optional `published_at` (ISO timestamp).
+2. On successful publish, set:
+  - `status = "published"`
+  - `published_at = now_utc_iso`
+3. Keep all new fields optional for backwards compatibility with old
+  `content_queue.json` state files.
 
-Deliverables:
+### Detailed implementation plan
 
-1. `PlanningMemoryEntry` and `PlanningMemory` models.
-2. `PlanDiagnostics` model attached to `ContentPlan`.
-3. Read/write support for `planning_memory.json` in plan node path.
+#### Work Package A — State model and publish timestamp
 
-Acceptance checks:
+Goal: make publication time available directly in queue history.
 
-1. Empty/missing memory file loads safely.
-2. New artifact is persisted on every planning run.
-3. Pydantic validation catches malformed memory records.
+Tasks:
 
-#### WP-B — Decide memory coupling (strategy -> plan)
+1. Add optional `published_at` to Python `Draft` model.
+2. Add optional `published_at` to TypeScript `Draft` interfaces in API and UI.
+3. Update publish node to populate `published_at` at publish success.
+4. Verify old queue payloads still deserialize without migration.
 
-Files:
+Deliverable:
 
-- `growth-agent/agent/nodes/plan.py`
-- `growth-agent/agent/models.py`
+- Published queue entries contain reliable publication time in the same object
+  used for planning and UI.
 
-Deliverables:
+#### Work Package B — Former-post context builder in draft node
 
-1. Plan always loads strategy policy before candidate selection.
-2. Effective policy snapshot is persisted with the run decision record.
-3. Plan diagnostics reference policy values used for this run.
+Goal: provide compact, deterministic history context to LLM prompts.
 
-Acceptance checks:
+Tasks:
 
-1. Changing strategy policy changes plan behavior in tests.
-2. Plan record can be audited without recomputing hidden state.
+1. Add helper in drafts node:
+  - Input: queue, target page URL, channel
+  - Output: latest N former posts for same normalized page URL
+2. Normalize URL matching by stripping UTM query parts before comparing URLs.
+3. For each history entry, include compact fields:
+  - published_at (or fallback created)
+  - channel
+  - short content preview (e.g., first 140 chars)
+  - hashtags (if present)
+4. Inject history block into Mastodon and Bluesky prompts under explicit rules:
+  - Do not reuse opening hook from recent entries
+  - Avoid repeating same claim framing and hashtag combination
+5. Keep prompt size bounded (e.g., N=3..5) to control token costs.
 
-#### WP-C — Episodic continuity in Orient and Decide
+Deliverable:
 
-Files:
+- Draft generation receives deterministic former-post context and explicit
+  anti-repetition instructions.
 
-- `growth-agent/agent/nodes/insights.py`
-- `growth-agent/agent/nodes/plan.py`
+#### Work Package C — Optional lightweight similarity retry
 
-Deliverables:
+Goal: reduce near-duplicate outputs without heavy infrastructure.
 
-1. Insights reads bounded recent planning episodes as context.
-2. Plan reads episodic history to enforce continuity constraints.
-3. Blocked/selected decisions are reason-coded in memory.
+Tasks:
 
-Acceptance checks:
+1. Implement simple lexical similarity check vs. recent same-page posts
+  (e.g., token Jaccard or normalized overlap).
+2. Define conservative threshold (example: >= 0.75).
+3. If threshold exceeded, run exactly one regeneration pass with stronger
+  "different angle" instruction.
+4. Persist final draft plus quality metadata as usual.
 
-1. Consecutive runs demonstrate continuity behavior in test fixtures.
-2. Reason codes are present and stable across runs.
+Deliverable:
 
-#### WP-D — Observability and verification
+- One-pass guardrail against obvious duplicates, bounded complexity.
 
-Files:
+#### Work Package D — API and UI context presentation
 
-- `growth-agent/test/*`
-- `growth-agent/GROWTH_AGENT.md`
+Goal: let reviewers see relevant history immediately on draft cards.
 
-Deliverables:
+Tasks:
 
-1. Unit/integration tests for memory coupling and continuity.
-2. Updated architecture docs for the Orient/Decide memory model.
+1. Reuse existing queue payload shape (no new endpoint required initially).
+2. In Growth UI, derive page-keyed history map from `queue.published`.
+3. For each draft card (pending/approved tabs), render a collapsible section:
+  - "Previous posts for this page"
+  - latest 3..5 items with date, channel, short preview
+4. Keep panel hidden by default to preserve dense review workflow.
+5. Add empty-state text when no former posts exist for that page.
 
-Acceptance checks:
+Deliverable:
 
-1. Test suite remains green (`pytest`, `ruff`).
-2. Local diagnose flow exposes enough state to inspect memory behavior.
+- Reviewer can assess novelty and spacing without leaving the draft card.
 
-### Suggested execution order (KISS-first)
+#### Work Package E — Test and verification matrix
 
-1. WP-A (contracts + persistence)
-2. WP-B (strategy-to-plan coupling)
-3. WP-C (episodic continuity)
-4. WP-D (tests + docs)
+Goal: lock behavior through focused tests across layers.
 
-This sequence follows the complexity-benefit analysis in Section 3.3: first fix
-the highest-impact, lowest-complexity gaps, then add broader recall continuity.
+Tasks:
 
-### Verification criteria for Phase 2d completion
+1. Python tests:
+  - publish sets `published_at`
+  - former-post extractor filters by normalized page URL
+  - bounded context size
+  - similarity retry path triggers once when threshold exceeded
+2. API tests:
+  - `GET /drafts` includes `published_at` when present
+  - backwards compatibility with older objects (no `published_at`)
+3. Website tests:
+  - draft card renders "Previous posts" section for matching page
+  - section hides when no history exists
+  - list ordering is newest-first
 
-1. Plan decisions are auditable via persisted diagnostics and episodic records.
-2. Strategy policy is a direct and test-verified plan input.
-3. Orient and Decide read from a shared episodic memory artifact.
-4. Consecutive runs show memory continuity in deterministic tests.
-5. Documentation reflects final memory contracts and ownership.
+Deliverable:
 
-### Exit criteria
+- End-to-end confidence that context appears in both AI prompts and reviewer UI.
 
-- [ ] `planning_memory.json` is in active use in Orient/Decide paths.
-- [ ] `content_plan.json` includes plan diagnostics.
-- [ ] Strategy-to-plan policy coupling verified by tests.
-- [ ] Updated architecture + state docs merged.
+### Rollout strategy
+
+1. **Step 1**: ship Work Package A first (state reliability).
+2. **Step 2**: ship Work Package B (prompt context) behind a small config flag if needed.
+3. **Step 3**: ship Work Package D (UI visibility for reviewers).
+4. **Step 4**: enable Work Package C only after baseline observation confirms
+  duplicate rate is still too high.
+
+### Effort estimate
+
+Assumptions: current architecture remains unchanged (`insights -> plan -> drafts -> publish`),
+no new services, and no additional infrastructure provisioning.
+
+1. Work Package A: **0.5-1.0 PT**
+2. Work Package B: **1.0-1.5 PT**
+3. Work Package C: **0.5-1.0 PT**
+4. Work Package D: **0.75-1.25 PT**
+5. Work Package E: **0.75-1.25 PT**
+
+Total:
+
+- **MVP (A+B+D+E, without C): 3.0-5.0 PT**
+- **Full phase (A+B+C+D+E): 3.5-6.0 PT**
+
+### Acceptance criteria
+
+1. Published drafts store a reliable `published_at` timestamp.
+2. Draft node prompt includes former-post context for same page URL.
+3. Growth UI shows page-specific former posts on draft cards.
+4. Duplicate phrasing incidence drops in reviewer feedback over at least one
+  weekly cycle.
+5. All added tests pass in Python, API, and website suites.
+
+### Risks and mitigations
+
+1. **Prompt bloat / higher token use**
+  Mitigation: cap history entries and preview length.
+2. **Over-constrained generation reduces creativity**
+  Mitigation: focus constraints on hook and framing, not core message.
+3. **Timestamp gaps in historical data**
+  Mitigation: fallback ordering to `created` when `published_at` missing.
+
+### Decision checkpoint before coding
+
+Before implementation starts, confirm:
+
+1. Include Work Package C (similarity retry) in first iteration, or defer.
+2. History window size (default proposed: 3 or 5 entries).
+3. UI default: collapsed vs. expanded former-post panel.
 
 ## Phase 3 — Refinements & Optimization
 
@@ -1584,7 +1325,7 @@ Currently the loop uses Umami traffic + follower counts — engagement metrics
 | Risk                           | Mitigation                                       |
 | ------------------------------ | ------------------------------------------------ |
 | Poor content quality           | Human edit + approval workflow, not just approve/reject |
-| Strategy drift                 | Max 1 change per run, audit log in strategy.json  |
+| Planning drift                 | Keep planner deterministic, dedupe URLs, and monitor weekly output quality |
 | LLM hallucination in posts     | Human edit step, factual grounding via page descriptions |
 | API rate limits (Mastodon)     | Respect 300 req/5min, scheduled queue spreads posts |
 | Bluesky API changes            | atproto is versioned, pin SDK version              |
@@ -1597,13 +1338,14 @@ Currently the loop uses Umami traffic + follower counts — engagement metrics
 ### Open
 
 1. **LLM provider switch** — When to evaluate Anthropic/OpenAI? Quality threshold?
-   Currently IONOS Llama 3.3 70B. Monitor post quality after strategy node is live.
+  Currently IONOS Llama 3.3 70B. Monitor post quality in the simplified runtime.
 2. **Posting language logic** — Post in both DE+EN? Alternate? Platform-specific?
    Currently EN only. DE variants could expand pipeline.
 3. **Bridgy coexistence** — Keep Bridgy for blog cross-posts + agent for original social content?
    Or migrate fully to agent-managed posting?
 4. **Threads API** — Apply for Meta App Review if Mastodon/Bluesky growth plateaus.
-5. **Deploy Phase 2b** — `bash bin/deploy.sh`, verify Monday cron triggers strategy node.
+5. **Deploy simplified graph** — `bash bin/deploy.sh`, verify cron executes
+  `insights -> plan -> drafts -> publish`.
 
 ---
 

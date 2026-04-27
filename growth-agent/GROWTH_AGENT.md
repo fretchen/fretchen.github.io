@@ -1458,6 +1458,57 @@ the highest-impact, lowest-complexity gaps, then add broader recall continuity.
 - [ ] Strategy-to-plan policy coupling verified by tests.
 - [ ] Updated architecture + state docs merged.
 
+## Phase 2e — Simplified Architecture Consolidation PR
+
+Purpose: make `GROWTH_AGENT.md` the single canonical architecture document and
+remove drift between docs and implementation. This phase is intentionally
+cleanup-focused: code cleanup, documentation cleanup, and a small set of agreed
+bug fixes. No new feature development.
+
+### Scope
+
+In scope:
+
+1. Consolidate simplified architecture documentation into `GROWTH_AGENT.md`.
+2. Make `GROWTH_AGENT_SIMPLE.md` obsolete by integrating relevant content and
+  marking it deprecated (or deleting it in a follow-up).
+3. Align architecture text/diagrams with the active runtime flow
+  (`ingest -> insights -> plan -> drafts -> publish`).
+4. Remove or rewrite stale strategy-centric wording that no longer matches the
+  active execution path.
+5. Implement agreed low-risk bug fixes with focused tests.
+
+Out of scope:
+
+1. New graph nodes or major topology changes.
+2. New strategic optimization features.
+3. Large refactors outside cleanup targets.
+
+### PR Todos
+
+1. Update architecture overview and flow diagrams to the simplified runtime
+  path.
+2. Add a short "Legacy Decision Record" section that explains why strategy-node
+  work was deferred and what remains intentionally out of scope.
+3. Merge any still-useful concise guidance from `GROWTH_AGENT_SIMPLE.md` into
+  `GROWTH_AGENT.md`.
+4. Mark `GROWTH_AGENT_SIMPLE.md` as deprecated and point all references to
+  `GROWTH_AGENT.md`.
+5. Clean obsolete references such as strategy-driven Monday routing assumptions
+  where they no longer apply.
+6. Align comments/docstrings in affected modules so terminology matches the
+  simplified architecture.
+7. Apply agreed bug fixes and add or update focused tests.
+8. Keep PR boundaries explicit: cleanup + bug fixes only.
+
+### Verification Criteria
+
+1. `GROWTH_AGENT.md` reflects the actual runtime architecture.
+2. No contradictory architecture statements remain across docs.
+3. Tests for touched areas pass.
+4. Lint/type checks remain green for touched modules.
+5. Reviewers can understand scope quickly from one canonical document.
+
 ## Phase 3 — Refinements & Optimization
 
 Ideas for improving the OODA loop once it's stable in production.

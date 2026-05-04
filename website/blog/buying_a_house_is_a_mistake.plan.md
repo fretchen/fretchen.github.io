@@ -67,6 +67,84 @@
   - More than 2 to 4 direct podcast quotes
   - A technical appendix beyond one very short note on utility and tail events
 
+## Proposed Fixes Before Next Draft
+
+Do not implement these yet. They should be applied only after explicit validation.
+
+### 1. New Opening Structure
+
+- Replace the current opening with a neutral 3-part setup:
+  - Identify the episode as a Diary of a CEO conversation with Ben Felix about renting versus owning
+  - Summarize his model fairly: owner costs, opportunity cost, rent comparison, investing the difference, and mobility
+  - State the narrower critique: this model is useful for some households, but travels poorly when household type changes
+- Avoid opening with a judgment like “the podcast is wrong.” The target audience should feel the post is improving a model they may already like.
+- Suggested opening stance: “I found the argument useful, but too portable.”
+
+### 2. Softer Section Titles
+
+- Rename “What the podcast gets right” to something less adjudicating, for example:
+  - “The part I find persuasive”
+- Rename “The core mistake” to something less accusatory, for example:
+  - “My core issue”
+- Rename “A better framework” to something less final, for example:
+  - “Questions I would ask instead”
+
+### 3. Main Argument Map
+
+- Recast the body around explicit pain points or model limits:
+  - Pain point 1: The household type changes the decision
+  - Pain point 2: A primary residence is not just another asset
+  - Pain point 3: Expected-return arithmetic is too narrow
+  - Pain point 4: The literature points to state-dependent risk, not a universal rule
+- Move the three-household split earlier and make it the central payoff of the post.
+- Keep the “very wealthy / additional property” group short. It should clarify the boundary of the argument, not become a second article.
+
+### 4. Tone Adjustments
+
+- Avoid sounding like the final authority on rent versus buy. The voice should be: financially literate reader debugging a useful but overgeneralized model.
+- Replace absolute claims with scoped claims:
+  - Instead of “the podcast is wrong,” use “the argument is strongest for mobile households but less complete for settled families.”
+  - Instead of “housing is existential,” use “situations with bad housing can be far more disruptive than an equivalent portfolio loss, especially for households rooted in one place.”
+
+### 5. Rent Hedge and Regional Context
+
+- Strengthen the rent-hedge paragraph, especially for families and inflationary or rent-volatile environments.
+- Frame the regional critique carefully:
+  - Not: “the podcast ignores the world outside Canada and the US”
+  - Better: “the advice weakens for countries in which law, inflation, rent control, and local rental markets differ substantially from those in Canada and the US.”
+- Make clear that this does not invalidate the podcast’s model; it limits where the model can be used confidently.
+
+### 6. Literature and Utility Integration
+
+- Do not leave utility and tail events as a “what is missing” note at the end. Integrate them into the literature or risk section.
+- Explain expected utility in one plain-language sentence: households will fear situations of bad housing more than the same euro loss in an investment account because housing disruption hits daily life directly.
+- Mention the author’s failed simulation attempt only if it functions as humility:
+  - “I tried to turn this into a clean simulation, but the utility side is exactly where the model becomes hard to implement in a robust fashion.”
+  - “That is why I do not want to replace one universal rule with another.”
+- Keep the literature section decision-relevant:
+  - Cocco: housing dominates the balance sheet
+  - Yao & Zhang: total wealth and liquid portfolio are different questions
+  - Sinai & Souleles: owner-occupation can hedge rent risk for stayers
+
+### 7. Closing Revision
+
+- Remove the “Short note on what is still missing” section from the publishable draft.
+- End with a checklist rather than a grand conclusion.
+- Suggested final claim: “Buying a house is not automatically a mistake. Treating every housing decision as the same optimization problem is the part I find misleading.”
+
+### 8. Mechanical Cleanup
+
+- Remove all visible `AUTHOR COMMENT` lines from the draft.
+- Fix awkward or broken phrases:
+  - “On first sight”
+  - “IMHO”
+  - “It is super individual”
+  - “This difference matters most a lot”
+  - “the house is a leveraged, illiquid”
+  - “if the the housing fulfills”
+  - spaces before question marks
+- Add links or citations for the named papers before publication.
+
 ## Interactive Elements
 
 - Preferred: reuse the existing housing risk framing from the home-protection post, especially the distinction between forced-sale risk and stay-and-save-rent risk

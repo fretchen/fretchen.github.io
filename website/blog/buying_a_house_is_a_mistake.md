@@ -6,97 +6,80 @@ description: "The podcast argument against buying a home is strongest for young 
 tokenID: 195
 ---
 
-AUTHOR COMMENT: No one knows which blog post we are talking about. It needs to be introduced and very roughly summarized.
-AUTHOR COMMENT: The whole article sounds to confident. I would like to be more "down to earth" neutral.
+This post is about an episode of the the podcast "the Diary of a CEO" with an expert (Ben Felix) on whether buying a home is a mistake. The presented arguments sound appealing at first glance. They sound clean, empirical, and easy to operationalize. It goes roughly like this: add up the unrecoverable costs of owning, compare them with rent, invest the difference in index funds, and you have a practical rule for a messy decision.
 
+I think that model is useful in certain situations, just like many other rules of thumb for housing. However, while it might roughly work for one type of household, it is likely to be pretty poor for others. A young mobile professional, a family that wants to stay in one place, and a wealthy household buying an additional property are not solving the same problem. That is why I do not think rent versus buy should be treated as one generic optimization exercise like the podcast seems to suggest.
 
-I understand why the podcast argument is appealing. It sounds clean, empirical, and practical. Add up the unrecoverable costs of ownership, compare them with rent, invest the difference in index funds, and you get a better financial result. On first sight that sounds like exactly the kind of rule that helps cut through noise.
+## The part I find persuasive
 
-The problem is not that this framework is IMHO oversimplified. It is just presented as too universal. The episode acts very much as if there were one generic rent-versus-buy decision, when in reality the decision is very individual as we will see with three different examples. A young mobile professional, a family that wants to stay in one place, and a very wealthy household buying an additional property. They simply are not solving the same problem.
+The podcast is strongest when it talks about visible owner costs and mobility.
 
-## What the podcast gets right
+Mortgage interest, property tax and maintenance costs are real, and probably underestimated by many first-time buyers. Transaction costs are real too. If your career is changing, your relationships are not settled, and your housing needs may look completely different in three years, ownership can become a very expensive way to reduce your own flexibility.
 
-AUTHOR COMMENT: Can we find formulations that are less "this is right". I have a point of view and am argueing here. I am not THE expert in the field that can decide what is right and wrong.
+That is not a side point. For young mobile households it may be the main point. In that setting, the warning against buying early can be genuinely useful.
 
+## Pain point 1: the household changes the decision
 
-Before criticizing it, it is worth stating what the episode gets right.
+My core issue starts here. The episode presents a strong argument, but it presents it as if it applied to one generic household. I do not think that is fair.
 
-Owner costs are real. Mortgage interest is real. Property taxes are real. Maintenance is probably underestimated by many first-time buyers. And for young people in particular, transaction costs and mobility constraints are not side issues. They are central.
+The first household is the one the podcast fits best: a young professional which is likely to switch cities for career opportunities and therefore puts a high value on mobility. Here ownership can genuinely be a drag. You may move for work, want a different city, or need a different type of home within a few years. In that case, transaction costs, illiquidity, and the psychological pull of staying put can dominate the decision.
 
-On that point, the podcast is strongest. If your career is still changing, your relationships are not settled, and your housing needs may look totally different in three years, then buying early can be a very expensive way to reduce your own flexibility. For that group, the warning is not only fair. It is important.
+The second household is solving a different problem: a family that wants to stay in one place. Here the main risk is not only opportunity cost. It is housing security. Can you stay near the school? Can you remain in the same neighborhood? What happens if rents jump or if the local rental market tightens at the wrong moment? For this household, ownership is not only an asset choice. It can also be a way to reduce the risk of a disruptive housing shock.
 
-## The core mistake
-AUTHOR COMMENT: I would rather call it something like the "my core issue. The core oversimplification..." something like this.
+The third household is different again: people whose primary residence no longer dominates their wealth, or people buying an additional property. Once housing is no longer the dominant item on the balance sheet, the question moves closer to standard portfolio analysis: concentration, leverage, taxes, diversification, and expected return. The utility argument is weaker for a third property than for the home you actually live in.
 
-The trouble starts when this good argument gets stretched into a general rule.
+That is why the same argument can be useful for one listener and too broad for another. It is not one decision with one clean answer.
 
-The episode treats rent versus buy mainly as a financial break-even problem. But housing is not just a line in a spreadsheet. It is a state-dependent decision whose meaning changes with the household. That is why one neat rule starts to mislead as soon as we move beyond the young, mobile, optimization-focused listener.
+## Pain point 2: a primary residence is not just another asset
 
-## Three households, three problems
+This is the second place where I think the simple comparison becomes too thin. A primary residence is not just capital sitting in walls. It delivers a necessary consumption stream: stable housing in a particular place.
 
-The first household is the one the podcast really speaks to: a young professional with a lot of career uncertainty and a high value of mobility. Here ownership can genuinely be a drag. You may need to move for work. You may want a different city. You may want a different type of home in a few years. In that case, transaction costs, illiquidity, and the psychology of feeling tied down can dominate the decision. The podcast is on solid ground here.
+That matters most in bad states. A bad stock-market year is unpleasant. A bad housing state can be much more disruptive, especially for households rooted in one place. A forced sale, problems in refinancing, or being priced out of the local rental market does not just lower wealth on paper. It can change schooling, commuting, childcare arrangements, and daily life.
 
-The second household is very different: a family that wants to stay in one place. Here the relevant risk is no longer just opportunity cost. It is housing security. Can you stay near the school? Can you stay in the same neighborhood? What happens if rents jump? What happens if you are forced to move with children in the middle of a difficult year? For this household, the value of ownership is not just expected appreciation. It is protection against disruptive housing states.
+ For a young high-income renter with plenty of flexibility, the difference may be less severe. For a wealthy household buying an additional property, it is weaker again. But for the primary residence of a family or a long-term stayer, I think it is a material distinction.
 
-The third household is different again: people whose primary residence no longer drives their wealth, or people buying a third or fourth property. Once housing is no longer the dominant item on the balance sheet, the question shifts back toward standard portfolio analysis: diversification, concentration, taxes, leverage, and expected returns. The utility argument matters much less for a marginal property than for the home you actually live in.
+## Pain point 3: the return framing is too narrow
 
-This is why the same podcast argument can be insightful for one listener and misleading for another. It is not one decision. It is super individual.
+The podcast puts a lot of weight on opportunity cost. In the narrow sense, that might be fair. Equity tied up in a house cannot also be invested in the stock market. But if that becomes the center of the analysis, the comparison starts to lose important parts of the decision.
 
-## Housing is not just another asset
-AUTHOR COMMENT: The connection to the previous paragraph is really awkward. How are they supposed to be connected ? Is this a second major critique ? I think so but this has to be marked.
-AUTHOR COMMENT: I would like it to frame the points here "pain points". Pain point 1 was "housing is an individual decision". Pain point 2 is "housing is not just another asset" etc.
+First, expected returns are the least stable input in the whole exercise. Long-run stock returns may exceed long-run house price growth, but households do not experience that as a clean constant. If the decision depends heavily on a return assumption, then the apparent precision of the spreadsheet can be misleading.
 
-This is the point I think the episode underweights most.
+Second, the comparison is not just house returns versus ETF returns. For many households, the house is a leveraged, illiquid asset that also determines whether they remain stably housed. That is a different object from a financial portfolio position. The question is not only which asset compounds faster. The question is what function the house has to fulfill for this household.
 
-If your stock portfolio is down, that is painful. If your housing situation breaks, that can be existentially disruptive. A primary residence is not just capital sitting somewhere. It provides a necessary consumption stream. You need to be housed. That makes it fundamentally different from stocks and bonds.
+AUTHOR COMMENT: This "third point" actually is part of the second point and should be move into this discussion. Otherwise, it feels repetitive and disconnected.
 
-This difference matters most a lot in difficult situations. A bad stock-market year is unpleasant. A forced sale, a refinancing shock, or being pushed out of a local rental market can reshape daily life in a much deeper way. Once you take that seriously, average-return arithmetic like the ones central in the podcast stop  being enough.
+Third, owner-occupation can hedge rent risk for people who expect to stay. If you own the home you plan to live in for a long time, rising local housing costs are less dangerous to you than to a renter who has to keep buying housing services on the market. That does not make ownership automatically better. It does mean the risk profile changes.
 
-## Why the return framing is too narrow
+AUTHOR COMMENT: Same for this line below. It is really going deeper on the second pain point, which might have to be clarified. Maybe pain point 3 can be removed if the whole "risk" discussion is moved into the second point ?
 
-AUTHOR COMMENT: Another pain point right ? Should be clearly marked as such.
+This point also travels differently across countries. I would be careful here, because I do not want to pretend one sentence settles international housing markets. But I do think the advice weakens once tenancy law, inflation, rent control, and local rental-market structure differ substantially from the Canadian or US cases that usually sit behind these discussions.
 
-The podcast puts a lot of weight on opportunity cost. In the narrow sense, that is fine. Equity tied up in a house cannot simultaneously be invested in the stock market. But once this becomes the center of the argument, the analysis gets too thin for my taste.
+AUTHOR COMMENT: What does this title even mean ? I absolutely have no idea what a state-dependent risk might be and I read the papers. This must be formulated more down to earth. 
+## Pain point 4: the literature points to state-dependent risk
 
-First, expected returns are the noisiest part of the entire comparison. Long-run stock returns may well exceed long-run house price growth, but that does not mean a household can safely treat the difference as a stable planning input. The entire finance literature is full of warnings about how hard expected returns are to estimate with confidence.
+AUTHOR COMMENT: What does this sentence mean ? No idea what a "check on the shape of the problem" is. This must be reformulated in more concrete terms.
 
-Second, the relevant comparison is not just house returns versus stock returns. For most ordinary households, the house is a leveraged, illiquid that also determines whether the household remains stably housed. That is a very different object from an ETF. The question is not just which line compounds faster. The question is if the the housing fulfills the necessary functions which hugely depends on the person as we saw above.
+This is where the academic literature becomes useful, not as decoration, but as a check on the shape of the problem.
 
-Third, owner-occupation has a feature that the simple opportunity-cost framing tends to flatten: the rent hedge. If you own the home you plan to stay in, rising local housing costs are less dangerous to you than to a renter. That does not make ownership automatically superior. But it does mean that a homeowner who stays is in a different risk position from a renter who must keep buying housing services on the market.
-AUTHOR COMMENT: This is hugely important for families that want to stay and countries with high inflation. You cannot just overlook this completely and act as if the world is only the US and Canada.
+Cocco shows why housing dominates the balance sheet for ordinary households. Yao and Zhang show that total net worth and liquid-portfolio risk are not the same thing once housing enters the picture. Sinai and Souleles show why owner-occupation can hedge rent risk for long-term occupiers.
 
-## What the literature adds
-AUTHOR COMMENT: Another pain point ? I think so. Should be clearly marked as such.
+Taken together, these papers do not say that buying is always better. They say something more interesting: once housing matters enough, the right answer depends on horizon, mobility, liquidity, balance-sheet concentration, and whether the property is your home or just another asset.
 
-This is also where the academic literature becomes more useful than the podcast frame suggests.
+I also think this is where expected utility matters, even if I would avoid pretending I have a perfect model for it. Households often fear bad housing states more than an equivalent euro loss in an investment account, because housing disruption hits daily life directly. I tried to simulate this cleanly for myself at one point, and that exercise was exactly where the model became fragile. Small assumptions about how painful housing disruption is can change the output a lot. That is one reason I am reluctant to replace one universal rule with another.
 
-Cocco shows why housing matters so much for ordinary households: it dominates the balance sheet. Yao and Zhang show that once housing enters the picture, you have to distinguish between total net-worth risk and the composition of the liquid portfolio. Sinai and Souleles show why ownership can hedge rent risk for long-term occupiers.
+## Questions I would ask instead
 
-None of these papers says that buying is always better. But together they show why a single rent-versus-buy rule is too crude. The right answer depends on horizon, mobility, liquidity, balance-sheet concentration, and whether this is the home you live in or just another asset.
+So the question I would ask is not only whether buying a house is a mistake.
 
-## A better framework
-AUTHOR COMMENT: A better framework sounds like I know it all. What could be a better title. Without calling it a framework, I would like to present the questions that I think are more useful than the podcast's one-size-fits-all rule.
+I would ask:
 
-So the question is not only: is buying a house a mistake?
-
-Central questions are:
-
-1. Which kind of household am I actually ?
+1. Which kind of household am I actually?
 2. How likely am I to move in the next few years?
 3. Is this mainly a housing-security decision or a portfolio-allocation decision?
 4. How much of my wealth would this property dominate?
 5. How costly would a bad housing state be for me?
 6. Is this my home, or just another property?
 
-For a young, mobile person, the podcast argument is often strong. For a family that wants to stay put, it is much less complete. For a very wealthy household or an additional property, the problem changes again.
+For a young, mobile person, the podcast argument may be very strong. For a family that wants to stay put, it is less complete. For a wealthy household buying an additional property, the problem changes again.
 
-That is why the slogan is too broad. Buying a house is not a mistake. Treating all housing decisions as the same optimization problem is.
-
-## Short note on what is still missing
-
-This draft still leaves out two things that would improve the final version.
-
-First, the post should eventually anchor the argument in one housing market more clearly. The podcast examples are largely Canadian, while many readers will map the argument to Germany, the UK, or other European markets with different tenancy laws and rent dynamics.
-
-Second, the final version would benefit from one short sentence or source on expected utility and tail events. I do not think the blog post needs a full formal model, but it should make explicit that housing losses are not only larger in daily-life terms. They are also the kind of losses households are especially averse to.
-AUTHOR COMMENT: I would like the utility part to be mentionned in the literature section. Also that I personally tried to simulate it. That it is painful. And this was the reason why I refrained from writing a decision kind of blog post.
+That is the part I find misleading in the slogan. Buying a house is not automatically a mistake. Treating every housing decision as the same optimization problem is.

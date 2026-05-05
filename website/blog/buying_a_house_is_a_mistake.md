@@ -36,37 +36,29 @@ This is the second place where I think the simple comparison becomes too thin. A
 
 That matters most in bad states. A bad stock-market year is unpleasant. A bad housing state can be much more disruptive, especially for households rooted in one place. A forced sale, problems in refinancing, or being priced out of the local rental market does not just lower wealth on paper. It can change schooling, commuting, childcare arrangements, and daily life.
 
- For a young high-income renter with plenty of flexibility, the difference may be less severe. For a wealthy household buying an additional property, it is weaker again. But for the primary residence of a family or a long-term stayer, I think it is a material distinction.
+For a young high-income renter with plenty of flexibility, the difference may be less severe. For a wealthy household buying an additional property, it is weaker again. But for the primary residence of a family or a long-term stayer, I think it is a material distinction.
+
+The comparison is also not just house returns versus ETF returns. For many households, the house is the asset that determines whether they remain stably housed. That is a different object from a financial portfolio position. The question is not only which asset compounds faster. The question is what function the house has to fulfill for this household.
+
+Owner-occupation can also hedge rent risk for people who expect to stay. If you own the home you plan to live in for a long time, rising local housing costs are less dangerous to you than to a renter who has to keep buying housing services on the market. That does not make ownership automatically better. It does mean the risk profile changes.
+
+This point also travels differently across countries. I would be careful here, because I do not want to pretend one sentence settles international housing markets. But I do think the advice weakens once tenancy law, inflation, rent control, and local rental-market structure differ substantially from the Canadian or US cases that usually sit behind these discussions.
 
 ## Pain point 3: the return framing is too narrow
 
 The podcast puts a lot of weight on opportunity cost. In the narrow sense, that might be fair. Equity tied up in a house cannot also be invested in the stock market. But if that becomes the center of the analysis, the comparison starts to lose important parts of the decision.
 
-First, expected returns are the least stable input in the whole exercise. Long-run stock returns may exceed long-run house price growth, but households do not experience that as a clean constant. If the decision depends heavily on a return assumption, then the apparent precision of the spreadsheet can be misleading.
+Expected returns are the least stable input in the whole exercise. Long-run stock returns may exceed long-run house price growth, but households do not experience that as a clean constant. If the decision depends heavily on a return assumption, then the apparent precision of the spreadsheet can be misleading.
 
-Second, the comparison is not just house returns versus ETF returns. For many households, the house is a leveraged, illiquid asset that also determines whether they remain stably housed. That is a different object from a financial portfolio position. The question is not only which asset compounds faster. The question is what function the house has to fulfill for this household.
+## Pain point 4: a bad housing state hurts more than a bad investment year
 
-AUTHOR COMMENT: This "third point" actually is part of the second point and should be move into this discussion. Otherwise, it feels repetitive and disconnected.
+This is where the academic literature becomes useful, not as decoration, but to show that the right answer really does change with household type, time horizon, and how painful a bad housing outcome would be.
 
-Third, owner-occupation can hedge rent risk for people who expect to stay. If you own the home you plan to live in for a long time, rising local housing costs are less dangerous to you than to a renter who has to keep buying housing services on the market. That does not make ownership automatically better. It does mean the risk profile changes.
+[Cocco](https://academic.oup.com/rfs/article-abstract/18/2/535/1599873?login=false) shows why housing dominates the balance sheet for ordinary households. [Yao and Zhang](https://personal.utdallas.edu/~hxz054000/RFS_YaoZhang.pdf) show that total net worth and liquid-portfolio risk are not the same thing once housing enters the picture.
 
-AUTHOR COMMENT: Same for this line below. It is really going deeper on the second pain point, which might have to be clarified. Maybe pain point 3 can be removed if the whole "risk" discussion is moved into the second point ?
+Taken together, these papers do not say that buying is always better. They say something more nuanced: once housing matters enough, the right answer depends on horizon, mobility, liquidity, balance-sheet concentration, and whether the property is your home or just another asset.
 
-This point also travels differently across countries. I would be careful here, because I do not want to pretend one sentence settles international housing markets. But I do think the advice weakens once tenancy law, inflation, rent control, and local rental-market structure differ substantially from the Canadian or US cases that usually sit behind these discussions.
-
-AUTHOR COMMENT: What does this title even mean ? I absolutely have no idea what a state-dependent risk might be and I read the papers. This must be formulated more down to earth.
-
-## Pain point 4: the literature points to state-dependent risk
-
-AUTHOR COMMENT: What does this sentence mean ? No idea what a "check on the shape of the problem" is. This must be reformulated in more concrete terms.
-
-This is where the academic literature becomes useful, not as decoration, but as a check on the shape of the problem.
-
-Cocco shows why housing dominates the balance sheet for ordinary households. Yao and Zhang show that total net worth and liquid-portfolio risk are not the same thing once housing enters the picture. Sinai and Souleles show why owner-occupation can hedge rent risk for long-term occupiers.
-
-Taken together, these papers do not say that buying is always better. They say something more interesting: once housing matters enough, the right answer depends on horizon, mobility, liquidity, balance-sheet concentration, and whether the property is your home or just another asset.
-
-I also think this is where expected utility matters, even if I would avoid pretending I have a perfect model for it. Households often fear bad housing states more than an equivalent euro loss in an investment account, because housing disruption hits daily life directly. I tried to simulate this cleanly for myself at one point, and that exercise was exactly where the model became fragile. Small assumptions about how painful housing disruption is can change the output a lot. That is one reason I am reluctant to replace one universal rule with another.
+I also think this is where the economic concept of expected utility matters. Households typically fear bad housing states more than an equivalent euro loss in an investment account.  Housing disruption simply hits daily life directly. I tried to simulate this cleanly for myself at one point but that model was super fragile. Small assumptions about how painful housing disruption is can changed the output a lot. That experience is one reason I am reluctant to replace one universal rule with another.
 
 ## Questions I would ask instead
 

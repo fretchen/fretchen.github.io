@@ -145,6 +145,58 @@ Do not implement these yet. They should be applied only after explicit validatio
   - spaces before question marks
 - Add links or citations for the named papers before publication.
 
+### 9. AUTHOR COMMENT Resolutions (pending validation)
+
+These four comments each touch the boundary between Pain Point 2 and Pain Point 3, and the language of Pain Point 4. The proposals below address them in order.
+
+---
+
+**Comment 1** (line 49): *”This 'third point' actually is part of the second point and should be moved into this discussion.”*
+
+The paragraph reads: *”Second, the comparison is not just house returns versus ETF returns. For many households, the house is a leveraged, illiquid asset that also determines whether they remain stably housed…”*
+
+**Proposal:** Move this paragraph into Pain Point 2 (“A primary residence is not just another asset”). It fits naturally there as a second concrete reason why the return comparison is insufficient: not only is a house a consumption good, it is also the asset that determines housing security. The word “second” at the start of the paragraph can be dropped or replaced with a transitional phrase.
+
+---
+
+**Comment 2** (line 53): *”Same for this line below. It is really going deeper on the second pain point. Maybe Pain Point 3 can be removed if the whole 'risk' discussion is moved into the second point?”*
+
+The two paragraphs in question are the rent-hedge paragraph (“Third, owner-occupation can hedge rent risk…”) and the regional paragraph (“This point also travels differently across countries…”).
+
+**Proposal — Option A (surgical):** Keep Pain Point 3, but strip it down to a single clean argument: *expected-return arithmetic is an unstable foundation for this decision.* Move the rent-hedge paragraph and the regional paragraph into Pain Point 2, which becomes the home for all housing-security and risk arguments. Pain Point 3 then covers only the narrower claim that long-run return comparisons are uncertain and that a spreadsheet that puts them at the center can give false precision.
+
+**Proposal — Option B (aggressive):** Remove Pain Point 3 entirely. Merge the rent-hedge and regional material into Pain Point 2. Fold the expected-return critique into the opening of the literature section (Pain Point 4), where it sets up why the academic framing is more useful than the return comparison alone. This shortens the post and eliminates the repetition, at the cost of losing a named section for the opportunity-cost critique.
+
+**Recommendation:** Option A. The expected-return instability point is distinct enough to earn its own short section. Option B risks making Pain Point 2 too heavy and losing a clear standalone argument.
+
+---
+
+**Comment 3** (line 57): *”What does this title even mean? 'State-dependent risk' is jargon. This must be formulated more down to earth.”*
+
+Current title: *”Pain point 4: the literature points to state-dependent risk”*
+
+**Proposed replacements:**
+
+- “Pain point 4: the research complicates the simple comparison” — neutral, invites the reader to hear something new
+- “Pain point 4: what the papers actually say about housing decisions” — plain, functional
+- “Pain point 4: bad housing years are worse than bad investment years” — most concrete, captures the asymmetry directly
+
+**Recommendation:** The third option (“bad housing years are worse than bad investment years”) is the most accessible and directly previews the core claim of the section. However it implies a general claim that might be too strong for all households (it is most true for settled families). A possible hedge: “Pain point 4: a bad housing state hurts more than a bad investment year.”
+
+---
+
+**Comment 4** (line 61): *”What does this sentence mean? No idea what a 'check on the shape of the problem' is. This must be reformulated in more concrete terms.”*
+
+Current sentence: *”This is where the academic literature becomes useful, not as decoration, but as a check on the shape of the problem.”*
+
+**Proposed replacements:**
+
+- “This is where the academic literature becomes useful, not as decoration, but to show that the right answer really does change with household type, time horizon, and how painful a bad housing outcome would be.” — most complete, directly connects to the three dimensions the section covers
+- “This is where the academic literature becomes useful: it tells you what the problem actually is before you try to solve it.” — shorter, functional
+- “This is where the academic literature matters: not to settle the debate, but to show it has more moving parts than the return comparison suggests.” — captures the anti-closure tone of the section
+
+**Recommendation:** The first option. It replaces the vague phrase “shape of the problem” with three concrete nouns — household type, time horizon, bad-state pain — that the reader has already encountered in earlier sections.
+
 ## Interactive Elements
 
 - Preferred: reuse the existing housing risk framing from the home-protection post, especially the distinction between forced-sale risk and stay-and-save-rent risk

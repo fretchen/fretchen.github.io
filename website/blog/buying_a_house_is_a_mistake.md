@@ -1,14 +1,14 @@
 ---
-title: "Rent vs. Buy Is Not One Decision"
+title: "My take on a housing podcast: Rent vs. Buy Is Not One Decision"
 publishing_date: "2026-05-04"
 category: "others"
 description: "The podcast argument against buying a home is strongest for young mobile professionals, but much weaker once you distinguish between different households and the very different risks they face."
 tokenID: 195
 ---
 
-This post is about an episode of the the podcast "the Diary of a CEO" with an expert (Ben Felix) on whether buying a home is a mistake. The presented arguments sound appealing at first glance. They sound clean, empirical, and easy to operationalize. It goes roughly like this: add up the unrecoverable costs of owning, compare them with rent, invest the difference in index funds, and you have a practical rule for a messy decision.
+This post is about an [episode of the the podcast "the Diary of a CEO"](https://open.spotify.com/episode/2ehl7eaYZvItjnVhTbokaa?si=D_Fv02TnQvShBtz5zvVlQQ&t=3657) with an expert (Ben Felix) on whether buying a home is a mistake. The presented arguments sound appealing at first glance. They sound clean, empirical, and easy to operationalize. It goes roughly like this: add up the unrecoverable costs of owning, compare them with rent, invest the difference in index funds, and you have a practical rule for a messy decision.
 
-I think that model is useful in certain situations, just like many other rules of thumb for housing. However, while it might roughly work for one type of household, it is likely to be pretty poor for others. A young mobile professional, a family that wants to stay in one place, and a wealthy household buying an additional property are not solving the same problem. That is why I do not think rent versus buy should be treated as one generic optimization exercise like the podcast seems to suggest.
+I think that model is useful in certain situations, just like many other rules of thumb for housing. However, a young mobile professional, a family that wants to stay in one place, and a wealthy household buying an additional property are not solving the same problem.  That is why I do not think rent versus buy should be treated as one generic optimization exercise like the podcast seems to suggest.
 
 ## The part I find persuasive
 
@@ -16,13 +16,13 @@ The podcast is strongest when it talks about visible owner costs and mobility.
 
 Mortgage interest, property tax and maintenance costs are real, and probably underestimated by many first-time buyers. Transaction costs are real too. If your career is changing, your relationships are not settled, and your housing needs may look completely different in three years, ownership can become a very expensive way to reduce your own flexibility.
 
-That is not a side point. For young mobile households it may be the main point. In that setting, the warning against buying early can be genuinely useful.
+That is not a unimportant consideration. For young mobile households it may even be the central point. In that setting, the warning against buying early can be genuinely useful.
 
 ## Pain point 1: the household changes the decision
 
 My core issue starts here. The episode presents a strong argument, but it presents it as if it applied to one generic household. I do not think that is fair.
 
-The first household is the one the podcast fits best: a young professional which is likely to switch cities for career opportunities and therefore puts a high value on mobility. Here ownership can genuinely be a drag. You may move for work, want a different city, or need a different type of home within a few years. In that case, transaction costs, illiquidity, and the psychological pull of staying put can dominate the decision.
+Consider the first household: a young professional which is likely to switch cities for career opportunities and therefore puts a high value on mobility. Here ownership can genuinely be a drag. You may move for work, want a different city, or need a different type of home within a few years. In that case, transaction costs, illiquidity, and the psychological pull of staying put can dominate the decision.
 
 The second household is solving a different problem: a family that wants to stay in one place. Here the main risk is not only opportunity cost. It is housing security. Can you stay near the school? Can you remain in the same neighborhood? What happens if rents jump or if the local rental market tightens at the wrong moment? For this household, ownership is not only an asset choice. It can also be a way to reduce the risk of a disruptive housing shock.
 
@@ -54,7 +54,8 @@ AUTHOR COMMENT: Same for this line below. It is really going deeper on the secon
 
 This point also travels differently across countries. I would be careful here, because I do not want to pretend one sentence settles international housing markets. But I do think the advice weakens once tenancy law, inflation, rent control, and local rental-market structure differ substantially from the Canadian or US cases that usually sit behind these discussions.
 
-AUTHOR COMMENT: What does this title even mean ? I absolutely have no idea what a state-dependent risk might be and I read the papers. This must be formulated more down to earth. 
+AUTHOR COMMENT: What does this title even mean ? I absolutely have no idea what a state-dependent risk might be and I read the papers. This must be formulated more down to earth.
+
 ## Pain point 4: the literature points to state-dependent risk
 
 AUTHOR COMMENT: What does this sentence mean ? No idea what a "check on the shape of the problem" is. This must be reformulated in more concrete terms.

@@ -3,7 +3,7 @@ title: "My take on a housing podcast: Rent vs. Buy Is Not One Decision"
 publishing_date: "2026-05-04"
 category: "others"
 description: "The podcast argument against buying a home is strongest for young mobile professionals, but much weaker once you distinguish between different households and the very different risks they face."
-tokenID: 195
+tokenID: 196
 ---
 
 This post is about an [episode of the the podcast "the Diary of a CEO"](https://open.spotify.com/episode/2ehl7eaYZvItjnVhTbokaa?si=D_Fv02TnQvShBtz5zvVlQQ&t=3657) with an expert (Ben Felix) on whether buying a home is a mistake. The presented arguments sound appealing at first glance. They sound clean, empirical, and easy to operationalize. It goes roughly like this: add up the unrecoverable costs of owning, compare them with rent, invest the difference in index funds, and you have a practical rule for a messy decision.

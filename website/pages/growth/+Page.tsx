@@ -436,9 +436,7 @@ function DraftCardView({
           )}
           {history.length > 0 && (
             <details style={{ fontSize: "12px", color: "#666", margin: "6px 0" }}>
-              <summary style={{ cursor: "pointer" }}>
-                Previous posts for this page ({history.length})
-              </summary>
+              <summary style={{ cursor: "pointer" }}>Previous posts for this page ({history.length})</summary>
               {history.slice(0, 3).map((h) => (
                 <div key={h.id} style={{ marginTop: "4px", paddingLeft: "8px", borderLeft: "2px solid #ddd" }}>
                   <span style={{ color: "#999" }}>

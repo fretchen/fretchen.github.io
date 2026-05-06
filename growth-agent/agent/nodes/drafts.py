@@ -228,7 +228,7 @@ def _former_posts_context(queue: ContentQueue, page_url: str, channel: str, n: i
     if not matches:
         return ""
 
-    matches.sort(key=lambda d: (d.published_at or d.created), reverse=True)
+    matches.sort(key=lambda d: d.published_at or d.created, reverse=True)
     lines = [f"Former posts for this page on {channel} (newest first):"]
     for i, d in enumerate(matches[:n], 1):
         ts = (d.published_at or d.created).strftime("%Y-%m-%d")

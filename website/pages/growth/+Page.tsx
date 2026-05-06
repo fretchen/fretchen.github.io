@@ -589,6 +589,19 @@ export default function Page() {
     }
   }, [isOwner, loadData]);
 
+  const historyByPage = useMemo(() => {
+    const map: Record<string, Draft[]> = {};
+    for (const d of queue?.published ?? []) {
+      const key = d.source_blog_post ?? "";
+      if (!key) continue;
+      (map[key] ??= []).push(d);
+    }
+    for (const arr of Object.values(map)) {
+      arr.sort((a, b) => (b.published_at ?? b.created).localeCompare(a.published_at ?? a.created));
+    }
+    return map;
+  }, [queue?.published]);
+
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     setBusy(true);
     setError(null);
@@ -700,19 +713,6 @@ export default function Page() {
       </div>
     );
   }
-
-  const historyByPage = useMemo(() => {
-    const map: Record<string, Draft[]> = {};
-    for (const d of queue?.published ?? []) {
-      const key = d.source_blog_post ?? "";
-      if (!key) continue;
-      (map[key] ??= []).push(d);
-    }
-    for (const arr of Object.values(map)) {
-      arr.sort((a, b) => (b.published_at ?? b.created).localeCompare(a.published_at ?? a.created));
-    }
-    return map;
-  }, [queue?.published]);
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "drafts", label: "Pending", count: queue?.drafts.length ?? 0 },

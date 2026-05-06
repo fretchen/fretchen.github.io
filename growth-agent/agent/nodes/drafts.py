@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
+from urllib.parse import urlparse, urlunparse
 
 from pydantic import BaseModel, Field
 
@@ -63,8 +64,20 @@ def _system_prompt(strategy: Strategy) -> str:
     )
 
 
-def _mastodon_prompt(item, language: str, strategy: Strategy) -> str:
+def _former_context_block(former_context: str) -> str:
+    """Wrap former-post context in a prompt section. Returns empty string when no context."""
+    if not former_context:
+        return ""
+    return f"""
+--- PREVIOUSLY PUBLISHED FOR THIS PAGE ---
+{former_context}
+Rules: do not reuse the same opening hook or the exact same claim framing from the entries above.
+------------------------------------------"""
+
+
+def _mastodon_prompt(item, language: str, strategy: Strategy, former_context: str = "") -> str:
     url = f"{item.page_url}?utm_source=mastodon&utm_campaign=growth-agent"
+    history_block = _former_context_block(former_context)
     if language == "de":
         return f"""Schreibe einen Mastodon-Post (max 500 Zeichen) über diesen Blog-Artikel:
 
@@ -72,7 +85,7 @@ URL: {url}
 Titel: {item.page_title}
 Zusammenfassung: {item.page_description}
 Warum bewerben: {item.reason}
-
+{history_block}
 Anforderungen:
 - Hook im ersten Satz (Frage oder starke These)
 - Ein konkretes Insight aus dem Artikel erwähnen
@@ -90,7 +103,7 @@ URL: {url}
 Title: {item.page_title}
 Article summary: {item.page_description}
 Why promote: {item.reason}
-
+{history_block}
 Context: {strategy.website_url} covers {pillars}.
 Target audience: {strategy.target_audience}
 
@@ -105,8 +118,9 @@ Do NOT use emojis excessively. One is fine.
 Return ONLY the post text, nothing else."""
 
 
-def _bluesky_prompt(item, language: str, strategy: Strategy) -> str:
+def _bluesky_prompt(item, language: str, strategy: Strategy, former_context: str = "") -> str:
     url = f"{item.page_url}?utm_source=bluesky&utm_campaign=growth-agent"
+    history_block = _former_context_block(former_context)
     if language == "de":
         return f"""Schreibe einen Bluesky-Post (max 300 Zeichen) über diesen Blog-Artikel:
 
@@ -114,7 +128,7 @@ URL: {url}
 Titel: {item.page_title}
 Zusammenfassung: {item.page_description}
 Warum bewerben: {item.reason}
-
+{history_block}
 Anforderungen:
 - Knackiger Hook
 - Link einbinden
@@ -129,7 +143,7 @@ URL: {url}
 Title: {item.page_title}
 Article summary: {item.page_description}
 Why promote: {item.reason}
-
+{history_block}
 Target audience: {strategy.target_audience}
 
 Requirements:
@@ -192,6 +206,35 @@ Requirements:
 - {"Max 500 chars, 2-3 hashtags" if channel == "mastodon" else "Max 300 chars, NO hashtags"}
 
 Return ONLY the improved post text, nothing else."""
+
+
+def _normalize_url(url: str) -> str:
+    """Strip query string and fragment so UTM-decorated URLs match their canonical form."""
+    p = urlparse(url)
+    return urlunparse(p._replace(query="", fragment=""))
+
+
+def _former_posts_context(queue: ContentQueue, page_url: str, channel: str, n: int = 3) -> str:
+    """Return a formatted block of the N most recent published posts for this page+channel.
+
+    Returns empty string when no history exists.
+    """
+    canonical = _normalize_url(page_url)
+    matches = [
+        d
+        for d in queue.published
+        if d.channel == channel and _normalize_url(d.link or "") == canonical
+    ]
+    if not matches:
+        return ""
+
+    matches.sort(key=lambda d: d.published_at or d.created, reverse=True)
+    lines = [f"Former posts for this page on {channel} (newest first):"]
+    for i, d in enumerate(matches[:n], 1):
+        ts = (d.published_at or d.created).strftime("%Y-%m-%d")
+        preview = d.content[:140] + ("…" if len(d.content) > 140 else "")
+        lines.append(f"{i}. [{ts}] {preview}")
+    return "\n".join(lines)
 
 
 def _normalize_hashtags(hashtags: list[str]) -> list[str]:
@@ -295,7 +338,8 @@ def create_drafts(storage, plan: ContentPlan) -> int:
                 continue
             config = CHANNEL_CONFIG[channel]
             prompt_fn = {"mastodon": _mastodon_prompt, "bluesky": _bluesky_prompt}[channel]
-            prompt = prompt_fn(item, "en", strategy)
+            former_context = _former_posts_context(queue, item.page_url, channel)
+            prompt = prompt_fn(item, "en", strategy, former_context)
             max_tokens = config["max_tokens"]
             draft_hashtags: list[str] = []
 

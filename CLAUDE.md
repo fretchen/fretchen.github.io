@@ -70,6 +70,19 @@ poetry run jupyter notebook
 poetry run python -m ipykernel install --user --name=merkle-tree-notebooks
 ```
 
+### growth-agent/
+
+Python cron container (managed with `uv`). Runs daily on Scaleway: ingests Umami analytics, generates LLM social-media drafts, and publishes approved posts to Mastodon and Bluesky. Human-in-the-loop via the website's Growth UI (`/growth`).
+
+```bash
+cd growth-agent/
+uv sync                                # install deps
+uv run pytest test/                    # run tests
+uv run python run_local.py diagnose   # inspect current S3 state
+uv run python run_local.py publish    # dry-run publish step
+bash bin/deploy.sh                    # build + push + deploy (needs SCW creds)
+```
+
 ## Architecture Patterns
 
 ### Smart Contracts (eth/)

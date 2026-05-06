@@ -80,6 +80,7 @@ def publish_approved_drafts(storage) -> list[str]:
                 continue
 
             draft.status = "published"
+            draft.published_at = datetime.now(timezone.utc)
             queue.published.append(draft)
             published_ids.append(draft.id)
             logger.info("Published draft %s to %s", draft.id, draft.channel)

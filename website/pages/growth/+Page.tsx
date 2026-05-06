@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
 import { useGrowthApi } from "../../hooks/useGrowthApi";
@@ -305,6 +305,7 @@ const reviewMeta = css({
 function DraftCardView({
   draft,
   showActions,
+  history,
   onApprove,
   onReject,
   onUpdate,
@@ -312,6 +313,7 @@ function DraftCardView({
 }: {
   draft: Draft;
   showActions: boolean;
+  history: Draft[];
   onApprove: (id: string, scheduledAt?: string, reviewComment?: string) => Promise<void>;
   onReject: (id: string, reviewComment?: string) => Promise<void>;
   onUpdate: (id: string, body: Partial<Draft>) => Promise<void>;
@@ -431,6 +433,23 @@ function DraftCardView({
             <a className={sourceLink} href={draft.link} target="_blank" rel="noopener noreferrer">
               {draft.source_blog_post || draft.link}
             </a>
+          )}
+          {history.length > 0 && (
+            <details style={{ fontSize: "12px", color: "#666", margin: "6px 0" }}>
+              <summary style={{ cursor: "pointer" }}>
+                Previous posts for this page ({history.length})
+              </summary>
+              {history.slice(0, 3).map((h) => (
+                <div key={h.id} style={{ marginTop: "4px", paddingLeft: "8px", borderLeft: "2px solid #ddd" }}>
+                  <span style={{ color: "#999" }}>
+                    {new Date(h.published_at ?? h.created).toLocaleDateString()} · {h.channel}
+                  </span>
+                  <p style={{ margin: "2px 0" }}>
+                    {h.content.length > 140 ? h.content.slice(0, 140) + "…" : h.content}
+                  </p>
+                </div>
+              ))}
+            </details>
           )}
           {draft.review_outcome && (
             <div className={reviewMeta}>
@@ -682,6 +701,19 @@ export default function Page() {
     );
   }
 
+  const historyByPage = useMemo(() => {
+    const map: Record<string, Draft[]> = {};
+    for (const d of queue?.published ?? []) {
+      const key = d.source_blog_post ?? "";
+      if (!key) continue;
+      (map[key] ??= []).push(d);
+    }
+    for (const arr of Object.values(map)) {
+      arr.sort((a, b) => (b.published_at ?? b.created).localeCompare(a.published_at ?? a.created));
+    }
+    return map;
+  }, [queue?.published]);
+
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "drafts", label: "Pending", count: queue?.drafts.length ?? 0 },
     { key: "approved", label: "Approved", count: queue?.approved.length ?? 0 },
@@ -718,6 +750,7 @@ export default function Page() {
                 key={draft.id}
                 draft={draft}
                 showActions={showActions}
+                history={historyByPage[draft.source_blog_post ?? ""] ?? []}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onUpdate={handleUpdate}

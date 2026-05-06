@@ -19,6 +19,8 @@ from agent.models import (
 )
 from agent.nodes.drafts import (
     MastodonDraftOutput,
+    _former_posts_context,
+    _normalize_url,
     create_drafts,
 )
 from agent.nodes.ingest import ingest_analytics
@@ -961,3 +963,107 @@ class TestRunServer:
             assert body["test"] is True
             mock_handle.assert_called_once()
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 2f — published_at, former-post context, backwards compatibility
+# ---------------------------------------------------------------------------
+
+
+@patch("agent.nodes.publish.MastodonClient")
+def test_publish_sets_published_at(MockMasto, mock_storage):
+    """Successful publish populates published_at on the draft."""
+    storage, store = mock_storage
+
+    now = datetime.now(timezone.utc)
+    draft = Draft(
+        id="d1",
+        channel="mastodon",
+        language="en",
+        content="Hello world",
+        status="approved",
+        scheduled_at=now - timedelta(minutes=1),
+    )
+    queue = ContentQueue(approved=[draft])
+    storage.write("content_queue.json", queue)
+
+    masto_inst = MockMasto.return_value
+    masto_inst.post.return_value = None
+    masto_inst.close.return_value = None
+
+    with patch("agent.nodes.publish.publish_draft"):
+        publish_approved_drafts(storage)
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert len(saved.published) == 1
+    assert saved.published[0].published_at is not None
+
+
+def test_normalize_url_strips_query_and_fragment():
+    """_normalize_url removes UTM params and fragments."""
+    url = "https://fretchen.eu/blog/post?utm_source=mastodon&utm_campaign=growth-agent#section"
+    assert _normalize_url(url) == "https://fretchen.eu/blog/post"
+
+
+def test_normalize_url_leaves_clean_url_unchanged():
+    assert _normalize_url("https://fretchen.eu/blog/post") == "https://fretchen.eu/blog/post"
+
+
+def test_former_posts_context_filters_by_channel():
+    """_former_posts_context returns only entries matching the requested channel."""
+    page = "https://fretchen.eu/blog/post"
+    now = datetime.now(timezone.utc)
+
+    published = [
+        Draft(
+            id="m1",
+            channel="mastodon",
+            language="en",
+            content="Mastodon post",
+            link=f"{page}?utm_source=mastodon&utm_campaign=growth-agent",
+            status="published",
+            published_at=now - timedelta(days=1),
+        ),
+        Draft(
+            id="b1",
+            channel="bluesky",
+            language="en",
+            content="Bluesky post",
+            link=f"{page}?utm_source=bluesky&utm_campaign=growth-agent",
+            status="published",
+            published_at=now - timedelta(days=2),
+        ),
+    ]
+    queue = ContentQueue(published=published)
+
+    ctx = _former_posts_context(queue, page, "mastodon")
+    assert "Mastodon post" in ctx
+    assert "Bluesky post" not in ctx
+
+
+def test_former_posts_context_empty_when_no_history():
+    """_former_posts_context returns empty string when no history exists."""
+    queue = ContentQueue()
+    assert _former_posts_context(queue, "https://fretchen.eu/blog/post", "mastodon") == ""
+
+
+def test_old_queue_deserializes_without_published_at():
+    """Queues persisted before Phase 2f (no published_at field) load without error."""
+    raw = {
+        "drafts": [],
+        "approved": [],
+        "published": [
+            {
+                "id": "old1",
+                "created": "2025-01-01T00:00:00",
+                "channel": "mastodon",
+                "language": "en",
+                "content": "old post",
+                "hashtags": [],
+                "status": "published",
+            }
+        ],
+        "rejected": [],
+    }
+    queue = ContentQueue.model_validate(raw)
+    assert queue.published[0].published_at is None

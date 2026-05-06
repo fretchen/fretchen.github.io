@@ -141,6 +141,7 @@ class Draft(BaseModel):
     review_outcome: str | None = None
     review_comment: str | None = None
     reviewed_at: datetime | None = None
+    published_at: datetime | None = None
 
 
 class ContentQueue(BaseModel):

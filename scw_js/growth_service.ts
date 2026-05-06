@@ -26,6 +26,7 @@ export interface Draft {
   review_outcome?: string | null;
   review_comment?: string | null;
   reviewed_at?: string | null;
+  published_at?: string | null;
 }
 
 export interface ContentQueue {

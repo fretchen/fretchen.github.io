@@ -265,6 +265,7 @@ Kontrolle sind in diesem Kontext keine gegensätzlichen Ziele.
 ---
 **Quelle:** IfM Bonn / IMPULS-Stiftung (2025). Bürokratiekosten von Unternehmen
 aus dem Maschinen- und Anlagenbau – Folgestudie. Februar 2025. ifm-bonn.org.
+
 ---
 
 **Quellen:**

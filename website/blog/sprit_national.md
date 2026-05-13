@@ -6,7 +6,9 @@ description: I explore how a rational company owner has to vote as he decides if
 tokenID: 123
 ---
  
-In the recent context, I had a rather common discussion for our current times with a family member. The topic was the Iran war and the hefty increase in fuel prices that it had triggered. As usual, I did not feel too much pity with people still driving fossil fuels and complaining about high prices. The counterargument was that high prices are one thing. But high prices in Germany compared to neighboring countries only was an unreasonable competitive disadvantage for transport companies. So in the end the counterargument was not about high prices for a private person but about the fact that the transport companies felt really left alone by the government as they felt they had to shoulder a much higher price for the war than others. From there the logic was quite straight-forward:
+Recently, I had a discussion with a family member on the Iran war and the hefty increase in fuel prices that it had triggered. As usual, I did not feel too much pity with people still driving fossil fuels and complaining about high prices. 
+
+The counterargument was that high prices are one thing. But high prices in Germany compared to neighboring countries only was an unreasonable competitive disadvantage for transport companies. So in the end the counterargument was not about high prices for a private person but about the fact that the transport companies felt really left alone by the government as they felt they had to shoulder a much higher price for the war than others. From there the logic was quite straight-forward:
 
 - This is yet another example of the government not protecting me.
 - I clearly have to look out for myself.
@@ -14,11 +16,9 @@ In the recent context, I had a rather common discussion for our current times wi
 
 In this logic you must decide rationally what is in your highest self-interest to protect your company and you do not reflect about the global good but about your self-interest. And this decision process has quite some analogies with the prisoners dilemma as we will see.
 
-## The real competitive pressure: what the data shows
+## But wait. What do the data say about the situation ?
 
-Before we can evaluate protectionism rationally, we need to understand what the actual competitive pressure looks like. A 2020 study by Kotsios & Folinas measured operating costs per 100 km for a standardised five-axle truck across European national routes. The headline finding: Polish carriers were roughly 31% cheaper than German ones on Polish domestic routes in 2018. But this figure both overstates and understates the relevant problem.
-
-On German roads specifically, the picture is more nuanced. Maut (motorway tolls) applies equally to all vehicles operating in Germany — domestic or foreign. Fuel prices are determined by the local pump. What *does* remain anchored to the home country is the driver's wage. The result is a structural cost advantage for Polish carriers of roughly **15–20%** on German routes — not 31%, but still substantial, and almost entirely wage-driven. *(A detailed cost breakdown is in the backup section below.)*
+Before I can dive into wild speculations, beautiful models etc I had to put in the usual foot work and try to understand the reality a bit. Because even if I would like to pretend it I have no clue about the costs, prices etc that logistics companies face. I really liked a 2020 study by Kotsios & Folinas that measured operating costs per 100 km for a standardised five-axle truck across European national routes. Roughly summarized: Polish carriers were roughly 31% cheaper than German ones on Polish domestic routes in 2018. However, on German roads specifically, the picture is more nuanced. Maut (motorway tolls) applies equally to all vehicles operating in Germany — domestic or foreign. Fuel prices are determined by the local pump. What *does* remain anchored to the home country is the driver's wage. The result is a structural cost advantage for Polish carriers of roughly **15–20%** on German routes — not 31%, but still substantial, and almost entirely wage-driven. *(A detailed cost breakdown is in the backup section below.)*
 
 The law already addresses this wage differential, at least on paper. The EU Mobility Package I, in force since February 2022, requires that drivers performing cabotage or bilateral transport with loading or unloading in Germany must receive the German minimum wage — €12.82 per hour in 2025, rising to €13.90 from January 2026. Violations carry fines of up to €500,000. And Polish wages are moving in the right direction: the gap has narrowed from a ratio of 1:2.8 in 2018 to around 1:1.8 today. The trajectory is encouraging even if the absolute gap remains significant.
 

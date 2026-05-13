@@ -1,6 +1,6 @@
 ---
 author:
-  - Fred Jendrzejewski
+  - fretchen
 order: 2
 title: Tutorial 2 - Continuous variables or the quantum harmonic oscillator
 ---

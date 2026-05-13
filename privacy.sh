@@ -17,7 +17,7 @@ find . -not -path './.git/*' -not -path '*/node_modules/*' \( \
   -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \
   -o -name "*.js" -o -name "*.ts" -o -name "*.tsx" \
 \) -exec grep -l "Fred Jendrzejewski" {} \; | while read f; do
-  sed -i 's/Fred Jendrzejewski/fretchen/g' "$f"
+  sed -i '' 's/Fred Jendrzejewski/fretchen/g' "$f"
   echo "   ✅ $f"
 done
 

@@ -1,6 +1,6 @@
 ---
 author:
-  - Fred Jendrzejewski
+  - fretchen
 order: 5
 title: Tutorial 5 - Quantum simulation with cold atoms
 ---

@@ -1,6 +1,6 @@
 ---
 author:
-  - Fred Jendrzejewski
+  - fretchen
   - Selim Jochim
 order: 1
 title: Lecture 1 - Some cooking recipes for Quantum Mechanics

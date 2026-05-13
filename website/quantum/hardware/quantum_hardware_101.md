@@ -1,6 +1,6 @@
 ---
 author:
-  - Fred Jendrzejewski
+  - fretchen
 order: 1
 title: Tutorial 1 - The qubit or the two level system
 ---

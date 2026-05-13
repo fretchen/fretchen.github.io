@@ -1,6 +1,6 @@
 ---
 author:
-  - Fred Jendrzejewski
+  - fretchen
 order: 4
 title: Tutorial 4 - A few words about quantum computing with superconducting qubits
 ---

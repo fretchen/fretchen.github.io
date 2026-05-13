@@ -1,6 +1,6 @@
 ---
 author:
-  - Fred Jendrzejewski
+  - fretchen
 order: 3
 title: Tutorial 3 - A few words about quantum computing with trapped ions
 ---

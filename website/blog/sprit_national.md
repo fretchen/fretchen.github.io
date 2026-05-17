@@ -1,107 +1,107 @@
 ---
 publishing_date: 2026-05-10
-title: How rational is protectionist voting actually ?
+title: Wie rational ist das Wählen von Protektionismus wirklich?
 category: "other"
-description: I explore how a rational company owner has to vote as he decides if he is in favor of nationalist and protectionist policies.
+description: Ich untersuche, wie ein rationaler Unternehmer abstimmen muss, wenn er entscheidet, ob er nationalistische und protektionistische Politik befürwortet.
 tokenID: 123
 ---
  
-Recently, I had a discussion with a family member on the Iran war and the hefty increase in fuel prices that it had triggered. As usual, I did not feel too much pity with people still driving fossil fuels and complaining about high prices.
+Vor Kurzem diskutierte ich mit einem Familienmitglied über den Irankrieg und den massiven Anstieg der Kraftstoffpreise, den er ausgelöst hatte. Wie üblich hatte ich wenig Mitleid mit Menschen, die noch Fossile fahren und sich über hohe Preise beklagen.
 
-The counterargument was that high prices are one thing. But high prices in Germany compared to neighboring countries only was an unreasonable competitive disadvantage for transport companies. So in the end the counterargument was not about high prices for a private person but about the fact that the transport companies felt really left alone by the government as they felt they had to shoulder a much higher price for the war than others. From there the logic was quite straight-forward:
+Das Gegenargument war: Hohe Preise sind eine Sache. Aber hohe Preise in Deutschland im Vergleich zu den Nachbarländern sind ein unzumutbarer Wettbewerbsnachteil für Transportunternehmen. Am Ende ging es also nicht um hohe Preise für eine Privatperson, sondern darum, dass Transportunternehmen sich von der Regierung wirklich im Stich gelassen fühlten — sie hatten das Gefühl, die Kriegskosten weit stärker schultern zu müssen als andere. Von dort war die Logik sehr geradlinig:
 
-- This is yet another example of the government not protecting me.
-- I clearly have to look out for myself.
-- I clearly have to vote the hardcore right wing parties.
+- Das ist wieder einmal ein Beispiel dafür, dass die Regierung mich nicht schützt.
+- Ich muss offensichtlich selbst für mich sorgen.
+- Ich muss offensichtlich die harten Rechtsparteien wählen.
 
-In this logic you must decide rationally what is in your highest self-interest to protect your company and you do not reflect about the global good but about your self-interest. And this decision process has quite some analogies with the prisoners dilemma as we will see.
+In dieser Logik muss man rational entscheiden, was im eigenen Höchstinteresse liegt, um das Unternehmen zu schützen — ohne über das Gemeinwohl nachzudenken, sondern nur über das Eigeninteresse. Und dieser Entscheidungsprozess hat durchaus Ähnlichkeiten mit dem Gefangenendilemma, wie wir sehen werden.
 
-## But wait. What do the data say about the situation ?
+## Aber was sagen die Daten zur Lage?
 
-Before I can dive into wild speculations, beautiful models etc I had to put in the usual foot work and try to understand the reality a bit. Because even if I would like to pretend it I have no clue about the costs, prices etc that logistics companies face. I really liked a 2020 study by Kotsios & Folinas that measured operating costs per 100 km for a standardised five-axle truck across European national routes. Roughly summarized: Polish carriers were roughly 31% cheaper than German ones on Polish domestic routes in 2018. However, on German roads specifically, the picture is more nuanced. Maut (motorway tolls) applies equally to all vehicles operating in Germany — domestic or foreign. Fuel prices are determined by the local pump. What *does* remain anchored to the home country is the driver's wage. The result is a structural cost advantage for Polish carriers of roughly **12%** on German routes with actual prevailing wages — not 31%, but still substantial, and almost entirely wage-driven. With full German minimum wage compliance (Mindestlohn), the gap narrows to around **7%**.
+Bevor ich mich in wilde Spekulationen und schöne Modelle stürze, musste ich die übliche Vorarbeit leisten und versuchen, die Realität besser zu verstehen. Denn selbst wenn ich es gerne täte — ich habe keine Ahnung von den Kosten, Preisen usw., mit denen Logistikunternehmen konfrontiert sind. Ich fand eine Studie von Kotsios & Folinas aus dem Jahr 2020, die die Betriebskosten pro 100 km für einen standardisierten Fünfachs-Lkw auf europäischen Inlandsstrecken gemessen hat. Grob zusammengefasst: Polnische Spediteure waren 2018 auf polnischen Inlandsstrecken etwa 31 % günstiger als deutsche. Auf deutschen Straßen ist das Bild jedoch differenzierter. Die Maut (Autobahngebühren) gilt gleichermaßen für alle in Deutschland fahrenden Fahrzeuge — in- wie ausländische. Die Kraftstoffpreise richten sich nach der lokalen Zapfsäule. Was jedoch am Herkunftsland verankert bleibt, ist der Lohn des Fahrers. Das Ergebnis ist ein struktureller Kostenvorteil polnischer Spediteure von rund **12 %** auf deutschen Strecken bei tatsächlich gezahlten Löhnen — nicht 31 %, aber immer noch erheblich und fast ausschließlich lohngetrieben. Bei vollständiger Einhaltung des deutschen Mindestlohns (Mindestlohn) schrumpft die Lücke auf rund **7 %**.
 
-| Cost component | PL on DE routes | PL on DE (Mindestlohn) | DE on DE routes |
+| Kostenkomponente | PL auf DE-Strecken | PL auf DE (Mindestlohn) | DE auf DE-Strecken |
 | --- | --- | --- | --- |
-| Driver | €10.49 | €16.03 | €24.54 |
-| Fuel | €52.20 | €52.20 | €52.20 |
-| Maut | €38.90 | €38.90 | €38.90 |
-| **Total** | **€107.59** | **€113.13** | **€121.56** |
-| **Gap vs. DE** | **−11.5%** | **−6.9%** | — |
+| Fahrer | €10,49 | €16,03 | €24,54 |
+| Kraftstoff | €52,20 | €52,20 | €52,20 |
+| Maut | €38,90 | €38,90 | €38,90 |
+| **Gesamt** | **€107,59** | **€113,13** | **€121,56** |
+| **Abstand zu DE** | **−11,5 %** | **−6,9 %** | — |
 
-*All figures €/100 km, 5-axle truck ≥ 12 t, Euro V, May 2026. Full methodology in the backup section.*
+*Alle Angaben in €/100 km, 5-Achs-Lkw ≥ 12 t, Euro V, Mai 2026. Vollständige Methodik im Backup-Abschnitt.*
 
-The law already addresses this wage differential, at least on paper. The EU Mobility Package I, in force since February 2022, requires that drivers performing cabotage or bilateral transport with loading or unloading in Germany must receive the German minimum wage — €12.82 per hour in 2025, rising to €13.90 from January 2026. Violations carry fines of up to €500,000. And Polish wages are moving in the right direction: the gap has narrowed from a ratio of 1:2.8 in 2018 to around 1:1.8 today. The trajectory is encouraging even if the absolute gap remains significant.
+Das Recht adressiert dieses Lohngefälle zumindest auf dem Papier. Das EU-Mobilitätspaket I, in Kraft seit Februar 2022, schreibt vor, dass Fahrer, die Kabotage oder bilateralen Transport mit Be- oder Entladung in Deutschland durchführen, den deutschen Mindestlohn erhalten müssen — 2025 €12,82 pro Stunde, ab Januar 2026 steigend auf €13,90. Verstöße können mit Bußgeldern von bis zu 500.000 Euro geahndet werden. Und die polnischen Löhne entwickeln sich in die richtige Richtung: Das Verhältnis hat sich von 1:2,8 im Jahr 2018 auf heute rund 1:1,8 verbessert. Die Tendenz ist ermutigend, auch wenn der absolute Abstand noch erheblich ist.
 
-The honest read of this data is that German carriers face a real but bounded disadvantage — and one that is **not primarily a structural fact that policy cannot address**. The rules to level the playing field already exist. The problem is enforcement.
+Die ehrliche Lesart dieser Daten: Deutsche Spediteure haben einen realen, aber begrenzten Nachteil — und einen, der **nicht primär eine strukturelle Tatsache ist, die Politik nicht beheben kann**. Die Regeln zur Herstellung gleicher Wettbewerbsbedingungen existieren bereits. Das Problem ist die Durchsetzung.
 
-## The enforcement gap
+## Die Durchsetzungslücke
 
-Between the law as written and the law as enforced, there is a significant divide. Three mechanisms explain how it persists.
+Zwischen dem Gesetz auf dem Papier und dem Gesetz in der Praxis klafft eine erhebliche Lücke. Drei Mechanismen erklären, warum sie fortbesteht.
 
-**Structural control deficit at the BAG.** The Bundesamt für Güterverkehr is responsible for roadside controls but lacks the staffing and automated data infrastructure to systematically verify posting conditions at scale. The German federal government's November 2024 parliamentary response to an inquiry about Mobility Package compliance referred to "continuously improved cross-border cooperation" — a formulation that implicitly confirms the deficit more than it rebuts it.
+**Strukturelles Kontrolldefizit beim BAG.** Das Bundesamt für Güterverkehr ist für Straßenkontrollen zuständig, verfügt aber nicht über die personelle Ausstattung und die automatisierte Dateninfrastruktur, um Entsendebedingungen systematisch im großen Maßstab zu überprüfen. Die Antwort der Bundesregierung vom November 2024 auf eine parlamentarische Anfrage der CDU/CSU zur Einhaltung des Mobilitätspakets verwies auf eine „kontinuierlich verbesserte grenzüberschreitende Zusammenarbeit" — eine Formulierung, die das Defizit implizit eher bestätigt als widerlegt.
 
-**Bogus self-employment as a workaround.** Polish drivers are frequently classified as formally self-employed, engaged at flat daily rates of around €80 for 13–15 hour days. When freight buyers are asked about working conditions, the routine response is: "We don't know which subcontractor is actually driving for us." This systematically removes the driver from minimum wage coverage and is nearly impossible to prosecute through current control mechanisms.
+**Scheinselbstständigkeit als Umgehungsstrategie.** Polnische Fahrer werden häufig formal als selbstständig eingestuft und zu Tagespauschalen von rund 80 Euro für 13- bis 15-Stunden-Tage beschäftigt. Wenn Frachtabnehmer nach den Arbeitsbedingungen gefragt werden, lautet die Standardantwort: „Wir wissen nicht, welcher Subunternehmer tatsächlich für uns fährt." Dadurch fällt der Fahrer systematisch aus dem Mindestlohnschutz heraus, und es ist mit den derzeitigen Kontrollmechanismen nahezu unmöglich, dies zu verfolgen.
 
-**Reporting without control infrastructure.** Companies must notify postings through the electronic IMI system (Internal Market Information System), but the link from that notification to actual wage verification is not operationally closed. A driver can carry an A1 certificate (confirming home-country social insurance) without any check on whether the actual hourly wage paid corresponds to the German minimum.
+**Meldepflicht ohne Kontrollinfrastruktur.** Unternehmen müssen Entsendungen über das elektronische IMI-System (Internal Market Information System) anmelden, doch die Verbindung von dieser Meldung zur tatsächlichen Lohnüberprüfung ist operativ nicht geschlossen. Ein Fahrer kann eine A1-Bescheinigung (Nachweis der sozialversicherungsrechtlichen Absicherung im Herkunftsland) mit sich führen, ohne dass überprüft wird, ob der tatsächlich gezahlte Stundenlohn dem deutschen Mindestlohn entspricht.
 
-The most significant change currently underway is the rollout of **Smart Tachograph Generation 2**, mandatory for new vehicles since August 2023 and being phased in for existing fleets through 2025. It automatically records border crossings via GPS — eliminating scope for manual falsification — stores data over 56 rather than 28 working days, and allows remote readout by authorities without stopping the vehicle. This makes it technically feasible to determine, without a roadside stop, whether a driver operates regularly in Germany and is therefore subject to the posting rules. The operational link to wage controls is not yet established, but the infrastructure is being built.
+Die derzeit bedeutendste Entwicklung ist die Einführung des **Digitalen Fahrtenschreibers der Generation 2**, der seit August 2023 für Neufahrzeuge Pflicht ist und bis 2025 schrittweise für Bestandsflotten eingeführt wird. Er zeichnet Grenzübertritte automatisch per GPS auf — und macht manuelle Fälschungen unmöglich —, speichert Daten über 56 statt 28 Arbeitstage und ermöglicht die ferngestützte Auslesung durch Behörden ohne Anhalten des Fahrzeugs. Damit ist es technisch möglich, ohne Straßenkontrolle festzustellen, ob ein Fahrer regelmäßig in Deutschland fährt und daher den Entsenderegeln unterliegt. Die operative Verknüpfung mit Lohnkontrollen ist noch nicht hergestellt, aber die Infrastruktur wird aufgebaut.
 
-The central finding: the competitive disadvantage facing German carriers on German roads is largely a **gap in enforcement of existing rules**, not an unanswerable structural problem. This changes how we should evaluate political responses.
+Das zentrale Ergebnis: Der Wettbewerbsnachteil deutscher Spediteure auf deutschen Straßen ist vor allem eine **Lücke in der Durchsetzung bestehender Regeln** — kein unlösbares Strukturproblem. Das ändert, wie wir politische Antworten bewerten sollten.
 
-## Modelling the decision process
+## Modellierung des Entscheidungsprozesses
 
-We can model the whole decision process as follows. Consider two freight carriers — one German, one Polish — each deciding independently whether to support an open market or push for protectionist measures. We call these two choices **Open** and **Protect**. The profit of each carrier is simply:
+Wir können den gesamten Entscheidungsprozess wie folgt modellieren. Zwei Spediteure — ein deutscher und ein polnischer — entscheiden jeweils unabhängig, ob sie einen offenen Markt unterstützen oder protektionistische Maßnahmen fordern. Wir nennen diese beiden Optionen **Offen** und **Schützen**. Der Gewinn jedes Spediteurs ergibt sich einfach als:
 
-$$\text{Profit} = \text{Price} - \text{Cost}$$
+$$\text{Gewinn} = \text{Preis} - \text{Kosten}$$
 
-In an open market, both carriers face the same market price $P_0$, but the German carrier has higher operating costs $C_{DE}$ than the Polish carrier $C_{PL}$ — reflecting real differences in wages, fuel taxes, and compliance costs. When the German side enacts protection, domestic freight prices rise by some amount $a$, since foreign competition is reduced. This helps the German carrier on domestic routes. But if Poland responds in kind — which in practice it will — German carriers face retaliatory costs $k$ on their cross-border business.
+Auf einem offenen Markt steht beiden Spediteuren der gleiche Marktpreis $P_0$ zur Verfügung, doch der deutsche Spediteur hat höhere Betriebskosten $K_{DE}$ als der polnische $K_{PL}$ — was die realen Unterschiede bei Löhnen, Kraftstoffsteuern und Compliance-Kosten widerspiegelt. Wenn die deutsche Seite Protektionsmaßnahmen ergreift, steigen die inländischen Frachtpreise um einen Betrag $a$, da der ausländische Wettbewerb eingeschränkt wird. Das hilft dem deutschen Spediteur auf inländischen Strecken. Aber wenn Polen entsprechend reagiert — was es in der Praxis tun wird —, entstehen dem deutschen Spediteur Vergeltungskosten $k$ im grenzüberschreitenden Geschäft.
 
-The net effect of mutual protection for the German carrier thus depends on whether the domestic price gain $a$ outweighs the retaliation cost $k$.
+Der Nettoeffekt gegenseitigen Protektionismus für den deutschen Spediteur hängt also davon ab, ob der inländische Preisgewinn $a$ die Vergeltungskosten $k$ überwiegt.
 
-### The simple case for protectionism
+### Der einfache Fall für Protektionismus
 
-The logic for protectionism is straightforward: if the German carrier chooses **Protect** the price will go up and almost certainly increase its profit on domestic routes. The downside is much more fuzzy. If Poland retaliates, this is likely to increase costs for the German carrier. But how much does he really care? It is likely that the German carrier is primarily focused on domestic routes, the retaliation cost $k$ is rather negligible compared to the price increase $a$.
+Die Logik des Protektionismus ist eindeutig: Wenn der deutsche Spediteur **Schützen** wählt, steigt der Preis und erhöht mit an Sicherheit grenzender Wahrscheinlichkeit seinen Gewinn auf inländischen Strecken. Die Kehrseite ist weit unklarer. Wenn Polen Vergeltungsmaßnahmen ergreift, erhöht das die Kosten für den deutschen Spediteur. Aber wie stark betrifft ihn das wirklich? Da der deutsche Spediteur wahrscheinlich hauptsächlich auf inländischen Strecken tätig ist, sind die Vergeltungskosten $k$ im Vergleich zur Preiserhöhung $a$ eher vernachlässigbar.
 
-### The slightly involved case for open markets
+### Der etwas kompliziertere Fall für offene Märkte
 
-The logic to keep the market open is much more involved from the perspective of the German carrier. The biggest downside is that the closed market will lead to higher prices, which might make the German carrier more profitable. However, the clients are very unlikely to be happy about this increase. And while they might not be able to do much about it at the beginning, they are looking for alternatives. Just move the factory and transport will go down.
+Die Logik für den offenen Markt ist aus Sicht des deutschen Spediteurs wesentlich vielschichtiger. Der größte Nachteil ist, dass ein geschlossener Markt zu höheren Preisen führt, was den deutschen Spediteur kurzfristig profitabler machen könnte. Allerdings werden die Kunden diese Erhöhung mit großer Wahrscheinlichkeit nicht akzeptieren. Und obwohl sie anfangs vielleicht wenig dagegen tun können, suchen sie nach Alternativen. Die Fabrik zieht einfach um — und der Transportbedarf sinkt.
 
-## Realistic alternatives
+## Realistische Alternativen
 
-So suppose now that you really want to keep open markets. Most German carriers are already quite optimised — there is no easy internal efficiency gain left on the table. The question is therefore not operational but political: what can governments actually do to close the cost gap without resorting to protectionism?
+Angenommen, man möchte offene Märkte erhalten. Die meisten deutschen Spediteure sind bereits gut optimiert — es gibt keinen einfachen internen Effizienzgewinn mehr zu heben. Die Frage ist daher nicht betrieblich, sondern politisch: Was können Regierungen tatsächlich tun, um die Kostenlücke zu schließen, ohne auf Protektionismus zurückzugreifen?
 
-The standard answer from the classical right — cut taxes, reduce regulation, shrink the state — is not wrong, but it is dangerously incomplete. It addresses only one side of the equation ($C_{DE}$ down) while ignoring that the competitive pressure comes not just from Poland's lower costs today, but from the structural divergence in wages, fuel taxation, and compliance costs that has built up over decades. Cutting diesel taxes in Germany gets you perhaps a few percent. The actual cost gap is closer to **12%** on German roads (around 7% with full Mindestlohn compliance).
+Die Standardantwort der klassischen Rechten — Steuern senken, Regulierung abbauen, den Staat verkleinern — ist nicht falsch, aber gefährlich unvollständig. Sie adressiert nur eine Seite der Gleichung ($K_{DE}$ senken), ignoriert aber, dass der Wettbewerbsdruck nicht nur von Polens heute niedrigeren Kosten kommt, sondern von der strukturellen Divergenz bei Löhnen, Kraftstoffbesteuerung und Compliance-Kosten, die sich über Jahrzehnte aufgebaut hat. Eine Senkung der Dieselsteuer in Deutschland bringt vielleicht ein paar Prozent. Die eigentliche Kostenlücke liegt auf deutschen Straßen bei rund **12 %** (etwa 7 % bei vollständiger Mindestlohn-Einhaltung).
 
-There are three levers that actually matter:
+Drei Hebel sind wirklich entscheidend:
 
-**Lever 1: Reduce $C_{DE}$ — but climatically compatible.**
-The biggest cost item for a German carrier is labour (~35–40% of operating costs), followed by fuel. Attacking the labour cost directly means cutting wages, which is not politically viable and would simply redistribute poverty. The smarter interventions are indirect: reducing the administrative burden (digitising customs, driving logs, and cabotage controls), shortening driver training pathways to address the structural shortage that inflates salaries through scarcity, and — critically — accelerating the transition to electric or hydrogen trucks. This sounds paradoxical, but modelling by Agora Verkehrswende shows that the total cost of ownership of battery-electric heavy trucks is already competitive with diesel in high-utilisation scenarios, and the gap will close further by 2030. A carrier that transitions early locks in lower per-kilometre energy costs before competitors do.
+**Hebel 1: $K_{DE}$ senken — klimaverträglich.**
+Der größte Kostenpunkt für einen deutschen Spediteur ist der Personalaufwand (~35–40 % der Betriebskosten), gefolgt vom Kraftstoff. Die Lohnkosten direkt anzugreifen bedeutet Lohnkürzungen, die politisch nicht durchsetzbar wären und Armut nur umverteilen. Die klügeren Eingriffe sind indirekt: den Verwaltungsaufwand reduzieren (Zoll, Fahrtenschreiber und Kabotagekontrollen digitalisieren), die Fahrausbildungswege verkürzen, um dem strukturellen Fahrermangel zu begegnen, der die Löhne durch Knappheit in die Höhe treibt — und vor allem: den Übergang zu Elektro- oder Wasserstoff-Lkw beschleunigen. Das klingt paradox, aber Modellierungen von Agora Verkehrswende zeigen, dass die Gesamtbetriebskosten batterieelektrischer Schwerlast-Lkw in Hochnutzungsszenarien bereits mit Diesel konkurrieren können und die Lücke bis 2030 weiter schrumpfen wird. Ein Spediteur, der früh umstellt, sichert sich niedrigere Energiekosten pro Kilometer, bevor es die Konkurrenz tut.
 
-**Lever 2: Raise $C_{PL}$ — through EU harmonisation, not tariffs.**
-This is the most underrated lever and the one most consistent with open markets. As the enforcement gap analysis shows, the legal framework for wage harmonisation already exists — the EU Mobility Package requires German minimum wages for drivers posting to Germany. The gap is in enforcement, not in law. Closing it through the Smart Tachograph 2 infrastructure, stricter posted worker controls, and an ambitious European minimum wage directive would structurally narrow the competitive gap without a single tariff. Polish wages in trucking rose by over 20% in 2022 alone and again by a quarter in 2024–2025 — the direction is right, the question is pace and enforcement.
+**Hebel 2: $K_{PL}$ erhöhen — durch EU-Harmonisierung, nicht durch Zölle.**
+Das ist der am meisten unterschätzte Hebel und der offenen Märkten gegenüber konsistenteste. Wie die Analyse der Durchsetzungslücke zeigt, existiert der rechtliche Rahmen für die Lohnharmonisierung bereits — das EU-Mobilitätspaket schreibt den deutschen Mindestlohn für nach Deutschland entsandte Fahrer vor. Die Lücke liegt in der Durchsetzung, nicht im Gesetz. Sie durch die Smart-Tachograph-2-Infrastruktur zu schließen, durch strengere Entsendekontrollern und eine ambitionierte europäische Mindestlohn-Richtlinie würde die Wettbewerbslücke strukturell verringern — ohne einen einzigen Zoll. Polnische Löhne im Güterverkehr stiegen 2022 um über 20 % und nochmals um ein Viertel 2024–2025 — die Richtung stimmt, die Frage ist Tempo und Durchsetzung.
 
-**Lever 3: Make retaliation credible — at the EU level.**
-The game-theoretic analysis shows that open markets become a rational equilibrium only when the retaliation cost $k$ is high enough relative to the protectionist gain $a$. Individually, Germany cannot credibly threaten meaningful retaliation against Poland without violating EU law. But the EU can — through reciprocity mechanisms in market access rules, through Mobility Package enforcement powers, and through the Carbon Border Adjustment Mechanism (CBAM), which from 2026 will apply CO₂ price differentials to imports from countries with weaker climate policy. CBAM does not directly target freight, but it signals the direction: the EU is willing to use its market power to enforce standards.
+**Hebel 3: Vergeltung glaubwürdig machen — auf EU-Ebene.**
+Die spieltheoretische Analyse zeigt, dass offene Märkte nur dann ein rationales Gleichgewicht sind, wenn die Vergeltungskosten $k$ im Verhältnis zum Protektionsgewinn $a$ hoch genug sind. Allein kann Deutschland keine glaubwürdige, wirksame Vergeltungsdrohung gegen Polen aussprechen, ohne EU-Recht zu verletzen. Aber die EU kann es — durch Gegenseitigkeitsmechanismen in den Marktzugangsregeln, durch Durchsetzungsbefugnisse des Mobilitätspakets und durch den Carbon Border Adjustment Mechanism (CBAM), der ab 2026 CO₂-Preisdifferenzen auf Importe aus Ländern mit schwächerer Klimapolitik anwendet. CBAM zielt nicht direkt auf Güterverkehr ab, signalisiert aber die Richtung: Die EU ist bereit, ihre Marktmacht einzusetzen, um Standards durchzusetzen.
 
-The honest conclusion is that none of these levers is fast, cheap, or politically easy. But the alternative — protectionism — delivers a short-term price increase ($a$) that feels good for domestic carriers, followed by client relocation decisions that shrink the total volume of freight to be carried. The factory that moves to avoid higher logistics costs takes its transport demand with it. The carriers who voted for protection are then competing for a smaller market at inflated prices. That is not a winning strategy. It is a slowly closing trap.
+Das ehrliche Fazit: Keiner dieser Hebel ist schnell, günstig oder politisch einfach. Aber die Alternative — Protektionismus — liefert kurzfristig eine Preiserhöhung ($a$), die sich für inländische Spediteure gut anfühlt, gefolgt von Verlagerungsentscheidungen der Kunden, die das gesamte zu transportierende Frachtvolumen schrumpfen lassen. Die Fabrik, die umzieht, weil Logistikkosten zu hoch sind, nimmt ihren Transportbedarf mit. Die Spediteure, die für Protektionismus gestimmt haben, konkurrieren dann um einen kleineren Markt zu aufgeblähten Preisen. Das ist keine Gewinnerstrategie. Es ist eine sich langsam schließende Falle.
 
-## What the parties offer — and where they fall short
+## Was die Parteien anbieten — und wo sie scheitern
 
-The classical right (CDU/CSU, FDP) focuses almost exclusively on reducing $C_{DE}$ through tax cuts, deregulation, and lower fuel levies. The diagnosis is not wrong — German carriers do face a real cost disadvantage — but the proposed cure is undersized. Diesel tax relief closes perhaps a few percent of a 15–20% cost gap, and it does nothing to address the structural wage divergence or to make the retaliation cost $k$ credible.
+Die klassische Rechte (CDU/CSU, FDP) konzentriert sich fast ausschließlich auf die Senkung von $K_{DE}$ durch Steuersenkungen, Deregulierung und niedrigere Kraftstoffabgaben. Die Diagnose ist nicht falsch — deutsche Spediteure haben einen realen Kostennachteil —, aber das vorgeschlagene Heilmittel ist zu klein. Diesel-Steuererleichterungen schließen vielleicht ein paar Prozent einer 15–20-prozentigen Kostenlücke und tun nichts, um die strukturelle Lohndivergenz zu adressieren oder die Vergeltungskosten $k$ glaubwürdig zu machen.
 
-The AfD's offer is more emotionally coherent but economically self-defeating. A closed market does raise domestic prices ($a$ goes up), which feels like relief. But as the prisoner's dilemma structure makes clear, the equilibrium outcome of mutual protection is worse for both sides than open competition — and more importantly, it triggers the client relocation dynamic: the factory that moves to avoid higher logistics costs takes its freight demand with it. The AfD has no answer to that second-order effect.
+Das Angebot der AfD ist emotional kohärenter, aber wirtschaftlich selbstzerstörerisch. Ein geschlossener Markt erhöht zwar die Inlandspreise ($a$ steigt), was sich wie Erleichterung anfühlt. Aber wie die Struktur des Gefangenendilemmas deutlich macht, ist das Gleichgewichtsergebnis gegenseitiger Protektion für beide Seiten schlechter als offener Wettbewerb — und wichtiger noch: Es löst die Verlagerungsdynamik aus. Die AfD hat keine Antwort auf diesen Zweitrundeneffekt.
 
-The Greens correctly identify the transformation pathway — electrification, modal shift to rail, carbon pricing — but systematically underestimate the transition costs for smaller carriers. A Polish competitor with an old diesel truck pays the same CO₂ surcharge on German roads as a German carrier, but remains 20–30% cheaper on everything else. During the transition window, aggressive climate policy without accompanying support measures can worsen the competitive position of German carriers before the long-run cost advantages of electrification materialise. This is not an argument against the green agenda — it is an argument for sequencing it correctly.
+Die Grünen identifizieren den Transformationspfad richtigerweise — Elektrifizierung, Verlagerung auf die Schiene, CO₂-Bepreisung —, unterschätzen aber systematisch die Übergangskosten für kleinere Spediteure. Ein polnischer Wettbewerber mit einem alten Diesel-Lkw zahlt auf deutschen Straßen denselben CO₂-Aufschlag wie ein deutscher Spediteur, ist aber bei allem anderen 20–30 % günstiger. Im Übergangsfenster kann eine aggressive Klimapolitik ohne begleitende Unterstützungsmaßnahmen die Wettbewerbsposition deutscher Spediteure verschlechtern, bevor die langfristigen Kostenvorteile der Elektrifizierung sich materialisieren. Das ist kein Argument gegen die grüne Agenda — es ist ein Argument für die richtige Sequenzierung.
 
-The SPD's most relevant contribution is the one already underway: wage harmonisation. Polish trucking wages rose by over 20% in 2022 and by a further quarter in 2024–2025, driven partly by the EU Mobility Package that the SPD supported. Stricter enforcement of posted worker rules — requiring German wage floors for any driver operating in Germany — is the single fastest lever to structurally narrow $C_{PL}$. The SPD supports this; its weakness is that it has no coherent strategy for financing the green transition in the sector.
+Der relevanteste Beitrag der SPD ist der bereits im Gang befindliche: Lohnharmonisierung. Polnische Lkw-Löhne stiegen 2022 um über 20 % und nochmals um ein Viertel 2024–2025, angetrieben auch durch das EU-Mobilitätspaket, das die SPD unterstützt hat. Eine strengere Durchsetzung der Entsenderegeln — deutsche Lohnuntergrenzen für jeden in Deutschland fahrenden Fahrer — ist der schnellste einzelne Hebel, um $K_{PL}$ strukturell zu senken. Die Schwäche der SPD ist das Fehlen einer kohärenten Strategie zur Finanzierung des grünen Übergangs im Sektor.
 
-Volt is structurally the best fit for the logic of this analysis, precisely because it operates at the level where the solution actually lives: the EU. Wage harmonisation, posted worker enforcement, and credible retaliation through mechanisms like CBAM are all EU-level instruments. Volt's explicit combination of pro-free-trade and pro-EU-integration positions maps directly onto Lever 2 and Lever 3 above. Its weakness is the absence of a specific industrial policy for financing the carrier transition — the $C_{DE}$-reduction side of the equation.
+Volt passt strukturell am besten zur Logik dieser Analyse, gerade weil die Partei auf der Ebene operiert, auf der die Lösung tatsächlich liegt: der EU. Lohnharmonisierung, Entsende-Durchsetzung und glaubwürdige Vergeltung durch Mechanismen wie CBAM sind allesamt EU-Instrumente. Volts explizite Kombination aus freihandels- und EU-integrationsfreundlichen Positionen entspricht direkt Hebel 2 und Hebel 3. Die Schwäche liegt im Fehlen einer spezifischen Industriepolitik zur Finanzierung des Spediteurs-Übergangs — der $K_{DE}$-Senkungsseite der Gleichung.
 
-The honest summary is that no single party covers all three levers. The closest approximation to an integrated answer would combine the SPD's wage-floor enforcement, Volt's EU-level institutional ambition, and a green transition subsidy programme targeted specifically at small and medium carriers — none of which currently exists as a coherent package in any party's platform.
+Das ehrliche Fazit: Keine einzige Partei deckt alle drei Hebel ab. Die nächste Annäherung an eine integrierte Antwort würde die Mindestlohn-Durchsetzung der SPD, Volts EU-institutionellen Ehrgeiz und ein auf kleine und mittlere Spediteure ausgerichtetes Förderprogramm für den grünen Übergang kombinieren — ein Paket, das derzeit in keinem Parteiprogramm als kohärentes Ganzes existiert.
 
 ---
 
-## Sources
+## Quellen
 
 [1] Kotsios, P. & Folinas, D. (2020). Analysis and Comparison of Road Freight Transport Cost in 20 European Countries. *IJAL*, 10(1). DOI: 10.4018/IJAL.2020010102
 
@@ -115,79 +115,79 @@ The honest summary is that no single party covers all three levers. The closest 
 
 [6] Parakar (2025). Gehaltsabrechnung und Arbeitsrecht Polen 2025. parakar.eu.
 
-[7] EU Mobility Package I, in force from February 2022.
+[7] EU Mobility Package I, in Kraft ab Februar 2022.
 
-[8] Volt Deutschland, Grundsatzprogramm 2021; see also *Deutsche Vereinigung für Politikwissenschaft* (2022).
+[8] Volt Deutschland, Grundsatzprogramm 2021; siehe auch *Deutsche Vereinigung für Politikwissenschaft* (2022).
 
 ---
 
 ## Backup / Ablage
 
-### Detailed cost breakdown on German roads
+### Detaillierte Kostenaufschlüsselung auf deutschen Straßen
 
-#### 2018 baseline (Kotsios & Folinas 2020)
+#### Ausgangsbasis 2018 (Kotsios & Folinas 2020)
 
-The Kotsios & Folinas (2020) study measures costs per 100 km on national routes. For German-road competition, maut and fuel are route-specific costs (equal for all operators), while driver wages remain anchored to the home country.
+Die Studie von Kotsios & Folinas (2020) misst Kosten pro 100 km auf Inlandsstrecken. Für den Wettbewerb auf deutschen Straßen sind Maut und Kraftstoff streckenbezogene Kosten (für alle Betreiber gleich), während die Fahrerlöhne im Herkunftsland verankert bleiben.
 
-| Cost component | PL on PL routes | PL on DE routes | DE on DE routes |
+| Kostenkomponente | PL auf PL-Strecken | PL auf DE-Strecken | DE auf DE-Strecken |
 | --- | --- | --- | --- |
-| Driver (min. wage basis) | €3.96 | €3.96* | €11.05 |
-| Fuel | €29.95 | ~€34.45 | €34.45 |
-| Maut | €6.27 | €15.60 | €15.60 |
-| Tyres | €5.67 | €5.67 | €5.29 |
-| **Total** | **€45.85** | **~€59.68** | **€66.38** |
+| Fahrer (Mindestlohnbasis) | €3,96 | €3,96* | €11,05 |
+| Kraftstoff | €29,95 | ~€34,45 | €34,45 |
+| Maut | €6,27 | €15,60 | €15,60 |
+| Reifen | €5,67 | €5,67 | €5,29 |
+| **Gesamt** | **€45,85** | **~€59,68** | **€66,38** |
 
-*Without posted worker rule enforcement. Source: Kotsios & Folinas (2020), own extension.
+*Ohne Durchsetzung der Entsenderegel. Quelle: Kotsios & Folinas (2020), eigene Erweiterung.
 
-#### 2026 update (own calculation)
+#### Aktualisierung 2026 (eigene Berechnung)
 
-| Cost component | PL on PL routes | PL on DE routes | PL on DE (Mindestlohn) | DE on DE routes |
+| Kostenkomponente | PL auf PL-Strecken | PL auf DE-Strecken | PL auf DE (Mindestlohn) | DE auf DE-Strecken |
 | --- | --- | --- | --- | --- |
-| Driver | €10.49 | €10.49 | €16.03 | €24.54 |
-| Fuel | €43.02 | €52.20 | €52.20 | €52.20 |
-| Maut | €13.37 | €38.90 | €38.90 | €38.90 |
-| Tyres | €6.00 | €6.00 | €6.00 | €5.92 |
-| **Total** | **€72.88** | **€107.59** | **€113.13** | **€121.56** |
-| **Gap vs. DE** | — | **−11.5%** | **−6.9%** | — |
+| Fahrer | €10,49 | €10,49 | €16,03 | €24,54 |
+| Kraftstoff | €43,02 | €52,20 | €52,20 | €52,20 |
+| Maut | €13,37 | €38,90 | €38,90 | €38,90 |
+| Reifen | €6,00 | €6,00 | €6,00 | €5,92 |
+| **Gesamt** | **€72,88** | **€107,59** | **€113,13** | **€121,56** |
+| **Abstand zu DE** | — | **−11,5 %** | **−6,9 %** | — |
 
-Exchange rates (ECB, 2026-05-12): 1 EUR ≈ 4.19 PLN.
+Wechselkurse (EZB, 12.05.2026): 1 EUR ≈ 4,19 PLN.
 
-### Data sources and methodology
+### Datenquellen und Methodik
 
-All figures are computed for a standardised 5-axle truck ≥ 12 t (Mercedes Actros equivalent), Euro V emission class, 100 km on motorway.
+Alle Angaben berechnet für einen standardisierten 5-Achs-Lkw ≥ 12 t (Mercedes Actros-Äquivalent), Emissionsklasse Euro V, 100 km auf der Autobahn.
 
-| Component | Source | Period |
+| Komponente | Quelle | Zeitraum |
 | --- | --- | --- |
-| Fuel | EU Weekly Oil Bulletin (ec.europa.eu), sheet *Prices with taxes* | Week of 2026-05-11 |
-| Driver wages | Eurostat SES `EARN_SES22_RHR`, mean hourly earnings, all sectors | 2022 (latest available) |
-| German toll | BMVI *Mautsätze für mautpflichtige Lkw 2024/2025*, CO₂ class EK1, Euro V, 5+ axles | from Jul 2024 |
-| Polish toll | Ministerstwo Finansów, *Mautsätze A+S-Straßen*, ≥ 12 t, min. EURO 5 | from 01 Feb 2026 |
-| Czech toll | myto.gov.cz, Autobahn, ≥ 12 t, ≥ 5 Achsen, Euro V/EEV, CO₂-Klasse 1 | from 01 Jan 2026 |
-| Exchange rates | ECB SDMX daily rate API | 2026-05-12 |
-| Tyres | Market prices, 295/60 R22.5, 10 tyres / 120,000 km | 2025 estimate |
+| Kraftstoff | EU Weekly Oil Bulletin (ec.europa.eu), Blatt *Preise mit Steuern* | Woche vom 11.05.2026 |
+| Fahrerlöhne | Eurostat SES `EARN_SES22_RHR`, durchschnittliche Stundenverdienste, alle Branchen | 2022 (aktuellste verfügbare Daten) |
+| Deutsche Maut | BMVI *Mautsätze für mautpflichtige Lkw 2024/2025*, CO₂-Klasse EK1, Euro V, 5+ Achsen | ab Juli 2024 |
+| Polnische Maut | Ministerstwo Finansów, *Mautsätze A+S-Straßen*, ≥ 12 t, mind. EURO 5 | ab 01.02.2026 |
+| Tschechische Maut | myto.gov.cz, Autobahn, ≥ 12 t, ≥ 5 Achsen, Euro V/EEV, CO₂-Klasse 1 | ab 01.01.2026 |
+| Wechselkurse | EZB SDMX Daily Rate API | 12.05.2026 |
+| Reifen | Marktpreise, 295/60 R22.5, 10 Reifen / 120.000 km | Schätzung 2025 |
 
-Driver costs assume 1.25 h per 100 km (80 km/h cruise speed). German SES figures use the mean of six East German NUTS-1 regions (DE3, DE4, DE8, DED, DEE, DEG). Polish SES figures use the mean of seven NUTS-1 macro-regions. The Mindestlohn scenario applies €12.82/h (German statutory minimum wage, 2025).
+Fahrerkosten setzen 1,25 h pro 100 km voraus (Reisegeschwindigkeit 80 km/h). Deutsche SES-Daten verwenden den Mittelwert von sechs ostdeutschen NUTS-1-Regionen (DE3, DE4, DE8, DED, DEE, DEG). Polnische SES-Daten verwenden den Mittelwert von sieben NUTS-1-Makroregionen. Das Mindestlohn-Szenario wendet €12,82/h an (gesetzlicher Mindestlohn Deutschland, 2025).
 
-### Wage data: precise figures (2025)
+### Lohndaten: genaue Zahlen (2025)
 
-- Polish minimum wage 2025: 4,666 PLN gross/month (~€1,085/month at current exchange rate), hourly rate 30.50 PLN (~€7.09/h).
-- German minimum wage 2025: €12.82/h, rising to €13.90/h from January 2026.
-- Ratio 2025: approx. 1:1.8, compared to 1:2.8 in 2018.
-- Measured as a share of national median wage, Poland (59.1%) has a higher relative minimum wage than Germany — indicating that structural harmonisation is advancing even as the absolute purchasing-power gap remains significant.
-- The EU Minimum Wage Directive was upheld in principle by the ECJ in November 2025; national implementation is underway.
+- Polnischer Mindestlohn 2025: 4.666 PLN brutto/Monat (~€1.085/Monat zum aktuellen Wechselkurs), Stundenlohn 30,50 PLN (~€7,09/h).
+- Deutscher Mindestlohn 2025: €12,82/h, ab Januar 2026 steigend auf €13,90/h.
+- Verhältnis 2025: ca. 1:1,8, verglichen mit 1:2,8 im Jahr 2018.
+- Gemessen als Anteil am nationalen Medianlohn hat Polen (59,1 %) einen höheren relativen Mindestlohn als Deutschland — ein Hinweis darauf, dass die strukturelle Harmonisierung voranschreitet, auch wenn die absolute Kaufkraftlücke noch erheblich ist.
+- Die EU-Mindestlohnrichtlinie wurde vom EuGH im November 2025 grundsätzlich bestätigt; die nationale Umsetzung läuft.
 
-Source: Parakar (2025); Hans-Böckler-Stiftung / WSI (2026).
+Quelle: Parakar (2025); Hans-Böckler-Stiftung / WSI (2026).
 
-### Bureaucracy as a cost factor
+### Bürokratie als Kostenfaktor
 
-Bureaucracy costs are a real but hard-to-quantify factor for German carriers. A 2025 follow-up study by IfM Bonn for the IMPULS Foundation measured bureaucracy costs of between 1.3 and 6 percent of revenue for SMEs in mechanical engineering — with the smallest firms at the upper end. A directly comparable study for freight carriers does not exist, but the cost structure is analogous: documentation requirements for driving and rest periods, posting notifications, eCMR, toll billing, and customs paperwork create administrative overhead that disproportionately affects small operators.
+Bürokratiekosten sind ein realer, aber schwer zu quantifizierender Faktor für deutsche Spediteure. Eine Folgestudie von IfM Bonn für die IMPULS-Stiftung aus dem Jahr 2025 maß Bürokratiekosten zwischen 1,3 und 6 Prozent des Umsatzes für KMU im Maschinenbau — mit den kleinsten Unternehmen am oberen Ende. Eine direkt vergleichbare Studie für den Güterverkehr existiert nicht, aber die Kostenstruktur ist analog: Dokumentationsanforderungen für Lenk- und Ruhezeiten, Entsendemeldungen, eCMR, Mautabrechnung und Zollformalitäten erzeugen Verwaltungsaufwand, der kleine Betreiber überproportional belastet.
 
-Critically, this burden is asymmetric: German firms bear it fully, while foreign operators face the same requirements but often do not comply — and escape consequences due to insufficient controls. Digitising control processes, as the Smart Tachograph 2 technically enables, would reduce this overhead for compliant operators while simultaneously improving enforcement against violations. In this context, cutting bureaucracy and improving enforcement are complementary rather than opposing goals.
+Entscheidend ist: Diese Last ist asymmetrisch. Deutsche Unternehmen tragen sie vollständig, während ausländische Betreiber denselben Anforderungen unterliegen, ihnen jedoch häufig nicht nachkommen — und wegen mangelhafter Kontrollen straffrei davonkommen. Die Digitalisierung der Kontrollprozesse, die der Smart Tachograph 2 technisch ermöglicht, würde diesen Aufwand für konforme Betreiber senken und gleichzeitig die Durchsetzung gegen Verstöße verbessern. In diesem Kontext sind Bürokratieabbau und bessere Durchsetzung komplementäre, keine entgegengesetzten Ziele.
 
-*Source: IfM Bonn / IMPULS-Stiftung (2025). Bürokratiekosten von Unternehmen aus dem Maschinen- und Anlagenbau – Folgestudie. Februar 2025.*
+*Quelle: IfM Bonn / IMPULS-Stiftung (2025). Bürokratiekosten von Unternehmen aus dem Maschinen- und Anlagenbau – Folgestudie. Februar 2025.*
 
-### Legal note: the transit exemption
+### Rechtlicher Hinweis: die Transitausnahme
 
-Pure transit journeys (no loading or unloading in Germany) are exempt from German minimum wage requirements — following EU Commission intervention against the original 2015 German Minimum Wage Act, which had sought to include transit as well. This exemption limits enforcement scope but does not affect bilateral and cabotage operations, which are the economically relevant competitive cases.
+Reine Transitfahrten (kein Be- oder Entladen in Deutschland) sind von den deutschen Mindestlohnanforderungen befreit — nach einer EU-Kommissions-Intervention gegen das ursprüngliche deutsche Mindestlohngesetz von 2015, das den Transit ursprünglich einschließen wollte. Diese Ausnahme schränkt den Durchsetzungsspielraum ein, berührt aber nicht die bilateral- und Kabotageoperationen, die wirtschaftlich die relevanten Wettbewerbsfälle sind.
 
-*Source: Wirtschaftsdienst (2020). Eisenkopf / Knorr: Entsenderecht im Strassengüterverkehr.*
+*Quelle: Wirtschaftsdienst (2020). Eisenkopf / Knorr: Entsenderecht im Strassengüterverkehr.*

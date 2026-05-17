@@ -6,7 +6,7 @@ description: I explore how a rational company owner has to vote as he decides if
 tokenID: 123
 ---
  
-Recently, I had a discussion with a family member on the Iran war and the hefty increase in fuel prices that it had triggered. As usual, I did not feel too much pity with people still driving fossil fuels and complaining about high prices. 
+Recently, I had a discussion with a family member on the Iran war and the hefty increase in fuel prices that it had triggered. As usual, I did not feel too much pity with people still driving fossil fuels and complaining about high prices.
 
 The counterargument was that high prices are one thing. But high prices in Germany compared to neighboring countries only was an unreasonable competitive disadvantage for transport companies. So in the end the counterargument was not about high prices for a private person but about the fact that the transport companies felt really left alone by the government as they felt they had to shoulder a much higher price for the war than others. From there the logic was quite straight-forward:
 
@@ -18,7 +18,17 @@ In this logic you must decide rationally what is in your highest self-interest t
 
 ## But wait. What do the data say about the situation ?
 
-Before I can dive into wild speculations, beautiful models etc I had to put in the usual foot work and try to understand the reality a bit. Because even if I would like to pretend it I have no clue about the costs, prices etc that logistics companies face. I really liked a 2020 study by Kotsios & Folinas that measured operating costs per 100 km for a standardised five-axle truck across European national routes. Roughly summarized: Polish carriers were roughly 31% cheaper than German ones on Polish domestic routes in 2018. However, on German roads specifically, the picture is more nuanced. Maut (motorway tolls) applies equally to all vehicles operating in Germany — domestic or foreign. Fuel prices are determined by the local pump. What *does* remain anchored to the home country is the driver's wage. The result is a structural cost advantage for Polish carriers of roughly **15–20%** on German routes — not 31%, but still substantial, and almost entirely wage-driven. *(A detailed cost breakdown is in the backup section below.)*
+Before I can dive into wild speculations, beautiful models etc I had to put in the usual foot work and try to understand the reality a bit. Because even if I would like to pretend it I have no clue about the costs, prices etc that logistics companies face. I really liked a 2020 study by Kotsios & Folinas that measured operating costs per 100 km for a standardised five-axle truck across European national routes. Roughly summarized: Polish carriers were roughly 31% cheaper than German ones on Polish domestic routes in 2018. However, on German roads specifically, the picture is more nuanced. Maut (motorway tolls) applies equally to all vehicles operating in Germany — domestic or foreign. Fuel prices are determined by the local pump. What *does* remain anchored to the home country is the driver's wage. The result is a structural cost advantage for Polish carriers of roughly **12%** on German routes with actual prevailing wages — not 31%, but still substantial, and almost entirely wage-driven. With full German minimum wage compliance (Mindestlohn), the gap narrows to around **7%**.
+
+| Cost component | PL on DE routes | PL on DE (Mindestlohn) | DE on DE routes |
+| --- | --- | --- | --- |
+| Driver | €10.49 | €16.03 | €24.54 |
+| Fuel | €52.20 | €52.20 | €52.20 |
+| Maut | €38.90 | €38.90 | €38.90 |
+| **Total** | **€107.59** | **€113.13** | **€121.56** |
+| **Gap vs. DE** | **−11.5%** | **−6.9%** | — |
+
+*All figures €/100 km, 5-axle truck ≥ 12 t, Euro V, May 2026. Full methodology in the backup section.*
 
 The law already addresses this wage differential, at least on paper. The EU Mobility Package I, in force since February 2022, requires that drivers performing cabotage or bilateral transport with loading or unloading in Germany must receive the German minimum wage — €12.82 per hour in 2025, rising to €13.90 from January 2026. Violations carry fines of up to €500,000. And Polish wages are moving in the right direction: the gap has narrowed from a ratio of 1:2.8 in 2018 to around 1:1.8 today. The trajectory is encouraging even if the absolute gap remains significant.
 
@@ -60,7 +70,7 @@ The logic to keep the market open is much more involved from the perspective of 
 
 So suppose now that you really want to keep open markets. Most German carriers are already quite optimised — there is no easy internal efficiency gain left on the table. The question is therefore not operational but political: what can governments actually do to close the cost gap without resorting to protectionism?
 
-The standard answer from the classical right — cut taxes, reduce regulation, shrink the state — is not wrong, but it is dangerously incomplete. It addresses only one side of the equation ($C_{DE}$ down) while ignoring that the competitive pressure comes not just from Poland's lower costs today, but from the structural divergence in wages, fuel taxation, and compliance costs that has built up over decades. Cutting diesel taxes in Germany gets you perhaps a few percent. The actual cost gap is closer to 15–20%.
+The standard answer from the classical right — cut taxes, reduce regulation, shrink the state — is not wrong, but it is dangerously incomplete. It addresses only one side of the equation ($C_{DE}$ down) while ignoring that the competitive pressure comes not just from Poland's lower costs today, but from the structural divergence in wages, fuel taxation, and compliance costs that has built up over decades. Cutting diesel taxes in Germany gets you perhaps a few percent. The actual cost gap is closer to **12%** on German roads (around 7% with full Mindestlohn compliance).
 
 There are three levers that actually matter:
 
@@ -115,7 +125,9 @@ The honest summary is that no single party covers all three levers. The closest 
 
 ### Detailed cost breakdown on German roads
 
-The Kotsios & Folinas (2020) study measures costs per 100 km on national routes. For German-road competition, a hybrid model applies: maut and fuel are route-specific costs (equal for all operators on German roads), while driver wages remain anchored to the home country.
+#### 2018 baseline (Kotsios & Folinas 2020)
+
+The Kotsios & Folinas (2020) study measures costs per 100 km on national routes. For German-road competition, maut and fuel are route-specific costs (equal for all operators), while driver wages remain anchored to the home country.
 
 | Cost component | PL on PL routes | PL on DE routes | DE on DE routes |
 | --- | --- | --- | --- |
@@ -127,7 +139,34 @@ The Kotsios & Folinas (2020) study measures costs per 100 km on national routes.
 
 *Without posted worker rule enforcement. Source: Kotsios & Folinas (2020), own extension.
 
-The calculated gap on German routes is ~9% using the statutory minimum wage as the labour benchmark. Since actual German trucking wages in 2025 are significantly above the minimum (median: ~€2,786–€3,321/month gross, well above the minimum wage floor), the realistic gap is closer to 15–20%.
+#### 2026 update (own calculation)
+
+| Cost component | PL on PL routes | PL on DE routes | PL on DE (Mindestlohn) | DE on DE routes |
+| --- | --- | --- | --- | --- |
+| Driver | €10.49 | €10.49 | €16.03 | €24.54 |
+| Fuel | €43.02 | €52.20 | €52.20 | €52.20 |
+| Maut | €13.37 | €38.90 | €38.90 | €38.90 |
+| Tyres | €6.00 | €6.00 | €6.00 | €5.92 |
+| **Total** | **€72.88** | **€107.59** | **€113.13** | **€121.56** |
+| **Gap vs. DE** | — | **−11.5%** | **−6.9%** | — |
+
+Exchange rates (ECB, 2026-05-12): 1 EUR ≈ 4.19 PLN.
+
+### Data sources and methodology
+
+All figures are computed for a standardised 5-axle truck ≥ 12 t (Mercedes Actros equivalent), Euro V emission class, 100 km on motorway.
+
+| Component | Source | Period |
+| --- | --- | --- |
+| Fuel | EU Weekly Oil Bulletin (ec.europa.eu), sheet *Prices with taxes* | Week of 2026-05-11 |
+| Driver wages | Eurostat SES `EARN_SES22_RHR`, mean hourly earnings, all sectors | 2022 (latest available) |
+| German toll | BMVI *Mautsätze für mautpflichtige Lkw 2024/2025*, CO₂ class EK1, Euro V, 5+ axles | from Jul 2024 |
+| Polish toll | Ministerstwo Finansów, *Mautsätze A+S-Straßen*, ≥ 12 t, min. EURO 5 | from 01 Feb 2026 |
+| Czech toll | myto.gov.cz, Autobahn, ≥ 12 t, ≥ 5 Achsen, Euro V/EEV, CO₂-Klasse 1 | from 01 Jan 2026 |
+| Exchange rates | ECB SDMX daily rate API | 2026-05-12 |
+| Tyres | Market prices, 295/60 R22.5, 10 tyres / 120,000 km | 2025 estimate |
+
+Driver costs assume 1.25 h per 100 km (80 km/h cruise speed). German SES figures use the mean of six East German NUTS-1 regions (DE3, DE4, DE8, DED, DEE, DEG). Polish SES figures use the mean of seven NUTS-1 macro-regions. The Mindestlohn scenario applies €12.82/h (German statutory minimum wage, 2025).
 
 ### Wage data: precise figures (2025)
 

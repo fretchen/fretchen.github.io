@@ -1,24 +1,20 @@
 ---
 publishing_date: 2026-05-10
-title: Wie rational ist das Wählen von Protektionismus wirklich?
+title: Würde mehr Protektionismus Spediteuren helfen ?
 category: "other"
 description: Ich untersuche, wie ein rationaler Unternehmer abstimmen muss, wenn er entscheidet, ob er nationalistische und protektionistische Politik befürwortet.
 tokenID: 123
 ---
  
-Vor Kurzem diskutierte ich mit einem Familienmitglied über den Irankrieg und den massiven Anstieg der Kraftstoffpreise, den er ausgelöst hatte. Wie üblich hatte ich wenig Mitleid mit Menschen, die noch Fossile fahren und sich über hohe Preise beklagen.
+Vor Kurzem diskutierte ich mit einer Person aus Sachsen über den Irankrieg und den massiven Anstieg der Kraftstoffpreise, den er ausgelöst hatte. Interessanterweise, ging es diesmal um die ziemlich konkrete Frage, ob die Deutsche Regierung einheimische Spediteure schützen sollte, da die Regierungen in osteuropäischen Nachbarländern ihre Unternehmen massiv stützen würden.
 
-Das Gegenargument war: Hohe Preise sind eine Sache. Aber hohe Preise in Deutschland im Vergleich zu den Nachbarländern sind ein unzumutbarer Wettbewerbsnachteil für Transportunternehmen. Am Ende ging es also nicht um hohe Preise für eine Privatperson, sondern darum, dass Transportunternehmen sich von der Regierung wirklich im Stich gelassen fühlten — sie hatten das Gefühl, die Kriegskosten weit stärker schultern zu müssen als andere. Von dort war die Logik sehr geradlinig:
+## Was sind die Kosten für Spediteure auf deutschen Strecken?
 
-- Das ist wieder einmal ein Beispiel dafür, dass die Regierung mich nicht schützt.
-- Ich muss offensichtlich selbst für mich sorgen.
-- Ich muss offensichtlich die harten Rechtsparteien wählen.
+Das brachte mich dazu ein wenig über die Realität der Spediteure zu lernen. Der erste zentrale Punkt ist, dass das Speditionsgeschäft offensichtlich mit enormen Kostendruck zu kämpfen hat. Es ist eine dieser Branchen in denen die Margen extrem dünn sind und es somit viel um Kostenkontrolle geht. 
 
-In dieser Logik muss man rational entscheiden, was im eigenen Höchstinteresse liegt, um das Unternehmen zu schützen — ohne über das Gemeinwohl nachzudenken, sondern nur über das Eigeninteresse. Und dieser Entscheidungsprozess hat durchaus Ähnlichkeiten mit dem Gefangenendilemma, wie wir sehen werden.
+Somit war der nächste Schritt, mehr über die Kosten der Spediteure in Deutschland und der Nachbarländer zu erfahren. Besonders wertvoll fand ich dabei die Herangehensweise aus der Studie von Kotsios & Folinas aus dem Jahr 2020, die die Betriebskosten pro 100 km für einen standardisierten Fünfachs-Lkw auf europäischen Inlandsstrecken gemessen hat. Die Kosten für die grossen Kostentreiber — Fahrer, Kraftstoff und Maut — werden in den verschiedenen Ländern untersucht und verglichen. Grob zusammengefasst fand die Studie, dass die Transportkosten in Polen in Polen etwa etwa 31 % geringer waren als in Deutschland. 
 
-## Aber was sagen die Daten zur Lage?
-
-Bevor ich mich in wilde Spekulationen und schöne Modelle stürze, musste ich die übliche Vorarbeit leisten und versuchen, die Realität besser zu verstehen. Denn selbst wenn ich es gerne täte — ich habe keine Ahnung von den Kosten, Preisen usw., mit denen Logistikunternehmen konfrontiert sind. Ich fand eine Studie von Kotsios & Folinas aus dem Jahr 2020, die die Betriebskosten pro 100 km für einen standardisierten Fünfachs-Lkw auf europäischen Inlandsstrecken gemessen hat. Grob zusammengefasst: Polnische Spediteure waren 2018 auf polnischen Inlandsstrecken etwa 31 % günstiger als deutsche. Auf deutschen Straßen ist das Bild jedoch differenzierter. Die Maut (Autobahngebühren) gilt gleichermaßen für alle in Deutschland fahrenden Fahrzeuge — in- wie ausländische. Die Kraftstoffpreise richten sich nach der lokalen Zapfsäule. Was jedoch am Herkunftsland verankert bleibt, ist der Lohn des Fahrers. Das Ergebnis ist ein struktureller Kostenvorteil polnischer Spediteure von rund **12 %** auf deutschen Strecken bei tatsächlich gezahlten Löhnen — nicht 31 %, aber immer noch erheblich und fast ausschließlich lohngetrieben. Bei vollständiger Einhaltung des deutschen Mindestlohns (Mindestlohn) schrumpft die Lücke auf rund **7 %**.
+Auf deutschen Straßen ist das Bild jedoch differenzierter. Die Maut (Autobahngebühren) gilt gleichermaßen für alle in Deutschland fahrenden Fahrzeuge — in- wie ausländische. Die Kraftstoffpreise richten sich nach der lokalen Zapfsäule. Was jedoch am Herkunftsland verankert bleibt, ist der Lohn des Fahrers. Das Ergebnis ist ein struktureller Kostenvorteil polnischer Spediteure von rund **12 %** auf deutschen Strecken bei tatsächlich gezahlten Löhnen. Bei vollständiger Einhaltung des deutschen Mindestlohns (Mindestlohn) schrumpft die Lücke auf rund **7 %**.
 
 | Kostenkomponente | PL auf DE-Strecken | PL auf DE (Mindestlohn) | DE auf DE-Strecken |
 | --- | --- | --- | --- |

@@ -1,8 +1,8 @@
 ---
 publishing_date: 2026-05-10
-title: Ostdeutsche Spediteure stehen unter Kostendruck — aber wovon eigentlich?
+title: Ostdeutsche Spediteure stehen unter Kostendruck — aber wodurch eigentlich?
 category: "others"
-description: Ostdeutsche Spediteure erleben einen erheblichen Kostendruck unter anderem durch niedrigere Lohnkosten in Polen. Interessanterweise, sind die Kostenunterschiede aber im einstelligen Prozentbereich und der eigentliche Kostendruck kommt aus einer anderen Richtung.
+description: Ostdeutsche Spediteure erleben einen erheblichen Kostendruck unter anderem durch niedrigere Lohnkosten in osteuropäischen Nachbarländern. Interessanterweise, sind die Kostenunterschiede aber im einstelligen Prozentbereich und der eigentliche Kostendruck kommt aus einer anderen Richtung.
 tokenID: 123
 ---
  
@@ -28,7 +28,7 @@ Das Ergebnis ist ein Kostenvorteil polnischer Spediteure von rund **12 %** auf d
 
 ## Eine Interpretation
 
-Aus den Daten sieht man, dass ein realer Kostenvorteil polnischer Spediteure auf deutschen Strecken besteht — aber dieser wird kleiner. Polnische Löhne sind zwischen 2018 und 2022 um rund 37 % gestiegen, ostdeutsche um 17 %. Der Lohnabstand lag 2018 bei etwa 2,7:1 und liegt heute bei 2,3:1 — polnische Fahrer verdienten 2018 gut ein Drittel so viel wie ostdeutsche, heute knapp die Hälfte. Die Richtung stimmt, auch wenn die Lücke real bleibt.
+Aus den Daten sieht man, dass ein echter Kostenvorteil polnischer Spediteure auf deutschen Strecken besteht — aber dieser wird kleiner. Polnische Löhne sind zwischen 2018 und 2022 um rund 37 % gestiegen, ostdeutsche um 17 % — polnische Fahrer verdienten 2018 gut ein Drittel so viel wie ostdeutsche, heute knapp die Hälfte. Die Richtung stimmt, auch wenn die Lücke real bleibt.
 
 Noch auffälliger ist aber, wie sich die Kostenstruktur insgesamt verändert hat:
 

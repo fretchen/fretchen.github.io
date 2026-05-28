@@ -30,7 +30,19 @@ Das Ergebnis ist ein Kostenvorteil polnischer Spediteure von rund **12 %** auf d
 
 ## Eine Interpretation
 
-Aus den Daten sieht man, dass ein realer Kostenachteil aufgrund der Lohnunterschiede besteht, aber diese Lücke wird immer geringer. Weiterhin ist auffällig, dass der Lohn mittlerweile bei weitem nicht mehr der grösste Kostenfaktor ist, die Maut und Kraftstoff machen den Grossteil der Kosten aus. Und da beide über die nächsten Jahre vorhersehbar steigen werden scheint es wahrscheinlich, dass der Kostendruck sich eher darüber unterscheidet wer am Besten mit diesen Kosten umgehen kann, als über die Lohnkosten. Und dann dreht sich die Frage nicht mehr wirklich um Lohnkosten, sondern darum wie sich in den nächsten Jahren vermutlich um die Wettbewerbsfähigkeit von Wasserstoff- oder Elektro-Lkw gegenüber Diesel-Lkw entwickeln wird. Aber das Thema möchte ich für einen möglichen zukünftigen Beitrag aufheben, um hier den Rahmen nicht komplett zu sprengen.
+Aus den Daten sieht man, dass ein realer Kostenvorteil polnischer Spediteure auf deutschen Strecken besteht — aber dieser wird kleiner. Polnische Löhne sind zwischen 2018 und 2022 um rund 37 % gestiegen, ostdeutsche um 17 %. Der Lohnabstand lag 2018 bei etwa 2,7:1 und liegt heute bei 2,3:1. Die Richtung stimmt, auch wenn die Lücke real bleibt.
+
+Noch auffälliger ist aber, wie sich die Kostenstruktur insgesamt verändert hat:
+
+| Kostenkomponente (Deutschland) | 2018 | 2026 | Veränderung |
+| --- | --- | --- | --- |
+| Maut | €15,60 | €38,90 | **+149 %** |
+| Kraftstoff | €33,71 | €52,20 | +55 % |
+| Fahrer (Ost-DE, SES) | €20,97 | €24,54 | +17 % |
+
+Die Maut hat sich fast verdreifacht — größtenteils durch den CO₂-Aufschlag auf die Lkw-Maut, der ab Dezember 2023 gilt. Kraftstoff und Maut machen damit heute den weitaus größten Teil der Gesamtkosten aus, und dieser Block trifft deutsche wie polnische Spediteure auf deutschen Strecken gleichermaßen.
+
+Das verschiebt die eigentliche Wettbewerbsfrage: Nicht mehr wer die günstigeren Fahrerlöhne hat, sondern wer am besten mit steigenden Energie- und CO₂-Kosten umgehen kann, wird den Kostendruck der nächsten Jahre bestimmen. Konkret dreht sich das um die Frage, wann Elektro- oder Wasserstoff-Lkw gegenüber Diesel wirtschaftlich werden. Das ist eine andere politische Frage als Grenzschutz — und eine, bei der ein fairer Wettbewerb eher durch Unterstützung beim Technologiewechsel als durch Marktzugangsschranken gesichert wird.
 
 ## Appendix
 
@@ -39,7 +51,8 @@ Alle Angaben berechnet für einen standardisierten 5-Achs-Lkw ≥ 12 t (Mercedes
 | Komponente | Quelle | Zeitraum |
 | --- | --- | --- |
 | Kraftstoff | EU Weekly Oil Bulletin (ec.europa.eu), Blatt *Preise mit Steuern* | Woche vom 11.05.2026 |
-| Fahrerlöhne | Eurostat SES `EARN_SES22_RHR`, durchschnittliche Stundenverdienste, alle Branchen | 2022 (aktuellste verfügbare Daten) |
+| Fahrerlöhne 2026 | Eurostat SES `EARN_SES22_RHR`, durchschnittliche Stundenverdienste, alle Branchen | 2022 (aktuellste verfügbare Daten) |
+| Fahrerlöhne 2018 | Eurostat SES `EARN_SES18_RHR`, durchschnittliche Stundenverdienste, alle Branchen | 2018 |
 | Deutsche Maut | BMVI *Mautsätze für mautpflichtige Lkw 2024/2025*, CO₂-Klasse EK1, Euro V, 5+ Achsen | ab Juli 2024 |
 | Polnische Maut | Ministerstwo Finansów, *Mautsätze A+S-Straßen*, ≥ 12 t, mind. EURO 5 | ab 01.02.2026 |
 | Tschechische Maut | myto.gov.cz, Autobahn, ≥ 12 t, ≥ 5 Achsen, Euro V/EEV, CO₂-Klasse 1 | ab 01.01.2026 |
@@ -48,39 +61,28 @@ Alle Angaben berechnet für einen standardisierten 5-Achs-Lkw ≥ 12 t (Mercedes
 
 Fahrerkosten setzen 1,25 h pro 100 km voraus (Reisegeschwindigkeit 80 km/h). Deutsche SES-Daten verwenden den Mittelwert von sechs ostdeutschen NUTS-1-Regionen (DE3, DE4, DE8, DED, DEE, DEG). Polnische SES-Daten verwenden den Mittelwert von sieben NUTS-1-Makroregionen. Das Mindestlohn-Szenario wendet €12,82/h an (gesetzlicher Mindestlohn Deutschland, 2025).
 
-### Ausgangsbasis 2018 (Kotsios & Folinas 2020)
+### Kostenentwicklung 2018 — 2026 auf deutschen Strecken (SES-basiert)
 
-Die Studie von Kotsios & Folinas (2020) misst Kosten pro 100 km auf Inlandsstrecken. Für den Wettbewerb auf deutschen Straßen sind Maut und Kraftstoff streckenbezogene Kosten (für alle Betreiber gleich), während die Fahrerlöhne im Herkunftsland verankert bleiben.
+Fahrerkosten für beide Jahre aus der Eurostat Structure of Earnings Survey (SES), nicht aus Mindestlöhnen. Für Deutschland: Mittelwert der 6 ostdeutschen NUTS-1-Regionen (SES 2018: €16,77/h → €20,97/100 km; SES 2022: €19,63/h → €24,54/100 km). Für Polen: Mittelwert der 7 NUTS-1-Makroregionen (SES 2018: €6,12/h → €7,65/100 km; SES 2022: €8,39/h → €10,49/100 km). Kraftstoffpreise aus dem EU Weekly Oil Bulletin (Juli 2018 bzw. Mai 2026).
 
-| Kostenkomponente | PL auf PL-Strecken | PL auf DE-Strecken | DE auf DE-Strecken |
-| --- | --- | --- | --- |
-| Fahrer (Mindestlohnbasis) | €3,96 | €3,96* | €11,05 |
-| Kraftstoff | €29,95 | ~€34,45 | €34,45 |
-| Maut | €6,27 | €15,60 | €15,60 |
-| Reifen | €5,67 | €5,67 | €5,29 |
-| **Gesamt** | **€45,85** | **~€59,68** | **€66,38** |
+| Kostenkomponente | PL auf DE 2018 | PL auf DE 2026 | DE auf DE 2018 | DE auf DE 2026 |
+| --- | --- | --- | --- | --- |
+| Fahrer (SES) | €7,65 | €10,49 | €20,97 | €24,54 |
+| Kraftstoff | €33,71 | €52,20 | €33,71 | €52,20 |
+| Maut | €15,60 | €38,90 | €15,60 | €38,90 |
+| Reifen | €5,67 | €6,00 | €5,29 | €5,92 |
+| **Gesamt** | **€62,63** | **€107,59** | **€75,57** | **€121,56** |
+| **Abstand zu DE** | **−17,1 %** | **−11,5 %** | — | — |
 
-*Ohne Durchsetzung der Entsenderegel. Quelle: Kotsios & Folinas (2020), eigene Erweiterung.
-
-### Aktualisierung 2026 (eigene Berechnung)
+### Aktualisierung 2026: alle Szenarien (eigene Berechnung)
 
 | Kostenkomponente | PL auf PL-Strecken | PL auf DE-Strecken | PL auf DE (Mindestlohn) | DE auf DE-Strecken |
 | --- | --- | --- | --- | --- |
 | Fahrer | €10,49 | €10,49 | €16,03 | €24,54 |
 | Kraftstoff | €43,02 | €52,20 | €52,20 | €52,20 |
-| Maut | €13,37 | €38,90 | €38,90 | €38,90 |
+| Maut | €13,19 | €38,90 | €38,90 | €38,90 |
 | Reifen | €6,00 | €6,00 | €6,00 | €5,92 |
-| **Gesamt** | **€72,88** | **€107,59** | **€113,13** | **€121,56** |
+| **Gesamt** | **€72,70** | **€107,59** | **€113,13** | **€121,56** |
 | **Abstand zu DE** | — | **−11,5 %** | **−6,9 %** | — |
 
-Wechselkurse (EZB, 12.05.2026): 1 EUR ≈ 4,19 PLN.
-
-### Lohndaten: genaue Zahlen (2025)
-
-- Polnischer Mindestlohn 2025: 4.666 PLN brutto/Monat (~€1.085/Monat zum aktuellen Wechselkurs), Stundenlohn 30,50 PLN (~€7,09/h).
-- Deutscher Mindestlohn 2025: €12,82/h, ab Januar 2026 steigend auf €13,90/h.
-- Verhältnis 2025: ca. 1:1,8, verglichen mit 1:2,8 im Jahr 2018.
-- Gemessen als Anteil am nationalen Medianlohn hat Polen (59,1 %) einen höheren relativen Mindestlohn als Deutschland — ein Hinweis darauf, dass die strukturelle Harmonisierung voranschreitet, auch wenn die absolute Kaufkraftlücke noch erheblich ist.
-- Die EU-Mindestlohnrichtlinie wurde vom EuGH im November 2025 grundsätzlich bestätigt; die nationale Umsetzung läuft.
-
-Quelle: Parakar (2025); Hans-Böckler-Stiftung / WSI (2026).
+Wechselkurse (EZB, 15.05.2026): 1 EUR = 4,2465 PLN.

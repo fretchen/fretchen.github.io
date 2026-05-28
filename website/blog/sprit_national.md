@@ -1,12 +1,12 @@
 ---
 publishing_date: 2026-05-10
-title: Würde mehr Protektionismus Spediteuren helfen ?
+title: Ostdeutsche Spediteure stehen unter Kostendruck — aber wovon eigentlich?
 category: "other"
-description: Ich untersuche, wie ein rationaler Unternehmer abstimmen muss, wenn er entscheidet, ob er nationalistische und protektionistische Politik befürwortet.
+description: Ostdeutsche  Spediteure erleben einen erheblichen Kostendruck unter anderem durch niedrigere Lohnkosten in Polen. Interessanterweise, sind die Kostenunterschiede aber im einstelligen Prozentbereich und der eigentliche Kostendruck kommt aus einer anderen Richtung.
 tokenID: 123
 ---
  
-Vor Kurzem diskutierte ich mit einer Person aus Sachsen über den Irankrieg und den massiven Anstieg der Kraftstoffpreise, den er ausgelöst hatte. Interessanterweise, ging es diesmal um die ziemlich konkrete Frage, ob die Deutsche Regierung einheimische Spediteure schützen sollte, da die Regierungen in osteuropäischen Nachbarländern ihre Unternehmen massiv stützen würden.
+Vor Kurzem diskutierte ich mit Jemandem aus Sachsen inmitten des Irankriegs und stark gestiegener Kraftstoffpreise. Es ging um eine sehr konkrete Frage: ob die deutsche Regierung einheimische Spediteure schützen sollte, da osteuropäische Konkurrenten strukturell günstiger fahren könnten. Das motivierte mich tiefer in das Thema reinzuschauen und die Antwort war differenzierter, als ich erwartet hatte.
 
 ## Was sind die Kosten für Spediteure auf deutschen Strecken?
 

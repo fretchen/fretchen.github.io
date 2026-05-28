@@ -139,3 +139,122 @@ Das ist die entscheidende Hürde. Die Tabellenzeilen dürfen keine allgemeinen P
 3. Kein zusammenfassendes Urteil — kein „Volt ist am besten." Die Tabelle ist das Ende des Abschnitts.
 
 Das gibt der Zielgruppe eine Handlungsoption (konkrete Fragen an Kandidaten) statt einer Abstimmungsempfehlung.
+
+---
+
+## Offene Fragen zum überarbeiteten Post
+
+### F1: Werden die drei Kernpunkte bereits klar?
+
+**Punkt 1 — Kostenlücke schließt sich: Teilweise.**
+Die 12%/7%-Zahl ist im Haupttext. Aber die *Dynamik* — dass die Lücke kleiner wird — ist nur im Appendix versteckt (Lohndaten: Verhältnis 1:2,8 → 1:1,8). Im Interpretationsabschnitt steht „diese Lücke wird immer geringer", ohne Beleg. Der Leser muss das glauben, kann es aber nicht nachvollziehen.
+
+**Punkt 2 — Der Kostendruck kommt vom Klimawandel: Noch nicht vorhanden.**
+Das ist die stärkste Erkenntnis im Notebook, aber sie fehlt im Post vollständig. Laut Notebook sind die deutschen Mautkosten von 2018 auf 2026 um **+149 %** gestiegen (von €15,60 auf €38,90) — fast ausschließlich durch den CO₂-Aufschlag auf die Lkw-Maut (eingeführt Dez. 2023). Kraftstoff stieg +55 %, Fahrerlöhne DE nur +17 %. Diese drei Zahlen zusammen sind der eigentliche Beweis für den Kern des Posts: Der Kostendruck kommt nicht mehr aus dem Lohngefälle, sondern aus dem Klimaumbau. Im Post steht das nicht.
+
+**Punkt 3 — Regierungsaufgabe ist CO₂-Begleitung, nicht Lohnschutz: Fehlt.**
+Der Interpretationsabschnitt endet abrupt mit „Aber das Thema möchte ich für einen möglichen zukünftigen Beitrag aufheben." Es gibt keine Schlussfolgerung. Der Leser hat die Daten gelesen — und weiß nicht, was er damit anfangen soll. Der Kern-Claim (Regierungsaufgabe = Transformation begleiten, nicht Grenzen schließen) wird nirgends ausgesprochen.
+
+---
+
+### F2: Sollten die 2018-Daten in den Haupttext?
+
+**Nein als zweite vollständige Tabelle — ja als Veränderungsperspektive.**
+
+Eine zweite Tabelle mit vier Kostenkomponenten für drei Länder ist zu schwer für den Haupttext. Was aber direkt aus dem Notebook ablesbar ist und den Kernpunkt trägt, wäre eine kompakte Vergleichsspalte oder ein kurzer Befund: wie stark haben sich die einzelnen Kostenkomponenten seit 2018 verändert?
+
+Die überzeugendsten Zahlen aus dem Notebook (Notebook-Ausgabe Zelle 11):
+
+| Kostenkomponente | DE 2018 | DE 2026 | Δ |
+| --- | --- | --- | --- |
+| Kraftstoff | €33,71 | €52,20 | +55 % |
+| Fahrer (Ost-DE) | €20,97 | €24,54 | +17 % |
+| Maut | €15,60 | €38,90 | +149 % |
+
+Diese drei Zahlen zeigen sofort, warum die Frage nicht mehr primär die Lohnfrage ist. Die Maut hat sich fast verdreifacht — das trifft deutsche und polnische Spediteure auf deutschen Strecken gleichermaßen, aber der deutsche Spediteur bezahlt auch auf polnischen Strecken inzwischen mehr Maut als früher. Das ist der Kern von Punkt 2.
+
+Empfehlung: Diese Prozentzahlen als kurze Einschubpassage in den Interpretationsabschnitt, keine vollständige neue Tabelle.
+
+---
+
+### F3: Sind die Angaben im Appendix kompatibel mit der Notebook-Methodik?
+
+**Die Haupttabelle (2026, PL auf DE) ist konsistent — aber es gibt drei Auffälligkeiten:**
+
+**Konsistent ✓:**
+Die 2026-Haupttabelle im Post stimmt mit dem Notebook überein.
+
+- DE Gesamt: €52,20 + €24,54 + €38,90 + €5,92 = €121,56 ✓
+- PL Ist: €52,20 + €10,49 + €38,90 + €6,00 = €107,59 ✓
+- PL Mindestlohn: €52,20 + €16,03 + €38,90 + €6,00 = €113,13 ✓
+
+**Auffälligkeit 1 — Wechselkurs-Diskrepanz (geringfügig):**
+Der Appendix nennt 1 EUR ≈ 4,19 PLN (12.05.2026), das Notebook verwendet 4,2465 PLN (15.05.2026). Für die Haupttabelle ist das irrelevant (polnische Maut auf deutschen Strecken ist die deutsche Maut = €38,90). Es betrifft nur die Backup-Tabelle für PL auf PL-Strecken: der Post zeigt €13,37, das Notebook ergibt €13,19. Kein Fehler, nur eine Datumsdifferenz — aber der Appendix sollte konsistente Wechselkurse nennen.
+
+**Auffälligkeit 2 — Kraftstoff 2018 (geringfügig):**
+Die 2018-Tabelle im Appendix zeigt DE-Kraftstoff = €34,45 (aus dem Kotsios-Paper). Das Notebook re-deriviert aus dem EU Oil Bulletin denselben Zeitraum und kommt auf €33,71. Beide beziehen sich auf die Woche des 20. Juli 2018, aber die Quelldaten differieren leicht. Das sollte in einer Anmerkung zur 2018-Tabelle transparent gemacht werden.
+
+**Auffälligkeit 3 — Methodenbruch 2018 vs. 2026 (inhaltlich relevant):**
+Die 2018-Tabelle im Appendix basiert für Fahrerkosten auf **Mindestlöhnen** (aus dem Kotsios-Paper: DE €11,05 = damaliger nationaler Mindestlohn × 1,25 h). Die 2026-Tabelle basiert auf **SES-Durchschnittslöhnen** (Eurostat, ostdeutsche NUTS-1-Regionen: €19,63/h → €24,54/100km). Das sind zwei verschiedene Konzepte. Ein direkter Vergleich zwischen den beiden Tabellen wäre daher irreführend — insbesondere weil die SES-Löhne deutlich höher liegen als der bloße Mindestlohn. Der Appendix sollte diesen Methodenwechsel explizit kennzeichnen.
+
+---
+
+## Lösungsvorschläge
+
+### L-F1: Drei Optionen für den Interpretationsabschnitt
+
+Die drei Kernpunkte brauchen konkrete Textstellen. Hier sind drei strukturelle Optionen — von minimal bis maximal:
+
+**Option A — Minimale Ergänzung (empfohlen als Einstieg):**
+Den bestehenden Interpretationsabschnitt um zwei Sätze verlängern, die Punkt 1 belegen und Punkt 2 einführen:
+
+- Satz für Punkt 1: Die Lohndaten (SES 2018 vs. 2022) zeigen, dass polnische Löhne zwischen 2018 und 2022 um +37 % stiegen, ostdeutsche nur um +17 % — die Lücke schließt sich also messbar, auch wenn sie real bleibt.
+- Satz für Punkt 2: Die Mautkosten stiegen im gleichen Zeitraum in Deutschland von €15,60 auf €38,90 pro 100 km (+149 %), vor allem durch den CO₂-Aufschlag ab Dezember 2023 — das ist jetzt der größte Kostentreiber.
+- Punkt 3 (Schluss): Eine abschließende Aussage, die aus den Daten folgt: Das Problem ist nicht mehr primär das Lohngefälle, sondern die Frage, wie Spediteure mit steigenden CO₂-Kosten umgehen. Das ist eine andere politische Frage als Grenzschutz.
+
+**Option B — Getrennte Schlussabschnitt:**
+Einen eigenständigen dritten Abschnitt „Was bedeutet das?" nach der Interpretation einfügen, der die drei Punkte explizit als Fazit formuliert. Vorteil: klare Trennung von Daten und Schlussfolgerung. Nachteil: kann moralisierend wirken, wenn die Sprache nicht neutral bleibt.
+
+**Option C — Offen lassen, Frage stellen:**
+Den Post mit einer offenen Frage enden lassen statt einem Fazit: „Wenn der Kostendruck zunehmend aus Maut und Kraftstoff kommt und nicht aus dem Lohngefälle — was sollte die Regierung dann tun?" Das lässt den Leser die Schlussfolgerung selbst ziehen und vermeidet Moralisieren. Passt gut zur Zielgruppe (Skepsis gegenüber Belehrungen). Risiko: der Post wirkt unfertig.
+
+**Zur Lohnkonvergenz (Formulierungsvorschlag):**
+Die SES-Zahlen sind ehrlicher als der Mindestlohn-Vergleich (1:2,8 → 1:1,8), weil ostdeutsche Trucker 2018 schon über dem Mindestlohn verdienten. Eine mögliche Formulierung: „Polnische Löhne sind seit 2018 schneller gestiegen als ostdeutsche — der Abstand war 2018 noch 2,7:1, heute ist er 2,3:1. Real bleibt die Lücke, die Richtung stimmt." Das ist präziser als „schließt sich" und ehrlicher als die Mindestlohn-Ratio.
+
+---
+
+### L-F2: Konkrete Tabellenergänzung für den Haupttext
+
+Vorschlag für eine schlanke Einschubpassage nach der bestehenden Tabelle, die Punkt 2 direkt belegt. Die Zahlen stammen direkt aus dem Notebook (Zelle 11, SES-basiert):
+
+| Kostenkomponente | 2018 | 2026 | Veränderung |
+| --- | --- | --- | --- |
+| Maut (Deutschland) | €15,60 | €38,90 | **+149 %** |
+| Kraftstoff (Deutschland) | €33,71 | €52,20 | +55 % |
+| Fahrer (Ost-DE, SES) | €20,97 | €24,54 | +17 % |
+
+Diese Tabelle zeigt in drei Zeilen, warum der Hauptkostendruck nicht mehr aus dem Lohngefälle kommt. Für die Lohnzeile gilt: die Prozentzahl (+17 %) ist korrekt und aus dem Notebook belegt. Den Vergleich mit dem polnischen Lohnwachstum (+37 %) kann man entweder in einem Satz ergänzen oder weglassen — je nachdem, wie stark man Punkt 1 im Haupttext verankern will.
+
+---
+
+### L-F3: Konsistente 2018-Basistabelle mit SES-Methodik
+
+Das Notebook enthält SES-Daten für **beide** Jahre (2018: `EARN_SES18_RHR`, 2022: `EARN_SES22_RHR`). Damit ist ein vollständig konsistenter 2018-Vergleich möglich, ohne die Kotsios-Mindestlöhne zu verwenden.
+
+**Konkrete Zahlen aus dem Notebook für eine überarbeitete Appendix-Basistabelle (SES-basiert, 2018):**
+
+| Kostenkomponente | PL auf DE 2018 | PL auf DE 2026 | DE auf DE 2018 | DE auf DE 2026 |
+| --- | --- | --- | --- | --- |
+| Fahrer (SES) | €7,65 | €10,49 | €20,97 | €24,54 |
+| Kraftstoff | €33,71 | €52,20 | €33,71 | €52,20 |
+| Maut | €15,60 | €38,90 | €15,60 | €38,90 |
+| Reifen | €5,67 | €6,00 | €5,29 | €5,92 |
+| **Gesamt** | **€62,63** | **€107,59** | **€75,57** | **€121,56** |
+| **Abstand zu DE** | **−17,1 %** | **−11,5 %** | — | — |
+
+Diese Tabelle ist methodisch konsistent (SES für beide Jahre) und zeigt, dass der Abstand auf deutschen Strecken von ~17 % (2018) auf ~12 % (2026) gesunken ist — was Punkt 1 direkt belegt.
+
+**Empfohlene Textformulierung für den Appendix:**
+„Fahrerkosten basieren auf dem mittleren Bruttostundenlohn aus der Eurostat Structure of Earnings Survey (SES): EARN_SES18_RHR für 2018, EARN_SES22_RHR für 2022/2026. Für Deutschland: Mittelwert der 6 ostdeutschen NUTS-1-Regionen. Dies weicht von den Kotsios & Folinas (2020)-Originalwerten ab, die Mindestlöhne als Proxy verwendeten — der SES-Ansatz ist realistischer für die tatsächlichen Lohnkosten ostdeutscher Spediteure."
+
+**Hinweis zur alten Kotsios-Basistabelle:** Die bestehende 2018-Tabelle im Appendix (auf Basis Kotsios-Mindestlöhne) kann dann ersetzt oder als Fussnote mit dem Hinweis „Originalwerte aus Kotsios & Folinas (2020), Methodik siehe oben" behalten werden.

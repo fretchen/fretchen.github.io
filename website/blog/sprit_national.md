@@ -1,9 +1,9 @@
 ---
-publishing_date: 2026-05-10
+publishing_date: 2026-05-28
 title: Ostdeutsche Spediteure stehen unter Kostendruck — aber wodurch eigentlich?
 category: "others"
 description: Ostdeutsche Spediteure erleben einen erheblichen Kostendruck unter anderem durch niedrigere Lohnkosten in osteuropäischen Nachbarländern. Interessanterweise, sind die Kostenunterschiede aber im einstelligen Prozentbereich und der eigentliche Kostendruck kommt aus einer anderen Richtung.
-tokenID: 123
+tokenID: 197
 ---
  
 Vor Kurzem diskutierte ich mit jemandem aus Sachsen inmitten des Irankriegs und stark gestiegener Kraftstoffpreise. Es ging um eine sehr konkrete Frage: ob die deutsche Regierung einheimische Spediteure zum Beispiel durch Subventionen oder Zölle mehr schützen sollte, da osteuropäische Konkurrenten strukturell günstiger fahren könnten. Das motivierte mich tiefer in das Thema reinzuschauen und die Antwort war differenzierter, als ich erwartet hatte.

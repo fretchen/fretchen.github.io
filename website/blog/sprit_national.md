@@ -1,22 +1,20 @@
 ---
 publishing_date: 2026-05-10
 title: Ostdeutsche Spediteure stehen unter Kostendruck — aber wovon eigentlich?
-category: "other"
-description: Ostdeutsche  Spediteure erleben einen erheblichen Kostendruck unter anderem durch niedrigere Lohnkosten in Polen. Interessanterweise, sind die Kostenunterschiede aber im einstelligen Prozentbereich und der eigentliche Kostendruck kommt aus einer anderen Richtung.
+category: "others"
+description: Ostdeutsche Spediteure erleben einen erheblichen Kostendruck unter anderem durch niedrigere Lohnkosten in Polen. Interessanterweise, sind die Kostenunterschiede aber im einstelligen Prozentbereich und der eigentliche Kostendruck kommt aus einer anderen Richtung.
 tokenID: 123
 ---
  
-Vor Kurzem diskutierte ich mit Jemandem aus Sachsen inmitten des Irankriegs und stark gestiegener Kraftstoffpreise. Es ging um eine sehr konkrete Frage: ob die deutsche Regierung einheimische Spediteure schützen sollte, da osteuropäische Konkurrenten strukturell günstiger fahren könnten. Das motivierte mich tiefer in das Thema reinzuschauen und die Antwort war differenzierter, als ich erwartet hatte.
+Vor Kurzem diskutierte ich mit jemandem aus Sachsen inmitten des Irankriegs und stark gestiegener Kraftstoffpreise. Es ging um eine sehr konkrete Frage: ob die deutsche Regierung einheimische Spediteure zum Beispiel durch Subventionen oder Zölle mehr schützen sollte, da osteuropäische Konkurrenten strukturell günstiger fahren könnten. Das motivierte mich tiefer in das Thema reinzuschauen und die Antwort war differenzierter, als ich erwartet hatte.
 
-## Was sind die Kosten für Spediteure auf deutschen Strecken?
+## Was sind die Kosten ?
 
-Das brachte mich dazu ein wenig über die Realität der Spediteure zu lernen. Der erste zentrale Punkt ist, dass das Speditionsgeschäft offensichtlich mit enormen Kostendruck zu kämpfen hat. Es ist eine dieser Branchen in denen die Margen extrem dünn sind und es somit viel um Kostenkontrolle geht. 
+Um die Situation der Spediteure besser zu verstehen, habe ich mir die Kostenseite genauer angeschaut. Spedition ist eine Branche mit extrem dünnen Margen, bei der Kostenunterschiede von wenigen Prozent über Aufträge entscheiden — das macht die Frage nach dem Wettbewerbsnachteil so drängend. Wirklich hilfreich fand ich dabei die Herangehensweise aus der Studie von [Kotsios & Folinas](https://dl.acm.org/doi/10.4018/IJAL.2020010102) aus dem Jahr 2020, die die Betriebskosten pro 100 km für einen standardisierten Fünfachs-Lkw auf europäischen Inlandsstrecken gemessen hat. Die Kosten für die großen Kostentreiber — Fahrer, Kraftstoff und Maut — werden in den verschiedenen Ländern untersucht und verglichen. Diese Studie habe ich dann, wie in den technischen Details beschrieben, auf aktuelle Zahlen für Deutschland und Polen aktualisiert. Grob zusammengefasst sind die Transportkosten für polnische Spediteure auf polnischen Strecken aktuell etwa 31 % geringer als für deutsche Spediteure in Deutschland.
 
-Somit war der nächste Schritt, mehr über die Kosten der Spediteure in Deutschland und der Nachbarländer zu erfahren. Wirklich hilfreich fand ich da die Herangehensweise aus der Studie von [Kotsios & Folinas](https://dl.acm.org/doi/10.4018/IJAL.2020010102) aus dem Jahr 2020, die die Betriebskosten pro 100 km für einen standardisierten Fünfachs-Lkw auf europäischen Inlandsstrecken gemessen hat. Die Kosten für die grossen Kostentreiber — Fahrer, Kraftstoff und Maut — werden in den verschiedenen Ländern untersucht und verglichen. Diese Studie habe ich dann, wie im Anhang beschrieben, auf aktuelle Zahlen für Deutschland und Polen aktualisiert. Grob zusammengefasst findet man aktuell, dass die Transportkosten für polnische Spediteure auf polnischen Strecken sind alsetwa 31 % geringer sind als für Deutsche Spediteure in Deutschland.
+Die eigentliche Frage ist aber nach den Kosten auf deutschen Strecken, und hier gilt die Maut gleichermaßen für alle in Deutschland fahrenden Fahrzeuge — in- wie ausländische. Die Kraftstoffpreise richten sich ebenfalls nach der lokalen Zapfsäule. Was jedoch am Herkunftsland verankert bleibt, ist der Lohn des Fahrers und der ist für polnische Spediteure deutlich niedriger als für deutsche Spediteure.
 
-Nun ist die eigentliche Frage, aber nach den Kosten auf deutschen Strecken und hier gilt die die Maut gleichermaßen für alle in Deutschland fahrenden Fahrzeuge — in- wie ausländische. Die Kraftstoffpreise richten sich ebenfalls nach der lokalen Zapfsäule. Was jedoch am Herkunftsland verankert bleibt, ist der Lohn des Fahrers und der ist für polnische Spediteure deutlich niedriger als für deutsche Spediteure.
-
-Das Ergebnis ist ein Kostenvorteil polnischer Spediteure von rund **12 %** auf deutschen Strecken bei tatsächlich gezahlten Löhnen. Bei vollständiger Einhaltung des deutschen Mindestlohns (Mindestlohn) schrumpft die Lücke auf rund **7 %**. Die Ergebnisse im Detail:
+Das Ergebnis ist ein Kostenvorteil polnischer Spediteure von rund **12 %** auf deutschen Strecken bei tatsächlich gezahlten Löhnen. EU-Recht schreibt für Fahrer, die in Deutschland eingesetzt werden, den deutschen Mindestlohn vor — bei vollständiger Einhaltung schrumpft die Lücke auf rund **7 %**. In der Praxis wird das nicht flächendeckend kontrolliert. Die Ergebnisse im Detail:
 
 | Kostenkomponente | PL auf DE-Strecken | PL auf DE (Mindestlohn) | DE auf DE-Strecken |
 | --- | --- | --- | --- |
@@ -30,7 +28,7 @@ Das Ergebnis ist ein Kostenvorteil polnischer Spediteure von rund **12 %** auf d
 
 ## Eine Interpretation
 
-Aus den Daten sieht man, dass ein realer Kostenvorteil polnischer Spediteure auf deutschen Strecken besteht — aber dieser wird kleiner. Polnische Löhne sind zwischen 2018 und 2022 um rund 37 % gestiegen, ostdeutsche um 17 %. Der Lohnabstand lag 2018 bei etwa 2,7:1 und liegt heute bei 2,3:1. Die Richtung stimmt, auch wenn die Lücke real bleibt.
+Aus den Daten sieht man, dass ein realer Kostenvorteil polnischer Spediteure auf deutschen Strecken besteht — aber dieser wird kleiner. Polnische Löhne sind zwischen 2018 und 2022 um rund 37 % gestiegen, ostdeutsche um 17 %. Der Lohnabstand lag 2018 bei etwa 2,7:1 und liegt heute bei 2,3:1 — polnische Fahrer verdienten 2018 gut ein Drittel so viel wie ostdeutsche, heute knapp die Hälfte. Die Richtung stimmt, auch wenn die Lücke real bleibt.
 
 Noch auffälliger ist aber, wie sich die Kostenstruktur insgesamt verändert hat:
 
@@ -38,13 +36,13 @@ Noch auffälliger ist aber, wie sich die Kostenstruktur insgesamt verändert hat
 | --- | --- | --- | --- |
 | Maut | €15,60 | €38,90 | **+149 %** |
 | Kraftstoff | €33,71 | €52,20 | +55 % |
-| Fahrer (Ost-DE, SES) | €20,97 | €24,54 | +17 % |
+| Fahrer (Ost-DE, Ø-Lohn) | €20,97 | €24,54 | +17 % |
 
 Die Maut hat sich fast verdreifacht — größtenteils durch den CO₂-Aufschlag auf die Lkw-Maut, der ab Dezember 2023 gilt. Kraftstoff und Maut machen damit heute den weitaus größten Teil der Gesamtkosten aus, und dieser Block trifft deutsche wie polnische Spediteure auf deutschen Strecken gleichermaßen.
 
 Das verschiebt die eigentliche Wettbewerbsfrage: Nicht mehr wer die günstigeren Fahrerlöhne hat, sondern wer am besten mit steigenden Energie- und CO₂-Kosten umgehen kann, wird den Kostendruck der nächsten Jahre bestimmen. Konkret dreht sich das um die Frage, wann Elektro- oder Wasserstoff-Lkw gegenüber Diesel wirtschaftlich werden. Das ist eine andere politische Frage als Grenzschutz — und eine, bei der ein fairer Wettbewerb eher durch Unterstützung beim Technologiewechsel als durch Marktzugangsschranken gesichert wird.
 
-## Appendix
+## Technische Details
 
 Alle Angaben berechnet für einen standardisierten 5-Achs-Lkw ≥ 12 t (Mercedes Actros-Äquivalent), Emissionsklasse Euro V, 100 km auf der Autobahn.
 
@@ -55,7 +53,6 @@ Alle Angaben berechnet für einen standardisierten 5-Achs-Lkw ≥ 12 t (Mercedes
 | Fahrerlöhne 2018 | Eurostat SES `EARN_SES18_RHR`, durchschnittliche Stundenverdienste, alle Branchen | 2018 |
 | Deutsche Maut | BMVI *Mautsätze für mautpflichtige Lkw 2024/2025*, CO₂-Klasse EK1, Euro V, 5+ Achsen | ab Juli 2024 |
 | Polnische Maut | Ministerstwo Finansów, *Mautsätze A+S-Straßen*, ≥ 12 t, mind. EURO 5 | ab 01.02.2026 |
-| Tschechische Maut | myto.gov.cz, Autobahn, ≥ 12 t, ≥ 5 Achsen, Euro V/EEV, CO₂-Klasse 1 | ab 01.01.2026 |
 | Wechselkurse | EZB SDMX Daily Rate API | 12.05.2026 |
 | Reifen | Marktpreise, 295/60 R22.5, 10 Reifen / 120.000 km | Schätzung 2025 |
 

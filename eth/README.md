@@ -99,6 +99,15 @@ npx hardhat vars set ETHERSCAN_API_KEY     # V2 API — single key covers all ch
 
 Never commit private keys. Use `hardhat vars` — not `.env`.
 
+## Per-Contract Guides
+
+Step-by-step deployment and upgrade instructions for each contract are in [`docs/`](docs/):
+
+- [`GENIMG_DEPLOY_V4_GUIDE.md`](docs/GENIMG_DEPLOY_V4_GUIDE.md) — deploy or upgrade GenImNFTv4
+- [`GENIMG_UPGRADE_TO_V4_GUIDE.md`](docs/GENIMG_UPGRADE_TO_V4_GUIDE.md) — v3→v4 upgrade (CVE-2025-11-26 fix)
+- [`DEPLOY_SUPPORT_V2_GUIDE.md`](docs/DEPLOY_SUPPORT_V2_GUIDE.md)
+- [`DEPLOY_EIP3009_SPLITTER_V1_GUIDE.md`](docs/DEPLOY_EIP3009_SPLITTER_V1_GUIDE.md)
+
 ## Archive
 
 Historical contracts, tests, scripts, and deployment guides are in `archive/`. Active upgrade-path references (GenImNFTv3 source, v4 upgrade guide) remain in `contracts/` and `docs/` respectively.

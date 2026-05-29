@@ -53,7 +53,7 @@ export function createCollectorNFTFixture(
     const publicClient = await hre.viem.getPublicClient();
 
     // Deploy GenImNFT first using viem
-    const genImNFT = await hre.viem.deployContract("GenImNFTv3", []);
+    const genImNFT = await hre.viem.deployContract("GenImNFTv4", []);
 
     // Mint some GenImNFTs for testing (publicly listed by default)
     await genImNFT.write.safeMint(["ipfs://test1", true], {

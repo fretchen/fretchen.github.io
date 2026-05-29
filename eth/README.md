@@ -1,248 +1,104 @@
-# My Hardhat Project
+# eth — Smart Contracts
 
-This project is based on the Hardhat sample. It has the standard examples `Token.sol` and `Lock.sol` contract. For me interesting is for the moment the new contract `Support.sol` which starts to implement the logic behind a simple like button.
+Solidity contracts for a blockchain-based AI image generation platform on Optimism. All contracts use the **OpenZeppelin UUPS upgradeable proxy pattern**.
 
-I really like to follow the documentation [Hardhat Runner](https://hardhat.org/hardhat-runner/docs/guides/compile-contracts) here.
+## Active Contracts
 
-The typical commands to run are:
+| Contract | Address (Optimism Mainnet) | Purpose |
+| --- | --- | --- |
+| `GenImNFTv4` | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` | AI image NFTs with agent-whitelist security fix (CVE-2025-11-26) |
+| `CollectorNFT` | `0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea` | Community NFTs minted on top of GenImNFT tokens |
+| `LLMv1` | `0x833F39D6e67390324796f861990ce9B7cf9F5dE1` | LLM access NFT |
+| `EIP3009SplitterV1` | testnet only | Token-agnostic USDC/EURC payment splitter |
+
+## Common Commands
 
 ```shell
+npm test                                  # Hardhat + Viem tests
 npx hardhat compile
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
+npx hardhat run scripts/export-abi.ts     # Regenerate ABIs after contract changes
 ```
 
-Then you can deploy the contract to a local network with:
+## Deployment Pattern
+
+All deploy/upgrade scripts use a JSON config file validated with Zod and support three execution modes:
 
 ```shell
-npx hardhat ignition deploy ./ignition/modules/Support.ts
+# 1. Validate config and upgrade compatibility — no on-chain changes
+NETWORK=optsepolia npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
+
+# Edit the config's "validateOnly": false, then dry-run:
+# 2. Simulate — logs what would happen, no transactions
+# 3. Execute — full deployment
 ```
 
-The final step is to deploy to the sepolia testnet.
+Config files live alongside each script (`scripts/*.config.json`). Deployment records are saved to `scripts/deployments/`.
+
+## Scripts
+
+### Deploy
 
 ```shell
-npx hardhat ignition deploy ignition/modules/Support.ts --network sepolia --deployment-id <YOUR-ID>
+# GenImNFTv4 (fresh deployment, rarely needed — use upgrade instead)
+NETWORK=optsepolia npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
+
+# LLMv1
+npx hardhat run scripts/deploy-llm-v1.ts --network optimisticEthereum
+
+# EIP3009SplitterV1
+npx hardhat run scripts/deploy-splitter-v1.ts --network optimisticEthereum
+
+# SupportV2
+npx hardhat run scripts/deploy-support-v2.ts --network optimisticEthereum
 ```
 
-And we can check the deployment with:
+### Upgrade
 
 ```shell
-npx hardhat ignition verify <THE-ID-FROM-ABOVE>
+# Upgrade GenImNFTv4 implementation (set PROXY_ADDRESS in config first)
+PROXY_ADDRESS=0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb \
+  npx hardhat run scripts/upgrade-genimg-v4.ts --network optimisticEthereum
+
+# Upgrade CollectorNFT
+PROXY_ADDRESS=0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea \
+  npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
 ```
 
-## GenImNFTv3 - OpenZeppelin Upgrades
-
-GenImNFTv3 can **only** be deployed as an upgrade from GenImNFTv2. There is no direct deployment of V3.
-
-### Upgrade existing V2 to V3:
+### Verify & ABI
 
 ```shell
-PROXY_ADDRESS=0x123... npx hardhat run scripts/upgrade-to-v3.ts --network sepolia
-```
+# Verify on Etherscan (V2 API — one key covers all chains including Optimism)
+npx hardhat run scripts/verify-genimg-v4.ts --network optimisticEthereum
+npx hardhat run scripts/verify-llm.ts --network optimisticEthereum
+npx hardhat run scripts/verify-contract.ts --network optimisticEthereum
 
-### Verify upgraded V3 contracts on Etherscan:
+# Validate upgrade storage compatibility without deploying
+npx hardhat run scripts/validate-contract.ts --network optimisticEthereum
 
-```shell
-PROXY_ADDRESS=0x123... npx hardhat run scripts/verify-v3.ts --network sepolia
-```
-
-### Manual verification (if automatic fails):
-
-```shell
-IMPLEMENTATION_ADDRESS=0x456... npx hardhat run scripts/verify-manual.ts --network sepolia
-```
-
-### Get ABI for frontend integration:
-
-```shell
-# Export ABIs for both GenImNFTv3 and CollectorNFT in multiple formats
+# Export ABIs for frontend (TypeScript + JSON)
 npx hardhat run scripts/export-abi.ts
-
-# ABI files will be available at:
-# - abi/contracts/GenImNFTv3.json (ABI only)
-# - abi/contracts/GenImNFTv3.ts (TypeScript)
-# - abi/contracts/CollectorNFT.json (ABI only)
-# - abi/contracts/CollectorNFT.ts (TypeScript)
 ```
 
-## CollectorNFT - Community Collection Contract
+## Networks
 
-CollectorNFT allows anyone to create NFTs based on existing GenImNFT tokens. When someone mints a CollectorNFT, the payment goes directly to the current owner of the referenced GenImNFT.
+| Name | Chain | Use |
+| --- | --- | --- |
+| `sepolia` | Ethereum Sepolia | General testnet |
+| `optsepolia` | Optimism Sepolia | Primary testnet |
+| `optimisticEthereum` | Optimism Mainnet | Production |
+| `baseSepolia` | Base Sepolia | Testnet |
+| `base` | Base Mainnet | Production |
 
-### Key Features
-
-- **Community-Driven**: Anyone can mint CollectorNFTs based on any GenImNFT
-- **Creator Rewards**: Payments go directly to GenImNFT owners
-- **Dynamic Pricing**: Price increases as more CollectorNFTs are minted for the same GenImNFT
-- **Upgradeable**: Uses OpenZeppelin UUPS proxy pattern
-
-### Deployment
+## Secrets (Hardhat vars)
 
 ```shell
-# Deploy CollectorNFT (requires existing GenImNFT address)
-GENIMNFv3_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
+npx hardhat vars set ALCHEMY_API_KEY
+npx hardhat vars set SEPOLIA_PRIVATE_KEY   # used for all networks
+npx hardhat vars set ETHERSCAN_API_KEY     # V2 API — single key covers all chains
 ```
 
-### Testing
+Never commit private keys. Use `hardhat vars` — not `.env`.
 
-```shell
-# Run deployment tests
-npx hardhat test --grep "CollectorNFT - Deployment Tests"
+## Archive
 
-# Run functional tests
-npx hardhat test --grep "CollectorNFT - Functional Tests"
-```
-
-### Key Scripts
-
-#### `deploy-collector-nft.ts`
-
-Deploys CollectorNFT as an upgradeable proxy contract.
-
-**Usage:**
-
-```shell
-# Validation only (dry run)
-npx hardhat run scripts/deploy-collector-nft.ts --network sepolia -- --validate-only
-
-# Full deployment
-GENIMNIFL_ADDRESS=0x123... npx hardhat run scripts/deploy-collector-nft.ts --network sepolia
-```
-
-#### `upgrade-collector-nft.ts`
-
-Upgrades existing CollectorNFT deployments (when available).
-
-**Usage:**
-
-```shell
-PROXY_ADDRESS=0x456... npx hardhat run scripts/upgrade-collector-nft.ts --network sepolia
-```
-
-### Contract Interaction Examples
-
-```typescript
-// Mint a CollectorNFT based on GenImNFT token #0
-const currentPrice = await collectorNFT.getCurrentPrice(0);
-await collectorNFT.mintCollectorNFT(0, "ipfs://metadata-uri", { value: currentPrice });
-
-// Get pricing information
-const [mintCount, currentPrice, nextPrice] = await collectorNFT.getMintStats(0);
-
-// Get all CollectorNFTs for a specific GenImNFT
-const collectorTokens = await collectorNFT.getCollectorTokensForGenIm(0);
-```
-
-### Pricing Model
-
-- **Base Price**: 0.001 ETH (configurable)
-- **Price Tiers**: Doubles every 5 mints
-  - Mints 1-5: 1x base price (0.001 ETH)
-  - Mints 6-10: 2x base price (0.002 ETH)
-  - Mints 11-15: 4x base price (0.004 ETH)
-  - And so on...
-
-### Integration with GenImNFT
-
-CollectorNFT works seamlessly with any GenImNFT version:
-
-- References GenImNFT by contract address
-- Validates token ownership before minting
-- Sends payments to current GenImNFT token owners
-- Independent pricing per GenImNFT token
-
-### Validate upgrade compatibility before upgrading
-
-```shell
-npx hardhat run scripts/validate-contract.ts --network sepolia
-```
-
-## Production Deployment - Optimism Mainnet
-
-### Current Deployed Contract
-
-- **Proxy Address**: `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb`
-- **Current Version**: GenImNFTv2
-- **Network**: Optimism Mainnet
-- **Deployment**: `genImv2-optimism`
-
-### Quick Upgrade (Automated)
-
-For a complete automated upgrade process with safety checks:
-
-```shell
-# Run the complete upgrade process
-./scripts/upgrade-optimism.sh
-```
-
-### Manual Upgrade Steps
-
-#### 1. Check current contract status
-
-```shell
-npx hardhat run scripts/check-contract-status.ts --network optimisticEthereum
-```
-
-#### 2. Upgrade V2 → V3 on Optimism Mainnet
-
-```shell
-npx hardhat run scripts/upgrade-v2-to-v3-optimism.ts --network optimisticEthereum
-```
-
-#### 3. Verify new implementation
-
-```shell
-npx hardhat run scripts/verify-v3.ts --network optimisticEthereum
-```
-
-### Testnet Testing (Recommended)
-
-#### Optimism Sepolia Testing
-
-```shell
-# Deploy V2 to testnet first (if not already deployed)
-TESTNET_PROXY_ADDRESS=0x... npx hardhat run scripts/upgrade-v2-to-v3-sepolia.ts --network optsepolia
-
-# Verify on testnet
-npx hardhat run scripts/verify-v3.ts --network optsepolia
-```
-
-### New V3 Features
-
-- **`getAllPublicTokens()`**: Get all publicly listed tokens across all owners
-- Improved gas efficiency for bulk token operations
-- Enhanced metadata handling
-
-### Post-Upgrade Integration
-
-After successful upgrade, update your frontend/dApp:
-
-```javascript
-// Example: Using the new getAllPublicTokens function
-const contract = new ethers.Contract("0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb", GenImNFTv3ABI, provider);
-
-// Get all public tokens (new V3 feature)
-const publicTokens = await contract.getAllPublicTokens();
-console.log(`Found ${publicTokens.length} public tokens`);
-```
-
-### Network Configuration
-
-Supported networks:
-
-- **Sepolia** (testnet): `--network sepolia`
-- **Optimism Sepolia** (testnet): `--network optsepolia`
-- **Optimism Mainnet** (production): `--network optimisticEthereum`
-
-### Environment Variables Required
-
-```shell
-# Required for all networks
-ALCHEMY_API_KEY=your_alchemy_key
-SEPOLIA_PRIVATE_KEY=your_private_key
-
-# Required for verification
-ETHERSCAN_API_KEY=your_etherscan_key
-OPTIMISTIC_ETHERSCAN_API_KEY=your_optimistic_etherscan_key
-```
+Historical contracts, tests, scripts, and deployment guides are in `archive/`. Active upgrade-path references (GenImNFTv3 source, v4 upgrade guide) remain in `contracts/` and `docs/` respectively.

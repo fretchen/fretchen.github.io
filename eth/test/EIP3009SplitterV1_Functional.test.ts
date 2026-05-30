@@ -8,7 +8,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("EIP3009SplitterV1", function () {
   before(async () => {
-    networkConn = await hre.network.getOrCreate("hardhat");
+    networkConn = await hre.network.getOrCreate();
   });
 
   // Token decimals (USDC uses 6)
@@ -463,8 +463,10 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject fee update from non-owner", async function () {
       const { splitter, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await assert.rejects(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account }),
+        splitter,
+        "OwnableUnauthorizedAccount",
       );
     });
 
@@ -500,8 +502,10 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject wallet update from non-owner", async function () {
       const { splitter, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await assert.rejects(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.setFacilitatorWallet([otherAccount.account.address], { account: otherAccount.account }),
+        splitter,
+        "OwnableUnauthorizedAccount",
       );
     });
 
@@ -606,10 +610,12 @@ describe("EIP3009SplitterV1", function () {
 
       const newImplementation = await networkConn.viem.deployContract("EIP3009SplitterV1");
 
-      await assert.rejects(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
           account: otherAccount.account,
         }),
+        splitter,
+        "OwnableUnauthorizedAccount",
       );
     });
   });

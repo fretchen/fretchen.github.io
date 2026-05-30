@@ -89,7 +89,7 @@ function loadConfig(): SplitterV1DeployConfig {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating EIP3009SplitterV1 contract...");
@@ -147,7 +147,7 @@ async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void>
 export async function deploySplitterV1(): Promise<
   boolean | { contract: unknown; address: string; deploymentInfo: unknown }
 > {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   const networkName = connection.networkName;

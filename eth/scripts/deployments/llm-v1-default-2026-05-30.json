@@ -1,9 +1,9 @@
 {
   "network": "default",
-  "timestamp": "2026-05-30T07:10:15.555Z",
-  "blockNumber": 2,
-  "proxyAddress": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-  "implementationAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "timestamp": "2026-05-30T08:19:03.221Z",
+  "blockNumber": 116,
+  "proxyAddress": "0x1c85638e118b37167e9298c2268758e058DdfDA0",
+  "implementationAddress": "0xD84379CEae14AA33C123Af12424A37803F885889",
   "adminAddress": "0x0000000000000000000000000000000000000000",
   "contractType": "LLMv1",
   "deploymentOptions": {

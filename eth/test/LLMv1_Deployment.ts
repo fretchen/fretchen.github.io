@@ -25,7 +25,7 @@ let upgradesApi: any;
 
 describe("LLMv1 - Deployment Tests", function () {
   before(async () => {
-    connection = await hre.network.getOrCreate("hardhat");
+    connection = await hre.network.getOrCreate();
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -153,7 +153,7 @@ describe("LLMv1 - Deployment Tests", function () {
           const llmV1 = await ethers.getContractAt("LLMv1", result.address);
           expect(llmV1).to.not.equal(null);
           // Verify deployment info
-          expect(result.deploymentInfo.network).to.equal("hardhat");
+          expect(result.deploymentInfo.network).to.equal("default");
         }
       });
     });
@@ -239,7 +239,7 @@ describe("LLMv1 - Deployment Tests", function () {
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(result.address);
 
           // Clean up deployment file

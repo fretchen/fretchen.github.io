@@ -51,7 +51,7 @@ async function verifyImplementation(implementationAddress: string, contractType:
 }
 
 async function verifyProxy(proxyAddress: string, implementationAddress: string, contractType: string): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   console.log("\n🔄 Verifying proxy contract...");
 

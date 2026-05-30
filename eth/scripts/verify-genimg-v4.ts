@@ -59,7 +59,7 @@ async function verifyImplementation(implementationAddress: string): Promise<void
 }
 
 async function verifyProxy(proxyAddress: string, implementationAddress: string): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   console.log("\n🔄 Verifying proxy contract...");
   console.log(`📍 Proxy Address: ${proxyAddress}`);
@@ -126,7 +126,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 }
 
 async function testContractFunctionality(proxyAddress: string): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   console.log("\n🧪 Testing GenImNFTv4 functionality...");
 
@@ -250,7 +250,7 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
 }
 
 async function main() {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   console.log("🚀 GenImNFTv4 Contract Verification Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");

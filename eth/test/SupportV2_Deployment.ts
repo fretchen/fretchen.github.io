@@ -32,7 +32,7 @@ let upgradesApi: any;
 
 describe("SupportV2 - Deployment Tests", function () {
   before(async () => {
-    connection = await hre.network.getOrCreate("hardhat");
+    connection = await hre.network.getOrCreate();
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -182,7 +182,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
         // Verify file content
         const deploymentInfo = JSON.parse(fs.readFileSync(deploymentFile, "utf8"));
-        expect(deploymentInfo.network).to.equal("hardhat");
+        expect(deploymentInfo.network).to.equal("default");
         expect(deploymentInfo.proxyAddress).to.equal(result!.proxyAddress);
         expect(deploymentInfo.implementationAddress).to.equal(result!.implementationAddress);
       });

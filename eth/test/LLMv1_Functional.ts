@@ -8,7 +8,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("LLMv1 - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.getOrCreate("hardhat");
+    networkConn = await hre.network.getOrCreate();
   });
 
   // Fixture to deploy LLMv1

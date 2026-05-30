@@ -202,7 +202,7 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
 }
 
 async function main() {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   console.log("🚀 Generic Contract Verification Script");
   console.log("=".repeat(60));

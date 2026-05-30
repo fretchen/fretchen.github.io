@@ -14,7 +14,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
  */
 describe("SupportV2 - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.getOrCreate("hardhat");
+    networkConn = await hre.network.getOrCreate();
   });
 
   // Token decimals (USDC uses 6)
@@ -446,10 +446,12 @@ describe("SupportV2 - Functional Tests", function () {
       // Deploy new implementation
       const newImplementation = await networkConn.viem.deployContract("SupportV2");
 
-      await assert.rejects(
+      await networkConn.viem.assertions.revertWithCustomError(
         support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
           account: otherAccount.account,
         }),
+        support,
+        "OwnableUnauthorizedAccount",
       );
     });
   });

@@ -83,7 +83,7 @@ function loadConfig(): SupportV2DeployConfig {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating SupportV2 contract...");
@@ -146,7 +146,7 @@ async function checkDeployerBalance(deployer: {
  * Simulate deployment (dry run)
  */
 async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const networkName = connection.networkName;
   console.log("🧪 Simulating SupportV2 deployment...");
@@ -180,7 +180,7 @@ async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> 
  * - Base Mainnet: npx hardhat run scripts/deploy-support-v2.ts --network base
  */
 async function deploySupportV2() {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   const networkName = connection.networkName;

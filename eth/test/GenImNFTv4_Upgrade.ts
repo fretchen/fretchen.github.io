@@ -26,7 +26,7 @@ let upgradesApi: any;
 
 describe("GenImNFTv4 - Upgrade Tests", function () {
   before(async () => {
-    connection = await hre.network.getOrCreate("hardhat");
+    connection = await hre.network.getOrCreate();
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -230,7 +230,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(proxyAddress);
           expect(deploymentData.upgradeType).to.equal("GenImNFTv3 → GenImNFTv4");
           expect(deploymentData.securityFix).to.equal("CVE-2025-11-26");

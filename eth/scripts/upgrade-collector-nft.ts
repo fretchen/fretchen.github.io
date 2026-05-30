@@ -25,7 +25,7 @@ interface UpgradeOptions {
  * - Skip OZ validation: SKIP_OZ_VALIDATION=true npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
  */
 async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   const networkName = connection.networkName;
@@ -229,7 +229,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
 }
 
 async function validateUpgrade(proxyAddress: string) {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating CollectorNFTv2 upgrade configuration...");
@@ -256,7 +256,7 @@ async function validateUpgrade(proxyAddress: string) {
 }
 
 async function simulateUpgrade(proxyAddress: string) {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🧪 Simulating CollectorNFTv2 upgrade...");
 
@@ -273,17 +273,6 @@ async function simulateUpgrade(proxyAddress: string) {
 
   console.log("🎉 Simulation completed successfully!");
   return true;
-}
-
-// Main execution
-async function main() {
-  try {
-    await upgradeCollectorNFT();
-  } catch (error) {
-    console.error("❌ Upgrade failed:");
-    console.error(error);
-    process.exitCode = 1;
-  }
 }
 
 export { upgradeCollectorNFT, UpgradeOptions };

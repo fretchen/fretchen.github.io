@@ -123,7 +123,7 @@ async function checkDeployerBalance(deployer: {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating GenImNFTv4 contract...");
@@ -159,7 +159,7 @@ async function validateDeployment(): Promise<void> {
  * Simulate deployment (dry run)
  */
 async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const networkName = connection.networkName;
   console.log("🧪 Simulating GenImNFTv4 deployment...");
@@ -200,7 +200,7 @@ async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
  * Configuration is loaded from deploy-genimg-v4.config.json
  */
 async function deployGenImV4() {
-  const connection = await hre.network.getOrCreate("hardhat");
+  const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   const networkName = connection.networkName;

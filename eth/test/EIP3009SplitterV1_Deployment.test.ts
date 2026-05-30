@@ -25,7 +25,7 @@ let upgradesApi: any;
 
 describe("EIP3009SplitterV1 - Deployment Tests", function () {
   before(async () => {
-    connection = await hre.network.getOrCreate("hardhat");
+    connection = await hre.network.getOrCreate();
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -215,7 +215,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
           expect(splitter).to.not.equal(null);
 
           // Verify deployment info
-          expect(result.deploymentInfo.network).to.equal("hardhat");
+          expect(result.deploymentInfo.network).to.equal("default");
           expect(result.deploymentInfo.contractType).to.equal("EIP3009SplitterV1");
           expect(result.deploymentInfo.tokenNote).to.include("supports USDC, EURC");
         }
@@ -358,7 +358,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(result.address);
           expect(deploymentData.contractType).to.equal("EIP3009SplitterV1");
           expect(deploymentData.tokenNote).to.include("Token is passed as parameter");

@@ -1,3 +1,4 @@
+import { describe, it, before } from "node:test";
 import { expect } from "chai";
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
@@ -227,7 +228,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
 
         // Should revert with an ERC721 error about nonexistent token
         await _networkConn.viem.assertions.revert(
-          () => contract.read.tokenURI([999n]),
+          contract.read.tokenURI([999n]),
         );
       });
     });
@@ -372,7 +373,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
 
         // Should revert when trying to get token by index for empty wallet
         await _networkConn.viem.assertions.revert(
-          () => contract.read.tokenOfOwnerByIndex([recipientAddress, 0n]),
+          contract.read.tokenOfOwnerByIndex([recipientAddress, 0n]),
         );
       });
     });
@@ -452,11 +453,11 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
 
         // Versuche, Status eines nicht-existierenden Tokens abzufragen
         await _networkConn.viem.assertions.revertWith(
-          () => contract.read.isImageUpdated([999n]),
+          contract.read.isImageUpdated([999n]),
           "Token does not exist",
         );
         await _networkConn.viem.assertions.revertWith(
-          () => contract.read.getAuthorizedImageUpdater([999n]),
+          contract.read.getAuthorizedImageUpdater([999n]),
           "Token does not exist",
         );
       });
@@ -480,7 +481,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
 
         // 4. Zweites Update sollte fehlschlagen
         await _networkConn.viem.assertions.revert(
-          () => otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"]),
+          otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"]),
         );
       });
     });

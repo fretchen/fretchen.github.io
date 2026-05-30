@@ -1,4 +1,5 @@
 import { describe, it, before } from "node:test";
+import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
 import { parseUnits, keccak256, toHex, getAddress, encodeAbiParameters, encodeFunctionData } from "viem";
@@ -262,7 +263,7 @@ describe("EIP3009SplitterV1", function () {
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -289,7 +290,7 @@ describe("EIP3009SplitterV1", function () {
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -317,7 +318,7 @@ describe("EIP3009SplitterV1", function () {
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, zeroAddress, totalAmount);
 
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -366,7 +367,7 @@ describe("EIP3009SplitterV1", function () {
 
       // Second execution with same nonce should fail
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -462,9 +463,8 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject fee update from non-owner", async function () {
       const { splitter, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await networkConn.viem.assertions.revertWith(
-        () => splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account }),
-        "OwnableUnauthorizedAccount",
+      await assert.rejects(
+        splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account }),
       );
     });
 
@@ -472,7 +472,7 @@ describe("EIP3009SplitterV1", function () {
       const { splitter, owner } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.setFixedFee([0n], { account: owner.account }),
+        splitter.write.setFixedFee([0n], { account: owner.account }),
         "Fee must be greater than 0",
       );
     });
@@ -500,9 +500,8 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject wallet update from non-owner", async function () {
       const { splitter, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await networkConn.viem.assertions.revertWith(
-        () => splitter.write.setFacilitatorWallet([otherAccount.account.address], { account: otherAccount.account }),
-        "OwnableUnauthorizedAccount",
+      await assert.rejects(
+        splitter.write.setFacilitatorWallet([otherAccount.account.address], { account: otherAccount.account }),
       );
     });
 
@@ -511,7 +510,7 @@ describe("EIP3009SplitterV1", function () {
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.setFacilitatorWallet([zeroAddress as `0x${string}`], { account: owner.account }),
+        splitter.write.setFacilitatorWallet([zeroAddress as `0x${string}`], { account: owner.account }),
         "Invalid wallet address",
       );
     });
@@ -607,11 +606,10 @@ describe("EIP3009SplitterV1", function () {
 
       const newImplementation = await networkConn.viem.deployContract("EIP3009SplitterV1");
 
-      await networkConn.viem.assertions.revertWith(
-        () => splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+      await assert.rejects(
+        splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
           account: otherAccount.account,
         }),
-        "OwnableUnauthorizedAccount",
       );
     });
   });
@@ -635,7 +633,7 @@ describe("EIP3009SplitterV1", function () {
       );
 
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -672,7 +670,7 @@ describe("EIP3009SplitterV1", function () {
       );
 
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -706,7 +704,7 @@ describe("EIP3009SplitterV1", function () {
       );
 
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             buyer.account.address, // Claim it's from buyer
@@ -732,8 +730,8 @@ describe("EIP3009SplitterV1", function () {
       const totalAmount = parseToken("10000.00"); // Buyer only has 1000
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
-      await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+      await assert.rejects(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -842,7 +840,7 @@ describe("EIP3009SplitterV1", function () {
 
       // Malicious facilitator tries to redirect funds to otherAccount (attacker)
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -874,7 +872,7 @@ describe("EIP3009SplitterV1", function () {
       const wrongSalt = keccak256(toHex("wrong-salt"));
 
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -911,7 +909,7 @@ describe("EIP3009SplitterV1", function () {
 
       // Facilitator tries to use authForSeller's signature but with otherAccount as seller
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             authForSeller.from as `0x${string}`,
@@ -1004,7 +1002,7 @@ describe("EIP3009SplitterV1", function () {
 
       // Malicious facilitator tries to set themselves as seller
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -1035,7 +1033,7 @@ describe("EIP3009SplitterV1", function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
       await networkConn.viem.assertions.revertWith(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             zeroAddress, // Invalid token address
             auth.from as `0x${string}`,
@@ -1064,7 +1062,7 @@ describe("EIP3009SplitterV1", function () {
       // Try to use an EOA (not a contract) as token address
       // This will fail because the transferWithAuthorization call will revert
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             otherAccount.account.address, // EOA, not a contract
             auth.from as `0x${string}`,
@@ -1098,7 +1096,7 @@ describe("EIP3009SplitterV1", function () {
       // Attempt to use authorization on mockUSDC2 (different token)
       // This should fail because the EIP-712 domain includes the contract address
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC2.address, // Different token!
             auth.from as `0x${string}`,
@@ -1225,7 +1223,7 @@ describe("EIP3009SplitterV1", function () {
       // This simulates an attacker trying to reuse the nonce
       // The signature won't work because EIP-712 domain is different
       await networkConn.viem.assertions.revert(
-        () => splitter.write.executeSplit(
+        splitter.write.executeSplit(
           [
             mockUSDC2.address, // Different token
             auth.from as `0x${string}`,

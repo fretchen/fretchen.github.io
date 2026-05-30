@@ -8,6 +8,8 @@
  * Based on the structure of GenImNFTSharedTests.ts
  */
 
+import { describe, it, before } from "node:test";
+import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
 import { parseEther, getAddress, formatEther, type Address } from "viem";
@@ -348,7 +350,7 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
 
         // Should throw error
         await _networkConn.viem.assertions.revert(
-          () => collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
+          collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
             value: insufficientPayment,
           }),
@@ -361,8 +363,8 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const nonExistentTokenId = 999n;
         const arbitraryURI = "ipfs://test1"; // Use any valid URI since token doesn't exist
 
-        await _networkConn.viem.assertions.revert(
-          () => collectorNFT.write.mintCollectorNFT([nonExistentTokenId, arbitraryURI], {
+        await assert.rejects(
+          collectorNFT.write.mintCollectorNFT([nonExistentTokenId, arbitraryURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),
@@ -668,7 +670,7 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
 
         // Should now fail
         await _networkConn.viem.assertions.revert(
-          () => collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
+          collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),

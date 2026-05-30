@@ -98,7 +98,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Try to update without being whitelisted
       await networkConn.viem.assertions.revertWith(
-        () => contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account }),
+        contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account }),
         "Not authorized agent",
       );
 
@@ -121,7 +121,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Second update should fail
       await networkConn.viem.assertions.revertWith(
-        () => contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account }),
+        contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account }),
         "Image already updated",
       );
     });
@@ -134,7 +134,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Try to update non-existent token
       await networkConn.viem.assertions.revertWith(
-        () => contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account }),
+        contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account }),
         "Token does not exist",
       );
     });
@@ -161,7 +161,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Should now be rejected
       await networkConn.viem.assertions.revertWith(
-        () => contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account }),
+        contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account }),
         "Not authorized agent",
       );
     });
@@ -357,7 +357,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
       // Step 3: Attacker (unauthorized third party) watches for mint event and attacks
       // THE EXPLOIT IS NOW BLOCKED: Attacker tries to call requestImageUpdate
       await networkConn.viem.assertions.revertWith(
-        () => contract.write.requestImageUpdate([tokenId, "ipfs://attacker-controlled-url"], {
+        contract.write.requestImageUpdate([tokenId, "ipfs://attacker-controlled-url"], {
           account: recipient.account,
         }),
         "Not authorized agent",

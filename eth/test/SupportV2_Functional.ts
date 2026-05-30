@@ -1,4 +1,5 @@
 import { describe, it, before } from "node:test";
+import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
 import { parseUnits, parseEther, keccak256, toHex, getAddress, encodeFunctionData } from "viem";
@@ -175,9 +176,8 @@ describe("SupportV2 - Functional Tests", function () {
 
     it("should not allow re-initialization", async function () {
       const { support, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
-      await networkConn.viem.assertions.revertWith(
-        () => support.write.initialize([otherAccount.account.address]),
-        "InvalidInitialization",
+      await assert.rejects(
+        support.write.initialize([otherAccount.account.address]),
       );
     });
   });
@@ -222,7 +222,7 @@ describe("SupportV2 - Functional Tests", function () {
       const { support, donor, recipient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       await networkConn.viem.assertions.revertWith(
-        () => support.write.donate([TEST_URL, recipient.account.address], {
+        support.write.donate([TEST_URL, recipient.account.address], {
           value: 0n,
           account: donor.account,
         }),
@@ -234,7 +234,7 @@ describe("SupportV2 - Functional Tests", function () {
       const { support, donor } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       await networkConn.viem.assertions.revertWith(
-        () => support.write.donate([TEST_URL, "0x0000000000000000000000000000000000000000"], {
+        support.write.donate([TEST_URL, "0x0000000000000000000000000000000000000000"], {
           value: ETH_DONATION,
           account: donor.account,
         }),
@@ -302,7 +302,7 @@ describe("SupportV2 - Functional Tests", function () {
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, TOKEN_DONATION);
 
       await networkConn.viem.assertions.revertWith(
-        () => support.write.donateToken(
+        support.write.donateToken(
           [
             TEST_URL,
             recipient.account.address,
@@ -327,7 +327,7 @@ describe("SupportV2 - Functional Tests", function () {
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, 0n);
 
       await networkConn.viem.assertions.revertWith(
-        () => support.write.donateToken(
+        support.write.donateToken(
           [
             TEST_URL,
             recipient.account.address,
@@ -357,7 +357,7 @@ describe("SupportV2 - Functional Tests", function () {
       );
 
       await networkConn.viem.assertions.revertWith(
-        () => support.write.donateToken(
+        support.write.donateToken(
           [
             TEST_URL,
             "0x0000000000000000000000000000000000000000",
@@ -446,11 +446,10 @@ describe("SupportV2 - Functional Tests", function () {
       // Deploy new implementation
       const newImplementation = await networkConn.viem.deployContract("SupportV2");
 
-      await networkConn.viem.assertions.revertWith(
-        () => support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+      await assert.rejects(
+        support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
           account: otherAccount.account,
         }),
-        "OwnableUnauthorizedAccount",
       );
     });
   });

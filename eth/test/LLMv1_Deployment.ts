@@ -1,8 +1,17 @@
-import { expect } from "chai";
+import { describe, it, before } from "node:test";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { deployLLMv1 } from "../scripts/deploy-llm-v1";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type LLMv1ConfigOptions = Partial<{
   validateOnly: boolean;
@@ -11,21 +20,32 @@ type LLMv1ConfigOptions = Partial<{
   waitConfirmations: number;
 }>;
 
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let upgradesApi: any;
+
 describe("LLMv1 - Deployment Tests", function () {
+  before(async () => {
+    connection = await hre.network.create();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   // Fixture to deploy LLMv1 using OpenZeppelin upgrades
   async function deployLLMv1Fixture() {
-    const [owner, otherAccount] = await hre.ethers.getSigners();
+    const [owner, otherAccount] = await ethers.getSigners();
 
     // Deploy LLMv1 using OpenZeppelin upgrades
-    const LLMv1Factory = await hre.ethers.getContractFactory("LLMv1");
-    const llmProxy = await hre.upgrades.deployProxy(LLMv1Factory, [], {
+    const LLMv1Factory = await ethers.getContractFactory("LLMv1");
+    const llmProxy = await upgradesApi.deployProxy(LLMv1Factory, [], {
       initializer: "initialize",
       kind: "uups",
     });
     await llmProxy.waitForDeployment();
 
     const proxyAddress = await llmProxy.getAddress();
-    const llmContract = await hre.ethers.getContractAt("LLMv1", proxyAddress);
+    const llmContract = await ethers.getContractAt("LLMv1", proxyAddress);
 
     return {
       llmContract,
@@ -102,7 +122,7 @@ describe("LLMv1 - Deployment Tests", function () {
 
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-      const implementation = await hre.ethers.provider.getStorage(proxyAddress, implementationSlot);
+      const implementation = await ethers.provider.getStorage(proxyAddress, implementationSlot);
 
       expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
     });
@@ -132,7 +152,7 @@ describe("LLMv1 - Deployment Tests", function () {
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const llmV1 = await hre.ethers.getContractAt("LLMv1", result.address);
+          const llmV1 = await ethers.getContractAt("LLMv1", result.address);
           expect(llmV1).to.not.equal(null);
           // Verify deployment info
           expect(result.deploymentInfo.network).to.equal("hardhat");

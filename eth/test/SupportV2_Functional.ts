@@ -1,7 +1,12 @@
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { expect } from "chai";
+import { describe, it, before } from "node:test";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
 import { parseUnits, parseEther, keccak256, toHex, getAddress, encodeFunctionData } from "viem";
+
+let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 /**
  * SupportV2 Functional Tests
@@ -10,6 +15,10 @@ import { parseUnits, parseEther, keccak256, toHex, getAddress, encodeFunctionDat
  * Proxy is deployed manually via ERC1967Proxy contract.
  */
 describe("SupportV2 - Functional Tests", function () {
+  before(async () => {
+    networkConn = await hre.network.create();
+  });
+
   // Token decimals (USDC uses 6)
   const TOKEN_DECIMALS = 6;
   const parseToken = (amount: string) => parseUnits(amount, TOKEN_DECIMALS);
@@ -26,18 +35,18 @@ describe("SupportV2 - Functional Tests", function () {
    * Uses manual proxy deployment (Viem only, no OpenZeppelin Upgrades Plugin)
    */
   async function deploySupportFixture() {
-    const [owner, donor, recipient, otherAccount] = await hre.viem.getWalletClients();
-    const publicClient = await hre.viem.getPublicClient();
+    const [owner, donor, recipient, otherAccount] = await networkConn.viem.getWalletClients();
+    const publicClient = await networkConn.viem.getPublicClient();
 
     // Deploy mock USDC with EIP-3009 support
-    const mockUSDC = await hre.viem.deployContract("MockUSDC_EIP3009");
+    const mockUSDC = await networkConn.viem.deployContract("MockUSDC_EIP3009");
 
     // Mint tokens to donor for testing
     const initialBalance = parseToken("1000"); // 1000 USDC
     await mockUSDC.write.mint([donor.account.address, initialBalance]);
 
     // Deploy SupportV2 implementation
-    const implementation = await hre.viem.deployContract("SupportV2");
+    const implementation = await networkConn.viem.deployContract("SupportV2");
 
     // Encode initialize call
     const initializeData = encodeFunctionData({
@@ -47,13 +56,13 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     // Deploy proxy manually (Viem only)
-    const proxy = await hre.viem.deployContract("ERC1967Proxy", [
+    const proxy = await networkConn.viem.deployContract("ERC1967Proxy", [
       implementation.address,
       initializeData as `0x${string}`,
     ]);
 
     // Get SupportV2 interface at proxy address
-    const support = await hre.viem.getContractAt("SupportV2", proxy.address);
+    const support = await networkConn.viem.getContractAt("SupportV2", proxy.address);
 
     return {
       support,
@@ -86,7 +95,7 @@ describe("SupportV2 - Functional Tests", function () {
     validBeforeOverride?: bigint,
   ) {
     // Get current block timestamp from Hardhat (not Date.now()!)
-    const publicClient = await hre.viem.getPublicClient();
+    const publicClient = await networkConn.viem.getPublicClient();
     const block = await publicClient.getBlock();
     const currentTimestamp = block.timestamp;
 
@@ -158,17 +167,17 @@ describe("SupportV2 - Functional Tests", function () {
 
   describe("Initialization", function () {
     it("should initialize with correct owner", async function () {
-      const { support, owner } = await loadFixture(deploySupportFixture);
+      const { support, owner } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
       expect(await support.read.owner()).to.equal(getAddress(owner.account.address));
     });
 
     it("should have VERSION = 1", async function () {
-      const { support } = await loadFixture(deploySupportFixture);
+      const { support } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
       expect(await support.read.VERSION()).to.equal(1n);
     });
 
     it("should not allow re-initialization", async function () {
-      const { support, otherAccount } = await loadFixture(deploySupportFixture);
+      const { support, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
       await expect(support.write.initialize([otherAccount.account.address])).to.be.rejectedWith(
         "InvalidInitialization",
       );
@@ -177,7 +186,7 @@ describe("SupportV2 - Functional Tests", function () {
 
   describe("ETH Donations", function () {
     it("should accept ETH donation and increment likes", async function () {
-      const { support, donor, recipient, publicClient } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient, publicClient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const recipientBalanceBefore = await publicClient.getBalance({
         address: recipient.account.address,
@@ -200,7 +209,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should emit Donation event with correct params", async function () {
-      const { support, donor, recipient, publicClient } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient, publicClient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const hash = await support.write.donate([TEST_URL, recipient.account.address], {
         value: ETH_DONATION,
@@ -212,7 +221,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation with zero ETH", async function () {
-      const { support, donor, recipient } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       await expect(
         support.write.donate([TEST_URL, recipient.account.address], {
@@ -223,7 +232,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation to zero address", async function () {
-      const { support, donor } = await loadFixture(deploySupportFixture);
+      const { support, donor } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       await expect(
         support.write.donate([TEST_URL, "0x0000000000000000000000000000000000000000"], {
@@ -234,7 +243,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should increment likes for multiple donations to same URL", async function () {
-      const { support, donor, recipient } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       await support.write.donate([TEST_URL, recipient.account.address], {
         value: ETH_DONATION,
@@ -255,7 +264,7 @@ describe("SupportV2 - Functional Tests", function () {
 
   describe("Token Donations (EIP-3009)", function () {
     it("should accept token donation with valid signature", async function () {
-      const { support, donor, recipient, mockUSDC } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const recipientBalanceBefore = await mockUSDC.read.balanceOf([recipient.account.address]);
 
@@ -288,7 +297,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation with zero token address", async function () {
-      const { support, donor, recipient, mockUSDC } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, TOKEN_DONATION);
 
@@ -312,7 +321,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation with zero amount", async function () {
-      const { support, donor, recipient, mockUSDC } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, 0n);
 
@@ -336,7 +345,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation to zero address", async function () {
-      const { support, donor, mockUSDC } = await loadFixture(deploySupportFixture);
+      const { support, donor, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const auth = await createTokenAuthorization(
         mockUSDC,
@@ -367,12 +376,12 @@ describe("SupportV2 - Functional Tests", function () {
 
   describe("URL Likes", function () {
     it("should return 0 for URL with no donations", async function () {
-      const { support } = await loadFixture(deploySupportFixture);
+      const { support } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
       expect(await support.read.getLikesForUrl(["https://example.com/no-donations"])).to.equal(0n);
     });
 
     it("should track likes separately for different URLs", async function () {
-      const { support, donor, recipient } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const url1 = "https://fretchen.github.io/blog/post-1";
       const url2 = "https://fretchen.github.io/blog/post-2";
@@ -395,7 +404,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should count both ETH and token donations", async function () {
-      const { support, donor, recipient, mockUSDC } = await loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       // ETH donation
       await support.write.donate([TEST_URL, recipient.account.address], {
@@ -429,10 +438,10 @@ describe("SupportV2 - Functional Tests", function () {
 
   describe("UUPS Upgrade Authorization", function () {
     it("should only allow owner to upgrade", async function () {
-      const { support, otherAccount } = await loadFixture(deploySupportFixture);
+      const { support, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       // Deploy new implementation
-      const newImplementation = await hre.viem.deployContract("SupportV2");
+      const newImplementation = await networkConn.viem.deployContract("SupportV2");
 
       await expect(
         support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {

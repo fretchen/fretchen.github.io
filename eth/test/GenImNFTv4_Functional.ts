@@ -57,7 +57,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
   describe("Image Updates with Authorization (Direct V4 Deployment)", function () {
     it("Should allow whitelisted agent to request image update and receive payment", async function () {
       const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
-      const publicClient = await hre.viem.getPublicClient();
+      const publicClient = await networkConn.viem.getPublicClient();
 
       const mintPrice = await contract.read.mintPrice();
 
@@ -338,7 +338,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
       // V4 Fix: EIP-8004 compatible whitelist - only authorized agents can update
 
       const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
-      const publicClient = await hre.viem.getPublicClient();
+      const publicClient = await networkConn.viem.getPublicClient();
       const mintPrice = await contract.read.mintPrice();
 
       // Step 1: Owner mints a token WITHOUT setting defaultImageUpdater

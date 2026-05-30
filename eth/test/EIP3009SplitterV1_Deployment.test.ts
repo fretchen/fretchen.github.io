@@ -1,8 +1,17 @@
-import { expect } from "chai";
+import { describe, it, before } from "node:test";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { deploySplitterV1 } from "../scripts/deploy-splitter-v1";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type SplitterV1ConfigOptions = Partial<{
   validateOnly: boolean;
@@ -11,23 +20,34 @@ type SplitterV1ConfigOptions = Partial<{
   waitConfirmations: number;
 }>;
 
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let upgradesApi: any;
+
 describe("EIP3009SplitterV1 - Deployment Tests", function () {
+  before(async () => {
+    connection = await hre.network.create();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   // Fixture to deploy EIP3009SplitterV1 using OpenZeppelin upgrades
   async function deploySplitterFixture() {
-    const [owner, facilitator, otherAccount] = await hre.ethers.getSigners();
+    const [owner, facilitator, otherAccount] = await ethers.getSigners();
 
     // Deploy EIP3009SplitterV1 using OpenZeppelin upgrades
-    const SplitterFactory = await hre.ethers.getContractFactory("EIP3009SplitterV1");
+    const SplitterFactory = await ethers.getContractFactory("EIP3009SplitterV1");
     const fixedFee = "10000"; // 1 cent in USDC (6 decimals)
 
-    const splitterProxy = await hre.upgrades.deployProxy(SplitterFactory, [facilitator.address, fixedFee], {
+    const splitterProxy = await upgradesApi.deployProxy(SplitterFactory, [facilitator.address, fixedFee], {
       initializer: "initialize",
       kind: "uups",
     });
     await splitterProxy.waitForDeployment();
 
     const proxyAddress = await splitterProxy.getAddress();
-    const splitterContract = await hre.ethers.getContractAt("EIP3009SplitterV1", proxyAddress);
+    const splitterContract = await ethers.getContractAt("EIP3009SplitterV1", proxyAddress);
 
     return {
       splitterContract,
@@ -42,7 +62,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   // Helper function to create a temporary config file for testing
   async function createTempConfig(options: SplitterV1ConfigOptions = {}) {
     const tempConfigPath = path.join(__dirname, "../scripts/deploy-splitter-v1.config-test.json");
-    const [, facilitator] = await hre.ethers.getSigners();
+    const [, facilitator] = await ethers.getSigners();
 
     const config = {
       parameters: {
@@ -115,7 +135,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-      const implementation = await hre.ethers.provider.getStorage(proxyAddress, implementationSlot);
+      const implementation = await ethers.provider.getStorage(proxyAddress, implementationSlot);
 
       expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
     });
@@ -193,7 +213,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const splitter = await hre.ethers.getContractAt("EIP3009SplitterV1", result.address);
+          const splitter = await ethers.getContractAt("EIP3009SplitterV1", result.address);
           expect(splitter).to.not.equal(null);
 
           // Verify deployment info
@@ -355,7 +375,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   describe("Configuration Validation", function () {
     it("Should reject config with invalid fixed fee", async function () {
       const invalidConfigPath = path.join(__dirname, "../scripts/deploy-splitter-v1.config-invalid-fee.json");
-      const [, facilitator] = await hre.ethers.getSigners();
+      const [, facilitator] = await ethers.getSigners();
 
       const invalidConfig = {
         parameters: {
@@ -417,8 +437,8 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
     it("Should verify implementation contract exists", async function () {
       const { proxyAddress } = await deploySplitterFixture();
 
-      const implementationAddress = await hre.upgrades.erc1967.getImplementationAddress(proxyAddress);
-      const implementationCode = await hre.ethers.provider.getCode(implementationAddress);
+      const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
+      const implementationCode = await ethers.provider.getCode(implementationAddress);
 
       expect(implementationCode).to.not.equal("0x");
       expect(implementationCode.length).to.be.greaterThan(2); // More than just "0x"
@@ -428,7 +448,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
       const { proxyAddress } = await deploySplitterFixture();
 
       // UUPS proxies use zero address for admin (upgrade logic in implementation)
-      const adminAddress = await hre.upgrades.erc1967.getAdminAddress(proxyAddress);
+      const adminAddress = await upgradesApi.erc1967.getAdminAddress(proxyAddress);
 
       // For UUPS, admin should be zero address
       expect(adminAddress).to.equal("0x0000000000000000000000000000000000000000");

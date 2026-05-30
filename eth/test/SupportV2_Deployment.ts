@@ -1,9 +1,18 @@
-import { expect } from "chai";
+import { describe, it, before, afterEach } from "node:test";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { deploySupportV2, MIN_DEPLOYMENT_BALANCE } from "../scripts/deploy-support-v2";
 import * as fs from "fs";
 import * as path from "path";
 import { parseEther } from "viem";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type SupportV2ConfigOptions = Partial<{
   validateOnly: boolean;
@@ -18,7 +27,18 @@ type SupportV2ConfigOptions = Partial<{
  * Tests the deployment script (deploy-support-v2.ts) with various configurations.
  * Uses ethers + OpenZeppelin Upgrades Plugin.
  */
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let upgradesApi: any;
+
 describe("SupportV2 - Deployment Tests", function () {
+  before(async () => {
+    connection = await hre.network.create();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   const CONFIG_PATH = path.join(__dirname, "../scripts/deploy-support-v2.config.json");
   const BACKUP_PATH = path.join(__dirname, "../scripts/deploy-support-v2.config.json.backup");
   const TEMP_CONFIG_PATH = path.join(__dirname, "../scripts/deploy-support-v2.config-test.json");
@@ -27,7 +47,7 @@ describe("SupportV2 - Deployment Tests", function () {
    * Helper: Create a temporary config file for testing
    */
   async function createTempConfig(options: SupportV2ConfigOptions = {}, owner?: string) {
-    const [deployer] = await hre.ethers.getSigners();
+    const [deployer] = await ethers.getSigners();
 
     const config = {
       parameters: {
@@ -110,7 +130,7 @@ describe("SupportV2 - Deployment Tests", function () {
         expect(result).to.have.property("implementationAddress");
 
         // Verify the deployed contract
-        const support = await hre.ethers.getContractAt("SupportV2", result!.proxyAddress);
+        const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
         expect(await support.VERSION()).to.equal(1n);
       });
     });
@@ -134,7 +154,7 @@ describe("SupportV2 - Deployment Tests", function () {
     });
 
     it("should set correct owner from config", async function () {
-      const [, customOwner] = await hre.ethers.getSigners();
+      const [, customOwner] = await ethers.getSigners();
 
       await withTempConfig(
         { dryRun: false },
@@ -143,7 +163,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
           expect(result).to.not.be.undefined;
 
-          const support = await hre.ethers.getContractAt("SupportV2", result!.proxyAddress);
+          const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
           const contractOwner = await support.owner();
 
           expect(contractOwner.toLowerCase()).to.equal(customOwner.address.toLowerCase());
@@ -223,8 +243,8 @@ describe("SupportV2 - Deployment Tests", function () {
 
           expect(result).to.not.be.undefined;
 
-          const support = await hre.ethers.getContractAt("SupportV2", result!.proxyAddress);
-          const [deployer] = await hre.ethers.getSigners();
+          const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
+          const [deployer] = await ethers.getSigners();
 
           expect((await support.owner()).toLowerCase()).to.equal(deployer.address.toLowerCase());
         },
@@ -271,7 +291,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
         // Verify proxy implementation slot is set
         const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-        const implementation = await hre.ethers.provider.getStorage(result!.proxyAddress, implementationSlot);
+        const implementation = await ethers.provider.getStorage(result!.proxyAddress, implementationSlot);
 
         expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
       });
@@ -284,7 +304,7 @@ describe("SupportV2 - Deployment Tests", function () {
         expect(result).to.not.be.undefined;
 
         // UUPS uses zero address for admin (upgrade logic in implementation)
-        const adminAddress = await hre.upgrades.erc1967.getAdminAddress(result!.proxyAddress);
+        const adminAddress = await upgradesApi.erc1967.getAdminAddress(result!.proxyAddress);
         expect(adminAddress).to.equal("0x0000000000000000000000000000000000000000");
       });
     });
@@ -297,7 +317,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
         expect(result).to.not.be.undefined;
 
-        const support = await hre.ethers.getContractAt("SupportV2", result!.proxyAddress);
+        const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
         expect(await support.VERSION()).to.equal(1n);
       });
     });
@@ -308,8 +328,8 @@ describe("SupportV2 - Deployment Tests", function () {
 
         expect(result).to.not.be.undefined;
 
-        const support = await hre.ethers.getContractAt("SupportV2", result!.proxyAddress);
-        const [, otherAccount] = await hre.ethers.getSigners();
+        const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
+        const [, otherAccount] = await ethers.getSigners();
 
         await expect(support.initialize(otherAccount.address)).to.be.rejected;
       });
@@ -322,8 +342,8 @@ describe("SupportV2 - Deployment Tests", function () {
         expect(result).to.not.be.undefined;
 
         // Deploy new implementation
-        const SupportV2Factory = await hre.ethers.getContractFactory("SupportV2");
-        const upgraded = await hre.upgrades.upgradeProxy(result!.proxyAddress, SupportV2Factory, {
+        const SupportV2Factory = await ethers.getContractFactory("SupportV2");
+        const upgraded = await upgradesApi.upgradeProxy(result!.proxyAddress, SupportV2Factory, {
           kind: "uups",
         });
         await upgraded.waitForDeployment();
@@ -339,11 +359,11 @@ describe("SupportV2 - Deployment Tests", function () {
 
         expect(result).to.not.be.undefined;
 
-        const support = await hre.ethers.getContractAt("SupportV2", result!.proxyAddress);
+        const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
 
         // Create some state
         const testUrl = "https://fretchen.github.io/blog/upgrade-test";
-        const [, donor] = await hre.ethers.getSigners();
+        const [, donor] = await ethers.getSigners();
 
         await support.connect(donor).donate(testUrl, donor.address, {
           value: parseEther("0.0001"),
@@ -353,8 +373,8 @@ describe("SupportV2 - Deployment Tests", function () {
         expect(likesBefore).to.equal(1n);
 
         // Upgrade
-        const SupportV2Factory = await hre.ethers.getContractFactory("SupportV2");
-        const upgraded = await hre.upgrades.upgradeProxy(result!.proxyAddress, SupportV2Factory, {
+        const SupportV2Factory = await ethers.getContractFactory("SupportV2");
+        const upgraded = await upgradesApi.upgradeProxy(result!.proxyAddress, SupportV2Factory, {
           kind: "uups",
         });
         await upgraded.waitForDeployment();

@@ -1,13 +1,22 @@
-import { expect } from "chai";
+import { describe, it, before } from "node:test";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
+let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+
 describe("LLMv1 - Functional Tests", function () {
+  before(async () => {
+    networkConn = await hre.network.create();
+  });
+
   // Fixture to deploy LLMv1
   async function deployLLMv1Fixture() {
     // The accounts used for testing
-    const [owner, otherAccount, serviceProvider] = await hre.viem.getWalletClients();
+    const [owner, otherAccount, serviceProvider] = await networkConn.viem.getWalletClients();
 
     // Deploy LLMv1 using ethers (required for OpenZeppelin upgrades)
     const LLMv1Factory = await hre.ethers.getContractFactory("LLMv1");
@@ -18,7 +27,7 @@ describe("LLMv1 - Functional Tests", function () {
     await llmProxy.waitForDeployment();
 
     const proxyAddress = await llmProxy.getAddress();
-    const llmContract = await hre.viem.getContractAt("LLMv1", proxyAddress);
+    const llmContract = await networkConn.viem.getContractAt("LLMv1", proxyAddress);
 
     return {
       llmContract,
@@ -31,7 +40,7 @@ describe("LLMv1 - Functional Tests", function () {
 
   describe("Basic Deposit Functionality", function () {
     it("Should update balance after deposit", async function () {
-      const { llmContract, otherAccount } = await loadFixture(deployLLMv1Fixture);
+      const { llmContract, otherAccount } = await networkConn.networkHelpers.loadFixture(deployLLMv1Fixture);
 
       // pay some money to the contract
       const DEPOSIT = hre.ethers.parseEther("0.001");
@@ -48,7 +57,7 @@ describe("LLMv1 - Functional Tests", function () {
 
   describe("Get some money to the service provider", function () {
     it("Process a small batch", async function () {
-      const { llmContract, otherAccount, serviceProvider } = await loadFixture(deployLLMv1Fixture);
+      const { llmContract, otherAccount, serviceProvider } = await networkConn.networkHelpers.loadFixture(deployLLMv1Fixture);
 
       // pay some money to the contract
       const DEPOSIT = hre.ethers.parseEther("0.001");
@@ -120,7 +129,7 @@ describe("LLMv1 - Functional Tests", function () {
       // 4. Get the proofs for each leaf (by index!)
       const proofs = llmLeafsArray.map((_, i) => tree.getProof(i));
 
-      const publicClient = await hre.viem.getPublicClient();
+      const publicClient = await networkConn.viem.getPublicClient();
       const initialServiceBalance = await publicClient.getBalance({ address: serviceProvider.account.address });
       console.log("Initial service provider balance:", initialServiceBalance.toString());
       // 5. Call processBatch with the struct array and the proofs

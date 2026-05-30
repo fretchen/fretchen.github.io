@@ -16,7 +16,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("GenImNFTv4 - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.create("hardhat");
+    networkConn = await hre.network.getOrCreate("hardhat");
     setNetworkConn(networkConn);
   });
 

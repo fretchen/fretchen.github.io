@@ -26,7 +26,7 @@ let upgradesApi: any;
 
 describe("GenImNFTv4 - Upgrade Tests", function () {
   before(async () => {
-    connection = await hre.network.create("hardhat");
+    connection = await hre.network.getOrCreate("hardhat");
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });

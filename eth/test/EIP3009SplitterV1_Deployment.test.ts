@@ -25,7 +25,7 @@ let upgradesApi: any;
 
 describe("EIP3009SplitterV1 - Deployment Tests", function () {
   before(async () => {
-    connection = await hre.network.create("hardhat");
+    connection = await hre.network.getOrCreate("hardhat");
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });

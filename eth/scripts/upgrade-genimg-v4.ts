@@ -113,7 +113,7 @@ function loadConfig(): UpgradeV4Config {
  * Configuration is loaded from upgrade-genimg-v4.config.json
  */
 async function upgradeToV4() {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   const networkName = connection.networkName;
@@ -450,7 +450,7 @@ async function upgradeToV4() {
 }
 
 async function validateUpgrade(proxyAddress: string) {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating upgrade configuration...");

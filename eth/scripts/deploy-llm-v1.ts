@@ -79,7 +79,7 @@ function loadConfig(): LLMv1Config {
  * Configuration is loaded from llm-v1.config.json
  */
 async function deployLLMv1() {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
   const networkName = connection.networkName;
@@ -229,7 +229,7 @@ async function deployLLMv1() {
 }
 
 async function validateDeployment() {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   console.log("🔍 Validating deployment configuration...");
 
@@ -244,7 +244,7 @@ async function validateDeployment() {
 }
 
 async function simulateDeployment() {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   console.log("🧪 Simulating deployment...");
 

@@ -7,7 +7,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("EIP3009SplitterV1", function () {
   before(async () => {
-    networkConn = await hre.network.create("hardhat");
+    networkConn = await hre.network.getOrCreate("hardhat");
   });
 
   // Token decimals (USDC uses 6)

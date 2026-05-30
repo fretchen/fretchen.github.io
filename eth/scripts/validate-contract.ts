@@ -79,7 +79,7 @@ interface DeploymentData {
 }
 
 async function validateContract(proxyAddress: string): Promise<ContractInfo> {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   console.log(`\n🔍 Validating GenImNFT contract at: ${proxyAddress}`);
   console.log("=".repeat(50));
@@ -165,7 +165,7 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
 }
 
 async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTInfo> {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   console.log(`\n🔍 Validating CollectorNFT contract at: ${proxyAddress}`);
   console.log("=".repeat(50));
@@ -239,7 +239,7 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
 }
 
 async function validateImplementation(implementationAddress: string, contractName: string): Promise<void> {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   console.log(`\n🔧 Validating ${contractName} implementation at: ${implementationAddress}`);
   console.log("=".repeat(50));
@@ -274,7 +274,7 @@ async function validateImplementation(implementationAddress: string, contractNam
 }
 
 async function checkUpgradeReadiness(proxyAddress: string, contractType: string = "GenImNFTv2"): Promise<void> {
-  const connection = await hre.network.create();
+  const connection = await hre.network.getOrCreate("hardhat");
   const { ethers } = connection;
   console.log(`\n🔄 Checking upgrade readiness for ${contractType}...`);
   console.log("=".repeat(30));

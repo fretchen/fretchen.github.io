@@ -227,9 +227,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const { contract } = await getFixture();
 
         // Should revert with an ERC721 error about nonexistent token
-        await _networkConn.viem.assertions.revert(
-          contract.read.tokenURI([999n]),
-        );
+        await _networkConn.viem.assertions.revert(contract.read.tokenURI([999n]));
       });
     });
 
@@ -372,9 +370,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         expect(await contract.read.balanceOf([recipientAddress])).to.equal(0n);
 
         // Should revert when trying to get token by index for empty wallet
-        await _networkConn.viem.assertions.revert(
-          contract.read.tokenOfOwnerByIndex([recipientAddress, 0n]),
-        );
+        await _networkConn.viem.assertions.revert(contract.read.tokenOfOwnerByIndex([recipientAddress, 0n]));
       });
     });
   };
@@ -452,10 +448,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         const { contract } = await getFixture();
 
         // Versuche, Status eines nicht-existierenden Tokens abzufragen
-        await _networkConn.viem.assertions.revertWith(
-          contract.read.isImageUpdated([999n]),
-          "Token does not exist",
-        );
+        await _networkConn.viem.assertions.revertWith(contract.read.isImageUpdated([999n]), "Token does not exist");
         await _networkConn.viem.assertions.revertWith(
           contract.read.getAuthorizedImageUpdater([999n]),
           "Token does not exist",

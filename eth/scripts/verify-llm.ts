@@ -190,4 +190,3 @@ async function main() {
     networkName,
   );
 }
-

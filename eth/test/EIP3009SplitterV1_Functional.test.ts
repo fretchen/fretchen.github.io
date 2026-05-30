@@ -151,7 +151,8 @@ describe("EIP3009SplitterV1", function () {
 
   describe("Split Execution", function () {
     it("Should execute split correctly with 1 cent fee", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00"); // 1.00 token
       const expectedSellerAmount = totalAmount - FEE_1_CENT; // 0.99 token
@@ -189,7 +190,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should execute split correctly with 2 cents fee", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, owner } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, owner } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Update fee to 2 cents
       await splitter.write.setFixedFee([FEE_2_CENTS], { account: owner.account });
@@ -222,7 +224,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should emit SplitExecuted event", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -257,7 +260,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject split when amount equals fee (boundary)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = FEE_1_CENT; // Amount = fee (seller would get 0)
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -284,7 +288,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject split when amount is less than fee", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("0.005"); // Less than 0.01 token fee
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -311,7 +316,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject split with invalid seller address", async function () {
-      const { splitter, mockUSDC, buyer, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
@@ -339,7 +345,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject reused authorization (nonce replay)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -387,7 +394,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should allow different buyers to use same contract", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Mint tokens to second buyer
       const buyer2 = otherAccount;
@@ -489,7 +497,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should emit FacilitatorWalletUpdated event", async function () {
-      const { splitter, owner, otherAccount, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, owner, otherAccount, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const hash = await splitter.write.setFacilitatorWallet([otherAccount.account.address], {
         account: owner.account,
@@ -520,7 +529,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should route fees to new wallet after update", async function () {
-      const { splitter, mockUSDC, buyer, seller, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, owner, otherAccount } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Update facilitator wallet
       const newWallet = otherAccount.account.address;
@@ -563,7 +573,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should correctly report used authorization", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -622,7 +633,8 @@ describe("EIP3009SplitterV1", function () {
 
   describe("EIP-3009 Authorization Security", function () {
     it("Should reject expired authorization (validBefore in past)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const now = BigInt(Math.floor(Date.now() / 1000));
@@ -659,7 +671,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject authorization not yet valid (validAfter in future)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const now = BigInt(Math.floor(Date.now() / 1000));
@@ -696,7 +709,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject authorization with wrong signer", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
 
@@ -730,7 +744,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject authorization with insufficient buyer balance", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Try to transfer more than buyer has
       const totalAmount = parseToken("10000.00"); // Buyer only has 1000
@@ -757,7 +772,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should work when seller equals buyer (self-payment)", async function () {
-      const { splitter, mockUSDC, buyer, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       // Buyer is also the seller - nonce encodes buyer as seller
@@ -791,7 +807,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should work when seller equals facilitator wallet", async function () {
-      const { splitter, mockUSDC, buyer, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       // Seller is the facilitator wallet - nonce encodes facilitator as seller
@@ -831,7 +848,8 @@ describe("EIP3009SplitterV1", function () {
 
   describe("Seller Verification Security", function () {
     it("Should reject when facilitator tries to redirect funds to different seller", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
 
@@ -867,7 +885,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should reject when facilitator provides wrong salt for correct seller", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
 
@@ -957,7 +976,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should verify seller address is cryptographically bound to nonce", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("5.00");
 
@@ -999,7 +1019,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should prevent facilitator from stealing funds via self as seller", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("100.00");
 
@@ -1031,7 +1052,8 @@ describe("EIP3009SplitterV1", function () {
 
   describe("Token Parameter Attack Vectors", function () {
     it("Should reject when token address is zero", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -1060,7 +1082,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should fail gracefully when fake token is provided (non-contract EOA)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, otherAccount } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("1.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
@@ -1088,7 +1111,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should prevent cross-token replay (signature bound to token domain)", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Deploy a second mock USDC (different contract = different EIP-712 domain)
       const mockUSDC2 = await networkConn.viem.deployContract("MockUSDC_EIP3009");
@@ -1122,7 +1146,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should work with multiple different tokens in sequence", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Deploy a second mock token
       const mockUSDC2 = await networkConn.viem.deployContract("MockUSDC_EIP3009");
@@ -1193,7 +1218,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should not allow reusing nonce across different tokens", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       // Deploy a second mock token
       const mockUSDC2 = await networkConn.viem.deployContract("MockUSDC_EIP3009");
@@ -1249,7 +1275,8 @@ describe("EIP3009SplitterV1", function () {
     });
 
     it("Should verify contract has no persistent token balance after split", async function () {
-      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
+      const { splitter, mockUSDC, buyer, seller, facilitator, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const totalAmount = parseToken("10.00");
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);

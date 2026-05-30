@@ -56,7 +56,8 @@ export function createCollectorNFTFixture(
 ) {
   return async function deployCollectorNFTFixture(): Promise<CollectorNFTFixture> {
     // Get viem wallet clients
-    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] = await _networkConn.viem.getWalletClients();
+    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] =
+      await _networkConn.viem.getWalletClients();
 
     const publicClient = await _networkConn.viem.getPublicClient();
 

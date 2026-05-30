@@ -49,7 +49,8 @@ describe("LLMv1 - Functional Tests", function () {
 
   describe("Get some money to the service provider", function () {
     it("Process a small batch", async function () {
-      const { llmContract, otherAccount, serviceProvider } = await networkConn.networkHelpers.loadFixture(deployLLMv1Fixture);
+      const { llmContract, otherAccount, serviceProvider } =
+        await networkConn.networkHelpers.loadFixture(deployLLMv1Fixture);
 
       const DEPOSIT = parseEther("0.001");
       await llmContract.write.depositForLLM([], {

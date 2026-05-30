@@ -176,15 +176,14 @@ describe("SupportV2 - Functional Tests", function () {
 
     it("should not allow re-initialization", async function () {
       const { support, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
-      await assert.rejects(
-        support.write.initialize([otherAccount.account.address]),
-      );
+      await assert.rejects(support.write.initialize([otherAccount.account.address]));
     });
   });
 
   describe("ETH Donations", function () {
     it("should accept ETH donation and increment likes", async function () {
-      const { support, donor, recipient, publicClient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
+      const { support, donor, recipient, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const recipientBalanceBefore = await publicClient.getBalance({
         address: recipient.account.address,
@@ -207,7 +206,8 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should emit Donation event with correct params", async function () {
-      const { support, donor, recipient, publicClient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
+      const { support, donor, recipient, publicClient } =
+        await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const hash = await support.write.donate([TEST_URL, recipient.account.address], {
         value: ETH_DONATION,
@@ -264,7 +264,8 @@ describe("SupportV2 - Functional Tests", function () {
 
   describe("Token Donations (EIP-3009)", function () {
     it("should accept token donation with valid signature", async function () {
-      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } =
+        await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const recipientBalanceBefore = await mockUSDC.read.balanceOf([recipient.account.address]);
 
@@ -297,7 +298,8 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation with zero token address", async function () {
-      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } =
+        await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, TOKEN_DONATION);
 
@@ -322,7 +324,8 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should reject donation with zero amount", async function () {
-      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } =
+        await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, 0n);
 
@@ -407,7 +410,8 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     it("should count both ETH and token donations", async function () {
-      const { support, donor, recipient, mockUSDC } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
+      const { support, donor, recipient, mockUSDC } =
+        await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
       // ETH donation
       await support.write.donate([TEST_URL, recipient.account.address], {

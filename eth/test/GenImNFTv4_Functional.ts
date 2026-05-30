@@ -53,7 +53,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
   // V4-specific image update tests WITH authorization setup
   describe("Image Updates with Authorization (Direct V4 Deployment)", function () {
     it("Should allow whitelisted agent to request image update and receive payment", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const publicClient = await networkConn.viem.getPublicClient();
 
       const mintPrice = await contract.read.mintPrice();
@@ -89,7 +91,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should reject image update from non-whitelisted address", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const mintPrice = await contract.read.mintPrice();
 
       // Mint a token
@@ -108,7 +112,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should prevent duplicate image updates", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const mintPrice = await contract.read.mintPrice();
 
       // Mint a token and whitelist agent
@@ -127,7 +133,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should reject update for non-existent token", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
 
       // Whitelist agent
       await contract.write.authorizeAgentWallet([otherAccount.account.address], { account: owner.account });
@@ -140,7 +148,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should allow revoking agent authorization", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const mintPrice = await contract.read.mintPrice();
 
       // Mint tokens
@@ -169,7 +179,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
   describe("V4 Specific Features (Authorization & Security)", function () {
     it("Should allow owner to whitelist agent wallets (EIP-8004)", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
 
       // Initially not whitelisted
       expect(await contract.read.isAuthorizedAgent([otherAccount.account.address])).to.equal(false);
@@ -184,7 +196,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should allow whitelisted agent to update any token", async function () {
-      const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const mintPrice = await contract.read.mintPrice();
 
       // Mint two tokens by different owners
@@ -226,7 +240,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should return all public tokens across all owners", async function () {
-      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const mintPrice = await contract.read.mintPrice();
 
       // Initially no tokens
@@ -338,7 +354,9 @@ describe("GenImNFTv4 - Functional Tests", function () {
       // Original vulnerability: No authorization in requestImageUpdate()
       // V4 Fix: EIP-8004 compatible whitelist - only authorized agents can update
 
-      const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(
+        deployGenImNFTv4DirectFixtureViem,
+      );
       const publicClient = await networkConn.viem.getPublicClient();
       const mintPrice = await contract.read.mintPrice();
 

@@ -19,6 +19,10 @@ module.exports = tseslint.config(
       "*.js",
       "*.cjs",
       "*.mjs",
+      // Archived legacy tests (H2 era, not migrated)
+      "archive/**",
+      // Auto-generated Hardhat artifact type declarations
+      "artifacts/**",
     ],
   },
   eslint.configs.recommended,
@@ -38,6 +42,8 @@ module.exports = tseslint.config(
         1,
         {
           argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
         },
       ],
       "@typescript-eslint/no-namespace": 0,
@@ -64,6 +70,8 @@ module.exports = tseslint.config(
       "chai-expect/missing-assertion": "error",
       "chai-expect/terminating-properties": "error",
       "@typescript-eslint/no-unused-expressions": "off",
+      // Test shared files use complex Viem/ethers types that require any
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 

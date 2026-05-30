@@ -8,11 +8,11 @@
  * Based on the structure of GenImNFTSharedTests.ts
  */
 
-import { describe, it, before } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
-import { parseEther, getAddress, formatEther, type Address } from "viem";
+import { parseEther, getAddress } from "viem";
 
 // Module-level networkConn for use in shared test functions
 let _networkConn: Awaited<ReturnType<typeof hre.network.create>>;
@@ -611,7 +611,6 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
           currentPrice0,
           currentPrice1,
           genImContract,
-          contractOwner,
         ] = await Promise.all([
           collectorNFT.read.totalSupply(),
           collectorNFT.read.mintCountPerGenImToken([0n]),
@@ -623,7 +622,6 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
           collectorNFT.read.getCurrentPrice([0n]),
           collectorNFT.read.getCurrentPrice([1n]),
           collectorNFT.read.genImNFTContract(),
-          collectorNFT.read.owner(),
         ]);
 
         // Verify consistency between related values

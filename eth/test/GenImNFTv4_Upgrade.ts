@@ -21,7 +21,7 @@ type UpgradeV4ConfigOptions = Partial<{
 
 let connection: Awaited<ReturnType<typeof hre.network.create>>;
 let ethers: typeof connection.ethers;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 let upgradesApi: any;
 
 describe("GenImNFTv4 - Upgrade Tests", function () {
@@ -242,7 +242,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     });
 
     it("Should handle forceImport automatically for non-registered proxies", async function () {
-      const { proxyAddress, owner } = await deployGenImNFTv3Fixture();
+      const { proxyAddress } = await deployGenImNFTv3Fixture();
 
       // Deploy v3 without OpenZeppelin tracking (simulates Ignition deployment)
       // The upgrade script should automatically call forceImport
@@ -469,7 +469,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
 
     it("Should handle upgrade when no tokens exist", async function () {
       // Deploy v3 without minting any tokens
-      const [owner] = await ethers.getSigners();
+      await ethers.getSigners();
       const GenImNFTv3Factory = await ethers.getContractFactory("GenImNFTv3");
       const proxyV3 = await upgradesApi.deployProxy(GenImNFTv3Factory, [], {
         initializer: "initialize",

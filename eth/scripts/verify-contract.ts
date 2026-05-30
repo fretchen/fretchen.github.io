@@ -1,10 +1,5 @@
 import hre from "hardhat";
 import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 interface DeploymentData {
   network: string;
@@ -201,6 +196,8 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
   console.log("   4. ✅ Update documentation with verified contract addresses");
 }
 
+export { verifyContract, loadDeploymentFile };
+
 async function main() {
   const connection = await hre.network.getOrCreate();
   const { ethers } = connection;
@@ -208,83 +205,39 @@ async function main() {
   console.log("=".repeat(60));
   console.log(`Network: ${connection.networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
-  console.log("");
 
-  // Check for required environment variables
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
   const contractPath = process.env.CONTRACT_PATH;
 
   if (!deploymentFilePath) {
-    console.error("❌ No deployment file specified!");
-    console.error("\nUsage:");
-    console.error("  DEPLOYMENT_FILE=scripts/deployments/contract-network-date.json \\");
-    console.error("  CONTRACT_PATH=contracts/MyContract.sol:MyContract \\");
-    console.error("  npx hardhat run scripts/verify-contract.ts --network <network>");
-    console.error("\nExample (Splitter):");
-    console.error("  DEPLOYMENT_FILE=scripts/deployments/splitter-v1-optsepolia-2026-01-05.json \\");
-    console.error("  CONTRACT_PATH=contracts/EIP3009SplitterV1.sol:EIP3009SplitterV1 \\");
-    console.error("  npx hardhat run scripts/verify-contract.ts --network optsepolia");
-
-    const deploymentsDir = path.join(__dirname, "deployments");
-    if (fs.existsSync(deploymentsDir)) {
-      const files = fs
-        .readdirSync(deploymentsDir)
-        .filter((f) => f.endsWith(".json"))
-        .sort()
-        .reverse()
-        .slice(0, 5);
-
-      if (files.length > 0) {
-        console.error("\nRecent deployment files:");
-        files.forEach((file) => console.error(`  - ${file}`));
-      }
-    }
-
+    console.error("❌ DEPLOYMENT_FILE environment variable not set");
     process.exit(1);
   }
-
   if (!contractPath) {
-    console.error("❌ No contract path specified!");
-    console.error("\nThe CONTRACT_PATH must be in format:");
-    console.error("  contracts/ContractName.sol:ContractName");
-    console.error("\nExamples:");
-    console.error("  - contracts/EIP3009SplitterV1.sol:EIP3009SplitterV1");
-    console.error("  - contracts/GenImNFTv4.sol:GenImNFTv4");
-    console.error("  - contracts/LLMv1.sol:LLMv1");
+    console.error("❌ CONTRACT_PATH environment variable not set (e.g. contracts/MyContract.sol:MyContract)");
     process.exit(1);
   }
 
-  console.log(`📂 Using deployment file: ${deploymentFilePath}`);
-  console.log(`📄 Contract path: ${contractPath}`);
-  console.log("");
-
-  // Load deployment data
   const deploymentData = await loadDeploymentFile(deploymentFilePath);
-
   if (!deploymentData) {
     console.error("❌ Failed to load deployment data");
     process.exit(1);
   }
 
-  // Verify network matches
   if (deploymentData.network !== connection.networkName) {
-    console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${connection.networkName})`,
-    );
-    console.warn("   Continuing anyway, but verification may fail if networks don't match");
-    console.log("");
+    console.warn(`⚠️  Network mismatch: deployment=${deploymentData.network}, current=${connection.networkName}`);
   }
 
-  // Perform verification
   try {
     await verifyContract(deploymentData, contractPath);
     console.log("\n✅ Script completed successfully");
-    process.exit(0);
   } catch (error) {
-    console.error("\n❌ Script failed:");
-    console.error(error);
+    console.error("\n❌ Script failed:", error);
     process.exit(1);
   }
 }
 
-export { verifyContract, loadDeploymentFile };
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,10 +1,5 @@
 import hre from "hardhat";
 import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 interface DeploymentData {
   network: string;
@@ -249,73 +244,41 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
   console.log("   4. ✅ Update documentation with verified contract addresses");
 }
 
+export { verifyGenImNFTv4, loadDeploymentFile };
+
 async function main() {
   const connection = await hre.network.getOrCreate();
-  const { ethers } = connection;
   console.log("🚀 GenImNFTv4 Contract Verification Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");
   console.log("=".repeat(60));
   console.log(`Network: ${connection.networkName}`);
-  console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
-  console.log("");
 
-  // Check for deployment file
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
-
   if (!deploymentFilePath) {
-    console.error("❌ No deployment file specified!");
-    console.error("\nUsage:");
-    console.error("  DEPLOYMENT_FILE=scripts/deployments/genimg-v4-upgrade-optimisticEthereum-2025-11-27.json \\");
-    console.error("  npx hardhat run scripts/verify-genimg-v4.ts --network optimisticEthereum");
-    console.error("\nAlternatively, check the deployments/ directory for available files:");
-
-    const deploymentsDir = path.join(__dirname, "deployments");
-    if (fs.existsSync(deploymentsDir)) {
-      const files = fs
-        .readdirSync(deploymentsDir)
-        .filter((f) => f.includes("genimg-v4") && f.endsWith(".json"))
-        .sort()
-        .reverse();
-
-      if (files.length > 0) {
-        console.error("\nAvailable GenImNFTv4 deployment files:");
-        files.forEach((file) => console.error(`  - ${file}`));
-      }
-    }
-
+    console.error("❌ DEPLOYMENT_FILE environment variable not set");
     process.exit(1);
   }
 
-  console.log(`📂 Using deployment file: ${deploymentFilePath}`);
-  console.log("");
-
-  // Load deployment data
   const deploymentData = await loadDeploymentFile(deploymentFilePath);
-
   if (!deploymentData) {
     console.error("❌ Failed to load deployment data");
     process.exit(1);
   }
 
-  // Verify network matches
   if (deploymentData.network !== connection.networkName) {
-    console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${connection.networkName})`,
-    );
-    console.warn("   Continuing anyway, but verification may fail if networks don't match");
-    console.log("");
+    console.warn(`⚠️  Network mismatch: deployment=${deploymentData.network}, current=${connection.networkName}`);
   }
 
-  // Perform verification
   try {
     await verifyGenImNFTv4(deploymentData);
     console.log("\n✅ Script completed successfully");
-    process.exit(0);
   } catch (error) {
-    console.error("\n❌ Script failed:");
-    console.error(error);
+    console.error("\n❌ Script failed:", error);
     process.exit(1);
   }
 }
 
-export { verifyGenImNFTv4, loadDeploymentFile };
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

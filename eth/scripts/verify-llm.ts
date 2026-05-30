@@ -110,7 +110,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
   }
 }
 
-async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
+export async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
   try {
     if (!fs.existsSync(filePath)) {
       return null;
@@ -131,7 +131,7 @@ async function loadDeploymentFile(filePath: string): Promise<DeploymentData | nu
   }
 }
 
-async function verifyContract(
+export async function verifyContract(
   proxyAddress: string,
   implementationAddress: string,
   contractType: string,
@@ -166,7 +166,6 @@ async function main() {
   const networkName = process.env.HARDHAT_NETWORK || "localhost";
   console.log(`🔍 Contract Verification Script starting on ${networkName}...`);
 
-  // Check for deployment file first
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
   if (!deploymentFilePath) {
     console.error("❌ No deployment file specified. Please set DEPLOYMENT_FILE environment variable.");
@@ -174,9 +173,8 @@ async function main() {
   }
   console.log(`📂 Using deployment file: ${deploymentFilePath}`);
   const deploymentData = await loadDeploymentFile(deploymentFilePath);
-  console.log(`📂 Deployment data: ${JSON.stringify(deploymentData, null, 2)}`);
   if (!deploymentData) {
-    console.log("❌ Failed to load deployment file, falling back to manual mode");
+    console.error("❌ Failed to load deployment file");
     return;
   }
 
@@ -190,3 +188,8 @@ async function main() {
     networkName,
   );
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

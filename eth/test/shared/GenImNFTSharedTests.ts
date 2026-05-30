@@ -1,4 +1,4 @@
-import { describe, it, before } from "node:test";
+import { describe, it } from "node:test";
 import { expect } from "chai";
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
@@ -550,7 +550,7 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
         const { proxy, owner } = await getFixture();
 
         const mintPrice = await proxy.mintPrice();
-        const tx = await proxy.connect(owner)["safeMint(string)"]("test-uri", { value: mintPrice });
+        await proxy.connect(owner)["safeMint(string)"]("test-uri", { value: mintPrice });
 
         // In ethers.js, we check the total supply to infer the token ID
         const totalSupply = await proxy.totalSupply();
@@ -700,7 +700,7 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
  * @param expectedName Expected contract name (optional)
  * @returns Test function
  */
-export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, expectedName?: string) {
+export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, _expectedName?: string) {
   return function () {
     describe("Image Updates (Ethers)", function () {
       it("Should update the tokenURI when requestImageUpdate is called", async function () {
@@ -749,7 +749,7 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
           if (imageUpdater !== "0x0000000000000000000000000000000000000000") {
             expect(imageUpdater).to.equal(otherAccount.address);
           }
-        } catch (error) {
+        } catch {
           // If the function doesn't exist or doesn't work as expected in this version,
           // just verify that the image update was successful
           expect(await proxy.isImageUpdated(tokenId)).to.be.true;
@@ -827,9 +827,6 @@ export function createAdvancedImageUpdateTests(
         await contract.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
 
         // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
-        const recipientClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
-          client: { wallet: recipient },
-        });
 
         // 3. Erfasse den Kontostand des Updaters VOR dem Update
         const updaterBalanceBefore = await provider.getBalance({
@@ -949,7 +946,7 @@ export function createAdvancedImageUpdateTests(
  */
 export function createEnumerationTests(
   fixtureFunction: () => Promise<ContractFixture>,
-  contractName: string = "Contract",
+  _contractName: string = "Contract",
 ): () => void {
   return function () {
     it("Should update enumeration after token transfer", async function () {

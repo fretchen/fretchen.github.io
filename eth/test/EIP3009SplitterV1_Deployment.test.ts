@@ -20,7 +20,7 @@ type SplitterV1ConfigOptions = Partial<{
 
 let connection: Awaited<ReturnType<typeof hre.network.create>>;
 let ethers: typeof connection.ethers;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 let upgradesApi: any;
 
 describe("EIP3009SplitterV1 - Deployment Tests", function () {

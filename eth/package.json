@@ -11,9 +11,9 @@
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.6",
     "@nomicfoundation/hardhat-verify": "^3.0.18",
     "@openzeppelin/hardhat-upgrades": "^4.0.0-alpha.0",
+    "@nomicfoundation/hardhat-ethers-chai-matchers": "^3.0.9",
     "@solidstate/hardhat-abi-exporter": "^3.0.3",
     "chai": "^5.1.2",
-    "chai-as-promised": "^8.0.0",
     "eslint-plugin-chai-expect": "^3.1.0",
     "hardhat": "^3.7.0"
   },

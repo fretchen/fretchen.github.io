@@ -1,8 +1,6 @@
 import { describe, it, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
+import assert from "node:assert";
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { upgradeToV4, loadConfig } from "../scripts/upgrade-genimg-v4";
@@ -28,7 +26,7 @@ let upgradesApi: any;
 
 describe("GenImNFTv4 - Upgrade Tests", function () {
   before(async () => {
-    connection = await hre.network.create();
+    connection = await hre.network.create("hardhat");
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -429,7 +427,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       await v4Contract.connect(owner)["safeMint(string,bool)"]("ipfs://funding", true, { value: mintPrice });
 
       // Unauthorized account should NOT be able to update
-      await expect(v4Contract.connect(thirdAccount).requestImageUpdate(0, "ipfs://hack")).to.be.rejectedWith(
+      await expect(v4Contract.connect(thirdAccount).requestImageUpdate(0, "ipfs://hack")).to.be.revertedWith(
         "Not authorized agent",
       );
 
@@ -462,11 +460,11 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     it("Should reject upgrade if proxy address is invalid", async function () {
       const invalidAddress = "0x0000000000000000000000000000000000000000";
 
-      await expect(
+      await assert.rejects(() =>
         withTempConfig(invalidAddress, { validateOnly: true }, async () => {
           await upgradeToV4();
         }),
-      ).to.be.rejected;
+      );
     });
 
     it("Should handle upgrade when no tokens exist", async function () {

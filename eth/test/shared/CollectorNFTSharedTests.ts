@@ -8,10 +8,7 @@
  * Based on the structure of GenImNFTSharedTests.ts
  */
 
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
 import hre from "hardhat";
 import { parseEther, getAddress, formatEther, type Address } from "viem";
 
@@ -350,12 +347,12 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const insufficientPayment = TEST_CONSTANTS.BASE_MINT_PRICE / 2n;
 
         // Should throw error
-        await expect(
-          collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
+        await _networkConn.viem.assertions.revert(
+          () => collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
             value: insufficientPayment,
           }),
-        ).to.be.rejected;
+        );
       });
 
       it("Should reject minting for non-existent GenImNFT", async function () {
@@ -364,12 +361,12 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const nonExistentTokenId = 999n;
         const arbitraryURI = "ipfs://test1"; // Use any valid URI since token doesn't exist
 
-        await expect(
-          collectorNFT.write.mintCollectorNFT([nonExistentTokenId, arbitraryURI], {
+        await _networkConn.viem.assertions.revert(
+          () => collectorNFT.write.mintCollectorNFT([nonExistentTokenId, arbitraryURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),
-        ).to.be.rejected;
+        );
       });
     });
   };
@@ -670,12 +667,12 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
         });
 
         // Should now fail
-        await expect(
-          collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
+        await _networkConn.viem.assertions.revert(
+          () => collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),
-        ).to.be.rejected;
+        );
 
         // Make token public again
         await genImNFT.write.setTokenListed([tokenId, true], {

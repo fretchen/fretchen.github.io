@@ -150,7 +150,7 @@ export async function deploySplitterV1(): Promise<
   const connection = await hre.network.create();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
-  const networkName = hre.network.name;
+  const networkName = connection.networkName;
   console.log("🚀 EIP3009SplitterV1 Deployment Script");
   console.log("=".repeat(60));
   console.log(`Network: ${networkName}`);

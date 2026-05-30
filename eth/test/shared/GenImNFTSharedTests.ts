@@ -1,7 +1,4 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
 import * as fs from "fs";
@@ -229,7 +226,9 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const { contract } = await getFixture();
 
         // Should revert with an ERC721 error about nonexistent token
-        await expect(contract.read.tokenURI([999n])).to.be.rejected;
+        await _networkConn.viem.assertions.revert(
+          () => contract.read.tokenURI([999n]),
+        );
       });
     });
 
@@ -372,7 +371,9 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         expect(await contract.read.balanceOf([recipientAddress])).to.equal(0n);
 
         // Should revert when trying to get token by index for empty wallet
-        await expect(contract.read.tokenOfOwnerByIndex([recipientAddress, 0n])).to.be.rejected;
+        await _networkConn.viem.assertions.revert(
+          () => contract.read.tokenOfOwnerByIndex([recipientAddress, 0n]),
+        );
       });
     });
   };
@@ -450,8 +451,14 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         const { contract } = await getFixture();
 
         // Versuche, Status eines nicht-existierenden Tokens abzufragen
-        await expect(contract.read.isImageUpdated([999n])).to.be.rejectedWith("Token does not exist");
-        await expect(contract.read.getAuthorizedImageUpdater([999n])).to.be.rejectedWith("Token does not exist");
+        await _networkConn.viem.assertions.revertWith(
+          () => contract.read.isImageUpdated([999n]),
+          "Token does not exist",
+        );
+        await _networkConn.viem.assertions.revertWith(
+          () => contract.read.getAuthorizedImageUpdater([999n]),
+          "Token does not exist",
+        );
       });
 
       it("Should prevent double image updates", async function () {
@@ -472,8 +479,9 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         expect(await contract.read.isImageUpdated([0n])).to.be.true;
 
         // 4. Zweites Update sollte fehlschlagen
-        await expect(otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"])).to.be
-          .rejected;
+        await _networkConn.viem.assertions.revert(
+          () => otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"]),
+        );
       });
     });
   };

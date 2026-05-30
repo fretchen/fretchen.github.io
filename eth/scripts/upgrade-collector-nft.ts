@@ -28,7 +28,7 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   const connection = await hre.network.create();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
-  const networkName = hre.network.name;
+  const networkName = connection.networkName;
   console.log("🚀 CollectorNFT -> CollectorNFTv2 Upgrade Script");
   console.log("=".repeat(50));
   console.log(`Network: ${networkName}`);

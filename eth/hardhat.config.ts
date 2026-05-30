@@ -2,6 +2,7 @@ import { defineConfig } from "hardhat/config";
 import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
 import hardhatUpgrades from "@openzeppelin/hardhat-upgrades";
 import hardhatAbiExporter from "@solidstate/hardhat-abi-exporter";
+import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
 
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY ?? "dummy-key-for-testing";
 const SEPOLIA_PRIVATE_KEY =
@@ -11,7 +12,7 @@ const SEPOLIA_PRIVATE_KEY =
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY ?? "dummy-etherscan-key";
 
 export default defineConfig({
-  plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter],
+  plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter, hardhatEthersChaiMatchers],
   solidity: {
     compilers: [
       {
@@ -23,6 +24,9 @@ export default defineConfig({
     ],
   },
   networks: {
+    hardhat: {
+      type: "edr-simulated",
+    },
     sepolia: {
       type: "http",
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,

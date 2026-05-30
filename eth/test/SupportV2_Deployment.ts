@@ -1,8 +1,6 @@
 import { describe, it, before, afterEach } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
+import assert from "node:assert";
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { deploySupportV2, MIN_DEPLOYMENT_BALANCE } from "../scripts/deploy-support-v2";
@@ -34,7 +32,7 @@ let upgradesApi: any;
 
 describe("SupportV2 - Deployment Tests", function () {
   before(async () => {
-    connection = await hre.network.create();
+    connection = await hre.network.create("hardhat");
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -220,7 +218,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
         fs.copyFileSync(invalidConfigPath, CONFIG_PATH);
 
-        await expect(deploySupportV2()).to.be.rejectedWith(/Config validation failed/);
+        await assert.rejects(() => deploySupportV2(), /Config validation failed/);
       } finally {
         if (fs.existsSync(BACKUP_PATH)) {
           fs.copyFileSync(BACKUP_PATH, CONFIG_PATH);
@@ -331,7 +329,7 @@ describe("SupportV2 - Deployment Tests", function () {
         const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
         const [, otherAccount] = await ethers.getSigners();
 
-        await expect(support.initialize(otherAccount.address)).to.be.rejected;
+        await expect(support.initialize(otherAccount.address)).to.revert(ethers);
       });
     });
 

@@ -1,8 +1,5 @@
 import { describe, it, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
 import hre from "hardhat";
 import { parseUnits, keccak256, toHex, getAddress, encodeAbiParameters, encodeFunctionData } from "viem";
 
@@ -10,7 +7,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("EIP3009SplitterV1", function () {
   before(async () => {
-    networkConn = await hre.network.create();
+    networkConn = await hre.network.create("hardhat");
   });
 
   // Token decimals (USDC uses 6)
@@ -264,8 +261,8 @@ describe("EIP3009SplitterV1", function () {
       const totalAmount = FEE_1_CENT; // Amount = fee (seller would get 0)
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -281,7 +278,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Amount must exceed fee");
+        "Amount must exceed fee",
+      );
     });
 
     it("Should reject split when amount is less than fee", async function () {
@@ -290,8 +288,8 @@ describe("EIP3009SplitterV1", function () {
       const totalAmount = parseToken("0.005"); // Less than 0.01 token fee
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -307,7 +305,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Amount must exceed fee");
+        "Amount must exceed fee",
+      );
     });
 
     it("Should reject split with invalid seller address", async function () {
@@ -317,8 +316,8 @@ describe("EIP3009SplitterV1", function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, zeroAddress, totalAmount);
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -334,7 +333,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Invalid seller address");
+        "Invalid seller address",
+      );
     });
 
     it("Should reject reused authorization (nonce replay)", async function () {
@@ -365,8 +365,8 @@ describe("EIP3009SplitterV1", function () {
       await mockUSDC.write.mint([buyer.account.address, totalAmount]);
 
       // Second execution with same nonce should fail
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -382,7 +382,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // Will be rejected by mock USDC
+      ); // Will be rejected by mock USDC
     });
 
     it("Should allow different buyers to use same contract", async function () {
@@ -462,7 +462,8 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject fee update from non-owner", async function () {
       const { splitter, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await expect(splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account })).to.be.rejectedWith(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.setFixedFee([FEE_2_CENTS], { account: otherAccount.account }),
         "OwnableUnauthorizedAccount",
       );
     });
@@ -470,7 +471,8 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject fee update to zero", async function () {
       const { splitter, owner } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await expect(splitter.write.setFixedFee([0n], { account: owner.account })).to.be.rejectedWith(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.setFixedFee([0n], { account: owner.account }),
         "Fee must be greater than 0",
       );
     });
@@ -498,18 +500,20 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject wallet update from non-owner", async function () {
       const { splitter, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await expect(
-        splitter.write.setFacilitatorWallet([otherAccount.account.address], { account: otherAccount.account }),
-      ).to.be.rejectedWith("OwnableUnauthorizedAccount");
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.setFacilitatorWallet([otherAccount.account.address], { account: otherAccount.account }),
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("Should reject wallet update to zero address", async function () {
       const { splitter, owner } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
-      await expect(
-        splitter.write.setFacilitatorWallet([zeroAddress as `0x${string}`], { account: owner.account }),
-      ).to.be.rejectedWith("Invalid wallet address");
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.setFacilitatorWallet([zeroAddress as `0x${string}`], { account: owner.account }),
+        "Invalid wallet address",
+      );
     });
 
     it("Should route fees to new wallet after update", async function () {
@@ -593,11 +597,9 @@ describe("EIP3009SplitterV1", function () {
       const newImplementation = await networkConn.viem.deployContract("EIP3009SplitterV1");
 
       // Upgrade should succeed (owner authorized)
-      await expect(
-        splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
-          account: owner.account,
-        }),
-      ).to.be.fulfilled;
+      await splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+        account: owner.account,
+      });
     });
 
     it("Should reject upgrade from non-owner", async function () {
@@ -605,11 +607,12 @@ describe("EIP3009SplitterV1", function () {
 
       const newImplementation = await networkConn.viem.deployContract("EIP3009SplitterV1");
 
-      await expect(
-        splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
           account: otherAccount.account,
         }),
-      ).to.be.rejectedWith("OwnableUnauthorizedAccount");
+        "OwnableUnauthorizedAccount",
+      );
     });
   });
 
@@ -631,8 +634,8 @@ describe("EIP3009SplitterV1", function () {
         now - 3600n, // validBefore: 1 hour in the past
       );
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -648,7 +651,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // EIP-3009 will reject expired authorization
+      ); // EIP-3009 will reject expired authorization
     });
 
     it("Should reject authorization not yet valid (validAfter in future)", async function () {
@@ -668,8 +671,8 @@ describe("EIP3009SplitterV1", function () {
         now + 7200n, // validBefore: 2 hours in the future
       );
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -685,7 +688,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // EIP-3009 will reject not-yet-valid authorization
+      ); // EIP-3009 will reject not-yet-valid authorization
     });
 
     it("Should reject authorization with wrong signer", async function () {
@@ -702,8 +705,8 @@ describe("EIP3009SplitterV1", function () {
         totalAmount,
       );
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             buyer.account.address, // Claim it's from buyer
@@ -719,7 +722,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // Signature verification will fail
+      ); // Signature verification will fail
     });
 
     it("Should reject authorization with insufficient buyer balance", async function () {
@@ -729,8 +732,8 @@ describe("EIP3009SplitterV1", function () {
       const totalAmount = parseToken("10000.00"); // Buyer only has 1000
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -746,7 +749,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // Transfer will fail due to insufficient balance
+      ); // Transfer will fail due to insufficient balance
     });
 
     it("Should work when seller equals buyer (self-payment)", async function () {
@@ -838,8 +841,8 @@ describe("EIP3009SplitterV1", function () {
       );
 
       // Malicious facilitator tries to redirect funds to otherAccount (attacker)
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -855,7 +858,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Seller not authorized by buyer");
+        "Seller not authorized by buyer",
+      );
     });
 
     it("Should reject when facilitator provides wrong salt for correct seller", async function () {
@@ -869,8 +873,8 @@ describe("EIP3009SplitterV1", function () {
       // Facilitator tries with correct seller but wrong salt
       const wrongSalt = keccak256(toHex("wrong-salt"));
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -886,7 +890,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Seller not authorized by buyer");
+        "Seller not authorized by buyer",
+      );
     });
 
     it("Should reject when facilitator swaps seller between two valid authorizations", async function () {
@@ -905,8 +910,8 @@ describe("EIP3009SplitterV1", function () {
       );
 
       // Facilitator tries to use authForSeller's signature but with otherAccount as seller
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             authForSeller.from as `0x${string}`,
@@ -922,7 +927,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Seller not authorized by buyer");
+        "Seller not authorized by buyer",
+      );
 
       // But correct seller should work
       const hash = await splitter.write.executeSplit(
@@ -997,8 +1003,8 @@ describe("EIP3009SplitterV1", function () {
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Malicious facilitator tries to set themselves as seller
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             mockUSDC.address,
             auth.from as `0x${string}`,
@@ -1014,7 +1020,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Seller not authorized by buyer");
+        "Seller not authorized by buyer",
+      );
     });
   });
 
@@ -1027,8 +1034,8 @@ describe("EIP3009SplitterV1", function () {
 
       const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revertWith(
+        () => splitter.write.executeSplit(
           [
             zeroAddress, // Invalid token address
             auth.from as `0x${string}`,
@@ -1044,7 +1051,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejectedWith("Invalid token address");
+        "Invalid token address",
+      );
     });
 
     it("Should fail gracefully when fake token is provided (non-contract EOA)", async function () {
@@ -1055,8 +1063,8 @@ describe("EIP3009SplitterV1", function () {
 
       // Try to use an EOA (not a contract) as token address
       // This will fail because the transferWithAuthorization call will revert
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             otherAccount.account.address, // EOA, not a contract
             auth.from as `0x${string}`,
@@ -1072,7 +1080,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // Will fail on transferWithAuthorization call to non-contract
+      ); // Will fail on transferWithAuthorization call to non-contract
     });
 
     it("Should prevent cross-token replay (signature bound to token domain)", async function () {
@@ -1089,8 +1097,8 @@ describe("EIP3009SplitterV1", function () {
 
       // Attempt to use authorization on mockUSDC2 (different token)
       // This should fail because the EIP-712 domain includes the contract address
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC2.address, // Different token!
             auth.from as `0x${string}`,
@@ -1106,7 +1114,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // EIP-712 signature verification will fail (wrong domain)
+      ); // EIP-712 signature verification will fail (wrong domain)
     });
 
     it("Should work with multiple different tokens in sequence", async function () {
@@ -1216,8 +1224,8 @@ describe("EIP3009SplitterV1", function () {
       // Create new auth for second token with SAME nonce (manually)
       // This simulates an attacker trying to reuse the nonce
       // The signature won't work because EIP-712 domain is different
-      await expect(
-        splitter.write.executeSplit(
+      await networkConn.viem.assertions.revert(
+        () => splitter.write.executeSplit(
           [
             mockUSDC2.address, // Different token
             auth.from as `0x${string}`,
@@ -1233,7 +1241,7 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-      ).to.be.rejected; // Signature bound to mockUSDC domain, won't verify on mockUSDC2
+      ); // Signature bound to mockUSDC domain, won't verify on mockUSDC2
     });
 
     it("Should verify contract has no persistent token balance after split", async function () {

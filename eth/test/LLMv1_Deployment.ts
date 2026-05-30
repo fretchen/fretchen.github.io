@@ -1,8 +1,6 @@
 import { describe, it, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
+import assert from "node:assert";
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { deployLLMv1 } from "../scripts/deploy-llm-v1";
@@ -27,7 +25,7 @@ let upgradesApi: any;
 
 describe("LLMv1 - Deployment Tests", function () {
   before(async () => {
-    connection = await hre.network.create();
+    connection = await hre.network.create("hardhat");
     ethers = connection.ethers;
     upgradesApi = await upgradesPlugin(hre, connection);
   });
@@ -204,7 +202,7 @@ describe("LLMv1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail due to format validation
-        await expect(deployLLMv1()).to.be.rejectedWith(/^Config validation failed:/);
+        await assert.rejects(() => deployLLMv1(), /Config validation failed:/);
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {

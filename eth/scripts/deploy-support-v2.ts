@@ -148,7 +148,7 @@ async function checkDeployerBalance(deployer: {
 async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> {
   const connection = await hre.network.create();
   const { ethers } = connection;
-  const networkName = hre.network.name;
+  const networkName = connection.networkName;
   console.log("🧪 Simulating SupportV2 deployment...");
 
   const [deployer] = await ethers.getSigners();
@@ -183,7 +183,7 @@ async function deploySupportV2() {
   const connection = await hre.network.create();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
-  const networkName = hre.network.name;
+  const networkName = connection.networkName;
   console.log("🚀 SupportV2 Deployment Script");
   console.log("=".repeat(60));
   console.log(`Network: ${networkName}`);

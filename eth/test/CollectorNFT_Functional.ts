@@ -10,9 +10,6 @@
  */
 
 import { describe, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
 import hre from "hardhat";
 import {
   createCollectorNFTFixture,
@@ -25,7 +22,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("CollectorNFT - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.create();
+    networkConn = await hre.network.create("hardhat");
     setNetworkConn(networkConn);
   });
 

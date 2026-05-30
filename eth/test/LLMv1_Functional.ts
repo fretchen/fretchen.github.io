@@ -1,8 +1,5 @@
 import { describe, it, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
 import hre from "hardhat";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
@@ -10,7 +7,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("LLMv1 - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.create();
+    networkConn = await hre.network.create("hardhat");
   });
 
   // Fixture to deploy LLMv1

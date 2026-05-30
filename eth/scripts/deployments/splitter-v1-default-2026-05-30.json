@@ -1,0 +1,37 @@
+{
+  "network": "default",
+  "timestamp": "2026-05-30T07:10:15.194Z",
+  "blockNumber": 2,
+  "proxyAddress": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  "implementationAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "EIP3009SplitterV1",
+  "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "tokenNote": "Token is passed as parameter to executeSplit() - supports USDC, EURC, and other EIP-3009 tokens",
+  "facilitatorWallet": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "fixedFee": "10000",
+  "deploymentOptions": {
+    "verify": false,
+    "waitConfirmations": 1,
+    "configUsed": "deploy-splitter-v1.config.json"
+  },
+  "config": {
+    "parameters": {
+      "facilitatorWallet": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "fixedFee": "10000"
+    },
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": false,
+      "waitConfirmations": 1
+    },
+    "metadata": {
+      "description": "Test deployment configuration for EIP3009SplitterV1",
+      "version": "1.0.0-test",
+      "environment": "development",
+      "notes": "Token-agnostic splitter supporting USDC, EURC, and any EIP-3009 token"
+    }
+  },
+  "verificationStatus": "passed"
+}

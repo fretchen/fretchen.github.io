@@ -1,8 +1,5 @@
 import { describe, it, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
 import hre from "hardhat";
 import { parseUnits, parseEther, keccak256, toHex, getAddress, encodeFunctionData } from "viem";
 
@@ -16,7 +13,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
  */
 describe("SupportV2 - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.create();
+    networkConn = await hre.network.create("hardhat");
   });
 
   // Token decimals (USDC uses 6)
@@ -178,7 +175,8 @@ describe("SupportV2 - Functional Tests", function () {
 
     it("should not allow re-initialization", async function () {
       const { support, otherAccount } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
-      await expect(support.write.initialize([otherAccount.account.address])).to.be.rejectedWith(
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.initialize([otherAccount.account.address]),
         "InvalidInitialization",
       );
     });
@@ -223,23 +221,25 @@ describe("SupportV2 - Functional Tests", function () {
     it("should reject donation with zero ETH", async function () {
       const { support, donor, recipient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
-      await expect(
-        support.write.donate([TEST_URL, recipient.account.address], {
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.donate([TEST_URL, recipient.account.address], {
           value: 0n,
           account: donor.account,
         }),
-      ).to.be.rejectedWith("No ETH sent");
+        "No ETH sent",
+      );
     });
 
     it("should reject donation to zero address", async function () {
       const { support, donor } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
-      await expect(
-        support.write.donate([TEST_URL, "0x0000000000000000000000000000000000000000"], {
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.donate([TEST_URL, "0x0000000000000000000000000000000000000000"], {
           value: ETH_DONATION,
           account: donor.account,
         }),
-      ).to.be.rejectedWith("Invalid recipient");
+        "Invalid recipient",
+      );
     });
 
     it("should increment likes for multiple donations to same URL", async function () {
@@ -301,8 +301,8 @@ describe("SupportV2 - Functional Tests", function () {
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, TOKEN_DONATION);
 
-      await expect(
-        support.write.donateToken(
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.donateToken(
           [
             TEST_URL,
             recipient.account.address,
@@ -317,7 +317,8 @@ describe("SupportV2 - Functional Tests", function () {
           ],
           { account: donor.account },
         ),
-      ).to.be.rejectedWith("Invalid token");
+        "Invalid token",
+      );
     });
 
     it("should reject donation with zero amount", async function () {
@@ -325,8 +326,8 @@ describe("SupportV2 - Functional Tests", function () {
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, 0n);
 
-      await expect(
-        support.write.donateToken(
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.donateToken(
           [
             TEST_URL,
             recipient.account.address,
@@ -341,7 +342,8 @@ describe("SupportV2 - Functional Tests", function () {
           ],
           { account: donor.account },
         ),
-      ).to.be.rejectedWith("Amount must be > 0");
+        "Amount must be > 0",
+      );
     });
 
     it("should reject donation to zero address", async function () {
@@ -354,8 +356,8 @@ describe("SupportV2 - Functional Tests", function () {
         TOKEN_DONATION,
       );
 
-      await expect(
-        support.write.donateToken(
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.donateToken(
           [
             TEST_URL,
             "0x0000000000000000000000000000000000000000",
@@ -370,7 +372,8 @@ describe("SupportV2 - Functional Tests", function () {
           ],
           { account: donor.account },
         ),
-      ).to.be.rejectedWith("Invalid recipient");
+        "Invalid recipient",
+      );
     });
   });
 
@@ -443,11 +446,12 @@ describe("SupportV2 - Functional Tests", function () {
       // Deploy new implementation
       const newImplementation = await networkConn.viem.deployContract("SupportV2");
 
-      await expect(
-        support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+      await networkConn.viem.assertions.revertWith(
+        () => support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
           account: otherAccount.account,
         }),
-      ).to.be.rejectedWith("OwnableUnauthorizedAccount");
+        "OwnableUnauthorizedAccount",
+      );
     });
   });
 });

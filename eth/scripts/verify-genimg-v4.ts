@@ -219,21 +219,21 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
   console.log(`   📍 Proxy Address: ${proxyAddress}`);
   console.log(`   📄 Implementation Address: ${implementationAddress}`);
   console.log(`   📝 Contract Type: GenImNFTv4`);
-  console.log(`   🌐 Network: ${hre.network.name}`);
+  console.log(`   🌐 Network: ${connection.networkName}`);
 
   if (deploymentData.securityFix) {
     console.log(`   🔒 Security Fix: ${deploymentData.securityFix}`);
   }
 
   // Provide Etherscan links
-  if (hre.network.name !== "localhost" && hre.network.name !== "hardhat") {
+  if (connection.networkName !== "localhost" && connection.networkName !== "hardhat") {
     let explorerUrl = "https://etherscan.io";
 
-    if (hre.network.name === "optimisticEthereum" || hre.network.name === "optimism") {
+    if (connection.networkName === "optimisticEthereum" || connection.networkName === "optimism") {
       explorerUrl = "https://optimistic.etherscan.io";
-    } else if (hre.network.name === "sepolia") {
+    } else if (connection.networkName === "sepolia") {
       explorerUrl = "https://sepolia.etherscan.io";
-    } else if (hre.network.name === "optsepolia") {
+    } else if (connection.networkName === "optsepolia") {
       explorerUrl = "https://sepolia-optimistic.etherscan.io";
     }
 
@@ -255,7 +255,7 @@ async function main() {
   console.log("🚀 GenImNFTv4 Contract Verification Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");
   console.log("=".repeat(60));
-  console.log(`Network: ${hre.network.name}`);
+  console.log(`Network: ${connection.networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -298,9 +298,9 @@ async function main() {
   }
 
   // Verify network matches
-  if (deploymentData.network !== hre.network.name) {
+  if (deploymentData.network !== connection.networkName) {
     console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${hre.network.name})`,
+      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${connection.networkName})`,
     );
     console.warn("   Continuing anyway, but verification may fail if networks don't match");
     console.log("");

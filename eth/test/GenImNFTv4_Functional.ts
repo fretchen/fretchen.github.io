@@ -1,8 +1,5 @@
 import { describe, it, afterEach, before } from "node:test";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const { expect } = chai;
+import { expect } from "chai";
 import hre from "hardhat";
 
 // Import shared test utilities
@@ -19,7 +16,7 @@ let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("GenImNFTv4 - Functional Tests", function () {
   before(async () => {
-    networkConn = await hre.network.create();
+    networkConn = await hre.network.create("hardhat");
     setNetworkConn(networkConn);
   });
 
@@ -100,9 +97,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       const tokenId = 0n;
 
       // Try to update without being whitelisted
-      await expect(
-        contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account }),
-      ).to.be.rejectedWith("Not authorized agent");
+      await networkConn.viem.assertions.revertWith(
+        () => contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account }),
+        "Not authorized agent",
+      );
 
       // Verify token was NOT updated
       expect(await contract.read.isImageUpdated([tokenId])).to.equal(false);
@@ -122,9 +120,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       expect(await contract.read.isImageUpdated([0n])).to.equal(true);
 
       // Second update should fail
-      await expect(
-        contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account }),
-      ).to.be.rejectedWith("Image already updated");
+      await networkConn.viem.assertions.revertWith(
+        () => contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account }),
+        "Image already updated",
+      );
     });
 
     it("Should reject update for non-existent token", async function () {
@@ -134,9 +133,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       await contract.write.authorizeAgentWallet([otherAccount.account.address], { account: owner.account });
 
       // Try to update non-existent token
-      await expect(
-        contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account }),
-      ).to.be.rejectedWith("Token does not exist");
+      await networkConn.viem.assertions.revertWith(
+        () => contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account }),
+        "Token does not exist",
+      );
     });
 
     it("Should allow revoking agent authorization", async function () {
@@ -160,9 +160,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       await contract.write.safeMint(["ipfs://funding", true], { value: mintPrice, account: owner.account });
 
       // Should now be rejected
-      await expect(
-        contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account }),
-      ).to.be.rejectedWith("Not authorized agent");
+      await networkConn.viem.assertions.revertWith(
+        () => contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account }),
+        "Not authorized agent",
+      );
     });
   });
 
@@ -355,11 +356,12 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Step 3: Attacker (unauthorized third party) watches for mint event and attacks
       // THE EXPLOIT IS NOW BLOCKED: Attacker tries to call requestImageUpdate
-      await expect(
-        contract.write.requestImageUpdate([tokenId, "ipfs://attacker-controlled-url"], {
+      await networkConn.viem.assertions.revertWith(
+        () => contract.write.requestImageUpdate([tokenId, "ipfs://attacker-controlled-url"], {
           account: recipient.account,
         }),
-      ).to.be.rejectedWith("Not authorized agent");
+        "Not authorized agent",
+      );
 
       // Step 4: Verify exploit was blocked
       expect(await contract.read.isImageUpdated([tokenId])).to.equal(false); // Token NOT updated

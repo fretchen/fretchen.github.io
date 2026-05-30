@@ -1,0 +1,27 @@
+{
+  "network": "default",
+  "timestamp": "2026-05-30T07:10:15.555Z",
+  "blockNumber": 2,
+  "proxyAddress": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  "implementationAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "adminAddress": "0x0000000000000000000000000000000000000000",
+  "contractType": "LLMv1",
+  "deploymentOptions": {
+    "verify": false,
+    "waitConfirmations": 1,
+    "configUsed": "llm-v1.config.json"
+  },
+  "config": {
+    "options": {
+      "validateOnly": false,
+      "dryRun": false,
+      "verify": false,
+      "waitConfirmations": 1
+    },
+    "metadata": {
+      "description": "Test deployment configuration for LLMv1",
+      "version": "1.0.0-test",
+      "environment": "development"
+    }
+  }
+}

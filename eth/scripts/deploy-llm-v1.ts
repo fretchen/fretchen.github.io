@@ -82,7 +82,7 @@ async function deployLLMv1() {
   const connection = await hre.network.create();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
-  const networkName = hre.network.name;
+  const networkName = connection.networkName;
   console.log("🚀 LLMv1 Deployment Script");
   console.log("=".repeat(50));
   console.log(`Network: ${networkName}`);

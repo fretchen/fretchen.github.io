@@ -183,11 +183,11 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
   console.log(`   📍 Proxy Address: ${proxyAddress}`);
   console.log(`   📄 Implementation Address: ${implementationAddress}`);
   console.log(`   📝 Contract Type: ${deploymentData.contractType}`);
-  console.log(`   🌐 Network: ${hre.network.name}`);
+  console.log(`   🌐 Network: ${connection.networkName}`);
 
   // Provide Etherscan links
-  if (hre.network.name !== "localhost" && hre.network.name !== "hardhat") {
-    const explorerUrl = getExplorerUrl(hre.network.name);
+  if (connection.networkName !== "localhost" && connection.networkName !== "hardhat") {
+    const explorerUrl = getExplorerUrl(connection.networkName);
 
     console.log(`\n🔗 View on Block Explorer:`);
     console.log(`   📍 Proxy: ${explorerUrl}/address/${proxyAddress}`);
@@ -206,7 +206,7 @@ async function main() {
   const { ethers } = connection;
   console.log("🚀 Generic Contract Verification Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${hre.network.name}`);
+  console.log(`Network: ${connection.networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -267,9 +267,9 @@ async function main() {
   }
 
   // Verify network matches
-  if (deploymentData.network !== hre.network.name) {
+  if (deploymentData.network !== connection.networkName) {
     console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${hre.network.name})`,
+      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${connection.networkName})`,
     );
     console.warn("   Continuing anyway, but verification may fail if networks don't match");
     console.log("");

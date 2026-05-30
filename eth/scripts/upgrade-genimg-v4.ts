@@ -116,7 +116,7 @@ async function upgradeToV4() {
   const connection = await hre.network.create();
   const { ethers } = connection;
   const upgradesApi = await upgradesPlugin(hre, connection);
-  const networkName = hre.network.name;
+  const networkName = connection.networkName;
   console.log("🚀 GenImNFTv3 → GenImNFTv4 Upgrade Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");
   console.log("=".repeat(60));

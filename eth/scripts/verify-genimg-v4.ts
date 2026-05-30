@@ -1,7 +1,10 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, run, network } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface DeploymentData {
   network: string;
@@ -38,7 +41,7 @@ async function verifyImplementation(implementationAddress: string): Promise<void
   console.log(`📍 Implementation Address: ${implementationAddress}`);
 
   try {
-    await run("verify:verify", {
+    await hre.run("verify:verify", {
       address: implementationAddress,
       constructorArguments: [], // UUPS implementation contracts have no constructor args
       contract: "contracts/GenImNFTv4.sol:GenImNFTv4",
@@ -56,6 +59,8 @@ async function verifyImplementation(implementationAddress: string): Promise<void
 }
 
 async function verifyProxy(proxyAddress: string, implementationAddress: string): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("\n🔄 Verifying proxy contract...");
   console.log(`📍 Proxy Address: ${proxyAddress}`);
 
@@ -65,7 +70,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
       const GenImNFTv4Factory = await ethers.getContractFactory("GenImNFTv4");
       const initializeData = GenImNFTv4Factory.interface.encodeFunctionData("initialize", []);
 
-      await run("verify:verify", {
+      await hre.run("verify:verify", {
         address: proxyAddress,
         constructorArguments: [implementationAddress, initializeData],
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
@@ -77,7 +82,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
       // Strategy 2: Try as custom ERC1967Proxy
       try {
-        await run("verify:verify", {
+        await hre.run("verify:verify", {
           address: proxyAddress,
           constructorArguments: [],
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
@@ -89,7 +94,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
         // Strategy 3: Try without specifying contract
         try {
-          await run("verify:verify", {
+          await hre.run("verify:verify", {
             address: proxyAddress,
             constructorArguments: [],
           });
@@ -121,6 +126,8 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 }
 
 async function testContractFunctionality(proxyAddress: string): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("\n🧪 Testing GenImNFTv4 functionality...");
 
   try {
@@ -212,21 +219,21 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
   console.log(`   📍 Proxy Address: ${proxyAddress}`);
   console.log(`   📄 Implementation Address: ${implementationAddress}`);
   console.log(`   📝 Contract Type: GenImNFTv4`);
-  console.log(`   🌐 Network: ${network.name}`);
+  console.log(`   🌐 Network: ${hre.network.name}`);
 
   if (deploymentData.securityFix) {
     console.log(`   🔒 Security Fix: ${deploymentData.securityFix}`);
   }
 
   // Provide Etherscan links
-  if (network.name !== "localhost" && network.name !== "hardhat") {
+  if (hre.network.name !== "localhost" && hre.network.name !== "hardhat") {
     let explorerUrl = "https://etherscan.io";
 
-    if (network.name === "optimisticEthereum" || network.name === "optimism") {
+    if (hre.network.name === "optimisticEthereum" || hre.network.name === "optimism") {
       explorerUrl = "https://optimistic.etherscan.io";
-    } else if (network.name === "sepolia") {
+    } else if (hre.network.name === "sepolia") {
       explorerUrl = "https://sepolia.etherscan.io";
-    } else if (network.name === "optsepolia") {
+    } else if (hre.network.name === "optsepolia") {
       explorerUrl = "https://sepolia-optimistic.etherscan.io";
     }
 
@@ -243,10 +250,12 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
 }
 
 async function main() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("🚀 GenImNFTv4 Contract Verification Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${hre.network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -289,9 +298,9 @@ async function main() {
   }
 
   // Verify network matches
-  if (deploymentData.network !== network.name) {
+  if (deploymentData.network !== hre.network.name) {
     console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${network.name})`,
+      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${hre.network.name})`,
     );
     console.warn("   Continuing anyway, but verification may fail if networks don't match");
     console.log("");
@@ -307,11 +316,6 @@ async function main() {
     console.error(error);
     process.exit(1);
   }
-}
-
-// Handle errors gracefully
-if (require.main === module) {
-  main();
 }
 
 export { verifyGenImNFTv4, loadDeploymentFile };

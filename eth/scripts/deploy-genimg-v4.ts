@@ -1,10 +1,14 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
 import { getAddress, formatEther, parseEther } from "viem";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Minimum ETH balance required for deployment (0.03 ETH)
 const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
@@ -119,6 +123,9 @@ async function checkDeployerBalance(deployer: {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating GenImNFTv4 contract...");
 
   // Check deployer balance
@@ -132,7 +139,7 @@ async function validateDeployment(): Promise<void> {
     console.log("✅ Contract compiles successfully");
 
     // Validate OpenZeppelin upgradeable patterns
-    await upgrades.validateImplementation(GenImNFTv4Factory, {
+    await upgradesApi.validateImplementation(GenImNFTv4Factory, {
       kind: "uups",
     });
 
@@ -152,6 +159,9 @@ async function validateDeployment(): Promise<void> {
  * Simulate deployment (dry run)
  */
 async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const networkName = hre.network.name;
   console.log("🧪 Simulating GenImNFTv4 deployment...");
 
   const [deployer] = await ethers.getSigners();
@@ -161,7 +171,7 @@ async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
 
   console.log("");
   console.log("📋 Deployment parameters:");
-  console.log(`  - Network: ${network.name}`);
+  console.log(`  - Network: ${networkName}`);
   console.log(`  - Mint Price: ${config.parameters.mintPrice} ETH`);
   console.log(`  - Agent Wallet: ${config.parameters.agentWallet || "Not specified (can be set after deployment)"}`);
   console.log("");
@@ -190,9 +200,13 @@ async function simulateDeployment(config: GenImV4DeployConfig): Promise<void> {
  * Configuration is loaded from deploy-genimg-v4.config.json
  */
 async function deployGenImV4() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
+  const networkName = hre.network.name;
   console.log("🚀 GenImNFTv4 Deployment Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -233,7 +247,7 @@ async function deployGenImV4() {
   console.log("-".repeat(40));
 
   try {
-    await upgrades.validateImplementation(GenImNFTv4Factory, {
+    await upgradesApi.validateImplementation(GenImNFTv4Factory, {
       kind: "uups",
     });
     console.log("✅ OpenZeppelin upgrade validation passed");
@@ -248,7 +262,7 @@ async function deployGenImV4() {
   console.log(`📋 Mint Price: ${parameters.mintPrice} ETH`);
   console.log("");
 
-  const GenImNFTv4 = await upgrades.deployProxy(GenImNFTv4Factory, [], {
+  const GenImNFTv4 = await upgradesApi.deployProxy(GenImNFTv4Factory, [], {
     kind: "uups",
     initializer: "initialize",
   });
@@ -259,8 +273,8 @@ async function deployGenImV4() {
   console.log("✅ GenImNFTv4 deployed successfully!");
   console.log("=".repeat(60));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
-  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
-  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
+  console.log(`📍 Implementation Address: ${await upgradesApi.erc1967.getImplementationAddress(proxyAddress)}`);
+  console.log(`📍 Admin Address: ${await upgradesApi.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
   // Post-deployment configuration
@@ -296,7 +310,7 @@ async function deployGenImV4() {
 
   // Verify deployment
   console.log("🔍 Verifying deployment...");
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
 
   console.log(`📄 Contract deployed at: ${proxyAddress}`);
 
@@ -343,12 +357,12 @@ async function deployGenImV4() {
 
   // Create deployment info
   const deploymentInfo = {
-    network: network.name,
+    network: networkName,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyAddress: proxyAddress,
-    implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
-    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    implementationAddress: await upgradesApi.erc1967.getImplementationAddress(proxyAddress),
+    adminAddress: await upgradesApi.erc1967.getAdminAddress(proxyAddress),
     contractType: "GenImNFTv4",
     owner: owner,
     mintPrice: ethers.formatEther(mintPrice),
@@ -370,7 +384,7 @@ async function deployGenImV4() {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  const deploymentFileName = `genimg-v4-${network.name}.json`;
+  const deploymentFileName = `genimg-v4-${networkName}.json`;
   const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -411,13 +425,3 @@ async function deployGenImV4() {
 
 // Export for testing
 export { deployGenImV4, MIN_DEPLOYMENT_BALANCE, GenImV4DeployConfigSchema };
-
-// Execute only when run directly (not imported)
-if (require.main === module) {
-  deployGenImV4()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
-}

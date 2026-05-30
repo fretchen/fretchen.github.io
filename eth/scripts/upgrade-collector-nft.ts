@@ -1,5 +1,5 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { getAddress } from "viem";
 
 interface UpgradeOptions {
@@ -25,9 +25,13 @@ interface UpgradeOptions {
  * - Skip OZ validation: SKIP_OZ_VALIDATION=true npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
  */
 async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
+  const networkName = hre.network.name;
   console.log("🚀 CollectorNFT -> CollectorNFTv2 Upgrade Script");
   console.log("=".repeat(50));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -68,13 +72,13 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   }
 
   // Get current implementation address
-  const currentImplementation = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const currentImplementation = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
   console.log(`📍 Current Implementation: ${currentImplementation}`);
 
   // Validate upgrade (unless skipped)
   if (!options.skipPreUpgradeValidation && process.env.SKIP_OZ_VALIDATION !== "true") {
     console.log("🔍 Validating upgrade compatibility...");
-    await upgrades.validateUpgrade(proxyAddress, CollectorNFTv2Factory);
+    await upgradesApi.validateUpgrade(proxyAddress, CollectorNFTv2Factory);
     console.log("✅ Upgrade validation passed");
   } else {
     console.log("⚠️  Skipping pre-upgrade validation");
@@ -97,17 +101,17 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   console.log("🚀 Upgrading CollectorNFT to CollectorNFTv2...");
   console.log("");
 
-  const upgradedContract = await upgrades.upgradeProxy(proxyAddress, CollectorNFTv2Factory);
+  const upgradedContract = await upgradesApi.upgradeProxy(proxyAddress, CollectorNFTv2Factory);
   await upgradedContract.waitForDeployment();
 
-  const newImplementation = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const newImplementation = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
 
   console.log("✅ CollectorNFT upgraded to v2 successfully!");
   console.log("=".repeat(50));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
   console.log(`📍 Old Implementation: ${currentImplementation}`);
   console.log(`📍 New Implementation: ${newImplementation}`);
-  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
+  console.log(`📍 Admin Address: ${await upgradesApi.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
   // Call reinitialize to update existing token URIs
@@ -192,13 +196,13 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
 
   // Export upgrade info
   const upgradeInfo = {
-    network: network.name,
+    network: networkName,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyAddress: proxyAddress,
     oldImplementation: currentImplementation,
     newImplementation: newImplementation,
-    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    adminAddress: await upgradesApi.erc1967.getAdminAddress(proxyAddress),
     upgradeType: "CollectorNFT -> CollectorNFTv2",
     newFeatures: [
       "Automatic URI inheritance from GenImNFT",
@@ -225,6 +229,9 @@ async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
 }
 
 async function validateUpgrade(proxyAddress: string) {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating CollectorNFTv2 upgrade configuration...");
 
   // Verify proxy contract
@@ -237,7 +244,7 @@ async function validateUpgrade(proxyAddress: string) {
   const CollectorNFTv2Factory = await ethers.getContractFactory("CollectorNFTv2");
 
   // Validate upgrade compatibility
-  await upgrades.validateUpgrade(proxyAddress, CollectorNFTv2Factory);
+  await upgradesApi.validateUpgrade(proxyAddress, CollectorNFTv2Factory);
 
   console.log("✅ CollectorNFTv2 contract compiles successfully");
   console.log("✅ Proxy contract exists at specified address");
@@ -249,12 +256,14 @@ async function validateUpgrade(proxyAddress: string) {
 }
 
 async function simulateUpgrade(proxyAddress: string) {
+  const connection = await hre.network.create();
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🧪 Simulating CollectorNFTv2 upgrade...");
 
   await validateUpgrade(proxyAddress);
 
   // Get current implementation
-  const currentImplementation = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const currentImplementation = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
   console.log(`📍 Current Implementation: ${currentImplementation}`);
 
   console.log("⛽ Estimating upgrade costs...");
@@ -275,11 +284,6 @@ async function main() {
     console.error(error);
     process.exitCode = 1;
   }
-}
-
-// Execute if run directly
-if (require.main === module) {
-  main();
 }
 
 export { upgradeCollectorNFT, UpgradeOptions };

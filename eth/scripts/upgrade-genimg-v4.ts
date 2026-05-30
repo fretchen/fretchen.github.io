@@ -1,10 +1,14 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
 import { getAddress } from "viem";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Zod Schema für Validierung
 const UpgradeV4ConfigSchema = z.object({
@@ -109,10 +113,14 @@ function loadConfig(): UpgradeV4Config {
  * Configuration is loaded from upgrade-genimg-v4.config.json
  */
 async function upgradeToV4() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
+  const networkName = hre.network.name;
   console.log("🚀 GenImNFTv3 → GenImNFTv4 Upgrade Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -185,7 +193,7 @@ async function upgradeToV4() {
     console.log("🔍 Checking if proxy is registered with OpenZeppelin...");
 
     try {
-      await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+      await upgradesApi.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
         kind: "uups",
       });
       console.log("✅ Proxy is registered");
@@ -195,7 +203,7 @@ async function upgradeToV4() {
         console.log("📦 Importing proxy with forceImport...");
         console.log("   This is normal for contracts deployed without OpenZeppelin Upgrades Plugin");
 
-        await upgrades.forceImport(proxyAddress, GenImNFTv3Factory, {
+        await upgradesApi.forceImport(proxyAddress, GenImNFTv3Factory, {
           kind: "uups",
         });
 
@@ -204,7 +212,7 @@ async function upgradeToV4() {
         console.log("🔍 Retrying upgrade validation...");
 
         // Retry validation after import
-        await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+        await upgradesApi.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
           kind: "uups",
         });
       } else {
@@ -230,7 +238,7 @@ async function upgradeToV4() {
 
     console.log("⏳ Upgrading proxy to GenImNFTv4...");
 
-    const upgradedProxy = await upgrades.upgradeProxy(proxyAddress, GenImNFTv4Factory, {
+    const upgradedProxy = await upgradesApi.upgradeProxy(proxyAddress, GenImNFTv4Factory, {
       kind: "uups",
       call: {
         fn: "reinitializeV4",
@@ -350,8 +358,8 @@ async function upgradeToV4() {
     }
 
     // Get implementation and admin addresses
-    const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-    const adminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
+    const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
+    const adminAddress = await upgradesApi.erc1967.getAdminAddress(proxyAddress);
 
     console.log("");
     console.log("📋 Deployment Details:");
@@ -361,7 +369,7 @@ async function upgradeToV4() {
 
     // Create deployment info
     const deploymentInfo = {
-      network: network.name,
+      network: networkName,
       timestamp: new Date().toISOString(),
       blockNumber: await ethers.provider.getBlockNumber(),
       upgradeType: "GenImNFTv3 → GenImNFTv4",
@@ -393,7 +401,7 @@ async function upgradeToV4() {
     }
 
     const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-    const deploymentFileName = `genimg-v4-upgrade-${network.name}-${timestamp}.json`;
+    const deploymentFileName = `genimg-v4-upgrade-${networkName}-${timestamp}.json`;
     const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
     fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -442,6 +450,9 @@ async function upgradeToV4() {
 }
 
 async function validateUpgrade(proxyAddress: string) {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating upgrade configuration...");
 
   // Get contract factories
@@ -460,7 +471,7 @@ async function validateUpgrade(proxyAddress: string) {
   console.log("");
   console.log("🔍 Checking if proxy is registered with OpenZeppelin...");
   try {
-    await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+    await upgradesApi.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
       kind: "uups",
     });
     console.log("✅ Proxy is registered");
@@ -469,7 +480,7 @@ async function validateUpgrade(proxyAddress: string) {
       console.log("⚠️  Proxy not registered with OpenZeppelin Upgrades Plugin");
       console.log("📦 Importing proxy with forceImport...");
 
-      await upgrades.forceImport(proxyAddress, GenImNFTv3Factory, {
+      await upgradesApi.forceImport(proxyAddress, GenImNFTv3Factory, {
         kind: "uups",
       });
 
@@ -478,7 +489,7 @@ async function validateUpgrade(proxyAddress: string) {
       console.log("🔍 Retrying upgrade validation...");
 
       // Retry validation after import
-      await upgrades.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
+      await upgradesApi.validateUpgrade(proxyAddress, GenImNFTv4Factory, {
         kind: "uups",
       });
     } else {
@@ -549,8 +560,3 @@ async function main() {
 
 // Export for use in tests
 export { upgradeToV4, loadConfig, UpgradeV4Config };
-
-// Run if called directly
-if (require.main === module) {
-  main();
-}

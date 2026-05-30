@@ -1,4 +1,4 @@
-import { ethers, run } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
 
 interface DeploymentData {
@@ -34,7 +34,7 @@ async function verifyImplementation(implementationAddress: string, contractType:
   console.log(`\n🔄 Verifying ${contractType} implementation contract...`);
 
   try {
-    await run("verify:verify", {
+    await hre.run("verify:verify", {
       address: implementationAddress,
       constructorArguments: [], // Implementation contracts don't have constructor args for OpenZeppelin
       contract: `contracts/${contractType}.sol:${contractType}`,
@@ -51,6 +51,8 @@ async function verifyImplementation(implementationAddress: string, contractType:
 }
 
 async function verifyProxy(proxyAddress: string, implementationAddress: string, contractType: string): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("\n🔄 Verifying proxy contract...");
 
   try {
@@ -59,7 +61,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
       const ContractFactory = await ethers.getContractFactory(contractType);
       const initializeData = ContractFactory.interface.encodeFunctionData("initialize", []);
 
-      await run("verify:verify", {
+      await hre.run("verify:verify", {
         address: proxyAddress,
         constructorArguments: [implementationAddress, initializeData],
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
@@ -70,7 +72,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
 
       // Strategy 2: Try as custom ERC1967Proxy
       try {
-        await run("verify:verify", {
+        await hre.run("verify:verify", {
           address: proxyAddress,
           constructorArguments: [],
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
@@ -81,7 +83,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
 
         // Strategy 3: Try without specifying contract
         try {
-          await run("verify:verify", {
+          await hre.run("verify:verify", {
             address: proxyAddress,
             constructorArguments: [],
           });
@@ -189,10 +191,3 @@ async function main() {
   );
 }
 
-// Handle errors gracefully
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });

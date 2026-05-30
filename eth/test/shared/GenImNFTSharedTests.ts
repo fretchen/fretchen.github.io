@@ -1,9 +1,15 @@
-import { expect } from "chai";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Definiere den Pfad für die Metadaten-Dateien
 const METADATA_DIR = path.join(__dirname, "../../metadata");
@@ -93,6 +99,13 @@ export interface ContractFixture {
   otherAccount: any;
   recipient?: any;
   [key: string]: any;
+}
+
+// Module-level networkConn for use in shared test functions
+let _networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+
+export function setNetworkConn(conn: Awaited<ReturnType<typeof hre.network.create>>) {
+  _networkConn = conn;
 }
 
 /**
@@ -319,7 +332,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         // Mint tokens to different owners
         await contract.write.safeMint(["uri1"], { value: mintPrice }); // Token 0 to owner
 
-        const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
         await otherClient.write.safeMint(["uri2"], { value: mintPrice }); // Token 1 to otherAccount
@@ -388,7 +401,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         expect(originalTokenURI).to.equal(initialTokenURI);
 
         // 2. Updater fordert ein Bild-Update an mit neuer URL
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -422,7 +435,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         expect(initialAuthorizedUpdater).to.equal("0x0000000000000000000000000000000000000000");
 
         // 3. Führe Image-Update durch
-        const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -449,7 +462,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         await contract.write.safeMint(["test-uri"], { value: mintPrice });
 
         // 2. Erstes Update
-        const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -796,7 +809,7 @@ export function createAdvancedImageUpdateTests(
     describe("Advanced Image Updates", function () {
       it("Should allow another wallet to update the image for a token with balance checks", async function () {
         const { contract, owner, recipient, otherAccount } = await getFixture();
-        const provider = await hre.viem.getPublicClient();
+        const provider = await _networkConn.viem.getPublicClient();
 
         // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
         const prompt = "A cyberpunk city with flying cars in the rain";
@@ -812,7 +825,7 @@ export function createAdvancedImageUpdateTests(
         await contract.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
 
         // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
-        const recipientClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const recipientClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: recipient },
         });
 
@@ -823,7 +836,7 @@ export function createAdvancedImageUpdateTests(
         console.log(`Updater balance before: ${formatEther(updaterBalanceBefore)} ETH`);
 
         // 4. Die autorisierte Wallet fordert ein Bild-Update an
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -874,7 +887,7 @@ export function createAdvancedImageUpdateTests(
         expect(getAddress(newOwner)).to.equal(getAddress(recipient.account.address));
 
         // Other account should be able to update image (anyone can update)
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -905,7 +918,7 @@ export function createAdvancedImageUpdateTests(
         expect(originalMetadata.image).to.equal(""); // Initially empty
 
         // Update image
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -938,7 +951,7 @@ export function createEnumerationTests(
 ): () => void {
   return function () {
     it("Should update enumeration after token transfer", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
+      const { contract, owner, otherAccount } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint token to owner
@@ -966,7 +979,7 @@ export function createEnumerationTests(
     });
 
     it("Should update enumeration after token burn", async function () {
-      const { contract, owner } = await loadFixture(fixtureFunction);
+      const { contract, owner } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint 3 tokens
@@ -1008,7 +1021,7 @@ export function createWalletEnumerationTests(
 ): () => void {
   return function () {
     it("Should get all NFTs with metadata for a wallet", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
+      const { contract, owner, otherAccount } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint tokens with metadata
@@ -1022,7 +1035,7 @@ export function createWalletEnumerationTests(
         const tokenURI = createMetadataFile(i, prompts[i]);
         if (i === 1) {
           // Mint one token to otherAccount
-          const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+          const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
             client: { wallet: otherAccount },
           });
           await otherClient.write.safeMint([tokenURI], { value: mintPrice });

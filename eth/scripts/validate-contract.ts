@@ -39,9 +39,13 @@
 // This script validates the current state of deployed contracts
 // and checks for upgrade readiness.
 //
-import { ethers } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface ContractInfo {
   name: string;
@@ -75,6 +79,8 @@ interface DeploymentData {
 }
 
 async function validateContract(proxyAddress: string): Promise<ContractInfo> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log(`\n🔍 Validating GenImNFT contract at: ${proxyAddress}`);
   console.log("=".repeat(50));
 
@@ -159,6 +165,8 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
 }
 
 async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTInfo> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log(`\n🔍 Validating CollectorNFT contract at: ${proxyAddress}`);
   console.log("=".repeat(50));
 
@@ -231,6 +239,8 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
 }
 
 async function validateImplementation(implementationAddress: string, contractName: string): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log(`\n🔧 Validating ${contractName} implementation at: ${implementationAddress}`);
   console.log("=".repeat(50));
 
@@ -264,6 +274,8 @@ async function validateImplementation(implementationAddress: string, contractNam
 }
 
 async function checkUpgradeReadiness(proxyAddress: string, contractType: string = "GenImNFTv2"): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log(`\n🔄 Checking upgrade readiness for ${contractType}...`);
   console.log("=".repeat(30));
 
@@ -454,14 +466,6 @@ async function main() {
     console.error("Script failed:", error instanceof Error ? error.message : error);
     process.exit(1);
   }
-}
-
-// Handle both direct execution and module import
-if (require.main === module) {
-  main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
 }
 
 export {

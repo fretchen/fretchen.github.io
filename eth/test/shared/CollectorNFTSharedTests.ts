@@ -8,10 +8,19 @@
  * Based on the structure of GenImNFTSharedTests.ts
  */
 
-import { expect } from "chai";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
 import { parseEther, getAddress, formatEther, type Address } from "viem";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+
+// Module-level networkConn for use in shared test functions
+let _networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+
+export function setNetworkConn(conn: Awaited<ReturnType<typeof hre.network.create>>) {
+  _networkConn = conn;
+}
 
 /**
  * Interface for CollectorNFT Contract Fixture
@@ -48,12 +57,12 @@ export function createCollectorNFTFixture(
 ) {
   return async function deployCollectorNFTFixture(): Promise<CollectorNFTFixture> {
     // Get viem wallet clients
-    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] = await hre.viem.getWalletClients();
+    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] = await _networkConn.viem.getWalletClients();
 
-    const publicClient = await hre.viem.getPublicClient();
+    const publicClient = await _networkConn.viem.getPublicClient();
 
     // Deploy GenImNFT first using viem
-    const genImNFT = await hre.viem.deployContract("GenImNFTv4", []);
+    const genImNFT = await _networkConn.viem.deployContract("GenImNFTv4", []);
 
     // Mint some GenImNFTs for testing (publicly listed by default)
     await genImNFT.write.safeMint(["ipfs://test1", true], {
@@ -73,7 +82,7 @@ export function createCollectorNFTFixture(
     });
 
     // Deploy CollectorNFT using viem
-    const collectorNFT = await hre.viem.deployContract(contractName);
+    const collectorNFT = await _networkConn.viem.deployContract(contractName);
 
     // Initialize the CollectorNFT
     await collectorNFT.write.initialize([genImNFT.address, baseMintPrice], {

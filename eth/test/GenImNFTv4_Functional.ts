@@ -1,5 +1,8 @@
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { expect } from "chai";
+import { describe, it, afterEach, before } from "node:test";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
+const { expect } = chai;
 import hre from "hardhat";
 
 // Import shared test utilities
@@ -8,25 +11,33 @@ import {
   createEnumerationTests,
   createWalletEnumerationTests,
   cleanupTestFiles,
+  setNetworkConn,
   ContractFixture,
 } from "./shared/GenImNFTSharedTests";
 
+let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+
 describe("GenImNFTv4 - Functional Tests", function () {
+  before(async () => {
+    networkConn = await hre.network.create();
+    setNetworkConn(networkConn);
+  });
+
   async function deployGenImNFTv4DirectFixtureViem(): Promise<ContractFixture> {
     // Deploy using viem only
-    const [viemOwner, viemOtherAccount, viemRecipient] = await hre.viem.getWalletClients();
+    const [viemOwner, viemOtherAccount, viemRecipient] = await networkConn.viem.getWalletClients();
 
     // Deploy implementation contract
-    const implementation = await hre.viem.deployContract("GenImNFTv4");
+    const implementation = await networkConn.viem.deployContract("GenImNFTv4");
 
     // Deploy ERC1967Proxy pointing to implementation
-    const proxy = await hre.viem.deployContract("ERC1967Proxy", [
+    const proxy = await networkConn.viem.deployContract("ERC1967Proxy", [
       implementation.address,
       "0x8129fc1c", // initialize() selector
     ]);
 
     // Get contract interface at proxy address
-    const viemContract = await hre.viem.getContractAt("GenImNFTv4", proxy.address);
+    const viemContract = await networkConn.viem.getContractAt("GenImNFTv4", proxy.address);
 
     return {
       contract: viemContract,
@@ -45,7 +56,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
   // V4-specific image update tests WITH authorization setup
   describe("Image Updates with Authorization (Direct V4 Deployment)", function () {
     it("Should allow whitelisted agent to request image update and receive payment", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const publicClient = await hre.viem.getPublicClient();
 
       const mintPrice = await contract.read.mintPrice();
@@ -81,7 +92,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should reject image update from non-whitelisted address", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint a token
@@ -99,7 +110,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should prevent duplicate image updates", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint a token and whitelist agent
@@ -117,7 +128,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should reject update for non-existent token", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
 
       // Whitelist agent
       await contract.write.authorizeAgentWallet([otherAccount.account.address], { account: owner.account });
@@ -129,7 +140,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should allow revoking agent authorization", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint tokens
@@ -157,7 +168,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
   describe("V4 Specific Features (Authorization & Security)", function () {
     it("Should allow owner to whitelist agent wallets (EIP-8004)", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
 
       // Initially not whitelisted
       expect(await contract.read.isAuthorizedAgent([otherAccount.account.address])).to.equal(false);
@@ -172,7 +183,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should allow whitelisted agent to update any token", async function () {
-      const { contract, owner, otherAccount, recipient } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint two tokens by different owners
@@ -199,7 +210,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should return only public tokens when querying", async function () {
-      const { contract, owner } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint mixed tokens
@@ -214,7 +225,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should return all public tokens across all owners", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Initially no tokens
@@ -255,7 +266,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should handle edge cases for getAllPublicTokens", async function () {
-      const { contract, owner } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Test empty collection
@@ -279,7 +290,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
     });
 
     it("Should correctly handle burned tokens in getAllPublicTokens", async function () {
-      const { contract, owner } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint some public tokens
@@ -326,7 +337,7 @@ describe("GenImNFTv4 - Functional Tests", function () {
       // Original vulnerability: No authorization in requestImageUpdate()
       // V4 Fix: EIP-8004 compatible whitelist - only authorized agents can update
 
-      const { contract, owner, otherAccount, recipient } = await loadFixture(deployGenImNFTv4DirectFixtureViem);
+      const { contract, owner, otherAccount, recipient } = await networkConn.networkHelpers.loadFixture(deployGenImNFTv4DirectFixtureViem);
       const publicClient = await hre.viem.getPublicClient();
       const mintPrice = await contract.read.mintPrice();
 

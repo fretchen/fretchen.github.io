@@ -1,9 +1,13 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
 import { getAddress, formatEther, parseEther } from "viem";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Minimum ETH balance required for deployment (0.03 ETH)
 const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
@@ -79,6 +83,9 @@ function loadConfig(): SupportV2DeployConfig {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating SupportV2 contract...");
 
   // Check deployer balance
@@ -89,7 +96,7 @@ async function validateDeployment(): Promise<void> {
     const SupportV2Factory = await ethers.getContractFactory("SupportV2");
     console.log("✅ Contract compiles successfully");
 
-    await upgrades.validateImplementation(SupportV2Factory, {
+    await upgradesApi.validateImplementation(SupportV2Factory, {
       kind: "uups",
     });
     console.log("✅ OpenZeppelin upgrade validation passed");
@@ -139,6 +146,9 @@ async function checkDeployerBalance(deployer: {
  * Simulate deployment (dry run)
  */
 async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const networkName = hre.network.name;
   console.log("🧪 Simulating SupportV2 deployment...");
 
   const [deployer] = await ethers.getSigners();
@@ -149,7 +159,7 @@ async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> 
 
   console.log("");
   console.log("📋 Deployment parameters:");
-  console.log(`  - Network: ${network.name}`);
+  console.log(`  - Network: ${networkName}`);
   console.log(`  - Owner: ${ownerAddress}`);
   console.log("");
   console.log("📦 What would happen:");
@@ -170,9 +180,13 @@ async function simulateDeployment(config: SupportV2DeployConfig): Promise<void> 
  * - Base Mainnet: npx hardhat run scripts/deploy-support-v2.ts --network base
  */
 async function deploySupportV2() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
+  const networkName = hre.network.name;
   console.log("🚀 SupportV2 Deployment Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -214,7 +228,7 @@ async function deploySupportV2() {
   console.log("-".repeat(40));
 
   try {
-    await upgrades.validateImplementation(SupportV2Factory, {
+    await upgradesApi.validateImplementation(SupportV2Factory, {
       kind: "uups",
     });
     console.log("✅ OpenZeppelin upgrade validation passed");
@@ -227,14 +241,14 @@ async function deploySupportV2() {
   console.log("");
   console.log("🚀 Deploying SupportV2...");
 
-  const SupportV2 = await upgrades.deployProxy(SupportV2Factory, [ownerAddress], {
+  const SupportV2 = await upgradesApi.deployProxy(SupportV2Factory, [ownerAddress], {
     kind: "uups",
     initializer: "initialize",
   });
 
   await SupportV2.waitForDeployment();
   const proxyAddress = await SupportV2.getAddress();
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
 
   console.log("✅ SupportV2 deployed successfully!");
   console.log("=".repeat(60));
@@ -244,7 +258,7 @@ async function deploySupportV2() {
 
   // Save deployment info
   const deploymentInfo = {
-    network: network.name,
+    network: networkName,
     proxyAddress,
     implementationAddress,
     owner: ownerAddress,
@@ -252,7 +266,7 @@ async function deploySupportV2() {
     version: config.metadata.version,
   };
 
-  const deploymentPath = path.join(__dirname, `../deployments/support-v2-${network.name}.json`);
+  const deploymentPath = path.join(__dirname, `../deployments/support-v2-${networkName}.json`);
 
   // Ensure deployments directory exists
   const deploymentsDir = path.dirname(deploymentPath);
@@ -267,22 +281,12 @@ async function deploySupportV2() {
   console.log("🎉 Deployment complete!");
   console.log("");
   console.log("📋 To verify on Etherscan, run:");
-  console.log(`   DEPLOYMENT_FILE=deployments/support-v2-${network.name}.json \\`);
+  console.log(`   DEPLOYMENT_FILE=deployments/support-v2-${networkName}.json \\`);
   console.log(`   CONTRACT_PATH=contracts/SupportV2.sol:SupportV2 \\`);
-  console.log(`   npx hardhat run scripts/verify-contract.ts --network ${network.name}`);
+  console.log(`   npx hardhat run scripts/verify-contract.ts --network ${networkName}`);
 
   return { proxyAddress, implementationAddress };
 }
 
 // Export for testing
 export { deploySupportV2, MIN_DEPLOYMENT_BALANCE, SupportV2DeployConfigSchema };
-
-// Execute only when run directly (not imported)
-if (require.main === module) {
-  deploySupportV2()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
-}

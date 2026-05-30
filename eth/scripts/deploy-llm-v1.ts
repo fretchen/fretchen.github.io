@@ -1,9 +1,13 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Zod Schema für Validierung
 const LLMv1ConfigSchema = z.object({
@@ -75,9 +79,13 @@ function loadConfig(): LLMv1Config {
  * Configuration is loaded from llm-v1.config.json
  */
 async function deployLLMv1() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
+  const networkName = hre.network.name;
   console.log("🚀 LLMv1 Deployment Script");
   console.log("=".repeat(50));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -106,7 +114,7 @@ async function deployLLMv1() {
   console.log("🚀 Deploying LLMv1...");
   console.log("");
 
-  const LLMv1 = await upgrades.deployProxy(LLMv1Factory, [], {
+  const LLMv1 = await upgradesApi.deployProxy(LLMv1Factory, [], {
     kind: "uups",
     initializer: "initialize",
   });
@@ -117,15 +125,15 @@ async function deployLLMv1() {
   console.log("✅ LLMv1 deployed successfully!");
   console.log("=".repeat(50));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
-  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
-  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
+  console.log(`📍 Implementation Address: ${await upgradesApi.erc1967.getImplementationAddress(proxyAddress)}`);
+  console.log(`📍 Admin Address: ${await upgradesApi.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
   // Verify deployment
   console.log("🔍 Verifying deployment...");
   const deployedContract = LLMv1Factory.attach(proxyAddress);
 
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
 
   console.log(`📄 Contract deployed at: ${proxyAddress}`);
 
@@ -154,12 +162,12 @@ async function deployLLMv1() {
 
   // Create deployment info
   const deploymentInfo = {
-    network: network.name,
+    network: networkName,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyAddress: proxyAddress,
-    implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
-    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    implementationAddress: await upgradesApi.erc1967.getImplementationAddress(proxyAddress),
+    adminAddress: await upgradesApi.erc1967.getAdminAddress(proxyAddress),
     contractType: "LLMv1",
     deploymentOptions: {
       verify: options.verify || false,
@@ -179,7 +187,7 @@ async function deployLLMv1() {
   }
 
   const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-  const deploymentFileName = `llm-v1-${network.name}-${timestamp}.json`;
+  const deploymentFileName = `llm-v1-${networkName}-${timestamp}.json`;
   const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -221,6 +229,8 @@ async function deployLLMv1() {
 }
 
 async function validateDeployment() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("🔍 Validating deployment configuration...");
 
   // Get contract factory for validation
@@ -234,6 +244,8 @@ async function validateDeployment() {
 }
 
 async function simulateDeployment() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("🧪 Simulating deployment...");
 
   await validateDeployment();
@@ -247,22 +259,6 @@ async function simulateDeployment() {
 
   console.log("🎉 Simulation completed successfully!");
   return true;
-}
-
-// Main execution
-async function main() {
-  try {
-    await deployLLMv1();
-  } catch (error) {
-    console.error("❌ Deployment failed:");
-    console.error(error);
-    process.exitCode = 1;
-  }
-}
-
-// Execute if run directly
-if (require.main === module) {
-  main();
 }
 
 export { deployLLMv1, loadConfig, LLMv1Config };

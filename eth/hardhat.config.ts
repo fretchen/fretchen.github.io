@@ -1,19 +1,17 @@
-import "@nomicfoundation/hardhat-toolbox-viem";
-import "@nomicfoundation/hardhat-verify";
-import "hardhat-abi-exporter";
-import "@openzeppelin/hardhat-upgrades";
-import { vars } from "hardhat/config";
+import { defineConfig } from "hardhat/config";
+import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatUpgrades from "@openzeppelin/hardhat-upgrades";
+import hardhatAbiExporter from "@solidstate/hardhat-abi-exporter";
 
-// Use default values for CI/testing if environment variables are not set
-const ALCHEMY_API_KEY: string = vars.get("ALCHEMY_API_KEY", "dummy-key-for-testing");
-const SEPOLIA_PRIVATE_KEY: string = vars.get(
-  "SEPOLIA_PRIVATE_KEY",
-  "0x1234567890123456789012345678901234567890123456789012345678901234",
-);
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY ?? "dummy-key-for-testing";
+const SEPOLIA_PRIVATE_KEY =
+  process.env.SEPOLIA_PRIVATE_KEY ??
+  "0x1234567890123456789012345678901234567890123456789012345678901234";
 // V2 API uses single Etherscan key for all chains (including Optimism, Base, Polygon, etc.)
-const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "dummy-etherscan-key");
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY ?? "dummy-etherscan-key";
 
-const config = {
+export default defineConfig({
+  plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter],
   solidity: {
     compilers: [
       {
@@ -24,33 +22,35 @@ const config = {
       },
     ],
   },
-  gasReporter: {
-    enabled: false,
-  },
   networks: {
     sepolia: {
+      type: "http",
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
     optsepolia: {
+      type: "http",
       url: `https://opt-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
     optimisticEthereum: {
+      type: "http",
       url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
     baseSepolia: {
+      type: "http",
       url: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
     base: {
+      type: "http",
       url: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [SEPOLIA_PRIVATE_KEY],
     },
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY, // V2 API uses single Etherscan key for all chains
+    apiKey: ETHERSCAN_API_KEY,
     customChains: [
       {
         network: "optsepolia",
@@ -86,6 +86,4 @@ const config = {
       },
     ],
   },
-};
-
-export default config;
+});

@@ -1,7 +1,10 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, run, network } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface DeploymentData {
   network: string;
@@ -42,7 +45,7 @@ async function verifyImplementation(implementationAddress: string, contractPath:
   console.log(`📄 Contract Path: ${contractPath}`);
 
   try {
-    await run("verify:verify", {
+    await hre.run("verify:verify", {
       address: implementationAddress,
       constructorArguments: [], // UUPS implementation contracts have no constructor args
       contract: contractPath,
@@ -66,7 +69,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
   try {
     // Strategy 1: Try as OpenZeppelin ERC1967Proxy (without initialization data)
     try {
-      await run("verify:verify", {
+      await hre.run("verify:verify", {
         address: proxyAddress,
         constructorArguments: [implementationAddress, "0x"],
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
@@ -78,7 +81,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
       // Strategy 2: Try as custom ERC1967Proxy
       try {
-        await run("verify:verify", {
+        await hre.run("verify:verify", {
           address: proxyAddress,
           constructorArguments: [],
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
@@ -90,7 +93,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
         // Strategy 3: Try without specifying contract
         try {
-          await run("verify:verify", {
+          await hre.run("verify:verify", {
             address: proxyAddress,
             constructorArguments: [],
           });
@@ -180,11 +183,11 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
   console.log(`   📍 Proxy Address: ${proxyAddress}`);
   console.log(`   📄 Implementation Address: ${implementationAddress}`);
   console.log(`   📝 Contract Type: ${deploymentData.contractType}`);
-  console.log(`   🌐 Network: ${network.name}`);
+  console.log(`   🌐 Network: ${hre.network.name}`);
 
   // Provide Etherscan links
-  if (network.name !== "localhost" && network.name !== "hardhat") {
-    const explorerUrl = getExplorerUrl(network.name);
+  if (hre.network.name !== "localhost" && hre.network.name !== "hardhat") {
+    const explorerUrl = getExplorerUrl(hre.network.name);
 
     console.log(`\n🔗 View on Block Explorer:`);
     console.log(`   📍 Proxy: ${explorerUrl}/address/${proxyAddress}`);
@@ -199,9 +202,11 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
 }
 
 async function main() {
+  const connection = await hre.network.create();
+  const { ethers } = connection;
   console.log("🚀 Generic Contract Verification Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${hre.network.name}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -262,9 +267,9 @@ async function main() {
   }
 
   // Verify network matches
-  if (deploymentData.network !== network.name) {
+  if (deploymentData.network !== hre.network.name) {
     console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${network.name})`,
+      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${hre.network.name})`,
     );
     console.warn("   Continuing anyway, but verification may fail if networks don't match");
     console.log("");
@@ -280,11 +285,6 @@ async function main() {
     console.error(error);
     process.exit(1);
   }
-}
-
-// Handle errors gracefully
-if (require.main === module) {
-  main();
 }
 
 export { verifyContract, loadDeploymentFile };

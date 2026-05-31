@@ -5,6 +5,10 @@ import hardhatAbiExporter from "@solidstate/hardhat-abi-exporter";
 import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
 
 export default defineConfig({
+  // Sets the default for `npx hardhat run` CLI tasks.
+  // Note: hre.network.getOrCreate() does NOT use this — it falls back to
+  // Hardhat 3's hardcoded DEFAULT_NETWORK_NAME ("default") when no --network
+  // flag is provided, regardless of this setting.
   defaultNetwork: "hardhat",
   plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter, hardhatEthersChaiMatchers],
   solidity: {

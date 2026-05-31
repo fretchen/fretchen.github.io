@@ -42,8 +42,6 @@ module.exports = tseslint.config(
         1,
         {
           argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
         },
       ],
       "@typescript-eslint/no-namespace": 0,
@@ -70,8 +68,6 @@ module.exports = tseslint.config(
       "chai-expect/missing-assertion": "error",
       "chai-expect/terminating-properties": "error",
       "@typescript-eslint/no-unused-expressions": "off",
-      // Test shared files use complex Viem/ethers types that require any
-      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 

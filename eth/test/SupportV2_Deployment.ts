@@ -3,6 +3,7 @@ import { expect } from "chai";
 import assert from "node:assert";
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { deploySupportV2, MIN_DEPLOYMENT_BALANCE } from "../scripts/deploy-support-v2";
 import * as fs from "fs";
 import * as path from "path";
@@ -28,7 +29,7 @@ type SupportV2ConfigOptions = Partial<{
 let connection: Awaited<ReturnType<typeof hre.network.create>>;
 let ethers: typeof connection.ethers;
 
-let upgradesApi: any;
+let upgradesApi: HardhatUpgrades;
 
 describe("SupportV2 - Deployment Tests", function () {
   before(async () => {

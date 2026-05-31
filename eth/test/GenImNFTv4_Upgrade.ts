@@ -3,6 +3,7 @@ import { expect } from "chai";
 import assert from "node:assert";
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { upgradeToV4, loadConfig } from "../scripts/upgrade-genimg-v4";
 import * as fs from "fs";
 import * as path from "path";
@@ -22,7 +23,7 @@ type UpgradeV4ConfigOptions = Partial<{
 let connection: Awaited<ReturnType<typeof hre.network.create>>;
 let ethers: typeof connection.ethers;
 
-let upgradesApi: any;
+let upgradesApi: HardhatUpgrades;
 
 describe("GenImNFTv4 - Upgrade Tests", function () {
   before(async () => {
@@ -47,7 +48,9 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
 
     // Mint some tokens in v3
     const mintPrice = await proxyV3.mintPrice();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers v3 proxy type lacks overloaded safeMint signature
     await (proxyV3 as any).connect(owner)["safeMint(string,bool)"]("ipfs://test1", true, { value: mintPrice });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers v3 proxy type lacks overloaded safeMint signature
     await (proxyV3 as any).connect(otherAccount)["safeMint(string,bool)"]("ipfs://test2", true, { value: mintPrice });
 
     return {
@@ -189,9 +192,9 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         try {
           await loadConfig();
           throw new Error("Expected loadConfig to throw but it didn't");
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Verify that error contains validation messages
-          expect(error.message).to.match(/Config validation failed|Invalid Ethereum address format/);
+          expect((error as Error).message).to.match(/Config validation failed|Invalid Ethereum address format/);
         }
       } finally {
         // Restore original config

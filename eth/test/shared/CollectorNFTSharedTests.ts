@@ -13,6 +13,7 @@ import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
 import { parseEther, getAddress } from "viem";
+import type { WalletClient, PublicClient } from "viem";
 
 // Module-level networkConn for use in shared test functions
 let _networkConn: Awaited<ReturnType<typeof hre.network.create>>;
@@ -25,16 +26,18 @@ export function setNetworkConn(conn: Awaited<ReturnType<typeof hre.network.creat
  * Interface for CollectorNFT Contract Fixture
  */
 export interface CollectorNFTFixture {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
   collectorNFT: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
   genImNFT: any;
-  owner: any;
-  collector1: any;
-  collector2: any;
-  genImOwner1: any;
-  genImOwner2: any;
-  randomUser: any;
-  publicClient: any;
-  [key: string]: any;
+  owner: WalletClient;
+  collector1: WalletClient;
+  collector2: WalletClient;
+  genImOwner1: WalletClient;
+  genImOwner2: WalletClient;
+  randomUser: WalletClient;
+  publicClient: PublicClient;
+  [key: string]: unknown;
 }
 
 /**
@@ -765,6 +768,7 @@ export function createCompleteTestSuite(
 /**
  * Helper function to get all NFTs for a wallet
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
 export async function getAllCollectorNFTsForWallet(contract: any, walletAddress: string) {
   const balance = await contract.read.balanceOf([walletAddress]);
   const tokens = [];
@@ -787,6 +791,7 @@ export async function getAllCollectorNFTsForWallet(contract: any, walletAddress:
 /**
  * Helper function to get mint statistics for multiple GenImNFTs
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
 export async function getMintStatsForTokens(contract: any, tokenIds: bigint[]) {
   const statsPromises = tokenIds.map((tokenId) => contract.read.getMintStats([tokenId]));
 

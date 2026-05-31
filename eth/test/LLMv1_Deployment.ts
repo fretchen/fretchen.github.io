@@ -3,6 +3,7 @@ import { expect } from "chai";
 import assert from "node:assert";
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { deployLLMv1 } from "../scripts/deploy-llm-v1";
 import * as fs from "fs";
 import * as path from "path";
@@ -21,7 +22,7 @@ type LLMv1ConfigOptions = Partial<{
 let connection: Awaited<ReturnType<typeof hre.network.create>>;
 let ethers: typeof connection.ethers;
 
-let upgradesApi: any;
+let upgradesApi: HardhatUpgrades;
 
 describe("LLMv1 - Deployment Tests", function () {
   before(async () => {

@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import { expect } from "chai";
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
+import type { WalletClient } from "viem";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -50,6 +51,7 @@ export function createMetadataFile(tokenId: number | bigint, prompt: string): st
 /**
  * Helper function to get all NFTs for a wallet
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
 export async function getAllNFTsForWallet(contract: any, walletAddress: string) {
   const balance = await contract.read.balanceOf([walletAddress]);
   const tokens = [];
@@ -92,11 +94,12 @@ export function cleanupTestFiles() {
  * Interface für Contract-Fixture
  */
 export interface ContractFixture {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
   contract: any;
-  owner: any;
-  otherAccount: any;
-  recipient?: any;
-  [key: string]: any;
+  owner: WalletClient;
+  otherAccount: WalletClient;
+  recipient?: WalletClient;
+  [key: string]: unknown;
 }
 
 // Module-level networkConn for use in shared test functions
@@ -487,6 +490,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
  * @param expectedName Expected contract name (optional)
  * @returns Test function
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers fixture type is not statically known
 export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expectedName?: string) {
   return function () {
     describe("Basic NFT Functionality (Ethers)", function () {
@@ -587,8 +591,8 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
         try {
           await proxy.tokenURI(999);
           expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-          expect(error.message).to.include("revert");
+        } catch (error: unknown) {
+          expect((error as Error).message).to.include("revert");
         }
       });
     });
@@ -700,7 +704,8 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
  * @param expectedName Expected contract name (optional)
  * @returns Test function
  */
-export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, _expectedName?: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers fixture type is not statically known
+export function createImageUpdateTestsEthers(getFixture: () => Promise<any>) {
   return function () {
     describe("Image Updates (Ethers)", function () {
       it("Should update the tokenURI when requestImageUpdate is called", async function () {
@@ -763,8 +768,8 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, _ex
         try {
           await proxy.isImageUpdated(999);
           expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-          expect(error.message).to.include("revert");
+        } catch (error: unknown) {
+          expect((error as Error).message).to.include("revert");
         }
       });
 
@@ -789,8 +794,8 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, _ex
           const secondImageUrl = "https://example.com/second-image.png";
           await proxy.connect(otherAccount).requestImageUpdate(tokenId, secondImageUrl);
           expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-          expect(error.message).to.include("revert");
+        } catch (error: unknown) {
+          expect((error as Error).message).to.include("revert");
         }
 
         // URI sollte unverändert sein
@@ -944,10 +949,7 @@ export function createAdvancedImageUpdateTests(
  * @param contractName Optional contract name for logging/debugging
  * @returns Function that creates the test suite
  */
-export function createEnumerationTests(
-  fixtureFunction: () => Promise<ContractFixture>,
-  _contractName: string = "Contract",
-): () => void {
+export function createEnumerationTests(fixtureFunction: () => Promise<ContractFixture>): () => void {
   return function () {
     it("Should update enumeration after token transfer", async function () {
       const { contract, owner, otherAccount } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);

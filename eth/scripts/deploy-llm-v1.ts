@@ -47,7 +47,7 @@ function loadConfig(): LLMv1Config {
     configRaw = JSON.parse(configContent);
   } catch (error: unknown) {
     if (error instanceof Error) {
-      throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+      throw new Error(`Invalid JSON in configuration file: ${error.message}`, { cause: error });
     }
     throw error;
   }
@@ -58,7 +58,7 @@ function loadConfig(): LLMv1Config {
     config = LLMv1ConfigSchema.parse(configRaw);
   } catch (error: unknown) {
     if (error instanceof Error) {
-      throw new Error(`Config validation failed: ${error.message}`);
+      throw new Error(`Config validation failed: ${error.message}`, { cause: error });
     }
     throw error;
   }

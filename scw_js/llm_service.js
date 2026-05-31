@@ -155,7 +155,7 @@ export async function verify_wallet(address, signature, message) {
     }
   } catch (error) {
     logger.error({ err: error }, "Signature verification failed");
-    throw new Error("Invalid wallet signature.");
+    throw new Error("Invalid wallet signature.", { cause: error });
   }
 }
 
@@ -248,7 +248,6 @@ export async function appendLeafToTrees(dataToAppend, fileName) {
     }));
   } catch {
     logger.info({ file: fileName }, "File doesn't exist, creating new trees structure");
-    treesData = null;
   }
 
   // Initialize if no data exists
@@ -389,13 +388,12 @@ export async function appendToS3Json(dataToAppend, fileName) {
   } catch {
     // File doesn't exist, we'll create a new one
     logger.info({ file: fileName }, "File doesn't exist, creating new file");
-    existingData = null;
   }
 
   // Determine how to append based on mode and existing data
   // We also need to calculate the size of the batch to see if
   // we should launch a new Merkle tree later
-  let batchSize = 0;
+  let batchSize;
   if (existingData === null) {
     // Create new array with the data
     updatedData = [dataToAppend];
@@ -502,7 +500,7 @@ export async function processMerkleTree(fileName, treeIndex = null) {
     },
   });
 
-  let treesData = null;
+  let treesData;
 
   // Get existing file
   const getParams = {

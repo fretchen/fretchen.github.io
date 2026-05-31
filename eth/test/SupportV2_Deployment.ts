@@ -107,7 +107,7 @@ describe("SupportV2 - Deployment Tests", function () {
    */
   function cleanupDeploymentFiles() {
     const deploymentsDir = path.join(__dirname, "../deployments");
-    const deploymentFile = path.join(deploymentsDir, "support-v2-hardhat.json");
+    const deploymentFile = path.join(deploymentsDir, "support-v2-default.json");
     if (fs.existsSync(deploymentFile)) {
       fs.unlinkSync(deploymentFile);
     }
@@ -177,7 +177,7 @@ describe("SupportV2 - Deployment Tests", function () {
         expect(result).to.not.be.undefined;
 
         // Check deployment file exists
-        const deploymentFile = path.join(__dirname, "../deployments/support-v2-hardhat.json");
+        const deploymentFile = path.join(__dirname, "../deployments/support-v2-default.json");
         expect(fs.existsSync(deploymentFile)).to.be.true;
 
         // Verify file content
@@ -401,7 +401,7 @@ describe("SupportV2 - Deployment Tests", function () {
 
         expect(result).to.not.be.undefined;
 
-        const deploymentFile = path.join(__dirname, "../deployments/support-v2-hardhat.json");
+        const deploymentFile = path.join(__dirname, "../deployments/support-v2-default.json");
         const deploymentInfo = JSON.parse(fs.readFileSync(deploymentFile, "utf8"));
 
         expect(deploymentInfo).to.have.property("network");

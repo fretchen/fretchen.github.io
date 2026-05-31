@@ -351,7 +351,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+          const deploymentFileName = `splitter-v1-default-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.equal(true);
@@ -470,7 +470,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   describe("Deployment File Persistence", function () {
     it("Should save deployment file immediately after successful deploy", async function () {
       const timestamp = new Date().toISOString().split("T")[0];
-      const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+      const deploymentFileName = `splitter-v1-default-${timestamp}.json`;
       const deploymentFilePath = path.join(__dirname, "../scripts/deployments", deploymentFileName);
 
       // Clean up any existing deployment file
@@ -503,7 +503,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
     it("Should include verification status in deployment file", async function () {
       const timestamp = new Date().toISOString().split("T")[0];
-      const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+      const deploymentFileName = `splitter-v1-default-${timestamp}.json`;
       const deploymentFilePath = path.join(__dirname, "../scripts/deployments", deploymentFileName);
 
       // Clean up any existing deployment file

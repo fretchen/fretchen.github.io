@@ -232,7 +232,7 @@ describe("LLMv1 - Deployment Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `llm-v1-hardhat-${timestamp}.json`;
+          const deploymentFileName = `llm-v1-default-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.equal(true);

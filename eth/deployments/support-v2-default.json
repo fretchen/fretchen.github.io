@@ -1,8 +1,0 @@
-{
-  "network": "default",
-  "proxyAddress": "0xc0F115A19107322cFBf1cDBC7ea011C19EbDB4F8",
-  "implementationAddress": "0x4631BCAbD6dF18D94796344963cB60d44a4136b6",
-  "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "deployedAt": "2026-05-30T08:19:03.459Z",
-  "version": "1.0.0-test"
-}

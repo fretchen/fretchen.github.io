@@ -428,7 +428,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+// HH_TEST is set by Hardhat's test runner. Guard against running main() when
+// this module is imported transitively by test files via deploy/upgrade scripts.
+if (!process.env.HH_TEST) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

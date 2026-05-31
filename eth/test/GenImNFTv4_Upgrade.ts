@@ -223,7 +223,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `genimg-v4-upgrade-hardhat-${timestamp}.json`;
+          const deploymentFileName = `genimg-v4-upgrade-default-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.equal(true);

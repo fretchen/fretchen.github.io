@@ -1,8 +1,16 @@
+import { describe, it, before } from "node:test";
 import { expect } from "chai";
+import assert from "node:assert";
 import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { deployLLMv1 } from "../scripts/deploy-llm-v1";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type LLMv1ConfigOptions = Partial<{
   validateOnly: boolean;
@@ -11,21 +19,32 @@ type LLMv1ConfigOptions = Partial<{
   waitConfirmations: number;
 }>;
 
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+
+let upgradesApi: HardhatUpgrades;
+
 describe("LLMv1 - Deployment Tests", function () {
+  before(async () => {
+    connection = await hre.network.getOrCreate();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   // Fixture to deploy LLMv1 using OpenZeppelin upgrades
   async function deployLLMv1Fixture() {
-    const [owner, otherAccount] = await hre.ethers.getSigners();
+    const [owner, otherAccount] = await ethers.getSigners();
 
     // Deploy LLMv1 using OpenZeppelin upgrades
-    const LLMv1Factory = await hre.ethers.getContractFactory("LLMv1");
-    const llmProxy = await hre.upgrades.deployProxy(LLMv1Factory, [], {
+    const LLMv1Factory = await ethers.getContractFactory("LLMv1");
+    const llmProxy = await upgradesApi.deployProxy(LLMv1Factory, [], {
       initializer: "initialize",
       kind: "uups",
     });
     await llmProxy.waitForDeployment();
 
     const proxyAddress = await llmProxy.getAddress();
-    const llmContract = await hre.ethers.getContractAt("LLMv1", proxyAddress);
+    const llmContract = await ethers.getContractAt("LLMv1", proxyAddress);
 
     return {
       llmContract,
@@ -102,7 +121,7 @@ describe("LLMv1 - Deployment Tests", function () {
 
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-      const implementation = await hre.ethers.provider.getStorage(proxyAddress, implementationSlot);
+      const implementation = await ethers.provider.getStorage(proxyAddress, implementationSlot);
 
       expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
     });
@@ -132,10 +151,10 @@ describe("LLMv1 - Deployment Tests", function () {
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const llmV1 = await hre.ethers.getContractAt("LLMv1", result.address);
+          const llmV1 = await ethers.getContractAt("LLMv1", result.address);
           expect(llmV1).to.not.equal(null);
           // Verify deployment info
-          expect(result.deploymentInfo.network).to.equal("hardhat");
+          expect(result.deploymentInfo.network).to.equal("default");
         }
       });
     });
@@ -184,7 +203,7 @@ describe("LLMv1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail due to format validation
-        await expect(deployLLMv1()).to.be.rejectedWith(/^Config validation failed:/);
+        await assert.rejects(() => deployLLMv1(), /Config validation failed:/);
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -214,14 +233,14 @@ describe("LLMv1 - Deployment Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `llm-v1-hardhat-${timestamp}.json`;
+          const deploymentFileName = `llm-v1-default-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.equal(true);
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(result.address);
 
           // Clean up deployment file

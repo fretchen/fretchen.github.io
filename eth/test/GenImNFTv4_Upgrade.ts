@@ -1,8 +1,16 @@
+import { describe, it, before } from "node:test";
 import { expect } from "chai";
+import assert from "node:assert";
 import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { upgradeToV4, loadConfig } from "../scripts/upgrade-genimg-v4";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type UpgradeV4ConfigOptions = Partial<{
   validateOnly: boolean;
@@ -12,14 +20,25 @@ type UpgradeV4ConfigOptions = Partial<{
   waitConfirmations: number;
 }>;
 
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+
+let upgradesApi: HardhatUpgrades;
+
 describe("GenImNFTv4 - Upgrade Tests", function () {
+  before(async () => {
+    connection = await hre.network.getOrCreate();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   // Fixture to deploy GenImNFTv3 for upgrade testing
   async function deployGenImNFTv3Fixture() {
-    const [owner, otherAccount, thirdAccount] = await hre.ethers.getSigners();
+    const [owner, otherAccount, thirdAccount] = await ethers.getSigners();
 
     // Deploy GenImNFTv3 using OpenZeppelin upgrades
-    const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
-    const proxyV3 = await hre.upgrades.deployProxy(GenImNFTv3Factory, [], {
+    const GenImNFTv3Factory = await ethers.getContractFactory("GenImNFTv3");
+    const proxyV3 = await upgradesApi.deployProxy(GenImNFTv3Factory, [], {
       initializer: "initialize",
       kind: "uups",
     });
@@ -29,7 +48,9 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
 
     // Mint some tokens in v3
     const mintPrice = await proxyV3.mintPrice();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers v3 proxy type lacks overloaded safeMint signature
     await (proxyV3 as any).connect(owner)["safeMint(string,bool)"]("ipfs://test1", true, { value: mintPrice });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers v3 proxy type lacks overloaded safeMint signature
     await (proxyV3 as any).connect(otherAccount)["safeMint(string,bool)"]("ipfs://test2", true, { value: mintPrice });
 
     return {
@@ -111,7 +132,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         expect(result).to.have.property("implementationAddress");
 
         // Verify the upgraded contract
-        const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+        const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
         expect(await v4Contract.owner()).to.equal(owner.address);
 
         // Verify v4 functions exist
@@ -171,9 +192,9 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         try {
           await loadConfig();
           throw new Error("Expected loadConfig to throw but it didn't");
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Verify that error contains validation messages
-          expect(error.message).to.match(/Config validation failed|Invalid Ethereum address format/);
+          expect((error as Error).message).to.match(/Config validation failed|Invalid Ethereum address format/);
         }
       } finally {
         // Restore original config
@@ -205,14 +226,14 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `genimg-v4-upgrade-hardhat-${timestamp}.json`;
+          const deploymentFileName = `genimg-v4-upgrade-default-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.equal(true);
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(proxyAddress);
           expect(deploymentData.upgradeType).to.equal("GenImNFTv3 → GenImNFTv4");
           expect(deploymentData.securityFix).to.equal("CVE-2025-11-26");
@@ -224,7 +245,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     });
 
     it("Should handle forceImport automatically for non-registered proxies", async function () {
-      const { proxyAddress, owner } = await deployGenImNFTv3Fixture();
+      const { proxyAddress } = await deployGenImNFTv3Fixture();
 
       // Deploy v3 without OpenZeppelin tracking (simulates Ignition deployment)
       // The upgrade script should automatically call forceImport
@@ -237,7 +258,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         expect(result).to.have.property("validated", true);
 
         // Verify that the proxy is now known to OpenZeppelin upgrades
-        const implementationAddress = await hre.upgrades.erc1967.getImplementationAddress(proxyAddress);
+        const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
         expect(implementationAddress).to.not.equal("0x0000000000000000000000000000000000000000");
       });
     });
@@ -248,7 +269,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       const { proxyAddress, owner, otherAccount } = await deployGenImNFTv3Fixture();
 
       // Get v3 state before upgrade
-      const v3Contract = await hre.ethers.getContractAt("GenImNFTv3", proxyAddress);
+      const v3Contract = await ethers.getContractAt("GenImNFTv3", proxyAddress);
       const preUpgradeSupply = await v3Contract.totalSupply();
       const preUpgradeOwner = await v3Contract.owner();
       const preUpgradeMintPrice = await v3Contract.mintPrice();
@@ -260,7 +281,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       });
 
       // Get v4 state after upgrade
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
       const postUpgradeSupply = await v4Contract.totalSupply();
       const postUpgradeOwner = await v4Contract.owner();
       const postUpgradeMintPrice = await v4Contract.mintPrice();
@@ -286,7 +307,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       });
 
       // Verify storage layout by checking that v3 data structures are intact
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // Check token listing status (v3 feature)
       const isListed0 = await v4Contract.isTokenListed(0);
@@ -312,7 +333,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // Check that v4 functions exist and are callable
       expect(v4Contract.isAuthorizedAgent).to.exist;
@@ -320,7 +341,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       expect(v4Contract.revokeAgentWallet).to.exist;
 
       // Test isAuthorizedAgent function
-      const owner = (await hre.ethers.getSigners())[0];
+      const owner = (await ethers.getSigners())[0];
       const isAuthorized = await v4Contract.isAuthorizedAgent(owner.address);
       expect(isAuthorized).to.be.a("boolean");
     });
@@ -332,14 +353,14 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // All tokens minted before upgrade should remain listed
       expect(await v4Contract.isTokenListed(0)).to.equal(true);
       expect(await v4Contract.isTokenListed(1)).to.equal(true);
 
       // getPublicTokensOfOwner should work
-      const owner = (await hre.ethers.getSigners())[0];
+      const owner = (await ethers.getSigners())[0];
       const publicTokens = await v4Contract.getPublicTokensOfOwner(owner.address);
       expect(publicTokens.length).to.be.greaterThan(0);
     });
@@ -347,7 +368,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     it("Should preserve owner, totalSupply, and mintPrice", async function () {
       const { proxyAddress, owner } = await deployGenImNFTv3Fixture();
 
-      const v3Contract = await hre.ethers.getContractAt("GenImNFTv3", proxyAddress);
+      const v3Contract = await ethers.getContractAt("GenImNFTv3", proxyAddress);
       const v3Supply = await v3Contract.totalSupply();
       const v3MintPrice = await v3Contract.mintPrice();
 
@@ -355,7 +376,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       expect(await v4Contract.owner()).to.equal(owner.address);
       expect(await v4Contract.totalSupply()).to.equal(v3Supply);
@@ -372,7 +393,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         expect(result).to.have.property("success", true);
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // Verify agent is authorized
       const isAuthorized = await v4Contract.isAuthorizedAgent(otherAccount.address);
@@ -386,7 +407,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // Authorized agent should return true
       expect(await v4Contract.isAuthorizedAgent(otherAccount.address)).to.equal(true);
@@ -402,14 +423,14 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // Fund contract for potential payment
       const mintPrice = await v4Contract.mintPrice();
       await v4Contract.connect(owner)["safeMint(string,bool)"]("ipfs://funding", true, { value: mintPrice });
 
       // Unauthorized account should NOT be able to update
-      await expect(v4Contract.connect(thirdAccount).requestImageUpdate(0, "ipfs://hack")).to.be.rejectedWith(
+      await expect(v4Contract.connect(thirdAccount).requestImageUpdate(0, "ipfs://hack")).to.be.revertedWith(
         "Not authorized agent",
       );
 
@@ -424,7 +445,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
 
       // Fund contract
       const mintPrice = await v4Contract.mintPrice();
@@ -442,18 +463,18 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
     it("Should reject upgrade if proxy address is invalid", async function () {
       const invalidAddress = "0x0000000000000000000000000000000000000000";
 
-      await expect(
+      await assert.rejects(() =>
         withTempConfig(invalidAddress, { validateOnly: true }, async () => {
           await upgradeToV4();
         }),
-      ).to.be.rejected;
+      );
     });
 
     it("Should handle upgrade when no tokens exist", async function () {
       // Deploy v3 without minting any tokens
-      const [owner] = await hre.ethers.getSigners();
-      const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
-      const proxyV3 = await hre.upgrades.deployProxy(GenImNFTv3Factory, [], {
+      await ethers.getSigners();
+      const GenImNFTv3Factory = await ethers.getContractFactory("GenImNFTv3");
+      const proxyV3 = await upgradesApi.deployProxy(GenImNFTv3Factory, [], {
         initializer: "initialize",
         kind: "uups",
       });
@@ -465,7 +486,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         expect(result).to.have.property("success", true);
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
       expect(await v4Contract.totalSupply()).to.equal(0n);
     });
 
@@ -473,7 +494,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       const { proxyAddress, owner } = await deployGenImNFTv3Fixture();
 
       // Mint additional tokens
-      const v3Contract = await hre.ethers.getContractAt("GenImNFTv3", proxyAddress);
+      const v3Contract = await ethers.getContractAt("GenImNFTv3", proxyAddress);
       const mintPrice = await v3Contract.mintPrice();
 
       for (let i = 0; i < 5; i++) {
@@ -486,7 +507,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
         await upgradeToV4();
       });
 
-      const v4Contract = await hre.ethers.getContractAt("GenImNFTv4", proxyAddress);
+      const v4Contract = await ethers.getContractAt("GenImNFTv4", proxyAddress);
       expect(await v4Contract.totalSupply()).to.equal(preUpgradeSupply);
     });
   });

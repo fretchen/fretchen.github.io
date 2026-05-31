@@ -8,25 +8,36 @@
  * Based on the structure of GenImNFTSharedTests.ts
  */
 
+import { describe, it } from "node:test";
+import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
-import { parseEther, getAddress, formatEther, type Address } from "viem";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+import { parseEther, getAddress } from "viem";
+import type { WalletClient, PublicClient } from "viem";
+
+// Module-level networkConn for use in shared test functions
+let _networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+
+export function setNetworkConn(conn: Awaited<ReturnType<typeof hre.network.create>>) {
+  _networkConn = conn;
+}
 
 /**
  * Interface for CollectorNFT Contract Fixture
  */
 export interface CollectorNFTFixture {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
   collectorNFT: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
   genImNFT: any;
-  owner: any;
-  collector1: any;
-  collector2: any;
-  genImOwner1: any;
-  genImOwner2: any;
-  randomUser: any;
-  publicClient: any;
-  [key: string]: any;
+  owner: WalletClient;
+  collector1: WalletClient;
+  collector2: WalletClient;
+  genImOwner1: WalletClient;
+  genImOwner2: WalletClient;
+  randomUser: WalletClient;
+  publicClient: PublicClient;
+  [key: string]: unknown;
 }
 
 /**
@@ -48,12 +59,13 @@ export function createCollectorNFTFixture(
 ) {
   return async function deployCollectorNFTFixture(): Promise<CollectorNFTFixture> {
     // Get viem wallet clients
-    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] = await hre.viem.getWalletClients();
+    const [owner, collector1, collector2, genImOwner1, genImOwner2, randomUser] =
+      await _networkConn.viem.getWalletClients();
 
-    const publicClient = await hre.viem.getPublicClient();
+    const publicClient = await _networkConn.viem.getPublicClient();
 
     // Deploy GenImNFT first using viem
-    const genImNFT = await hre.viem.deployContract("GenImNFTv4", []);
+    const genImNFT = await _networkConn.viem.deployContract("GenImNFTv4", []);
 
     // Mint some GenImNFTs for testing (publicly listed by default)
     await genImNFT.write.safeMint(["ipfs://test1", true], {
@@ -73,7 +85,7 @@ export function createCollectorNFTFixture(
     });
 
     // Deploy CollectorNFT using viem
-    const collectorNFT = await hre.viem.deployContract(contractName);
+    const collectorNFT = await _networkConn.viem.deployContract(contractName);
 
     // Initialize the CollectorNFT
     await collectorNFT.write.initialize([genImNFT.address, baseMintPrice], {
@@ -341,12 +353,12 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const insufficientPayment = TEST_CONSTANTS.BASE_MINT_PRICE / 2n;
 
         // Should throw error
-        await expect(
+        await _networkConn.viem.assertions.revert(
           collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
             value: insufficientPayment,
           }),
-        ).to.be.rejected;
+        );
       });
 
       it("Should reject minting for non-existent GenImNFT", async function () {
@@ -355,12 +367,12 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const nonExistentTokenId = 999n;
         const arbitraryURI = "ipfs://test1"; // Use any valid URI since token doesn't exist
 
-        await expect(
+        await assert.rejects(
           collectorNFT.write.mintCollectorNFT([nonExistentTokenId, arbitraryURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),
-        ).to.be.rejected;
+        );
       });
     });
   };
@@ -602,7 +614,6 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
           currentPrice0,
           currentPrice1,
           genImContract,
-          contractOwner,
         ] = await Promise.all([
           collectorNFT.read.totalSupply(),
           collectorNFT.read.mintCountPerGenImToken([0n]),
@@ -614,7 +625,6 @@ export function createStateConsistencyTests(getFixture: () => Promise<CollectorN
           collectorNFT.read.getCurrentPrice([0n]),
           collectorNFT.read.getCurrentPrice([1n]),
           collectorNFT.read.genImNFTContract(),
-          collectorNFT.read.owner(),
         ]);
 
         // Verify consistency between related values
@@ -661,12 +671,12 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
         });
 
         // Should now fail
-        await expect(
+        await _networkConn.viem.assertions.revert(
           collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),
-        ).to.be.rejected;
+        );
 
         // Make token public again
         await genImNFT.write.setTokenListed([tokenId, true], {
@@ -758,6 +768,7 @@ export function createCompleteTestSuite(
 /**
  * Helper function to get all NFTs for a wallet
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
 export async function getAllCollectorNFTsForWallet(contract: any, walletAddress: string) {
   const balance = await contract.read.balanceOf([walletAddress]);
   const tokens = [];
@@ -780,6 +791,7 @@ export async function getAllCollectorNFTsForWallet(contract: any, walletAddress:
 /**
  * Helper function to get mint statistics for multiple GenImNFTs
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
 export async function getMintStatsForTokens(contract: any, tokenIds: bigint[]) {
   const statsPromises = tokenIds.map((tokenId) => contract.read.getMintStats([tokenId]));
 

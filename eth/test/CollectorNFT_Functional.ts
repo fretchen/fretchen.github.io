@@ -9,13 +9,26 @@
  * see CollectorNFT_Deployment.ts which uses ethers + OpenZeppelin upgrades.
  */
 
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { createCollectorNFTFixture, createCompleteTestSuite, TEST_CONSTANTS } from "./shared/CollectorNFTSharedTests";
+import { describe, before } from "node:test";
+import hre from "hardhat";
+import {
+  createCollectorNFTFixture,
+  createCompleteTestSuite,
+  TEST_CONSTANTS,
+  setNetworkConn,
+} from "./shared/CollectorNFTSharedTests";
+
+let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
 
 describe("CollectorNFT - Functional Tests", function () {
+  before(async () => {
+    networkConn = await hre.network.getOrCreate();
+    setNetworkConn(networkConn);
+  });
+
   // Create fixture using the shared library
   const getFixture = createCollectorNFTFixture("CollectorNFT", TEST_CONSTANTS.BASE_MINT_PRICE);
 
   // Run the complete test suite
-  createCompleteTestSuite(() => loadFixture(getFixture), "CollectorNFT")();
+  createCompleteTestSuite(() => networkConn.networkHelpers.loadFixture(getFixture), "CollectorNFT")();
 });

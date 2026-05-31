@@ -1,4 +1,4 @@
-import { ethers, run } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
 
 interface DeploymentData {
@@ -34,7 +34,7 @@ async function verifyImplementation(implementationAddress: string, contractType:
   console.log(`\n🔄 Verifying ${contractType} implementation contract...`);
 
   try {
-    await run("verify:verify", {
+    await hre.run("verify:verify", {
       address: implementationAddress,
       constructorArguments: [], // Implementation contracts don't have constructor args for OpenZeppelin
       contract: `contracts/${contractType}.sol:${contractType}`,
@@ -51,6 +51,8 @@ async function verifyImplementation(implementationAddress: string, contractType:
 }
 
 async function verifyProxy(proxyAddress: string, implementationAddress: string, contractType: string): Promise<void> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log("\n🔄 Verifying proxy contract...");
 
   try {
@@ -59,7 +61,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
       const ContractFactory = await ethers.getContractFactory(contractType);
       const initializeData = ContractFactory.interface.encodeFunctionData("initialize", []);
 
-      await run("verify:verify", {
+      await hre.run("verify:verify", {
         address: proxyAddress,
         constructorArguments: [implementationAddress, initializeData],
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
@@ -70,7 +72,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
 
       // Strategy 2: Try as custom ERC1967Proxy
       try {
-        await run("verify:verify", {
+        await hre.run("verify:verify", {
           address: proxyAddress,
           constructorArguments: [],
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
@@ -81,7 +83,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
 
         // Strategy 3: Try without specifying contract
         try {
-          await run("verify:verify", {
+          await hre.run("verify:verify", {
             address: proxyAddress,
             constructorArguments: [],
           });
@@ -108,7 +110,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
   }
 }
 
-async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
+export async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
   try {
     if (!fs.existsSync(filePath)) {
       return null;
@@ -129,7 +131,7 @@ async function loadDeploymentFile(filePath: string): Promise<DeploymentData | nu
   }
 }
 
-async function verifyContract(
+export async function verifyContract(
   proxyAddress: string,
   implementationAddress: string,
   contractType: string,
@@ -164,7 +166,6 @@ async function main() {
   const networkName = process.env.HARDHAT_NETWORK || "localhost";
   console.log(`🔍 Contract Verification Script starting on ${networkName}...`);
 
-  // Check for deployment file first
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
   if (!deploymentFilePath) {
     console.error("❌ No deployment file specified. Please set DEPLOYMENT_FILE environment variable.");
@@ -172,9 +173,8 @@ async function main() {
   }
   console.log(`📂 Using deployment file: ${deploymentFilePath}`);
   const deploymentData = await loadDeploymentFile(deploymentFilePath);
-  console.log(`📂 Deployment data: ${JSON.stringify(deploymentData, null, 2)}`);
   if (!deploymentData) {
-    console.log("❌ Failed to load deployment file, falling back to manual mode");
+    console.error("❌ Failed to load deployment file");
     return;
   }
 
@@ -189,10 +189,7 @@ async function main() {
   );
 }
 
-// Handle errors gracefully
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

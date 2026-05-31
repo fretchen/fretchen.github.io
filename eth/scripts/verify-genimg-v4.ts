@@ -1,7 +1,5 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, run, network } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
-import * as path from "path";
 
 interface DeploymentData {
   network: string;
@@ -38,7 +36,7 @@ async function verifyImplementation(implementationAddress: string): Promise<void
   console.log(`📍 Implementation Address: ${implementationAddress}`);
 
   try {
-    await run("verify:verify", {
+    await hre.run("verify:verify", {
       address: implementationAddress,
       constructorArguments: [], // UUPS implementation contracts have no constructor args
       contract: "contracts/GenImNFTv4.sol:GenImNFTv4",
@@ -56,6 +54,8 @@ async function verifyImplementation(implementationAddress: string): Promise<void
 }
 
 async function verifyProxy(proxyAddress: string, implementationAddress: string): Promise<void> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log("\n🔄 Verifying proxy contract...");
   console.log(`📍 Proxy Address: ${proxyAddress}`);
 
@@ -65,7 +65,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
       const GenImNFTv4Factory = await ethers.getContractFactory("GenImNFTv4");
       const initializeData = GenImNFTv4Factory.interface.encodeFunctionData("initialize", []);
 
-      await run("verify:verify", {
+      await hre.run("verify:verify", {
         address: proxyAddress,
         constructorArguments: [implementationAddress, initializeData],
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
@@ -77,7 +77,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
       // Strategy 2: Try as custom ERC1967Proxy
       try {
-        await run("verify:verify", {
+        await hre.run("verify:verify", {
           address: proxyAddress,
           constructorArguments: [],
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
@@ -89,7 +89,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
         // Strategy 3: Try without specifying contract
         try {
-          await run("verify:verify", {
+          await hre.run("verify:verify", {
             address: proxyAddress,
             constructorArguments: [],
           });
@@ -121,6 +121,8 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 }
 
 async function testContractFunctionality(proxyAddress: string): Promise<void> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log("\n🧪 Testing GenImNFTv4 functionality...");
 
   try {
@@ -212,21 +214,21 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
   console.log(`   📍 Proxy Address: ${proxyAddress}`);
   console.log(`   📄 Implementation Address: ${implementationAddress}`);
   console.log(`   📝 Contract Type: GenImNFTv4`);
-  console.log(`   🌐 Network: ${network.name}`);
+  console.log(`   🌐 Network: ${connection.networkName}`);
 
   if (deploymentData.securityFix) {
     console.log(`   🔒 Security Fix: ${deploymentData.securityFix}`);
   }
 
   // Provide Etherscan links
-  if (network.name !== "localhost" && network.name !== "hardhat") {
+  if (connection.networkName !== "localhost" && connection.networkName !== "hardhat") {
     let explorerUrl = "https://etherscan.io";
 
-    if (network.name === "optimisticEthereum" || network.name === "optimism") {
+    if (connection.networkName === "optimisticEthereum" || connection.networkName === "optimism") {
       explorerUrl = "https://optimistic.etherscan.io";
-    } else if (network.name === "sepolia") {
+    } else if (connection.networkName === "sepolia") {
       explorerUrl = "https://sepolia.etherscan.io";
-    } else if (network.name === "optsepolia") {
+    } else if (connection.networkName === "optsepolia") {
       explorerUrl = "https://sepolia-optimistic.etherscan.io";
     }
 
@@ -242,76 +244,41 @@ async function verifyGenImNFTv4(deploymentData: DeploymentData): Promise<void> {
   console.log("   4. ✅ Update documentation with verified contract addresses");
 }
 
+export { verifyGenImNFTv4, loadDeploymentFile };
+
 async function main() {
+  const connection = await hre.network.getOrCreate();
   console.log("🚀 GenImNFTv4 Contract Verification Script");
   console.log("🔒 Security Fix: CVE-2025-11-26");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
-  console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
-  console.log("");
+  console.log(`Network: ${connection.networkName}`);
 
-  // Check for deployment file
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
-
   if (!deploymentFilePath) {
-    console.error("❌ No deployment file specified!");
-    console.error("\nUsage:");
-    console.error("  DEPLOYMENT_FILE=scripts/deployments/genimg-v4-upgrade-optimisticEthereum-2025-11-27.json \\");
-    console.error("  npx hardhat run scripts/verify-genimg-v4.ts --network optimisticEthereum");
-    console.error("\nAlternatively, check the deployments/ directory for available files:");
-
-    const deploymentsDir = path.join(__dirname, "deployments");
-    if (fs.existsSync(deploymentsDir)) {
-      const files = fs
-        .readdirSync(deploymentsDir)
-        .filter((f) => f.includes("genimg-v4") && f.endsWith(".json"))
-        .sort()
-        .reverse();
-
-      if (files.length > 0) {
-        console.error("\nAvailable GenImNFTv4 deployment files:");
-        files.forEach((file) => console.error(`  - ${file}`));
-      }
-    }
-
+    console.error("❌ DEPLOYMENT_FILE environment variable not set");
     process.exit(1);
   }
 
-  console.log(`📂 Using deployment file: ${deploymentFilePath}`);
-  console.log("");
-
-  // Load deployment data
   const deploymentData = await loadDeploymentFile(deploymentFilePath);
-
   if (!deploymentData) {
     console.error("❌ Failed to load deployment data");
     process.exit(1);
   }
 
-  // Verify network matches
-  if (deploymentData.network !== network.name) {
-    console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${network.name})`,
-    );
-    console.warn("   Continuing anyway, but verification may fail if networks don't match");
-    console.log("");
+  if (deploymentData.network !== connection.networkName) {
+    console.warn(`⚠️  Network mismatch: deployment=${deploymentData.network}, current=${connection.networkName}`);
   }
 
-  // Perform verification
   try {
     await verifyGenImNFTv4(deploymentData);
     console.log("\n✅ Script completed successfully");
-    process.exit(0);
   } catch (error) {
-    console.error("\n❌ Script failed:");
-    console.error(error);
+    console.error("\n❌ Script failed:", error);
     process.exit(1);
   }
 }
 
-// Handle errors gracefully
-if (require.main === module) {
-  main();
-}
-
-export { verifyGenImNFTv4, loadDeploymentFile };
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

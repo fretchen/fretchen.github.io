@@ -19,6 +19,10 @@ module.exports = tseslint.config(
       "*.js",
       "*.cjs",
       "*.mjs",
+      // Archived legacy tests (H2 era, not migrated)
+      "archive/**",
+      // Auto-generated Hardhat artifact type declarations
+      "artifacts/**",
     ],
   },
   eslint.configs.recommended,

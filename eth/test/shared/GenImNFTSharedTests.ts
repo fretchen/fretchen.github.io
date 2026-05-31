@@ -1,9 +1,14 @@
+import { describe, it } from "node:test";
 import { expect } from "chai";
 import hre from "hardhat";
 import { formatEther, getAddress } from "viem";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+import type { WalletClient } from "viem";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Definiere den Pfad für die Metadaten-Dateien
 const METADATA_DIR = path.join(__dirname, "../../metadata");
@@ -46,6 +51,7 @@ export function createMetadataFile(tokenId: number | bigint, prompt: string): st
 /**
  * Helper function to get all NFTs for a wallet
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
 export async function getAllNFTsForWallet(contract: any, walletAddress: string) {
   const balance = await contract.read.balanceOf([walletAddress]);
   const tokens = [];
@@ -88,11 +94,19 @@ export function cleanupTestFiles() {
  * Interface für Contract-Fixture
  */
 export interface ContractFixture {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem contract type requires compile-time ABI generics
   contract: any;
-  owner: any;
-  otherAccount: any;
-  recipient?: any;
-  [key: string]: any;
+  owner: WalletClient;
+  otherAccount: WalletClient;
+  recipient?: WalletClient;
+  [key: string]: unknown;
+}
+
+// Module-level networkConn for use in shared test functions
+let _networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+
+export function setNetworkConn(conn: Awaited<ReturnType<typeof hre.network.create>>) {
+  _networkConn = conn;
 }
 
 /**
@@ -216,7 +230,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         const { contract } = await getFixture();
 
         // Should revert with an ERC721 error about nonexistent token
-        await expect(contract.read.tokenURI([999n])).to.be.rejected;
+        await _networkConn.viem.assertions.revert(contract.read.tokenURI([999n]));
       });
     });
 
@@ -319,7 +333,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         // Mint tokens to different owners
         await contract.write.safeMint(["uri1"], { value: mintPrice }); // Token 0 to owner
 
-        const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
         await otherClient.write.safeMint(["uri2"], { value: mintPrice }); // Token 1 to otherAccount
@@ -359,7 +373,7 @@ export function createBasicNFTTests(getFixture: () => Promise<ContractFixture>, 
         expect(await contract.read.balanceOf([recipientAddress])).to.equal(0n);
 
         // Should revert when trying to get token by index for empty wallet
-        await expect(contract.read.tokenOfOwnerByIndex([recipientAddress, 0n])).to.be.rejected;
+        await _networkConn.viem.assertions.revert(contract.read.tokenOfOwnerByIndex([recipientAddress, 0n]));
       });
     });
   };
@@ -388,7 +402,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         expect(originalTokenURI).to.equal(initialTokenURI);
 
         // 2. Updater fordert ein Bild-Update an mit neuer URL
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -422,7 +436,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         expect(initialAuthorizedUpdater).to.equal("0x0000000000000000000000000000000000000000");
 
         // 3. Führe Image-Update durch
-        const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -437,8 +451,11 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         const { contract } = await getFixture();
 
         // Versuche, Status eines nicht-existierenden Tokens abzufragen
-        await expect(contract.read.isImageUpdated([999n])).to.be.rejectedWith("Token does not exist");
-        await expect(contract.read.getAuthorizedImageUpdater([999n])).to.be.rejectedWith("Token does not exist");
+        await _networkConn.viem.assertions.revertWith(contract.read.isImageUpdated([999n]), "Token does not exist");
+        await _networkConn.viem.assertions.revertWith(
+          contract.read.getAuthorizedImageUpdater([999n]),
+          "Token does not exist",
+        );
       });
 
       it("Should prevent double image updates", async function () {
@@ -449,7 +466,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         await contract.write.safeMint(["test-uri"], { value: mintPrice });
 
         // 2. Erstes Update
-        const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -459,8 +476,9 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         expect(await contract.read.isImageUpdated([0n])).to.be.true;
 
         // 4. Zweites Update sollte fehlschlagen
-        await expect(otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"])).to.be
-          .rejected;
+        await _networkConn.viem.assertions.revert(
+          otherClient.write.requestImageUpdate([0n, "https://example.com/second-update.png"]),
+        );
       });
     });
   };
@@ -472,6 +490,7 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
  * @param expectedName Expected contract name (optional)
  * @returns Test function
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers fixture type is not statically known
 export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expectedName?: string) {
   return function () {
     describe("Basic NFT Functionality (Ethers)", function () {
@@ -535,7 +554,7 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
         const { proxy, owner } = await getFixture();
 
         const mintPrice = await proxy.mintPrice();
-        const tx = await proxy.connect(owner)["safeMint(string)"]("test-uri", { value: mintPrice });
+        await proxy.connect(owner)["safeMint(string)"]("test-uri", { value: mintPrice });
 
         // In ethers.js, we check the total supply to infer the token ID
         const totalSupply = await proxy.totalSupply();
@@ -572,8 +591,8 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
         try {
           await proxy.tokenURI(999);
           expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-          expect(error.message).to.include("revert");
+        } catch (error: unknown) {
+          expect((error as Error).message).to.include("revert");
         }
       });
     });
@@ -685,7 +704,8 @@ export function createBasicNFTTestsEthers(getFixture: () => Promise<any>, expect
  * @param expectedName Expected contract name (optional)
  * @returns Test function
  */
-export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, expectedName?: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ethers fixture type is not statically known
+export function createImageUpdateTestsEthers(getFixture: () => Promise<any>) {
   return function () {
     describe("Image Updates (Ethers)", function () {
       it("Should update the tokenURI when requestImageUpdate is called", async function () {
@@ -734,7 +754,7 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
           if (imageUpdater !== "0x0000000000000000000000000000000000000000") {
             expect(imageUpdater).to.equal(otherAccount.address);
           }
-        } catch (error) {
+        } catch {
           // If the function doesn't exist or doesn't work as expected in this version,
           // just verify that the image update was successful
           expect(await proxy.isImageUpdated(tokenId)).to.be.true;
@@ -748,8 +768,8 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
         try {
           await proxy.isImageUpdated(999);
           expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-          expect(error.message).to.include("revert");
+        } catch (error: unknown) {
+          expect((error as Error).message).to.include("revert");
         }
       });
 
@@ -774,8 +794,8 @@ export function createImageUpdateTestsEthers(getFixture: () => Promise<any>, exp
           const secondImageUrl = "https://example.com/second-image.png";
           await proxy.connect(otherAccount).requestImageUpdate(tokenId, secondImageUrl);
           expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-          expect(error.message).to.include("revert");
+        } catch (error: unknown) {
+          expect((error as Error).message).to.include("revert");
         }
 
         // URI sollte unverändert sein
@@ -796,7 +816,7 @@ export function createAdvancedImageUpdateTests(
     describe("Advanced Image Updates", function () {
       it("Should allow another wallet to update the image for a token with balance checks", async function () {
         const { contract, owner, recipient, otherAccount } = await getFixture();
-        const provider = await hre.viem.getPublicClient();
+        const provider = await _networkConn.viem.getPublicClient();
 
         // 1. Erstelle ein NFT mit leerem Bild und übertrage es dann an recipient
         const prompt = "A cyberpunk city with flying cars in the rain";
@@ -812,9 +832,6 @@ export function createAdvancedImageUpdateTests(
         await contract.write.transferFrom([owner.account.address, recipient.account.address, 0n]);
 
         // 2. Token-Besitzer autorisiert eine andere Wallet als Bild-Updater
-        const recipientClient = await hre.viem.getContractAt(contractName, contract.address, {
-          client: { wallet: recipient },
-        });
 
         // 3. Erfasse den Kontostand des Updaters VOR dem Update
         const updaterBalanceBefore = await provider.getBalance({
@@ -823,7 +840,7 @@ export function createAdvancedImageUpdateTests(
         console.log(`Updater balance before: ${formatEther(updaterBalanceBefore)} ETH`);
 
         // 4. Die autorisierte Wallet fordert ein Bild-Update an
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -874,7 +891,7 @@ export function createAdvancedImageUpdateTests(
         expect(getAddress(newOwner)).to.equal(getAddress(recipient.account.address));
 
         // Other account should be able to update image (anyone can update)
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -905,7 +922,7 @@ export function createAdvancedImageUpdateTests(
         expect(originalMetadata.image).to.equal(""); // Initially empty
 
         // Update image
-        const updaterClient = await hre.viem.getContractAt(contractName, contract.address, {
+        const updaterClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
           client: { wallet: otherAccount },
         });
 
@@ -932,13 +949,10 @@ export function createAdvancedImageUpdateTests(
  * @param contractName Optional contract name for logging/debugging
  * @returns Function that creates the test suite
  */
-export function createEnumerationTests(
-  fixtureFunction: () => Promise<ContractFixture>,
-  contractName: string = "Contract",
-): () => void {
+export function createEnumerationTests(fixtureFunction: () => Promise<ContractFixture>): () => void {
   return function () {
     it("Should update enumeration after token transfer", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
+      const { contract, owner, otherAccount } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint token to owner
@@ -966,7 +980,7 @@ export function createEnumerationTests(
     });
 
     it("Should update enumeration after token burn", async function () {
-      const { contract, owner } = await loadFixture(fixtureFunction);
+      const { contract, owner } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint 3 tokens
@@ -1008,7 +1022,7 @@ export function createWalletEnumerationTests(
 ): () => void {
   return function () {
     it("Should get all NFTs with metadata for a wallet", async function () {
-      const { contract, owner, otherAccount } = await loadFixture(fixtureFunction);
+      const { contract, owner, otherAccount } = await _networkConn.networkHelpers.loadFixture(fixtureFunction);
       const mintPrice = await contract.read.mintPrice();
 
       // Mint tokens with metadata
@@ -1022,7 +1036,7 @@ export function createWalletEnumerationTests(
         const tokenURI = createMetadataFile(i, prompts[i]);
         if (i === 1) {
           // Mint one token to otherAccount
-          const otherClient = await hre.viem.getContractAt(contractName, contract.address, {
+          const otherClient = await _networkConn.viem.getContractAt(contractName, contract.address, {
             client: { wallet: otherAccount },
           });
           await otherClient.write.safeMint([tokenURI], { value: mintPrice });

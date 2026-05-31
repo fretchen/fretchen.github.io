@@ -1,7 +1,5 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, run, network } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
-import * as path from "path";
 
 interface DeploymentData {
   network: string;
@@ -42,7 +40,7 @@ async function verifyImplementation(implementationAddress: string, contractPath:
   console.log(`📄 Contract Path: ${contractPath}`);
 
   try {
-    await run("verify:verify", {
+    await hre.run("verify:verify", {
       address: implementationAddress,
       constructorArguments: [], // UUPS implementation contracts have no constructor args
       contract: contractPath,
@@ -66,7 +64,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
   try {
     // Strategy 1: Try as OpenZeppelin ERC1967Proxy (without initialization data)
     try {
-      await run("verify:verify", {
+      await hre.run("verify:verify", {
         address: proxyAddress,
         constructorArguments: [implementationAddress, "0x"],
         contract: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
@@ -78,7 +76,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
       // Strategy 2: Try as custom ERC1967Proxy
       try {
-        await run("verify:verify", {
+        await hre.run("verify:verify", {
           address: proxyAddress,
           constructorArguments: [],
           contract: "contracts/ERC1967Proxy.sol:ERC1967Proxy",
@@ -90,7 +88,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string):
 
         // Strategy 3: Try without specifying contract
         try {
-          await run("verify:verify", {
+          await hre.run("verify:verify", {
             address: proxyAddress,
             constructorArguments: [],
           });
@@ -180,11 +178,11 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
   console.log(`   📍 Proxy Address: ${proxyAddress}`);
   console.log(`   📄 Implementation Address: ${implementationAddress}`);
   console.log(`   📝 Contract Type: ${deploymentData.contractType}`);
-  console.log(`   🌐 Network: ${network.name}`);
+  console.log(`   🌐 Network: ${connection.networkName}`);
 
   // Provide Etherscan links
-  if (network.name !== "localhost" && network.name !== "hardhat") {
-    const explorerUrl = getExplorerUrl(network.name);
+  if (connection.networkName !== "localhost" && connection.networkName !== "hardhat") {
+    const explorerUrl = getExplorerUrl(connection.networkName);
 
     console.log(`\n🔗 View on Block Explorer:`);
     console.log(`   📍 Proxy: ${explorerUrl}/address/${proxyAddress}`);
@@ -198,93 +196,48 @@ async function verifyContract(deploymentData: DeploymentData, contractPath: stri
   console.log("   4. ✅ Update documentation with verified contract addresses");
 }
 
+export { verifyContract, loadDeploymentFile };
+
 async function main() {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log("🚀 Generic Contract Verification Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${connection.networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
-  console.log("");
 
-  // Check for required environment variables
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
   const contractPath = process.env.CONTRACT_PATH;
 
   if (!deploymentFilePath) {
-    console.error("❌ No deployment file specified!");
-    console.error("\nUsage:");
-    console.error("  DEPLOYMENT_FILE=scripts/deployments/contract-network-date.json \\");
-    console.error("  CONTRACT_PATH=contracts/MyContract.sol:MyContract \\");
-    console.error("  npx hardhat run scripts/verify-contract.ts --network <network>");
-    console.error("\nExample (Splitter):");
-    console.error("  DEPLOYMENT_FILE=scripts/deployments/splitter-v1-optsepolia-2026-01-05.json \\");
-    console.error("  CONTRACT_PATH=contracts/EIP3009SplitterV1.sol:EIP3009SplitterV1 \\");
-    console.error("  npx hardhat run scripts/verify-contract.ts --network optsepolia");
-
-    const deploymentsDir = path.join(__dirname, "deployments");
-    if (fs.existsSync(deploymentsDir)) {
-      const files = fs
-        .readdirSync(deploymentsDir)
-        .filter((f) => f.endsWith(".json"))
-        .sort()
-        .reverse()
-        .slice(0, 5);
-
-      if (files.length > 0) {
-        console.error("\nRecent deployment files:");
-        files.forEach((file) => console.error(`  - ${file}`));
-      }
-    }
-
+    console.error("❌ DEPLOYMENT_FILE environment variable not set");
     process.exit(1);
   }
-
   if (!contractPath) {
-    console.error("❌ No contract path specified!");
-    console.error("\nThe CONTRACT_PATH must be in format:");
-    console.error("  contracts/ContractName.sol:ContractName");
-    console.error("\nExamples:");
-    console.error("  - contracts/EIP3009SplitterV1.sol:EIP3009SplitterV1");
-    console.error("  - contracts/GenImNFTv4.sol:GenImNFTv4");
-    console.error("  - contracts/LLMv1.sol:LLMv1");
+    console.error("❌ CONTRACT_PATH environment variable not set (e.g. contracts/MyContract.sol:MyContract)");
     process.exit(1);
   }
 
-  console.log(`📂 Using deployment file: ${deploymentFilePath}`);
-  console.log(`📄 Contract path: ${contractPath}`);
-  console.log("");
-
-  // Load deployment data
   const deploymentData = await loadDeploymentFile(deploymentFilePath);
-
   if (!deploymentData) {
     console.error("❌ Failed to load deployment data");
     process.exit(1);
   }
 
-  // Verify network matches
-  if (deploymentData.network !== network.name) {
-    console.warn(
-      `⚠️  Warning: Deployment network (${deploymentData.network}) does not match current network (${network.name})`,
-    );
-    console.warn("   Continuing anyway, but verification may fail if networks don't match");
-    console.log("");
+  if (deploymentData.network !== connection.networkName) {
+    console.warn(`⚠️  Network mismatch: deployment=${deploymentData.network}, current=${connection.networkName}`);
   }
 
-  // Perform verification
   try {
     await verifyContract(deploymentData, contractPath);
     console.log("\n✅ Script completed successfully");
-    process.exit(0);
   } catch (error) {
-    console.error("\n❌ Script failed:");
-    console.error(error);
+    console.error("\n❌ Script failed:", error);
     process.exit(1);
   }
 }
 
-// Handle errors gracefully
-if (require.main === module) {
-  main();
-}
-
-export { verifyContract, loadDeploymentFile };
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

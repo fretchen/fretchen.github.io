@@ -1,8 +1,16 @@
+import { describe, it, before } from "node:test";
 import { expect } from "chai";
+import assert from "node:assert";
 import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { deploySplitterV1 } from "../scripts/deploy-splitter-v1";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type SplitterV1ConfigOptions = Partial<{
   validateOnly: boolean;
@@ -11,23 +19,34 @@ type SplitterV1ConfigOptions = Partial<{
   waitConfirmations: number;
 }>;
 
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+
+let upgradesApi: HardhatUpgrades;
+
 describe("EIP3009SplitterV1 - Deployment Tests", function () {
+  before(async () => {
+    connection = await hre.network.getOrCreate();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   // Fixture to deploy EIP3009SplitterV1 using OpenZeppelin upgrades
   async function deploySplitterFixture() {
-    const [owner, facilitator, otherAccount] = await hre.ethers.getSigners();
+    const [owner, facilitator, otherAccount] = await ethers.getSigners();
 
     // Deploy EIP3009SplitterV1 using OpenZeppelin upgrades
-    const SplitterFactory = await hre.ethers.getContractFactory("EIP3009SplitterV1");
+    const SplitterFactory = await ethers.getContractFactory("EIP3009SplitterV1");
     const fixedFee = "10000"; // 1 cent in USDC (6 decimals)
 
-    const splitterProxy = await hre.upgrades.deployProxy(SplitterFactory, [facilitator.address, fixedFee], {
+    const splitterProxy = await upgradesApi.deployProxy(SplitterFactory, [facilitator.address, fixedFee], {
       initializer: "initialize",
       kind: "uups",
     });
     await splitterProxy.waitForDeployment();
 
     const proxyAddress = await splitterProxy.getAddress();
-    const splitterContract = await hre.ethers.getContractAt("EIP3009SplitterV1", proxyAddress);
+    const splitterContract = await ethers.getContractAt("EIP3009SplitterV1", proxyAddress);
 
     return {
       splitterContract,
@@ -42,7 +61,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   // Helper function to create a temporary config file for testing
   async function createTempConfig(options: SplitterV1ConfigOptions = {}) {
     const tempConfigPath = path.join(__dirname, "../scripts/deploy-splitter-v1.config-test.json");
-    const [, facilitator] = await hre.ethers.getSigners();
+    const [, facilitator] = await ethers.getSigners();
 
     const config = {
       parameters: {
@@ -115,7 +134,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-      const implementation = await hre.ethers.provider.getStorage(proxyAddress, implementationSlot);
+      const implementation = await ethers.provider.getStorage(proxyAddress, implementationSlot);
 
       expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
     });
@@ -140,7 +159,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
       const { splitterContract, facilitator } = await deploySplitterFixture();
 
       // Attempt to re-initialize should fail (already initialized)
-      await expect(splitterContract.initialize(facilitator.address, "20000")).to.be.rejected;
+      await expect(splitterContract.initialize(facilitator.address, "20000")).to.revert(ethers);
     });
   });
 
@@ -193,11 +212,11 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const splitter = await hre.ethers.getContractAt("EIP3009SplitterV1", result.address);
+          const splitter = await ethers.getContractAt("EIP3009SplitterV1", result.address);
           expect(splitter).to.not.equal(null);
 
           // Verify deployment info
-          expect(result.deploymentInfo.network).to.equal("hardhat");
+          expect(result.deploymentInfo.network).to.equal("default");
           expect(result.deploymentInfo.contractType).to.equal("EIP3009SplitterV1");
           expect(result.deploymentInfo.tokenNote).to.include("supports USDC, EURC");
         }
@@ -252,7 +271,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail due to address validation
-        await expect(deploySplitterV1()).to.be.rejectedWith(/^Config validation failed:/);
+        await assert.rejects(() => deploySplitterV1(), /Config validation failed:/);
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -303,7 +322,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail during deployment (contract validation)
-        await expect(deploySplitterV1()).to.be.rejected;
+        await assert.rejects(() => deploySplitterV1());
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -333,14 +352,14 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
           expect(fs.existsSync(deploymentsDir)).to.equal(true);
 
           const timestamp = new Date().toISOString().split("T")[0];
-          const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+          const deploymentFileName = `splitter-v1-default-${timestamp}.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.equal(true);
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(result.address);
           expect(deploymentData.contractType).to.equal("EIP3009SplitterV1");
           expect(deploymentData.tokenNote).to.include("Token is passed as parameter");
@@ -355,7 +374,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   describe("Configuration Validation", function () {
     it("Should reject config with invalid fixed fee", async function () {
       const invalidConfigPath = path.join(__dirname, "../scripts/deploy-splitter-v1.config-invalid-fee.json");
-      const [, facilitator] = await hre.ethers.getSigners();
+      const [, facilitator] = await ethers.getSigners();
 
       const invalidConfig = {
         parameters: {
@@ -384,7 +403,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
-        await expect(deploySplitterV1()).to.be.rejectedWith(/Config validation failed:/);
+        await assert.rejects(() => deploySplitterV1(), /Config validation failed:/);
       } finally {
         if (fs.existsSync(backupConfigPath)) {
           fs.copyFileSync(backupConfigPath, originalConfigPath);
@@ -417,8 +436,8 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
     it("Should verify implementation contract exists", async function () {
       const { proxyAddress } = await deploySplitterFixture();
 
-      const implementationAddress = await hre.upgrades.erc1967.getImplementationAddress(proxyAddress);
-      const implementationCode = await hre.ethers.provider.getCode(implementationAddress);
+      const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
+      const implementationCode = await ethers.provider.getCode(implementationAddress);
 
       expect(implementationCode).to.not.equal("0x");
       expect(implementationCode.length).to.be.greaterThan(2); // More than just "0x"
@@ -428,7 +447,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
       const { proxyAddress } = await deploySplitterFixture();
 
       // UUPS proxies use zero address for admin (upgrade logic in implementation)
-      const adminAddress = await hre.upgrades.erc1967.getAdminAddress(proxyAddress);
+      const adminAddress = await upgradesApi.erc1967.getAdminAddress(proxyAddress);
 
       // For UUPS, admin should be zero address
       expect(adminAddress).to.equal("0x0000000000000000000000000000000000000000");
@@ -452,7 +471,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
   describe("Deployment File Persistence", function () {
     it("Should save deployment file immediately after successful deploy", async function () {
       const timestamp = new Date().toISOString().split("T")[0];
-      const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+      const deploymentFileName = `splitter-v1-default-${timestamp}.json`;
       const deploymentFilePath = path.join(__dirname, "../scripts/deployments", deploymentFileName);
 
       // Clean up any existing deployment file
@@ -485,7 +504,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
 
     it("Should include verification status in deployment file", async function () {
       const timestamp = new Date().toISOString().split("T")[0];
-      const deploymentFileName = `splitter-v1-hardhat-${timestamp}.json`;
+      const deploymentFileName = `splitter-v1-default-${timestamp}.json`;
       const deploymentFilePath = path.join(__dirname, "../scripts/deployments", deploymentFileName);
 
       // Clean up any existing deployment file

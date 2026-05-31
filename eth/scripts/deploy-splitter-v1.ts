@@ -1,10 +1,14 @@
-#!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
 import { getAddress } from "viem";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Zod Schema for configuration validation
 const SplitterV1DeployConfigSchema = z.object({
@@ -85,6 +89,9 @@ function loadConfig(): SplitterV1DeployConfig {
  * Validate deployment without deploying
  */
 async function validateDeployment(): Promise<void> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating EIP3009SplitterV1 contract...");
 
   try {
@@ -94,7 +101,7 @@ async function validateDeployment(): Promise<void> {
     console.log("✅ Contract compiles successfully");
 
     // Validate OpenZeppelin upgradeable patterns
-    await upgrades.validateImplementation(SplitterFactory, {
+    await upgradesApi.validateImplementation(SplitterFactory, {
       kind: "uups",
     });
 
@@ -140,9 +147,13 @@ async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void>
 export async function deploySplitterV1(): Promise<
   boolean | { contract: unknown; address: string; deploymentInfo: unknown }
 > {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
+  const networkName = connection.networkName;
   console.log("🚀 EIP3009SplitterV1 Deployment Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -174,7 +185,7 @@ export async function deploySplitterV1(): Promise<
   console.log("-".repeat(40));
 
   try {
-    await upgrades.validateImplementation(SplitterFactory, {
+    await upgradesApi.validateImplementation(SplitterFactory, {
       kind: "uups",
     });
     console.log("✅ OpenZeppelin upgrade validation passed");
@@ -191,15 +202,15 @@ export async function deploySplitterV1(): Promise<
   console.log(`📋 Note: Token is now a parameter of executeSplit()`);
   console.log("");
 
-  const Splitter = await upgrades.deployProxy(SplitterFactory, [parameters.facilitatorWallet, parameters.fixedFee], {
+  const Splitter = await upgradesApi.deployProxy(SplitterFactory, [parameters.facilitatorWallet, parameters.fixedFee], {
     kind: "uups",
     initializer: "initialize",
   });
 
   await Splitter.waitForDeployment();
   const proxyAddress = await Splitter.getAddress();
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-  const adminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
+  const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
+  const adminAddress = await upgradesApi.erc1967.getAdminAddress(proxyAddress);
 
   console.log("✅ EIP3009SplitterV1 deployed successfully!");
   console.log("=".repeat(60));
@@ -217,7 +228,7 @@ export async function deploySplitterV1(): Promise<
   // Create deployment info IMMEDIATELY after successful deployment
   // This ensures deployment info is saved even if verification fails
   const deploymentInfo = {
-    network: network.name,
+    network: networkName,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyAddress: proxyAddress,
@@ -244,7 +255,7 @@ export async function deploySplitterV1(): Promise<
   }
 
   const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-  const deploymentFileName = `splitter-v1-${network.name}-${timestamp}.json`;
+  const deploymentFileName = `splitter-v1-${networkName}-${timestamp}.json`;
   const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -363,12 +374,4 @@ export async function deploySplitterV1(): Promise<
     address: proxyAddress,
     deploymentInfo,
   };
-}
-
-// Execute deployment only when run directly (not imported)
-if (require.main === module) {
-  deploySplitterV1().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
 }

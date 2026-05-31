@@ -39,9 +39,8 @@
 // This script validates the current state of deployed contracts
 // and checks for upgrade readiness.
 //
-import { ethers } from "hardhat";
+import hre from "hardhat";
 import * as fs from "fs";
-import * as path from "path";
 
 interface ContractInfo {
   name: string;
@@ -75,6 +74,8 @@ interface DeploymentData {
 }
 
 async function validateContract(proxyAddress: string): Promise<ContractInfo> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log(`\n🔍 Validating GenImNFT contract at: ${proxyAddress}`);
   console.log("=".repeat(50));
 
@@ -159,6 +160,8 @@ async function validateContract(proxyAddress: string): Promise<ContractInfo> {
 }
 
 async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTInfo> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log(`\n🔍 Validating CollectorNFT contract at: ${proxyAddress}`);
   console.log("=".repeat(50));
 
@@ -231,6 +234,8 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
 }
 
 async function validateImplementation(implementationAddress: string, contractName: string): Promise<void> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log(`\n🔧 Validating ${contractName} implementation at: ${implementationAddress}`);
   console.log("=".repeat(50));
 
@@ -264,6 +269,8 @@ async function validateImplementation(implementationAddress: string, contractNam
 }
 
 async function checkUpgradeReadiness(proxyAddress: string, contractType: string = "GenImNFTv2"): Promise<void> {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
   console.log(`\n🔄 Checking upgrade readiness for ${contractType}...`);
   console.log("=".repeat(30));
 
@@ -382,88 +389,6 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
   }
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-
-  // Check for deployment file first
-  const deploymentFilePath = process.env.DEPLOYMENT_FILE;
-
-  if (deploymentFilePath) {
-    console.log(`📂 Using deployment file: ${deploymentFilePath}`);
-    const deploymentData = await loadDeploymentFile(deploymentFilePath);
-
-    if (deploymentData) {
-      await validateFromDeploymentFile(deploymentData);
-      return;
-    } else {
-      console.log("❌ Failed to load deployment file, falling back to manual mode");
-    }
-  }
-
-  // Check for deployment files in the deployments directory
-  const deploymentsDir = path.join(__dirname, "deployments");
-  if (fs.existsSync(deploymentsDir)) {
-    const files = fs.readdirSync(deploymentsDir).filter((f) => f.endsWith(".json"));
-
-    if (files.length > 0) {
-      console.log(`📂 Found ${files.length} deployment file(s) in deployments directory:`);
-      files.forEach((file) => console.log(`   - ${file}`));
-
-      // Use the most recent file if no specific file was provided
-      const mostRecentFile = files.sort().reverse()[0];
-      const deploymentFilePath = path.join(deploymentsDir, mostRecentFile);
-
-      console.log(`📂 Using most recent deployment file: ${mostRecentFile}`);
-      const deploymentData = await loadDeploymentFile(deploymentFilePath);
-
-      if (deploymentData) {
-        await validateFromDeploymentFile(deploymentData);
-        return;
-      }
-    }
-  }
-
-  // Fallback to original validation mode
-  if (args.length === 0) {
-    console.log("Usage: npx hardhat run scripts/validate-contract-new.ts --network <network>");
-    console.log("Set PROXY_ADDRESS environment variable or DEPLOYMENT_FILE for automated validation");
-    return;
-  }
-
-  const proxyAddress = process.env.PROXY_ADDRESS || "";
-
-  if (!proxyAddress) {
-    console.log(
-      "❌ Please set PROXY_ADDRESS environment variable, DEPLOYMENT_FILE, or place deployment files in deployments/ directory",
-    );
-    console.log("Example: PROXY_ADDRESS=0x... npx hardhat run scripts/validate-contract-new.ts --network sepolia");
-    console.log(
-      "Example: DEPLOYMENT_FILE=./deployments/collector-nft-optimism-2025-06-10.json npx hardhat run scripts/validate-contract-new.ts --network optimisticEthereum",
-    );
-    return;
-  }
-
-  try {
-    const info = await validateContract(proxyAddress);
-    await checkUpgradeReadiness(proxyAddress);
-
-    console.log("\n📋 Summary:");
-    console.log("=".repeat(20));
-    console.log(JSON.stringify(info, null, 2));
-  } catch (error: unknown) {
-    console.error("Script failed:", error instanceof Error ? error.message : error);
-    process.exit(1);
-  }
-}
-
-// Handle both direct execution and module import
-if (require.main === module) {
-  main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
-
 export {
   validateContract,
   validateCollectorNFT,
@@ -472,3 +397,42 @@ export {
   loadDeploymentFile,
   validateFromDeploymentFile,
 };
+
+async function main() {
+  const deploymentFilePath = process.env.DEPLOYMENT_FILE;
+  if (deploymentFilePath) {
+    const deploymentData = await loadDeploymentFile(deploymentFilePath);
+    if (deploymentData) {
+      await validateFromDeploymentFile(deploymentData);
+      return;
+    }
+    console.error("❌ Failed to load deployment file");
+    process.exit(1);
+  }
+
+  const proxyAddress = process.env.PROXY_ADDRESS;
+  if (!proxyAddress) {
+    console.error("❌ Set PROXY_ADDRESS or DEPLOYMENT_FILE environment variable");
+    console.error("Example: PROXY_ADDRESS=0x... npx hardhat run scripts/validate-contract.ts --network sepolia");
+    process.exit(1);
+  }
+
+  try {
+    const info = await validateContract(proxyAddress);
+    await checkUpgradeReadiness(proxyAddress);
+    console.log("\n📋 Summary:");
+    console.log(JSON.stringify(info, null, 2));
+  } catch (error: unknown) {
+    console.error("Script failed:", error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}
+
+// HH_TEST is set by Hardhat's test runner. Guard against running main() when
+// this module is imported transitively by test files via deploy/upgrade scripts.
+if (!process.env.HH_TEST) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

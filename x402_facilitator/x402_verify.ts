@@ -63,7 +63,7 @@ export async function verifyPayment(
     }
 
     const facilitator = getFacilitator();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const result = await facilitator.verify(paymentPayload as any, paymentRequirements as any);
 
     if (result.isValid) {
@@ -87,11 +87,11 @@ export async function verifyPayment(
     return {
       ...result,
       feeRequired: resultWithExtras.feeRequired as boolean | undefined,
-      recipient: (resultWithExtras.recipient as string | undefined) || result.recipient,
+      recipient: resultWithExtras.recipient as string | undefined,
     };
   } catch (error) {
-    const err = error as Error;
-    logger.error({ err, message: err.message }, "Unexpected error during payment verification");
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ message }, "Unexpected error during payment verification");
     return {
       isValid: false,
       invalidReason: "unexpected_verify_error",

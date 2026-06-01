@@ -1,24 +1,21 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-export default [
-  // Ignore patterns first
-  {
-    ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"],
-  },
-
-  // Base recommended configuration
+export default tseslint.config(
+  { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
-
-  // Custom configuration for all JS files
+  ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ["**/*.js"],
     languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
+      parserOptions: { projectService: true },
+    },
+  },
+  // JS files: disable type-checked rules, add node globals
+  {
+    files: ["**/*.js", "**/*.cjs", "**/*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
       globals: {
-        // Node.js globals
         process: "readonly",
         Buffer: "readonly",
         console: "readonly",
@@ -31,7 +28,6 @@ export default [
       },
     },
     rules: {
-      // Code quality rules
       "no-unused-vars": [
         "error",
         {
@@ -46,11 +42,7 @@ export default [
       "no-duplicate-imports": "error",
       "no-unreachable": "error",
       "no-undef": "off",
-
-      // Style rules
       "comma-dangle": ["error", "always-multiline"],
-
-      // Best practices
       eqeqeq: ["error", "always"],
       curly: ["error", "all"],
       "no-eval": "error",
@@ -58,44 +50,14 @@ export default [
       "no-new-func": "error",
       "no-throw-literal": "error",
       "no-return-await": "error",
-
-      // ES6+ features
       "arrow-spacing": "error",
       "template-curly-spacing": "error",
       "object-shorthand": "error",
     },
   },
-
-  // Test files configuration
-  {
-    files: ["test/**/*.js", "**/*.test.js", "test/**/*.ts", "**/*.test.ts"],
-    languageOptions: {
-      globals: {
-        describe: "readonly",
-        test: "readonly",
-        expect: "readonly",
-        beforeAll: "readonly",
-        beforeEach: "readonly",
-        afterEach: "readonly",
-        afterAll: "readonly",
-        vi: "readonly",
-      },
-    },
-    rules: {
-      "no-unused-expressions": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
-
-  // TypeScript-specific configuration
+  // TS files
   {
     files: ["**/*.ts"],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: "./tsconfig.json",
-      },
-    },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
@@ -106,6 +68,49 @@ export default [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "prefer-const": "error",
+      "no-var": "error",
+      "no-duplicate-imports": "error",
+      "no-unreachable": "error",
+      "comma-dangle": ["error", "always-multiline"],
+      eqeqeq: ["error", "always"],
+      curly: ["error", "all"],
+      "no-eval": "error",
+      "no-implied-eval": "error",
+      "no-new-func": "error",
+      "no-throw-literal": "error",
+      "arrow-spacing": "error",
+      "template-curly-spacing": "error",
+      "object-shorthand": "error",
     },
   },
-];
+  // Test files: vitest globals + relax unsafe rules (mocks are inherently untyped)
+  {
+    files: ["test/**/*.ts", "**/*.test.ts", "test/**/*.js", "**/*.test.js"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeAll: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        afterAll: "readonly",
+        vi: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        console: "readonly",
+      },
+    },
+    rules: {
+      "no-unused-expressions": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/require-await": "off",
+      "no-undef": "off",
+    },
+  },
+);

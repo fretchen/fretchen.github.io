@@ -26,10 +26,11 @@ module.exports = tseslint.config(
     ],
   },
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
       parserOptions: {
+        projectService: true,
         warnOnUnsupportedTypeScriptVersion: false,
         sourceType: "module",
         ecmaVersion: "latest",
@@ -58,6 +59,20 @@ module.exports = tseslint.config(
     },
   },
 
+  // Deploy/upgrade scripts use ethers.js which returns `any` from contract calls — disable unsafe rules
+  {
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@typescript-eslint/require-await": "off",
+    },
+  },
+
   // Chai-expect plugin for test files - fixes @typescript-eslint/no-unused-expressions with Chai assertions
   {
     files: ["test/**/*.ts"],
@@ -68,6 +83,13 @@ module.exports = tseslint.config(
       "chai-expect/missing-assertion": "error",
       "chai-expect/terminating-properties": "error",
       "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/require-await": "off",
     },
   },
 

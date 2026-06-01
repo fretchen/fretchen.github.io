@@ -69,7 +69,7 @@ export async function settlePayment(
 
     // Execute settlement via x402 Facilitator
     const facilitator = getFacilitator();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
 
     if (!result.success) {

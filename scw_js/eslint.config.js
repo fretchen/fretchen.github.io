@@ -1,23 +1,17 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-export default [
-  // Ignore patterns first
-  {
-    ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"],
-  },
-
-  // Base recommended configuration
+export default tseslint.config(
+  { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
   js.configs.recommended,
-
-  // Custom configuration for all JS files
+  ...tseslint.configs.recommended,
+  // JS files: node globals + project-specific rules
   {
     files: ["**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
       globals: {
-        // Node.js globals
         process: "readonly",
         Buffer: "readonly",
         console: "readonly",
@@ -30,8 +24,15 @@ export default [
       },
     },
     rules: {
-      // Code quality rules
       "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^(_|context|cb|_context|_cb)$",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/no-unused-vars": [
         "error",
         {
           argsIgnorePattern: "^(_|context|cb|_context|_cb)$",
@@ -45,11 +46,7 @@ export default [
       "no-duplicate-imports": "error",
       "no-unreachable": "error",
       "no-undef": "off",
-
-      // Style rules
       "comma-dangle": ["error", "always-multiline"],
-
-      // Best practices
       eqeqeq: ["error", "always"],
       curly: ["error", "all"],
       "no-eval": "error",
@@ -57,15 +54,29 @@ export default [
       "no-new-func": "error",
       "no-throw-literal": "error",
       "no-return-await": "error",
-
-      // ES6+ features
       "arrow-spacing": "error",
       "template-curly-spacing": "error",
       "object-shorthand": "error",
     },
   },
-
-  // Test files configuration
+  // TS files: non-type-aware rules (no tsconfig.json in scw_js)
+  {
+    files: ["**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "no-unused-vars": "off",
+      "no-undef": "off",
+    },
+  },
+  // Test files: vitest globals
   {
     files: ["test/**/*.js", "test/**/*.ts", "**/*.test.js", "**/*.test.ts"],
     languageOptions: {
@@ -78,26 +89,15 @@ export default [
         afterEach: "readonly",
         afterAll: "readonly",
         vi: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        console: "readonly",
       },
     },
     rules: {
       "no-unused-expressions": "off",
-    },
-  },
-
-  // TypeScript files configuration
-  {
-    files: ["**/*.ts"],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: "module",
-      },
-    },
-    rules: {
-      "no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
       "no-undef": "off",
     },
   },
-];
+);

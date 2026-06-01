@@ -24,12 +24,13 @@ export default tseslint.config(
     ],
   },
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   prettier,
 
   {
     languageOptions: {
       parserOptions: {
+        projectService: true,
         warnOnUnsupportedTypeScriptVersion: false,
         sourceType: "module",
         ecmaVersion: "latest",

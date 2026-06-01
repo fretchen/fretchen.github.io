@@ -54,10 +54,7 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     // Deploy proxy manually (Viem only)
-    const proxy = await networkConn.viem.deployContract("ERC1967Proxy", [
-      implementation.address,
-      initializeData as `0x${string}`,
-    ]);
+    const proxy = await networkConn.viem.deployContract("ERC1967Proxy", [implementation.address, initializeData]);
 
     // Get SupportV2 interface at proxy address
     const support = await networkConn.viem.getContractAt("SupportV2", proxy.address);
@@ -141,7 +138,7 @@ describe("SupportV2 - Functional Tests", function () {
         name: domain[1],
         version: domain[2],
         chainId: Number(domain[3]),
-        verifyingContract: domain[4] as `0x${string}`,
+        verifyingContract: domain[4],
       },
       types,
       primaryType: "TransferWithAuthorization",
@@ -149,8 +146,8 @@ describe("SupportV2 - Functional Tests", function () {
     });
 
     // Split signature into v, r, s
-    const r = `0x${signature.slice(2, 66)}` as `0x${string}`;
-    const s = `0x${signature.slice(66, 130)}` as `0x${string}`;
+    const r = `0x${signature.slice(2, 66)}`;
+    const s = `0x${signature.slice(66, 130)}`;
     const v = parseInt(signature.slice(130, 132), 16);
 
     return {
@@ -451,7 +448,7 @@ describe("SupportV2 - Functional Tests", function () {
       const newImplementation = await networkConn.viem.deployContract("SupportV2");
 
       await networkConn.viem.assertions.revertWithCustomError(
-        support.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+        support.write.upgradeToAndCall([newImplementation.address, "0x"], {
           account: otherAccount.account,
         }),
         support,

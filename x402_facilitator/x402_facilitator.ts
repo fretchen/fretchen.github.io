@@ -90,6 +90,7 @@ export async function handleSettle(
 /**
  * Handle /supported endpoint - capability discovery
  */
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function handleSupported(
   event: ScalewayEvent,
   _context: ScalewayContext,

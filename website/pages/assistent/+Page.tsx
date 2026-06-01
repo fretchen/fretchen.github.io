@@ -390,7 +390,7 @@ export default function Page() {
       handleWalletConnection();
       return;
     }
-    sendMessage(currentInput);
+    void sendMessage(currentInput);
   };
 
   // If feature is disabled, show maintenance message

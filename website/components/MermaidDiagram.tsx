@@ -48,7 +48,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
       }
     };
 
-    renderDiagram();
+    void renderDiagram();
   }, [definition, config]);
 
   return (

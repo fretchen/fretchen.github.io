@@ -111,7 +111,7 @@ export function NFTCard({
           args: [tokenId],
         });
 
-        const tokenURI = tokenURIResult as string;
+        const tokenURI = tokenURIResult;
 
         // Skip fetching if tokenURI is empty and we have preloaded data
         if (!tokenURI && (preloadedImageUrl || preloadedMetadata)) {
@@ -170,7 +170,7 @@ export function NFTCard({
       }
     };
 
-    loadNFTData();
+    void loadNFTData();
   }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, publicClient, contractAddress]);
 
   // Warte auf Transaktionsbestätigung für Burn
@@ -291,7 +291,7 @@ export function NFTCard({
         return;
       }
 
-      await writeContract({
+      writeContract({
         address: contractAddress,
         abi: GenImNFTv4ABI,
         functionName: "burn",
@@ -322,7 +322,7 @@ export function NFTCard({
       onListedStatusChanged(nft.tokenId, newListedStatus);
 
       // Call contract
-      await writeListingContract({
+      writeListingContract({
         address: contractAddress,
         abi: GenImNFTv4ABI,
         functionName: "setTokenListed",
@@ -402,7 +402,7 @@ export function NFTCard({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDownload();
+                    void handleDownload();
                   }}
                   className={styles.nftCard.compactSecondaryButton}
                   title={`${downloadLabel} image`}
@@ -429,7 +429,7 @@ export function NFTCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleShare();
+                  void handleShare();
                 }}
                 className={styles.nftCard.compactSecondaryButton}
                 title="Share artwork"
@@ -442,7 +442,7 @@ export function NFTCard({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleToggleListing();
+                    void handleToggleListing();
                   }}
                   disabled={isToggling || isListingConfirming}
                   className={styles.nftCard.compactSecondaryButton}
@@ -460,7 +460,7 @@ export function NFTCard({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleBurn();
+                    void handleBurn();
                   }}
                   disabled={isBurning || isConfirming}
                   className={styles.nftCard.compactSecondaryButton}

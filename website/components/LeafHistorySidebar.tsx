@@ -47,7 +47,7 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
 
   useEffect(() => {
     if (isOpen && address) {
-      fetchLeafHistory();
+      void fetchLeafHistory();
     }
   }, [isOpen, address, fetchLeafHistory]);
 

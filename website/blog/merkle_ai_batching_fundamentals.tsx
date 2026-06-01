@@ -191,7 +191,7 @@ const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
     leafHash: selectedRequest.leafHash,
     proof: proof.map((hash, index) => ({
       data: hash,
-      position: (index % 2 === 0 ? "left" : "right") as "left" | "right",
+      position: index % 2 === 0 ? "left" : "right",
     })),
     root: root,
   };
@@ -739,7 +739,7 @@ const BatchCreator: React.FC = () => {
       }
     };
 
-    createMerkleTree();
+    void createMerkleTree();
   }, [requests, batchRegistered]);
 
   const handleSendRequest = async () => {

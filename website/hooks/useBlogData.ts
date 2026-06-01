@@ -71,7 +71,7 @@ export function useBlogData(
       }
     }
 
-    fetchBlogs();
+    void fetchBlogs();
 
     // Cleanup function to prevent state updates on unmounted component
     return () => {

@@ -68,7 +68,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
             args: [BigInt(tokenId)],
           });
 
-          const tokenURI = tokenURIResult as string;
+          const tokenURI = tokenURIResult;
 
           // Fetch metadata from the token URI
           const metadata = await fetchNFTMetadata(tokenURI);
@@ -83,7 +83,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
       }
     };
 
-    loadNFTImage();
+    void loadNFTImage();
   }, [tokenId, fallbackImageUrl, publicClient]);
 
   if (!imageUrl && !isLoading) {

@@ -141,7 +141,7 @@ export function useSupportAction(url: string) {
       setIsLoading(false);
       setErrorMessage(null);
       setTimeout(() => {
-        refetch();
+        void refetch();
       }, 2000);
     }
     if (writeError) {

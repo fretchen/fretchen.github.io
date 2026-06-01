@@ -236,7 +236,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         paymentMethod: "x402-usdc",
       });
 
-      handleX402Generate();
+      void handleX402Generate();
     };
 
     return (
@@ -439,14 +439,14 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileSelect(files[0]);
+      void handleFileSelect(files[0]);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileSelect(files[0]);
+      void handleFileSelect(files[0]);
     }
   };
 

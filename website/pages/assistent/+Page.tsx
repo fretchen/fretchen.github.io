@@ -96,7 +96,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
   // Refetch balance when transaction is confirmed
   React.useEffect(() => {
     if (isConfirmed) {
-      refetchBalance();
+      void refetchBalance();
     }
   }, [isConfirmed, refetchBalance]);
 
@@ -376,7 +376,7 @@ export default function Page() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (isConnected) {
-        sendMessage(currentInput);
+        void sendMessage(currentInput);
       }
     }
   };

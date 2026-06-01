@@ -11,7 +11,7 @@ vi.mock("vike-react/usePageContext", () => ({
 }));
 
 // Mock fetch API
-global.fetch = vi.fn() as Mock;
+global.fetch = vi.fn();
 
 describe("CommentsSection Component", () => {
   beforeEach(() => {

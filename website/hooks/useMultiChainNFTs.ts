@@ -96,7 +96,7 @@ export function useMultiChainUserNFTs(options: UseMultiChainUserNFTsOptions = {}
                   args: [address, BigInt(i)],
                   chainId,
                 });
-                return { tokenId: tokenId as bigint, network };
+                return { tokenId: tokenId, network };
               } catch (err) {
                 console.error(`Error fetching token at index ${i} on ${network}:`, err);
                 return null;
@@ -151,7 +151,7 @@ export function useMultiChainUserNFTs(options: UseMultiChainUserNFTsOptions = {}
   // Load on mount and when dependencies change
   useEffect(() => {
     if (isConnected && address) {
-      loadAllNetworks();
+      void loadAllNetworks();
     }
   }, [isConnected, address, loadAllNetworks]);
 
@@ -256,7 +256,7 @@ export function useMultiChainPublicNFTs(options: UseMultiChainPublicNFTsOptions 
 
   // Load on mount
   useEffect(() => {
-    loadAllNetworks();
+    void loadAllNetworks();
   }, [loadAllNetworks]);
 
   return {

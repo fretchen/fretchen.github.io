@@ -794,7 +794,7 @@ ${generatedJson || "(please generate JSON first)"}
                 </span>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(generatedJson);
+                    void navigator.clipboard.writeText(generatedJson);
                     showToast("Copied to clipboard!", "success");
                   }}
                   className={css({

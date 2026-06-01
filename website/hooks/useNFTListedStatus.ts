@@ -78,7 +78,7 @@ export function useNFTListedStatus({
         chainId,
       });
 
-      setIsListed(result as boolean);
+      setIsListed(result);
     } catch (err) {
       // Distinguish between contract reverts (legacy tokens) and real errors
       const isContractRevert =
@@ -104,7 +104,7 @@ export function useNFTListedStatus({
 
   // Fetch on mount and when dependencies change
   useEffect(() => {
-    fetchListedStatus();
+    void fetchListedStatus();
   }, [fetchListedStatus]);
 
   // Optimistic update for immediate UI feedback

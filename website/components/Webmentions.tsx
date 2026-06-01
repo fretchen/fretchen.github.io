@@ -58,7 +58,7 @@ export function Webmentions() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ mentions }) => {
+    void fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ mentions }) => {
       setMentions(mentions);
       setLoading(false);
     });

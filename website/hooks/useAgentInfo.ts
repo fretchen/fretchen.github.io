@@ -130,7 +130,7 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
 
   useEffect(() => {
     if (autoFetch) {
-      fetchAgent();
+      void fetchAgent();
     }
   }, [autoFetch, fetchAgent]);
 

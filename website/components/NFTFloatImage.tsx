@@ -75,7 +75,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
           args: [BigInt(tokenId)],
         });
 
-        const tokenURI = tokenURIResult as string;
+        const tokenURI = tokenURIResult;
 
         // Fetch metadata
         const metadata = await fetchNFTMetadata(tokenURI);
@@ -94,7 +94,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
       }
     };
 
-    loadNFTData();
+    void loadNFTData();
   }, [tokenId, publicClient, contractAddress]);
 
   if (isLoading) {

@@ -583,7 +583,7 @@ export default function Page() {
 
   useEffect(() => {
     if (isOwner) {
-      loadData();
+      void loadData();
     }
   }, [isOwner, loadData]);
 

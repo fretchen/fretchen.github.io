@@ -37,7 +37,7 @@ export default function EndOfArticleSupport() {
       // User needs to connect wallet first - button will show connect prompt
       return;
     }
-    handleSupport();
+    void handleSupport();
   };
 
   // Handle hover for analytics

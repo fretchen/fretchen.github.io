@@ -62,6 +62,15 @@ export async function verifyPayment(
       );
     }
 
+    // Pre-validate signature format before the RPC-heavy verify path.
+    // The x402 library passes raw signatures to viem which throws on malformed input
+    // rather than returning a structured failure — this would cause RPC timeouts first.
+    const signature = payload?.signature as string | undefined;
+    if (signature !== undefined && !signature.startsWith("0x")) {
+      logger.warn({ signature: `${signature.slice(0, 8)}…` }, "Signature missing 0x prefix");
+      return { isValid: false, invalidReason: "invalid_exact_evm_payload_signature" };
+    }
+
     const facilitator = getFacilitator();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const result = await facilitator.verify(paymentPayload as any, paymentRequirements as any);

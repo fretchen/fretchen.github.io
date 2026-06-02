@@ -70,9 +70,11 @@ export const loadModuleFromDirectory = async (
     throw new Error(`Module not found: ${modulePath}. Available modules: ${availableModules}`);
   }
 
+  type EagerMod = { default: React.ComponentType };
+  type LazyMod = () => Promise<{ default: React.ComponentType }>;
   // If production (eager), moduleOrLoader is the module itself
   // If development (lazy), moduleOrLoader is a function that returns a Promise
-  return isProduction ? moduleOrLoader : await moduleOrLoader();
+  return isProduction ? (moduleOrLoader as EagerMod) : await (moduleOrLoader as LazyMod)();
 };
 
 /**

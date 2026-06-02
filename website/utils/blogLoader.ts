@@ -3,6 +3,7 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
+import type { ComponentType } from "react";
 import { BlogPost, BlogPostMeta, NFTMetadata } from "../types/BlogPost";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
@@ -203,7 +204,10 @@ export async function loadBlogs(
       const cleanPath = path.replace(/\?.*$/, "");
 
       // Load the module (in production it's already loaded, in dev we need to await)
-      const module = import.meta.env.PROD ? moduleOrLoader : await moduleOrLoader();
+      type EagerModule = { default: ComponentType };
+      const module: EagerModule = import.meta.env.PROD
+        ? (moduleOrLoader as EagerModule)
+        : await (moduleOrLoader as () => Promise<EagerModule>)();
 
       // Use pure function for metadata extraction
       const metadata = extractMetadataFromModule(module, path);

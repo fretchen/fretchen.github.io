@@ -164,7 +164,7 @@ interface MerkleProof {
 }
 
 // Generate a Merkle Proof using OpenZeppelin StandardMerkleTree
-const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
+const generateMerkleProof = (leafIndex: number): MerkleProof => {
   const selectedRequest = sampleBatch.requests[leafIndex];
 
   // Prepare tree data in the same format as calculateMerkleRoot
@@ -198,9 +198,7 @@ const generateMerkleProof = async (leafIndex: number): Promise<MerkleProof> => {
 };
 
 // Validate a Merkle Proof using OpenZeppelin StandardMerkleTree
-const validateMerkleProof = async (
-  proof: MerkleProof,
-): Promise<{ isValid: boolean; message: string; steps: string[] }> => {
+const validateMerkleProof = (proof: MerkleProof): { isValid: boolean; message: string; steps: string[] } => {
   try {
     // Recreate the tree using StandardMerkleTree for validation
     const allRequests = sampleBatch.requests;
@@ -279,7 +277,7 @@ const ProofDemo: React.FC = () => {
 
   const handleGenerateProof = async () => {
     try {
-      const proof = await generateMerkleProof(selectedUser);
+      const proof = generateMerkleProof(selectedUser);
       setGeneratedProof(proof);
     } catch (_error) {
       console.error("Error generating proof:", _error);
@@ -289,7 +287,7 @@ const ProofDemo: React.FC = () => {
   const handleValidateProof = async () => {
     try {
       const proof = JSON.parse(validationInput) as MerkleProof;
-      const result = await validateMerkleProof(proof);
+      const result = validateMerkleProof(proof);
       setValidationResult(result);
     } catch (error) {
       console.error("Proof validation failed:", error);
@@ -618,7 +616,7 @@ const ProofDemo: React.FC = () => {
 };
 
 // Calculate Merkle Root using OpenZeppelin StandardMerkleTree
-const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
+const calculateMerkleRoot = (requests: LLMRequest[]): string => {
   if (requests.length === 0) return "";
 
   // Use the actual leaf data from requests
@@ -639,7 +637,7 @@ const calculateMerkleRoot = async (requests: LLMRequest[]): Promise<string> => {
 };
 
 // Function to visualize the Merkle Tree structure using StandardMerkleTree
-const visualizeMerkleTree = async (requests: LLMRequest[]): Promise<string> => {
+const visualizeMerkleTree = (requests: LLMRequest[]): string => {
   if (requests.length === 0) return "";
 
   // Use the same leaf data format as calculateMerkleRoot
@@ -678,7 +676,7 @@ const BatchCreator: React.FC = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentWallet, setCurrentWallet] = useState(mockWallets[0]);
   // Simulate sending an LLM call (using StandardMerkleTree for consistency)
-  const sendLLMCall = async (wallet: string, prompt: string) => {
+  const sendLLMCall = (wallet: string, prompt: string) => {
     // Create leaf data
     const leafData = {
       id: nextRequestId,
@@ -731,8 +729,8 @@ const BatchCreator: React.FC = () => {
   useEffect(() => {
     const createMerkleTree = async () => {
       if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
-        const root = await calculateMerkleRoot(requests);
-        const treeVis = await visualizeMerkleTree(requests);
+        const root = calculateMerkleRoot(requests);
+        const treeVis = visualizeMerkleTree(requests);
         setMerkleRoot(root);
         setMerkleTreeVisualization(treeVis);
         setBatchRegistered(true);
@@ -744,14 +742,14 @@ const BatchCreator: React.FC = () => {
 
   const handleSendRequest = async () => {
     if (!currentPrompt.trim()) return;
-    await sendLLMCall(currentWallet, currentPrompt);
+    sendLLMCall(currentWallet, currentPrompt);
   };
 
   const handleRandomRequest = async () => {
     const randomPrompt = mockPrompts[Math.floor(Math.random() * mockPrompts.length)];
     const randomWallet = mockWallets[Math.floor(Math.random() * mockWallets.length)];
     setCurrentWallet(randomWallet);
-    await sendLLMCall(randomWallet, randomPrompt);
+    sendLLMCall(randomWallet, randomPrompt);
   };
 
   const resetDemo = () => {

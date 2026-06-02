@@ -99,7 +99,7 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
         throw new Error(`Failed to fetch agent registration: ${response.status}`);
       }
 
-      const data: AgentRegistration = await response.json();
+      const data = (await response.json()) as AgentRegistration;
 
       // Parse endpoints
       const walletEndpoint = data.endpoints.find((e) => e.name === "agentWallet")?.endpoint;

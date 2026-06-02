@@ -11,7 +11,7 @@ import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402Gen
 
 // API URL from environment (fallback to env var if not set)
 const X402_API_URL =
-  import.meta.env.PUBLIC_ENV__IMAGE_URL ||
+  (import.meta.env.PUBLIC_ENV__IMAGE_URL as string | undefined) ??
   "https://mypersonaljscloudivnad9dy-genimgx402token.functions.fnc.fr-par.scw.cloud";
 // const X402_API_URL = import.meta.env.PUBLIC_ENV__IMAGE_URL;
 
@@ -60,7 +60,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
 
         // === Setup x402 client (exactly like Quickstart) ===
         const client = new x402Client();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x402 SDK expects specific signer interface
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- x402 SDK expects specific signer interface
         registerExactEvmScheme(client, { signer: signer as any });
 
         // === Make the paid request ===
@@ -80,7 +80,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
             const paymentRequiredHeader = response.headers.get("Payment-Required");
             if (paymentRequiredHeader) {
               try {
-                const decoded = JSON.parse(atob(paymentRequiredHeader));
+                const decoded = JSON.parse(atob(paymentRequiredHeader)) as { accepts?: Array<{ network?: string }> };
                 const serverNetwork = decoded.accepts?.[0]?.network;
 
                 if (serverNetwork && serverNetwork !== request.network) {
@@ -118,7 +118,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
           throw new Error(`Request failed: ${response.status} - ${errorText}`);
         }
 
-        const result: X402GenImgResponse = await response.json();
+        const result = (await response.json()) as X402GenImgResponse;
 
         // === Extract payment receipt (like Quickstart step 3) ===
         try {

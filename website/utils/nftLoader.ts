@@ -44,7 +44,7 @@ export async function loadNFTMetadata(
       throw new Error(`Failed to fetch metadata: ${response.status}`);
     }
 
-    const metadata: NFTMetadataJSON = await response.json();
+    const metadata = (await response.json()) as NFTMetadataJSON;
 
     // Extract prompt from description
     const prompt = extractPromptFromDescription(metadata.description || "");

@@ -21,9 +21,10 @@ export const MarkdownWithLatex: React.FC<MarkdownWithLatexProps> = ({ children, 
   // Client-side LaTeX rendering after content is mounted
   React.useEffect(() => {
     if (containerRef.current) {
+      type RenderMathInElement = (element: Element, options?: Record<string, unknown>) => void;
       import("katex/dist/contrib/auto-render")
         .then((module) => {
-          const renderMathInElement = module.default;
+          const renderMathInElement = (module as { default: RenderMathInElement }).default;
           if (containerRef.current) {
             renderMathInElement(containerRef.current, {
               delimiters: [

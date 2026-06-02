@@ -186,18 +186,18 @@ export function FacilitatorApproval({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((json) => {
+      .then((json: { extensions?: Array<{ name: string; fee?: { recipient: string } }> }) => {
         // Extract facilitator address from fee extension
-        const feeExt = json.extensions?.find((ext: Record<string, unknown>) => ext.name === "facilitator_fee");
-        const recipient = (feeExt as Record<string, Record<string, string>>)?.fee?.recipient;
+        const feeExt = json.extensions?.find((ext) => ext.name === "facilitator_fee");
+        const recipient = feeExt?.fee?.recipient;
         if (recipient) {
           setFacilitatorAddress(recipient as Address);
         } else {
           setFetchError("Facilitator address not found in /supported response");
         }
       })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name !== "AbortError") {
           setFetchError(err.message);
         }
       });
@@ -232,7 +232,7 @@ export function FacilitatorApproval({
   // Refetch allowance after successful approval
   useEffect(() => {
     if (isSuccess) {
-      const timer = setTimeout(() => refetchAllowance(), 2000);
+      const timer = setTimeout(() => void refetchAllowance(), 2000);
       return () => clearTimeout(timer);
     }
   }, [isSuccess, refetchAllowance]);

@@ -71,12 +71,12 @@ function SupportedStatus() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((json) => {
+      .then((json: SupportedResponse) => {
         setData(json);
         setLoading(false);
       })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name !== "AbortError") {
           setError(err.message);
           setLoading(false);
         }

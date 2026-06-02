@@ -59,8 +59,12 @@ export async function fetchWebmentions(
 ): Promise<{ mentions: Webmention[]; count: number }> {
   try {
     const [dataWithout, dataWith] = await Promise.all([
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithoutSlash}`).then((r) => r.json()),
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithSlash}`).then((r) => r.json()),
+      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithoutSlash}`).then(
+        (r): Promise<WebmentionApiResponse> => r.json(),
+      ),
+      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithSlash}`).then(
+        (r): Promise<WebmentionApiResponse> => r.json(),
+      ),
     ]);
 
     const mentions = combineAndDeduplicateWebmentions(dataWithout, dataWith);

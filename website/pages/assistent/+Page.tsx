@@ -67,7 +67,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
     return topUpAmountLabel.replace("{amount}", amountToSend);
   }, [isConfirming, processingLabel, topUpAmountLabel, amountToSend]);
 
-  const handleTopUp = async () => {
+  const handleTopUp = () => {
     if (!address) return;
 
     try {
@@ -319,7 +319,7 @@ export default function Page() {
       ];
 
       const serverlessEndpoint =
-        import.meta.env.PUBLIC_ENV__LLM_ENDPOINT ||
+        (import.meta.env.PUBLIC_ENV__LLM_ENDPOINT as string | undefined) ??
         "https://mypersonaljscloudivnad9dy-llm.functions.fnc.fr-par.scw.cloud";
       // Call the serverless function - format like Python code
       const response = await fetch(serverlessEndpoint, {
@@ -341,16 +341,16 @@ export default function Page() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to get response");
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? "Failed to get response");
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { content?: string };
 
       // Add assistant message
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.content || noResponseMessage,
+        content: data.content ?? noResponseMessage,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);

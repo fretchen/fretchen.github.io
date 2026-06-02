@@ -3,7 +3,7 @@ import { useAccount, useSignMessage } from "wagmi";
 import type { ContentQueue, Draft, Insights, Performance } from "../types/growth";
 
 const API_BASE =
-  import.meta.env.PUBLIC_ENV__GROWTH_API_URL ||
+  (import.meta.env.PUBLIC_ENV__GROWTH_API_URL as string | undefined) ??
   "https://mypersonaljscloudivnad9dy-growthapi.functions.fnc.fr-par.scw.cloud";
 
 const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutes (backend allows 5 min)
@@ -29,8 +29,8 @@ async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}
     },
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `API error ${res.status}`);
   }
   return res.json();
 }

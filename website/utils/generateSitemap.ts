@@ -178,7 +178,7 @@ ${urlEntries}
 /**
  * Main function to generate sitemap
  */
-async function generateSitemap(): Promise<void> {
+function generateSitemap(): void {
   console.log("[Sitemap] Starting sitemap generation...");
 
   // Check if build directory exists

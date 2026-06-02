@@ -12,7 +12,7 @@ import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 /**
  * Get PUBLIC_ENV__CHAIN_NAME in Vite context (Browser)
  */
-const CHAIN_NAME = import.meta.env?.PUBLIC_ENV__CHAIN_NAME || "optimism";
+const CHAIN_NAME = (import.meta.env.PUBLIC_ENV__CHAIN_NAME as string | undefined) ?? "optimism";
 
 // ═══════════════════════════════════════════════════════════════
 // SupportV2: Multi-Chain Configuration

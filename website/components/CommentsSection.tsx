@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { commentSection } from "../layouts/styles";
 
-const API_URL = import.meta.env.VITE_COMMENTS_API || "https://comments.fretchen.eu";
+const API_URL = (import.meta.env.VITE_COMMENTS_API as string | undefined) ?? "https://comments.fretchen.eu";
 
 interface Comment {
   id: string;
@@ -25,9 +25,9 @@ export function CommentsSection() {
 
   useEffect(() => {
     fetch(`${API_URL}?page=${encodeURIComponent(urlPathname)}`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ comments?: Comment[] }>)
       .then((data) => {
-        setComments(data.comments || []);
+        setComments(data.comments ?? []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -53,10 +53,10 @@ export function CommentsSection() {
         }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to post comment");
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to post comment");
       }
-      const data = await res.json();
+      const data = (await res.json()) as { comment: Comment };
       setComments((prev) => [...prev, data.comment]);
       setText("");
       setSuccess(true);

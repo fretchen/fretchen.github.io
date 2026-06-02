@@ -1,6 +1,6 @@
 import * as React from "react";
 import { entryList } from "../layouts/styles";
-import { GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTMetadata } from "../types/components";
 
@@ -26,6 +26,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
   // Default to first mainnet for public client (we'll try all networks anyway)
   const defaultNetwork = MAINNET_NETWORKS[0];
   const publicClient = useConfiguredPublicClient(defaultNetwork);
+  const contractAddress = getGenAiNFTAddress(defaultNetwork);
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -40,7 +41,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
         throw new Error(`Failed to fetch metadata: ${response.status}`);
       }
 
-      const metadata: NFTMetadata = await response.json();
+      const metadata = (await response.json()) as NFTMetadata;
       return metadata;
     } catch (error) {
       console.error("Error fetching NFT metadata:", error);

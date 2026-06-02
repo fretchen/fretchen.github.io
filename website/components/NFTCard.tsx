@@ -89,7 +89,7 @@ export function NFTCard({
         throw new Error(`Failed to fetch metadata: ${response.status}`);
       }
 
-      const metadata: NFTMetadata = await response.json();
+      const metadata = (await response.json()) as NFTMetadata;
       return metadata;
     } catch (error) {
       console.error("Error fetching NFT metadata:", error);

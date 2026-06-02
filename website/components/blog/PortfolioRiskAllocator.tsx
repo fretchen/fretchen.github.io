@@ -8,7 +8,7 @@ const ETF_INDEX = new Map(DATA.etf_names.map((name, i) => [name, i]));
 /** Matrix-vector product: Σw */
 function matVec(cov: number[][], w: number[]): number[] {
   const n = w.length;
-  const result = new Array(n).fill(0);
+  const result = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       result[i] += cov[i][j] * w[j];
@@ -22,19 +22,19 @@ function matVec(cov: number[][], w: number[]): number[] {
 function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]): number[] {
   const n = cov.length;
   const nC = budgets.length;
-  const active = new Array(n).fill(true);
+  const active: boolean[] = new Array<boolean>(n).fill(true);
   for (let i = 0; i < n; i++) if (budgets[clusterOf[i]] < 1e-10) active[i] = false;
   const activeCount = active.filter(Boolean).length;
-  if (activeCount === 0) return new Array(n).fill(1 / n);
+  if (activeCount === 0) return new Array<number>(n).fill(1 / n);
 
   // Per-asset risk budgets: b_i = B_c / clusterSize_c
-  const clusterSize = new Array(nC).fill(0);
+  const clusterSize: number[] = new Array<number>(nC).fill(0);
   for (let i = 0; i < n; i++) if (active[i]) clusterSize[clusterOf[i]]++;
-  const targetRc = new Array(n).fill(0);
+  const targetRc = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) if (active[i]) targetRc[i] = budgets[clusterOf[i]] / clusterSize[clusterOf[i]];
 
   // Initialize: w_i ∝ b_i / σ_i (inverse-vol scaled by budget)
-  let w = new Array(n).fill(0);
+  let w = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) if (active[i]) w[i] = targetRc[i] / Math.sqrt(cov[i][i]);
   const wInit = w.reduce((a, b) => a + b, 0);
   if (wInit > 0) w = w.map((wi) => wi / wInit);
@@ -66,7 +66,7 @@ function solveRiskBudget(cov: number[][], clusterOf: number[], budgets: number[]
 /** Solve long-only minimum variance: min w'Σw s.t. Σw=1, w≥0. */
 function solveMinVariance(cov: number[][]): number[] {
   const n = cov.length;
-  let w = new Array(n).fill(1 / n);
+  let w = new Array<number>(n).fill(1 / n);
   for (let iter = 0; iter < 5000; iter++) {
     const grad = matVec(cov, w).map((g) => 2 * g);
     const raw = w.map((wi, i) => wi - 0.5 * grad[i]);
@@ -95,8 +95,8 @@ function computeRisk(w: number[]) {
   const rc = w.map((wi, i) => (portVar > 0 ? ((wi * sigmaW[i]) / portVar) * 100 : 0));
 
   // Cluster-level aggregation
-  const clusterWeight = new Array(N_CLUSTERS).fill(0);
-  const clusterRc = new Array(N_CLUSTERS).fill(0);
+  const clusterWeight: number[] = new Array<number>(N_CLUSTERS).fill(0);
+  const clusterRc: number[] = new Array<number>(N_CLUSTERS).fill(0);
   for (let i = 0; i < N_ETF; i++) {
     const ci = DATA.etf_cluster[i];
     clusterWeight[ci] += w[i] * 100;

@@ -1636,8 +1636,8 @@ const CommunityGovernanceSimulator: React.FC = () => {
         calculateTotalCatch(currentStock, calculateSustainableBoats(currentStock)) / MODEL_PARAMS.nplayers;
 
       // Initialize arrays
-      const redistributionTax = new Array(MODEL_PARAMS.nplayers).fill(0);
-      const underfished = new Array(MODEL_PARAMS.nplayers).fill(0);
+      const redistributionTax: number[] = new Array<number>(MODEL_PARAMS.nplayers).fill(0);
+      const underfished: number[] = new Array<number>(MODEL_PARAMS.nplayers).fill(0);
       const finalCatches = [...originalCatches];
 
       // Step 1: Calculate redistribution tax for players above sustainable catch
@@ -1665,7 +1665,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
       const totalRedistributionAmount = redistributionTax.reduce((sum, tax) => sum + tax, 0);
       const totalUnderfished = underfished.reduce((sum, amount) => sum + amount, 0);
 
-      const redistributionReceived = new Array(MODEL_PARAMS.nplayers).fill(0);
+      const redistributionReceived: number[] = new Array<number>(MODEL_PARAMS.nplayers).fill(0);
 
       if (totalUnderfished > 0) {
         for (let jj = 0; jj < MODEL_PARAMS.nplayers; jj++) {

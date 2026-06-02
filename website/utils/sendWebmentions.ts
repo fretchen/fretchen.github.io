@@ -82,7 +82,7 @@ function setupGhPagesWorktree(): string {
   } catch (error) {
     console.error("❌ Failed to create gh-pages worktree");
     console.error("   Make sure you have a gh-pages branch");
-    console.error(`   Error: ${error instanceof Error ? error.message : error}`);
+    console.error(`   Error: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 }

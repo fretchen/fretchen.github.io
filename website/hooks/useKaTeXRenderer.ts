@@ -16,10 +16,11 @@ export function useKaTeXRenderer(containerRef: React.RefObject<HTMLElement | nul
     // Delay to ensure content has fully rendered
     const timer = setTimeout(() => {
       // Dynamically import KaTeX only in the browser
+      type RenderMathInElement = (element: Element, options?: Record<string, unknown>) => void;
       Promise.all([import("katex"), import("katex/dist/contrib/auto-render")])
         .then(([katexModule, autoRenderModule]) => {
           const katex = katexModule.default;
-          const renderMathInElement = autoRenderModule.default;
+          const renderMathInElement = (autoRenderModule as { default: RenderMathInElement }).default;
 
           if (!containerRef.current) return;
 

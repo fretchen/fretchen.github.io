@@ -269,9 +269,7 @@ describe("createFacilitator — private key validation", () => {
   it("throws when private key is missing and requirePrivateKey=true", () => {
     delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
 
-    expect(() => createFacilitator(true)).toThrow(
-      "FACILITATOR_WALLET_PRIVATE_KEY not configured",
-    );
+    expect(() => createFacilitator(true)).toThrow("FACILITATOR_WALLET_PRIVATE_KEY not configured");
   });
 
   it("returns read-only facilitator when private key is missing and requirePrivateKey=false", () => {

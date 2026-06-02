@@ -23,22 +23,24 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: x402_facilitator/package.json
+          cache-dependency-path: |
+            x402_facilitator/package-lock.json
+            shared/chain-utils/package-lock.json
 
       - name: Build chain-utils dependency
         working-directory: ./shared/chain-utils
-        run: npm install && npm run build
+        run: npm ci && npm run build
 
       - name: Install dependencies
         working-directory: ./x402_facilitator
-        run: npm install
+        run: npm ci
 
       - name: Run quality checks (lint + format + test with coverage)
         working-directory: ./x402_facilitator

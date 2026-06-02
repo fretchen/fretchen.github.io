@@ -66,7 +66,7 @@ export default function MetadataLine({
       // Could show a connect wallet message
       return;
     }
-    handleSupport();
+    void handleSupport();
   };
 
   // Handle hover

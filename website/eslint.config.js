@@ -24,12 +24,13 @@ export default tseslint.config(
     ],
   },
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   prettier,
 
   {
     languageOptions: {
       parserOptions: {
+        projectService: true,
         warnOnUnsupportedTypeScriptVersion: false,
         sourceType: "module",
         ecmaVersion: "latest",
@@ -45,6 +46,23 @@ export default tseslint.config(
         },
       ],
       "@typescript-eslint/no-namespace": 0,
+      // Pre-existing technical debt: API responses, Wagmi hooks, and dynamic imports
+      // are untyped (any). These rules would require a separate typing refactor.
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      // Async callbacks in React state handlers and blog interactive components
+      "@typescript-eslint/require-await": "off",
+      // Template literals with non-string types are used intentionally in utils
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@typescript-eslint/no-redundant-type-constituents": "off",
+      // React JSX attributes expect void return; async event handlers are valid React pattern
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
     },
   },
 

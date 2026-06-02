@@ -10,8 +10,14 @@
  * 2. Fee collected after: transferFrom(merchant → facilitator, feeAmount)
  */
 
-import { createPublicClient, createWalletClient, http, getContract } from "viem";
-import type { Address, Abi } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  getContract,
+  type Address,
+  type Abi,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
 import { getChainConfig } from "./chain_utils";
@@ -100,13 +106,17 @@ export function getFeeAmount(): bigint {
  */
 export function getFacilitatorAddress(): Address | null {
   let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
-  if (!privateKey) return null;
+  if (!privateKey) {
+    return null;
+  }
 
   privateKey = privateKey.trim();
   if (!privateKey.startsWith("0x")) {
     privateKey = "0x" + privateKey;
   }
-  if (privateKey.length !== 66) return null;
+  if (privateKey.length !== 66) {
+    return null;
+  }
 
   try {
     const account = privateKeyToAccount(privateKey as `0x${string}`);

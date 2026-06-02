@@ -44,10 +44,7 @@ describe("EIP3009SplitterV1", function () {
     });
 
     // Deploy proxy
-    const proxy = await networkConn.viem.deployContract("ERC1967Proxy", [
-      implementation.address,
-      initializeData as `0x${string}`,
-    ]);
+    const proxy = await networkConn.viem.deployContract("ERC1967Proxy", [implementation.address, initializeData]);
 
     // Get Splitter interface at proxy address
     const splitter = await networkConn.viem.getContractAt("EIP3009SplitterV1", proxy.address);
@@ -128,7 +125,7 @@ describe("EIP3009SplitterV1", function () {
 
     // Parse signature into v, r, s
     const r = signature.slice(0, 66) as `0x${string}`;
-    const s = `0x${signature.slice(66, 130)}` as `0x${string}`;
+    const s = `0x${signature.slice(66, 130)}`;
     const v = parseInt(signature.slice(130, 132), 16);
 
     return {
@@ -165,7 +162,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -205,7 +202,7 @@ describe("EIP3009SplitterV1", function () {
       await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -233,7 +230,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -270,7 +267,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -298,7 +295,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -327,7 +324,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             zeroAddress,
             auth.salt,
             auth.value,
@@ -355,7 +352,7 @@ describe("EIP3009SplitterV1", function () {
       await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -377,7 +374,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -409,7 +406,7 @@ describe("EIP3009SplitterV1", function () {
       await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth1.from as `0x${string}`,
+          auth1.from,
           seller.account.address,
           auth1.salt,
           auth1.value,
@@ -428,7 +425,7 @@ describe("EIP3009SplitterV1", function () {
       await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth2.from as `0x${string}`,
+          auth2.from,
           seller.account.address,
           auth2.salt,
           auth2.value,
@@ -543,7 +540,7 @@ describe("EIP3009SplitterV1", function () {
       await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -583,7 +580,7 @@ describe("EIP3009SplitterV1", function () {
       await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -611,7 +608,7 @@ describe("EIP3009SplitterV1", function () {
       const newImplementation = await networkConn.viem.deployContract("EIP3009SplitterV1");
 
       // Upgrade should succeed (owner authorized)
-      await splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+      await splitter.write.upgradeToAndCall([newImplementation.address, "0x"], {
         account: owner.account,
       });
     });
@@ -622,7 +619,7 @@ describe("EIP3009SplitterV1", function () {
       const newImplementation = await networkConn.viem.deployContract("EIP3009SplitterV1");
 
       await networkConn.viem.assertions.revertWithCustomError(
-        splitter.write.upgradeToAndCall([newImplementation.address, "0x" as `0x${string}`], {
+        splitter.write.upgradeToAndCall([newImplementation.address, "0x"], {
           account: otherAccount.account,
         }),
         splitter,
@@ -654,7 +651,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -692,7 +689,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -755,7 +752,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -783,7 +780,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           buyer.account.address, // seller = buyer
           auth.salt,
           auth.value,
@@ -824,7 +821,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           facilitator.account.address, // seller = facilitator
           auth.salt,
           auth.value,
@@ -867,7 +864,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             otherAccount.account.address, // ATTACKER: Not the authorized seller!
             auth.salt,
             auth.value,
@@ -900,7 +897,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address, // Correct seller
             wrongSalt, // Wrong salt!
             auth.value,
@@ -937,7 +934,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            authForSeller.from as `0x${string}`,
+            authForSeller.from,
             otherAccount.account.address, // Wrong seller for this auth
             authForSeller.salt, // Salt from seller auth
             authForSeller.value,
@@ -957,7 +954,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          authForSeller.from as `0x${string}`,
+          authForSeller.from,
           seller.account.address,
           authForSeller.salt,
           authForSeller.value,
@@ -995,7 +992,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -1032,7 +1029,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC.address,
-            auth.from as `0x${string}`,
+            auth.from,
             facilitator.account.address, // Facilitator tries to steal!
             auth.salt,
             auth.value,
@@ -1064,7 +1061,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             zeroAddress, // Invalid token address
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -1094,7 +1091,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             otherAccount.account.address, // EOA, not a contract
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -1129,7 +1126,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC2.address, // Different token!
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -1166,7 +1163,7 @@ describe("EIP3009SplitterV1", function () {
       const hash1 = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth1.from as `0x${string}`,
+          auth1.from,
           seller.account.address,
           auth1.salt,
           auth1.value,
@@ -1187,7 +1184,7 @@ describe("EIP3009SplitterV1", function () {
       const hash2 = await splitter.write.executeSplit(
         [
           mockUSDC2.address,
-          auth2.from as `0x${string}`,
+          auth2.from,
           seller.account.address,
           auth2.salt,
           auth2.value,
@@ -1234,7 +1231,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,
@@ -1258,7 +1255,7 @@ describe("EIP3009SplitterV1", function () {
         splitter.write.executeSplit(
           [
             mockUSDC2.address, // Different token
-            auth.from as `0x${string}`,
+            auth.from,
             seller.account.address,
             auth.salt,
             auth.value,
@@ -1288,7 +1285,7 @@ describe("EIP3009SplitterV1", function () {
       const hash = await splitter.write.executeSplit(
         [
           mockUSDC.address,
-          auth.from as `0x${string}`,
+          auth.from,
           seller.account.address,
           auth.salt,
           auth.value,

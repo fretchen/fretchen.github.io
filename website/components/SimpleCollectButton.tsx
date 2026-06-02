@@ -83,7 +83,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   useEffect(() => {
     if (isSuccess) {
       setTimeout(() => {
-        refetch();
+        void refetch();
       }, 2000);
     }
   }, [isSuccess, refetch]);

@@ -6,8 +6,7 @@
  * Each network has its own dedicated viem client, eliminating chain selection issues
  */
 
-import { createPublicClient, createWalletClient, http } from "viem";
-import type { Account } from "viem";
+import { createPublicClient, createWalletClient, http, type Account } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";

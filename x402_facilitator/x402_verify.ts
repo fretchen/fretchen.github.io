@@ -62,8 +62,17 @@ export async function verifyPayment(
       );
     }
 
+    // Pre-validate signature format before the RPC-heavy verify path.
+    // The x402 library passes raw signatures to viem which throws on malformed input
+    // rather than returning a structured failure — this would cause RPC timeouts first.
+    const signature = payload?.signature as string | undefined;
+    if (signature !== undefined && !signature.startsWith("0x")) {
+      logger.warn({ signature: `${signature.slice(0, 8)}…` }, "Signature missing 0x prefix");
+      return { isValid: false, invalidReason: "invalid_exact_evm_payload_signature" };
+    }
+
     const facilitator = getFacilitator();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const result = await facilitator.verify(paymentPayload as any, paymentRequirements as any);
 
     if (result.isValid) {
@@ -87,11 +96,11 @@ export async function verifyPayment(
     return {
       ...result,
       feeRequired: resultWithExtras.feeRequired as boolean | undefined,
-      recipient: (resultWithExtras.recipient as string | undefined) || result.recipient,
+      recipient: resultWithExtras.recipient as string | undefined,
     };
   } catch (error) {
-    const err = error as Error;
-    logger.error({ err, message: err.message }, "Unexpected error during payment verification");
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ message }, "Unexpected error during payment verification");
     return {
       isValid: false,
       invalidReason: "unexpected_verify_error",

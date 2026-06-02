@@ -35,7 +35,7 @@ npx hardhat vars set SEPOLIA_PRIVATE_KEY
 
 Edit `scripts/deploy-genimg-v4.config.json`:
 
-```json
+````json
 {
   "parameters": {
     "mintPrice": "0.00003",
@@ -73,7 +73,7 @@ Edit `scripts/deploy-genimg-v4.config.json`:
     "environment": "testnet"
   }
 }
-```
+````
 
 ### For Mainnet
 
@@ -103,10 +103,10 @@ Edit `scripts/deploy-genimg-v4.config.json`:
 
 Ensure deployer wallet has ≥0.03 ETH:
 
-| Network  | Minimum | Faucet                                               |
-| -------- | ------- | ---------------------------------------------------- |
-| Sepolia  | 0.03    | https://www.alchemy.com/faucets/optimism-sepolia     |
-| Mainnet  | 0.1     | -                                                    |
+| Network | Minimum | Faucet                                           |
+| ------- | ------- | ------------------------------------------------ |
+| Sepolia | 0.03    | https://www.alchemy.com/faucets/optimism-sepolia |
+| Mainnet | 0.1     | -                                                |
 
 ### Step 2: Validate (Recommended)
 
@@ -195,12 +195,12 @@ Current agent: `0xAAEBC1441323B8ad6Bdf6793A8428166b510239C`
 
 ## Troubleshooting
 
-| Issue                     | Solution                                           |
-| ------------------------- | -------------------------------------------------- |
-| "Config file not found"   | Ensure `deploy-genimg-v4.config.json` exists       |
-| "Insufficient funds"      | Deployer needs ≥0.03 ETH                           |
-| "Validation failed"       | Check contract compiles: `npx hardhat compile`     |
-| Verification fails        | Use `verify-contract.ts` script                    |
+| Issue                   | Solution                                       |
+| ----------------------- | ---------------------------------------------- |
+| "Config file not found" | Ensure `deploy-genimg-v4.config.json` exists   |
+| "Insufficient funds"    | Deployer needs ≥0.03 ETH                       |
+| "Validation failed"     | Check contract compiles: `npx hardhat compile` |
+| Verification fails      | Use `verify-contract.ts` script                |
 
 ## Related Documentation
 

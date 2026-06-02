@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,10 +39,10 @@ jobs:
 
       - name: Install and build chain-utils
         working-directory: ./shared/chain-utils
-        run: npm install && npm run build
+        run: npm ci && npm run build
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run quality checks (lint + format + test with coverage)
         run: npm run check

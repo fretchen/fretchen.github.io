@@ -75,7 +75,7 @@ const contracts: ContractConfig[] = [
   },
 ];
 
-async function exportContractABI(config: ContractConfig) {
+function exportContractABI(config: ContractConfig) {
   console.log(`🔧 Extracting ${config.name} ABI...`);
 
   // Read the artifact file
@@ -233,6 +233,7 @@ const abi = require('./${config.name}.json');
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 async function main() {
   console.log("🚀 Starting ABI export for all contracts...\n");
 
@@ -241,7 +242,7 @@ async function main() {
 
   for (const contract of contracts) {
     try {
-      const result = await exportContractABI(contract);
+      const result = exportContractABI(contract);
       if (result) {
         allExportedFiles.push(
           path.relative(process.cwd(), result.jsonPath),

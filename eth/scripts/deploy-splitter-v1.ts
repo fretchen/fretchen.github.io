@@ -63,7 +63,7 @@ function loadConfig(): SplitterV1DeployConfig {
     configRaw = JSON.parse(configContent);
   } catch (error: unknown) {
     if (error instanceof Error) {
-      throw new Error(`Invalid JSON in configuration file: ${error.message}`);
+      throw new Error(`Invalid JSON in configuration file: ${error.message}`, { cause: error });
     }
     throw error;
   }
@@ -74,7 +74,7 @@ function loadConfig(): SplitterV1DeployConfig {
     config = SplitterV1DeployConfigSchema.parse(configRaw);
   } catch (error: unknown) {
     if (error instanceof Error) {
-      throw new Error(`Config validation failed: ${error.message}`);
+      throw new Error(`Config validation failed: ${error.message}`, { cause: error });
     }
     throw error;
   }
@@ -120,7 +120,7 @@ async function validateDeployment(): Promise<void> {
 /**
  * Simulate deployment (dry run)
  */
-async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void> {
+function simulateDeployment(config: SplitterV1DeployConfig): void {
   console.log("🧪 Simulating EIP3009SplitterV1 deployment...");
 
   console.log("📋 Deployment parameters:");
@@ -172,7 +172,7 @@ export async function deploySplitterV1(): Promise<
   // Check if dry run
   if (options.dryRun) {
     console.log("🧪 Dry Run Mode - Simulation only");
-    await simulateDeployment(config);
+    simulateDeployment(config);
     return true;
   }
 

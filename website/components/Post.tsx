@@ -62,7 +62,7 @@ const ReactPostRenderer: React.FC<{
       }
     };
 
-    loadComponent();
+    void loadComponent();
   }, [componentPath]);
 
   // Use custom hook for KaTeX rendering
@@ -153,7 +153,7 @@ export function Post({
 
   // Fetch webmention counts for metadata line - query both URL variants and deduplicate
   React.useEffect(() => {
-    fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ count }) => {
+    void fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ count }) => {
       setReactionCount(count);
     });
   }, [urlWithoutSlash, urlWithSlash]);

@@ -4,12 +4,12 @@ Solidity contracts for a blockchain-based AI image generation platform on Optimi
 
 ## Active Contracts
 
-| Contract | Address (Optimism Mainnet) | Purpose |
-| --- | --- | --- |
-| `GenImNFTv4` | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` | AI image NFTs with agent-whitelist security fix (CVE-2025-11-26) |
-| `CollectorNFT` | `0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea` | Community NFTs minted on top of GenImNFT tokens |
-| `LLMv1` | `0x833F39D6e67390324796f861990ce9B7cf9F5dE1` | LLM access NFT |
-| `EIP3009SplitterV1` | testnet only | Token-agnostic USDC/EURC payment splitter |
+| Contract            | Address (Optimism Mainnet)                   | Purpose                                                          |
+| ------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| `GenImNFTv4`        | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` | AI image NFTs with agent-whitelist security fix (CVE-2025-11-26) |
+| `CollectorNFT`      | `0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea` | Community NFTs minted on top of GenImNFT tokens                  |
+| `LLMv1`             | `0x833F39D6e67390324796f861990ce9B7cf9F5dE1` | LLM access NFT                                                   |
+| `EIP3009SplitterV1` | testnet only                                 | Token-agnostic USDC/EURC payment splitter                        |
 
 ## Common Commands
 
@@ -81,13 +81,13 @@ npx hardhat run scripts/export-abi.ts
 
 ## Networks
 
-| Name | Chain | Use |
-| --- | --- | --- |
-| `sepolia` | Ethereum Sepolia | General testnet |
-| `optsepolia` | Optimism Sepolia | Primary testnet |
-| `optimisticEthereum` | Optimism Mainnet | Production |
-| `baseSepolia` | Base Sepolia | Testnet |
-| `base` | Base Mainnet | Production |
+| Name                 | Chain            | Use             |
+| -------------------- | ---------------- | --------------- |
+| `sepolia`            | Ethereum Sepolia | General testnet |
+| `optsepolia`         | Optimism Sepolia | Primary testnet |
+| `optimisticEthereum` | Optimism Mainnet | Production      |
+| `baseSepolia`        | Base Sepolia     | Testnet         |
+| `base`               | Base Mainnet     | Production      |
 
 ## Secrets (Hardhat vars)
 

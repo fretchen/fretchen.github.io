@@ -45,7 +45,7 @@ export async function loadNFTMetadataNode(tokenID: number): Promise<NFTMetadata 
       args: [BigInt(tokenID)],
     });
 
-    const tokenURI = tokenURIResult as string;
+    const tokenURI = tokenURIResult;
 
     // Skip file:// URLs as they can't be fetched in this environment
     if (tokenURI.startsWith("file://")) {

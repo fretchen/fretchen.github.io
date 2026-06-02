@@ -63,7 +63,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
   }
 
   // Helper function to create a temporary config file for testing
-  async function createTempConfig(proxyAddress: string, options: UpgradeV4ConfigOptions = {}) {
+  function createTempConfig(proxyAddress: string, options: UpgradeV4ConfigOptions = {}) {
     const tempConfigPath = path.join(__dirname, "../scripts/upgrade-genimg-v4.config-test.json");
     const config = {
       proxyAddress: proxyAddress,
@@ -90,7 +90,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
   async function withTempConfig(proxyAddress: string, options: UpgradeV4ConfigOptions, testFn: () => Promise<void>) {
     const originalConfigPath = path.join(__dirname, "../scripts/upgrade-genimg-v4.config.json");
     const backupConfigPath = path.join(__dirname, "../scripts/upgrade-genimg-v4.config.json.backup");
-    const tempConfigPath = await createTempConfig(proxyAddress, options);
+    const tempConfigPath = createTempConfig(proxyAddress, options);
 
     try {
       // Backup original config if it exists

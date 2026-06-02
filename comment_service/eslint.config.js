@@ -1,22 +1,28 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-export default [
-  {
-    ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"],
-  },
-
+export default tseslint.config(
+  { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
-
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: { projectService: true },
+    },
+  },
+  // JS files: disable type-checked rules
+  {
+    files: ["**/*.js", "**/*.cjs", "**/*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    rules: {
+      "prefer-const": "error",
+      "no-var": "error",
+      "comma-dangle": ["error", "always-multiline"],
+    },
+  },
+  // TS files
   {
     files: ["**/*.ts"],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: "./tsconfig.json",
-      },
-    },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
@@ -43,20 +49,7 @@ export default [
       "object-shorthand": "error",
     },
   },
-
-  {
-    files: ["**/*.js"],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-    },
-    rules: {
-      "prefer-const": "error",
-      "no-var": "error",
-      "comma-dangle": ["error", "always-multiline"],
-    },
-  },
-
+  // Test files: vitest globals + relax unsafe rules (mocks are inherently untyped)
   {
     files: ["test/**/*.ts", "**/*.test.ts"],
     languageOptions: {
@@ -74,6 +67,13 @@ export default [
     rules: {
       "no-unused-expressions": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/require-await": "off",
     },
   },
-];
+);

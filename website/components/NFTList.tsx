@@ -31,7 +31,7 @@ export function NFTList({
   // Refetch when a new NFT is created to update the tab count
   useEffect(() => {
     if (newlyCreatedNFT) {
-      reloadTokens();
+      void reloadTokens();
     }
   }, [newlyCreatedNFT, reloadTokens]);
 

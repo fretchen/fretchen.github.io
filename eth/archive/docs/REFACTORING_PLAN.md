@@ -18,6 +18,7 @@
 ## Problem 1 – Doppeltes Deployment-System
 
 **Symptom:** Zwei parallele Systeme existieren nebeneinander:
+
 - `ignition/modules/` → `GenImNFT.ts`, `GenImNFTv2.ts`, `Lock.ts`, `Support.ts` (alt)
 - `scripts/deploy-*.ts` → `GenImNFTv4`, `CollectorNFT`, `SupportV2`, `LLM` (neu)
 
@@ -26,7 +27,7 @@ Hardhat Ignition hat eingeschränkte Unterstützung für upgradeable Contracts. 
 ### Aufgaben
 
 - [ ] Entscheidung dokumentieren: **Ignition einfrieren, nur noch `scripts/deploy-*.ts` für neue Contracts**
-- [ ] `README.md` in `ignition/` ergänzen: *"Diese Module sind historisch. Neue Deployments erfolgen via `scripts/`."*
+- [ ] `README.md` in `ignition/` ergänzen: _"Diese Module sind historisch. Neue Deployments erfolgen via `scripts/`."_
 - [ ] Sicherstellen, dass alle `ignition/deployments/` im Git bleiben (sie sind die on-chain Referenz der alten Deployments)
 
 ---
@@ -69,7 +70,7 @@ Da UUPS verwendet wird, sind die alten Implementierungen on-chain in `.openzeppe
   git mv contracts/ERC1967Proxy.sol contracts/_archive/  # OZ-Kopie, kein eigener Contract
   ```
 - [ ] Sicherstellen, dass kein aktiver Contract `_archive/` importiert
-- [ ] `_archive/README.md` erstellen mit Hinweis: *"Historische Implementierungen. Zugriff via Git-Tag möglich."*
+- [ ] `_archive/README.md` erstellen mit Hinweis: _"Historische Implementierungen. Zugriff via Git-Tag möglich."_
 
 ---
 
@@ -143,10 +144,10 @@ test/
 
 ## Priorisierung
 
-| # | Aufgabe | Priorität | Aufwand |
-|---|---|---|---|
-| 1 | Git-Tags für historische Deployments setzen | Hoch | ~15 min |
-| 2 | Alte Contract-Dateien nach `_archive/` verschieben | Hoch | ~30 min |
-| 3 | Alte Tests nach `_archive/` verschieben | Mittel | ~30 min |
-| 4 | `ignition/` und `README` als eingefroren markieren | Mittel | ~15 min |
-| 5 | `hardhat test` nach Bereinigung verifizieren | Hoch | ~10 min |
+| #   | Aufgabe                                            | Priorität | Aufwand |
+| --- | -------------------------------------------------- | --------- | ------- |
+| 1   | Git-Tags für historische Deployments setzen        | Hoch      | ~15 min |
+| 2   | Alte Contract-Dateien nach `_archive/` verschieben | Hoch      | ~30 min |
+| 3   | Alte Tests nach `_archive/` verschieben            | Mittel    | ~30 min |
+| 4   | `ignition/` und `README` als eingefroren markieren | Mittel    | ~15 min |
+| 5   | `hardhat test` nach Bereinigung verifizieren       | Hoch      | ~10 min |

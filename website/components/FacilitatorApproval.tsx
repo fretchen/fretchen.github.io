@@ -287,9 +287,9 @@ export function FacilitatorApproval({
     );
   }
 
-  const formattedAllowance = allowance !== undefined ? formatUnits(allowance as bigint, usdcConfig.decimals) : "—";
+  const formattedAllowance = allowance !== undefined ? formatUnits(allowance, usdcConfig.decimals) : "—";
 
-  const hasAllowance = allowance !== undefined && (allowance as bigint) > 0n;
+  const hasAllowance = allowance !== undefined && allowance > 0n;
 
   return (
     <div className={container}>

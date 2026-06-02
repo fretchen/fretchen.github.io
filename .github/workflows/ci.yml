@@ -41,7 +41,7 @@ jobs:
       - name: Install website dependencies
         run: |
           cd website
-          npm install --include=dev
+          npm ci
 
       - name: Lint
         run: |

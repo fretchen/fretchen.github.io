@@ -28,11 +28,11 @@ jobs:
               with:
                   node-version: "22"
                   cache: "npm"
-                  cache-dependency-path: comment_service/package.json
+                  cache-dependency-path: comment_service/package-lock.json
 
             - name: Install dependencies
               working-directory: ./comment_service
-              run: npm install
+              run: npm ci
 
             - name: Run quality checks (lint + format + test with coverage)
               working-directory: ./comment_service

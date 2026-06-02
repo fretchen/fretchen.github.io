@@ -75,10 +75,10 @@ Edit `scripts/collector-nft-v1.config.json`:
 
 Ensure deployer wallet has ≥0.03 ETH:
 
-| Network  | Minimum | Faucet                                               |
-| -------- | ------- | ---------------------------------------------------- |
-| Sepolia  | 0.03    | https://www.alchemy.com/faucets/optimism-sepolia     |
-| Mainnet  | 0.1     | -                                                    |
+| Network | Minimum | Faucet                                           |
+| ------- | ------- | ------------------------------------------------ |
+| Sepolia | 0.03    | https://www.alchemy.com/faucets/optimism-sepolia |
+| Mainnet | 0.1     | -                                                |
 
 ### Step 2: Validate (Recommended)
 
@@ -160,6 +160,7 @@ export const MAINNET_COLLECTOR_NFT_ADDRESSES: Record<string, `0x${string}`> = {
 ```
 
 Then rebuild and republish:
+
 ```bash
 cd shared/chain-utils
 npm run build
@@ -185,6 +186,7 @@ mintPrice = baseMintPrice × (1 + totalSupply)
 ```
 
 Example with `baseMintPrice = 0.00005 ETH`:
+
 - 1st mint: 0.00005 ETH
 - 10th mint: 0.00055 ETH
 - 100th mint: 0.00505 ETH
@@ -203,12 +205,12 @@ CollectorNFTv1 validates that minters own GenImNFT tokens. The GenImNFT address 
 
 ## Troubleshooting
 
-| Issue                            | Solution                                                |
-| -------------------------------- | ------------------------------------------------------- |
-| "Config file not found"          | Ensure `collector-nft-v1.config.json` exists            |
-| "No contract at GenImNFT address"| Deploy GenImNFTv4 first, use correct proxy address     |
-| "Insufficient funds"             | Deployer needs ≥0.03 ETH                                |
-| "Validation failed"              | Check contract compiles: `npx hardhat compile`          |
+| Issue                             | Solution                                           |
+| --------------------------------- | -------------------------------------------------- |
+| "Config file not found"           | Ensure `collector-nft-v1.config.json` exists       |
+| "No contract at GenImNFT address" | Deploy GenImNFTv4 first, use correct proxy address |
+| "Insufficient funds"              | Deployer needs ≥0.03 ETH                           |
+| "Validation failed"               | Check contract compiles: `npx hardhat compile`     |
 
 ## Deployment Checklist
 

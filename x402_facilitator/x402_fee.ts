@@ -10,7 +10,14 @@
  * 2. Fee collected after: transferFrom(merchant → facilitator, feeAmount)
  */
 
-import { createPublicClient, createWalletClient, http, getContract, type Address, type Abi } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  getContract,
+  type Address,
+  type Abi,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
 import { getChainConfig } from "./chain_utils";

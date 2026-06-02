@@ -210,10 +210,7 @@ async function handlePostComment(
 
   let body: CommentPostBody;
   try {
-    body =
-      typeof event.body === "string"
-        ? (JSON.parse(event.body) as CommentPostBody)
-        : event.body;
+    body = typeof event.body === "string" ? (JSON.parse(event.body) as CommentPostBody) : event.body;
   } catch {
     return {
       statusCode: 400,

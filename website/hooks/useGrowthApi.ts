@@ -32,7 +32,7 @@ async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `API error ${res.status}`);
   }
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
 export interface UseGrowthApi {

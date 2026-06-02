@@ -1,7 +1,13 @@
 import * as React from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useSwitchChain,
+  useChainId,
+  useReadContracts,
+} from "wagmi";
 import { parseEther } from "viem";
-import { useReadContracts } from "wagmi";
 import {
   getSupportV2Config,
   isSupportV2Chain,

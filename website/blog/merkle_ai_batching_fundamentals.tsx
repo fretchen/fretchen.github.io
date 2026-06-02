@@ -275,7 +275,7 @@ const ProofDemo: React.FC = () => {
   } | null>(null);
   const [activeTab, setActiveTab] = useState<"generate" | "validate">("generate");
 
-  const handleGenerateProof = async () => {
+  const handleGenerateProof = () => {
     try {
       const proof = generateMerkleProof(selectedUser);
       setGeneratedProof(proof);
@@ -284,7 +284,7 @@ const ProofDemo: React.FC = () => {
     }
   };
 
-  const handleValidateProof = async () => {
+  const handleValidateProof = () => {
     try {
       const proof = JSON.parse(validationInput) as MerkleProof;
       const result = validateMerkleProof(proof);
@@ -727,7 +727,7 @@ const BatchCreator: React.FC = () => {
 
   // Create merkle tree when threshold is reached
   useEffect(() => {
-    const createMerkleTree = async () => {
+    const createMerkleTree = () => {
       if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
         const root = calculateMerkleRoot(requests);
         const treeVis = visualizeMerkleTree(requests);
@@ -740,12 +740,12 @@ const BatchCreator: React.FC = () => {
     void createMerkleTree();
   }, [requests, batchRegistered]);
 
-  const handleSendRequest = async () => {
+  const handleSendRequest = () => {
     if (!currentPrompt.trim()) return;
     sendLLMCall(currentWallet, currentPrompt);
   };
 
-  const handleRandomRequest = async () => {
+  const handleRandomRequest = () => {
     const randomPrompt = mockPrompts[Math.floor(Math.random() * mockPrompts.length)];
     const randomWallet = mockWallets[Math.floor(Math.random() * mockWallets.length)];
     setCurrentWallet(randomWallet);

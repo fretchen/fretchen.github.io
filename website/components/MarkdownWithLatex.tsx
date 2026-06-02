@@ -1,6 +1,5 @@
 import React from "react";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 
 interface MarkdownWithLatexProps {
   children: string;

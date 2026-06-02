@@ -85,7 +85,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
     };
 
     void loadNFTImage();
-  }, [tokenId, fallbackImageUrl, publicClient]);
+  }, [tokenId, fallbackImageUrl, publicClient, contractAddress]);
 
   if (!imageUrl && !isLoading) {
     return null;

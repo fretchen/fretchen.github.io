@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
 import { useGrowthApi } from "../../hooks/useGrowthApi";
-import type { ContentQueue, Draft, Insights } from "../../types/growth";
-import { CHANNEL_CHAR_LIMITS } from "../../types/growth";
+import { CHANNEL_CHAR_LIMITS, type ContentQueue, type Draft, type Insights } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";

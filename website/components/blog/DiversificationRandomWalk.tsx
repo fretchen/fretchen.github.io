@@ -92,7 +92,7 @@ function ReturnHistogram({ bondReturns, stockReturns, mixReturns, visibleSteps }
   const binSize = (2 * HIST_RANGE) / HIST_BINS;
 
   const toBins = (returns: number[], steps: number): number[] => {
-    const bins = new Array(HIST_BINS).fill(0);
+    const bins: number[] = new Array<number>(HIST_BINS).fill(0);
     for (let i = 0; i < steps; i++) {
       const idx = Math.floor((returns[i] + HIST_RANGE) / binSize);
       if (idx >= 0 && idx < HIST_BINS) bins[idx]++;

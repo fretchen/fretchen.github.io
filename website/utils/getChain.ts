@@ -1,4 +1,4 @@
-import { optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
+import { optimism, optimismSepolia, base, baseSepolia, type Chain } from "wagmi/chains";
 import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
@@ -114,8 +114,6 @@ export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
 // Legacy getChain() for LLMv1 (Phase 4 migration candidate)
 // Returns the chain object based on CHAIN_NAME environment variable
 // ═══════════════════════════════════════════════════════════════
-
-import type { Chain } from "wagmi/chains";
 
 /**
  * Get chain for LLMv1 contract based on environment variable

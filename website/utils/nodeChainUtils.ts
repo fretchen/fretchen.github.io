@@ -6,9 +6,8 @@
  *   import { getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
  */
 
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, type Chain, type PublicClient } from "viem";
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
-import type { Chain, PublicClient } from "viem";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 

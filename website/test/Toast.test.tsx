@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { renderHook, act } from "@testing-library/react";
-import { Toast, useToast } from "../components/Toast";
-import type { ToastType } from "../components/Toast";
+import { render, screen, renderHook, act } from "@testing-library/react";
+import { Toast, useToast, type ToastType } from "../components/Toast";
 
 /**
  * Tests for the Toast component and useToast hook

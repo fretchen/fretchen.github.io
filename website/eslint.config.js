@@ -51,6 +51,12 @@ export default tseslint.config(
         "error",
         { checksVoidReturn: { attributes: false } },
       ],
+      "prefer-const": "error",
+      "no-var": "error",
+      "no-duplicate-imports": "error",
+      "eqeqeq": ["error", "always"],
+      "no-eval": "error",
+      "no-implied-eval": "error",
     },
   },
 
@@ -63,6 +69,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/unbound-method": "off",
     },
   },
 

@@ -230,9 +230,11 @@ function generateSitemap(): void {
 }
 
 // Run if called directly
-generateSitemap().catch((error) => {
+try {
+  generateSitemap();
+} catch (error) {
   console.error("[Sitemap] Error generating sitemap:", error);
   process.exit(1);
-});
+}
 
 export { generateSitemap, SitemapUrl };

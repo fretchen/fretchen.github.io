@@ -1,12 +1,18 @@
 import React, { useState, useMemo } from "react";
-import { useAccount, useSignMessage, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useSignMessage,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useConnect,
+} from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getChain, llmV1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
 import { AgentInfoPanel } from "../../components/AgentInfoPanel";
 import * as styles from "../../layouts/styles";
 import { useLocale } from "../../hooks/useLocale";
-import { useConnect } from "wagmi";
 import { useUmami } from "../../hooks/useUmami";
 import { css } from "../../styled-system/css";
 

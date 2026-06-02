@@ -110,7 +110,7 @@ async function verifyProxy(proxyAddress: string, implementationAddress: string, 
   }
 }
 
-export async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
+export function loadDeploymentFile(filePath: string): DeploymentData | null {
   try {
     if (!fs.existsSync(filePath)) {
       return null;
@@ -172,7 +172,7 @@ async function main() {
     return;
   }
   console.log(`📂 Using deployment file: ${deploymentFilePath}`);
-  const deploymentData = await loadDeploymentFile(deploymentFilePath);
+  const deploymentData = loadDeploymentFile(deploymentFilePath);
   if (!deploymentData) {
     console.error("❌ Failed to load deployment file");
     return;

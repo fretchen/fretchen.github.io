@@ -120,7 +120,7 @@ async function validateDeployment(): Promise<void> {
 /**
  * Simulate deployment (dry run)
  */
-async function simulateDeployment(config: SplitterV1DeployConfig): Promise<void> {
+function simulateDeployment(config: SplitterV1DeployConfig): void {
   console.log("🧪 Simulating EIP3009SplitterV1 deployment...");
 
   console.log("📋 Deployment parameters:");
@@ -172,7 +172,7 @@ export async function deploySplitterV1(): Promise<
   // Check if dry run
   if (options.dryRun) {
     console.log("🧪 Dry Run Mode - Simulation only");
-    await simulateDeployment(config);
+    simulateDeployment(config);
     return true;
   }
 

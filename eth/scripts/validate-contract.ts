@@ -323,7 +323,7 @@ async function checkUpgradeReadiness(proxyAddress: string, contractType: string 
   }
 }
 
-async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
+function loadDeploymentFile(filePath: string): DeploymentData | null {
   try {
     if (!fs.existsSync(filePath)) {
       return null;
@@ -401,7 +401,7 @@ export {
 async function main() {
   const deploymentFilePath = process.env.DEPLOYMENT_FILE;
   if (deploymentFilePath) {
-    const deploymentData = await loadDeploymentFile(deploymentFilePath);
+    const deploymentData = loadDeploymentFile(deploymentFilePath);
     if (deploymentData) {
       await validateFromDeploymentFile(deploymentData);
       return;

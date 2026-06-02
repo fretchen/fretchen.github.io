@@ -164,7 +164,7 @@ async function testContractFunctionality(proxyAddress: string): Promise<void> {
   }
 }
 
-async function loadDeploymentFile(filePath: string): Promise<DeploymentData | null> {
+function loadDeploymentFile(filePath: string): DeploymentData | null {
   try {
     if (!fs.existsSync(filePath)) {
       console.error(`❌ Deployment file not found: ${filePath}`);
@@ -259,7 +259,7 @@ async function main() {
     process.exit(1);
   }
 
-  const deploymentData = await loadDeploymentFile(deploymentFilePath);
+  const deploymentData = loadDeploymentFile(deploymentFilePath);
   if (!deploymentData) {
     console.error("❌ Failed to load deployment data");
     process.exit(1);

@@ -52,8 +52,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
-    "@vitest/coverage-v8": "^4.0.1",
-    "@vitest/ui": "^4.0.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -67,7 +67,7 @@
     "typescript-eslint": "^8.46.2",
     "vike": "^0.4.244",
     "vite": "^7.3.2",
-    "vitest": "^4.0.1"
+    "vitest": "^4.0.18"
   },
   "type": "module"
 }

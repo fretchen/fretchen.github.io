@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useAccount, useSignMessage } from "wagmi";
-import { useGrowthApi } from "../hooks/useGrowthApi";
+import { useGrowthApi, clearAuthCacheForTesting } from "../hooks/useGrowthApi";
 
 const OWNER_ADDRESS = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
 
@@ -10,6 +10,7 @@ describe("useGrowthApi", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearAuthCacheForTesting(); // isolate module-level cache between tests
     globalThis.fetch = vi.fn();
 
     vi.mocked(useAccount).mockReturnValue({
@@ -223,6 +224,37 @@ describe("useGrowthApi", () => {
       } as ReturnType<typeof useAccount>);
       rerender();
 
+      await result.current.fetchDrafts();
+      expect(mockSignMessageAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it("shares token across separate hook instances (module-level cache)", async () => {
+      mockFetchResponse({ drafts: [], approved: [], published: [], rejected: [] });
+      mockFetchResponse({ drafts: [], approved: [], published: [], rejected: [] });
+
+      // Two independent renderHook calls simulate useGrowthDrafts + useApproveDraft
+      // being used together in a component — each creates its own React closure.
+      const { result: hook1 } = renderHook(() => useGrowthApi());
+      const { result: hook2 } = renderHook(() => useGrowthApi());
+
+      await hook1.current.fetchDrafts(); // signs and caches token
+      await hook2.current.fetchInsights(); // separate instance — should reuse cached token
+
+      expect(mockSignMessageAsync).toHaveBeenCalledTimes(1);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("clearAuthCacheForTesting resets the shared cache", async () => {
+      mockFetchResponse({ drafts: [], approved: [], published: [], rejected: [] });
+      mockFetchResponse({ drafts: [], approved: [], published: [], rejected: [] });
+
+      const { result } = renderHook(() => useGrowthApi());
+      await result.current.fetchDrafts();
+      expect(mockSignMessageAsync).toHaveBeenCalledTimes(1);
+
+      clearAuthCacheForTesting();
+
+      // Cache was cleared — next call must sign again even within TTL
       await result.current.fetchDrafts();
       expect(mockSignMessageAsync).toHaveBeenCalledTimes(2);
     });

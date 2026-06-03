@@ -603,6 +603,13 @@ export default function Page() {
     await updateMutation.mutateAsync({ id, body });
   };
 
+  const handleTabChange = (newTab: Tab) => {
+    setTab(newTab);
+    approveMutation.reset();
+    rejectMutation.reset();
+    updateMutation.reset();
+  };
+
   // Pre-hydration: show nothing interactive
   if (!hasMounted) {
     return (
@@ -666,7 +673,11 @@ export default function Page() {
         <>
           <div className={tabBar}>
             {tabs.map((t) => (
-              <button key={t.key} className={tab === t.key ? tabButtonActive : tabButton} onClick={() => setTab(t.key)}>
+              <button
+                key={t.key}
+                className={tab === t.key ? tabButtonActive : tabButton}
+                onClick={() => handleTabChange(t.key)}
+              >
                 {t.label} ({t.count})
               </button>
             ))}

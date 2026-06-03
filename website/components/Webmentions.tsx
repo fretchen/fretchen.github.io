@@ -2,27 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { webmentions } from "../layouts/styles";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
-import { fetchWebmentions } from "../utils/webmentionUtils";
-
-interface WebmentionAuthor {
-  name: string;
-  photo?: string;
-  url?: string;
-}
-
-interface WebmentionContent {
-  text?: string;
-  html?: string;
-}
-
-interface Webmention {
-  "wm-id": number;
-  "wm-property": string;
-  author: WebmentionAuthor;
-  content?: WebmentionContent;
-  published?: string;
-  url: string;
-}
+import { fetchWebmentions, type Webmention } from "../utils/webmentionUtils";
 
 function ShareActions({ urlWithoutSlash }: { urlWithoutSlash: string }) {
   const shareText =
@@ -57,7 +37,7 @@ export function Webmentions() {
   const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
 
   const { data, isPending } = useQuery({
-    queryKey: ["webmentions", urlWithoutSlash],
+    queryKey: ["webmentions", urlWithoutSlash, urlWithSlash],
     queryFn: () => fetchWebmentions(urlWithoutSlash, urlWithSlash),
   });
 
@@ -80,9 +60,9 @@ export function Webmentions() {
     );
   }
 
-  const replies = (mentions as Webmention[]).filter((m) => ["in-reply-to", "mention-of"].includes(m["wm-property"]));
-  const likes = (mentions as Webmention[]).filter((m) => m["wm-property"] === "like-of");
-  const reposts = (mentions as Webmention[]).filter((m) => m["wm-property"] === "repost-of");
+  const replies = mentions.filter((m) => ["in-reply-to", "mention-of"].includes(m["wm-property"]));
+  const likes = mentions.filter((m) => m["wm-property"] === "like-of");
+  const reposts = mentions.filter((m) => m["wm-property"] === "repost-of");
   const allAvatars = [...likes, ...reposts];
 
   return (
@@ -121,7 +101,7 @@ export function Webmentions() {
 
       {replies.length > 0 && (
         <ul className={webmentions.replyList}>
-          {replies.map((mention) => (
+          {replies.map((mention: Webmention) => (
             <li key={mention["wm-id"]} className={webmentions.replyCard}>
               <div className={webmentions.replyHeader}>
                 {mention.author.photo ? (

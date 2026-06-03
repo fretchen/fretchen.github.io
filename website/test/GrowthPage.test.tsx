@@ -10,13 +10,23 @@ const mockUseGrowthInsights = vi.fn();
 const mockApproveMutateAsync = vi.fn();
 const mockRejectMutateAsync = vi.fn();
 const mockUpdateMutateAsync = vi.fn();
+const mockApproveReset = vi.fn();
+const mockRejectReset = vi.fn();
+const mockUpdateReset = vi.fn();
+// Mutable error state for approve mutation (used in tab-switch test)
+let mockApproveError: Error | null = null;
 
 vi.mock("../hooks/useGrowthApi", () => ({
   useGrowthDrafts: (...args: unknown[]) => mockUseGrowthDrafts(...args),
   useGrowthInsights: (...args: unknown[]) => mockUseGrowthInsights(...args),
-  useApproveDraft: () => ({ mutateAsync: mockApproveMutateAsync, isPending: false, error: null }),
-  useRejectDraft: () => ({ mutateAsync: mockRejectMutateAsync, isPending: false, error: null }),
-  useUpdateDraft: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false, error: null }),
+  useApproveDraft: () => ({
+    mutateAsync: mockApproveMutateAsync,
+    isPending: false,
+    error: mockApproveError,
+    reset: mockApproveReset,
+  }),
+  useRejectDraft: () => ({ mutateAsync: mockRejectMutateAsync, isPending: false, error: null, reset: mockRejectReset }),
+  useUpdateDraft: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false, error: null, reset: mockUpdateReset }),
 }));
 
 // Mock styled-system
@@ -49,6 +59,7 @@ const sampleQueue = {
 describe("Growth Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockApproveError = null; // reset mutable error state
     mockUseGrowthDrafts.mockReturnValue({ data: sampleQueue, isPending: false, error: null });
     mockUseGrowthInsights.mockReturnValue({
       data: { growth_opportunities: [], last_analysis: null, social_metrics: {}, website_analytics: {} },
@@ -295,6 +306,52 @@ describe("Growth Page", () => {
 
     await waitFor(() => {
       expect(screen.getByText("43/500 characters")).toBeInTheDocument();
+    });
+  });
+
+  it("calls reset on all mutations when switching tabs", async () => {
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Approved/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Approved/));
+
+    expect(mockApproveReset).toHaveBeenCalledOnce();
+    expect(mockRejectReset).toHaveBeenCalledOnce();
+    expect(mockUpdateReset).toHaveBeenCalledOnce();
+  });
+
+  it("clears approve error banner after switching tabs", async () => {
+    // Simulate a mutation error being present
+    mockApproveError = new Error("Approve failed");
+
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    const { rerender } = render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Approve failed")).toBeInTheDocument();
+    });
+
+    // Clicking a tab calls reset() — simulate the effect by clearing the error
+    mockApproveError = null;
+    fireEvent.click(screen.getByText(/Approved/));
+    rerender(<Page />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Approve failed")).not.toBeInTheDocument();
     });
   });
 });

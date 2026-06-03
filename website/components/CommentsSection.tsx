@@ -41,7 +41,11 @@ export function CommentsSection() {
   const [success, setSuccess] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
-  const { data: comments = [], isPending } = useQuery({
+  const {
+    data: comments = [],
+    isPending,
+    isError: isFetchError,
+  } = useQuery({
     queryKey: ["comments", urlPathname],
     queryFn: () => fetchComments(urlPathname),
   });
@@ -126,6 +130,8 @@ export function CommentsSection() {
 
       {isPending ? (
         <p className={commentSection.loading}>Loading comments...</p>
+      ) : isFetchError ? (
+        <p className={commentSection.errorMsg}>Could not load comments. Please try again later.</p>
       ) : comments.length === 0 ? (
         <p className={commentSection.empty}>No comments yet — be the first!</p>
       ) : (

@@ -7,7 +7,6 @@ import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
-import "katex/dist/katex.min.css";
 import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";

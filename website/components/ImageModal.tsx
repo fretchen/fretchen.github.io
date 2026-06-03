@@ -47,7 +47,7 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
         <button className={styles.nftCard.modalClose} onClick={onClose}>
           ✕
         </button>
-        <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} />
+        <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} decoding="async" />
         {(image.title || image.description || image.network) && (
           <div className={styles.nftCard.modalInfo}>
             {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}

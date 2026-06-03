@@ -156,6 +156,7 @@ export function NFTCard({
     query: { enabled: tokenDataLoaded && !!nft.tokenId && isListed !== null },
   });
 
+
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
@@ -337,6 +338,8 @@ export function NFTCard({
                 src={nft.imageUrl}
                 alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
                 className={styles.nftCard.image}
+                loading="lazy"
+                decoding="async"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = "none";

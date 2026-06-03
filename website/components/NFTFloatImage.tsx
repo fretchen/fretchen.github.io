@@ -80,7 +80,13 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
 
   return (
     <div className={styles.nftFloat.container}>
-      <img src={data.imageUrl} alt={data.title || `NFT #${tokenId}`} className={`u-photo ${styles.nftFloat.image}`} />
+      <img
+        src={data.imageUrl}
+        alt={data.title || `NFT #${tokenId}`}
+        className={`u-photo ${styles.nftFloat.image}`}
+        loading="lazy"
+        decoding="async"
+      />
       <p className={styles.nftFloat.caption}>{getImageTitle()}</p>
     </div>
   );

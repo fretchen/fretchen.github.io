@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery } from "./testUtils";
 import { Post } from "../components/Post";
 import React from "react";
 import "@testing-library/jest-dom";
@@ -67,7 +68,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act: Render the Post component
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Title should be rendered
       expect(screen.getByText("Hello World")).toBeInTheDocument();
@@ -90,7 +91,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Full title should be rendered
       expect(screen.getByText("Moving old lectures")).toBeInTheDocument();
@@ -111,7 +112,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Title and metadata
       expect(screen.getByText("A gallery of AI images")).toBeInTheDocument();
@@ -130,7 +131,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Title
       expect(screen.getByText("Merkle Ai Batching")).toBeInTheDocument();
@@ -150,7 +151,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Navigation should be present
       expect(screen.getByText(/Previous:/)).toBeInTheDocument();
@@ -169,7 +170,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Title renders but no navigation
       expect(screen.getByText("Standalone Post")).toBeInTheDocument();
@@ -190,7 +191,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Support button should be present (new text: "Support ~50¢")
       expect(screen.getByText(/Support/)).toBeInTheDocument();
@@ -209,7 +210,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Wait for fetch to be called
       await vi.waitFor(() => {
@@ -243,7 +244,7 @@ describe("Post Component Integration Tests", () => {
       };
 
       // Act
-      render(<Post {...postProps} />);
+      renderWithQuery(<Post {...postProps} />);
 
       // Assert: Webmentions API should be called
       await vi.waitFor(() => {

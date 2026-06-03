@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { CommentsSection } from "../components/CommentsSection";
+import { renderWithQuery } from "./testUtils";
 
 // Mock vike-react/usePageContext
 vi.mock("vike-react/usePageContext", () => ({
@@ -31,7 +32,7 @@ describe("CommentsSection Component", () => {
           }),
       );
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       expect(screen.getByText(/Loading comments/i)).toBeInTheDocument();
     });
@@ -44,7 +45,7 @@ describe("CommentsSection Component", () => {
         json: async () => ({ comments: [] }),
       });
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -76,7 +77,7 @@ describe("CommentsSection Component", () => {
         json: async () => mockComments,
       });
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText("Great post!")).toBeInTheDocument();
@@ -103,7 +104,7 @@ describe("CommentsSection Component", () => {
         }),
       });
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText("Buy stuff")).toBeInTheDocument();
@@ -118,7 +119,7 @@ describe("CommentsSection Component", () => {
         json: async () => ({ comments: [] }),
       });
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("page=%2Fquantum%2Famo%2F0"));
@@ -130,7 +131,7 @@ describe("CommentsSection Component", () => {
     it("should handle fetch errors gracefully", async () => {
       (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -148,7 +149,7 @@ describe("CommentsSection Component", () => {
     });
 
     it("should render the comment form immediately (always visible)", async () => {
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -160,7 +161,7 @@ describe("CommentsSection Component", () => {
     });
 
     it("should submit a comment successfully", async () => {
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -197,7 +198,7 @@ describe("CommentsSection Component", () => {
     });
 
     it("should show error message on submission failure", async () => {
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -220,7 +221,7 @@ describe("CommentsSection Component", () => {
     });
 
     it("should not submit when text is empty", async () => {
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -231,7 +232,7 @@ describe("CommentsSection Component", () => {
     });
 
     it("should have a hidden honeypot field", async () => {
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();
@@ -251,7 +252,7 @@ describe("CommentsSection Component", () => {
         json: async () => ({ comments: [] }),
       });
 
-      render(<CommentsSection />);
+      renderWithQuery(<CommentsSection />);
 
       await waitFor(() => {
         expect(screen.getByText(/No comments yet/i)).toBeInTheDocument();

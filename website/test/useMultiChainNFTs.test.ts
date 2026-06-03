@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor, cleanup } from "@testing-library/react";
+import { waitFor, cleanup } from "@testing-library/react";
+import { renderHookWithQuery } from "./testUtils";
 
 /**
  * Tests for useMultiChainNFTs hooks.
@@ -62,7 +63,7 @@ describe("useMultiChainUserNFTs", () => {
       isConnected: false,
     });
 
-    const { result } = renderHook(() => useMultiChainUserNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainUserNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -86,7 +87,7 @@ describe("useMultiChainUserNFTs", () => {
       return 0n;
     });
 
-    const { result } = renderHook(() => useMultiChainUserNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainUserNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -110,7 +111,7 @@ describe("useMultiChainUserNFTs", () => {
       return 0n;
     });
 
-    const { result } = renderHook(() => useMultiChainUserNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainUserNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -124,7 +125,7 @@ describe("useMultiChainUserNFTs", () => {
   it("should handle contract errors gracefully", async () => {
     mockReadContract.mockRejectedValue(new Error("Contract call failed"));
 
-    const { result } = renderHook(() => useMultiChainUserNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainUserNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -151,7 +152,7 @@ describe("useMultiChainUserNFTs", () => {
       return 0n;
     });
 
-    const { result } = renderHook(() => useMultiChainUserNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainUserNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -181,7 +182,7 @@ describe("useMultiChainPublicNFTs", () => {
       return [];
     });
 
-    const { result } = renderHook(() => useMultiChainPublicNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainPublicNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -196,7 +197,7 @@ describe("useMultiChainPublicNFTs", () => {
   it("should handle empty public NFT lists", async () => {
     mockReadContract.mockResolvedValue([]);
 
-    const { result } = renderHook(() => useMultiChainPublicNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainPublicNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -208,7 +209,7 @@ describe("useMultiChainPublicNFTs", () => {
   it("should handle contract errors gracefully", async () => {
     mockReadContract.mockRejectedValue(new Error("Contract call failed"));
 
-    const { result } = renderHook(() => useMultiChainPublicNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainPublicNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -226,7 +227,7 @@ describe("useMultiChainPublicNFTs", () => {
       return [];
     });
 
-    const { result } = renderHook(() => useMultiChainPublicNFTs());
+    const { result } = renderHookWithQuery(() => useMultiChainPublicNFTs());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQuery } from "./testUtils";
 import { Webmentions } from "../components/Webmentions";
 
 /**
@@ -41,7 +42,7 @@ describe("Webmentions Component", () => {
           }),
       );
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       expect(screen.getByText(/Loading reactions/i)).toBeInTheDocument();
     });
@@ -54,7 +55,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("Social Reactions")).toBeInTheDocument();
@@ -71,7 +72,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByRole("link", { name: /Bluesky/i })).toBeInTheDocument();
@@ -88,7 +89,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         // Should fetch from both URL variants
@@ -121,7 +122,7 @@ describe("Webmentions Component", () => {
           json: async () => ({ children: [duplicateMention] }),
         });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         // Should only show one like, not two (deduplicated)
@@ -135,7 +136,7 @@ describe("Webmentions Component", () => {
     it("should handle fetch errors gracefully", async () => {
       (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("Social Reactions")).toBeInTheDocument();
@@ -175,7 +176,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/❤️ 2/)).toBeInTheDocument();
@@ -205,7 +206,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/❤️ 1/)).toBeInTheDocument();
@@ -226,7 +227,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Likes/i)).not.toBeInTheDocument();
@@ -256,7 +257,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/🔁 1/)).toBeInTheDocument();
@@ -292,7 +293,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/🔁 3/)).toBeInTheDocument();
@@ -326,7 +327,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/💬 1/)).toBeInTheDocument();
@@ -360,7 +361,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText(/💬 1/)).toBeInTheDocument();
@@ -390,7 +391,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("Frank")).toBeInTheDocument();
@@ -409,7 +410,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByRole("link", { name: /Bluesky/i })).toBeInTheDocument();
@@ -465,7 +466,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         expect(screen.getByText("Reactions")).toBeInTheDocument();
@@ -485,7 +486,7 @@ describe("Webmentions Component", () => {
         json: async () => ({ children: [] }),
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         const blueskyLink = screen.getByRole("link", { name: /Bluesky/i });
@@ -515,7 +516,7 @@ describe("Webmentions Component", () => {
         json: async () => mockData,
       });
 
-      render(<Webmentions />);
+      renderWithQuery(<Webmentions />);
 
       await waitFor(() => {
         const avatar = screen.getByAltText("Alice");

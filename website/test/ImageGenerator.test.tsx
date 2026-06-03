@@ -31,7 +31,8 @@
 
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithQuery } from "./testUtils";
 import { ImageGenerator } from "../components/ImageGenerator";
 import { useAccount, useConnect, useWalletClient } from "wagmi";
 
@@ -69,7 +70,7 @@ describe("ImageGenerator Component", () => {
         status: "disconnected",
       } as ReturnType<typeof useAccount>);
 
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // Check for collapsed state content
       expect(screen.getByText(/🎨.*mocked-imagegen\.title/)).toBeInTheDocument();
@@ -98,7 +99,7 @@ describe("ImageGenerator Component", () => {
         status: "disconnected",
       } as ReturnType<typeof useAccount>);
 
-      render(<ImageGenerator {...mockProps} />);
+      renderWithQuery(<ImageGenerator {...mockProps} />);
 
       // Should still show collapsed state
       expect(screen.getByText(/🎨.*mocked-imagegen\.title/)).toBeInTheDocument();
@@ -121,7 +122,7 @@ describe("ImageGenerator Component", () => {
         connectors: [{ id: "mockConnector", name: "Mock Wallet" }],
       } as unknown as ReturnType<typeof useConnect>);
 
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // Verify we start in collapsed state
       expect(screen.getByText(/mocked-imagegen\.collapsedDescription/)).toBeInTheDocument();
@@ -154,7 +155,7 @@ describe("ImageGenerator Component", () => {
         },
       } as ReturnType<typeof useWalletClient>);
 
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // Should show expanded form elements
       expect(screen.getByPlaceholderText("mocked-imagegen.promptPlaceholder")).toBeInTheDocument();

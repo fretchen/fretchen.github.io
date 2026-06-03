@@ -13,7 +13,8 @@
 
 import React from "react";
 import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithQuery } from "./testUtils";
 import { ImageGenerator } from "../components/ImageGenerator";
 import { useAccount, useWalletClient } from "wagmi";
 
@@ -50,7 +51,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
   describe("🔴 HOCH: Basic Component Integration", () => {
     it("sollte ImageGenerator Component rendern können", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // LocaleText zeigt echte übersetzte Texte, useLocale gibt Label-Keys zurück
       expect(screen.getByText("Create Collectible AI Art • 10¢")).toBeInTheDocument();
@@ -59,7 +60,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte File Input korrekt konfiguriert haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input");
       expect(fileInput).toBeInTheDocument();
@@ -68,7 +69,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Drop Zone haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
@@ -77,7 +78,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte verschiedene Image Sizes unterstützen", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
@@ -90,7 +91,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
   describe("🔴 HOCH: File Upload Functionality", () => {
     it("sollte JPEG Dateien akzeptieren", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input");
 
@@ -105,7 +106,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte PNG Dateien akzeptieren", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const fileInput = screen.getByTestId("reference-image-input");
 
@@ -120,7 +121,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Drag & Drop Zone haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const dropZone = screen.getByTestId("drop-zone");
       expect(dropZone).toBeInTheDocument();
@@ -132,7 +133,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
   describe("🔴 HOCH: UI State Management", () => {
     it("sollte initial Create Artwork Button zeigen", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // useLocale Mock gibt Label-Keys zurück
       const button = screen.getByRole("button", { name: /imagegen.enterPrompt/ });
@@ -140,7 +141,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Textarea für Prompt haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const textarea = screen.getByPlaceholderText("imagegen.promptPlaceholder");
       expect(textarea).toBeInTheDocument();
@@ -148,7 +149,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Listed Checkbox haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const checkbox = screen.getByRole("checkbox", { name: /Listed/ });
       expect(checkbox).toBeInTheDocument();
@@ -156,7 +157,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Image Size Select haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       const sizeSelect = screen.getByLabelText("Select image format for your artwork");
       expect(sizeSelect).toBeInTheDocument();
@@ -170,7 +171,7 @@ describe("ImageGenerator Reference Image Integration", () => {
 
   describe("🟢 HOCH: Dynamic Placeholder Tests", () => {
     it("sollte Standard-Placeholder zeigen wenn kein Reference Image hochgeladen ist", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // useLocale Mock gibt Label-Keys zurück
       const textarea = screen.getByPlaceholderText("imagegen.promptPlaceholder");
@@ -181,7 +182,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Button Text korrekt ändern basierend auf previewState", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // useLocale Mock gibt Label-Keys zurück
       const button = screen.getByRole("button", { name: /imagegen.enterPrompt/ });
@@ -189,7 +190,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte Edit-Mode Locale Keys korrekt geladen haben", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // useLocale Mock gibt Label-Keys zurück
       const textarea = screen.getByPlaceholderText("imagegen.promptPlaceholder");
@@ -200,7 +201,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     });
 
     it("sollte previewState System für UI-Changes nutzen", () => {
-      render(<ImageGenerator />);
+      renderWithQuery(<ImageGenerator />);
 
       // Teste dass das previewState System die UI beeinflusst
       // Drop Zone sollte sichtbar sein im "empty" state

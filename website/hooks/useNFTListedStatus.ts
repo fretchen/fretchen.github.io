@@ -11,7 +11,7 @@ export interface UseNFTListedStatusOptions {
 }
 
 export interface UseNFTListedStatusResult {
-  isListed: boolean | undefined;
+  isListed: boolean | null | undefined;
   isLoading: boolean;
   error: string | undefined;
   refetch: () => Promise<void>;
@@ -35,7 +35,7 @@ export function useNFTListedStatus({
     isError,
     error: queryError,
     refetch,
-  } = useQuery<boolean | undefined>({
+  } = useQuery<boolean | null>({
     queryKey,
     queryFn: async () => {
       try {
@@ -53,7 +53,7 @@ export function useNFTListedStatus({
           (err.message.includes("reverted") ||
             err.name.includes("ContractFunctionRevertedError") ||
             err.name.includes("ContractFunctionExecutionError"));
-        if (isContractRevert) return undefined;
+        if (isContractRevert) return null;
         throw err;
       }
     },
@@ -70,7 +70,7 @@ export function useNFTListedStatus({
 
   return {
     isListed,
-    isLoading: isPending,
+    isLoading: enabled !== false && isPending,
     error: isError ? (queryError instanceof Error ? queryError.message : "Failed to load listing status") : undefined,
     refetch: async () => {
       await refetch();

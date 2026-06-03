@@ -405,7 +405,7 @@ export function NFTCard({
               </button>
 
               {/* Listed Toggle (nur private view) */}
-              {!isPublicView && onListedStatusChanged && isListed !== undefined && (
+              {!isPublicView && onListedStatusChanged && isListed !== undefined && isListed !== null && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

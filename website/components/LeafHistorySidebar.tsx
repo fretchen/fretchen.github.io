@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { formatEther } from "viem";
 
-// Types
 interface LeafHistoryItem {
   id: number;
   user: string;
@@ -14,45 +14,26 @@ interface LeafHistoryItem {
   root?: string;
 }
 
-interface LeafHistoryResponse {
-  leaves: LeafHistoryItem[];
-  count: number;
-}
-
 interface LeafHistorySidebarProps {
   address: `0x${string}` | undefined;
   isOpen: boolean;
   onClose: () => void;
 }
 
+const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
+
+async function fetchLeafHistory(address: string): Promise<LeafHistoryItem[]> {
+  const response = await fetch(`${LEAF_BASE_URL}?address=${address}`);
+  const data = (await response.json()) as { leaves?: LeafHistoryItem[] };
+  return data.leaves ?? [];
+}
+
 export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHistorySidebarProps) {
-  const [leaves, setLeaves] = useState<LeafHistoryItem[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchLeafHistory = useCallback(async () => {
-    if (!address) return;
-
-    setLoading(true);
-    try {
-      const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
-      const response = await fetch(`${LEAF_BASE_URL}?address=${address}`);
-      const data = (await response.json()) as LeafHistoryResponse;
-      setLeaves(data.leaves || []);
-    } catch (error) {
-      console.error("Failed to fetch leaf history:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [address]);
-
-  // Async fetch drives state updates — no synchronous alternative for remote data.
-
-  useEffect(() => {
-    if (isOpen && address) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      void fetchLeafHistory();
-    }
-  }, [isOpen, address, fetchLeafHistory]);
+  const { data: leaves = [], isPending } = useQuery({
+    queryKey: ["leafHistory", address],
+    queryFn: () => fetchLeafHistory(address!),
+    enabled: isOpen && !!address,
+  });
 
   if (!isOpen) return null;
 
@@ -86,7 +67,7 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
         </button>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <div>Loading...</div>
       ) : (
         <div>
@@ -96,7 +77,6 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
             <div style={{ textAlign: "center", color: "#999", marginTop: "2rem" }}>No requests found</div>
           ) : (
             leaves.slice(0, 10).map((leaf) => {
-              // Determine status colors and text
               const getStatusStyle = (processed: boolean) => {
                 if (processed) {
                   return {

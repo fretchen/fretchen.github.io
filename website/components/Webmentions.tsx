@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { webmentions } from "../layouts/styles";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
@@ -54,17 +55,15 @@ function ShareActions({ urlWithoutSlash }: { urlWithoutSlash: string }) {
 
 export function Webmentions() {
   const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
-  const [mentions, setMentions] = useState<Webmention[] | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void fetchWebmentions(urlWithoutSlash, urlWithSlash).then(({ mentions }) => {
-      setMentions(mentions);
-      setLoading(false);
-    });
-  }, [urlWithoutSlash, urlWithSlash]);
+  const { data, isPending } = useQuery({
+    queryKey: ["webmentions", urlWithoutSlash],
+    queryFn: () => fetchWebmentions(urlWithoutSlash, urlWithSlash),
+  });
 
-  if (loading) {
+  const mentions = data?.mentions ?? null;
+
+  if (isPending) {
     return (
       <div className={webmentions.loadingState}>
         <span>⏳</span> Loading reactions...
@@ -72,7 +71,6 @@ export function Webmentions() {
     );
   }
 
-  // Empty state — only share actions
   if (!mentions || mentions.length === 0) {
     return (
       <div className={webmentions.container}>
@@ -82,19 +80,15 @@ export function Webmentions() {
     );
   }
 
-  // Group by type
-  const replies = mentions.filter((m) => ["in-reply-to", "mention-of"].includes(m["wm-property"]));
-  const likes = mentions.filter((m) => m["wm-property"] === "like-of");
-  const reposts = mentions.filter((m) => m["wm-property"] === "repost-of");
-
-  // Collect all avatars from likes + reposts for the compact bar
+  const replies = (mentions as Webmention[]).filter((m) => ["in-reply-to", "mention-of"].includes(m["wm-property"]));
+  const likes = (mentions as Webmention[]).filter((m) => m["wm-property"] === "like-of");
+  const reposts = (mentions as Webmention[]).filter((m) => m["wm-property"] === "repost-of");
   const allAvatars = [...likes, ...reposts];
 
   return (
     <div className={webmentions.container}>
       <h3 className={webmentions.sectionTitle}>Reactions</h3>
 
-      {/* Compact counts bar */}
       <div className={webmentions.compactBar}>
         <div className={webmentions.compactCounts}>
           {likes.length > 0 && <span className={webmentions.compactCount}>❤️ {likes.length}</span>}
@@ -125,7 +119,6 @@ export function Webmentions() {
         )}
       </div>
 
-      {/* Replies — still rendered as cards */}
       {replies.length > 0 && (
         <ul className={webmentions.replyList}>
           {replies.map((mention) => (

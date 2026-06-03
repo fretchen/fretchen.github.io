@@ -105,6 +105,7 @@ export function useNFTListedStatus({
   // Async fetch drives state updates — no synchronous alternative for remote data.
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchListedStatus();
   }, [fetchListedStatus]);
 

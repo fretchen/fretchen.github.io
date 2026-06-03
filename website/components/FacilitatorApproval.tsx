@@ -178,6 +178,7 @@ export function FacilitatorApproval({
 
   useEffect(() => {
     if (propAddress) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFacilitatorAddress(propAddress);
       return;
     }

@@ -582,6 +582,7 @@ export default function Page() {
 
   useEffect(() => {
     if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadData();
     }
   }, [isOwner, loadData]);

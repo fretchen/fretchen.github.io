@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
-import { useMultiChainUserNFTs, MultiChainNFTToken } from "../hooks/useMultiChainNFTs";
+import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
 import { NFTCard } from "./NFTCard";

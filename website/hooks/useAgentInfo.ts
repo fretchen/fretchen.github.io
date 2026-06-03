@@ -132,6 +132,7 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
 
   useEffect(() => {
     if (autoFetch) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void fetchAgent();
     }
   }, [autoFetch, fetchAgent]);

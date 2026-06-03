@@ -49,6 +49,7 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
 
   useEffect(() => {
     if (isOpen && address) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void fetchLeafHistory();
     }
   }, [isOpen, address, fetchLeafHistory]);

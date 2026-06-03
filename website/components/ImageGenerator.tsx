@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";

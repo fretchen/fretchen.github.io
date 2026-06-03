@@ -138,8 +138,7 @@ export function useSupportAction(url: string) {
       }, 2000);
     }
     if (writeError) {
-      setIsLoading(false);
-      // writeError.message is merged at the return site — no setState needed
+      setIsLoading(false); // writeError.message is merged at the return site
     }
   }, [isSuccess, writeError, refetch, fullUrl, chainId]);
 

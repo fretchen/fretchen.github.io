@@ -15,6 +15,7 @@ interface Comment {
 
 async function fetchComments(page: string): Promise<Comment[]> {
   const r = await fetch(`${API_URL}?page=${encodeURIComponent(page)}`);
+  if (!r.ok) throw new Error(`Failed to load comments: ${r.status}`);
   const data = (await r.json()) as { comments?: Comment[] };
   return data.comments ?? [];
 }

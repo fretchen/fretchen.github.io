@@ -330,7 +330,10 @@ describe("Growth Page", () => {
   });
 
   it("clears approve error banner after switching tabs", async () => {
-    // Simulate a mutation error being present
+    // mockApproveError is read by the vi.mock closure at call time (not creation time),
+    // so updating it here affects what the mock returns on next render.
+    // Setting it to null before rerender simulates what reset() does in production.
+    // The "calls reset on all mutations" test above verifies reset() is actually invoked.
     mockApproveError = new Error("Approve failed");
 
     vi.mocked(useAccount).mockReturnValue({

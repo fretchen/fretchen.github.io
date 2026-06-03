@@ -128,8 +128,23 @@ describe("CommentsSection Component", () => {
   });
 
   describe("Fetch Error Handling", () => {
-    it("should show an error message when comments cannot be loaded", async () => {
+    it("should show an error message on network failure", async () => {
       (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
+
+      renderWithQuery(<CommentsSection />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Could not load comments/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/No comments yet/i)).not.toBeInTheDocument();
+    });
+
+    it("should show an error message on server error (non-ok response)", async () => {
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      });
 
       renderWithQuery(<CommentsSection />);
 

@@ -2,7 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { webmentions } from "../layouts/styles";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
-import { fetchWebmentions, type Webmention } from "../utils/webmentionUtils";
+import { fetchWebmentions } from "../utils/webmentionUtils";
 
 function ShareActions({ urlWithoutSlash }: { urlWithoutSlash: string }) {
   const shareText =
@@ -101,7 +101,7 @@ export function Webmentions() {
 
       {replies.length > 0 && (
         <ul className={webmentions.replyList}>
-          {replies.map((mention: Webmention) => (
+          {replies.map((mention) => (
             <li key={mention["wm-id"]} className={webmentions.replyCard}>
               <div className={webmentions.replyHeader}>
                 {mention.author.photo ? (

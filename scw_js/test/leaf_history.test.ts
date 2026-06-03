@@ -140,23 +140,10 @@ describe("handle", () => {
     expect((body.leafs[0] as { id: number }).id).toBe(1);
   });
 
-  it("returns 401 when Authorization header uses capitalized casing", async () => {
-    // Test that the handler also checks the capitalized header key
-    const auth = makeAuthHeader();
-    const res = await handle(
-      {
-        httpMethod: "GET",
-        queryStringParameters: { address: TEST_ADDRESS },
-        headers: { Authorization: auth },
-      },
-      {},
-    );
-    // With a valid token, verifyMessage should be called (returns undefined = falsy here)
-    // The point is that the handler reads the Authorization header correctly
+  it("reads Authorization header in capitalized form", async () => {
     mockVerifyMessage.mockResolvedValue(true);
-    // Re-run with mocked verifyMessage to confirm it reaches the S3 step
     mockS3Send.mockResolvedValue({ Body: JSON.stringify({ trees: [] }) });
-    const res2 = await handle(
+    const res = await handle(
       {
         httpMethod: "GET",
         queryStringParameters: { address: TEST_ADDRESS },
@@ -164,7 +151,7 @@ describe("handle", () => {
       },
       {},
     );
-    expect(res2.statusCode).toBe(200);
+    expect(res.statusCode).toBe(200);
   });
 
   it("returns 500 when S3 read fails", async () => {

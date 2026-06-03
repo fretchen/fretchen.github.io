@@ -1,17 +1,10 @@
 import pino from "pino";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { verifyMessage } from "viem";
+import { parseBearerToken, verifySignedMessage } from "./auth_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const MERKLE_TREE_FILE = "merkle/trees.json";
-const MAX_AUTH_AGE_MS = 5 * 60 * 1000;
-
-interface AuthPayload {
-  address: string;
-  signature: string;
-  message: string;
-}
 
 interface ScwEvent {
   httpMethod: string;
@@ -43,37 +36,9 @@ async function verifyLeafHistoryAuth(
   queryAddress: string,
   authHeader: string | undefined,
 ): Promise<string | null> {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) return "Unauthorized";
-
-  let payload: AuthPayload;
-  try {
-    payload = JSON.parse(Buffer.from(authHeader.slice(7), "base64").toString()) as AuthPayload;
-  } catch {
-    return "Unauthorized";
-  }
-
-  const { address, signature, message } = payload;
-
-  const match = message.match(/^leaf-history:(\d+)$/);
-  if (!match) return "Unauthorized";
-
-  const ts = parseInt(match[1], 10);
-  if (Math.abs(Date.now() - ts * 1000) > MAX_AUTH_AGE_MS) return "Token expired";
-
-  if (address.toLowerCase() !== queryAddress.toLowerCase()) return "Address mismatch";
-
-  try {
-    const isValid = await verifyMessage({
-      address: address as `0x${string}`,
-      message,
-      signature: signature as `0x${string}`,
-    });
-    if (!isValid) return "Invalid signature";
-  } catch {
-    return "Invalid signature";
-  }
-
-  return null;
+  const payload = parseBearerToken(authHeader);
+  if (!payload) return "Unauthorized";
+  return verifySignedMessage(payload.address, payload.signature, payload.message, "leaf-history", queryAddress);
 }
 
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {

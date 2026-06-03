@@ -1,60 +1,14 @@
 import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAccount, useSignMessage } from "wagmi";
+import { useAccount } from "wagmi";
 import type { ContentQueue, Draft, Insights, Performance } from "../types/growth";
+import { useWalletAuth, clearAuthCacheForTesting } from "./useWalletAuth";
+
+export { clearAuthCacheForTesting };
 
 const API_BASE =
   (import.meta.env.PUBLIC_ENV__GROWTH_API_URL as string | undefined) ??
   "https://mypersonaljscloudivnad9dy-growthapi.functions.fnc.fr-par.scw.cloud";
-
-const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutes (backend allows 5 min)
-
-// Module-level cache shared across all hook instances for the same address.
-// This prevents multiple wallet signature prompts when different hooks (e.g.
-// useGrowthDrafts + useApproveDraft) both call getAuth in the same session.
-const authCacheMap = new Map<string, { token: string; timestamp: number }>();
-const pendingAuthMap = new Map<string, Promise<string>>();
-
-async function createAuthHeader(
-  address: string,
-  signMessageAsync: (args: { message: string }) => Promise<string>,
-): Promise<string> {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const message = `growth-api:${timestamp}`;
-  const signature = await signMessageAsync({ message });
-  const payload = JSON.stringify({ address, signature, message });
-  return `Bearer ${btoa(payload)}`;
-}
-
-async function getOrCreateToken(
-  address: string,
-  signMessageAsync: (args: { message: string }) => Promise<string>,
-): Promise<string> {
-  const cached = authCacheMap.get(address);
-  if (cached && Date.now() - cached.timestamp < AUTH_CACHE_TTL_MS) return cached.token;
-
-  const pending = pendingAuthMap.get(address);
-  if (pending) return pending;
-
-  const promise = createAuthHeader(address, signMessageAsync)
-    .then((token) => {
-      authCacheMap.set(address, { token, timestamp: Date.now() });
-      pendingAuthMap.delete(address);
-      return token;
-    })
-    .catch((err) => {
-      pendingAuthMap.delete(address);
-      throw err;
-    });
-
-  pendingAuthMap.set(address, promise);
-  return promise;
-}
-
-export function clearAuthCacheForTesting() {
-  authCacheMap.clear();
-  pendingAuthMap.clear();
-}
 
 async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}/${path}`, {
@@ -72,15 +26,8 @@ async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}
   return res.json() as Promise<T>;
 }
 
-// Thin wrapper: supplies current address + signMessageAsync to the shared module-level cache.
 function useGrowthAuth() {
-  const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-
-  return useCallback(async () => {
-    if (!address) throw new Error("Wallet not connected");
-    return getOrCreateToken(address, signMessageAsync);
-  }, [address, signMessageAsync]);
+  return useWalletAuth("growth-api");
 }
 
 export function useGrowthDrafts(enabled: boolean) {

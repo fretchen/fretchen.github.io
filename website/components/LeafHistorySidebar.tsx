@@ -1,24 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSignMessage } from "wagmi";
 import { formatEther } from "viem";
-
-const authCacheMap = new Map<string, { token: string; timestamp: number }>();
-const AUTH_CACHE_TTL_MS = 4 * 60 * 1000;
-
-async function getLeafHistoryAuth(
-  address: string,
-  signMessageAsync: (args: { message: string }) => Promise<string>,
-): Promise<string> {
-  const cached = authCacheMap.get(address);
-  if (cached && Date.now() - cached.timestamp < AUTH_CACHE_TTL_MS) return cached.token;
-  const timestamp = Math.floor(Date.now() / 1000);
-  const message = `leaf-history:${timestamp}`;
-  const signature = await signMessageAsync({ message });
-  const token = `Bearer ${btoa(JSON.stringify({ address, signature, message }))}`;
-  authCacheMap.set(address, { token, timestamp: Date.now() });
-  return token;
-}
+import { useWalletAuth } from "../hooks/useWalletAuth";
 
 interface LeafHistoryItem {
   id: number;
@@ -41,12 +24,12 @@ interface LeafHistorySidebarProps {
 const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
 
 export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHistorySidebarProps) {
-  const { signMessageAsync } = useSignMessage();
+  const getAuth = useWalletAuth("leaf-history");
 
   const { data: leaves = [], isPending } = useQuery({
     queryKey: ["leafHistory", address],
     queryFn: async () => {
-      const auth = await getLeafHistoryAuth(address!, signMessageAsync);
+      const auth = await getAuth();
       const response = await fetch(`${LEAF_BASE_URL}?address=${encodeURIComponent(address!)}`, {
         headers: { Authorization: auth },
       });

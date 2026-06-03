@@ -5,8 +5,9 @@
  * Tests verify the contract call logic and state management.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { waitFor, act } from "@testing-library/react";
 import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
+import { renderHookWithQuery } from "./testUtils";
 
 // Mock the readContract function from wagmi/actions
 const mockReadContract = vi.fn();
@@ -44,7 +45,7 @@ describe("useNFTListedStatus", () => {
     it("should call isListed contract function when enabled", async () => {
       mockReadContract.mockResolvedValue(true);
 
-      renderHook(() =>
+      renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -66,7 +67,7 @@ describe("useNFTListedStatus", () => {
     });
 
     it("should NOT call isListed when enabled=false", async () => {
-      renderHook(() =>
+      renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -86,7 +87,7 @@ describe("useNFTListedStatus", () => {
       mockReadContract.mockResolvedValue(false);
 
       // Test Optimism
-      const { unmount: unmount1 } = renderHook(() =>
+      const { unmount: unmount1 } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(1),
           network: "eip155:10",
@@ -107,7 +108,7 @@ describe("useNFTListedStatus", () => {
       vi.clearAllMocks();
 
       // Test Sepolia
-      renderHook(() =>
+      renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(1),
           network: "eip155:11155420",
@@ -130,7 +131,7 @@ describe("useNFTListedStatus", () => {
     it("should return isListed=true when contract returns true", async () => {
       mockReadContract.mockResolvedValue(true);
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -151,7 +152,7 @@ describe("useNFTListedStatus", () => {
     it("should return isListed=false when contract returns false", async () => {
       mockReadContract.mockResolvedValue(false);
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -167,7 +168,7 @@ describe("useNFTListedStatus", () => {
     it("should return error when contract call fails", async () => {
       mockReadContract.mockRejectedValue(new Error("Contract call failed"));
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -190,7 +191,7 @@ describe("useNFTListedStatus", () => {
       // Spy on console.error to verify it's NOT called for reverts
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(2), // Legacy token ID
           network: "eip155:10",
@@ -201,10 +202,10 @@ describe("useNFTListedStatus", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Should set specific error message for legacy tokens
-      expect(result.current.error).toBe("isListed not available for this token");
-      // isListed should remain undefined (not an error state, just not supported)
-      expect(result.current.isListed).toBeUndefined();
+      // Legacy tokens return null gracefully — no error state
+      expect(result.current.error).toBeUndefined();
+      // isListed is null for legacy tokens (no listing support, not an error)
+      expect(result.current.isListed).toBeNull();
       // Should NOT log to console.error for expected contract reverts
       expect(consoleSpy).not.toHaveBeenCalled();
 
@@ -212,7 +213,7 @@ describe("useNFTListedStatus", () => {
     });
 
     it("should return undefined isListed when disabled", async () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -230,7 +231,7 @@ describe("useNFTListedStatus", () => {
     it("should allow optimistic update via setOptimisticListed", async () => {
       mockReadContract.mockResolvedValue(false);
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -242,11 +243,13 @@ describe("useNFTListedStatus", () => {
       });
 
       // Optimistically set to true (simulating user toggle)
-      act(() => {
+      await act(async () => {
         result.current.setOptimisticListed(true);
       });
 
-      expect(result.current.isListed).toBe(true);
+      await waitFor(() => {
+        expect(result.current.isListed).toBe(true);
+      });
     });
   });
 
@@ -254,7 +257,7 @@ describe("useNFTListedStatus", () => {
     it("should refetch when refetch() is called", async () => {
       mockReadContract.mockResolvedValue(false);
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithQuery(() =>
         useNFTListedStatus({
           tokenId: BigInt(42),
           network: "eip155:10",
@@ -276,7 +279,9 @@ describe("useNFTListedStatus", () => {
       });
 
       expect(mockReadContract).toHaveBeenCalledTimes(2);
-      expect(result.current.isListed).toBe(true);
+      await waitFor(() => {
+        expect(result.current.isListed).toBe(true);
+      });
     });
   });
 
@@ -284,7 +289,7 @@ describe("useNFTListedStatus", () => {
     it("should refetch when tokenId changes", async () => {
       mockReadContract.mockResolvedValue(true);
 
-      const { result, rerender } = renderHook(
+      const { result, rerender } = renderHookWithQuery(
         ({ tokenId }) =>
           useNFTListedStatus({
             tokenId,
@@ -314,7 +319,7 @@ describe("useNFTListedStatus", () => {
       mockReadContract.mockResolvedValue(true);
 
       // Start with enabled=false (simulating isLoading state)
-      const { result, rerender } = renderHook(
+      const { result, rerender } = renderHookWithQuery(
         ({ enabled }) =>
           useNFTListedStatus({
             tokenId: BigInt(42),

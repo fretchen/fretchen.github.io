@@ -2,10 +2,13 @@
  * Utility functions for handling webmentions
  */
 
-interface Webmention {
+export interface Webmention {
   "wm-id": number;
   "wm-property": string;
-  [key: string]: unknown;
+  author: { name: string; photo?: string; url?: string };
+  content?: { text?: string; html?: string };
+  published?: string;
+  url: string;
 }
 
 interface WebmentionApiResponse {

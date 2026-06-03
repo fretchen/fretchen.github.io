@@ -15,4 +15,14 @@ export default {
   description: "Blog, notepad, whatever you want to call it.",
   prerender: true,
   extends: [vikeReact, vikeReactQuery],
+
+  queryClientConfig: {
+    defaultOptions: {
+      queries: {
+        staleTime: 60_000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
+  },
 } satisfies Config;

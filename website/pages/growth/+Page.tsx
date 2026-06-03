@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useIsMounted } from "../../hooks/useIsMounted";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
-import { useGrowthApi } from "../../hooks/useGrowthApi";
-import { CHANNEL_CHAR_LIMITS, type ContentQueue, type Draft, type Insights } from "../../types/growth";
+import {
+  useGrowthDrafts,
+  useGrowthInsights,
+  useApproveDraft,
+  useRejectDraft,
+  useUpdateDraft,
+} from "../../hooks/useGrowthApi";
+import { CHANNEL_CHAR_LIMITS, type Draft, type Insights } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
@@ -551,41 +557,26 @@ export default function Page() {
 
   const { address, status } = useAccount();
   const { connectors, connect } = useConnect();
-  const { fetchDrafts, fetchInsights, updateDraft, approveDraft: apiApprove, rejectDraft: apiReject } = useGrowthApi();
 
-  const [queue, setQueue] = useState<ContentQueue | null>(null);
-  const [insights, setInsights] = useState<Insights | null>(null);
   const [tab, setTab] = useState<Tab>("drafts");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   // Use status === "connected" (not just isConnected) to ensure wagmi's
   // reconnect is fully complete before we call signMessageAsync.
   const isOwner = hasMounted && status === "connected" && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [q, ins] = await Promise.all([fetchDrafts(), fetchInsights()]);
-      setQueue(q);
-      setInsights(ins);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchDrafts, fetchInsights]);
+  const { data: queue, isPending: loadingDrafts, error: draftsError } = useGrowthDrafts(isOwner);
+  const { data: insights } = useGrowthInsights(isOwner);
 
-  // Async fetch drives state updates — no synchronous alternative for remote data.
+  const approveMutation = useApproveDraft();
+  const rejectMutation = useRejectDraft();
+  const updateMutation = useUpdateDraft();
 
-  useEffect(() => {
-    if (isOwner) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      void loadData();
-    }
-  }, [isOwner, loadData]);
+  const busy = approveMutation.isPending || rejectMutation.isPending || updateMutation.isPending;
+  const error =
+    (draftsError instanceof Error ? draftsError.message : draftsError ? "Failed to load drafts" : null) ??
+    (approveMutation.error instanceof Error ? approveMutation.error.message : null) ??
+    (rejectMutation.error instanceof Error ? rejectMutation.error.message : null) ??
+    (updateMutation.error instanceof Error ? updateMutation.error.message : null);
 
   const historyByPage = useMemo(() => {
     const map: Record<string, Draft[]> = {};
@@ -601,74 +592,22 @@ export default function Page() {
   }, [queue?.published]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await apiApprove(id, scheduledAt, reviewComment);
-      // Optimistic update
-      setQueue((prev) => {
-        if (!prev) return prev;
-        const draft = prev.drafts.find((d) => d.id === id);
-        if (!draft) return prev;
-        const updated = { ...draft, ...response };
-        return {
-          ...prev,
-          drafts: prev.drafts.filter((d) => d.id !== id),
-          approved: [...prev.approved, updated],
-        };
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to approve");
-    } finally {
-      setBusy(false);
-    }
+    await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
   };
 
   const handleReject = async (id: string, reviewComment?: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await apiReject(id, reviewComment);
-      // Optimistic update
-      setQueue((prev) => {
-        if (!prev) return prev;
-        const draft = prev.drafts.find((d) => d.id === id) || prev.approved.find((d) => d.id === id);
-        if (!draft) return prev;
-        const updated = { ...draft, ...response };
-        return {
-          ...prev,
-          drafts: prev.drafts.filter((d) => d.id !== id),
-          approved: prev.approved.filter((d) => d.id !== id),
-          rejected: [...prev.rejected, updated],
-        };
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reject");
-    } finally {
-      setBusy(false);
-    }
+    await rejectMutation.mutateAsync({ id, reviewComment });
   };
 
   const handleUpdate = async (id: string, body: Partial<Draft>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await updateDraft(id, body);
-      // Update in-place
-      setQueue((prev) => {
-        if (!prev) return prev;
-        const updateIn = (list: Draft[]) => list.map((d) => (d.id === id ? { ...d, ...updated } : d));
-        return {
-          ...prev,
-          drafts: updateIn(prev.drafts),
-          approved: updateIn(prev.approved),
-        };
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update");
-    } finally {
-      setBusy(false);
-    }
+    await updateMutation.mutateAsync({ id, body });
+  };
+
+  const handleTabChange = (newTab: Tab) => {
+    setTab(newTab);
+    approveMutation.reset();
+    rejectMutation.reset();
+    updateMutation.reset();
   };
 
   // Pre-hydration: show nothing interactive
@@ -728,13 +667,17 @@ export default function Page() {
 
       {error && <div className={errorBanner}>{error}</div>}
 
-      {loading ? (
+      {loadingDrafts ? (
         <p className={loadingText}>Loading drafts...</p>
       ) : (
         <>
           <div className={tabBar}>
             {tabs.map((t) => (
-              <button key={t.key} className={tab === t.key ? tabButtonActive : tabButton} onClick={() => setTab(t.key)}>
+              <button
+                key={t.key}
+                className={tab === t.key ? tabButtonActive : tabButton}
+                onClick={() => handleTabChange(t.key)}
+              >
                 {t.label} ({t.count})
               </button>
             ))}
@@ -757,7 +700,7 @@ export default function Page() {
             ))
           )}
 
-          <InsightsSection insights={insights} />
+          <InsightsSection insights={insights ?? null} />
         </>
       )}
     </div>

@@ -1,103 +1,62 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
+import { NFTMetadata } from "../types/components";
 import * as styles from "../layouts/styles";
 
 interface NFTFloatImageProps {
   tokenId: number;
 }
 
-import { NFTMetadata } from "../types/components";
+type NFTFloatData = {
+  imageUrl: string | null;
+  title: string | null;
+  description: string | null;
+};
 
 export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [nftTitle, setNftTitle] = useState<string | null>(null);
-  const [nftDescription, setNftDescription] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Get network and contract address from chain-utils
   const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
   const contractAddress = getGenAiNFTAddress(network);
-
-  // Extract prompt from description for display (reusing utility function)
-  const getPromptPreview = (description: string | null): string => {
-    if (!description) return "";
-    return extractPromptFromDescription(description, 60);
-  };
-
-  // Create descriptive title for the image
-  const getImageTitle = (): string => {
-    const promptPreview = getPromptPreview(nftDescription);
-    if (promptPreview) {
-      return `Article Illustration: ${promptPreview}`;
-    }
-    return nftTitle ? `Article Illustration: ${nftTitle}` : `Article Illustration: NFT #${tokenId}`;
-  };
-
-  // Use the custom hook for a stable public client reference
   const publicClient = useConfiguredPublicClient(network);
 
-  // Fetch metadata from tokenURI
-  const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
-    try {
-      if (tokenURI.startsWith("file://")) {
-        console.warn("Cannot fetch file:// URLs in browser. Metadata:", tokenURI);
-        return null;
+  const { data, isPending, isError } = useQuery<NFTFloatData>({
+    queryKey: ["nftFloatData", tokenId, network],
+    queryFn: async () => {
+      const tokenURI = await publicClient.readContract({
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
+        functionName: "tokenURI",
+        args: [BigInt(tokenId)],
+      });
+
+      if (!tokenURI || tokenURI.startsWith("file://")) {
+        return { imageUrl: null, title: null, description: null };
       }
 
       const response = await fetch(tokenURI);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metadata: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Failed to fetch metadata: ${response.status}`);
       const metadata = (await response.json()) as NFTMetadata;
-      return metadata;
-    } catch (error) {
-      console.error("Error fetching NFT metadata:", error);
-      return null;
-    }
+
+      return {
+        imageUrl: metadata.image ?? null,
+        title: metadata.name ?? null,
+        description: metadata.description ?? null,
+      };
+    },
+  });
+
+  const getImageTitle = (): string => {
+    const description = data?.description ?? null;
+    const title = data?.title ?? null;
+    const promptPreview = description ? extractPromptFromDescription(description, 60) : "";
+    if (promptPreview) return `Article Illustration: ${promptPreview}`;
+    return title ? `Article Illustration: ${title}` : `Article Illustration: NFT #${tokenId}`;
   };
 
-  useEffect(() => {
-    const loadNFTData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Get token URI using public client
-        const tokenURIResult = await publicClient.readContract({
-          address: contractAddress,
-          abi: GenImNFTv4ABI,
-          functionName: "tokenURI",
-          args: [BigInt(tokenId)],
-        });
-
-        const tokenURI = tokenURIResult;
-
-        // Fetch metadata
-        const metadata = await fetchNFTMetadata(tokenURI);
-
-        if (metadata) {
-          setImageUrl(metadata.image || null);
-          setNftTitle(metadata.name || null);
-          setNftDescription(metadata.description || null);
-        }
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error(`Error loading NFT ${tokenId}:`, error);
-        setError(`Failed to load NFT #${tokenId}`);
-        setIsLoading(false);
-      }
-    };
-
-    void loadNFTData();
-  }, [tokenId, publicClient, contractAddress]);
-
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className={styles.nftFloat.container}>
         <div className={styles.nftFloat.loading}>
@@ -108,7 +67,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
     );
   }
 
-  if (error || !imageUrl) {
+  if (isError || !data?.imageUrl) {
     return (
       <div className={styles.nftFloat.container}>
         <div className={styles.nftFloat.placeholder}>
@@ -121,7 +80,7 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
 
   return (
     <div className={styles.nftFloat.container}>
-      <img src={imageUrl} alt={nftTitle || `NFT #${tokenId}`} className={`u-photo ${styles.nftFloat.image}`} />
+      <img src={data.imageUrl} alt={data.title || `NFT #${tokenId}`} className={`u-photo ${styles.nftFloat.image}`} />
       <p className={styles.nftFloat.caption}>{getImageTitle()}</p>
     </div>
   );

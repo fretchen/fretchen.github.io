@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
 import { getGenAiNFTAddress, GenImNFTv4ABI, fromCAIP2 } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
-import { NFTCardProps, NFT, NFTMetadata } from "../types/components";
+import { NFTCardProps, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
 import { ChainBadge } from "./ChainBadge";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
+
+type NFTQueryData = {
+  tokenURI: string;
+  imageUrl: string | undefined;
+  metadata: NFTMetadata | undefined;
+  owner: string;
+};
+
 // NFT Card Component
 export function NFTCard({
   tokenId,
@@ -25,16 +34,6 @@ export function NFTCard({
   const { writeContract: writeListingContract, isPending: isToggling, data: listingHash } = useWriteContract();
   const { switchChainAsync } = useSwitchChain();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-
-  // NFT state - initialize with preloaded data if available
-  const [nft, setNft] = useState<NFT>({
-    tokenId,
-    tokenURI: "",
-    imageUrl: preloadedImageUrl,
-    metadata: preloadedMetadata,
-    isLoading: !preloadedImageUrl, // Not loading if we have preloaded data
-  });
-  const [owner, setOwner] = useState<string>("");
 
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
@@ -60,118 +59,86 @@ export function NFTCard({
     }
   };
 
+  // Use the custom hook for a stable public client reference
+  const publicClient = useConfiguredPublicClient(network);
+
+  const {
+    data: nftQueryData,
+    isPending: nftLoading,
+    isError: nftIsError,
+    error: nftQueryError,
+  } = useQuery<NFTQueryData>({
+    queryKey: ["nftData", tokenId.toString(), network, isPublicView],
+    queryFn: async () => {
+      const tokenURI = await publicClient.readContract({
+        address: contractAddress,
+        abi: GenImNFTv4ABI,
+        functionName: "tokenURI",
+        args: [tokenId],
+      });
+
+      let metadata: NFTMetadata | undefined = preloadedMetadata;
+      let imageUrl: string | undefined = preloadedImageUrl;
+      let owner = "";
+
+      if (!tokenURI && (preloadedImageUrl || preloadedMetadata)) {
+        return { tokenURI: "", imageUrl, metadata, owner };
+      }
+
+      if (isPublicView) {
+        const ownerResult = await publicClient.readContract({
+          address: contractAddress,
+          abi: GenImNFTv4ABI,
+          functionName: "ownerOf",
+          args: [tokenId],
+        });
+        owner = ownerResult as string;
+      }
+
+      if (tokenURI && !tokenURI.startsWith("file://")) {
+        try {
+          const response = await fetch(tokenURI);
+          if (response.ok) {
+            const contractMetadata = (await response.json()) as NFTMetadata;
+            metadata = contractMetadata;
+            imageUrl = contractMetadata.image;
+          }
+        } catch {
+          // keep preloaded fallback
+        }
+      }
+
+      return { tokenURI, imageUrl, metadata, owner };
+    },
+    placeholderData:
+      preloadedImageUrl || preloadedMetadata
+        ? { tokenURI: "", imageUrl: preloadedImageUrl, metadata: preloadedMetadata, owner: "" }
+        : undefined,
+  });
+
+  const nft = {
+    tokenId,
+    tokenURI: nftQueryData?.tokenURI ?? "",
+    imageUrl: nftQueryData?.imageUrl,
+    metadata: nftQueryData?.metadata,
+    isLoading: nftLoading,
+    error: nftIsError
+      ? `Failed to load NFT #${tokenId}: ${nftQueryError instanceof Error ? nftQueryError.message : "Unknown error"}`
+      : undefined,
+  };
+  const owner = nftQueryData?.owner ?? "";
+
   // Use the extracted hook for listing status
   // Only enabled when:
   // 1. Not public view (owners can toggle listing)
   // 2. Token data loaded successfully (no error, not loading)
   // This prevents contract calls for non-existent/burned tokens
-  const tokenDataLoaded = !nft.isLoading && !nft.error;
+  const tokenDataLoaded = !nftLoading && !nftIsError;
   const { isListed, setOptimisticListed } = useNFTListedStatus({
     tokenId,
     network,
     enabled: !isPublicView && tokenDataLoaded,
   });
-
-  // Use the custom hook for a stable public client reference
-  const publicClient = useConfiguredPublicClient(network);
-
-  // Fetch metadata from tokenURI
-  const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
-    try {
-      // Handle file:// URLs for local development
-      if (tokenURI.startsWith("file://")) {
-        console.warn("Cannot fetch file:// URLs in browser. Metadata:", tokenURI);
-        return null;
-      }
-
-      const response = await fetch(tokenURI);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metadata: ${response.status}`);
-      }
-
-      const metadata = (await response.json()) as NFTMetadata;
-      return metadata;
-    } catch (error) {
-      console.error("Error fetching NFT metadata:", error);
-      return null;
-    }
-  };
-
-  // Load NFT data from blockchain
-  useEffect(() => {
-    const loadNFTData = async () => {
-      try {
-        setNft((prev) => ({ ...prev, isLoading: true, error: undefined }));
-
-        // Get token URI using public client
-        const tokenURIResult = await publicClient.readContract({
-          address: contractAddress,
-          abi: GenImNFTv4ABI,
-          functionName: "tokenURI",
-          args: [tokenId],
-        });
-
-        const tokenURI = tokenURIResult;
-
-        // Skip fetching if tokenURI is empty and we have preloaded data
-        if (!tokenURI && (preloadedImageUrl || preloadedMetadata)) {
-          setNft((prev) => ({
-            ...prev,
-            tokenURI: "",
-            isLoading: false,
-          }));
-          return;
-        }
-
-        // Get owner if in public view
-        let nftOwner = "";
-        if (isPublicView) {
-          const ownerResult = await publicClient.readContract({
-            address: contractAddress,
-            abi: GenImNFTv4ABI,
-            functionName: "ownerOf",
-            args: [tokenId],
-          });
-          nftOwner = ownerResult as string;
-          setOwner(nftOwner);
-        }
-
-        // Note: isListed is now handled by useNFTListedStatus hook
-
-        // Fetch metadata only if tokenURI is available
-        let metadata = preloadedMetadata; // Keep preloaded metadata as fallback
-        let finalImageUrl = preloadedImageUrl; // Keep preloaded image as fallback
-
-        if (tokenURI) {
-          const contractMetadata = await fetchNFTMetadata(tokenURI);
-          if (contractMetadata) {
-            metadata = contractMetadata;
-            finalImageUrl = contractMetadata.image;
-          }
-        }
-
-        setNft({
-          tokenId,
-          tokenURI,
-          metadata,
-          imageUrl: finalImageUrl,
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error(`Error loading NFT ${tokenId}:`, error);
-        setNft({
-          tokenId,
-          tokenURI: "",
-          imageUrl: preloadedImageUrl, // Keep preloaded image on error
-          metadata: preloadedMetadata, // Keep preloaded metadata on error
-          isLoading: false,
-          error: `Failed to load NFT #${tokenId}: ${error instanceof Error ? error.message : "Unknown error"}`,
-        });
-      }
-    };
-
-    void loadNFTData();
-  }, [tokenId, isPublicView, preloadedImageUrl, preloadedMetadata, publicClient, contractAddress]);
 
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -438,7 +405,7 @@ export function NFTCard({
               </button>
 
               {/* Listed Toggle (nur private view) */}
-              {!isPublicView && onListedStatusChanged && isListed !== undefined && (
+              {!isPublicView && onListedStatusChanged && isListed !== undefined && isListed !== null && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

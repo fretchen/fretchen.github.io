@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePageContext } from "vike-react/usePageContext";
 import { commentSection } from "../layouts/styles";
 
@@ -12,76 +13,83 @@ interface Comment {
   suspectedAgent?: boolean;
 }
 
+async function fetchComments(page: string): Promise<Comment[]> {
+  const r = await fetch(`${API_URL}?page=${encodeURIComponent(page)}`);
+  if (!r.ok) throw new Error(`Failed to load comments: ${r.status}`);
+  const data = (await r.json()) as { comments?: Comment[] };
+  return data.comments ?? [];
+}
+
+async function postComment(body: { name?: string; text: string; page: string; website: string }): Promise<Comment> {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string };
+    throw new Error(data.error ?? "Failed to post comment");
+  }
+  const data = (await res.json()) as { comment: Comment };
+  return data.comment;
+}
+
 export function CommentsSection() {
   const { urlPathname } = usePageContext();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [text, setText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetch(`${API_URL}?page=${encodeURIComponent(urlPathname)}`)
-      .then((r) => r.json() as Promise<{ comments?: Comment[] }>)
-      .then((data) => {
-        setComments(data.comments ?? []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [urlPathname]);
+  const {
+    data: comments = [],
+    isPending,
+    isError: isFetchError,
+  } = useQuery({
+    queryKey: ["comments", urlPathname],
+    queryFn: () => fetchComments(urlPathname),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim()) {
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim() || undefined,
-          text: text.trim(),
-          page: urlPathname,
-          website: honeypotRef.current?.value || "",
-        }),
-      });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to post comment");
-      }
-      const data = (await res.json()) as { comment: Comment };
-      setComments((prev) => [...prev, data.comment]);
+  const {
+    mutate: submitComment,
+    isPending: submitting,
+    error: mutationError,
+  } = useMutation({
+    mutationFn: postComment,
+    onSuccess: (newComment) => {
+      queryClient.setQueryData<Comment[]>(["comments", urlPathname], (prev = []) => [...prev, newComment]);
       setText("");
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post comment");
-    } finally {
-      setSubmitting(false);
-    }
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    submitComment({
+      name: name.trim() || undefined,
+      text: text.trim(),
+      page: urlPathname,
+      website: honeypotRef.current?.value ?? "",
+    });
   };
 
   const commentCount = comments.length;
+  const error =
+    mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to post comment" : null;
 
   return (
     <div className={commentSection.container}>
-      {/* Section title */}
       <h3 className={commentSection.title}>
-        {loading
+        {isPending
           ? "Comments"
           : commentCount === 0
             ? "Comments"
             : `${commentCount} Comment${commentCount !== 1 ? "s" : ""}`}
       </h3>
 
-      {/* Comment form — always visible */}
       <form onSubmit={handleSubmit} className={commentSection.form}>
         <input
           type="text"
@@ -121,9 +129,10 @@ export function CommentsSection() {
         </div>
       </form>
 
-      {/* Comment list */}
-      {loading ? (
+      {isPending ? (
         <p className={commentSection.loading}>Loading comments...</p>
+      ) : isFetchError ? (
+        <p className={commentSection.errorMsg}>Could not load comments. Please try again later.</p>
       ) : comments.length === 0 ? (
         <p className={commentSection.empty}>No comments yet — be the first!</p>
       ) : (

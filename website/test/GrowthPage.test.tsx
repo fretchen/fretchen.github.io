@@ -4,22 +4,29 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 import { useAccount, useConnect } from "wagmi";
 import { OWNER_ADDRESS } from "../utils/getChain";
 
-// Mock useGrowthApi
-const mockFetchDrafts = vi.fn();
-const mockFetchInsights = vi.fn();
-const mockApproveDraft = vi.fn();
-const mockRejectDraft = vi.fn();
-const mockUpdateDraft = vi.fn();
+// Mock the new TQ-based growth hooks
+const mockUseGrowthDrafts = vi.fn();
+const mockUseGrowthInsights = vi.fn();
+const mockApproveMutateAsync = vi.fn();
+const mockRejectMutateAsync = vi.fn();
+const mockUpdateMutateAsync = vi.fn();
+const mockApproveReset = vi.fn();
+const mockRejectReset = vi.fn();
+const mockUpdateReset = vi.fn();
+// Mutable error state for approve mutation (used in tab-switch test)
+let mockApproveError: Error | null = null;
 
 vi.mock("../hooks/useGrowthApi", () => ({
-  useGrowthApi: () => ({
-    fetchDrafts: mockFetchDrafts,
-    fetchInsights: mockFetchInsights,
-    fetchPerformance: vi.fn().mockResolvedValue({ posts: [] }),
-    approveDraft: mockApproveDraft,
-    rejectDraft: mockRejectDraft,
-    updateDraft: mockUpdateDraft,
+  useGrowthDrafts: (...args: unknown[]) => mockUseGrowthDrafts(...args),
+  useGrowthInsights: (...args: unknown[]) => mockUseGrowthInsights(...args),
+  useApproveDraft: () => ({
+    mutateAsync: mockApproveMutateAsync,
+    isPending: false,
+    error: mockApproveError,
+    reset: mockApproveReset,
   }),
+  useRejectDraft: () => ({ mutateAsync: mockRejectMutateAsync, isPending: false, error: null, reset: mockRejectReset }),
+  useUpdateDraft: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false, error: null, reset: mockUpdateReset }),
 }));
 
 // Mock styled-system
@@ -52,16 +59,16 @@ const sampleQueue = {
 describe("Growth Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetchDrafts.mockResolvedValue(sampleQueue);
-    mockFetchInsights.mockResolvedValue({
-      growth_opportunities: [],
-      last_analysis: null,
-      social_metrics: {},
-      website_analytics: {},
+    mockApproveError = null; // reset mutable error state
+    mockUseGrowthDrafts.mockReturnValue({ data: sampleQueue, isPending: false, error: null });
+    mockUseGrowthInsights.mockReturnValue({
+      data: { growth_opportunities: [], last_analysis: null, social_metrics: {}, website_analytics: {} },
+      isPending: false,
+      error: null,
     });
-    mockApproveDraft.mockResolvedValue({ ...sampleQueue.drafts[0], status: "approved" });
-    mockRejectDraft.mockResolvedValue({ ...sampleQueue.drafts[0], status: "rejected" });
-    mockUpdateDraft.mockResolvedValue({ ...sampleQueue.drafts[0], content: "Updated content" });
+    mockApproveMutateAsync.mockResolvedValue({ ...sampleQueue.drafts[0], status: "approved" });
+    mockRejectMutateAsync.mockResolvedValue({ ...sampleQueue.drafts[0], status: "rejected" });
+    mockUpdateMutateAsync.mockResolvedValue({ ...sampleQueue.drafts[0], content: "Updated content" });
   });
 
   afterEach(() => {
@@ -104,10 +111,6 @@ describe("Growth Page", () => {
     } as ReturnType<typeof useAccount>);
 
     render(<Page />);
-
-    await waitFor(() => {
-      expect(mockFetchDrafts).toHaveBeenCalled();
-    });
 
     await waitFor(() => {
       expect(screen.getByText("Check out this blog post about game theory!")).toBeInTheDocument();
@@ -159,7 +162,11 @@ describe("Growth Page", () => {
     fireEvent.click(screen.getByText("Confirm Approve"));
 
     await waitFor(() => {
-      expect(mockApproveDraft).toHaveBeenCalledWith("draft_1", undefined, undefined);
+      expect(mockApproveMutateAsync).toHaveBeenCalledWith({
+        id: "draft_1",
+        scheduledAt: undefined,
+        reviewComment: undefined,
+      });
     });
   });
 
@@ -179,7 +186,7 @@ describe("Growth Page", () => {
     fireEvent.click(screen.getByText("Reject"));
 
     await waitFor(() => {
-      expect(mockRejectDraft).toHaveBeenCalledWith("draft_1", undefined);
+      expect(mockRejectMutateAsync).toHaveBeenCalledWith({ id: "draft_1", reviewComment: undefined });
     });
   });
 
@@ -204,7 +211,7 @@ describe("Growth Page", () => {
   });
 
   it("shows error banner when API call fails", async () => {
-    mockFetchDrafts.mockRejectedValueOnce(new Error("Network error"));
+    mockUseGrowthDrafts.mockReturnValue({ data: undefined, isPending: false, error: new Error("Network error") });
 
     vi.mocked(useAccount).mockReturnValue({
       address: OWNER_ADDRESS,
@@ -240,9 +247,10 @@ describe("Growth Page", () => {
 
   it("disables save button when content exceeds character limit", async () => {
     const longContent = "x".repeat(501);
-    mockFetchDrafts.mockResolvedValue({
-      ...sampleQueue,
-      drafts: [{ ...sampleQueue.drafts[0], content: longContent }],
+    mockUseGrowthDrafts.mockReturnValue({
+      data: { ...sampleQueue, drafts: [{ ...sampleQueue.drafts[0], content: longContent }] },
+      isPending: false,
+      error: null,
     });
 
     vi.mocked(useAccount).mockReturnValue({
@@ -265,9 +273,10 @@ describe("Growth Page", () => {
 
   it("shows over-limit warning and disables approve for too-long content", async () => {
     const longContent = "y".repeat(501);
-    mockFetchDrafts.mockResolvedValue({
-      ...sampleQueue,
-      drafts: [{ ...sampleQueue.drafts[0], content: longContent }],
+    mockUseGrowthDrafts.mockReturnValue({
+      data: { ...sampleQueue, drafts: [{ ...sampleQueue.drafts[0], content: longContent }] },
+      isPending: false,
+      error: null,
     });
 
     vi.mocked(useAccount).mockReturnValue({
@@ -297,6 +306,55 @@ describe("Growth Page", () => {
 
     await waitFor(() => {
       expect(screen.getByText("43/500 characters")).toBeInTheDocument();
+    });
+  });
+
+  it("calls reset on all mutations when switching tabs", async () => {
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Approved/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Approved/));
+
+    expect(mockApproveReset).toHaveBeenCalledOnce();
+    expect(mockRejectReset).toHaveBeenCalledOnce();
+    expect(mockUpdateReset).toHaveBeenCalledOnce();
+  });
+
+  it("clears approve error banner after switching tabs", async () => {
+    // mockApproveError is read by the vi.mock closure at call time (not creation time),
+    // so updating it here affects what the mock returns on next render.
+    // Setting it to null before rerender simulates what reset() does in production.
+    // The "calls reset on all mutations" test above verifies reset() is actually invoked.
+    mockApproveError = new Error("Approve failed");
+
+    vi.mocked(useAccount).mockReturnValue({
+      address: OWNER_ADDRESS,
+      isConnected: true,
+      status: "connected",
+    } as ReturnType<typeof useAccount>);
+
+    const { rerender } = render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Approve failed")).toBeInTheDocument();
+    });
+
+    // Clicking a tab calls reset() — simulate the effect by clearing the error
+    mockApproveError = null;
+    fireEvent.click(screen.getByText(/Approved/));
+    rerender(<Page />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Approve failed")).not.toBeInTheDocument();
     });
   });
 });

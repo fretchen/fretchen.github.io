@@ -1,0 +1,2 @@
+import{St as e,ar as t,ir as n,sn as r}from"./chunk-mKn3i_vA2.js";import{t as i}from"./chunk-ndlv0VQa2.js";var a={parse:n(async e=>{let n=await i(`info`,e);t.debug(n)},`parse`)},o={version:`11.15.0`},s={parser:a,db:{getVersion:n(()=>o.version,`getVersion`)},renderer:{draw:n((n,i,a)=>{t.debug(`rendering info diagram
+`+n);let o=e(i);r(o,100,400,!0),o.append(`g`).append(`text`).attr(`x`,100).attr(`y`,40).attr(`class`,`version`).attr(`font-size`,32).style(`text-anchor`,`middle`).text(`v${a}`)},`draw`)}};export{s as diagram};

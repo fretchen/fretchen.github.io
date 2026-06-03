@@ -156,7 +156,6 @@ export function NFTCard({
     query: { enabled: tokenDataLoaded && !!nft.tokenId && isListed !== null },
   });
 
-
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,

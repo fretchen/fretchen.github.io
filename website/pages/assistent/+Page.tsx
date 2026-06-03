@@ -98,7 +98,7 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
       return;
     }
     if (!simulateDepositData) {
-      alert(invalidAmountFormatMessage);
+      alert(invalidAmountMessage);
       return;
     }
     writeContract(simulateDepositData.request);

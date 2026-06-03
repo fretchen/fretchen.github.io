@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
+import { render, screen } from "@testing-library/react";
 import { NFTCard } from "../components/NFTCard";
 import { NFTCardProps } from "../types/components";
 
@@ -16,6 +17,8 @@ vi.mock("wagmi", () => ({
     isLoading: false,
     isSuccess: false,
   })),
+  useSimulateContract: vi.fn(() => ({ data: undefined })),
+  useSwitchChain: vi.fn(() => ({ switchChainAsync: vi.fn() })),
 }));
 
 vi.mock("wagmi/actions", () => ({
@@ -71,12 +74,50 @@ vi.mock("../layouts/styles", () => ({
     checkbox: "nft-checkbox",
     actions: "nft-actions",
     actionButton: "action-button",
+    compactSecondaryButton: "compact-secondary-button",
+    actionsOverlay: "actions-overlay",
+    ownerBadge: "owner-badge",
+    modalOverlay: "modal-overlay",
+    modalContent: "modal-content",
+    modalClose: "modal-close",
+    modalImage: "modal-image",
+    modalInfo: "modal-info",
+    modalTitle: "modal-title",
+    modalDescription: "modal-description",
   },
   spinner: "spinner",
   primaryButton: "primary-button",
   secondaryButton: "secondary-button",
   errorStatus: "error-status",
 }));
+
+vi.mock("@fretchen/chain-utils", () => ({
+  getGenAiNFTAddress: vi.fn(() => "0xNFTContract"),
+  GenImNFTv4ABI: [],
+  fromCAIP2: vi.fn(() => 10),
+  GENAI_NFT_NETWORKS: ["eip155:10"],
+}));
+
+vi.mock("../hooks/useNFTListedStatus", () => ({
+  useNFTListedStatus: vi.fn(() => ({ isListed: false, setOptimisticListed: vi.fn() })),
+}));
+
+vi.mock("../hooks/useConfiguredPublicClient", () => ({
+  useConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
+}));
+
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return {
+    ...actual,
+    useQuery: vi.fn(() => ({
+      data: { tokenURI: "file://", imageUrl: undefined, metadata: undefined, owner: "" },
+      isPending: false,
+      isError: false,
+      error: null,
+    })),
+  };
+});
 
 // Mock fetch globally
 global.fetch = vi.fn();
@@ -315,5 +356,62 @@ describe("NFTCard Component", () => {
       const element = React.createElement(NFTCard, propsWithoutCallback);
       expect(element).toBeDefined();
     }).not.toThrow();
+  });
+});
+
+describe("NFTCard — button disabled state with simulation", () => {
+  import("wagmi").then((wagmi) => {
+    vi.mocked(wagmi.useSimulateContract).mockReturnValue({ data: undefined } as ReturnType<
+      typeof wagmi.useSimulateContract
+    >);
+  });
+
+  const renderProps: NFTCardProps = {
+    tokenId: BigInt(1),
+    network: "eip155:10" as `eip155:${number}`,
+    onImageClick: vi.fn(),
+    onNftBurned: vi.fn(),
+    onListedStatusChanged: vi.fn(),
+    isPublicView: false,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("disables burn button when simulateBurnData is undefined", async () => {
+    const wagmi = await import("wagmi");
+    vi.mocked(wagmi.useSimulateContract).mockReturnValue({ data: undefined } as ReturnType<
+      typeof wagmi.useSimulateContract
+    >);
+
+    render(<NFTCard {...renderProps} />);
+
+    const burnButton = screen.getByTitle("imagegen.delete artwork (permanent)");
+    expect(burnButton).toBeDisabled();
+  });
+
+  it("enables burn button when simulateBurnData resolves", async () => {
+    const wagmi = await import("wagmi");
+    vi.mocked(wagmi.useSimulateContract).mockReturnValue({
+      data: { request: { address: "0xNFTContract", abi: [], functionName: "burn", args: [BigInt(1)] } },
+    } as unknown as ReturnType<typeof wagmi.useSimulateContract>);
+
+    render(<NFTCard {...renderProps} />);
+
+    const burnButton = screen.getByTitle("imagegen.delete artwork (permanent)");
+    expect(burnButton).not.toBeDisabled();
+  });
+
+  it("disables listing toggle when simulateListingData is undefined", async () => {
+    const wagmi = await import("wagmi");
+    vi.mocked(wagmi.useSimulateContract).mockReturnValue({ data: undefined } as ReturnType<
+      typeof wagmi.useSimulateContract
+    >);
+
+    render(<NFTCard {...renderProps} />);
+
+    const listingButton = screen.getByTitle("Make public");
+    expect(listingButton).toBeDisabled();
   });
 });

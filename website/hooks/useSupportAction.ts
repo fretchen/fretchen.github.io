@@ -89,7 +89,7 @@ export function useSupportAction(url: string) {
     functionName: "donate",
     args: fullUrl ? [fullUrl, SUPPORT_RECIPIENT_ADDRESS] : undefined,
     value: donationAmount,
-    query: { enabled: !!fullUrl && !!activeConfig },
+    query: { enabled: !!fullUrl && !!activeConfig && isConnected },
   });
 
   // Aggregate counts from all chains
@@ -126,8 +126,14 @@ export function useSupportAction(url: string) {
       }
     }
 
-    if (!simulateDonateData) {
+    const resolvedConfig = getSupportV2Config(targetChainId);
+    if (!resolvedConfig) {
       setErrorMessage("Konfigurationsfehler");
+      return;
+    }
+
+    if (!simulateDonateData) {
+      // Simulation still loading (e.g. after chain switch) — bail silently
       return;
     }
 

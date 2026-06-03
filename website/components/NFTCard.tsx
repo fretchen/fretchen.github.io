@@ -420,7 +420,7 @@ export function NFTCard({
                     e.stopPropagation();
                     void handleToggleListing();
                   }}
-                  disabled={isToggling || isListingConfirming}
+                  disabled={isToggling || isListingConfirming || !simulateListingData}
                   className={styles.nftCard.compactSecondaryButton}
                   title={`${isListed ? "Make private" : "Make public"}`}
                 >
@@ -438,12 +438,13 @@ export function NFTCard({
                     e.stopPropagation();
                     void handleBurn();
                   }}
-                  disabled={isBurning || isConfirming}
+                  disabled={isBurning || isConfirming || !simulateBurnData}
                   className={styles.nftCard.compactSecondaryButton}
                   title={`${deleteLabel} artwork (permanent)`}
                   style={{
-                    backgroundColor: isBurning || isConfirming ? "rgba(0,0,0,0.3)" : "rgba(220, 38, 38, 0.8)",
-                    opacity: isBurning || isConfirming ? 0.6 : 1,
+                    backgroundColor:
+                      isBurning || isConfirming || !simulateBurnData ? "rgba(0,0,0,0.3)" : "rgba(220, 38, 38, 0.8)",
+                    opacity: isBurning || isConfirming || !simulateBurnData ? 0.6 : 1,
                   }}
                 >
                   {isBurning ? "⏳" : isConfirming ? "⏳" : "🗑️"}

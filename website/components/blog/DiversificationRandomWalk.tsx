@@ -13,8 +13,6 @@ import {
 import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
 // ============================================================
 // Random Walk helpers
 // ============================================================
@@ -188,6 +186,10 @@ export default function DiversificationRandomWalk() {
   const [visibleSteps, setVisibleSteps] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+  }, []);
 
   const sigBond = PEDAGOGY.sigBond;
   const sigStock = PEDAGOGY.sigStock;

@@ -93,7 +93,7 @@ export function useGrowthDrafts(enabled: boolean) {
       const auth = await getAuth();
       return apiFetch<ContentQueue>("drafts", auth);
     },
-    enabled,
+    enabled: enabled && !!address,
   });
 }
 
@@ -107,7 +107,7 @@ export function useGrowthInsights(enabled: boolean) {
       const auth = await getAuth();
       return apiFetch<Insights>("insights", auth);
     },
-    enabled,
+    enabled: enabled && !!address,
   });
 }
 

@@ -5,6 +5,7 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useSimulateContract,
   useConnect,
 } from "wagmi";
 import { formatEther, parseEther } from "viem";
@@ -33,7 +34,6 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 
   // localized message
   const invalidAmountMessage = useLocale({ label: "assistent.invalidAmount" });
-  const invalidAmountFormatMessage = useLocale({ label: "assistent.invalidAmountFormat" });
   const topUpLabel = useLocale({ label: "assistent.topUp" });
   const topUpBalanceLabel = useLocale({ label: "assistent.topUpBalance" });
   const currentBalanceLabel = useLocale({ label: "assistent.currentBalance" });
@@ -67,6 +67,23 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
   // Memoize the amount to send to avoid unnecessary recalculations
   const amountToSend = useMemo(() => customAmount.trim() || selectedAmount, [customAmount, selectedAmount]);
 
+  const amountWei = useMemo(() => {
+    try {
+      const wei = parseEther(amountToSend);
+      return wei > 0n ? wei : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [amountToSend]);
+
+  const { data: simulateDepositData } = useSimulateContract({
+    ...llmV1ContractConfig,
+    functionName: "depositForLLM",
+    value: amountWei,
+    ...(chain?.id && { chainId: chain.id }),
+    query: { enabled: !!address && !!amountWei },
+  });
+
   // Memoize the button text to avoid string replacement on every render
   const buttonText = useMemo(() => {
     if (isConfirming) return processingLabel;
@@ -75,28 +92,16 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 
   const handleTopUp = () => {
     if (!address) return;
-
-    try {
-      const amountStr = amountToSend;
-      const amountWei = parseEther(amountStr);
-
-      if (!amountWei || amountWei <= 0n) {
-        alert(invalidAmountMessage);
-        return;
-      }
-
-      writeContract({
-        ...llmV1ContractConfig,
-        functionName: "depositForLLM",
-        value: amountWei,
-        ...(chain?.id && { chainId: chain.id }),
-      });
-
-      setShowTopUpModal(false);
-    } catch (err) {
-      console.error("Top-up failed", err);
-      alert(invalidAmountFormatMessage);
+    if (!amountWei) {
+      alert(invalidAmountMessage);
+      return;
     }
+    if (!simulateDepositData) {
+      alert(invalidAmountMessage);
+      return;
+    }
+    writeContract(simulateDepositData.request);
+    setShowTopUpModal(false);
   };
 
   // Refetch balance when transaction is confirmed

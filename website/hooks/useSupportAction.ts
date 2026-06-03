@@ -3,6 +3,7 @@ import {
   useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useSimulateContract,
   useSwitchChain,
   useChainId,
   useReadContracts,
@@ -76,6 +77,21 @@ export function useSupportAction(url: string) {
     query: { enabled: !!fullUrl },
   });
 
+  // Derive which chain to donate on based on current wallet chain
+  const activeConfig = React.useMemo(() => {
+    const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
+    const targetChainId = currentlySupported ? chainId : DEFAULT_SUPPORT_CHAIN.id;
+    return targetChainId ? getSupportV2Config(targetChainId) : null;
+  }, [chainId]);
+
+  const { data: simulateDonateData } = useSimulateContract({
+    ...(activeConfig ?? {}),
+    functionName: "donate",
+    args: fullUrl ? [fullUrl, SUPPORT_RECIPIENT_ADDRESS] : undefined,
+    value: donationAmount,
+    query: { enabled: !!fullUrl && !!activeConfig && isConnected },
+  });
+
   // Aggregate counts from all chains
   const aggregatedCount = chainResults
     ? chainResults.reduce((sum, result) => {
@@ -110,32 +126,28 @@ export function useSupportAction(url: string) {
       }
     }
 
-    // Get contract config for the target chain (user's chain if supported, otherwise default)
-    const activeConfig = getSupportV2Config(targetChainId);
-    if (!activeConfig) {
+    const resolvedConfig = getSupportV2Config(targetChainId);
+    if (!resolvedConfig) {
       setErrorMessage("Konfigurationsfehler");
+      return;
+    }
+
+    if (!simulateDonateData) {
+      // Simulation still loading (e.g. after chain switch) — bail silently
       return;
     }
 
     // Capture chain at write time; read in the effect to avoid chainId dep causing re-fires
     txChainIdRef.current = targetChainId;
 
-    // SupportV2 has recipient parameter
-    writeContract({
-      ...activeConfig,
-      functionName: "donate",
-      args: [fullUrl, SUPPORT_RECIPIENT_ADDRESS],
-      value: donationAmount,
-    });
-  }, [fullUrl, chainId, switchChainAsync, writeContract, donationAmount]);
+    writeContract(simulateDonateData.request);
+  }, [fullUrl, chainId, switchChainAsync, writeContract, simulateDonateData]);
 
   // Side effects after transaction: analytics + refetch
   React.useEffect(() => {
     if (isSuccess) {
       trackEvent("blog-support-success", { url: fullUrl, chainId: txChainIdRef.current });
-      setTimeout(() => {
-        void refetch();
-      }, 2000);
+      void refetch();
     }
   }, [isSuccess, writeError, refetch, fullUrl]);
 

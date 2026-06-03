@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useSimulateContract, useSwitchChain } from "wagmi";
 import { useNFTListedStatus } from "../hooks/useNFTListedStatus";
 import { getGenAiNFTAddress, GenImNFTv4ABI, fromCAIP2 } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
@@ -140,6 +140,22 @@ export function NFTCard({
     enabled: !isPublicView && tokenDataLoaded,
   });
 
+  const { data: simulateBurnData } = useSimulateContract({
+    address: contractAddress,
+    abi: GenImNFTv4ABI,
+    functionName: "burn",
+    args: [nft.tokenId],
+    query: { enabled: tokenDataLoaded && !!nft.tokenId },
+  });
+
+  const { data: simulateListingData } = useSimulateContract({
+    address: contractAddress,
+    abi: GenImNFTv4ABI,
+    functionName: "setTokenListed",
+    args: [nft.tokenId, !isListed],
+    query: { enabled: tokenDataLoaded && !!nft.tokenId && isListed !== null },
+  });
+
   // Warte auf Transaktionsbestätigung für Burn
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
@@ -258,12 +274,8 @@ export function NFTCard({
         return;
       }
 
-      writeContract({
-        address: contractAddress,
-        abi: GenImNFTv4ABI,
-        functionName: "burn",
-        args: [nft.tokenId],
-      });
+      if (!simulateBurnData) throw new Error("Simulation not ready");
+      writeContract(simulateBurnData.request);
     } catch (error) {
       console.error("Delete failed:", error);
       showToast("Failed to delete artwork. Please try again.", "error");
@@ -288,13 +300,8 @@ export function NFTCard({
       setOptimisticListed(newListedStatus);
       onListedStatusChanged(nft.tokenId, newListedStatus);
 
-      // Call contract
-      writeListingContract({
-        address: contractAddress,
-        abi: GenImNFTv4ABI,
-        functionName: "setTokenListed",
-        args: [nft.tokenId, newListedStatus],
-      });
+      if (!simulateListingData) throw new Error("Simulation not ready");
+      writeListingContract(simulateListingData.request);
     } catch (error) {
       console.error("Failed to update listing status:", error);
       // Revert optimistic update on error
@@ -413,7 +420,7 @@ export function NFTCard({
                     e.stopPropagation();
                     void handleToggleListing();
                   }}
-                  disabled={isToggling || isListingConfirming}
+                  disabled={isToggling || isListingConfirming || !simulateListingData}
                   className={styles.nftCard.compactSecondaryButton}
                   title={`${isListed ? "Make private" : "Make public"}`}
                 >
@@ -431,12 +438,13 @@ export function NFTCard({
                     e.stopPropagation();
                     void handleBurn();
                   }}
-                  disabled={isBurning || isConfirming}
+                  disabled={isBurning || isConfirming || !simulateBurnData}
                   className={styles.nftCard.compactSecondaryButton}
                   title={`${deleteLabel} artwork (permanent)`}
                   style={{
-                    backgroundColor: isBurning || isConfirming ? "rgba(0,0,0,0.3)" : "rgba(220, 38, 38, 0.8)",
-                    opacity: isBurning || isConfirming ? 0.6 : 1,
+                    backgroundColor:
+                      isBurning || isConfirming || !simulateBurnData ? "rgba(0,0,0,0.3)" : "rgba(220, 38, 38, 0.8)",
+                    opacity: isBurning || isConfirming || !simulateBurnData ? 0.6 : 1,
                   }}
                 >
                   {isBurning ? "⏳" : isConfirming ? "⏳" : "🗑️"}

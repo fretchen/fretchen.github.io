@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from "wagmi";
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useReadContract,
+  useSimulateContract,
+  useAccount,
+} from "wagmi";
 import { formatEther } from "viem";
 import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
@@ -47,6 +53,18 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     chainId,
   });
 
+  const currentPrice = mintStats && Array.isArray(mintStats) ? (mintStats as [bigint, bigint, bigint])[1] : undefined;
+
+  const { data: simulateMintData } = useSimulateContract({
+    address: getCollectorNFTAddress(network),
+    abi: CollectorNFTv1ABI,
+    functionName: "mintCollectorNFT",
+    args: [genImTokenId],
+    value: currentPrice ?? 0n,
+    chainId,
+    query: { enabled: isConnected && !!mintStats && currentPrice !== undefined },
+  });
+
   // Handle collect action
   const handleCollect = async () => {
     if (!isConnected) return;
@@ -61,15 +79,8 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
       return;
     }
 
-    const [, currentPrice] = mintStats as [bigint, bigint, bigint];
-
-    writeContract({
-      address: getCollectorNFTAddress(network),
-      abi: CollectorNFTv1ABI,
-      functionName: "mintCollectorNFT",
-      args: [genImTokenId], // CollectorNFTv1 doesn't need URI parameter
-      value: currentPrice,
-    });
+    if (!simulateMintData) return;
+    writeContract(simulateMintData.request);
     // Don't set isLoading(false) here - let useEffect handle it when isPending becomes true
   };
 
@@ -82,9 +93,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   // Update state after transaction
   useEffect(() => {
     if (isSuccess) {
-      setTimeout(() => {
-        void refetch();
-      }, 2000);
+      void refetch();
     }
   }, [isSuccess, refetch]);
 
@@ -134,7 +143,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
   return (
     <button
       onClick={handleCollect}
-      disabled={!isConnected || isPending || isConfirming || isLoading}
+      disabled={!isConnected || !simulateMintData || isPending || isConfirming || isLoading}
       className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >

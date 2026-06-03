@@ -235,8 +235,7 @@ export function FacilitatorApproval({
   // Refetch allowance after successful approval
   useEffect(() => {
     if (isSuccess) {
-      const timer = setTimeout(() => void refetchAllowance(), 2000);
-      return () => clearTimeout(timer);
+      void refetchAllowance();
     }
   }, [isSuccess, refetchAllowance]);
 

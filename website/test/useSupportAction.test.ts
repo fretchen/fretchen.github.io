@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId } from "wagmi";
+import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId, useSimulateContract } from "wagmi";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
 
@@ -63,6 +63,14 @@ describe("useSupportAction", () => {
       switchChainAsync: mockSwitchChainAsync,
       chains: [],
     } as unknown as ReturnType<typeof useSwitchChain>);
+
+    // Mock useSimulateContract - echoes params back as request so writeContract assertions still pass
+    vi.mocked(useSimulateContract).mockImplementation(
+      (params) =>
+        ({
+          data: { request: { ...params } },
+        }) as unknown as ReturnType<typeof useSimulateContract>,
+    );
 
     // Mock useReadContracts - returns array of results for all chains
     // useReadContracts aggregates reads from multiple chains in one hook

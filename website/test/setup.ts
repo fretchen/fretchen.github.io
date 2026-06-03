@@ -70,6 +70,7 @@ vi.mock("wagmi", () => ({
   useReadContract: vi.fn(() => mockReadContractData()),
   useReadContracts: vi.fn(() => mockReadContractData()),
   useWriteContract: vi.fn(() => mockWriteContractData()),
+  useSimulateContract: vi.fn(() => ({ data: undefined })),
   useWaitForTransactionReceipt: vi.fn(() => ({ isLoading: false, isSuccess: false })),
   useChainId: vi.fn(() => mockChainId()),
   useSwitchChain: vi.fn(() => ({

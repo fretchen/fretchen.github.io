@@ -10,6 +10,7 @@ vi.mock("wagmi", () => ({
   useWriteContract: vi.fn(),
   useWaitForTransactionReceipt: vi.fn(),
   useReadContract: vi.fn(),
+  useSimulateContract: vi.fn(),
 }));
 
 // Mock useAutoNetwork
@@ -67,6 +68,17 @@ describe("SimpleCollectButton", () => {
 
     // Default mock implementations
     vi.mocked(wagmi.useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof wagmi.useAccount>);
+    vi.mocked(wagmi.useSimulateContract).mockReturnValue({
+      data: {
+        request: {
+          address: "0x123",
+          abi: [],
+          functionName: "mintCollectorNFT",
+          args: [BigInt(1)],
+          value: BigInt(1000000000000000),
+        },
+      },
+    } as unknown as ReturnType<typeof wagmi.useSimulateContract>);
     vi.mocked(wagmi.useWriteContract).mockReturnValue({
       writeContract: vi.fn(),
       isPending: false,

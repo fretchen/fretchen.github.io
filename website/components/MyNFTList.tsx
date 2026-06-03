@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useMultiChainUserNFTs, MultiChainNFTToken } from "../hooks/useMultiChainNFTs";
 import { NFTMetadata, ModalImageData } from "../types/components";
@@ -26,52 +26,32 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   const [highlightedNFT, setHighlightedNFT] = useState<{ tokenId: bigint; network: string } | null>(null);
   const [selectedImage, setSelectedImage] = useState<ModalImageData | null>(null);
 
-  // Merge newly created NFT into the list
-  const [localTokens, setLocalTokens] = useState<MultiChainNFTToken[]>([]);
-
-  // Sync tokens from hook to local state
-  useEffect(() => {
-    setLocalTokens(tokens);
-  }, [tokens]);
-
-  // Handle newly created NFT - add to top of list with highlighting
-  const handleNewlyCreatedNFT = useCallback(
-    (newToken: { tokenId: bigint; network: string }) => {
-      // Set highlighting for the new NFT
-      setHighlightedNFT(newToken);
-
-      // Add to top of token list if not already present
-      setLocalTokens((prev) => {
-        const exists = prev.some((t) => t.tokenId === newToken.tokenId && t.network === newToken.network);
-        if (exists) {
-          return prev;
-        }
-        return [{ tokenId: newToken.tokenId, network: newToken.network }, ...prev];
-      });
-
-      // Remove highlighting after 5 seconds
-      setTimeout(() => {
-        setHighlightedNFT(null);
-        onNewNFTDisplayed?.();
-      }, 5000);
-    },
-    [onNewNFTDisplayed],
-  );
+  // Merge newly created NFT into the top of the list without a sync effect.
+  // If the NFT is not yet in the hook data, prepend it so it appears immediately.
+  const displayTokens = useMemo(() => {
+    if (!newlyCreatedNFT) return tokens;
+    const exists = tokens.some((t) => t.tokenId === newlyCreatedNFT.tokenId && t.network === newlyCreatedNFT.network);
+    if (exists) return tokens;
+    return [{ tokenId: newlyCreatedNFT.tokenId, network: newlyCreatedNFT.network }, ...tokens];
+  }, [tokens, newlyCreatedNFT]);
 
   // Handle listing status changes (NFTCard handles blockchain state itself)
   const handleListedStatusChanged = useCallback((_tokenId: bigint, _isListed: boolean) => {
     // This callback can be used to update local state if needed
   }, []);
 
-  // Handle newly created NFT when prop changes
+  // Highlight the newly created NFT and clear after 5s.
+  // setState inside an effect is necessary here because the highlight is time-limited.
   useEffect(() => {
     if (newlyCreatedNFT) {
-      handleNewlyCreatedNFT({
-        tokenId: newlyCreatedNFT.tokenId,
-        network: newlyCreatedNFT.network,
-      });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHighlightedNFT({ tokenId: newlyCreatedNFT.tokenId, network: newlyCreatedNFT.network });
+      setTimeout(() => {
+        setHighlightedNFT(null);
+        onNewNFTDisplayed?.();
+      }, 5000);
     }
-  }, [newlyCreatedNFT, handleNewlyCreatedNFT]);
+  }, [newlyCreatedNFT, onNewNFTDisplayed]);
 
   if (!isConnected) {
     return (
@@ -87,7 +67,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     );
   }
 
-  if (isLoading && localTokens.length === 0) {
+  if (isLoading && displayTokens.length === 0) {
     return (
       <div className={styles.nftList.loadingContainer}>
         <div className={styles.spinner}></div>
@@ -96,7 +76,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     );
   }
 
-  if (localTokens.length === 0) {
+  if (displayTokens.length === 0) {
     return (
       <div className={styles.nftList.emptyStateContainer}>
         <p className={styles.nftList.emptyStateText}>
@@ -109,7 +89,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
   return (
     <>
       <div className={styles.nftList.grid}>
-        {localTokens.map((token, index) => {
+        {displayTokens.map((token, index) => {
           // Check if this is the newly created NFT with preloaded data
           const isNewlyCreated =
             newlyCreatedNFT?.tokenId === token.tokenId && newlyCreatedNFT?.network === token.network;

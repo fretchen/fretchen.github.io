@@ -204,7 +204,9 @@ export default function DiversificationRandomWalk() {
   // Cleanup on unmount
   useEffect(() => stopAnimation, [stopAnimation]);
 
-  // Auto-start animation on mount
+  // Auto-start animation on mount. setState inside setInterval is the intended
+  // mechanism for driving frame-by-frame animation state.
+
   useEffect(() => {
     const fresh = generatePaths(sigBond, sigStock, rho);
     setPaths(fresh);

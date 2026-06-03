@@ -102,7 +102,8 @@ export function useNFTListedStatus({
     }
   }, [tokenId, enabled, contractAddress, chainId]);
 
-  // Fetch on mount and when dependencies change
+  // Async fetch drives state updates — no synchronous alternative for remote data.
+
   useEffect(() => {
     void fetchListedStatus();
   }, [fetchListedStatus]);

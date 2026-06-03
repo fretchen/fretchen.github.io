@@ -27,7 +27,6 @@ export function useSupportAction(url: string) {
   // States
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [fullUrl, setFullUrl] = React.useState(url);
 
   // Wagmi hooks
   const { isConnected, chainId: accountChainId } = useAccount();
@@ -40,14 +39,8 @@ export function useSupportAction(url: string) {
   // Use accountChainId as it reflects wallet state
   const chainId = accountChainId ?? wagmiChainId;
 
-  // Set full URL after hydration
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const rawUrl = window.location.origin + url;
-      const cleanUrl = rawUrl.replace(/\/+$/, "");
-      setFullUrl(cleanUrl);
-    }
-  }, [url]);
+  // Compute full URL during render; safe since window.location.origin is stable
+  const fullUrl = typeof window !== "undefined" ? (window.location.origin + url).replace(/\/+$/, "") : url;
 
   // ═══════════════════════════════════════════════════════════════
   // AGGREGATED READS: Read likes from ALL chains in current mode
@@ -83,15 +76,14 @@ export function useSupportAction(url: string) {
   });
 
   // Aggregate counts from all chains
-  const aggregatedCount = React.useMemo(() => {
-    if (!chainResults) return 0n;
-    return chainResults.reduce((sum, result) => {
-      if (result.status === "success" && typeof result.result === "bigint") {
-        return sum + result.result;
-      }
-      return sum;
-    }, 0n);
-  }, [chainResults]);
+  const aggregatedCount = chainResults
+    ? chainResults.reduce((sum, result) => {
+        if (result.status === "success" && typeof result.result === "bigint") {
+          return sum + result.result;
+        }
+        return sum;
+      }, 0n)
+    : 0n;
 
   // Handle support action with automatic chain switch
   const handleSupport = React.useCallback(async () => {
@@ -135,15 +127,10 @@ export function useSupportAction(url: string) {
     });
   }, [fullUrl, chainId, switchChainAsync, writeContract, donationAmount]);
 
-  // Update state after transaction
+  // Side effects after transaction: analytics + refetch (no setErrorMessage here)
   React.useEffect(() => {
     if (isSuccess) {
-      // Track successful support
-      trackEvent("blog-support-success", {
-        url: fullUrl,
-        chainId: chainId,
-      });
-
+      trackEvent("blog-support-success", { url: fullUrl, chainId: chainId });
       setIsLoading(false);
       setErrorMessage(null);
       setTimeout(() => {
@@ -152,7 +139,7 @@ export function useSupportAction(url: string) {
     }
     if (writeError) {
       setIsLoading(false);
-      setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
+      // writeError.message is merged at the return site — no setState needed
     }
   }, [isSuccess, writeError, refetch, fullUrl, chainId]);
 
@@ -161,7 +148,7 @@ export function useSupportAction(url: string) {
     supportCount: aggregatedCount.toString(),
     isLoading: isLoading || isPending || isConfirming,
     isSuccess,
-    errorMessage,
+    errorMessage: errorMessage ?? writeError?.message ?? null,
     isConnected,
     isReadPending,
     readError,

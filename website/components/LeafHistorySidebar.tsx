@@ -45,6 +45,8 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
     }
   }, [address]);
 
+  // Async fetch drives state updates — no synchronous alternative for remote data.
+
   useEffect(() => {
     if (isOpen && address) {
       void fetchLeafHistory();

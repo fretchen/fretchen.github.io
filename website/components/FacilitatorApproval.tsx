@@ -173,7 +173,9 @@ export function FacilitatorApproval({
   const usdcConfig = getNetworkUSDCConfig(selectedNetwork);
   const targetChainId = usdcConfig ? usdcConfig.chainId : fromCAIP2(selectedNetwork);
 
-  // Fetch facilitator address from /supported if not provided via props
+  // Fetch facilitator address from /supported if not provided via props.
+  // setState after async fetch is intentional — no synchronous alternative.
+
   useEffect(() => {
     if (propAddress) {
       setFacilitatorAddress(propAddress);

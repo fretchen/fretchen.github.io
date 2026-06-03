@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useIsMounted } from "../../hooks/useIsMounted";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
 import { useGrowthApi } from "../../hooks/useGrowthApi";
@@ -546,10 +547,7 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
 // ===== Main Page =====
 
 export default function Page() {
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const hasMounted = useIsMounted();
 
   const { address, status } = useAccount();
   const { connectors, connect } = useConnect();
@@ -579,6 +577,8 @@ export default function Page() {
       setLoading(false);
     }
   }, [fetchDrafts, fetchInsights]);
+
+  // Async fetch drives state updates — no synchronous alternative for remote data.
 
   useEffect(() => {
     if (isOwner) {

@@ -1,6 +1,24 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSignMessage } from "wagmi";
 import { formatEther } from "viem";
+
+const authCacheMap = new Map<string, { token: string; timestamp: number }>();
+const AUTH_CACHE_TTL_MS = 4 * 60 * 1000;
+
+async function getLeafHistoryAuth(
+  address: string,
+  signMessageAsync: (args: { message: string }) => Promise<string>,
+): Promise<string> {
+  const cached = authCacheMap.get(address);
+  if (cached && Date.now() - cached.timestamp < AUTH_CACHE_TTL_MS) return cached.token;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const message = `leaf-history:${timestamp}`;
+  const signature = await signMessageAsync({ message });
+  const token = `Bearer ${btoa(JSON.stringify({ address, signature, message }))}`;
+  authCacheMap.set(address, { token, timestamp: Date.now() });
+  return token;
+}
 
 interface LeafHistoryItem {
   id: number;
@@ -22,16 +40,19 @@ interface LeafHistorySidebarProps {
 
 const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
 
-async function fetchLeafHistory(address: string): Promise<LeafHistoryItem[]> {
-  const response = await fetch(`${LEAF_BASE_URL}?address=${address}`);
-  const data = (await response.json()) as { leaves?: LeafHistoryItem[] };
-  return data.leaves ?? [];
-}
-
 export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHistorySidebarProps) {
+  const { signMessageAsync } = useSignMessage();
+
   const { data: leaves = [], isPending } = useQuery({
     queryKey: ["leafHistory", address],
-    queryFn: () => fetchLeafHistory(address!),
+    queryFn: async () => {
+      const auth = await getLeafHistoryAuth(address!, signMessageAsync);
+      const response = await fetch(`${LEAF_BASE_URL}?address=${encodeURIComponent(address!)}`, {
+        headers: { Authorization: auth },
+      });
+      const data = (await response.json()) as { leafs?: LeafHistoryItem[] };
+      return data.leafs ?? [];
+    },
     enabled: isOpen && !!address,
   });
 

@@ -24,9 +24,10 @@ import { trackEvent } from "../utils/analytics";
  * - Automatic chain switch when user clicks "Support"
  */
 export function useSupportAction(url: string) {
-  // States
-  const [isLoading, setIsLoading] = React.useState(false);
+  // errorMessage tracks chain-switch failures and config errors from handleSupport
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  // Captures the chain used at write time so the analytics effect reads a stable value
+  const txChainIdRef = React.useRef<number | undefined>(undefined);
 
   // Wagmi hooks
   const { isConnected, chainId: accountChainId } = useAccount();
@@ -116,7 +117,8 @@ export function useSupportAction(url: string) {
       return;
     }
 
-    setIsLoading(true);
+    // Capture chain at write time; read in the effect to avoid chainId dep causing re-fires
+    txChainIdRef.current = targetChainId;
 
     // SupportV2 has recipient parameter
     writeContract({
@@ -127,26 +129,20 @@ export function useSupportAction(url: string) {
     });
   }, [fullUrl, chainId, switchChainAsync, writeContract, donationAmount]);
 
-  // Side effects after transaction: analytics + refetch (no setErrorMessage here)
+  // Side effects after transaction: analytics + refetch
   React.useEffect(() => {
     if (isSuccess) {
-      trackEvent("blog-support-success", { url: fullUrl, chainId: chainId });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsLoading(false);
-      setErrorMessage(null);
+      trackEvent("blog-support-success", { url: fullUrl, chainId: txChainIdRef.current });
       setTimeout(() => {
         void refetch();
       }, 2000);
     }
-    if (writeError) {
-      setIsLoading(false); // writeError.message is merged at the return site
-    }
-  }, [isSuccess, writeError, refetch, fullUrl, chainId]);
+  }, [isSuccess, writeError, refetch, fullUrl]);
 
   return {
     // State - aggregated count from both chains in current mode
     supportCount: aggregatedCount.toString(),
-    isLoading: isLoading || isPending || isConfirming,
+    isLoading: isPending || isConfirming,
     isSuccess,
     errorMessage: errorMessage ?? writeError?.message ?? null,
     isConnected,

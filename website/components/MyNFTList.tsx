@@ -40,6 +40,13 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
     // This callback can be used to update local state if needed
   }, []);
 
+  // Keep a stable ref to the callback so the highlight effect doesn't re-run (and
+  // restart the 5s timer) if the caller passes a new function reference on each render.
+  const onNewNFTDisplayedRef = React.useRef(onNewNFTDisplayed);
+  useEffect(() => {
+    onNewNFTDisplayedRef.current = onNewNFTDisplayed;
+  });
+
   // Highlight the newly created NFT and clear after 5s.
   // setState inside an effect is necessary here because the highlight is time-limited.
   useEffect(() => {
@@ -48,10 +55,10 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
       setHighlightedNFT({ tokenId: newlyCreatedNFT.tokenId, network: newlyCreatedNFT.network });
       setTimeout(() => {
         setHighlightedNFT(null);
-        onNewNFTDisplayed?.();
+        onNewNFTDisplayedRef.current?.();
       }, 5000);
     }
-  }, [newlyCreatedNFT, onNewNFTDisplayed]);
+  }, [newlyCreatedNFT]);
 
   if (!isConnected) {
     return (

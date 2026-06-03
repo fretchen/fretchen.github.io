@@ -34,7 +34,6 @@ function BalanceDisplay({ address }: BalanceDisplayProps) {
 
   // localized message
   const invalidAmountMessage = useLocale({ label: "assistent.invalidAmount" });
-  const invalidAmountFormatMessage = useLocale({ label: "assistent.invalidAmountFormat" });
   const topUpLabel = useLocale({ label: "assistent.topUp" });
   const topUpBalanceLabel = useLocale({ label: "assistent.topUpBalance" });
   const currentBalanceLabel = useLocale({ label: "assistent.currentBalance" });

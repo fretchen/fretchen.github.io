@@ -360,12 +360,6 @@ describe("NFTCard Component", () => {
 });
 
 describe("NFTCard — button disabled state with simulation", () => {
-  import("wagmi").then((wagmi) => {
-    vi.mocked(wagmi.useSimulateContract).mockReturnValue({ data: undefined } as ReturnType<
-      typeof wagmi.useSimulateContract
-    >);
-  });
-
   const renderProps: NFTCardProps = {
     tokenId: BigInt(1),
     network: "eip155:10" as `eip155:${number}`,

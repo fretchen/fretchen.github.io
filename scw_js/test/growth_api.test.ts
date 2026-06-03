@@ -176,7 +176,7 @@ describe("growth_api", () => {
       const event = makeEvent("GET", "drafts");
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(401);
-      expect(JSON.parse(res.body).error).toMatch(/Invalid signature/i);
+      expect(JSON.parse(res.body).error).toMatch(/Invalid wallet signature/i);
     });
 
     test("returns 401 when address is not the owner", async () => {
@@ -189,7 +189,7 @@ describe("growth_api", () => {
       const event = makeEvent("GET", "drafts", { auth });
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(401);
-      expect(JSON.parse(res.body).error).toMatch(/Address mismatch/i);
+      expect(JSON.parse(res.body).error).toMatch(/Not the owner/i);
     });
 
     test("returns 401 when message timestamp is expired", async () => {
@@ -210,7 +210,7 @@ describe("growth_api", () => {
       const event = makeEvent("GET", "drafts", { auth });
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(401);
-      expect(JSON.parse(res.body).error).toMatch(/Unauthorized/i);
+      expect(JSON.parse(res.body).error).toMatch(/Invalid message format/i);
     });
 
     test("returns 401 when auth fields are non-string types", async () => {

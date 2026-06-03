@@ -34,10 +34,12 @@ function makeAuthHeader(address: string = TEST_ADDRESS, timestamp?: number): str
   return `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
 }
 
-function makeEvent(options: {
-  address?: string;
-  auth?: string | null;
-} = {}) {
+function makeEvent(
+  options: {
+    address?: string;
+    auth?: string | null;
+  } = {},
+) {
   const address = options.address ?? TEST_ADDRESS;
   const auth = options.auth === null ? undefined : (options.auth ?? makeAuthHeader(address));
   return {

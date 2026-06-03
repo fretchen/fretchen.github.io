@@ -6,6 +6,18 @@ const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const MERKLE_TREE_FILE = "merkle/trees.json";
 
+interface LeafItem {
+  id: number;
+  user: string | undefined;
+  serviceProvider: string;
+  tokenCount: string;
+  cost: string;
+  timestamp: string;
+  treeIndex: number;
+  processed: boolean;
+  root: string | null;
+}
+
 interface ScwEvent {
   httpMethod: string;
   queryStringParameters?: Record<string, string>;
@@ -38,7 +50,13 @@ async function verifyLeafHistoryAuth(
 ): Promise<string | null> {
   const payload = parseBearerToken(authHeader);
   if (!payload) return "Unauthorized";
-  return verifySignedMessage(payload.address, payload.signature, payload.message, "leaf-history", queryAddress);
+  return verifySignedMessage(
+    payload.address,
+    payload.signature,
+    payload.message,
+    "leaf-history",
+    queryAddress,
+  );
 }
 
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
@@ -85,10 +103,26 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       const getResult = await s3Client.send(
         new GetObjectCommand({ Bucket: "my-imagestore", Key: MERKLE_TREE_FILE }),
       );
+      if (!getResult.Body) throw new Error("S3 returned empty body");
       const bodyStr = await streamToString(getResult.Body as AsyncIterable<Uint8Array>);
-      const treesData = JSON.parse(bodyStr) as { trees?: Array<{ treeIndex?: number; leafs?: Array<{ user?: string; id: number; serviceProvider: string; tokenCount: string; cost: string; timestamp: string }>; processed?: boolean; root?: string }> };
 
-      const leafs: unknown[] = [];
+      interface TreeLeaf {
+        user?: string;
+        id: number;
+        serviceProvider: string;
+        tokenCount: string;
+        cost: string;
+        timestamp: string;
+      }
+      interface Tree {
+        treeIndex?: number;
+        leafs?: TreeLeaf[];
+        processed?: boolean;
+        root?: string;
+      }
+      const treesData = JSON.parse(bodyStr) as { trees?: Tree[] };
+
+      const leafs: LeafItem[] = [];
       (treesData.trees ?? []).forEach((tree, idx) => {
         const treeIndex = tree.treeIndex ?? idx;
         (tree.leafs ?? []).forEach((leaf) => {
@@ -108,9 +142,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
         });
       });
 
-      (leafs as Array<{ timestamp: string }>).sort((a, b) =>
-        a.timestamp > b.timestamp ? -1 : 1,
-      );
+      leafs.sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1));
 
       return {
         statusCode: 200,
@@ -136,6 +168,9 @@ if (process.env.NODE_ENV === "test") {
     const dotenvModule = await import("dotenv");
     dotenvModule.config();
     const scw_fnc_node = await import("@scaleway/serverless-functions");
-    (scw_fnc_node as { serveHandler: (h: typeof handle, port: number) => void }).serveHandler(handle, 8080);
+    (scw_fnc_node as { serveHandler: (h: typeof handle, port: number) => void }).serveHandler(
+      handle,
+      8080,
+    );
   })().catch((err) => logger.error({ err }, "Error starting local server"));
 }

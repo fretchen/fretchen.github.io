@@ -21,7 +21,9 @@ interface LeafHistorySidebarProps {
   onClose: () => void;
 }
 
-const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
+const LEAF_BASE_URL =
+  (import.meta.env.PUBLIC_ENV__LEAF_HISTORY_URL as string | undefined) ??
+  "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
 
 export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHistorySidebarProps) {
   const getAuth = useWalletAuth("leaf-history");

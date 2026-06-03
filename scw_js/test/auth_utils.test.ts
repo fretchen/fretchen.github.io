@@ -31,7 +31,11 @@ function freshTs(): number {
 
 describe("parseBearerToken", () => {
   it("returns parsed payload for a valid Bearer token", () => {
-    const payload = { address: VALID_ADDRESS, signature: VALID_SIGNATURE, message: "leaf-history:1234" };
+    const payload = {
+      address: VALID_ADDRESS,
+      signature: VALID_SIGNATURE,
+      message: "leaf-history:1234",
+    };
     const result = parseBearerToken(makeToken(payload));
     expect(result).toEqual(payload);
   });
@@ -62,27 +66,47 @@ describe("parseBearerToken", () => {
   });
 
   it("returns null when address is not a string", () => {
-    expect(parseBearerToken(makeToken({ address: 123, signature: VALID_SIGNATURE, message: "m" }))).toBeNull();
+    expect(
+      parseBearerToken(makeToken({ address: 123, signature: VALID_SIGNATURE, message: "m" })),
+    ).toBeNull();
   });
 
   it("returns null when address lacks 0x prefix", () => {
-    expect(parseBearerToken(makeToken({ address: "notanaddress", signature: VALID_SIGNATURE, message: "m" }))).toBeNull();
+    expect(
+      parseBearerToken(
+        makeToken({ address: "notanaddress", signature: VALID_SIGNATURE, message: "m" }),
+      ),
+    ).toBeNull();
   });
 
   it("returns null when signature lacks 0x prefix", () => {
-    expect(parseBearerToken(makeToken({ address: VALID_ADDRESS, signature: "nosigprefix", message: "m" }))).toBeNull();
+    expect(
+      parseBearerToken(
+        makeToken({ address: VALID_ADDRESS, signature: "nosigprefix", message: "m" }),
+      ),
+    ).toBeNull();
   });
 
   it("returns null when signature is not a string", () => {
-    expect(parseBearerToken(makeToken({ address: VALID_ADDRESS, signature: true, message: "m" }))).toBeNull();
+    expect(
+      parseBearerToken(makeToken({ address: VALID_ADDRESS, signature: true, message: "m" })),
+    ).toBeNull();
   });
 
   it("returns null when message is empty string", () => {
-    expect(parseBearerToken(makeToken({ address: VALID_ADDRESS, signature: VALID_SIGNATURE, message: "" }))).toBeNull();
+    expect(
+      parseBearerToken(
+        makeToken({ address: VALID_ADDRESS, signature: VALID_SIGNATURE, message: "" }),
+      ),
+    ).toBeNull();
   });
 
   it("returns null when message is not a string", () => {
-    expect(parseBearerToken(makeToken({ address: VALID_ADDRESS, signature: VALID_SIGNATURE, message: ["array"] }))).toBeNull();
+    expect(
+      parseBearerToken(
+        makeToken({ address: VALID_ADDRESS, signature: VALID_SIGNATURE, message: ["array"] }),
+      ),
+    ).toBeNull();
   });
 
   it("is safe against __proto__ injection — Object.prototype is not modified", () => {
@@ -106,25 +130,45 @@ describe("verifySignedMessage", () => {
     mockVerifyMessage.mockResolvedValue(true);
     const ts = freshTs();
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `leaf-history:${ts}`,
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${ts}`,
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBeNull();
+  });
+
+  it("returns 'Unauthorized' for a timestamp far in the future (overflow guard)", async () => {
+    const result = await verifySignedMessage(
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      "leaf-history:99999999999",
+      "leaf-history",
+      VALID_ADDRESS,
+    );
+    expect(result).toBe("Unauthorized");
   });
 
   it("returns 'Unauthorized' for wrong message prefix", async () => {
     const ts = freshTs();
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `wrong-prefix:${ts}`,
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `wrong-prefix:${ts}`,
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBe("Unauthorized");
   });
 
   it("returns 'Unauthorized' for completely malformed message", async () => {
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, "not-a-valid-message",
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      "not-a-valid-message",
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBe("Unauthorized");
   });
@@ -132,8 +176,11 @@ describe("verifySignedMessage", () => {
   it("returns 'Token expired' for timestamp 6 minutes in the past", async () => {
     const staleTs = freshTs() - 360;
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `leaf-history:${staleTs}`,
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${staleTs}`,
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBe("Token expired");
   });
@@ -141,8 +188,11 @@ describe("verifySignedMessage", () => {
   it("returns 'Token expired' for timestamp 6 minutes in the future", async () => {
     const futureTs = freshTs() + 360;
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `leaf-history:${futureTs}`,
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${futureTs}`,
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBe("Token expired");
   });
@@ -150,8 +200,11 @@ describe("verifySignedMessage", () => {
   it("returns 'Address mismatch' when payload address differs from expected", async () => {
     const ts = freshTs();
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `leaf-history:${ts}`,
-      "leaf-history", "0xdeadbeef00000000000000000000000000000000",
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${ts}`,
+      "leaf-history",
+      "0xdeadbeef00000000000000000000000000000000",
     );
     expect(result).toBe("Address mismatch");
   });
@@ -162,8 +215,11 @@ describe("verifySignedMessage", () => {
     const upper = VALID_ADDRESS.toUpperCase().replace("0X", "0x");
     const lower = VALID_ADDRESS.toLowerCase();
     const result = await verifySignedMessage(
-      upper, VALID_SIGNATURE, `leaf-history:${ts}`,
-      "leaf-history", lower,
+      upper,
+      VALID_SIGNATURE,
+      `leaf-history:${ts}`,
+      "leaf-history",
+      lower,
     );
     expect(result).toBeNull();
   });
@@ -172,8 +228,11 @@ describe("verifySignedMessage", () => {
     mockVerifyMessage.mockResolvedValue(false);
     const ts = freshTs();
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `leaf-history:${ts}`,
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${ts}`,
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBe("Invalid signature");
   });
@@ -182,8 +241,11 @@ describe("verifySignedMessage", () => {
     mockVerifyMessage.mockRejectedValue(new Error("RPC error"));
     const ts = freshTs();
     const result = await verifySignedMessage(
-      VALID_ADDRESS, VALID_SIGNATURE, `leaf-history:${ts}`,
-      "leaf-history", VALID_ADDRESS,
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${ts}`,
+      "leaf-history",
+      VALID_ADDRESS,
     );
     expect(result).toBe("Invalid signature");
   });
@@ -192,7 +254,13 @@ describe("verifySignedMessage", () => {
     mockVerifyMessage.mockResolvedValue(true);
     const ts = freshTs();
     const message = `leaf-history:${ts}`;
-    await verifySignedMessage(VALID_ADDRESS, VALID_SIGNATURE, message, "leaf-history", VALID_ADDRESS);
+    await verifySignedMessage(
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      message,
+      "leaf-history",
+      VALID_ADDRESS,
+    );
     expect(mockVerifyMessage).toHaveBeenCalledWith({
       address: VALID_ADDRESS,
       message,

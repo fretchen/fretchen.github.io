@@ -251,9 +251,19 @@ export async function verifyOwner(
   }
 
   const err = await verifySignedMessage(address, signature, message, "growth-api", ownerAddress);
-  if (err) throw new AuthError(err);
+  if (!err) {
+    logger.info({ address }, "Owner verified");
+    return;
+  }
 
-  logger.info({ address }, "Owner verified");
+  // Translate shared utility error strings to the original growth-api domain messages
+  const domainErrors: Record<string, string> = {
+    "Invalid signature": "Invalid wallet signature",
+    "Address mismatch": "Not the owner",
+    Unauthorized: "Invalid message format, expected 'growth-api:<timestamp>'",
+    "Token expired": "Message expired (>5 minutes)",
+  };
+  throw new AuthError(domainErrors[err] ?? err);
 }
 
 // ===== Custom errors =====

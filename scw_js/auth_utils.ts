@@ -20,9 +20,12 @@ export function parseBearerToken(authHeader: string | undefined): BearerPayload 
     const decoded = JSON.parse(Buffer.from(match[1], "base64").toString("utf-8")) as BearerPayload;
     const { address, signature, message } = decoded;
     if (
-      typeof address === "string" && address.startsWith("0x") &&
-      typeof signature === "string" && signature.startsWith("0x") &&
-      typeof message === "string" && message.length > 0
+      typeof address === "string" &&
+      address.startsWith("0x") &&
+      typeof signature === "string" &&
+      signature.startsWith("0x") &&
+      typeof message === "string" &&
+      message.length > 0
     ) {
       return { address, signature, message };
     }
@@ -49,6 +52,7 @@ export async function verifySignedMessage(
   if (!match) return "Unauthorized";
 
   const ts = parseInt(match[1], 10);
+  if (ts > 9_999_999_999) return "Unauthorized"; // guard against year >2286 / integer overflow
   if (Math.abs(Date.now() - ts * 1000) > MAX_AUTH_AGE_MS) return "Token expired";
 
   if (address.toLowerCase() !== expectedAddress.toLowerCase()) return "Address mismatch";

@@ -916,7 +916,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
               })}
             >
               <InfoIcon size="xs" className={css({ mr: "1" })} />
-              {mintingInfoLabel}
+              {mintingInfoText}
             </div>
 
             {/* Status-Anzeige for x402 */}

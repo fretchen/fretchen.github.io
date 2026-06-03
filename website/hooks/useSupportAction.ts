@@ -131,6 +131,7 @@ export function useSupportAction(url: string) {
   React.useEffect(() => {
     if (isSuccess) {
       trackEvent("blog-support-success", { url: fullUrl, chainId: chainId });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
       setErrorMessage(null);
       setTimeout(() => {

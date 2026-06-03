@@ -211,9 +211,7 @@ export default function DiversificationRandomWalk() {
     const fresh = generatePaths(sigBond, sigStock, rho);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPaths(fresh);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleSteps(0);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsAnimating(true);
     let step = 0;
     animRef.current = setInterval(() => {

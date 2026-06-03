@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from "react";
-import mermaid from "mermaid";
 import { css } from "../styled-system/css";
 
 interface MermaidDiagramProps {
@@ -21,6 +20,8 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
       if (!mermaidRef.current) return;
 
       try {
+        const mermaid = (await import("mermaid")).default;
+
         // Initialize mermaid with custom config merged with defaults
         const defaultConfig = {
           startOnLoad: false,

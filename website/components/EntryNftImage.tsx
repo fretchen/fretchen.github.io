@@ -106,6 +106,8 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
           className={entryList.entryNftImage}
           title={`NFT Artwork${nftName ? `: ${nftName}` : ""}`}
           onError={() => setImageUrl(null)}
+          loading="lazy"
+          decoding="async"
         />
       )}
     </>

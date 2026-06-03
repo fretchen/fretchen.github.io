@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
@@ -10,6 +10,7 @@ import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
+import { useIsMounted } from "../hooks/useIsMounted";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 
 // Image compression helpers
@@ -81,6 +82,39 @@ const compressImage = (file: File, maxSizeKB: number = 1024): Promise<{ base64: 
   });
 };
 
+interface CreateArtworkButtonProps {
+  buttonState: string;
+  onClick: () => void;
+  buttonText: string;
+  mintingInfoLabel: string;
+}
+
+function CreateArtworkButton({ buttonState, onClick, buttonText, mintingInfoLabel }: CreateArtworkButtonProps) {
+  const isLoadingState = buttonState === "loading";
+  const isDisabled = buttonState === "needsPrompt" || isLoadingState;
+  return (
+    <button
+      onClick={onClick}
+      disabled={isDisabled}
+      className={`${styles.primaryButton} ${isDisabled ? styles.primaryButtonDisabled : ""}`}
+      title={mintingInfoLabel}
+      aria-describedby="create-artwork-info"
+    >
+      {isLoadingState ? (
+        <>
+          <div className={styles.spinner}></div>
+          {buttonText}
+        </>
+      ) : (
+        <>
+          🎨 {buttonText}
+          <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
+        </>
+      )}
+    </button>
+  );
+}
+
 export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Feature flag - set if image generation is enabled
   const isImageGenEnabled = true;
@@ -102,10 +136,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const [tokenId, setTokenId] = useState<bigint>();
 
   // Hydration safety: prevent SSR/client mismatch by showing collapsed state until mounted
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const hasMounted = useIsMounted();
 
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
@@ -220,47 +251,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   };
 
   const buttonState = getButtonState();
-
-  // Button Components
-  const CreateArtworkButton = () => {
-    const isLoadingState = buttonState === "loading";
-    const isDisabled = buttonState === "needsPrompt" || isLoadingState;
-
-    const handleClick = () => {
-      // Track create artwork attempt with context
-      trackEvent("imagegen-create-artwork-click", {
-        hasReferenceImage: previewState !== "empty",
-        promptLength: prompt.trim().length,
-        isConnected: isConnected,
-        imageSize: size,
-        paymentMethod: "x402-usdc",
-      });
-
-      void handleX402Generate();
-    };
-
-    return (
-      <button
-        onClick={handleClick}
-        disabled={isDisabled}
-        className={`${styles.primaryButton} ${isDisabled ? styles.primaryButtonDisabled : ""}`}
-        title={useLocale({ label: "imagegen.mintingInfo" })}
-        aria-describedby="create-artwork-info"
-      >
-        {isLoadingState ? (
-          <>
-            <div className={styles.spinner}></div>
-            {getButtonText(buttonState)}
-          </>
-        ) : (
-          <>
-            🎨 {getButtonText(buttonState)}
-            <InfoIcon size="xs" className={css({ ml: "1", opacity: "0.7" })} />
-          </>
-        )}
-      </button>
-    );
-  };
 
   const handleX402Generate = async () => {
     if (!isConnected || !address) {
@@ -379,7 +369,17 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       setIsLoading(false);
     }
   };
-  const mintingInfoLabel = useLocale({ label: "imagegen.mintingInfo" });
+
+  const handleCreateClick = () => {
+    trackEvent("imagegen-create-artwork-click", {
+      hasReferenceImage: previewState !== "empty",
+      promptLength: prompt.trim().length,
+      isConnected: isConnected,
+      imageSize: size,
+      paymentMethod: "x402-usdc",
+    });
+    void handleX402Generate();
+  };
 
   // File handling logic
   const validateImageFile = (file: File): boolean => {
@@ -878,7 +878,12 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                   </label>
                 </div>
 
-                <CreateArtworkButton />
+                <CreateArtworkButton
+                  buttonState={buttonState}
+                  onClick={handleCreateClick}
+                  buttonText={getButtonText(buttonState)}
+                  mintingInfoLabel={mintingInfoText}
+                />
               </div>
             </div>
 
@@ -911,7 +916,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
               })}
             >
               <InfoIcon size="xs" className={css({ mr: "1" })} />
-              {mintingInfoLabel}
+              {mintingInfoText}
             </div>
 
             {/* Status-Anzeige for x402 */}

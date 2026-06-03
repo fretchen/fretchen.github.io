@@ -45,8 +45,11 @@ export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHis
     }
   }, [address]);
 
+  // Async fetch drives state updates — no synchronous alternative for remote data.
+
   useEffect(() => {
     if (isOpen && address) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void fetchLeafHistory();
     }
   }, [isOpen, address, fetchLeafHistory]);

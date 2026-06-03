@@ -204,9 +204,12 @@ export default function DiversificationRandomWalk() {
   // Cleanup on unmount
   useEffect(() => stopAnimation, [stopAnimation]);
 
-  // Auto-start animation on mount
+  // Auto-start animation on mount. setState inside setInterval is the intended
+  // mechanism for driving frame-by-frame animation state.
+
   useEffect(() => {
     const fresh = generatePaths(sigBond, sigStock, rho);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPaths(fresh);
     setVisibleSteps(0);
     setIsAnimating(true);

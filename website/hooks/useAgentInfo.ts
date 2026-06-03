@@ -128,8 +128,11 @@ export function useAgentInfo(options: UseAgentInfoOptions = {}): UseAgentInfoRes
     }
   }, [agentUrl]);
 
+  // Async fetch drives state updates — no synchronous alternative for remote data.
+
   useEffect(() => {
     if (autoFetch) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void fetchAgent();
     }
   }, [autoFetch, fetchAgent]);

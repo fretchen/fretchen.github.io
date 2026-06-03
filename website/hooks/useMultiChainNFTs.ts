@@ -148,9 +148,11 @@ export function useMultiChainUserNFTs(options: UseMultiChainUserNFTsOptions = {}
     }
   }, [isConnected, address, networks, fetchUserTokensOnNetwork]);
 
-  // Load on mount and when dependencies change
+  // Async fetch drives state updates — no synchronous alternative for remote data.
+
   useEffect(() => {
     if (isConnected && address) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadAllNetworks();
     }
   }, [isConnected, address, loadAllNetworks]);
@@ -254,8 +256,10 @@ export function useMultiChainPublicNFTs(options: UseMultiChainPublicNFTsOptions 
     }
   }, [networks, fetchPublicTokensOnNetwork]);
 
-  // Load on mount
+  // Async fetch drives state updates — no synchronous alternative for remote data.
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadAllNetworks();
   }, [loadAllNetworks]);
 

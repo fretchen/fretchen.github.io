@@ -4,6 +4,7 @@ import { walletOptions } from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { WalletEvents } from "../utils/analytics";
+import { useIsMounted } from "../hooks/useIsMounted";
 /**
  * WalletOptions Component
  *
@@ -25,7 +26,7 @@ export default function WalletOptions() {
   // UI state
   const [isOpen, setIsOpen] = React.useState(false);
   const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
-  const [isMounted, setIsMounted] = React.useState(false);
+  const isMounted = useIsMounted();
   const [isMobile, setIsMobile] = React.useState(false);
   const [buttonRect, setButtonRect] = React.useState<DOMRect | null>(null);
   const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -40,11 +41,8 @@ export default function WalletOptions() {
   // when component mounts with an already connected wallet.
   const wasConnected = React.useRef(isConnected);
 
-  // Prevent hydration mismatch by only showing wallet data after client-side mount
+  // Check viewport width on mount and on resize
   React.useEffect(() => {
-    setIsMounted(true);
-
-    // Check if mobile on mount and listen for resize
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
@@ -148,35 +146,7 @@ export default function WalletOptions() {
         ? connectLabel
         : connectAccountLabel;
 
-  // Get menu items based on connection status
   const disconnectLabel = useLocale({ label: "walletoptions.disconnect" });
-  const getMenuItems = () => {
-    if (isMounted && isConnected) {
-      return [{ id: "disconnect", label: disconnectLabel, action: () => disconnect() }];
-    } else {
-      return connectors.map((connector) => ({
-        id: connector.uid,
-        label: connector.name,
-        action: () => {
-          // Mark that user interacted with dropdown
-          hadInteraction.current = true;
-
-          // Track connect attempt
-          connectAttemptTime.current = Date.now();
-          attemptedConnector.current = connector.name;
-
-          trackEvent(WalletEvents.CONNECT_ATTEMPT, {
-            connector: connector.name,
-            connectorId: connector.uid,
-            device: isMobile ? "mobile" : "desktop",
-          });
-
-          // Attempt connection
-          connect({ connector });
-        },
-      }));
-    }
-  };
 
   // Common styles
   const styles = walletOptions;
@@ -204,25 +174,51 @@ export default function WalletOptions() {
 
       {isOpen && (
         <div className={styles.menu} style={isMobile ? getMobileMenuStyle() : undefined}>
-          {getMenuItems().map((item) => (
+          {isMounted && isConnected ? (
             <div
-              key={item.id}
-              className={`${styles.menuItem} ${hoveredItem === item.id ? styles.menuItemHover : ""}`}
-              onMouseEnter={() => setHoveredItem(item.id)}
+              key="disconnect"
+              className={`${styles.menuItem} ${hoveredItem === "disconnect" ? styles.menuItemHover : ""}`}
+              onMouseEnter={() => setHoveredItem("disconnect")}
               onMouseLeave={() => setHoveredItem(null)}
               onClick={() => {
-                item.action();
+                disconnect();
                 setIsOpen(false);
-                // Clear timeout when clicking to close immediately
                 if (closeTimeoutRef.current) {
                   clearTimeout(closeTimeoutRef.current);
                   closeTimeoutRef.current = null;
                 }
               }}
             >
-              {item.label}
+              {disconnectLabel}
             </div>
-          ))}
+          ) : (
+            connectors.map((connector) => (
+              <div
+                key={connector.uid}
+                className={`${styles.menuItem} ${hoveredItem === connector.uid ? styles.menuItemHover : ""}`}
+                onMouseEnter={() => setHoveredItem(connector.uid)}
+                onMouseLeave={() => setHoveredItem(null)}
+                onClick={() => {
+                  hadInteraction.current = true;
+                  connectAttemptTime.current = Date.now();
+                  attemptedConnector.current = connector.name;
+                  trackEvent(WalletEvents.CONNECT_ATTEMPT, {
+                    connector: connector.name,
+                    connectorId: connector.uid,
+                    device: isMobile ? "mobile" : "desktop",
+                  });
+                  connect({ connector });
+                  setIsOpen(false);
+                  if (closeTimeoutRef.current) {
+                    clearTimeout(closeTimeoutRef.current);
+                    closeTimeoutRef.current = null;
+                  }
+                }}
+              >
+                {connector.name}
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>

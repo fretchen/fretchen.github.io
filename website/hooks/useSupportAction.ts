@@ -24,10 +24,10 @@ import { trackEvent } from "../utils/analytics";
  * - Automatic chain switch when user clicks "Support"
  */
 export function useSupportAction(url: string) {
-  // States
-  const [isLoading, setIsLoading] = React.useState(false);
+  // errorMessage tracks chain-switch failures and config errors from handleSupport
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [fullUrl, setFullUrl] = React.useState(url);
+  // Captures the chain used at write time so the analytics effect reads a stable value
+  const txChainIdRef = React.useRef<number | undefined>(undefined);
 
   // Wagmi hooks
   const { isConnected, chainId: accountChainId } = useAccount();
@@ -40,14 +40,8 @@ export function useSupportAction(url: string) {
   // Use accountChainId as it reflects wallet state
   const chainId = accountChainId ?? wagmiChainId;
 
-  // Set full URL after hydration
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const rawUrl = window.location.origin + url;
-      const cleanUrl = rawUrl.replace(/\/+$/, "");
-      setFullUrl(cleanUrl);
-    }
-  }, [url]);
+  // Compute full URL during render; safe since window.location.origin is stable
+  const fullUrl = typeof window !== "undefined" ? (window.location.origin + url).replace(/\/+$/, "") : url;
 
   // ═══════════════════════════════════════════════════════════════
   // AGGREGATED READS: Read likes from ALL chains in current mode
@@ -83,15 +77,14 @@ export function useSupportAction(url: string) {
   });
 
   // Aggregate counts from all chains
-  const aggregatedCount = React.useMemo(() => {
-    if (!chainResults) return 0n;
-    return chainResults.reduce((sum, result) => {
-      if (result.status === "success" && typeof result.result === "bigint") {
-        return sum + result.result;
-      }
-      return sum;
-    }, 0n);
-  }, [chainResults]);
+  const aggregatedCount = chainResults
+    ? chainResults.reduce((sum, result) => {
+        if (result.status === "success" && typeof result.result === "bigint") {
+          return sum + result.result;
+        }
+        return sum;
+      }, 0n)
+    : 0n;
 
   // Handle support action with automatic chain switch
   const handleSupport = React.useCallback(async () => {
@@ -124,7 +117,8 @@ export function useSupportAction(url: string) {
       return;
     }
 
-    setIsLoading(true);
+    // Capture chain at write time; read in the effect to avoid chainId dep causing re-fires
+    txChainIdRef.current = targetChainId;
 
     // SupportV2 has recipient parameter
     writeContract({
@@ -135,33 +129,22 @@ export function useSupportAction(url: string) {
     });
   }, [fullUrl, chainId, switchChainAsync, writeContract, donationAmount]);
 
-  // Update state after transaction
+  // Side effects after transaction: analytics + refetch
   React.useEffect(() => {
     if (isSuccess) {
-      // Track successful support
-      trackEvent("blog-support-success", {
-        url: fullUrl,
-        chainId: chainId,
-      });
-
-      setIsLoading(false);
-      setErrorMessage(null);
+      trackEvent("blog-support-success", { url: fullUrl, chainId: txChainIdRef.current });
       setTimeout(() => {
         void refetch();
       }, 2000);
     }
-    if (writeError) {
-      setIsLoading(false);
-      setErrorMessage(writeError?.message || "Transaktion fehlgeschlagen");
-    }
-  }, [isSuccess, writeError, refetch, fullUrl, chainId]);
+  }, [isSuccess, writeError, refetch, fullUrl]);
 
   return {
     // State - aggregated count from both chains in current mode
     supportCount: aggregatedCount.toString(),
-    isLoading: isLoading || isPending || isConfirming,
+    isLoading: isPending || isConfirming,
     isSuccess,
-    errorMessage,
+    errorMessage: errorMessage ?? writeError?.message ?? null,
     isConnected,
     isReadPending,
     readError,

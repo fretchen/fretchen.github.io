@@ -129,7 +129,9 @@ export function extractPaymentPayload(
   return null;
 }
 
-export function createSettlementHeaders(settlementResult: Record<string, unknown>): Record<string, string> {
+export function createSettlementHeaders(
+  settlementResult: Record<string, unknown>,
+): Record<string, string> {
   const paymentResponseHeader = Buffer.from(JSON.stringify(settlementResult)).toString("base64");
   return {
     "Payment-Response": paymentResponseHeader,

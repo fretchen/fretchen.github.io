@@ -52,6 +52,9 @@ export async function uploadToS3(
 ): Promise<string> {
   const accessKey = process.env.SCW_ACCESS_KEY;
   const secretKey = process.env.SCW_SECRET_KEY;
+  if (!accessKey || !secretKey) {
+    throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
+  }
 
   let dataToUpload: Buffer | string;
   if (Buffer.isBuffer(data)) {
@@ -66,8 +69,8 @@ export async function uploadToS3(
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
     credentials: {
-      accessKeyId: accessKey!,
-      secretAccessKey: secretKey!,
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
     },
   });
 
@@ -112,7 +115,7 @@ async function generateImageIONOS(prompt: string, size: string): Promise<string>
     throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
   }
 
-  const responseData = await response.json() as { data: Array<{ b64_json: string }> };
+  const responseData = (await response.json()) as { data: Array<{ b64_json: string }> };
   return responseData.data[0]!.b64_json;
 }
 
@@ -159,7 +162,7 @@ async function generateImageBFL(
     throw new Error(`Could not reach BFL: ${response.status} ${response.statusText}`);
   }
 
-  const initData = await response.json() as { id: string; polling_url: string };
+  const initData = (await response.json()) as { id: string; polling_url: string };
   const { id: requestId, polling_url } = initData;
 
   console.log(`BFL request started with ID: ${requestId}`);
@@ -185,7 +188,7 @@ async function generateImageBFL(
         continue;
       }
 
-      const pollData = await pollResponse.json() as {
+      const pollData = (await pollResponse.json()) as {
         status: string;
         result?: { sample: string };
       };

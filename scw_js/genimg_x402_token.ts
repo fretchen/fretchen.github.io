@@ -5,7 +5,15 @@ import {
   getUSDCConfig,
   isTestnet,
 } from "@fretchen/chain-utils";
-import { getContract, createWalletClient, createPublicClient, http, parseEther, type PublicClient, type Chain } from "viem";
+import {
+  getContract,
+  createWalletClient,
+  createPublicClient,
+  http,
+  parseEther,
+  type PublicClient,
+  type Chain,
+} from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 import {
@@ -16,7 +24,7 @@ import {
   createSettlementHeaders,
 } from "./x402_server.js";
 import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
-import type { ScwEvent } from "./sc_llm.js";
+import type { ScwEvent } from "./types.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
@@ -99,7 +107,9 @@ async function mintNFTToClient(
   mintPrice: bigint,
   isListed = false,
 ): Promise<MintResult> {
-  console.log(`🎨 Minting NFT to server (isListed=${isListed}), then transferring to ${clientAddress}`);
+  console.log(
+    `🎨 Minting NFT to server (isListed=${isListed}), then transferring to ${clientAddress}`,
+  );
 
   const mintTxHash = await contract.write.safeMint([metadataUrl, isListed], { value: mintPrice });
   console.log(`📝 Mint transaction submitted: ${mintTxHash}`);
@@ -110,7 +120,9 @@ async function mintNFTToClient(
   }
 
   const mintLog = mintReceipt.logs.find((log) => {
-    if (log.address.toLowerCase() !== contractAddress.toLowerCase()) {return false;}
+    if (log.address.toLowerCase() !== contractAddress.toLowerCase()) {
+      return false;
+    }
     const zeroAddress = "0x0000000000000000000000000000000000000000000000000000000000000000";
     return log.topics[0] === TRANSFER_EVENT_HASH && log.topics[1] === zeroAddress;
   });
@@ -142,8 +154,12 @@ async function mintNFTToClient(
       const msg = (error as { message?: string; shortMessage?: string }).message ?? "";
       const short = (error as { shortMessage?: string }).shortMessage ?? "";
 
-      const isNonExistentToken = msg.includes("ERC721NonexistentToken") || short.includes("ERC721NonexistentToken");
-      const isNonce = msg.includes("nonce too low") || msg.includes("Nonce provided for the transaction is lower") || short.includes("nonce too low");
+      const isNonExistentToken =
+        msg.includes("ERC721NonexistentToken") || short.includes("ERC721NonexistentToken");
+      const isNonce =
+        msg.includes("nonce too low") ||
+        msg.includes("Nonce provided for the transaction is lower") ||
+        short.includes("nonce too low");
 
       if ((isNonExistentToken || isNonce) && attempt < MAX_TRANSFER_RETRIES) {
         console.log(`⏳ Retrying in ${RETRY_DELAY_MS}ms...`);
@@ -201,7 +217,14 @@ async function generateImageAndMintNFT(
     imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
     metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
   } else {
-    metadataUrl = await generateAndUploadImage(prompt, tempTokenId, "bfl", size, mode, referenceImageBase64);
+    metadataUrl = await generateAndUploadImage(
+      prompt,
+      tempTokenId,
+      "bfl",
+      size,
+      mode,
+      referenceImageBase64,
+    );
 
     const baseDomain = new URL(JSON_BASE_PATH);
     const url = new URL(metadataUrl);
@@ -214,7 +237,7 @@ async function generateImageAndMintNFT(
       throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
     }
 
-    const metadata = await metadataResponse.json() as { image: string };
+    const metadata = (await metadataResponse.json()) as { image: string };
     imageUrl = metadata.image;
   }
 
@@ -240,7 +263,11 @@ async function generateImageAndMintNFT(
   };
 }
 
-async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promise<{
+async function handle(
+  event: ScwEvent,
+  _context: unknown,
+  _cb?: unknown,
+): Promise<{
   statusCode: number;
   headers: Record<string, string>;
   body: string;
@@ -268,7 +295,10 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
 
   let body: Record<string, unknown>;
   try {
-    body = typeof event.body === "string" ? JSON.parse(event.body) : (event.body as Record<string, unknown>);
+    body =
+      typeof event.body === "string"
+        ? JSON.parse(event.body)
+        : (event.body as Record<string, unknown>);
   } catch {
     return {
       body: JSON.stringify({ error: "Invalid JSON body" }),
@@ -295,7 +325,10 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Server configuration error", message: "NFT_WALLET_PRIVATE_KEY not configured" }),
+      body: JSON.stringify({
+        error: "Server configuration error",
+        message: "NFT_WALLET_PRIVATE_KEY not configured",
+      }),
     };
   }
   const account = privateKeyToAccount(`0x${privateKey.replace(/^0x/, "")}`);
@@ -309,7 +342,9 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
   const validSizes = ["1024x1024", "1792x1024"];
   if (!validSizes.includes(size)) {
     return {
-      body: JSON.stringify({ error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}` }),
+      body: JSON.stringify({
+        error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
+      }),
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       statusCode: 400,
     };
@@ -317,7 +352,7 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
 
   let referenceImageBase64: string | null = null;
   if (mode === "edit") {
-    referenceImageBase64 = body["referenceImage"] as string | undefined ?? null;
+    referenceImageBase64 = (body["referenceImage"] as string | undefined) ?? null;
     if (!referenceImageBase64) {
       return {
         body: JSON.stringify({ error: "Edit mode requires referenceImage parameter" }),
@@ -362,9 +397,12 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
 
   console.log("🔍 Payment received, verifying...");
 
-  const clientNetwork = (paymentPayload as Record<string, unknown>)?.["accepted"] !== undefined
-    ? ((paymentPayload as Record<string, unknown>)["accepted"] as Record<string, unknown>)?.["network"] as string | undefined
-    : undefined;
+  const clientNetwork =
+    (paymentPayload as Record<string, unknown>)?.["accepted"] !== undefined
+      ? (((paymentPayload as Record<string, unknown>)["accepted"] as Record<string, unknown>)?.[
+          "network"
+        ] as string | undefined)
+      : undefined;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
 
   const clientIsTestnet = clientNetwork ? isTestnet(clientNetwork) : false;
@@ -447,11 +485,16 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
       client: { public: publicClient, wallet: walletClient },
     });
 
-    const mintPrice = await contract.read.mintPrice() as bigint;
+    const mintPrice = (await contract.read.mintPrice()) as bigint;
     console.log(`💰 Mint price: ${(parseFloat(mintPrice.toString()) / 1e18).toFixed(6)} ETH`);
 
     console.log(`🔍 Running pre-flight checks...`);
-    const preFlightResult = await preFlightChecks(publicClient, account.address, mintPrice, viemChain.name);
+    const preFlightResult = await preFlightChecks(
+      publicClient,
+      account.address,
+      mintPrice,
+      viemChain.name,
+    );
 
     if (!preFlightResult.success) {
       console.error(`❌ Pre-flight check failed: ${preFlightResult.error}`);
@@ -484,8 +527,12 @@ async function handle(event: ScwEvent, _context: unknown, _cb?: unknown): Promis
     resourceServer
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .settlePayment(paymentPayload as any, paymentRequirements)
-      .then((settlement) => { console.log(`✅ Payment settled:`, settlement); })
-      .catch((error: unknown) => { console.error(`⚠️ Settlement failed (non-critical): ${(error as Error).message}`); });
+      .then((settlement) => {
+        console.log(`✅ Payment settled:`, settlement);
+      })
+      .catch((error: unknown) => {
+        console.error(`⚠️ Settlement failed (non-critical): ${(error as Error).message}`);
+      });
 
     const settlementHeaders = createSettlementHeaders({
       success: true,
@@ -541,9 +588,21 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           fastify.register((urlDataModule as any).default);
 
-          fastify.addContentTypeParser("text/json", { parseAs: "string" }, fastify.defaultTextParser);
-          fastify.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, fastify.defaultTextParser);
-          fastify.addContentTypeParser("application/json", { parseAs: "string" }, fastify.defaultTextParser);
+          fastify.addContentTypeParser(
+            "text/json",
+            { parseAs: "string" },
+            fastify.defaultTextParser,
+          );
+          fastify.addContentTypeParser(
+            "application/x-www-form-urlencoded",
+            { parseAs: "string" },
+            fastify.defaultTextParser,
+          );
+          fastify.addContentTypeParser(
+            "application/json",
+            { parseAs: "string" },
+            fastify.defaultTextParser,
+          );
 
           fastify.route({
             method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
@@ -572,7 +631,10 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
           });
 
           fastify.listen({ port: 8082, host: "0.0.0.0" }, (err: unknown, address: string) => {
-            if (err) { console.error("Failed to start server:", err); process.exit(1); }
+            if (err) {
+              console.error("Failed to start server:", err);
+              process.exit(1);
+            }
             console.log(`🚀 x402 v2 Token Payment Local Server listening at ${address}`);
           });
         });

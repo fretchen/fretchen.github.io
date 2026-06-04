@@ -1,6 +1,7 @@
 import pino from "pino";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { parseBearerToken, verifySignedMessage } from "./auth_utils.js";
+import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -18,13 +19,6 @@ interface LeafItem {
   root: string | null;
 }
 
-interface ScwEvent {
-  httpMethod: string;
-  queryStringParameters?: Record<string, string>;
-  headers?: Record<string, string>;
-  body?: string;
-}
-
 interface ScwResponse {
   statusCode: number;
   headers: Record<string, string>;
@@ -36,7 +30,9 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 }
 
 async function streamToString(stream: AsyncIterable<Uint8Array> | string): Promise<string> {
-  if (typeof stream === "string") {return stream;}
+  if (typeof stream === "string") {
+    return stream;
+  }
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk));
@@ -49,7 +45,9 @@ async function verifyLeafHistoryAuth(
   authHeader: string | undefined,
 ): Promise<string | null> {
   const payload = parseBearerToken(authHeader);
-  if (!payload) {return "Unauthorized";}
+  if (!payload) {
+    return "Unauthorized";
+  }
   return verifySignedMessage(
     payload.address,
     payload.signature,
@@ -91,19 +89,23 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     }
 
     try {
+      const accessKey = process.env.SCW_ACCESS_KEY;
+      const secretKey = process.env.SCW_SECRET_KEY;
+      if (!accessKey || !secretKey) {
+        throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
+      }
       const s3Client = new S3Client({
         region: "nl-ams",
         endpoint: "https://s3.nl-ams.scw.cloud",
-        credentials: {
-          accessKeyId: process.env.SCW_ACCESS_KEY ?? "",
-          secretAccessKey: process.env.SCW_SECRET_KEY ?? "",
-        },
+        credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
       });
 
       const getResult = await s3Client.send(
         new GetObjectCommand({ Bucket: "my-imagestore", Key: MERKLE_TREE_FILE }),
       );
-      if (!getResult.Body) {throw new Error("S3 returned empty body");}
+      if (!getResult.Body) {
+        throw new Error("S3 returned empty body");
+      }
       const bodyStr = await streamToString(getResult.Body as AsyncIterable<Uint8Array>);
 
       interface TreeLeaf {

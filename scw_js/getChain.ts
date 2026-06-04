@@ -8,7 +8,10 @@ import {
 
 function getEnvironmentVariable(key: string, defaultValue: string): string {
   try {
-    if (typeof import.meta !== "undefined" && (import.meta as unknown as { env?: Record<string, string> }).env) {
+    if (
+      typeof import.meta !== "undefined" &&
+      (import.meta as unknown as { env?: Record<string, string> }).env
+    ) {
       return (import.meta as unknown as { env: Record<string, string> }).env[key] ?? defaultValue;
     }
   } catch {

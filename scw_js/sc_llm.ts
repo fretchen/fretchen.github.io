@@ -6,18 +6,14 @@ import {
   verify_wallet,
   processMerkleTree,
   startNewTree,
+  type LLMMessage,
 } from "./llm_service.js";
 
 import { parseEther } from "viem";
 import pino from "pino";
+import type { ScwEvent } from "./types.js";
 
-export interface ScwEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | Record<string, unknown> | null;
-  path?: string;
-  queryStringParameters?: Record<string, string>;
-}
+export type { ScwEvent };
 
 interface ScwResponse {
   body: string | unknown;
@@ -47,10 +43,13 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return { statusCode: 200, headers, body: "" };
   }
 
-  let prompt: unknown;
+  let prompt: LLMMessage[];
   let body: Record<string, unknown>;
   if (event.httpMethod === "POST") {
-    body = typeof event.body === "string" ? JSON.parse(event.body) : (event.body as Record<string, unknown>);
+    body =
+      typeof event.body === "string"
+        ? JSON.parse(event.body)
+        : (event.body as Record<string, unknown>);
     logger.debug({ body }, "Parsed body");
   } else {
     return {
@@ -61,8 +60,8 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   const data = body["data"] as Record<string, unknown> | undefined;
-  if (data?.["prompt"]) {
-    prompt = data["prompt"];
+  if (Array.isArray(data?.["prompt"])) {
+    prompt = data["prompt"] as LLMMessage[];
   } else {
     return { body: JSON.stringify({ error: "No prompt provided" }), headers, statusCode: 400 };
   }
@@ -71,7 +70,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   let useDummyData = false;
   if (data?.["useDummyData"] !== undefined) {
     if (typeof data["useDummyData"] !== "boolean") {
-      return { body: JSON.stringify({ error: "Invalid useDummyData flag" }), headers, statusCode: 400 };
+      return {
+        body: JSON.stringify({ error: "Invalid useDummyData flag" }),
+        headers,
+        statusCode: 400,
+      };
     }
     useDummyData = data["useDummyData"];
   }
@@ -130,7 +133,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       !/^\d+$/.test(String(totalTokensRaw)))
   ) {
     logger.error({ data: llmData }, "Invalid total_tokens in LLM response");
-    return { body: JSON.stringify({ error: "Invalid token count from LLM" }), headers, statusCode: 500 };
+    return {
+      body: JSON.stringify({ error: "Invalid token count from LLM" }),
+      headers,
+      statusCode: 500,
+    };
   }
 
   const tokenCountBigInt =

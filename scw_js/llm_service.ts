@@ -12,6 +12,11 @@ const BUCKET_NAME = "my-imagestore";
 const MERKLE_TREE_FILE = "merkle/trees.json";
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
+export interface LLMMessage {
+  role: string;
+  content: string;
+}
+
 interface LLMResponse {
   content: string;
   usage: {
@@ -22,10 +27,16 @@ interface LLMResponse {
   model: string;
 }
 
-export async function callLLMAPI(
-  prompt: unknown,
-  dummy = false,
-): Promise<LLMResponse> {
+function getS3Credentials(): { accessKey: string; secretKey: string } {
+  const accessKey = process.env.SCW_ACCESS_KEY;
+  const secretKey = process.env.SCW_SECRET_KEY;
+  if (!accessKey || !secretKey) {
+    throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
+  }
+  return { accessKey, secretKey };
+}
+
+export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<LLMResponse> {
   if (dummy) {
     return {
       content: "I am a placeholder for the LLM response",
@@ -41,7 +52,7 @@ export async function callLLMAPI(
     );
   }
 
-  if (!prompt) {
+  if (!prompt || !prompt.length) {
     throw new Error("No prompt provided.");
   }
   logger.info({ prompt }, "Generating answer for prompt");
@@ -60,13 +71,17 @@ export async function callLLMAPI(
     throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json() as {
+  const data = (await response.json()) as {
     choices: Array<{ message: { content: string } }>;
     usage: LLMResponse["usage"];
     model: string;
   };
+  const firstChoice = data.choices[0];
+  if (!firstChoice) {
+    throw new Error(`LLM API returned empty choices (model: ${data.model})`);
+  }
   return {
-    content: data.choices[0]!.message.content,
+    content: firstChoice.message.content,
     usage: data.usage,
     model: data.model,
   };
@@ -154,20 +169,22 @@ export async function saveLeafToTree(
 }
 
 export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): Promise<number> {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-
+  const { accessKey, secretKey } = getS3Credentials();
   const s3Client = new S3Client({
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey!, secretAccessKey: secretKey! },
+    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
   });
 
   let treesData: TreesData | null = null;
 
   try {
-    const getResult = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }));
-    const bodyContents = await streamToString(getResult.Body as unknown as AsyncIterable<Uint8Array>);
+    const getResult = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
+    );
+    const bodyContents = await streamToString(
+      getResult.Body as unknown as AsyncIterable<Uint8Array>,
+    );
     const parsed = JSON.parse(bodyContents) as TreesData;
     treesData = {
       ...parsed,
@@ -214,16 +231,16 @@ export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): P
 }
 
 export async function startNewTree(fileName: string): Promise<number> {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-
+  const { accessKey, secretKey } = getS3Credentials();
   const s3Client = new S3Client({
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey!, secretAccessKey: secretKey! },
+    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
   });
 
-  const getResult = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }));
+  const getResult = await s3Client.send(
+    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
+  );
   const bodyContents = await streamToString(getResult.Body as unknown as AsyncIterable<Uint8Array>);
   const treesData = JSON.parse(bodyContents) as TreesData;
 
@@ -252,20 +269,22 @@ export async function startNewTree(fileName: string): Promise<number> {
 }
 
 export async function appendToS3Json(dataToAppend: Leaf, fileName: string): Promise<number> {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-
+  const { accessKey, secretKey } = getS3Credentials();
   const s3Client = new S3Client({
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey!, secretAccessKey: secretKey! },
+    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
   });
 
   let existingData: Leaf[] | null = null;
 
   try {
-    const getResult = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }));
-    const bodyContents = await streamToString(getResult.Body as unknown as AsyncIterable<Uint8Array>);
+    const getResult = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
+    );
+    const bodyContents = await streamToString(
+      getResult.Body as unknown as AsyncIterable<Uint8Array>,
+    );
     existingData = restoreBigIntsInLeaves(JSON.parse(bodyContents) as Leaf[]);
   } catch {
     logger.info({ file: fileName }, "File doesn't exist, creating new file");
@@ -335,16 +354,11 @@ export async function processMerkleTree(
   fileName: string,
   treeIndex: number | null = null,
 ): Promise<void> {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-
-  if (!accessKey || !secretKey) {
-    throw new Error("Missing S3 credentials");
-  }
   if (!fileName) {
     throw new Error("Missing file name");
   }
 
+  const { accessKey, secretKey } = getS3Credentials();
   const s3Client = new S3Client({
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
@@ -353,8 +367,12 @@ export async function processMerkleTree(
 
   let treesData: TreesData;
   try {
-    const getResult = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }));
-    const bodyContents = await streamToString(getResult.Body as unknown as AsyncIterable<Uint8Array>);
+    const getResult = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
+    );
+    const bodyContents = await streamToString(
+      getResult.Body as unknown as AsyncIterable<Uint8Array>,
+    );
     const parsed = JSON.parse(bodyContents) as TreesData;
     treesData = {
       ...parsed,

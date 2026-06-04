@@ -353,11 +353,13 @@ export function createMintingTests(getFixture: () => Promise<CollectorNFTFixture
         const insufficientPayment = TEST_CONSTANTS.BASE_MINT_PRICE / 2n;
 
         // Should throw error
-        await _networkConn.viem.assertions.revert(
+        await _networkConn.viem.assertions.revertWithCustomError(
           collectorNFT.write.mintCollectorNFT([genImTokenId, genImURI], {
             account: collector1.account,
             value: insufficientPayment,
           }),
+          collectorNFT,
+          "InsufficientPayment",
         );
       });
 
@@ -671,11 +673,13 @@ export function createListingStatusTests(getFixture: () => Promise<CollectorNFTF
         });
 
         // Should now fail
-        await _networkConn.viem.assertions.revert(
+        await _networkConn.viem.assertions.revertWithCustomError(
           collectorNFT.write.mintCollectorNFT([tokenId, genImURI], {
             account: collector1.account,
             value: TEST_CONSTANTS.BASE_MINT_PRICE,
           }),
+          collectorNFT,
+          "TokenNotPubliclyListed",
         );
 
         // Make token public again

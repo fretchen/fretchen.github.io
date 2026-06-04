@@ -36,17 +36,21 @@ contract CollectorNFT is
     // Mapping from GenImNFT token ID to array of CollectorNFT token IDs
     mapping(uint256 => uint256[]) public collectorTokensByGenImToken;
     
-    // Events
     event CollectorNFTMinted(uint256 indexed collectorTokenId, uint256 indexed genImTokenId, address indexed collector, uint256 price, uint256 mintNumber);
     event PaymentSentToCreator(uint256 indexed genImTokenId, address indexed creator, uint256 amount);
+
+    error TokenDoesNotExist();
+    error TokenNotPubliclyListed();
+    error InsufficientPayment();
+    error PaymentFailed();
+    error RefundFailed();
     
     function initialize(address _genImNFTContract, uint256 _baseMintPrice) initializer public {
         __ERC721_init("CollectorNFT", "COLLECTOR");
         __ERC721URIStorage_init();
         __ERC721Enumerable_init();
         __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
-        
+
         genImNFTContract = IGenImNFTWithListing(_genImNFTContract);
         baseMintPrice = _baseMintPrice; // e.g., 0.001 ether
     }
@@ -78,38 +82,29 @@ contract CollectorNFT is
      * @param uri The metadata URI for the CollectorNFT
      */
     function mintCollectorNFT(uint256 genImTokenId, string memory uri) public payable returns (uint256) {
-        // Check that the GenImNFT exists and get its owner
         address genImOwner = genImNFTContract.ownerOf(genImTokenId);
-        require(genImOwner != address(0), "GenImNFT token does not exist");
-        
-        // Check that the GenImNFT token is publicly listed
-        require(genImNFTContract.isTokenListed(genImTokenId), "GenImNFT token is not publicly listed");
-        
-        // Calculate required payment
+        if (genImOwner == address(0)) revert TokenDoesNotExist();
+        if (!genImNFTContract.isTokenListed(genImTokenId)) revert TokenNotPubliclyListed();
+
         uint256 currentPrice = getCurrentPrice(genImTokenId);
-        require(msg.value >= currentPrice, "Insufficient payment");
-        
-        // Mint the CollectorNFT
+        if (msg.value < currentPrice) revert InsufficientPayment();
+
         uint256 collectorTokenId = _nextTokenId++;
         _safeMint(msg.sender, collectorTokenId);
         _setTokenURI(collectorTokenId, uri);
-        
-        // Update tracking
+
         mintCountPerGenImToken[genImTokenId]++;
         collectorTokensByGenImToken[genImTokenId].push(collectorTokenId);
-        
-        // Send payment to GenImNFT owner (the creator/current owner)
+
         (bool success, ) = payable(genImOwner).call{value: currentPrice}("");
-        require(success, "Payment to GenImNFT owner failed");
-        
-        // Emit events
+        if (!success) revert PaymentFailed();
+
         emit CollectorNFTMinted(collectorTokenId, genImTokenId, msg.sender, currentPrice, mintCountPerGenImToken[genImTokenId]);
         emit PaymentSentToCreator(genImTokenId, genImOwner, currentPrice);
-        
-        // Refund excess payment
+
         if (msg.value > currentPrice) {
             (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - currentPrice}("");
-            require(refundSuccess, "Refund failed");
+            if (!refundSuccess) revert RefundFailed();
         }
         
         return collectorTokenId;

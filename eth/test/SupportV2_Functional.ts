@@ -218,24 +218,26 @@ describe("SupportV2 - Functional Tests", function () {
     it("should reject donation with zero ETH", async function () {
       const { support, donor, recipient } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         support.write.donate([TEST_URL, recipient.account.address], {
           value: 0n,
           account: donor.account,
         }),
-        "No ETH sent",
+        support,
+        "NoEthSent",
       );
     });
 
     it("should reject donation to zero address", async function () {
       const { support, donor } = await networkConn.networkHelpers.loadFixture(deploySupportFixture);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         support.write.donate([TEST_URL, "0x0000000000000000000000000000000000000000"], {
           value: ETH_DONATION,
           account: donor.account,
         }),
-        "Invalid recipient",
+        support,
+        "InvalidRecipient",
       );
     });
 
@@ -300,7 +302,7 @@ describe("SupportV2 - Functional Tests", function () {
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, TOKEN_DONATION);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         support.write.donateToken(
           [
             TEST_URL,
@@ -316,7 +318,8 @@ describe("SupportV2 - Functional Tests", function () {
           ],
           { account: donor.account },
         ),
-        "Invalid token",
+        support,
+        "InvalidToken",
       );
     });
 
@@ -326,7 +329,7 @@ describe("SupportV2 - Functional Tests", function () {
 
       const auth = await createTokenAuthorization(mockUSDC, donor, recipient.account.address, 0n);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         support.write.donateToken(
           [
             TEST_URL,
@@ -342,7 +345,8 @@ describe("SupportV2 - Functional Tests", function () {
           ],
           { account: donor.account },
         ),
-        "Amount must be > 0",
+        support,
+        "AmountMustBePositive",
       );
     });
 
@@ -356,7 +360,7 @@ describe("SupportV2 - Functional Tests", function () {
         TOKEN_DONATION,
       );
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         support.write.donateToken(
           [
             TEST_URL,
@@ -372,7 +376,8 @@ describe("SupportV2 - Functional Tests", function () {
           ],
           { account: donor.account },
         ),
-        "Invalid recipient",
+        support,
+        "InvalidRecipient",
       );
     });
   });

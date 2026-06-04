@@ -330,7 +330,7 @@ describe("SupportV2 - Deployment Tests", function () {
         const support = await ethers.getContractAt("SupportV2", result!.proxyAddress);
         const [, otherAccount] = await ethers.getSigners();
 
-        await expect(support.initialize(otherAccount.address)).to.revert(ethers);
+        await assert.rejects(support.initialize(otherAccount.address));
       });
     });
 

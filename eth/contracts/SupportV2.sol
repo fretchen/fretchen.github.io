@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "./interfaces/IEIP3009.sol";
 
 /**
@@ -20,12 +20,21 @@ import "./interfaces/IEIP3009.sol";
  *
  * Multi-chain: Deploy on Optimism + Base
  */
-contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardTransient {
     /// @notice Contract version for upgrade tracking
     uint256 public constant VERSION = 1;
 
+    // Reserved: was ReentrancyGuardUpgradeable._status — must not be reused
+    uint256 private __reentrancyStatusGap;
+
     /// @notice Like count per URL hash
     mapping(bytes32 => uint256) public urlLikes;
+
+    error NoEthSent();
+    error InvalidRecipient();
+    error TransferFailed();
+    error InvalidToken();
+    error AmountMustBePositive();
 
     /// @notice Emitted when a donation is made (ETH or token)
     /// @param from Donor address
@@ -54,8 +63,6 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
      */
     function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
-        __ReentrancyGuard_init();
-        __UUPSUpgradeable_init();
     }
 
     /**
@@ -67,14 +74,14 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         string calldata _url,
         address _recipient
     ) external payable nonReentrant {
-        require(msg.value > 0, "No ETH sent");
-        require(_recipient != address(0), "Invalid recipient");
+        if (msg.value == 0) revert NoEthSent();
+        if (_recipient == address(0)) revert InvalidRecipient();
 
         bytes32 urlHash = keccak256(bytes(_url));
         urlLikes[urlHash]++;
 
         (bool success, ) = payable(_recipient).call{value: msg.value}("");
-        require(success, "Transfer failed");
+        if (!success) revert TransferFailed();
 
         emit Donation(msg.sender, _recipient, urlHash, _url, msg.value, address(0));
     }
@@ -106,9 +113,9 @@ contract SupportV2 is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgrad
         bytes32 _r,
         bytes32 _s
     ) external nonReentrant {
-        require(_recipient != address(0), "Invalid recipient");
-        require(_amount > 0, "Amount must be > 0");
-        require(_token != address(0), "Invalid token");
+        if (_recipient == address(0)) revert InvalidRecipient();
+        if (_amount == 0) revert AmountMustBePositive();
+        if (_token == address(0)) revert InvalidToken();
 
         // Transfer tokens directly from sender to recipient
         IEIP3009(_token).transferWithAuthorization(

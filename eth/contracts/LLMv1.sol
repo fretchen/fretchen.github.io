@@ -32,6 +32,19 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
     event ServiceProviderAdded(address indexed provider);
     event ServiceProviderRemoved(address indexed provider);
     event DebugLeafHash(uint256 index, bytes32 hash);
+
+    error NoEthSent();
+    error InsufficientBalance();
+    error WithdrawFailed();
+    error ZeroAddress();
+    error ProviderNotAuthorized();
+    error CannotRemoveDefaultProvider();
+    error NotAuthorizedProvider();
+    error BatchAlreadyProcessed();
+    error MismatchedInputs();
+    error InvalidServiceProvider();
+    error InvalidProof();
+    error ServiceProviderPaymentFailed();
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -43,14 +56,13 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
      */
     function initialize() initializer public {
         __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
         defaultServiceProvider = msg.sender;
         authorizedProviders[msg.sender] = true;
     }
     
     // --- LLM batching: deposit funds for LLM usage ---
     function depositForLLM() external payable {
-        require(msg.value > 0, "No ETH sent");
+        if (msg.value == 0) revert NoEthSent();
         llmBalance[msg.sender] += msg.value;
         emit LLMDeposit(msg.sender, msg.value);
     }
@@ -62,31 +74,28 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
 
     // --- LLM batching: withdraw unused balance ---
     function withdrawBalance(uint256 amount) external {
-        require(llmBalance[msg.sender] >= amount, "Insufficient balance");
+        if (llmBalance[msg.sender] < amount) revert InsufficientBalance();
         llmBalance[msg.sender] -= amount;
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        require(success, "Withdraw failed");
+        if (!success) revert WithdrawFailed();
         emit LLMWithdraw(msg.sender, amount);
     }
 
-    // --- LLM batching: set/change default service provider ---
     function setDefaultServiceProvider(address newProvider) external onlyOwner {
-        require(newProvider != address(0), "Zero address");
-        require(authorizedProviders[newProvider], "Provider not authorized");
+        if (newProvider == address(0)) revert ZeroAddress();
+        if (!authorizedProviders[newProvider]) revert ProviderNotAuthorized();
         defaultServiceProvider = newProvider;
         emit ServiceProviderChanged(newProvider);
     }
 
-    // --- LLM batching: add service provider ---
     function addServiceProvider(address provider) external onlyOwner {
-        require(provider != address(0), "Zero address");
+        if (provider == address(0)) revert ZeroAddress();
         authorizedProviders[provider] = true;
         emit ServiceProviderAdded(provider);
     }
 
-    // --- LLM batching: remove service provider ---
     function removeServiceProvider(address provider) external onlyOwner {
-        require(provider != defaultServiceProvider, "Cannot remove default provider");
+        if (provider == defaultServiceProvider) revert CannotRemoveDefaultProvider();
         authorizedProviders[provider] = false;
         emit ServiceProviderRemoved(provider);
     }
@@ -129,15 +138,14 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
         LLMLeaf[] calldata leaves,
         bytes32[][] calldata proofs
     ) external {
-        require(authorizedProviders[msg.sender], "Not authorized provider");
-        require(!processedBatches[merkleRoot], "Batch already processed");
-        require(leaves.length == proofs.length, "Mismatched inputs");
+        if (!authorizedProviders[msg.sender]) revert NotAuthorizedProvider();
+        if (processedBatches[merkleRoot]) revert BatchAlreadyProcessed();
+        if (leaves.length != proofs.length) revert MismatchedInputs();
 
         uint256 totalCost = 0;
 
         for (uint256 i = 0; i < leaves.length; i++) {
-            // Verify service provider is authorized
-            require(authorizedProviders[leaves[i].serviceProvider], "Invalid service provider");
+            if (!authorizedProviders[leaves[i].serviceProvider]) revert InvalidServiceProvider();
 
             // Construct leaf as
             bytes32 leaf = keccak256(bytes.concat(
@@ -150,8 +158,8 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
                     leaves[i].timestamp
                 ))
             ));
-            require(verifyMerkleProof(proofs[i], merkleRoot, leaf), "Invalid proof");
-            require(llmBalance[leaves[i].user] >= leaves[i].cost, "Insufficient balance");
+            if (!verifyMerkleProof(proofs[i], merkleRoot, leaf)) revert InvalidProof();
+            if (llmBalance[leaves[i].user] < leaves[i].cost) revert InsufficientBalance();
 
             // Deduct from user balance
             llmBalance[leaves[i].user] -= leaves[i].cost;
@@ -188,7 +196,7 @@ contract LLMv1 is OwnableUpgradeable, UUPSUpgradeable {
         // Pay each unique service provider
         for (uint256 i = 0; i < uniqueCount; i++) {
             (bool success, ) = payable(uniqueProviders[i]).call{value: providerPayments[i]}("");
-            require(success, "Service provider payment failed");
+            if (!success) revert ServiceProviderPaymentFailed();
         }
 
         processedBatches[merkleRoot] = true;

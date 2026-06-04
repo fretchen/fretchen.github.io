@@ -1,0 +1,92 @@
+---
+publishing_date: 2026-06-04
+title: "Building a Social Media Growth Agent for Under 50 Cents a Month"
+category: "ai"
+secondaryCategory: "webdev"
+description: "How I built a LangGraph-based social media assistant that generates, queues, and publishes posts to Mastodon and Bluesky — with human approval and a monthly cost of under 20 cents."
+---
+
+After spending months improving the discoverability of this site — SEO, Schema.org markup, Webmentions — I realized the next gap was simpler to name and harder to fix: I barely posted on social media. The blog had content, the infrastructure was in place, but actually turning articles into social posts required enough friction to just... not happen consistently.
+
+I wanted something that would draft posts for me, let me review them, and hit publish — without a subscription, without an autonomous agent making questionable posts while I sleep, and without a complicated setup.
+
+The result: a Python agent running on Scaleway for about 20 cents a month.
+
+## The Architecture
+
+The agent is a [LangGraph](https://langchain-ai.github.io/langgraph/) pipeline with nodes that run sequentially every morning at 08:00 UTC:
+
+1. **Ingest** — Fetches the last 7 days of website analytics from Umami plus basic follower counts from Mastodon and Bluesky
+2. **Insights** — Runs an LLM pass over the analytics to identify which blog articles are worth promoting
+3. **Plan** — Selects articles and schedules draft slots across channels
+4. **Drafts** — Generates platform-specific post text (Mastodon: up to 500 characters with hashtags; Bluesky: up to 300 characters, no hashtags), then self-critiques and refines each draft once
+5. **Publish** — Posts any approved drafts whose scheduled time has passed
+
+All state lives in a handful of JSON files in S3. There's no database, no message queue, no always-on server. The container spins up, does its work in about two minutes, and shuts down.
+
+The full source is in the `growth-agent/` folder of my [GitHub repository](https://github.com/fretchen/fretchen.github.io).
+
+## The Approval Interface
+
+The agent doesn't post automatically. After generating drafts, it drops them into a queue. I review them via a small React page on this site — I can edit the text, approve or reject each draft, and optionally set a specific publish time.
+
+This was a deliberate design choice from the start. The agent's job is to get 80% of the way there: a usable draft with the right hashtags, a reasonable hook, within the character limit. My job is the remaining 20%: is this the right tone for this week? Does it make sense given what else is happening? Is the framing honest?
+
+Treating this as a collaborative tool rather than an autonomous one turns out to matter quite a bit — more on that below.
+
+## Key Learnings
+
+After running this for several months and seeing 46 posts go out across Mastodon and Bluesky, here's what I actually learned.
+
+### Don't hand strategy to the agent
+
+Early versions tried to be smart about strategy: the LLM would analyze traffic data and decide which pages to promote based on pageviews, referrers, and content gaps. In theory this sounds right. In practice, it collapsed onto a narrow set of topics within a few weeks. The analytics-driven planner kept recommending the same three or four high-traffic pages because those had the clearest signal.
+
+The fix was simple: I moved strategy back to myself. The agent now executes within a framework I define — which topics to cover, which channels, how frequently — rather than inferring it from data. The LLM is still responsible for drafting. That's where it genuinely helps.
+
+### Random selection beats algorithmic when you have no data
+
+Related to the above: when there's no engagement history, a "smart" selection algorithm is just noise dressed up as signal. I had no meaningful data about which posts perform better on Mastodon vs. Bluesky, which topics get more shares, or what time of day matters.
+
+The current approach picks from a broader candidate pool with some randomization. It's less elegant but more honest about what we actually know. Premature optimization on engagement signals that don't yet exist is just a way of building a feedback loop on noise.
+
+Once there's enough data — follower engagement, link click rates, referral traffic — it will make sense to introduce smarter ranking. Not yet.
+
+### Think assistant, not autonomous system
+
+The approval step isn't a workaround for an agent that isn't ready to post on its own. It's the intended behavior.
+
+There's an important difference between "the agent posts for me" and "the agent drafts for me." The first requires trusting the agent's judgment on tone, timing, and context. The second just requires trusting that it can produce a reasonable starting point faster than I can write from scratch. The second threshold is much easier to meet with current LLM quality, and it's the one I actually care about.
+
+Running it this way also makes mistakes cheap: if the agent drafts something off-tone or factually vague, I reject it. Nothing goes out without a human read.
+
+### It costs almost nothing
+
+Monthly costs break down roughly like this:
+
+- **LLM API** (IONOS, Llama 3.3 70B): ~15 cents
+- **Scaleway container** (runs ~2 min/day): ~5 cents
+- **S3 storage** (a few KB/day of JSON): negligible
+
+Total: **~20 cents/month**.
+
+No subscription tier, no per-seat pricing, no usage-based cost that scales uncomfortably with success. The whole thing fits comfortably within serverless free tiers.
+
+## What the Numbers Actually Look Like
+
+To be honest about impact: 46 posts later, the social presence exists but has not visibly moved the needle on website traffic. Monthly visitors: February 118, March 257, April 135, May 169. The March spike happened, but I can't attribute it to the agent — it coincided with other activity and the numbers dropped back in April.
+
+There are reactions on social posts. People see them, occasionally engage, sometimes follow. But "measurable traffic growth from social media" is not something I can claim yet.
+
+This is fine. The goal was a consistent social presence with minimal effort, not an immediate distribution solution. 46 posts went out that wouldn't have existed otherwise. That's a reasonable outcome for a side project running at 20 cents a month. Understanding what actually drives traffic will take more data and more time.
+
+## What's Next
+
+The current iteration is a working foundation. Next priorities:
+
+- **Better post quality for quantum/AMO articles** — the agent tends to write generic posts about "quantum physics" when the actual articles describe specific cold-atom experiments. The LLM only sees the page title and meta description; that's not enough context for scientific specificity.
+- **Engagement metrics in the approval UI** — likes, boosts, and replies are returned by the platform APIs but not currently surfaced in the review interface.
+- **Migrating to Mistral** — a straightforward model swap to test quality and cost.
+- **Engagement with other accounts** — automatically liking relevant posts, replying to mentions with a draft that goes through the same approval flow.
+
+The code is open source. If you're building something similar, feel free to take what's useful.

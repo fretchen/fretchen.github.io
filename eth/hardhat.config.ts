@@ -2,7 +2,6 @@ import { defineConfig, configVariable } from "hardhat/config";
 import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
 import hardhatUpgrades from "@openzeppelin/hardhat-upgrades";
 import hardhatAbiExporter from "@solidstate/hardhat-abi-exporter";
-import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
 
 export default defineConfig({
   // Sets the default for `npx hardhat run` CLI tasks.
@@ -10,7 +9,7 @@ export default defineConfig({
   // Hardhat 3's hardcoded DEFAULT_NETWORK_NAME ("default") when no --network
   // flag is provided, regardless of this setting.
   defaultNetwork: "hardhat",
-  plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter, hardhatEthersChaiMatchers],
+  plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter],
   solidity: {
     compilers: [
       {

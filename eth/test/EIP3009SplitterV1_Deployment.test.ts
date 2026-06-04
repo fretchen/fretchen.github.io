@@ -159,7 +159,7 @@ describe("EIP3009SplitterV1 - Deployment Tests", function () {
       const { splitterContract, facilitator } = await deploySplitterFixture();
 
       // Attempt to re-initialize should fail (already initialized)
-      await expect(splitterContract.initialize(facilitator.address, "20000")).to.revert(ethers);
+      await assert.rejects(splitterContract.initialize(facilitator.address, "20000"));
     });
   });
 

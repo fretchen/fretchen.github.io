@@ -1,13 +1,11 @@
-import { verifyMessage } from "viem";
 import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import pino from "pino";
+import { verifySignedMessage } from "./auth_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const BUCKET = "my-imagestore";
 const STATE_PREFIX = "growth-agent/";
-const MAX_MESSAGE_AGE_MS = 5 * 60 * 1000; // 5 minutes
-
 // ===== TypeScript interfaces mirroring Python Pydantic models =====
 
 export interface Draft {
@@ -252,34 +250,20 @@ export async function verifyOwner(
     throw new Error("OWNER_ETH_ADDRESS not configured");
   }
 
-  // Verify EIP-191 signature
-  const isValid = await verifyMessage({
-    address: address as `0x${string}`,
-    message,
-    signature: signature as `0x${string}`,
-  });
-
-  if (!isValid) {
-    throw new AuthError("Invalid wallet signature");
+  const err = await verifySignedMessage(address, signature, message, "growth-api", ownerAddress);
+  if (!err) {
+    logger.info({ address }, "Owner verified");
+    return;
   }
 
-  // Verify owner
-  if (address.toLowerCase() !== ownerAddress.toLowerCase()) {
-    throw new AuthError("Not the owner");
-  }
-
-  // Replay protection: message must be "growth-api:<unix-timestamp>"
-  const match = message.match(/^growth-api:(\d+)$/);
-  if (!match) {
-    throw new AuthError("Invalid message format, expected 'growth-api:<timestamp>'");
-  }
-  const messageTime = parseInt(match[1], 10) * 1000; // convert to ms
-  const now = Date.now();
-  if (Math.abs(now - messageTime) > MAX_MESSAGE_AGE_MS) {
-    throw new AuthError("Message expired (>5 minutes)");
-  }
-
-  logger.info({ address }, "Owner verified");
+  // Translate shared utility error strings to the original growth-api domain messages
+  const domainErrors: Record<string, string> = {
+    "Invalid signature": "Invalid wallet signature",
+    "Address mismatch": "Not the owner",
+    Unauthorized: "Invalid message format, expected 'growth-api:<timestamp>'",
+    "Token expired": "Message expired (>5 minutes)",
+  };
+  throw new AuthError(domainErrors[err] ?? err);
 }
 
 // ===== Custom errors =====

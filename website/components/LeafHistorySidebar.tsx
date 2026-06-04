@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatEther } from "viem";
+import { useWalletAuth } from "../hooks/useWalletAuth";
 
 interface LeafHistoryItem {
   id: number;
@@ -20,18 +21,23 @@ interface LeafHistorySidebarProps {
   onClose: () => void;
 }
 
-const LEAF_BASE_URL = "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
-
-async function fetchLeafHistory(address: string): Promise<LeafHistoryItem[]> {
-  const response = await fetch(`${LEAF_BASE_URL}?address=${address}`);
-  const data = (await response.json()) as { leaves?: LeafHistoryItem[] };
-  return data.leaves ?? [];
-}
+const LEAF_BASE_URL =
+  (import.meta.env.PUBLIC_ENV__LEAF_HISTORY_URL as string | undefined) ??
+  "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
 
 export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHistorySidebarProps) {
+  const getAuth = useWalletAuth("leaf-history");
+
   const { data: leaves = [], isPending } = useQuery({
     queryKey: ["leafHistory", address],
-    queryFn: () => fetchLeafHistory(address!),
+    queryFn: async () => {
+      const auth = await getAuth();
+      const response = await fetch(`${LEAF_BASE_URL}?address=${encodeURIComponent(address!)}`, {
+        headers: { Authorization: auth },
+      });
+      const data = (await response.json()) as { leafs?: LeafHistoryItem[] };
+      return data.leafs ?? [];
+    },
     enabled: isOpen && !!address,
   });
 

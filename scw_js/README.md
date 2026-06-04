@@ -134,7 +134,7 @@ NODE_ENV=test node sc_llm.js
 ## Deployment
 
 ```bash
-serverless deploy
+npm run deploy
 ```
 
 ---

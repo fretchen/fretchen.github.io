@@ -11,6 +11,7 @@ import {
   AuthError,
 } from "./growth_service.js";
 import type { ContentQueue } from "./growth_service.js";
+import { parseBearerToken } from "./auth_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -27,41 +28,6 @@ function jsonResponse(statusCode: number, body: unknown) {
     headers: HEADERS,
     body: JSON.stringify(body),
   };
-}
-
-function extractAuth(event: Record<string, unknown>): {
-  address: string;
-  signature: string;
-  message: string;
-} | null {
-  const headers = event.headers as Record<string, string> | undefined;
-  const authHeader = headers?.authorization || headers?.Authorization;
-  if (!authHeader || typeof authHeader !== "string") {
-    return null;
-  }
-
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
-    return null;
-  }
-
-  try {
-    const decoded = JSON.parse(Buffer.from(match[1], "base64").toString("utf-8"));
-    const { address, signature, message } = decoded;
-    if (
-      typeof address === "string" &&
-      address.startsWith("0x") &&
-      typeof signature === "string" &&
-      signature.startsWith("0x") &&
-      typeof message === "string" &&
-      message.length > 0
-    ) {
-      return { address, signature, message };
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 function parsePath(rawPath: string): string {
@@ -98,7 +64,8 @@ export async function handle(
   }
 
   // Auth check for all non-OPTIONS requests
-  const auth = extractAuth(event);
+  const headers = event.headers as Record<string, string> | undefined;
+  const auth = parseBearerToken(headers?.authorization || headers?.Authorization);
   if (!auth) {
     return jsonResponse(401, { error: "Missing or invalid Authorization header" });
   }

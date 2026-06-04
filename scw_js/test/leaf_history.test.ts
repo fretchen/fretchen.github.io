@@ -78,6 +78,8 @@ const sampleTree = {
 describe("handle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SCW_ACCESS_KEY = "test-access-key";
+    process.env.SCW_SECRET_KEY = "test-secret-key";
   });
 
   it("returns 200 for OPTIONS preflight", async () => {

@@ -223,7 +223,6 @@ export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): P
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
-      ACL: "public-read",
     }),
   );
   logger.info({ treeIndex: treesData.currentTreeIndex }, "Successfully appended leaf to tree");
@@ -261,7 +260,6 @@ export async function startNewTree(fileName: string): Promise<number> {
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
-      ACL: "public-read",
     }),
   );
   logger.info({ newTreeIndex }, "Started new tree");
@@ -312,7 +310,6 @@ export async function appendToS3Json(dataToAppend: Leaf, fileName: string): Prom
       Key: fileName,
       Body: JSON.stringify(updatedData, bigintReplacer, 2),
       ContentType: "application/json",
-      ACL: "public-read",
     }),
   );
   logger.info({ file: fileName }, "Successfully appended to file");
@@ -449,7 +446,6 @@ export async function processMerkleTree(
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
-      ACL: "public-read",
     }),
   );
   logger.info({ treeIndex: targetTreeIndex }, "Tree marked as processed");

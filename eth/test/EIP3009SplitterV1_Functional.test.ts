@@ -263,7 +263,7 @@ describe("EIP3009SplitterV1", function () {
       const totalAmount = FEE_1_CENT; // Amount = fee (seller would get 0)
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -280,7 +280,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Amount must exceed fee",
+        splitter,
+        "AmountMustExceedFee",
       );
     });
 
@@ -291,7 +292,7 @@ describe("EIP3009SplitterV1", function () {
       const totalAmount = parseToken("0.005"); // Less than 0.01 token fee
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -308,7 +309,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Amount must exceed fee",
+        splitter,
+        "AmountMustExceedFee",
       );
     });
 
@@ -320,7 +322,7 @@ describe("EIP3009SplitterV1", function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, zeroAddress, totalAmount);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -337,7 +339,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Invalid seller address",
+        splitter,
+        "InvalidSellerAddress",
       );
     });
 
@@ -478,9 +481,10 @@ describe("EIP3009SplitterV1", function () {
     it("Should reject fee update to zero", async function () {
       const { splitter, owner } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.setFixedFee([0n], { account: owner.account }),
-        "Fee must be greater than 0",
+        splitter,
+        "FeeMustBePositive",
       );
     });
 
@@ -519,9 +523,10 @@ describe("EIP3009SplitterV1", function () {
       const { splitter, owner } = await networkConn.networkHelpers.loadFixture(deploySplitterFixture);
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.setFacilitatorWallet([zeroAddress as `0x${string}`], { account: owner.account }),
-        "Invalid wallet address",
+        splitter,
+        "InvalidWalletAddress",
       );
     });
 
@@ -860,7 +865,7 @@ describe("EIP3009SplitterV1", function () {
       );
 
       // Malicious facilitator tries to redirect funds to otherAccount (attacker)
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -877,7 +882,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Seller not authorized by buyer",
+        splitter,
+        "SellerNotAuthorizedByBuyer",
       );
     });
 
@@ -893,7 +899,7 @@ describe("EIP3009SplitterV1", function () {
       // Facilitator tries with correct seller but wrong salt
       const wrongSalt = keccak256(toHex("wrong-salt"));
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -910,7 +916,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Seller not authorized by buyer",
+        splitter,
+        "SellerNotAuthorizedByBuyer",
       );
     });
 
@@ -930,7 +937,7 @@ describe("EIP3009SplitterV1", function () {
       );
 
       // Facilitator tries to use authForSeller's signature but with otherAccount as seller
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -947,7 +954,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Seller not authorized by buyer",
+        splitter,
+        "SellerNotAuthorizedByBuyer",
       );
 
       // But correct seller should work
@@ -1025,7 +1033,7 @@ describe("EIP3009SplitterV1", function () {
       const auth = await createAuthorization(mockUSDC, buyer, splitter.address, seller.account.address, totalAmount);
 
       // Malicious facilitator tries to set themselves as seller
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             mockUSDC.address,
@@ -1042,7 +1050,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Seller not authorized by buyer",
+        splitter,
+        "SellerNotAuthorizedByBuyer",
       );
     });
   });
@@ -1057,7 +1066,7 @@ describe("EIP3009SplitterV1", function () {
 
       const zeroAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         splitter.write.executeSplit(
           [
             zeroAddress, // Invalid token address
@@ -1074,7 +1083,8 @@ describe("EIP3009SplitterV1", function () {
           ],
           { account: facilitator.account },
         ),
-        "Invalid token address",
+        splitter,
+        "InvalidTokenAddress",
       );
     });
 

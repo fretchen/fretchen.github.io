@@ -101,9 +101,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       const tokenId = 0n;
 
       // Try to update without being whitelisted
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         contract.write.requestImageUpdate([tokenId, "ipfs://unauthorized"], { account: otherAccount.account }),
-        "Not authorized agent",
+        contract,
+        "NotAuthorizedAgent",
       );
 
       // Verify token was NOT updated
@@ -126,9 +127,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       expect(await contract.read.isImageUpdated([0n])).to.equal(true);
 
       // Second update should fail
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         contract.write.requestImageUpdate([0n, "ipfs://double-update"], { account: otherAccount.account }),
-        "Image already updated",
+        contract,
+        "ImageAlreadyUpdated",
       );
     });
 
@@ -141,9 +143,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       await contract.write.authorizeAgentWallet([otherAccount.account.address], { account: owner.account });
 
       // Try to update non-existent token
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         contract.write.requestImageUpdate([999n, "ipfs://nonexistent"], { account: otherAccount.account }),
-        "Token does not exist",
+        contract,
+        "TokenDoesNotExist",
       );
     });
 
@@ -170,9 +173,10 @@ describe("GenImNFTv4 - Functional Tests", function () {
       await contract.write.safeMint(["ipfs://funding", true], { value: mintPrice, account: owner.account });
 
       // Should now be rejected
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         contract.write.requestImageUpdate([1n, "ipfs://updated1"], { account: otherAccount.account }),
-        "Not authorized agent",
+        contract,
+        "NotAuthorizedAgent",
       );
     });
   });
@@ -374,11 +378,12 @@ describe("GenImNFTv4 - Functional Tests", function () {
 
       // Step 3: Attacker (unauthorized third party) watches for mint event and attacks
       // THE EXPLOIT IS NOW BLOCKED: Attacker tries to call requestImageUpdate
-      await networkConn.viem.assertions.revertWith(
+      await networkConn.viem.assertions.revertWithCustomError(
         contract.write.requestImageUpdate([tokenId, "ipfs://attacker-controlled-url"], {
           account: recipient.account,
         }),
-        "Not authorized agent",
+        contract,
+        "NotAuthorizedAgent",
       );
 
       // Step 4: Verify exploit was blocked

@@ -105,6 +105,14 @@ contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
     event FixedFeeUpdated(uint256 oldFee, uint256 newFee);
     event FacilitatorWalletUpdated(address indexed oldWallet, address indexed newWallet);
 
+    error InvalidFacilitatorWallet();
+    error FeeMustBePositive();
+    error InvalidTokenAddress();
+    error InvalidSellerAddress();
+    error AmountMustExceedFee();
+    error SellerNotAuthorizedByBuyer();
+    error InvalidWalletAddress();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -119,12 +127,11 @@ contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
         address _facilitatorWallet,
         uint256 _fixedFee
     ) public initializer {
-        require(_facilitatorWallet != address(0), "Invalid facilitator wallet");
-        require(_fixedFee > 0, "Fee must be greater than 0");
+        if (_facilitatorWallet == address(0)) revert InvalidFacilitatorWallet();
+        if (_fixedFee == 0) revert FeeMustBePositive();
 
         __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
-        
+
         facilitatorWallet = _facilitatorWallet;
         fixedFee = _fixedFee;
     }
@@ -168,17 +175,14 @@ contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
         bytes32 r,
         bytes32 s
     ) external {
-        require(token != address(0), "Invalid token address");
-        require(seller != address(0), "Invalid seller address");
-        require(totalAmount > fixedFee, "Amount must exceed fee");
-        
+        if (token == address(0)) revert InvalidTokenAddress();
+        if (seller == address(0)) revert InvalidSellerAddress();
+        if (totalAmount <= fixedFee) revert AmountMustExceedFee();
+
         // SECURITY: Verify that seller was authorized by the buyer
         // The buyer computed nonce = keccak256(abi.encode(seller, salt)) when signing
         // If facilitator tries to change seller, the nonce won't match
-        require(
-            keccak256(abi.encode(seller, salt)) == nonce,
-            "Seller not authorized by buyer"
-        );
+        if (keccak256(abi.encode(seller, salt)) != nonce) revert SellerNotAuthorizedByBuyer();
 
         // Calculate split amounts
         uint256 sellerAmount = totalAmount - fixedFee;
@@ -212,7 +216,7 @@ contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
      * @param _fixedFee New fee in token base units
      */
     function setFixedFee(uint256 _fixedFee) external onlyOwner {
-        require(_fixedFee > 0, "Fee must be greater than 0");
+        if (_fixedFee == 0) revert FeeMustBePositive();
         uint256 oldFee = fixedFee;
         fixedFee = _fixedFee;
         emit FixedFeeUpdated(oldFee, _fixedFee);
@@ -223,7 +227,7 @@ contract EIP3009SplitterV1 is OwnableUpgradeable, UUPSUpgradeable {
      * @param _wallet New facilitator wallet address
      */
     function setFacilitatorWallet(address _wallet) external onlyOwner {
-        require(_wallet != address(0), "Invalid wallet address");
+        if (_wallet == address(0)) revert InvalidWalletAddress();
         address oldWallet = facilitatorWallet;
         facilitatorWallet = _wallet;
         emit FacilitatorWalletUpdated(oldWallet, _wallet);

@@ -5,22 +5,15 @@ export default tseslint.config(
   { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  // JS files: node globals + project-specific rules
+  // TypeScript source files (excluded from tsconfig: test files use non-type-aware rules below)
   {
-    files: ["**/*.js"],
+    files: ["*.ts"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
-      globals: {
-        process: "readonly",
-        Buffer: "readonly",
-        console: "readonly",
-        __dirname: "readonly",
-        __filename: "readonly",
-        global: "readonly",
-        module: "readonly",
-        require: "readonly",
-        exports: "readonly",
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
@@ -32,6 +25,8 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "no-unused-vars": "off",
       "no-console": "off",
       "prefer-const": "error",
       "no-var": "error",
@@ -45,33 +40,18 @@ export default tseslint.config(
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-throw-literal": "error",
-      "no-return-await": "error",
       "arrow-spacing": "error",
       "template-curly-spacing": "error",
       "object-shorthand": "error",
     },
   },
-  // TS files: non-type-aware rules (no tsconfig.json in scw_js)
+  // Test files: non-type-aware (not in tsconfig), vitest globals
   {
-    files: ["**/*.ts"],
-    rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-        },
-      ],
-      "@typescript-eslint/no-explicit-any": "warn",
-      "no-unused-vars": "off",
-      "no-undef": "off",
-    },
-  },
-  // Test files: vitest globals
-  {
-    files: ["test/**/*.js", "test/**/*.ts", "**/*.test.js", "**/*.test.ts"],
+    files: ["test/**/*.ts", "**/*.test.ts"],
     languageOptions: {
+      parserOptions: {
+        project: false,
+      },
       globals: {
         describe: "readonly",
         test: "readonly",
@@ -89,7 +69,12 @@ export default tseslint.config(
     rules: {
       "no-unused-expressions": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
       "no-undef": "off",
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 );

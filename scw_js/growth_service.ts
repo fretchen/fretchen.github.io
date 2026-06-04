@@ -85,13 +85,15 @@ export interface Performance {
 // ===== S3 helpers =====
 
 export function createS3Client(): S3Client {
+  const accessKey = process.env.SCW_ACCESS_KEY;
+  const secretKey = process.env.SCW_SECRET_KEY;
+  if (!accessKey || !secretKey) {
+    throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
+  }
   return new S3Client({
     region: "nl-ams",
     endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: {
-      accessKeyId: process.env.SCW_ACCESS_KEY!,
-      secretAccessKey: process.env.SCW_SECRET_KEY!,
-    },
+    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
   });
 }
 

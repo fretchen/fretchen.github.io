@@ -36,7 +36,7 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 }
 
 async function streamToString(stream: AsyncIterable<Uint8Array> | string): Promise<string> {
-  if (typeof stream === "string") return stream;
+  if (typeof stream === "string") {return stream;}
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk));
@@ -49,7 +49,7 @@ async function verifyLeafHistoryAuth(
   authHeader: string | undefined,
 ): Promise<string | null> {
   const payload = parseBearerToken(authHeader);
-  if (!payload) return "Unauthorized";
+  if (!payload) {return "Unauthorized";}
   return verifySignedMessage(
     payload.address,
     payload.signature,
@@ -103,7 +103,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       const getResult = await s3Client.send(
         new GetObjectCommand({ Bucket: "my-imagestore", Key: MERKLE_TREE_FILE }),
       );
-      if (!getResult.Body) throw new Error("S3 returned empty body");
+      if (!getResult.Body) {throw new Error("S3 returned empty body");}
       const bodyStr = await streamToString(getResult.Body as AsyncIterable<Uint8Array>);
 
       interface TreeLeaf {

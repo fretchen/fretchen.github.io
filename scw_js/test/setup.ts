@@ -43,7 +43,7 @@ export function setupGlobalMocks() {
   }));
 
   // Setup default privateKeyToAccount mock
-  mockViemFunctions.privateKeyToAccount.mockImplementation((_key) => ({
+  mockViemFunctions.privateKeyToAccount.mockImplementation((_) => ({
     address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
     signMessage: vi.fn(),
     signTransaction: vi.fn(),

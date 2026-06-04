@@ -22,6 +22,7 @@ export const mockPreparePaymentHeader = vi.fn();
 // ===== AWS SDK MOCKS =====
 export const mockS3Send = vi.fn();
 export const mockPutObjectCommand = vi.fn();
+export const mockGetObjectCommand = vi.fn();
 
 // ===== IMAGE SERVICE MOCKS =====
 export const mockGenerateAndUploadImage = vi.fn();
@@ -68,10 +69,11 @@ export function setupGlobalMocks() {
 
   // Mock AWS SDK
   vi.mock("@aws-sdk/client-s3", () => ({
-    S3Client: vi.fn().mockImplementation(() => ({
-      send: mockS3Send,
-    })),
+    S3Client: vi.fn().mockImplementation(function () {
+      return { send: mockS3Send };
+    }),
     PutObjectCommand: mockPutObjectCommand,
+    GetObjectCommand: mockGetObjectCommand,
   }));
 
   // Mock image_service

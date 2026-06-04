@@ -23,6 +23,7 @@ import {
   cleanupTestEnvironment,
   setupDefaultMocks,
   mockFetchResponse,
+  makeMockResponse,
   mockMetadataResponse,
   mockViemFunctions,
 } from "./setup.js";
@@ -111,21 +112,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
     global.fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          isValid: true,
-          payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockMetadataResponse,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, transaction: "0xsettlement" }),
-      });
+      .mockResolvedValueOnce(
+        makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+      )
+      .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
+      .mockResolvedValueOnce(makeMockResponse({ success: true, transaction: "0xsettlement" }));
   }
 
   describe("create402Response() - x402 v2 Payment Header", () => {
@@ -485,15 +476,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
     test("should reject invalid payment", async () => {
       // Mock facilitator verification failure
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
+      global.fetch = vi.fn().mockResolvedValueOnce(
+        makeMockResponse({
           isValid: false,
           invalidReason: "invalid_exact_evm_payload_signature",
           payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
         }),
-      });
+      );
 
       const event = {
         httpMethod: "POST",
@@ -517,11 +506,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
     test("should handle facilitator error", async () => {
       // Mock facilitator network error
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        text: async () => "Internal Server Error",
-      });
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(makeMockResponse("Internal Server Error", false, 500));
 
       const event = {
         httpMethod: "POST",
@@ -545,15 +532,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
     test("should reject unauthorized recipient (not whitelisted)", async () => {
       // Mock facilitator rejection for unauthorized recipient
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
+      global.fetch = vi.fn().mockResolvedValueOnce(
+        makeMockResponse({
           isValid: false,
           invalidReason: "unauthorized_agent",
           recipient: "0xUnauthorized123",
         }),
-      });
+      );
 
       const event = {
         httpMethod: "POST",
@@ -940,17 +925,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // Mock facilitator verification AND image service response
       global.fetch = vi
         .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            isValid: true,
-            payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockMetadataResponse,
-        });
+        .mockResolvedValueOnce(
+          makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        )
+        .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse));
 
       const event = {
         httpMethod: "POST",
@@ -1027,15 +1005,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       global.fetch = vi
         .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
-        })
-        .mockResolvedValueOnce({ ok: true, json: async () => mockMetadataResponse })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, transaction: "0xsettlement" }),
-        });
+        .mockResolvedValueOnce(
+          makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        )
+        .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
+        .mockResolvedValueOnce(makeMockResponse({ success: true, transaction: "0xsettlement" }));
 
       const event = {
         httpMethod: "POST",
@@ -1078,13 +1052,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000")); // 0.01 ETH
 
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          isValid: true,
-          payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-        }),
-      });
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        );
 
       const event = {
         httpMethod: "POST",
@@ -1118,10 +1090,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
       mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
 
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
-      });
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        );
 
       const event = {
         httpMethod: "POST",

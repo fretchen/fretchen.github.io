@@ -204,14 +204,19 @@ export function setupDefaultMocks(mockContract: any) {
 }
 
 // ===== FETCH MOCK HELPERS =====
-export function mockFetchResponse(data: any, options: any = {}) {
-  const defaultResponse = {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(data),
-    ...options,
+export function makeMockResponse(data: any, ok = true, status = 200) {
+  const body = typeof data === "string" ? data : JSON.stringify(data);
+  return {
+    ok,
+    status,
+    headers: { get: () => null },
+    text: () => Promise.resolve(body),
+    json: () => Promise.resolve(typeof data === "string" ? JSON.parse(data) : data),
   };
-  (global.fetch as any).mockResolvedValue(defaultResponse);
+}
+
+export function mockFetchResponse(data: any, options: any = {}) {
+  (global.fetch as any).mockResolvedValue({ ...makeMockResponse(data), ...options });
 }
 
 export function mockFetchError(error: string = "Network error") {

@@ -10,7 +10,7 @@
 
 A social media growth agent doesn't need to be autonomous or expensive — building it as an AI assistant with human oversight costs under 50 cents/month and works better than full automation when you have no engagement data yet.
 
-**Why should the reader care**: Most AI agent tutorials go straight for full automation. This post shows a cheaper, more honest alternative: the human stays in control of *what* gets posted, and the agent handles the tedious *how*.
+**Why should the reader care**: Most AI agent tutorials go straight for full automation. This post shows a cheaper, more honest alternative: the human stays in control of _what_ gets posted, and the agent handles the tedious _how_.
 
 ## Outline
 

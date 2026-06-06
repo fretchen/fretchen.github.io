@@ -47,14 +47,11 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-namespace": 0,
       // React JSX attributes expect void return; async event handlers are valid React pattern
-      "@typescript-eslint/no-misused-promises": [
-        "error",
-        { checksVoidReturn: { attributes: false } },
-      ],
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
       "prefer-const": "error",
       "no-var": "error",
       "no-duplicate-imports": "error",
-      "eqeqeq": ["error", "always"],
+      eqeqeq: ["error", "always"],
       "no-eval": "error",
       "no-implied-eval": "error",
     },

@@ -8,7 +8,7 @@ tokenID: 196
 
 This post is about an [episode of the the podcast "the Diary of a CEO"](https://open.spotify.com/episode/2ehl7eaYZvItjnVhTbokaa?si=D_Fv02TnQvShBtz5zvVlQQ&t=3657) with an expert (Ben Felix) on whether buying a home is a mistake. The presented arguments sound appealing at first glance. They sound clean, empirical, and easy to operationalize. It goes roughly like this: add up the unrecoverable costs of owning, compare them with rent, invest the difference in index funds, and you have a practical rule for a messy decision.
 
-I think that model is useful in certain situations, just like many other rules of thumb for housing. However, a young mobile professional, a family that wants to stay in one place, and a wealthy household buying an additional property are not solving the same problem.  That is why I do not think rent versus buy should be treated as one generic optimization exercise like the podcast seems to suggest.
+I think that model is useful in certain situations, just like many other rules of thumb for housing. However, a young mobile professional, a family that wants to stay in one place, and a wealthy household buying an additional property are not solving the same problem. That is why I do not think rent versus buy should be treated as one generic optimization exercise like the podcast seems to suggest.
 
 ## The part I find persuasive
 
@@ -58,7 +58,7 @@ This is where the academic literature becomes useful, not as decoration, but to 
 
 Taken together, these papers do not say that buying is always better. They say something more nuanced: once housing matters enough, the right answer depends on horizon, mobility, liquidity, balance-sheet concentration, and whether the property is your home or just another asset.
 
-I also think this is where the economic concept of expected utility matters. Households typically fear bad housing states more than an equivalent euro loss in an investment account.  Housing disruption simply hits daily life directly. I tried to simulate this cleanly for myself at one point but that model was super fragile. Small assumptions about how painful housing disruption is can changed the output a lot. That experience is one reason I am reluctant to replace one universal rule with another.
+I also think this is where the economic concept of expected utility matters. Households typically fear bad housing states more than an equivalent euro loss in an investment account. Housing disruption simply hits daily life directly. I tried to simulate this cleanly for myself at one point but that model was super fragile. Small assumptions about how painful housing disruption is can changed the output a lot. That experience is one reason I am reluctant to replace one universal rule with another.
 
 ## Questions I would ask instead
 

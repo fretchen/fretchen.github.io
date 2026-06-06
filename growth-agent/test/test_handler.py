@@ -1069,7 +1069,10 @@ def test_publish_stores_platform_id_mastodon(MockMasto, mock_publish, mock_stora
     )
     storage.write("content_queue.json", ContentQueue(approved=[draft]))
 
-    mock_publish.return_value = {"id": "masto-status-42", "uri": "https://mastodon.social/@fretchen/42"}
+    mock_publish.return_value = {
+        "id": "masto-status-42",
+        "uri": "https://mastodon.social/@fretchen/42",
+    }
 
     publish_approved_drafts(storage)
 

@@ -116,8 +116,6 @@ def test_diagnose_passes_prod(mock_make_storage, mock_load_model):
     fake_storage.read.return_value = None
     fake_storage.list_keys.return_value = []
     mock_make_storage.return_value = fake_storage
-    mock_load_model.return_value = MagicMock(
-        drafts=[], approved=[], published=[], rejected=[]
-    )
+    mock_load_model.return_value = MagicMock(drafts=[], approved=[], published=[], rejected=[])
     diagnose(prod=True)
     mock_make_storage.assert_called_once_with(True)

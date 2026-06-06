@@ -19,6 +19,7 @@ let mockApproveError: Error | null = null;
 vi.mock("../hooks/useGrowthApi", () => ({
   useGrowthDrafts: (...args: unknown[]) => mockUseGrowthDrafts(...args),
   useGrowthInsights: (...args: unknown[]) => mockUseGrowthInsights(...args),
+  useGrowthPerformance: () => ({ data: undefined, isPending: false }),
   useApproveDraft: () => ({
     mutateAsync: mockApproveMutateAsync,
     isPending: false,

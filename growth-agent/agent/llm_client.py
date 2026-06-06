@@ -1,11 +1,32 @@
-"""IONOS AI Model Hub LLM client (OpenAI-compatible)."""
+"""LLM client with pluggable provider support (OpenAI-compatible endpoints)."""
+
+import os
+from dataclasses import dataclass
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-IONOS_BASE_URL = "https://openai.inference.de-txl.ionos.com/v1"
-DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+
+@dataclass
+class ProviderConfig:
+    base_url: str
+    api_key_env: str  # name of the env var that holds the API key
+    default_model: str
+
+
+PROVIDERS: dict[str, ProviderConfig] = {
+    "ionos": ProviderConfig(
+        base_url="https://openai.inference.de-txl.ionos.com/v1",
+        api_key_env="IONOS_API_TOKEN",
+        default_model="meta-llama/Llama-3.3-70B-Instruct",
+    ),
+    "mistral": ProviderConfig(
+        base_url="https://api.mistral.ai/v1",
+        api_key_env="MISTRAL_API_KEY",
+        default_model="mistral-large-latest",
+    ),
+}
 
 
 def _to_langchain_messages(
@@ -28,20 +49,27 @@ def _to_langchain_messages(
 
 
 class LLMClient:
-    """Client for IONOS AI Model Hub (OpenAI-compatible chat completions API)."""
+    """OpenAI-compatible LLM client. Use from_env() for provider selection via LLM_PROVIDER."""
 
-    def __init__(
-        self,
-        api_token: str,
-        model: str = DEFAULT_MODEL,
-    ):
+    def __init__(self, api_token: str, base_url: str, model: str):
         self.model = model
         self._chat_model = ChatOpenAI(
-            base_url=IONOS_BASE_URL,
+            base_url=base_url,
             api_key=api_token,  # type: ignore[arg-type]
             model=model,
             temperature=0.3,
             max_tokens=2048,  # type: ignore[call-arg]
+        )
+
+    @classmethod
+    def from_env(cls, model: str | None = None) -> "LLMClient":
+        """Construct from environment. Reads LLM_PROVIDER (default: 'ionos') and LLM_MODEL."""
+        provider_name = os.environ.get("LLM_PROVIDER", "ionos")
+        config = PROVIDERS[provider_name]
+        return cls(
+            api_token=os.environ[config.api_key_env],
+            base_url=config.base_url,
+            model=model or os.environ.get("LLM_MODEL", config.default_model),
         )
 
     def chat(
@@ -74,7 +102,7 @@ class LLMClient:
         """Send a chat request and parse the response into a Pydantic model.
 
         Uses ChatOpenAI.with_structured_output() which sets
-        response_format=json_schema on the IONOS endpoint.
+        response_format=json_schema on the provider endpoint.
 
         Args:
             schema: Pydantic model class to parse the response into.

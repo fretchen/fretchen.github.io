@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from datetime import datetime, timezone
 
 from agent.llm_client import LLMClient
@@ -34,7 +33,7 @@ def generate_insights(storage) -> LLMAnalysis | None:
     insights = load_model(storage, "insights.json", Insights)
     strategy = load_model(storage, "strategy.json", Strategy)
 
-    llm = LLMClient(api_token=os.environ["IONOS_API_TOKEN"])
+    llm = LLMClient.from_env()
     try:
         # Fetch page descriptions for a broader candidate set, not only the top winners.
         page_urls = [

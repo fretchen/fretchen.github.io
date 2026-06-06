@@ -1251,3 +1251,25 @@ def test_old_queue_deserializes_without_published_at():
     }
     queue = ContentQueue.model_validate(raw)
     assert queue.published[0].published_at is None
+
+
+# ---------------------------------------------------------------------------
+# BlueskyClient.get_posts — batching behaviour
+# ---------------------------------------------------------------------------
+
+
+def test_bluesky_get_posts_batches():
+    """URIs beyond 25 trigger a second HTTP request."""
+    from agent.platforms.bluesky import BlueskyClient
+
+    bsky = BlueskyClient.__new__(BlueskyClient)
+    mock_http = MagicMock()
+    bsky.client = mock_http
+    mock_http.get.return_value.raise_for_status = MagicMock()
+    mock_http.get.return_value.json.return_value = {"posts": [{"uri": "x"}]}
+
+    uris = [f"at://did/post/{i}" for i in range(26)]
+    result = bsky.get_posts(uris)
+
+    assert mock_http.get.call_count == 2  # batch of 25 + batch of 1
+    assert len(result) == 2  # one entry per batch response

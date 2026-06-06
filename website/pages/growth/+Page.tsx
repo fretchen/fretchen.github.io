@@ -19,6 +19,8 @@ type Tab = "drafts" | "approved" | "published" | "rejected";
 
 // ===== Styles =====
 
+const growthContainer = css({ maxWidth: "900px", mx: "auto", px: "md", pt: "md" });
+
 const infoBox = css({
   padding: "lg",
   textAlign: "center",
@@ -269,6 +271,45 @@ const pageGroupRow = css({
   overflow: "hidden",
 });
 
+const pageGroupSummaryRow = css({
+  cursor: "pointer",
+  padding: "sm md",
+  display: "flex",
+  alignItems: "center",
+  gap: "xs",
+  flexWrap: "wrap",
+});
+
+const pageGroupLink = css({
+  color: "blue.600",
+  textDecoration: "underline",
+  fontSize: "sm",
+  fontWeight: "medium",
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+const pageGroupMeta = css({
+  fontSize: "xs",
+  color: "gray.600",
+  whiteSpace: "nowrap",
+});
+
+const pageGroupDim = css({
+  fontSize: "xs",
+  color: "gray.400",
+  whiteSpace: "nowrap",
+});
+
+const pageGroupBody = css({
+  borderTop: "1px solid",
+  borderColor: "gray.200",
+  padding: "sm md",
+});
+
 // ===== Sub-components =====
 
 function DraftCardView({
@@ -493,7 +534,9 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
   return (
     <div className={insightsPanel}>
       <details>
-        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>Insights & Analytics</summary>
+        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>
+          Insights & Analytics (28 days)
+        </summary>
         {(insights.growth_opportunities ?? []).length > 0 && (
           <>
             <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Growth Opportunities</h4>
@@ -552,7 +595,7 @@ export default function Page() {
   const historyByPage = useMemo(() => {
     const map: Record<string, Draft[]> = {};
     for (const d of queue?.published ?? []) {
-      const key = d.source_blog_post ?? "";
+      const key = d.link ?? d.source_blog_post ?? "";
       if (!key) continue;
       (map[key] ??= []).push(d);
     }
@@ -580,6 +623,7 @@ export default function Page() {
       string,
       {
         url: string;
+        displayUrl: string;
         drafts: Draft[];
         totalEngagement: { favourites: number; reblogs: number; replies: number };
         lastPublished: string | null;
@@ -591,19 +635,20 @@ export default function Page() {
     for (const draft of queue?.published ?? []) {
       const url = draft.link ?? draft.source_blog_post ?? "(no link)";
       if (!map.has(url)) {
-        let path: string | null = null;
+        let path: string;
         try {
           path = new URL(url).pathname;
         } catch {
-          /* invalid url */
+          path = url;
         }
         map.set(url, {
           url,
+          displayUrl: path,
           drafts: [],
           totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
           lastPublished: null,
           channels: new Set(),
-          pageviews: path !== null ? (trafficByPath.get(path) ?? null) : null,
+          pageviews: trafficByPath.get(path) ?? null,
         });
       }
       const group = map.get(url)!;
@@ -645,7 +690,7 @@ export default function Page() {
   // Pre-hydration: show nothing interactive
   if (!hasMounted) {
     return (
-      <div className={pageContainer}>
+      <div className={growthContainer}>
         <h1 className={titleBar.title}>Growth Agent</h1>
         <p className={infoBox}>Loading...</p>
       </div>
@@ -655,7 +700,7 @@ export default function Page() {
   // Not connected or still reconnecting
   if (status !== "connected") {
     return (
-      <div className={pageContainer}>
+      <div className={growthContainer}>
         <h1 className={titleBar.title}>Growth Agent</h1>
         <div className={infoBox}>
           <p>Connect your wallet to manage drafts.</p>
@@ -676,7 +721,7 @@ export default function Page() {
   // Wrong address
   if (!isOwner) {
     return (
-      <div className={pageContainer}>
+      <div className={growthContainer}>
         <h1 className={titleBar.title}>Growth Agent</h1>
         <p className={infoBox}>This page is restricted to the site owner.</p>
       </div>
@@ -694,7 +739,7 @@ export default function Page() {
   const showActions = tab === "drafts" || tab === "approved";
 
   return (
-    <div className={pageContainer}>
+    <div className={growthContainer}>
       <h1 className={titleBar.title}>Growth Agent</h1>
 
       <InsightsSection insights={insights ?? null} />
@@ -723,70 +768,35 @@ export default function Page() {
               pageGroups.map((group) => {
                 const eng = group.totalEngagement;
                 const hasEngagement = eng.favourites + eng.reblogs + eng.replies > 0;
-                let displayUrl = group.url;
-                try {
-                  displayUrl = new URL(group.url).pathname;
-                } catch {
-                  /* keep full url */
-                }
                 return (
                   <details key={group.url} className={pageGroupRow}>
-                    <summary
-                      style={{
-                        cursor: "pointer",
-                        padding: "10px 12px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        flexWrap: "wrap",
-                      }}
-                    >
+                    <summary className={pageGroupSummaryRow}>
                       <a
                         href={group.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{
-                          color: "#2563eb",
-                          textDecoration: "underline",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          flex: 1,
-                          minWidth: 0,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
+                        className={pageGroupLink}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {displayUrl}
+                        {group.displayUrl}
                       </a>
-                      <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>
-                        {group.drafts.length}×
-                      </span>
+                      <span className={pageGroupMeta}>{group.drafts.length}×</span>
                       {group.lastPublished && (
-                        <span style={{ fontSize: "12px", color: "#777", whiteSpace: "nowrap" }}>
-                          {new Date(group.lastPublished).toLocaleDateString()}
-                        </span>
+                        <span className={pageGroupDim}>{new Date(group.lastPublished).toLocaleDateString()}</span>
                       )}
-                      <span style={{ whiteSpace: "nowrap" }}>
+                      <span className={pageGroupDim}>
                         {[...group.channels].map((ch) => (ch === "mastodon" ? "🐘" : "🦋")).join(" ")}
                       </span>
                       {hasEngagement && (
-                        <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>
+                        <span className={pageGroupMeta}>
                           ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
                         </span>
                       )}
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          color: group.pageviews !== null ? "#555" : "#aaa",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <span className={group.pageviews !== null ? pageGroupMeta : pageGroupDim}>
                         {group.pageviews !== null ? `${group.pageviews} views (28d)` : "—"}
                       </span>
                     </summary>
-                    <div style={{ borderTop: "1px solid #e5e7eb", padding: "8px 12px" }}>
+                    <div className={pageGroupBody}>
                       {group.drafts.map((draft) => (
                         <DraftCardView
                           key={draft.id}
@@ -813,7 +823,7 @@ export default function Page() {
                 key={draft.id}
                 draft={draft}
                 showActions={showActions}
-                history={historyByPage[draft.source_blog_post ?? ""] ?? []}
+                history={historyByPage[draft.link ?? draft.source_blog_post ?? ""] ?? []}
                 metrics={metricsByDraftId[draft.id]}
                 onApprove={handleApprove}
                 onReject={handleReject}

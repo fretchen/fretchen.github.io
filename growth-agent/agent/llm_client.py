@@ -65,6 +65,10 @@ class LLMClient:
     def from_env(cls, model: str | None = None) -> "LLMClient":
         """Construct from environment. Reads LLM_PROVIDER (default: 'ionos') and LLM_MODEL."""
         provider_name = os.environ.get("LLM_PROVIDER", "ionos")
+        if provider_name not in PROVIDERS:
+            raise ValueError(
+                f"Unknown LLM_PROVIDER={provider_name!r}. Valid providers: {list(PROVIDERS)}"
+            )
         config = PROVIDERS[provider_name]
         return cls(
             api_token=os.environ[config.api_key_env],

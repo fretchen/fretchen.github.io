@@ -1,9 +1,10 @@
 """Unit tests for LLMClient provider abstraction."""
 
-import pytest
 from unittest.mock import patch
 
-from agent.llm_client import LLMClient, PROVIDERS
+import pytest
+
+from agent.llm_client import PROVIDERS, LLMClient
 
 
 def test_providers_registry():
@@ -82,7 +83,7 @@ def test_from_env_empty_llm_model_uses_default(MockChatOpenAI, monkeypatch):
 def test_from_env_unknown_provider_raises(MockChatOpenAI, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "openai")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         LLMClient.from_env()
 
 

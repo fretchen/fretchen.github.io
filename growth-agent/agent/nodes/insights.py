@@ -21,7 +21,7 @@ INSIGHTS_CANDIDATE_TARGET = 15
 def insights_node(state: AgentState) -> dict:
     """LangGraph node: generate LLM insights, update state."""
     try:
-        analysis = generate_insights(state["storage"])
+        generate_insights(state["storage"])
         return {"insights_ok": True}
     except Exception:
         logger.exception("Insight generation failed")

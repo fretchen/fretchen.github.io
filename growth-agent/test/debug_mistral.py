@@ -1,6 +1,6 @@
 """
 Debug script for LLM provider integration.
-Run with: uv run python debug_mistral.py
+Run with: uv run python test/debug_mistral.py  (from growth-agent/)
 
 Set LLM_PROVIDER=ionos or LLM_PROVIDER=mistral in .env (or environment).
 
@@ -13,11 +13,15 @@ Steps:
 import os
 import sys
 
+import httpx
 from dotenv import load_dotenv
-
-load_dotenv(".env", override=True)
+from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from agent.llm_client import PROVIDERS
+
+load_dotenv("../.env", override=True)
 
 PROVIDER_NAME = os.environ.get("LLM_PROVIDER", "ionos")
 
@@ -42,7 +46,6 @@ if not API_KEY:
 
 # ── Step 1: raw httpx call ─────────────────────────────────────────────────────
 print("=== Step 1: raw HTTP POST /chat/completions ===")
-import httpx
 
 payload = {
     "model": MODEL,
@@ -69,8 +72,6 @@ print()
 
 # ── Step 2: ChatOpenAI plain invoke ────────────────────────────────────────────
 print("=== Step 2: ChatOpenAI plain invoke ===")
-from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
 
 chat = ChatOpenAI(
     base_url=BASE_URL,
@@ -90,7 +91,6 @@ print()
 
 # ── Step 3: with_structured_output ────────────────────────────────────────────
 print("=== Step 3: with_structured_output ===")
-from pydantic import BaseModel
 
 
 class Greeting(BaseModel):
@@ -100,7 +100,9 @@ class Greeting(BaseModel):
 
 structured = chat.with_structured_output(Greeting)
 try:
-    greeting = structured.invoke([HumanMessage(content="Say hello in one word. Return the word and the language.")])
+    greeting = structured.invoke(
+        [HumanMessage(content="Say hello in one word. Return the word and the language.")]
+    )
     print("OK —", greeting)
 except Exception as e:
     print(f"FAILED: {e}")

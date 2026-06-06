@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 
 @dataclass
@@ -51,14 +51,14 @@ def _to_langchain_messages(
 class LLMClient:
     """OpenAI-compatible LLM client. Use from_env() for provider selection via LLM_PROVIDER."""
 
-    def __init__(self, api_token: str, base_url: str, model: str):
+    def __init__(self, api_token: SecretStr, base_url: str, model: str):
         self.model = model
         self._chat_model = ChatOpenAI(
             base_url=base_url,
-            api_key=api_token,  # type: ignore[arg-type]
+            api_key=api_token,
             model=model,
             temperature=0.3,
-            max_tokens=2048,  # type: ignore[call-arg]
+            max_completion_tokens=2048,
         )
 
     @classmethod
@@ -71,7 +71,7 @@ class LLMClient:
             )
         config = PROVIDERS[provider_name]
         return cls(
-            api_token=os.environ[config.api_key_env],
+            api_token=SecretStr(os.environ[config.api_key_env]),
             base_url=config.base_url,
             model=model or os.environ.get("LLM_MODEL") or config.default_model,
         )

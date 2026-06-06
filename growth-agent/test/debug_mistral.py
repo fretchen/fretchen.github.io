@@ -17,7 +17,7 @@ import httpx
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 from agent.llm_client import PROVIDERS
 
@@ -35,7 +35,7 @@ MODEL = os.environ.get("LLM_MODEL") or config.default_model
 BASE_URL = config.base_url
 
 print(f"Provider : {PROVIDER_NAME}")
-print(f"API key  : {API_KEY[:8]}..." if API_KEY else "API key  : NOT SET")
+print(f"API key  : {'SET' if API_KEY else 'NOT SET'}")
 print(f"Model    : {MODEL}")
 print(f"Base URL : {BASE_URL}")
 print()
@@ -75,10 +75,10 @@ print("=== Step 2: ChatOpenAI plain invoke ===")
 
 chat = ChatOpenAI(
     base_url=BASE_URL,
-    api_key=API_KEY,
+    api_key=SecretStr(API_KEY),
     model=MODEL,
     temperature=0.3,
-    max_tokens=20,
+    max_completion_tokens=20,
 )
 try:
     result = chat.invoke([HumanMessage(content="Say hello in one word.")])

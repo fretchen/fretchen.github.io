@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from pydantic import SecretStr
 
 from agent.llm_client import PROVIDERS, LLMClient
 
@@ -27,10 +28,10 @@ def test_from_env_defaults_to_ionos(MockChatOpenAI, monkeypatch):
 
     MockChatOpenAI.assert_called_once_with(
         base_url="https://openai.inference.de-txl.ionos.com/v1",
-        api_key="ionos-key",
+        api_key=SecretStr("ionos-key"),
         model=PROVIDERS["ionos"].default_model,
         temperature=0.3,
-        max_tokens=2048,
+        max_completion_tokens=2048,
     )
     assert client.model == PROVIDERS["ionos"].default_model
 
@@ -45,10 +46,10 @@ def test_from_env_selects_mistral(MockChatOpenAI, monkeypatch):
 
     MockChatOpenAI.assert_called_once_with(
         base_url="https://api.mistral.ai/v1",
-        api_key="mistral-key",
+        api_key=SecretStr("mistral-key"),
         model="mistral-large-latest",
         temperature=0.3,
-        max_tokens=2048,
+        max_completion_tokens=2048,
     )
     assert client.model == "mistral-large-latest"
 

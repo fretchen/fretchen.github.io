@@ -69,7 +69,7 @@ class LLMClient:
         return cls(
             api_token=os.environ[config.api_key_env],
             base_url=config.base_url,
-            model=model or os.environ.get("LLM_MODEL", config.default_model),
+            model=model or os.environ.get("LLM_MODEL") or config.default_model,
         )
 
     def chat(
@@ -78,16 +78,6 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int = 2048,
     ) -> dict:
-        """Send a chat completion request.
-
-        Args:
-            messages: List of {role, content} dicts.
-            temperature: Sampling temperature.
-            max_tokens: Maximum response tokens.
-
-        Returns:
-            dict with 'content' key.
-        """
         model = self._chat_model.bind(temperature=temperature, max_tokens=max_tokens)
         result = model.invoke(_to_langchain_messages(messages))
         return {"content": result.content}
@@ -99,20 +89,6 @@ class LLMClient:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ) -> BaseModel:
-        """Send a chat request and parse the response into a Pydantic model.
-
-        Uses ChatOpenAI.with_structured_output() which sets
-        response_format=json_schema on the provider endpoint.
-
-        Args:
-            schema: Pydantic model class to parse the response into.
-            messages: List of {role, content} dicts.
-            temperature: Optional sampling temperature override.
-            max_tokens: Optional maximum response tokens override.
-
-        Returns:
-            Parsed Pydantic model instance.
-        """
         bind_kwargs: dict[str, float | int] = {}
         if temperature is not None:
             bind_kwargs["temperature"] = temperature

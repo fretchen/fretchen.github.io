@@ -66,6 +66,19 @@ def test_from_env_model_override(MockChatOpenAI, monkeypatch):
 
 
 @patch("agent.llm_client.ChatOpenAI")
+def test_from_env_empty_llm_model_uses_default(MockChatOpenAI, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "mistral")
+    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-key")
+    monkeypatch.setenv("LLM_MODEL", "")  # blank value should fall back to provider default
+
+    client = LLMClient.from_env()
+
+    _, kwargs = MockChatOpenAI.call_args
+    assert kwargs["model"] == "mistral-large-latest"
+    assert client.model == "mistral-large-latest"
+
+
+@patch("agent.llm_client.ChatOpenAI")
 def test_from_env_unknown_provider_raises(MockChatOpenAI, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "openai")
 

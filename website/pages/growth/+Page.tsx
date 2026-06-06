@@ -739,6 +739,8 @@ export default function Page() {
     <div className={pageContainer}>
       <h1 className={pageTitle}>Growth Agent</h1>
 
+      <InsightsSection insights={insights ?? null} />
+
       {error && <div className={errorBanner}>{error}</div>}
 
       {loadingDrafts ? (
@@ -833,7 +835,6 @@ export default function Page() {
             ))
           )}
 
-          <InsightsSection insights={insights ?? null} />
         </>
       )}
     </div>

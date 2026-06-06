@@ -465,17 +465,17 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
-@patch("agent.nodes.insights.generate_insights")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
-def test_handle_daily_not_monday(mock_get_storage, mock_insights, mock_publish):
-    """On a non-Monday, graph still runs insights -> plan -> drafts -> publish."""
+def test_handle_daily_not_monday(mock_get_storage, mock_ingest, mock_publish):
+    """On a non-Monday, graph runs ingest -> plan -> drafts -> publish (insights skipped)."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = ["d1"]
+    mock_ingest.return_value = MagicMock()
 
     # No registry in this test fixture: plan node writes empty plan and flow continues.
     fake_storage.read.return_value = None
-    # Patch datetime to a Wednesday
     wednesday = datetime(2025, 1, 8, 8, 0, 0, tzinfo=timezone.utc)  # Wednesday
     with patch("handler.datetime") as mock_dt:
         mock_dt.now.return_value = wednesday
@@ -484,24 +484,29 @@ def test_handle_daily_not_monday(mock_get_storage, mock_insights, mock_publish):
         result = handle({}, None)
 
     assert result["statusCode"] == 200
-    mock_insights.assert_called_once()
+    mock_ingest.assert_called_once()
     mock_publish.assert_called_once()
     body = json.loads(result["body"])
     assert body["drafts_created"] == 0
+    assert body["analytics"] is True
+    assert body["insights"] is False  # not Monday — insights skipped
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
 @patch("agent.nodes.insights.generate_insights")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
     mock_get_storage,
+    mock_ingest,
     mock_insights,
     mock_publish,
 ):
-    """On Monday, graph runs the same simplified flow insights -> plan -> drafts -> publish."""
+    """On Monday, graph runs ingest -> insights -> plan -> drafts -> publish."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = []
+    mock_ingest.return_value = MagicMock()
 
     analysis = LLMAnalysis(
         top_topics=["q"],
@@ -522,19 +527,24 @@ def test_handle_weekly_on_monday(
         result = handle({}, None)
 
     assert result["statusCode"] == 200
-    mock_publish.assert_called_once()
+    mock_ingest.assert_called_once()
     mock_insights.assert_called_once()
+    mock_publish.assert_called_once()
     body = json.loads(result["body"])
     assert body["drafts_created"] == 0
+    assert body["analytics"] is True
+    assert body["insights"] is True  # Monday — insights ran
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
-def test_handle_resilient_on_failure(mock_get_storage, mock_publish):
+def test_handle_resilient_on_failure(mock_get_storage, mock_ingest, mock_publish):
     """Handler continues if an upstream node fails internally."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = []
+    mock_ingest.return_value = MagicMock()
 
     wednesday = datetime(2025, 1, 8, 8, 0, 0, tzinfo=timezone.utc)
     with patch("handler.datetime") as mock_dt:

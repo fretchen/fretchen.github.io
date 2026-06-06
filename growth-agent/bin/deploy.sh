@@ -25,6 +25,7 @@ if [ -f "$PROJECT_DIR/.env" ]; then
   export TF_VAR_umami_api_key="$(_read_env UMAMI_API_KEY)"
   export TF_VAR_mastodon_access_token="$(_read_env MASTODON_ACCESS_TOKEN)"
   export TF_VAR_bluesky_app_password="$(_read_env BLUESKY_APP_PASSWORD)"
+  export TF_VAR_s3_state_prefix="$(_read_env S3_STATE_PREFIX_PROD)"
 fi
 TF_BOOTSTRAP_DIR="$PROJECT_DIR/terraform-bootstrap"
 TF_DIR="$PROJECT_DIR/terraform"

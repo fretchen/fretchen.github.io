@@ -34,7 +34,9 @@ def build_graph():
     builder.add_node("publish", publish_node)
 
     builder.add_edge(START, "ingest")
-    builder.add_conditional_edges("ingest", _route_after_ingest, {"insights": "insights", "plan": "plan"})
+    builder.add_conditional_edges(
+        "ingest", _route_after_ingest, {"insights": "insights", "plan": "plan"}
+    )
     builder.add_edge("insights", "plan")
     builder.add_edge("plan", "drafts")
     builder.add_edge("drafts", "publish")

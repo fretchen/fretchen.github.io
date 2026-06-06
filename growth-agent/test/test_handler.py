@@ -1001,7 +1001,7 @@ def test_publish_sets_published_at(MockMasto, mock_storage):
     masto_inst.post.return_value = None
     masto_inst.close.return_value = None
 
-    with patch("agent.nodes.publish.publish_draft"):
+    with patch("agent.nodes.publish.publish_draft", return_value={"id": "masto-1"}):
         publish_approved_drafts(storage)
 
     saved = ContentQueue.model_validate(store["content_queue.json"])
@@ -1055,6 +1055,42 @@ def test_former_posts_context_empty_when_no_history():
     """_former_posts_context returns empty string when no history exists."""
     queue = ContentQueue()
     assert _former_posts_context(queue, "https://fretchen.eu/blog/post", "mastodon") == ""
+
+
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.MastodonClient")
+def test_publish_stores_platform_id_mastodon(MockMasto, mock_publish, mock_storage):
+    """platform_id is populated from the Mastodon API response after publish."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(minutes=1)
+    draft = Draft(id="d-masto", channel="mastodon", language="en", content="Hello", scheduled_at=past)
+    storage.write("content_queue.json", ContentQueue(approved=[draft]))
+
+    mock_publish.return_value = {"id": "masto-status-42", "uri": "https://mastodon.social/@fretchen/42"}
+
+    publish_approved_drafts(storage)
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert saved.published[0].platform_id == "masto-status-42"
+
+
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.BlueskyClient")
+def test_publish_stores_platform_id_bluesky(MockBsky, mock_publish, mock_storage):
+    """platform_id is populated from the Bluesky AT URI after publish."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(minutes=1)
+    draft = Draft(id="d-bsky", channel="bluesky", language="en", content="Hello", scheduled_at=past)
+    storage.write("content_queue.json", ContentQueue(approved=[draft]))
+
+    mock_publish.return_value = {"uri": "at://did:plc:abc/app.bsky.feed.post/xyz", "cid": "cid123"}
+
+    publish_approved_drafts(storage)
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert saved.published[0].platform_id == "at://did:plc:abc/app.bsky.feed.post/xyz"
 
 
 def test_old_queue_deserializes_without_published_at():

@@ -2,10 +2,7 @@
 
 from unittest.mock import MagicMock, call, patch
 
-import pytest
-
 from run_local import _make_storage, diagnose, run_analytics, run_insights, run_publish, run_refill
-
 
 # ---------------------------------------------------------------------------
 # _make_storage — core routing logic

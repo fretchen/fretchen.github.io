@@ -22,6 +22,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 # Load .env for IONOS_API_TOKEN
 load_dotenv()
@@ -51,10 +52,10 @@ class IONOSEvalLLM(DeepEvalBaseLLM):
             raise ValueError("IONOS_API_TOKEN not found in environment")
         self._model = ChatOpenAI(
             base_url=IONOS_BASE_URL,
-            api_key=token,  # type: ignore[arg-type]
+            api_key=SecretStr(token),
             model=IONOS_MODEL,
             temperature=0.0,  # Deterministic for eval
-            max_tokens=1024,  # type: ignore[call-arg]
+            max_completion_tokens=1024,
         )
 
     def load_model(self) -> ChatOpenAI:
@@ -62,12 +63,12 @@ class IONOSEvalLLM(DeepEvalBaseLLM):
 
     def generate(self, prompt: str) -> str:
         chat_model = self.load_model()
-        return chat_model.invoke(prompt).content  # type: ignore[return-value]
+        return str(chat_model.invoke(prompt).content)
 
     async def a_generate(self, prompt: str) -> str:
         chat_model = self.load_model()
         res = await chat_model.ainvoke(prompt)
-        return res.content  # type: ignore[return-value]
+        return str(res.content)
 
     def get_model_name(self) -> str:
         return f"IONOS {IONOS_MODEL}"

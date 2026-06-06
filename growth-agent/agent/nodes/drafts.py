@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timezone
 from urllib.parse import urlparse, urlunparse
 
@@ -322,7 +321,7 @@ def create_drafts(storage, plan: ContentPlan) -> int:
     strategy = load_model(storage, "strategy.json", Strategy)
     queue = load_model(storage, "content_queue.json", ContentQueue)
 
-    llm = LLMClient(api_token=os.environ["IONOS_API_TOKEN"])
+    llm = LLMClient.from_env()
     new_drafts: list[Draft] = []
     draft_index = 0
 

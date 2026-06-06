@@ -189,6 +189,26 @@ class PlanningMemory(BaseModel):
     entries: list[PlanningMemoryEntry] = Field(default_factory=list)
 
 
+class PostMetrics(BaseModel):
+    """Engagement metrics for a single published post."""
+
+    id: str
+    channel: str
+    published_at: str
+    platform_id: str | None = None
+    reblogs: int = 0
+    favourites: int = 0
+    replies: int = 0
+    link_clicks: int | None = None          # future: Umami UTM correlation
+    website_referral_sessions: int = 0      # future: Umami UTM correlation
+
+
+class Performance(BaseModel):
+    """Aggregated engagement metrics for all published posts."""
+
+    posts: list[PostMetrics] = Field(default_factory=list)
+
+
 class DraftCritique(BaseModel):
     """Structured critique output for self-refine pattern."""
 

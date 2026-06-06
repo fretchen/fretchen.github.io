@@ -5,11 +5,12 @@ import { css } from "../../styled-system/css";
 import {
   useGrowthDrafts,
   useGrowthInsights,
+  useGrowthPerformance,
   useApproveDraft,
   useRejectDraft,
   useUpdateDraft,
 } from "../../hooks/useGrowthApi";
-import { CHANNEL_CHAR_LIMITS, type Draft, type Insights } from "../../types/growth";
+import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
@@ -312,6 +313,7 @@ function DraftCardView({
   draft,
   showActions,
   history,
+  metrics,
   onApprove,
   onReject,
   onUpdate,
@@ -320,6 +322,7 @@ function DraftCardView({
   draft: Draft;
   showActions: boolean;
   history: Draft[];
+  metrics?: PostMetrics;
   onApprove: (id: string, scheduledAt?: string, reviewComment?: string) => Promise<void>;
   onReject: (id: string, reviewComment?: string) => Promise<void>;
   onUpdate: (id: string, body: Partial<Draft>) => Promise<void>;
@@ -462,6 +465,11 @@ function DraftCardView({
               {draft.review_comment ? `\nComment: ${draft.review_comment}` : ""}
             </div>
           )}
+          {metrics && (
+            <div style={{ fontSize: "13px", color: "#666", margin: "6px 0" }}>
+              ❤️ {metrics.favourites} &nbsp; 🔁 {metrics.reblogs} &nbsp; 💬 {metrics.replies}
+            </div>
+          )}
           {showActions && (
             <>
               <textarea
@@ -566,6 +574,7 @@ export default function Page() {
 
   const { data: queue, isPending: loadingDrafts, error: draftsError } = useGrowthDrafts(isOwner);
   const { data: insights } = useGrowthInsights(isOwner);
+  const { data: performance } = useGrowthPerformance(isOwner);
 
   const approveMutation = useApproveDraft();
   const rejectMutation = useRejectDraft();
@@ -590,6 +599,14 @@ export default function Page() {
     }
     return map;
   }, [queue?.published]);
+
+  const metricsByDraftId = useMemo(() => {
+    const map: Record<string, PostMetrics> = {};
+    for (const m of performance?.posts ?? []) {
+      map[m.id] = m;
+    }
+    return map;
+  }, [performance?.posts]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
@@ -692,6 +709,7 @@ export default function Page() {
                 draft={draft}
                 showActions={showActions}
                 history={historyByPage[draft.source_blog_post ?? ""] ?? []}
+                metrics={metricsByDraftId[draft.id]}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onUpdate={handleUpdate}

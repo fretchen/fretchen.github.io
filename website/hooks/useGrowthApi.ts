@@ -58,6 +58,20 @@ export function useGrowthInsights(enabled: boolean) {
   });
 }
 
+export function useGrowthPerformance(enabled: boolean) {
+  const { address } = useAccount();
+  const getAuth = useGrowthAuth();
+
+  return useQuery<Performance>({
+    queryKey: ["growthPerformance", address],
+    queryFn: async () => {
+      const auth = await getAuth();
+      return apiFetch<Performance>("performance", auth);
+    },
+    enabled: enabled && !!address,
+  });
+}
+
 export function useUpdateDraft() {
   const { address } = useAccount();
   const getAuth = useGrowthAuth();

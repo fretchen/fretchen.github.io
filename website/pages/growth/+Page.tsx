@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useIsMounted } from "../../hooks/useIsMounted";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
-import { pageContainer, titleBar, tabs as tabStyles } from "../../layouts/styles";
+import { titleBar, tabs as tabStyles } from "../../layouts/styles";
 import { Tab } from "../../components/Tab";
 import {
   useGrowthDrafts,
@@ -19,14 +19,12 @@ type Tab = "drafts" | "approved" | "published" | "rejected";
 
 // ===== Styles =====
 
-
 const infoBox = css({
   padding: "lg",
   textAlign: "center",
   color: "gray.600",
   fontSize: "md",
 });
-
 
 const draftCard = css({
   border: "1px solid",
@@ -578,20 +576,27 @@ export default function Page() {
       trafficByPath.set(p.x as string, p.y as number);
     }
 
-    const map = new Map<string, {
-      url: string;
-      drafts: Draft[];
-      totalEngagement: { favourites: number; reblogs: number; replies: number };
-      lastPublished: string | null;
-      channels: Set<string>;
-      pageviews: number | null;
-    }>();
+    const map = new Map<
+      string,
+      {
+        url: string;
+        drafts: Draft[];
+        totalEngagement: { favourites: number; reblogs: number; replies: number };
+        lastPublished: string | null;
+        channels: Set<string>;
+        pageviews: number | null;
+      }
+    >();
 
     for (const draft of queue?.published ?? []) {
       const url = draft.link ?? draft.source_blog_post ?? "(no link)";
       if (!map.has(url)) {
         let path: string | null = null;
-        try { path = new URL(url).pathname; } catch { /* invalid url */ }
+        try {
+          path = new URL(url).pathname;
+        } catch {
+          /* invalid url */
+        }
         map.set(url, {
           url,
           drafts: [],
@@ -615,9 +620,7 @@ export default function Page() {
       }
     }
 
-    return [...map.values()].sort((a, b) =>
-      (b.lastPublished ?? "").localeCompare(a.lastPublished ?? "")
-    );
+    return [...map.values()].sort((a, b) => (b.lastPublished ?? "").localeCompare(a.lastPublished ?? ""));
   }, [queue?.published, insights?.website_analytics?.top_pages, metricsByDraftId]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
@@ -721,34 +724,65 @@ export default function Page() {
                 const eng = group.totalEngagement;
                 const hasEngagement = eng.favourites + eng.reblogs + eng.replies > 0;
                 let displayUrl = group.url;
-                try { displayUrl = new URL(group.url).pathname; } catch { /* keep full url */ }
+                try {
+                  displayUrl = new URL(group.url).pathname;
+                } catch {
+                  /* keep full url */
+                }
                 return (
                   <details key={group.url} className={pageGroupRow}>
-                    <summary style={{ cursor: "pointer", padding: "10px 12px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <summary
+                      style={{
+                        cursor: "pointer",
+                        padding: "10px 12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <a
                         href={group.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: "#2563eb", textDecoration: "underline", fontSize: "14px", fontWeight: 500, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        style={{
+                          color: "#2563eb",
+                          textDecoration: "underline",
+                          fontSize: "14px",
+                          fontWeight: 500,
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {displayUrl}
                       </a>
-                      <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>{group.drafts.length}×</span>
+                      <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>
+                        {group.drafts.length}×
+                      </span>
                       {group.lastPublished && (
                         <span style={{ fontSize: "12px", color: "#777", whiteSpace: "nowrap" }}>
                           {new Date(group.lastPublished).toLocaleDateString()}
                         </span>
                       )}
                       <span style={{ whiteSpace: "nowrap" }}>
-                        {[...group.channels].map((ch) => ch === "mastodon" ? "🐘" : "🦋").join(" ")}
+                        {[...group.channels].map((ch) => (ch === "mastodon" ? "🐘" : "🦋")).join(" ")}
                       </span>
                       {hasEngagement && (
                         <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>
                           ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
                         </span>
                       )}
-                      <span style={{ fontSize: "12px", color: group.pageviews !== null ? "#555" : "#aaa", whiteSpace: "nowrap" }}>
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: group.pageviews !== null ? "#555" : "#aaa",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {group.pageviews !== null ? `${group.pageviews} views (28d)` : "—"}
                       </span>
                     </summary>
@@ -788,7 +822,6 @@ export default function Page() {
               />
             ))
           )}
-
         </>
       )}
     </div>

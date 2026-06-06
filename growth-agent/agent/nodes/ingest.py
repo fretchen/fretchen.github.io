@@ -5,7 +5,14 @@ from __future__ import annotations
 import logging
 import os
 
-from agent.models import ContentQueue, Insights, Performance, PostMetrics, SocialMetrics, WebsiteAnalytics
+from agent.models import (
+    ContentQueue,
+    Insights,
+    Performance,
+    PostMetrics,
+    SocialMetrics,
+    WebsiteAnalytics,
+)
 from agent.platforms.bluesky import BlueskyClient
 from agent.platforms.mastodon import MastodonClient
 from agent.state import AgentState
@@ -120,7 +127,9 @@ def _collect_post_metrics(storage) -> None:
                             performance_posts.append(PostMetrics(
                                 id=draft.id,
                                 channel="mastodon",
-                                published_at=draft.published_at.isoformat() if draft.published_at else "",
+                                published_at=(
+                                    draft.published_at.isoformat() if draft.published_at else ""
+                                ),
                                 platform_id=draft.platform_id,
                                 reblogs=status.get("reblogs_count", 0),
                                 favourites=status.get("favourites_count", 0),
@@ -147,7 +156,9 @@ def _collect_post_metrics(storage) -> None:
                             performance_posts.append(PostMetrics(
                                 id=draft.id,
                                 channel="bluesky",
-                                published_at=draft.published_at.isoformat() if draft.published_at else "",
+                                published_at=(
+                                    draft.published_at.isoformat() if draft.published_at else ""
+                                ),
                                 platform_id=draft.platform_id,
                                 reblogs=post.get("repostCount", 0),
                                 favourites=post.get("likeCount", 0),

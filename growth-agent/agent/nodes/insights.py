@@ -22,14 +22,14 @@ def insights_node(state: AgentState) -> dict:
     """LangGraph node: generate LLM insights, update state."""
     try:
         analysis = generate_insights(state["storage"])
-        return {"insights_ok": analysis is not None}
+        return {"insights_ok": True}
     except Exception:
         logger.exception("Insight generation failed")
         return {"insights_ok": False}
 
 
-def generate_insights(storage) -> LLMAnalysis | None:
-    """Run LLM insight generation on current analytics data."""
+def generate_insights(storage) -> LLMAnalysis:
+    """Run LLM insight generation on current analytics data. Raises on failure."""
     insights = load_model(storage, "insights.json", Insights)
     strategy = load_model(storage, "strategy.json", Strategy)
 
@@ -106,17 +106,13 @@ candidates when the data allows it.
             ],
         )
         assert isinstance(result, LLMAnalysis)
-        analysis = result
 
-        insights.growth_opportunities = analysis.growth_opportunities
+        insights.growth_opportunities = result.growth_opportunities
         insights.last_analysis = datetime.now(timezone.utc)
         storage.write("insights.json", insights)
-        storage.write("llm_analysis.json", analysis)
+        storage.write("llm_analysis.json", result)
         logger.info("LLM insights generated and persisted")
-        return analysis
+        return result
 
-    except Exception:
-        logger.exception("Insight generation failed")
-        return None
     finally:
         llm.close()

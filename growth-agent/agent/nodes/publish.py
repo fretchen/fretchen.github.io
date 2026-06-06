@@ -67,7 +67,7 @@ def publish_approved_drafts(storage) -> list[str]:
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
                 response = publish_draft(draft, mastodon_client)
-                draft.platform_id = response.get("id")
+                draft.platform_id = (response or {}).get("id")
             elif draft.channel == "bluesky":
                 if bluesky_client is None:
                     bluesky_client = BlueskyClient(
@@ -75,7 +75,7 @@ def publish_approved_drafts(storage) -> list[str]:
                         app_password=os.environ["BLUESKY_APP_PASSWORD"],
                     )
                 response = publish_draft(draft, bluesky_client)
-                draft.platform_id = response.get("uri")
+                draft.platform_id = (response or {}).get("uri")
             else:
                 logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
                 still_approved.append(draft)

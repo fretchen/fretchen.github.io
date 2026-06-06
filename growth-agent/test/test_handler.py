@@ -1093,6 +1093,24 @@ def test_publish_stores_platform_id_bluesky(MockBsky, mock_publish, mock_storage
     assert saved.published[0].platform_id == "at://did:plc:abc/app.bsky.feed.post/xyz"
 
 
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.MastodonClient")
+def test_publish_platform_id_none_when_publisher_returns_none(MockMasto, mock_publish, mock_storage):
+    """publish_draft() returning None does not raise — platform_id stays None."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(minutes=1)
+    draft = Draft(id="d-none", channel="mastodon", language="en", content="Hello", scheduled_at=past)
+    storage.write("content_queue.json", ContentQueue(approved=[draft]))
+
+    mock_publish.return_value = None  # simulate edge-case silent failure
+
+    publish_approved_drafts(storage)  # must not raise
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert saved.published[0].platform_id is None
+
+
 def test_old_queue_deserializes_without_published_at():
     """Queues persisted before Phase 2f (no published_at field) load without error."""
     raw = {

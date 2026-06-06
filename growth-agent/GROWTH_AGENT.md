@@ -1204,6 +1204,77 @@ Before implementation starts, confirm:
 Ideas for improving the OODA loop once it's stable in production.
 **Not required for the loop to function.**
 
+### Active Roadmap (June 2026)
+
+Prioritized next steps after Phase 2 stabilization:
+
+| Prio | Item | Status | Effort |
+|------|------|--------|--------|
+| 1 | Blog post about growth agent status | [ ] | ~2h |
+| 2 | Migrate LLM to Mistral AI (api.mistral.ai) | [ ] | ~1h |
+| 3 | Engagement metrics in Growth Page UI | [ ] | ~4h |
+| 4 | Better posts for quantum/AMO articles | [ ] | ~3h |
+| 5 | Engagement with other accounts (like/boost, replies, follows) | [ ] | ~2–3d |
+
+#### 1. Blog Post: Growth Agent Status
+
+Document what the agent does, how it performs, lessons learned. Drafted using
+`/blog-planner` skill. Target slug: `website/blog/growth-agent-status-2026.mdx`.
+
+#### 2. LLM Migration: IONOS → Mistral AI
+
+- `agent/llm_client.py`: change `base_url` to `https://api.mistral.ai/v1`, model to `mistral-large-latest`
+- Env var: `MISTRAL_API_KEY` (replace `IONOS_API_TOKEN` in Scaleway Console + Terraform)
+- Structured output (`response_format: json_schema`) is supported by Mistral — no code changes beyond the client config
+- Update `test/test_handler.py` mock env key
+
+#### 3. Engagement Metrics in Growth Page
+
+Re-enables the already-defined `performance.json` / `PostMetrics` schema:
+
+- New node `collect_metrics_node` in `agent/nodes/metrics.py`:
+  fetches per-post stats from Mastodon `GET /api/v1/statuses/:id` and
+  Bluesky `app.bsky.feed.getPostThread` for each draft with a `platform_id`
+- Wire into `agent/graph.py` (runs after `publish_node`)
+- `GET /performance` endpoint in `scw_js/growth_api.ts` already exists
+- Frontend: activate `useGrowthPerformance()` hook in `website/hooks/useGrowthApi.ts`,
+  show ❤️ / 🔁 / 💬 counts on Published-tab cards in `website/pages/growth/+Page.tsx`
+
+#### 4. Better Posts for Quantum/AMO Articles
+
+Problem: posts are too generic/clichéd, lack specific experimental findings.
+Root cause: `page_meta.py` only fetches `<title>` + `<meta description>` — insufficient context.
+
+- `agent/page_meta.py`: also extract first ~500 chars of article body (first `<p>` after hero)
+  as `article_excerpt`; pass to draft prompts
+- `agent/nodes/drafts.py`: add `{article_excerpt}` to `_mastodon_prompt` / `_bluesky_prompt`,
+  explicit instruction to avoid generic buzzwords and reference the specific finding/experiment
+- `_critique_prompt`: add **scientific specificity** criterion
+
+#### 5. Engagement with Other Accounts
+
+Three sub-features, implement in order:
+
+**5a. Like/Boost relevant posts**
+- `agent/platforms/mastodon.py`: add `search_posts(hashtags)`, `favourite_status(id)`, `reblog_status(id)`
+- `agent/platforms/bluesky.py`: add `search_posts(query)`, `like_post(uri, cid)`, `repost(uri, cid)`
+- New `agent/nodes/engage.py`: daily search for configured hashtags (`#coldatoms`, `#blockchain`,
+  `#quantumphysics`), like/boost top 3–5 posts; config in `agent/config.py`
+
+**5b. Follow relevant accounts**
+- `mastodon.py`: `follow_account(id)`, `search_accounts(query)`
+- `bluesky.py`: `follow_actor(did)`
+- Max 2 follows/day; track followed IDs in `engagement_log.json` on S3 to prevent re-follows
+
+**5c. Reply to mentions (with Approval Flow)**
+- `mastodon.py`: `get_notifications(types=["mention"])`, `reply_to_status(id, content)`
+- `bluesky.py`: `get_notifications()` for mentions/replies
+- Reply drafts → `content_queue.json` with type `reply`, status `pending_approval`
+- Growth UI: new "Replies" tab (same approve/reject/edit flow as Drafts)
+- `scw_js/growth_api.ts`: include reply drafts in `/drafts` response
+
+State addition: `EngagementLog` model in `agent/models.py` (liked/boosted/followed IDs per day)
+
 ### Topic Diversity
 
 Current planning can collapse onto a narrow topic set when `best_pages_for_social`
@@ -1358,7 +1429,8 @@ Currently the loop uses Umami traffic + follower counts — engagement metrics
 Currently set via Scaleway Console (Functions). After Phase 1f, managed by OpenTofu.
 
 ```
-IONOS_API_TOKEN          # Existing — IONOS AI Model Hub
+IONOS_API_TOKEN          # Existing — IONOS AI Model Hub (Phase 3: replace with MISTRAL_API_KEY)
+MISTRAL_API_KEY          # Phase 3 — Mistral AI (api.mistral.ai), replaces IONOS_API_TOKEN
 UMAMI_API_TOKEN          # ✅ Generated — cloud.umami.is API key
 SCW_ACCESS_KEY           # Existing — S3 access
 SCW_SECRET_KEY           # Existing — S3 access
@@ -1450,6 +1522,11 @@ PR Boundary Map:
   Phase 1f PR: growth-agent/ (container migration) ✅ COMPLETE
   Phase 2a PR: growth-agent/ (KISS cleanup + LangGraph migration) ✅ COMPLETE
   Phase 2b PR: growth-agent/ (OODA reorder + Strategy/Plan nodes) ✅ COMPLETE
+  Phase 3a PR: website/blog/ (growth agent status blog post)
+  Phase 3b PR: growth-agent/ (Mistral migration)
+  Phase 3c PR: growth-agent/ + scw_js/ + website/ (engagement metrics in UI)
+  Phase 3d PR: growth-agent/ (better quantum post prompts)
+  Phase 3e PR: growth-agent/ + scw_js/ + website/ (account engagement)
 ```
 
 ---

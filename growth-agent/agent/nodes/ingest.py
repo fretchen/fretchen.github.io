@@ -131,7 +131,7 @@ def _collect_post_metrics(storage) -> None:
             except Exception:
                 logger.exception("Mastodon per-post metrics failed")
 
-        # Bluesky: one feed fetch, then match by URI
+        # Bluesky: direct URI lookup via getPosts (no feed pollution, no 100-item cap)
         bluesky_published = [d for d in published if d.channel == "bluesky" and d.platform_id]
         if bluesky_published:
             try:
@@ -139,10 +139,10 @@ def _collect_post_metrics(storage) -> None:
                     handle=os.environ.get("BLUESKY_HANDLE", "fretchen.eu"),
                     app_password=os.environ["BLUESKY_APP_PASSWORD"],
                 ) as bsky:
-                    feed = bsky.get_author_feed(limit=100)
-                    feed_by_uri = {item["post"]["uri"]: item["post"] for item in feed}
+                    uris = [d.platform_id for d in bluesky_published]
+                    posts_by_uri = {p["uri"]: p for p in bsky.get_posts(uris)}  # type: ignore[arg-type]
                     for draft in bluesky_published:
-                        post = feed_by_uri.get(draft.platform_id or "")
+                        post = posts_by_uri.get(draft.platform_id or "")
                         if post:
                             performance_posts.append(PostMetrics(
                                 id=draft.id,

@@ -84,6 +84,19 @@ class BlueskyClient:
         resp.raise_for_status()
         return resp.json().get("feed", [])
 
+    def get_posts(self, uris: list[str]) -> list[dict]:
+        """Fetch posts by AT URI in batches of 25, returning post objects with engagement counts."""
+        posts = []
+        for i in range(0, len(uris), 25):
+            batch = uris[i : i + 25]
+            resp = self.client.get(
+                f"{self.BASE_URL}/app.bsky.feed.getPosts",
+                params=[("uris", u) for u in batch],
+            )
+            resp.raise_for_status()
+            posts.extend(resp.json().get("posts", []))
+        return posts
+
     @staticmethod
     def _detect_link_facet(text: str, link: str) -> list[dict]:
         """Create a link facet if the link appears in the text."""

@@ -15,6 +15,7 @@ from agent.models import (
     Insights,
     LLMAnalysis,
     PageForSocial,
+    Performance,
     WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
@@ -23,7 +24,7 @@ from agent.nodes.drafts import (
     _normalize_url,
     create_drafts,
 )
-from agent.nodes.ingest import ingest_analytics
+from agent.nodes.ingest import _collect_post_metrics, ingest_analytics
 from agent.nodes.insights import generate_insights
 from agent.nodes.plan import (
     PIPELINE_TARGET,
@@ -156,6 +157,114 @@ def test_ingest_analytics_old_umami_format(MockUmami, MockMasto, MockBsky, mock_
     result = ingest_analytics(storage)
     assert result.website_analytics.pageviews == 500
     assert result.website_analytics.visitors == 120
+
+
+# ---------------------------------------------------------------------------
+# _collect_post_metrics
+# ---------------------------------------------------------------------------
+
+
+@patch("agent.nodes.ingest.MastodonClient")
+def test_collect_post_metrics_mastodon(MockMasto, mock_storage):
+    storage, store = mock_storage
+    queue = ContentQueue(
+        published=[
+            Draft(
+                id="d1",
+                channel="mastodon",
+                language="en",
+                content="x",
+                platform_id="111",
+                published_at=datetime.now(timezone.utc),
+            )
+        ]
+    )
+    storage.write("content_queue.json", queue)
+
+    masto_ctx = MagicMock()
+    masto_ctx.get_status.return_value = {"reblogs_count": 3, "favourites_count": 7, "replies_count": 1}
+    MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
+    MockMasto.return_value.__exit__ = MagicMock(return_value=False)
+
+    _collect_post_metrics(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert len(perf.posts) == 1
+    assert perf.posts[0].reblogs == 3
+    assert perf.posts[0].favourites == 7
+    assert perf.posts[0].replies == 1
+
+
+@patch("agent.nodes.ingest.BlueskyClient")
+def test_collect_post_metrics_bluesky(MockBsky, mock_storage):
+    storage, store = mock_storage
+    uri = "at://did:plc:abc/app.bsky.feed.post/123"
+    queue = ContentQueue(
+        published=[
+            Draft(
+                id="d2",
+                channel="bluesky",
+                language="en",
+                content="x",
+                platform_id=uri,
+                published_at=datetime.now(timezone.utc),
+            )
+        ]
+    )
+    storage.write("content_queue.json", queue)
+
+    bsky_ctx = MagicMock()
+    bsky_ctx.get_posts.return_value = [
+        {"uri": uri, "repostCount": 2, "likeCount": 5, "replyCount": 0},
+    ]
+    MockBsky.return_value.__enter__ = MagicMock(return_value=bsky_ctx)
+    MockBsky.return_value.__exit__ = MagicMock(return_value=False)
+
+    _collect_post_metrics(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert len(perf.posts) == 1
+    assert perf.posts[0].favourites == 5
+    assert perf.posts[0].reblogs == 2
+    assert perf.posts[0].replies == 0
+
+
+def test_collect_post_metrics_no_published(mock_storage):
+    storage, store = mock_storage
+    storage.write("content_queue.json", ContentQueue())
+
+    _collect_post_metrics(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert perf.posts == []
+
+
+@patch("agent.nodes.ingest.MastodonClient")
+def test_collect_post_metrics_mastodon_api_failure(MockMasto, mock_storage):
+    storage, store = mock_storage
+    queue = ContentQueue(
+        published=[
+            Draft(
+                id="d3",
+                channel="mastodon",
+                language="en",
+                content="x",
+                platform_id="999",
+                published_at=datetime.now(timezone.utc),
+            )
+        ]
+    )
+    storage.write("content_queue.json", queue)
+
+    masto_ctx = MagicMock()
+    masto_ctx.get_status.side_effect = Exception("API error")
+    MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
+    MockMasto.return_value.__exit__ = MagicMock(return_value=False)
+
+    _collect_post_metrics(storage)  # must not raise
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert perf.posts == []
 
 
 # ---------------------------------------------------------------------------

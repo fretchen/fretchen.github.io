@@ -6,23 +6,28 @@ secondaryCategory: "webdev"
 description: "How I built a LangGraph-based social media assistant that generates, queues, and publishes posts to Mastodon and Bluesky — with human approval and a monthly cost of under 20 cents."
 ---
 
-After spending months improving the discoverability of this site — SEO, Schema.org markup, Webmentions — I realized the next gap was simpler to name and harder to fix: I barely posted on social media. The blog had content, the infrastructure was in place, but actually turning articles into social posts required enough friction to just... not happen consistently.
+Over the lifetime of the blog, I tried to improve the discoverability of this site:
 
-I wanted something that would draft posts for me, let me review them, and hit publish — without a subscription, without an autonomous agent making questionable posts while I sleep, and without a complicated setup.
+ - I first started with classical [search engine optimization](blog/19/) and integration of [webmentions](https://indieweb.org/Webmention).
+ - most recently I enabled a simpler commenting system for which the blog post is still missing.
+ 
+However, it is really clear that I avoided the integration with the social networks. I am just not into the daily posts on those networks and hence I get absolutly no traffic from over there. 
+Therefore, I came up with a little AI assistent that proposes me ten drafts, I once I accept and edit them, he neatly publishes them once a week. As a result I now have more consistent posts, little AI slop
+because I always edit the posts and actually a good variety of summaries on the different content on the page. All of this without a subscription, without an autonomous agent making questionable posts while I sleep, and without a complicated setup.
 
-The result: a Python agent running on Scaleway for about 20 cents a month.
+The result: a little Python agent running on Scaleway for about 20 cents a month.
 
 ## The Architecture
 
-The agent is a [LangGraph](https://langchain-ai.github.io/langgraph/) pipeline with nodes that run sequentially every morning at 08:00 UTC:
+The agent is a [LangGraph](https://langchain-ai.github.io/langgraph/) pipeline with three nodes that run sequentially every morning at 08:00 UTC:
 
-1. **Ingest** — Fetches the last 7 days of website analytics from Umami plus basic follower counts from Mastodon and Bluesky
-2. **Insights** — Runs an LLM pass over the analytics to identify which blog articles are worth promoting
-3. **Plan** — Selects articles and schedules draft slots across channels
-4. **Drafts** — Generates platform-specific post text (Mastodon: up to 500 characters with hashtags; Bluesky: up to 300 characters, no hashtags), then self-critiques and refines each draft once
-5. **Publish** — Posts any approved drafts whose scheduled time has passed
+1. **Plan** — Selects which blog articles to promote and schedules draft slots across channels
+2. **Drafts** — Generates platform-specific post text (Mastodon: up to 500 characters with hashtags; Bluesky: up to 300 characters, no hashtags), then self-critiques and refines each draft once
+3. **Publish** — Posts any approved drafts whose scheduled time has passed
 
-All state lives in a handful of JSON files in S3. There's no database, no message queue, no always-on server. The container spins up, does its work in about two minutes, and shuts down.
+The candidate pool of articles comes from Umami analytics — which pages have had recent traffic, which topics are underrepresented in recent posts — but this data is refreshed periodically by hand, not on every run. I pull it when I want to recalibrate what the agent focuses on.
+
+All state lives in a handful of JSON files in S3. There's no database, no message queue, no always-on server. The container spins up, does its work in about two minutes, and shuts down. Why a container and not a serverless function — more on that below.
 
 The full source is in the `growth-agent/` folder of my [GitHub repository](https://github.com/fretchen/fretchen.github.io).
 
@@ -59,6 +64,16 @@ The approval step isn't a workaround for an agent that isn't ready to post on it
 There's an important difference between "the agent posts for me" and "the agent drafts for me." The first requires trusting the agent's judgment on tone, timing, and context. The second just requires trusting that it can produce a reasonable starting point faster than I can write from scratch. The second threshold is much easier to meet with current LLM quality, and it's the one I actually care about.
 
 Running it this way also makes mistakes cheap: if the agent drafts something off-tone or factually vague, I reject it. Nothing goes out without a human read.
+
+### Python agents don't fit serverless — use a container
+
+My other backend services run as Scaleway serverless functions: the image generation API, the growth draft API, the payment facilitator. All TypeScript, all stateless, all fast to start. Naturally I started building the growth agent the same way.
+
+It didn't work. The problem isn't Python itself — it's that a Python AI agent has a large dependency tree: LangGraph, Pydantic, httpx, boto3, a model client. Packaging all of that into a serverless function zip means cold starts that take tens of seconds, package size limits you quickly run into, and a runtime environment that's harder to control. For a TypeScript Lambda importing three packages, serverless is genuinely simple. For a Python LLM agent, it fights you.
+
+The fix was to switch to a container. The agent now runs as a Docker image deployed on Scaleway Container, managed with [OpenTofu](https://opentofu.org/) (the open-source Terraform fork). The infrastructure lives in `growth-agent/terraform/` and defines the container registry, deployment, cron trigger, and environment variable references — all as code. The tradeoff is a bit more setup upfront, but a fully reproducible deployment and no fight with packaging constraints.
+
+If you're building a Python AI agent for periodic tasks: skip serverless functions from the start and go straight to a container with a cron trigger. The runtime predictability is worth it.
 
 ### It costs almost nothing
 

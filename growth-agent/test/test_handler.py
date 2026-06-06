@@ -1064,7 +1064,9 @@ def test_publish_stores_platform_id_mastodon(MockMasto, mock_publish, mock_stora
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(minutes=1)
-    draft = Draft(id="d-masto", channel="mastodon", language="en", content="Hello", scheduled_at=past)
+    draft = Draft(
+        id="d-masto", channel="mastodon", language="en", content="Hello", scheduled_at=past
+    )
     storage.write("content_queue.json", ContentQueue(approved=[draft]))
 
     mock_publish.return_value = {"id": "masto-status-42", "uri": "https://mastodon.social/@fretchen/42"}
@@ -1095,12 +1097,16 @@ def test_publish_stores_platform_id_bluesky(MockBsky, mock_publish, mock_storage
 
 @patch("agent.nodes.publish.publish_draft")
 @patch("agent.nodes.publish.MastodonClient")
-def test_publish_platform_id_none_when_publisher_returns_none(MockMasto, mock_publish, mock_storage):
+def test_publish_platform_id_none_when_publisher_returns_none(
+    MockMasto, mock_publish, mock_storage
+):
     """publish_draft() returning None does not raise — platform_id stays None."""
     storage, store = mock_storage
 
     past = datetime.now(timezone.utc) - timedelta(minutes=1)
-    draft = Draft(id="d-none", channel="mastodon", language="en", content="Hello", scheduled_at=past)
+    draft = Draft(
+        id="d-none", channel="mastodon", language="en", content="Hello", scheduled_at=past
+    )
     storage.write("content_queue.json", ContentQueue(approved=[draft]))
 
     mock_publish.return_value = None  # simulate edge-case silent failure

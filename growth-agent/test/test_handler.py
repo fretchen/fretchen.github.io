@@ -304,7 +304,7 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
         growth_opportunities=["Post more quantum content"],
     )
 
-    llm_inst = MockLLM.return_value
+    llm_inst = MockLLM.from_env.return_value
     llm_inst.structured_output.return_value = analysis
     llm_inst.close.return_value = None
 
@@ -351,7 +351,7 @@ def test_create_drafts(MockLLM, mock_storage):
         ]
     )
 
-    llm_inst = MockLLM.return_value
+    llm_inst = MockLLM.from_env.return_value
     llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
     llm_inst.structured_output.side_effect = [
         MastodonDraftOutput(
@@ -425,7 +425,7 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
         ]
     )
 
-    llm_inst = MockLLM.return_value
+    llm_inst = MockLLM.from_env.return_value
     llm_inst.structured_output.side_effect = [
         MastodonDraftOutput(
             content=(

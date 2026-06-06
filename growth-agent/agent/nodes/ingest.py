@@ -37,7 +37,7 @@ def ingest_analytics(storage) -> Insights:
         website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
     )
     try:
-        start_at = ms_timestamp(days_ago=7)
+        start_at = ms_timestamp(days_ago=28)
         end_at = ms_timestamp(days_ago=0)
 
         stats = umami.get_stats(start_at, end_at)

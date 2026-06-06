@@ -307,6 +307,15 @@ const reviewMeta = css({
   whiteSpace: "pre-wrap",
 });
 
+const pageGroupRow = css({
+  border: "1px solid",
+  borderColor: "gray.200",
+  borderRadius: "md",
+  mb: "sm",
+  backgroundColor: "white",
+  overflow: "hidden",
+});
+
 // ===== Sub-components =====
 
 function DraftCardView({
@@ -608,6 +617,54 @@ export default function Page() {
     return map;
   }, [performance?.posts]);
 
+  const pageGroups = useMemo(() => {
+    const trafficByPath = new Map<string, number>();
+    for (const p of insights?.website_analytics?.top_pages ?? []) {
+      trafficByPath.set(p.x as string, p.y as number);
+    }
+
+    const map = new Map<string, {
+      url: string;
+      drafts: Draft[];
+      totalEngagement: { favourites: number; reblogs: number; replies: number };
+      lastPublished: string | null;
+      channels: Set<string>;
+      pageviews: number | null;
+    }>();
+
+    for (const draft of queue?.published ?? []) {
+      const url = draft.link ?? draft.source_blog_post ?? "(no link)";
+      if (!map.has(url)) {
+        let path: string | null = null;
+        try { path = new URL(url).pathname; } catch { /* invalid url */ }
+        map.set(url, {
+          url,
+          drafts: [],
+          totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
+          lastPublished: null,
+          channels: new Set(),
+          pageviews: path !== null ? (trafficByPath.get(path) ?? null) : null,
+        });
+      }
+      const group = map.get(url)!;
+      group.drafts.push(draft);
+      group.channels.add(draft.channel);
+      const m = metricsByDraftId[draft.id];
+      if (m) {
+        group.totalEngagement.favourites += m.favourites;
+        group.totalEngagement.reblogs += m.reblogs;
+        group.totalEngagement.replies += m.replies;
+      }
+      if (draft.published_at && (!group.lastPublished || draft.published_at > group.lastPublished)) {
+        group.lastPublished = draft.published_at;
+      }
+    }
+
+    return [...map.values()].sort((a, b) =>
+      (b.lastPublished ?? "").localeCompare(a.lastPublished ?? "")
+    );
+  }, [queue?.published, insights?.website_analytics?.top_pages, metricsByDraftId]);
+
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
   };
@@ -700,7 +757,65 @@ export default function Page() {
             ))}
           </div>
 
-          {currentDrafts.length === 0 ? (
+          {tab === "published" ? (
+            pageGroups.length === 0 ? (
+              <p className={infoBox}>No published posts.</p>
+            ) : (
+              pageGroups.map((group) => {
+                const eng = group.totalEngagement;
+                const hasEngagement = eng.favourites + eng.reblogs + eng.replies > 0;
+                let displayUrl = group.url;
+                try { displayUrl = new URL(group.url).pathname; } catch { /* keep full url */ }
+                return (
+                  <details key={group.url} className={pageGroupRow}>
+                    <summary style={{ cursor: "pointer", padding: "10px 12px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <a
+                        href={group.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#2563eb", textDecoration: "underline", fontSize: "14px", fontWeight: 500, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {displayUrl}
+                      </a>
+                      <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>{group.drafts.length}×</span>
+                      {group.lastPublished && (
+                        <span style={{ fontSize: "12px", color: "#777", whiteSpace: "nowrap" }}>
+                          {new Date(group.lastPublished).toLocaleDateString()}
+                        </span>
+                      )}
+                      <span style={{ whiteSpace: "nowrap" }}>
+                        {[...group.channels].map((ch) => ch === "mastodon" ? "🐘" : "🦋").join(" ")}
+                      </span>
+                      {hasEngagement && (
+                        <span style={{ fontSize: "12px", color: "#555", whiteSpace: "nowrap" }}>
+                          ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
+                        </span>
+                      )}
+                      <span style={{ fontSize: "12px", color: group.pageviews !== null ? "#555" : "#aaa", whiteSpace: "nowrap" }}>
+                        {group.pageviews !== null ? `${group.pageviews} views (28d)` : "—"}
+                      </span>
+                    </summary>
+                    <div style={{ borderTop: "1px solid #e5e7eb", padding: "8px 12px" }}>
+                      {group.drafts.map((draft) => (
+                        <DraftCardView
+                          key={draft.id}
+                          draft={draft}
+                          showActions={false}
+                          history={[]}
+                          metrics={metricsByDraftId[draft.id]}
+                          onApprove={handleApprove}
+                          onReject={handleReject}
+                          onUpdate={handleUpdate}
+                          busy={busy}
+                        />
+                      ))}
+                    </div>
+                  </details>
+                );
+              })
+            )
+          ) : currentDrafts.length === 0 ? (
             <p className={infoBox}>No {tab} drafts.</p>
           ) : (
             currentDrafts.map((draft) => (

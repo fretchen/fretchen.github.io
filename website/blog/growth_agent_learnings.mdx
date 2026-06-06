@@ -58,7 +58,7 @@ The fix was to stop trying to be strategic at all. The random draw described in 
 
 The approval step isn't a workaround for an assistant that isn't ready to post on its own. It's the intended behavior.
 
-There's an important difference between "the assistant posts for me" and "the assistant drafts for me." The first would have required the assistant's judgment on tone, timing, and context. The second just requires trusting that it can produce a reasonable starting point 
+There's an important difference between "the assistant posts for me" and "the assistant drafts for me." The first would have required the assistant's judgment on tone, timing, and context. The second just requires trusting that it can produce a reasonable starting point
 faster than I can write from scratch. The second threshold is much easier to meet with current LLM quality, and it's the one I actually care about.
 
 Running it this way also makes mistakes cheap: if the assistant drafts something off-tone or factually vague, I reject it. Nothing goes out without a human read.
@@ -67,7 +67,7 @@ Running it this way also makes mistakes cheap: if the assistant drafts something
 
 My other backend services run as Scaleway serverless functions: the image generation API, the growth draft API, the payment facilitator. All TypeScript, all stateless, all fast to start. Naturally I started building the growth assistant the same way.
 
-It didn't work. The problem isn't Python itself — it's that a Python AI assistant has a large dependency tree: LangGraph, Pydantic, httpx, boto3, a model client. Packaging all of that into a serverless function zip just did not compile. 
+It didn't work. The problem isn't Python itself — it's that a Python AI assistant has a large dependency tree: LangGraph, Pydantic, httpx, boto3, a model client. Packaging all of that into a serverless function zip just did not compile.
 The fix was to switch to a container. The assistant now runs as a Docker image deployed on Scaleway Container, managed with [OpenTofu](https://opentofu.org/) (the open-source Terraform fork). The infrastructure lives in `growth-agent/terraform/` and defines the container registry, deployment, cron trigger, and environment variable references — all as code. The tradeoff is a bit more setup upfront, but a fully reproducible deployment and no fight with packaging constraints.
 
 If you're building a Python AI assistant for periodic tasks: skip serverless functions from the start and go straight to a container with a cron trigger. The runtime predictability is worth it.
@@ -96,7 +96,7 @@ This is fine. The goal was a consistent social presence with minimal effort, not
 
 The current iteration is a working foundation. Next priorities:
 
-- **Better post quality for quantum/AMO articles** — the assistant tends to write generic posts about "quantum physics" when the actual articles describe specific cold-atom experiments. 
+- **Better post quality for quantum/AMO articles** — the assistant tends to write generic posts about "quantum physics" when the actual articles describe specific cold-atom experiments.
 - **Engagement metrics in the approval UI** — likes, boosts, and replies are returned by the platform APIs but not currently surfaced in the review interface.
 - **Migrating to Mistral** — a straightforward model swap to test quality and cost.
 - **Engagement with other accounts** — automatically liking relevant posts, replying to mentions with a draft that goes through the same approval flow.

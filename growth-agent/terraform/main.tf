@@ -49,6 +49,8 @@ resource "scaleway_container" "growth_agent" {
     UMAMI_WEBSITE_ID  = var.umami_website_id
     S3_BUCKET         = var.s3_bucket
     S3_STATE_PREFIX   = var.s3_state_prefix
+    LLM_PROVIDER      = var.llm_provider
+    LLM_MODEL         = var.llm_model
   }
 
   secret_environment_variables = {
@@ -58,6 +60,7 @@ resource "scaleway_container" "growth_agent" {
     UMAMI_API_KEY         = var.umami_api_key
     SCW_ACCESS_KEY        = var.scw_access_key
     SCW_SECRET_KEY        = var.scw_secret_key
+    MISTRAL_API_KEY       = var.mistral_api_key
   }
 }
 

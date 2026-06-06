@@ -46,6 +46,13 @@ variable "scw_secret_key" {
   sensitive   = true
 }
 
+variable "mistral_api_key" {
+  description = "Mistral API key (used when LLM_PROVIDER=mistral)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # --- Non-sensitive configuration ---
 
 variable "s3_bucket" {
@@ -70,4 +77,16 @@ variable "bluesky_handle" {
   description = "Bluesky handle"
   type        = string
   default     = "fretchen.eu"
+}
+
+variable "llm_provider" {
+  description = "LLM provider: ionos (default) or mistral"
+  type        = string
+  default     = "ionos"
+}
+
+variable "llm_model" {
+  description = "Optional model override for the LLM provider (empty = use provider default)"
+  type        = string
+  default     = ""
 }

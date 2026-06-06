@@ -66,14 +66,16 @@ def publish_approved_drafts(storage) -> list[str]:
                         instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
                         access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                     )
-                publish_draft(draft, mastodon_client)
+                response = publish_draft(draft, mastodon_client)
+                draft.platform_id = (response or {}).get("id")
             elif draft.channel == "bluesky":
                 if bluesky_client is None:
                     bluesky_client = BlueskyClient(
                         handle=os.environ.get("BLUESKY_HANDLE", "fretchen.eu"),
                         app_password=os.environ["BLUESKY_APP_PASSWORD"],
                     )
-                publish_draft(draft, bluesky_client)
+                response = publish_draft(draft, bluesky_client)
+                draft.platform_id = (response or {}).get("uri")
             else:
                 logger.warning("Unknown channel %s for draft %s", draft.channel, draft.id)
                 still_approved.append(draft)

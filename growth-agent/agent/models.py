@@ -142,6 +142,7 @@ class Draft(BaseModel):
     review_comment: str | None = None
     reviewed_at: datetime | None = None
     published_at: datetime | None = None
+    platform_id: str | None = None  # Mastodon status ID or Bluesky AT URI
 
 
 class ContentQueue(BaseModel):

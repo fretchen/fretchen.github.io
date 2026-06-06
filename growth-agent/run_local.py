@@ -1,20 +1,26 @@
 """Run growth-agent functions locally for debugging and diagnostics.
 
 Usage:
-    uv run python run_local.py --diagnose       # Read-only: show S3 state + recent logs
-    uv run python run_local.py --publish         # Only publish approved drafts
-    uv run python run_local.py --refill          # Only pipeline refill (create drafts)
-    uv run python run_local.py --insights        # Only generate LLM insights
+    uv run python run_local.py --diagnose            # Read-only: show S3 state + recent logs
+    uv run python run_local.py --publish             # Only publish approved drafts
+    uv run python run_local.py --refill              # Only pipeline refill (create drafts)
+    uv run python run_local.py --insights            # Only generate LLM insights
+    uv run python run_local.py --analytics           # Ingest analytics
+
+Add --prod to any command to target S3_STATE_PREFIX_PROD instead of S3_STATE_PREFIX:
+    uv run python run_local.py --diagnose --prod
+    uv run python run_local.py --refill --prod
 
 For a full handler run (all daily tasks), use the Scaleway local framework:
-    uv run python handler.py                     # HTTP server on :8080
-    curl http://localhost:8080                    # Trigger the handler
+    uv run python handler.py                         # HTTP server on :8080
+    curl http://localhost:8080                        # Trigger the handler
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 
 from dotenv import load_dotenv
 
@@ -26,13 +32,23 @@ from agent.nodes.ingest import ingest_analytics  # noqa: E402
 from agent.nodes.insights import generate_insights  # noqa: E402
 from agent.nodes.plan import create_plan  # noqa: E402
 from agent.nodes.publish import publish_approved_drafts  # noqa: E402
-from agent.storage import load_model  # noqa: E402
-from handler import _get_storage  # noqa: E402
+from agent.storage import S3Storage, load_model  # noqa: E402
 
 
-def diagnose() -> None:
+def _make_storage(prod: bool = False) -> S3Storage:
+    """Create S3Storage using prod or dev prefix, without mutating os.environ."""
+    prefix_key = "S3_STATE_PREFIX_PROD" if prod else "S3_STATE_PREFIX"
+    return S3Storage(
+        bucket=os.environ["S3_BUCKET"],
+        prefix=os.environ.get(prefix_key, "growth-agent/"),
+        access_key=os.environ["SCW_ACCESS_KEY"],
+        secret_key=os.environ["SCW_SECRET_KEY"],
+    )
+
+
+def diagnose(prod: bool = False) -> None:
     """Read-only: print S3 state and recent logs."""
-    storage = _get_storage()
+    storage = _make_storage(prod)
 
     # --- Content Queue ---
     queue = load_model(storage, "content_queue.json", ContentQueue)
@@ -113,22 +129,22 @@ def diagnose() -> None:
             print(line)
 
 
-def run_publish() -> None:
-    storage = _get_storage()
+def run_publish(prod: bool = False) -> None:
+    storage = _make_storage(prod)
     published = publish_approved_drafts(storage)
     print(f"Published: {published}")
 
 
-def run_refill() -> None:
-    storage = _get_storage()
+def run_refill(prod: bool = False) -> None:
+    storage = _make_storage(prod)
     plan = create_plan(storage)
     print(f"Plan created with {len(plan.items)} items")
     count = create_drafts(storage, plan)
     print(f"Created {count} new drafts")
 
 
-def run_insights() -> None:
-    storage = _get_storage()
+def run_insights(prod: bool = False) -> None:
+    storage = _make_storage(prod)
     analysis = generate_insights(storage)
     if analysis:
         print(f"Insights generated — top topics: {analysis.top_topics}")
@@ -137,8 +153,8 @@ def run_insights() -> None:
         print("No insights generated (missing analytics data?)")
 
 
-def run_analytics() -> None:
-    storage = _get_storage()
+def run_analytics(prod: bool = False) -> None:
+    storage = _make_storage(prod)
     result = ingest_analytics(storage)
     print(f"Analytics ingested — pageviews: {result.website_analytics.pageviews}")
     print(json.dumps(result.model_dump(), indent=2, default=str)[:500])
@@ -169,18 +185,27 @@ def main() -> None:
         metavar="FILE",
         help="Export graph as PNG (default: graph.png)",
     )
+    parser.add_argument(
+        "--prod",
+        action="store_true",
+        help="Use S3_STATE_PREFIX_PROD instead of S3_STATE_PREFIX",
+    )
     args = parser.parse_args()
 
+    if args.prod:
+        prefix = os.environ.get("S3_STATE_PREFIX_PROD", "(not set)")
+        print(f"[prod] S3 prefix: {prefix}")
+
     if args.diagnose:
-        diagnose()
+        diagnose(prod=args.prod)
     elif args.publish:
-        run_publish()
+        run_publish(prod=args.prod)
     elif args.refill:
-        run_refill()
+        run_refill(prod=args.prod)
     elif args.insights:
-        run_insights()
+        run_insights(prod=args.prod)
     elif args.analytics:
-        run_analytics()
+        run_analytics(prod=args.prod)
     elif args.graph:
         show_graph(args.graph)
 

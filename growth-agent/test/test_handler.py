@@ -304,7 +304,7 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
         growth_opportunities=["Post more quantum content"],
     )
 
-    llm_inst = MockLLM.return_value
+    llm_inst = MockLLM.from_env.return_value
     llm_inst.structured_output.return_value = analysis
     llm_inst.close.return_value = None
 
@@ -351,7 +351,7 @@ def test_create_drafts(MockLLM, mock_storage):
         ]
     )
 
-    llm_inst = MockLLM.return_value
+    llm_inst = MockLLM.from_env.return_value
     llm_inst.chat.return_value = {"content": "Check out this post about quantum computing!"}
     llm_inst.structured_output.side_effect = [
         MastodonDraftOutput(
@@ -425,7 +425,7 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
         ]
     )
 
-    llm_inst = MockLLM.return_value
+    llm_inst = MockLLM.from_env.return_value
     llm_inst.structured_output.side_effect = [
         MastodonDraftOutput(
             content=(
@@ -465,17 +465,17 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
-@patch("agent.nodes.insights.generate_insights")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
-def test_handle_daily_not_monday(mock_get_storage, mock_insights, mock_publish):
-    """On a non-Monday, graph still runs insights -> plan -> drafts -> publish."""
+def test_handle_daily_not_monday(mock_get_storage, mock_ingest, mock_publish):
+    """On a non-Monday, graph runs ingest -> plan -> drafts -> publish (insights skipped)."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = ["d1"]
+    mock_ingest.return_value = MagicMock()
 
     # No registry in this test fixture: plan node writes empty plan and flow continues.
     fake_storage.read.return_value = None
-    # Patch datetime to a Wednesday
     wednesday = datetime(2025, 1, 8, 8, 0, 0, tzinfo=timezone.utc)  # Wednesday
     with patch("handler.datetime") as mock_dt:
         mock_dt.now.return_value = wednesday
@@ -484,24 +484,29 @@ def test_handle_daily_not_monday(mock_get_storage, mock_insights, mock_publish):
         result = handle({}, None)
 
     assert result["statusCode"] == 200
-    mock_insights.assert_called_once()
+    mock_ingest.assert_called_once()
     mock_publish.assert_called_once()
     body = json.loads(result["body"])
     assert body["drafts_created"] == 0
+    assert body["analytics"] is True
+    assert body["insights"] is False  # not Monday — insights skipped
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
 @patch("agent.nodes.insights.generate_insights")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
 def test_handle_weekly_on_monday(
     mock_get_storage,
+    mock_ingest,
     mock_insights,
     mock_publish,
 ):
-    """On Monday, graph runs the same simplified flow insights -> plan -> drafts -> publish."""
+    """On Monday, graph runs ingest -> insights -> plan -> drafts -> publish."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = []
+    mock_ingest.return_value = MagicMock()
 
     analysis = LLMAnalysis(
         top_topics=["q"],
@@ -522,19 +527,24 @@ def test_handle_weekly_on_monday(
         result = handle({}, None)
 
     assert result["statusCode"] == 200
-    mock_publish.assert_called_once()
+    mock_ingest.assert_called_once()
     mock_insights.assert_called_once()
+    mock_publish.assert_called_once()
     body = json.loads(result["body"])
     assert body["drafts_created"] == 0
+    assert body["analytics"] is True
+    assert body["insights"] is True  # Monday — insights ran
 
 
 @patch("agent.nodes.publish.publish_approved_drafts")
+@patch("agent.nodes.ingest.ingest_analytics")
 @patch("handler._get_storage")
-def test_handle_resilient_on_failure(mock_get_storage, mock_publish):
+def test_handle_resilient_on_failure(mock_get_storage, mock_ingest, mock_publish):
     """Handler continues if an upstream node fails internally."""
     fake_storage = MagicMock()
     mock_get_storage.return_value = fake_storage
     mock_publish.return_value = []
+    mock_ingest.return_value = MagicMock()
 
     wednesday = datetime(2025, 1, 8, 8, 0, 0, tzinfo=timezone.utc)
     with patch("handler.datetime") as mock_dt:
@@ -991,7 +1001,7 @@ def test_publish_sets_published_at(MockMasto, mock_storage):
     masto_inst.post.return_value = None
     masto_inst.close.return_value = None
 
-    with patch("agent.nodes.publish.publish_draft"):
+    with patch("agent.nodes.publish.publish_draft", return_value={"id": "masto-1"}):
         publish_approved_drafts(storage)
 
     saved = ContentQueue.model_validate(store["content_queue.json"])
@@ -1045,6 +1055,69 @@ def test_former_posts_context_empty_when_no_history():
     """_former_posts_context returns empty string when no history exists."""
     queue = ContentQueue()
     assert _former_posts_context(queue, "https://fretchen.eu/blog/post", "mastodon") == ""
+
+
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.MastodonClient")
+def test_publish_stores_platform_id_mastodon(MockMasto, mock_publish, mock_storage):
+    """platform_id is populated from the Mastodon API response after publish."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(minutes=1)
+    draft = Draft(
+        id="d-masto", channel="mastodon", language="en", content="Hello", scheduled_at=past
+    )
+    storage.write("content_queue.json", ContentQueue(approved=[draft]))
+
+    mock_publish.return_value = {
+        "id": "masto-status-42",
+        "uri": "https://mastodon.social/@fretchen/42",
+    }
+
+    publish_approved_drafts(storage)
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert saved.published[0].platform_id == "masto-status-42"
+
+
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.BlueskyClient")
+def test_publish_stores_platform_id_bluesky(MockBsky, mock_publish, mock_storage):
+    """platform_id is populated from the Bluesky AT URI after publish."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(minutes=1)
+    draft = Draft(id="d-bsky", channel="bluesky", language="en", content="Hello", scheduled_at=past)
+    storage.write("content_queue.json", ContentQueue(approved=[draft]))
+
+    mock_publish.return_value = {"uri": "at://did:plc:abc/app.bsky.feed.post/xyz", "cid": "cid123"}
+
+    publish_approved_drafts(storage)
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert saved.published[0].platform_id == "at://did:plc:abc/app.bsky.feed.post/xyz"
+
+
+@patch("agent.nodes.publish.publish_draft")
+@patch("agent.nodes.publish.MastodonClient")
+def test_publish_platform_id_none_when_publisher_returns_none(
+    MockMasto, mock_publish, mock_storage
+):
+    """publish_draft() returning None does not raise — platform_id stays None."""
+    storage, store = mock_storage
+
+    past = datetime.now(timezone.utc) - timedelta(minutes=1)
+    draft = Draft(
+        id="d-none", channel="mastodon", language="en", content="Hello", scheduled_at=past
+    )
+    storage.write("content_queue.json", ContentQueue(approved=[draft]))
+
+    mock_publish.return_value = None  # simulate edge-case silent failure
+
+    publish_approved_drafts(storage)  # must not raise
+
+    saved = ContentQueue.model_validate(store["content_queue.json"])
+    assert saved.published[0].platform_id is None
 
 
 def test_old_queue_deserializes_without_published_at():

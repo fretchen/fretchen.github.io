@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { useIsMounted } from "../../hooks/useIsMounted";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
+import { pageContainer, titleBar, tabs as tabStyles } from "../../layouts/styles";
+import { Tab } from "../../components/Tab";
 import {
   useGrowthDrafts,
   useGrowthInsights,
@@ -17,19 +19,6 @@ type Tab = "drafts" | "approved" | "published" | "rejected";
 
 // ===== Styles =====
 
-const pageContainer = css({
-  maxWidth: "900px",
-  mx: "auto",
-  px: "md",
-  py: "lg",
-});
-
-const pageTitle = css({
-  fontSize: "2xl",
-  fontWeight: "bold",
-  mb: "lg",
-  color: "text",
-});
 
 const infoBox = css({
   padding: "lg",
@@ -38,38 +27,6 @@ const infoBox = css({
   fontSize: "md",
 });
 
-const tabBar = css({
-  display: "flex",
-  gap: "xs",
-  mb: "lg",
-  flexWrap: "wrap",
-});
-
-const tabButton = css({
-  padding: "sm md",
-  border: "1px solid",
-  borderColor: "gray.300",
-  borderRadius: "sm",
-  backgroundColor: "transparent",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  transition: "all 0.2s",
-  color: "gray.700",
-  _hover: { backgroundColor: "gray.100" },
-});
-
-const tabButtonActive = css({
-  padding: "sm md",
-  border: "1px solid",
-  borderColor: "gray.600",
-  borderRadius: "sm",
-  backgroundColor: "gray.200",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  color: "gray.900",
-});
 
 const draftCard = css({
   border: "1px solid",
@@ -274,10 +231,8 @@ const loadingText = css({
 });
 
 const insightsPanel = css({
-  mt: "xl",
-  borderTop: "1px solid",
-  borderColor: "gray.200",
-  pt: "md",
+  mt: "sm",
+  mb: "md",
 });
 
 const insightsList = css({
@@ -688,7 +643,7 @@ export default function Page() {
   if (!hasMounted) {
     return (
       <div className={pageContainer}>
-        <h1 className={pageTitle}>Growth Agent</h1>
+        <h1 className={titleBar.title}>Growth Agent</h1>
         <p className={infoBox}>Loading...</p>
       </div>
     );
@@ -698,7 +653,7 @@ export default function Page() {
   if (status !== "connected") {
     return (
       <div className={pageContainer}>
-        <h1 className={pageTitle}>Growth Agent</h1>
+        <h1 className={titleBar.title}>Growth Agent</h1>
         <div className={infoBox}>
           <p>Connect your wallet to manage drafts.</p>
           {connectors.length > 0 && (
@@ -719,13 +674,13 @@ export default function Page() {
   if (!isOwner) {
     return (
       <div className={pageContainer}>
-        <h1 className={pageTitle}>Growth Agent</h1>
+        <h1 className={titleBar.title}>Growth Agent</h1>
         <p className={infoBox}>This page is restricted to the site owner.</p>
       </div>
     );
   }
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
+  const tabDefs: { key: Tab; label: string; count: number }[] = [
     { key: "drafts", label: "Pending", count: queue?.drafts.length ?? 0 },
     { key: "approved", label: "Approved", count: queue?.approved.length ?? 0 },
     { key: "published", label: "Published", count: queue?.published.length ?? 0 },
@@ -737,7 +692,7 @@ export default function Page() {
 
   return (
     <div className={pageContainer}>
-      <h1 className={pageTitle}>Growth Agent</h1>
+      <h1 className={titleBar.title}>Growth Agent</h1>
 
       <InsightsSection insights={insights ?? null} />
 
@@ -747,15 +702,14 @@ export default function Page() {
         <p className={loadingText}>Loading drafts...</p>
       ) : (
         <>
-          <div className={tabBar}>
-            {tabs.map((t) => (
-              <button
+          <div className={tabStyles.tabList}>
+            {tabDefs.map((t) => (
+              <Tab
                 key={t.key}
-                className={tab === t.key ? tabButtonActive : tabButton}
+                label={`${t.label} (${t.count})`}
+                isActive={tab === t.key}
                 onClick={() => handleTabChange(t.key)}
-              >
-                {t.label} ({t.count})
-              </button>
+              />
             ))}
           </div>
 

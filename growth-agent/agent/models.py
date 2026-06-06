@@ -199,8 +199,8 @@ class PostMetrics(BaseModel):
     reblogs: int = 0
     favourites: int = 0
     replies: int = 0
-    link_clicks: int | None = None          # future: Umami UTM correlation
-    website_referral_sessions: int = 0      # future: Umami UTM correlation
+    link_clicks: int | None = None  # future: Umami UTM correlation
+    website_referral_sessions: int = 0  # future: Umami UTM correlation
 
 
 class Performance(BaseModel):

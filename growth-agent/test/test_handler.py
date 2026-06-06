@@ -183,7 +183,9 @@ def test_collect_post_metrics_mastodon(MockMasto, mock_storage):
 
     masto_ctx = MagicMock()
     masto_ctx.get_status.return_value = {
-        "reblogs_count": 3, "favourites_count": 7, "replies_count": 1
+        "reblogs_count": 3,
+        "favourites_count": 7,
+        "replies_count": 1,
     }
     MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
     MockMasto.return_value.__exit__ = MagicMock(return_value=False)

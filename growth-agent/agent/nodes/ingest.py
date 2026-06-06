@@ -124,17 +124,19 @@ def _collect_post_metrics(storage) -> None:
                     for draft in mastodon_published:
                         try:
                             status = masto.get_status(draft.platform_id)  # type: ignore[arg-type]
-                            performance_posts.append(PostMetrics(
-                                id=draft.id,
-                                channel="mastodon",
-                                published_at=(
-                                    draft.published_at.isoformat() if draft.published_at else ""
-                                ),
-                                platform_id=draft.platform_id,
-                                reblogs=status.get("reblogs_count", 0),
-                                favourites=status.get("favourites_count", 0),
-                                replies=status.get("replies_count", 0),
-                            ))
+                            performance_posts.append(
+                                PostMetrics(
+                                    id=draft.id,
+                                    channel="mastodon",
+                                    published_at=(
+                                        draft.published_at.isoformat() if draft.published_at else ""
+                                    ),
+                                    platform_id=draft.platform_id,
+                                    reblogs=status.get("reblogs_count", 0),
+                                    favourites=status.get("favourites_count", 0),
+                                    replies=status.get("replies_count", 0),
+                                )
+                            )
                         except Exception:
                             logger.warning("Failed to fetch Mastodon status %s", draft.platform_id)
             except Exception:
@@ -153,17 +155,19 @@ def _collect_post_metrics(storage) -> None:
                     for draft in bluesky_published:
                         post = posts_by_uri.get(draft.platform_id or "")
                         if post:
-                            performance_posts.append(PostMetrics(
-                                id=draft.id,
-                                channel="bluesky",
-                                published_at=(
-                                    draft.published_at.isoformat() if draft.published_at else ""
-                                ),
-                                platform_id=draft.platform_id,
-                                reblogs=post.get("repostCount", 0),
-                                favourites=post.get("likeCount", 0),
-                                replies=post.get("replyCount", 0),
-                            ))
+                            performance_posts.append(
+                                PostMetrics(
+                                    id=draft.id,
+                                    channel="bluesky",
+                                    published_at=(
+                                        draft.published_at.isoformat() if draft.published_at else ""
+                                    ),
+                                    platform_id=draft.platform_id,
+                                    reblogs=post.get("repostCount", 0),
+                                    favourites=post.get("likeCount", 0),
+                                    replies=post.get("replyCount", 0),
+                                )
+                            )
             except Exception:
                 logger.exception("Bluesky per-post metrics failed")
 

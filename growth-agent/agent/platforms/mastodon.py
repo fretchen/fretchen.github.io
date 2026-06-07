@@ -39,6 +39,11 @@ class MastodonClient:
         resp = self.client.delete(f"/api/v1/statuses/{status_id}")
         resp.raise_for_status()
 
+    def get_status(self, status_id: str) -> dict:
+        resp = self.client.get(f"/api/v1/statuses/{status_id}")
+        resp.raise_for_status()
+        return resp.json()
+
     def get_account_statuses(self, account_id: str, limit: int = 20) -> list[dict]:
         resp = self.client.get(f"/api/v1/accounts/{account_id}/statuses", params={"limit": limit})
         resp.raise_for_status()

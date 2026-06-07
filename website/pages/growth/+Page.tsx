@@ -2,72 +2,30 @@ import React, { useState, useMemo } from "react";
 import { useIsMounted } from "../../hooks/useIsMounted";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
+import { titleBar, tabs as tabStyles } from "../../layouts/styles";
+import { Tab } from "../../components/Tab";
 import {
   useGrowthDrafts,
   useGrowthInsights,
+  useGrowthPerformance,
   useApproveDraft,
   useRejectDraft,
   useUpdateDraft,
 } from "../../hooks/useGrowthApi";
-import { CHANNEL_CHAR_LIMITS, type Draft, type Insights } from "../../types/growth";
+import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
 
 // ===== Styles =====
 
-const pageContainer = css({
-  maxWidth: "900px",
-  mx: "auto",
-  px: "md",
-  py: "lg",
-});
-
-const pageTitle = css({
-  fontSize: "2xl",
-  fontWeight: "bold",
-  mb: "lg",
-  color: "text",
-});
+const growthContainer = css({ maxWidth: "900px", mx: "auto", px: "md", pt: "md" });
 
 const infoBox = css({
   padding: "lg",
   textAlign: "center",
   color: "gray.600",
   fontSize: "md",
-});
-
-const tabBar = css({
-  display: "flex",
-  gap: "xs",
-  mb: "lg",
-  flexWrap: "wrap",
-});
-
-const tabButton = css({
-  padding: "sm md",
-  border: "1px solid",
-  borderColor: "gray.300",
-  borderRadius: "sm",
-  backgroundColor: "transparent",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  transition: "all 0.2s",
-  color: "gray.700",
-  _hover: { backgroundColor: "gray.100" },
-});
-
-const tabButtonActive = css({
-  padding: "sm md",
-  border: "1px solid",
-  borderColor: "gray.600",
-  borderRadius: "sm",
-  backgroundColor: "gray.200",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  color: "gray.900",
 });
 
 const draftCard = css({
@@ -273,10 +231,8 @@ const loadingText = css({
 });
 
 const insightsPanel = css({
-  mt: "xl",
-  borderTop: "1px solid",
-  borderColor: "gray.200",
-  pt: "md",
+  mt: "sm",
+  mb: "md",
 });
 
 const insightsList = css({
@@ -306,12 +262,61 @@ const reviewMeta = css({
   whiteSpace: "pre-wrap",
 });
 
+const pageGroupRow = css({
+  border: "1px solid",
+  borderColor: "gray.200",
+  borderRadius: "md",
+  mb: "sm",
+  backgroundColor: "white",
+  overflow: "hidden",
+});
+
+const pageGroupSummaryRow = css({
+  cursor: "pointer",
+  padding: "sm md",
+  display: "flex",
+  alignItems: "center",
+  gap: "xs",
+  flexWrap: "wrap",
+});
+
+const pageGroupLink = css({
+  color: "blue.600",
+  textDecoration: "underline",
+  fontSize: "sm",
+  fontWeight: "medium",
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+const pageGroupMeta = css({
+  fontSize: "xs",
+  color: "gray.600",
+  whiteSpace: "nowrap",
+});
+
+const pageGroupDim = css({
+  fontSize: "xs",
+  color: "gray.400",
+  whiteSpace: "nowrap",
+});
+
+const pageGroupBody = css({
+  borderTop: "1px solid",
+  borderColor: "gray.200",
+  padding: "sm md",
+});
+
 // ===== Sub-components =====
 
 function DraftCardView({
   draft,
   showActions,
   history,
+  metrics,
   onApprove,
   onReject,
   onUpdate,
@@ -320,6 +325,7 @@ function DraftCardView({
   draft: Draft;
   showActions: boolean;
   history: Draft[];
+  metrics?: PostMetrics;
   onApprove: (id: string, scheduledAt?: string, reviewComment?: string) => Promise<void>;
   onReject: (id: string, reviewComment?: string) => Promise<void>;
   onUpdate: (id: string, body: Partial<Draft>) => Promise<void>;
@@ -462,6 +468,11 @@ function DraftCardView({
               {draft.review_comment ? `\nComment: ${draft.review_comment}` : ""}
             </div>
           )}
+          {metrics && (
+            <div style={{ fontSize: "13px", color: "#666", margin: "6px 0" }}>
+              ❤️ {metrics.favourites} &nbsp; 🔁 {metrics.reblogs} &nbsp; 💬 {metrics.replies}
+            </div>
+          )}
           {showActions && (
             <>
               <textarea
@@ -523,7 +534,9 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
   return (
     <div className={insightsPanel}>
       <details>
-        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>Insights & Analytics</summary>
+        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>
+          Insights & Analytics (28 days)
+        </summary>
         {(insights.growth_opportunities ?? []).length > 0 && (
           <>
             <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Growth Opportunities</h4>
@@ -566,6 +579,7 @@ export default function Page() {
 
   const { data: queue, isPending: loadingDrafts, error: draftsError } = useGrowthDrafts(isOwner);
   const { data: insights } = useGrowthInsights(isOwner);
+  const { data: performance } = useGrowthPerformance(isOwner);
 
   const approveMutation = useApproveDraft();
   const rejectMutation = useRejectDraft();
@@ -581,7 +595,7 @@ export default function Page() {
   const historyByPage = useMemo(() => {
     const map: Record<string, Draft[]> = {};
     for (const d of queue?.published ?? []) {
-      const key = d.source_blog_post ?? "";
+      const key = d.link ?? d.source_blog_post ?? "";
       if (!key) continue;
       (map[key] ??= []).push(d);
     }
@@ -590,6 +604,69 @@ export default function Page() {
     }
     return map;
   }, [queue?.published]);
+
+  const metricsByDraftId = useMemo(() => {
+    const map: Record<string, PostMetrics> = {};
+    for (const m of performance?.posts ?? []) {
+      map[m.id] = m;
+    }
+    return map;
+  }, [performance?.posts]);
+
+  const pageGroups = useMemo(() => {
+    const trafficByPath = new Map<string, number>();
+    for (const p of insights?.website_analytics?.top_pages ?? []) {
+      trafficByPath.set(p.x as string, p.y as number);
+    }
+
+    const map = new Map<
+      string,
+      {
+        url: string;
+        displayUrl: string;
+        drafts: Draft[];
+        totalEngagement: { favourites: number; reblogs: number; replies: number };
+        lastPublished: string | null;
+        channels: Set<string>;
+        pageviews: number | null;
+      }
+    >();
+
+    for (const draft of queue?.published ?? []) {
+      const url = draft.link ?? draft.source_blog_post ?? "(no link)";
+      if (!map.has(url)) {
+        let path: string;
+        try {
+          path = new URL(url).pathname;
+        } catch {
+          path = url;
+        }
+        map.set(url, {
+          url,
+          displayUrl: path,
+          drafts: [],
+          totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
+          lastPublished: null,
+          channels: new Set(),
+          pageviews: trafficByPath.get(path) ?? null,
+        });
+      }
+      const group = map.get(url)!;
+      group.drafts.push(draft);
+      group.channels.add(draft.channel);
+      const m = metricsByDraftId[draft.id];
+      if (m) {
+        group.totalEngagement.favourites += m.favourites;
+        group.totalEngagement.reblogs += m.reblogs;
+        group.totalEngagement.replies += m.replies;
+      }
+      if (draft.published_at && (!group.lastPublished || draft.published_at > group.lastPublished)) {
+        group.lastPublished = draft.published_at;
+      }
+    }
+
+    return [...map.values()].sort((a, b) => (b.lastPublished ?? "").localeCompare(a.lastPublished ?? ""));
+  }, [queue?.published, insights?.website_analytics?.top_pages, metricsByDraftId]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
@@ -613,8 +690,8 @@ export default function Page() {
   // Pre-hydration: show nothing interactive
   if (!hasMounted) {
     return (
-      <div className={pageContainer}>
-        <h1 className={pageTitle}>Growth Agent</h1>
+      <div className={growthContainer}>
+        <h1 className={titleBar.title}>Growth Agent</h1>
         <p className={infoBox}>Loading...</p>
       </div>
     );
@@ -623,8 +700,8 @@ export default function Page() {
   // Not connected or still reconnecting
   if (status !== "connected") {
     return (
-      <div className={pageContainer}>
-        <h1 className={pageTitle}>Growth Agent</h1>
+      <div className={growthContainer}>
+        <h1 className={titleBar.title}>Growth Agent</h1>
         <div className={infoBox}>
           <p>Connect your wallet to manage drafts.</p>
           {connectors.length > 0 && (
@@ -644,14 +721,14 @@ export default function Page() {
   // Wrong address
   if (!isOwner) {
     return (
-      <div className={pageContainer}>
-        <h1 className={pageTitle}>Growth Agent</h1>
+      <div className={growthContainer}>
+        <h1 className={titleBar.title}>Growth Agent</h1>
         <p className={infoBox}>This page is restricted to the site owner.</p>
       </div>
     );
   }
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
+  const tabDefs: { key: Tab; label: string; count: number }[] = [
     { key: "drafts", label: "Pending", count: queue?.drafts.length ?? 0 },
     { key: "approved", label: "Approved", count: queue?.approved.length ?? 0 },
     { key: "published", label: "Published", count: queue?.published.length ?? 0 },
@@ -662,8 +739,10 @@ export default function Page() {
   const showActions = tab === "drafts" || tab === "approved";
 
   return (
-    <div className={pageContainer}>
-      <h1 className={pageTitle}>Growth Agent</h1>
+    <div className={growthContainer}>
+      <h1 className={titleBar.title}>Growth Agent</h1>
+
+      <InsightsSection insights={insights ?? null} />
 
       {error && <div className={errorBanner}>{error}</div>}
 
@@ -671,19 +750,72 @@ export default function Page() {
         <p className={loadingText}>Loading drafts...</p>
       ) : (
         <>
-          <div className={tabBar}>
-            {tabs.map((t) => (
-              <button
+          <div className={tabStyles.tabList}>
+            {tabDefs.map((t) => (
+              <Tab
                 key={t.key}
-                className={tab === t.key ? tabButtonActive : tabButton}
+                label={`${t.label} (${t.count})`}
+                isActive={tab === t.key}
                 onClick={() => handleTabChange(t.key)}
-              >
-                {t.label} ({t.count})
-              </button>
+              />
             ))}
           </div>
 
-          {currentDrafts.length === 0 ? (
+          {tab === "published" ? (
+            pageGroups.length === 0 ? (
+              <p className={infoBox}>No published posts.</p>
+            ) : (
+              pageGroups.map((group) => {
+                const eng = group.totalEngagement;
+                const hasEngagement = eng.favourites + eng.reblogs + eng.replies > 0;
+                return (
+                  <details key={group.url} className={pageGroupRow}>
+                    <summary className={pageGroupSummaryRow}>
+                      <a
+                        href={group.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={pageGroupLink}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {group.displayUrl}
+                      </a>
+                      <span className={pageGroupMeta}>{group.drafts.length}×</span>
+                      {group.lastPublished && (
+                        <span className={pageGroupDim}>{new Date(group.lastPublished).toLocaleDateString()}</span>
+                      )}
+                      <span className={pageGroupDim}>
+                        {[...group.channels].map((ch) => (ch === "mastodon" ? "🐘" : "🦋")).join(" ")}
+                      </span>
+                      {hasEngagement && (
+                        <span className={pageGroupMeta}>
+                          ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
+                        </span>
+                      )}
+                      <span className={group.pageviews !== null ? pageGroupMeta : pageGroupDim}>
+                        {group.pageviews !== null ? `${group.pageviews} views (28d)` : "—"}
+                      </span>
+                    </summary>
+                    <div className={pageGroupBody}>
+                      {group.drafts.map((draft) => (
+                        <DraftCardView
+                          key={draft.id}
+                          draft={draft}
+                          showActions={false}
+                          history={[]}
+                          metrics={metricsByDraftId[draft.id]}
+                          onApprove={handleApprove}
+                          onReject={handleReject}
+                          onUpdate={handleUpdate}
+                          busy={busy}
+                        />
+                      ))}
+                    </div>
+                  </details>
+                );
+              })
+            )
+          ) : currentDrafts.length === 0 ? (
             <p className={infoBox}>No {tab} drafts.</p>
           ) : (
             currentDrafts.map((draft) => (
@@ -691,7 +823,8 @@ export default function Page() {
                 key={draft.id}
                 draft={draft}
                 showActions={showActions}
-                history={historyByPage[draft.source_blog_post ?? ""] ?? []}
+                history={historyByPage[draft.link ?? draft.source_blog_post ?? ""] ?? []}
+                metrics={metricsByDraftId[draft.id]}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onUpdate={handleUpdate}
@@ -699,8 +832,6 @@ export default function Page() {
               />
             ))
           )}
-
-          <InsightsSection insights={insights ?? null} />
         </>
       )}
     </div>

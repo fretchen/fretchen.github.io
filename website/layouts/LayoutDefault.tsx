@@ -6,9 +6,11 @@ import WalletOptions from "../components/WalletOptions";
 import LanguageToggle from "../components/LanguageToggle";
 import Footer from "../components/Footer";
 
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, useAccount } from "wagmi";
 import { config } from "../wagmi.config";
 import { layout } from "./styles";
+import { useIsMounted } from "../hooks/useIsMounted";
+import { OWNER_ADDRESS } from "../utils/getChain";
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   const navigationRef = useRef<HTMLDivElement>(null);
@@ -61,6 +63,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
               <div className={layout.navigationLink}>
                 <Link href="/lab">Lab</Link>
               </div>
+              <GrowthNavLink />
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
             <div className={layout.headerControls}>
@@ -92,6 +95,18 @@ function Content({ children }: { children: React.ReactNode }) {
       <div id="page-content" className={layout.content}>
         {children}
       </div>
+    </div>
+  );
+}
+
+function GrowthNavLink() {
+  const hasMounted = useIsMounted();
+  const { address, status } = useAccount();
+  const isOwner = hasMounted && status === "connected" && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  if (!isOwner) return null;
+  return (
+    <div className={layout.navigationLink}>
+      <Link href="/growth">Growth</Link>
     </div>
   );
 }

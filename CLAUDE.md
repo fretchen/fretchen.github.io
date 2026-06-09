@@ -64,10 +64,9 @@ npm test
 
 ### notebooks/
 ```bash
-poetry install
-poetry shell
-poetry run jupyter notebook
-poetry run python -m ipykernel install --user --name=merkle-tree-notebooks
+uv sync
+uv run jupyter notebook
+uv run python -m ipykernel install --user --name=merkle-tree-notebooks
 ```
 
 ### growth-agent/

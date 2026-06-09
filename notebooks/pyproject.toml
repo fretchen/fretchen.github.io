@@ -1,7 +1,7 @@
 [project]
-name = "merkle-tree-notebooks"
+name = "notebooks"
 version = "0.1.0"
-description = "Jupyter notebooks for exploring Merkle trees and LLM API batching"
+description = "Jupyter notebooks for exploring different topics outside of the website"
 requires-python = ">=3.10"
 dependencies = [
     "jupyter>=1.0.0",

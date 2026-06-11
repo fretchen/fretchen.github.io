@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class WebsiteAnalytics(BaseModel):
-    """Aggregated website analytics from Umami."""
+    """Aggregated website analytics (reserved for future analytics integration)."""
 
     pageviews: int = 0
     visitors: int = 0

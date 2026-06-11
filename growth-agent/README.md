@@ -23,7 +23,6 @@ State is stored as JSON files in Scaleway S3 (`my-imagestore` bucket, `growth-ag
 |---|---|
 | Runtime | Python 3.11 (Scaleway Serverless Container) |
 | LLM | IONOS AI Model Hub (Llama 3.3 70B) |
-| Analytics | Umami Cloud |
 | Social | Mastodon REST API, Bluesky AT Protocol |
 | Storage | Scaleway S3 |
 | Package manager | uv |
@@ -49,6 +48,15 @@ uv run ruff format .
 ```bash
 bash bin/deploy.sh       # bootstrap registry, build/push image, tofu apply app stack
 ```
+
+After the first deploy, retrieve the Grafana URL:
+
+```bash
+cd terraform
+tofu output grafana_url
+```
+
+Open the URL and log in with your Scaleway account (IAM authentication).
 
 Requires Docker with buildx and OpenTofu. Deploy context comes from your active Scaleway profile in `~/.config/scw/config.yaml`, consistent with the serverless subprojects. `bin/deploy.sh` does not load `.env`; OpenTofu input variables are taken from `terraform/terraform.tfvars` or exported `TF_VAR_*` values.
 
@@ -84,7 +92,6 @@ terraform/          # OpenTofu config (container, cron, secrets)
 agent/
   models.py         # Pydantic state models
   llm_client.py     # IONOS LLM client
-  umami_client.py   # Umami analytics client
   page_meta.py      # Blog page metadata fetcher
   publisher.py      # Draft → platform publishing bridge
   storage.py        # S3 + local storage backends
@@ -149,9 +156,21 @@ kill %1
 
 This runs all daily tasks (analytics, publish, pipeline refill) and weekly tasks (insights on Monday) — exactly what Scaleway executes on `0 8 * * *`.
 
+### 4. Inspect container logs in Grafana (Cockpit)
+
+Grafana gives you the actual stdout/stderr from the running container — useful when the cron fires but no S3 log is written (e.g. startup crash before `_get_storage()` succeeds).
+
+```bash
+# After bin/deploy.sh, retrieve the URL once:
+cd terraform
+tofu output grafana_url
+```
+
+Open the URL and log in with your Scaleway account (IAM — no separate Grafana user needed). In Grafana: **Explore → Loki**, query: `{service_name="growth-agent"}`.
+
 ### Common issues
 
-- **No log for today**: Scaleway cron didn't fire. Check the Scaleway Console → Containers → Cron Triggers. Try redeploying with `bash bin/deploy.sh`.
+- **No log for today**: Scaleway cron didn't fire. Check Scaleway Console → Containers → Cron Triggers. Check Grafana Loki for startup errors. Try redeploying with `bash bin/deploy.sh`.
 - **`status: started`**: Function timed out. Check `memory_limit` in `terraform/main.tf` (currently 1024 MB). LLM insight generation is the heaviest task.
 - **`status: crashed`**: Read the error in the log. Common causes: expired API tokens, S3 permission issues, platform API changes.
 - **Draft not published**: Content may exceed character limits (Mastodon: 500, Bluesky: 300). Check the approval UI for warnings.

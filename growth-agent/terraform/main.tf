@@ -46,7 +46,6 @@ resource "scaleway_container" "growth_agent" {
   environment_variables = {
     MASTODON_INSTANCE = var.mastodon_instance
     BLUESKY_HANDLE    = var.bluesky_handle
-    UMAMI_WEBSITE_ID  = var.umami_website_id
     S3_BUCKET         = var.s3_bucket
     S3_STATE_PREFIX   = var.s3_state_prefix
     LLM_PROVIDER      = var.llm_provider
@@ -57,7 +56,6 @@ resource "scaleway_container" "growth_agent" {
     IONOS_API_TOKEN       = var.ionos_api_token
     MASTODON_ACCESS_TOKEN = var.mastodon_access_token
     BLUESKY_APP_PASSWORD  = var.bluesky_app_password
-    UMAMI_API_KEY         = var.umami_api_key
     SCW_ACCESS_KEY        = var.scw_access_key
     SCW_SECRET_KEY        = var.scw_secret_key
     MISTRAL_API_KEY       = var.mistral_api_key
@@ -72,9 +70,18 @@ resource "scaleway_container_cron" "daily" {
   args         = jsonencode({ source = "cron" })
 }
 
+# --- Observability (Cockpit + Grafana) ---
+
+data "scaleway_cockpit_grafana" "main" {}
+
 # --- Outputs ---
 
 output "container_url" {
   value       = scaleway_container.growth_agent.domain_name
   description = "The container endpoint URL"
+}
+
+output "grafana_url" {
+  value       = data.scaleway_cockpit_grafana.main.grafana_url
+  description = "Open in browser and log in with your Scaleway account (IAM)"
 }

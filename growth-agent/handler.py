@@ -183,6 +183,14 @@ def _run_server():
     GET /health returns 200 for health checks.
     """
     port = int(os.environ.get("PORT", "8080"))
+    try:
+        storage = _get_storage()
+        storage.write(
+            f"logs/startup-{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')}.json",
+            {"status": "started", "timestamp": datetime.now(timezone.utc).isoformat()},
+        )
+    except Exception:
+        logger.exception("Startup S3 write failed — check env vars")
     server = _create_server(port)
     logger.info("Growth Agent HTTP server listening on port %d", port)
     server.serve_forever()

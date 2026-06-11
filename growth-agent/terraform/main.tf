@@ -74,12 +74,11 @@ resource "scaleway_container_cron" "daily" {
 
 # --- Observability (Cockpit + Grafana) ---
 
-resource "scaleway_cockpit" "main" {}
+data "scaleway_cockpit" "main" {}
 
 resource "scaleway_cockpit_grafana_user" "admin" {
-  cockpit_id = scaleway_cockpit.main.id
-  login      = "fred"
-  role       = "editor"
+  login = "fred"
+  role  = "editor"
 }
 
 # --- Outputs ---
@@ -90,7 +89,7 @@ output "container_url" {
 }
 
 output "grafana_url" {
-  value       = scaleway_cockpit.main.grafana_url
+  value       = data.scaleway_cockpit.main.endpoints[0].grafana_url
   description = "Grafana URL for log inspection"
 }
 

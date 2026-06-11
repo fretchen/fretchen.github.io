@@ -185,9 +185,10 @@ def _run_server():
     port = int(os.environ.get("PORT", "8080"))
     try:
         storage = _get_storage()
+        now = datetime.now(timezone.utc)
         storage.write(
-            f"logs/startup-{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')}.json",
-            {"status": "started", "timestamp": datetime.now(timezone.utc).isoformat()},
+            f"logs/startup-{now.strftime('%Y-%m-%dT%H-%M-%S')}.json",
+            {"status": "started", "timestamp": now.isoformat()},
         )
     except Exception:
         logger.exception("Startup S3 write failed — check env vars")

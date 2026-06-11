@@ -92,7 +92,6 @@ terraform/          # OpenTofu config (container, cron, secrets)
 agent/
   models.py         # Pydantic state models
   llm_client.py     # IONOS LLM client
-  umami_client.py   # Umami analytics client
   page_meta.py      # Blog page metadata fetcher
   publisher.py      # Draft → platform publishing bridge
   storage.py        # S3 + local storage backends

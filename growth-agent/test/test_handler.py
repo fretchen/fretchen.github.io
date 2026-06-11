@@ -268,7 +268,11 @@ def test_collect_post_metrics_preserves_old_posts(MockMasto, mock_storage):
     )
 
     masto_ctx = MagicMock()
-    masto_ctx.get_status.return_value = {"reblogs_count": 1, "favourites_count": 2, "replies_count": 0}
+    masto_ctx.get_status.return_value = {
+        "reblogs_count": 1,
+        "favourites_count": 2,
+        "replies_count": 0,
+    }
     MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
     MockMasto.return_value.__exit__ = MagicMock(return_value=False)
 
@@ -286,6 +290,55 @@ def test_collect_post_metrics_preserves_old_posts(MockMasto, mock_storage):
     assert by_id["recent"].favourites == 2
 
     assert masto_ctx.get_status.call_count == 1  # only the recent post
+
+
+@patch("agent.nodes.ingest.MastodonClient")
+def test_collect_post_metrics_api_failure_preserves_existing(MockMasto, mock_storage):
+    """API failure for a recent post keeps its previously stored metrics."""
+    storage, store = mock_storage
+    recent_date = datetime.now(timezone.utc) - timedelta(days=5)
+
+    queue = ContentQueue(
+        published=[
+            Draft(
+                id="p1",
+                channel="mastodon",
+                language="en",
+                content="x",
+                platform_id="111",
+                published_at=recent_date,
+            )
+        ]
+    )
+    storage.write("content_queue.json", queue)
+    storage.write(
+        "performance.json",
+        Performance(
+            posts=[
+                PostMetrics(
+                    id="p1",
+                    channel="mastodon",
+                    published_at=recent_date.isoformat(),
+                    platform_id="111",
+                    reblogs=99,
+                    favourites=50,
+                    replies=10,
+                )
+            ]
+        ),
+    )
+
+    masto_ctx = MagicMock()
+    masto_ctx.get_status.side_effect = Exception("API error")
+    MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
+    MockMasto.return_value.__exit__ = MagicMock(return_value=False)
+
+    _collect_post_metrics(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert len(perf.posts) == 1
+    assert perf.posts[0].reblogs == 99
+    assert perf.posts[0].favourites == 50
 
 
 def test_collect_post_metrics_skips_no_published_at(mock_storage):

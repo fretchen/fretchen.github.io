@@ -72,9 +72,30 @@ resource "scaleway_container_cron" "daily" {
   args         = jsonencode({ source = "cron" })
 }
 
+# --- Observability (Cockpit + Grafana) ---
+
+resource "scaleway_cockpit" "main" {}
+
+resource "scaleway_cockpit_grafana_user" "admin" {
+  cockpit_id = scaleway_cockpit.main.id
+  login      = "fred"
+  role       = "editor"
+}
+
 # --- Outputs ---
 
 output "container_url" {
   value       = scaleway_container.growth_agent.domain_name
   description = "The container endpoint URL"
+}
+
+output "grafana_url" {
+  value       = scaleway_cockpit.main.grafana_url
+  description = "Grafana URL for log inspection"
+}
+
+output "grafana_password" {
+  value       = scaleway_cockpit_grafana_user.admin.password
+  sensitive   = true
+  description = "Grafana password for user 'fred'"
 }

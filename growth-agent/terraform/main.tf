@@ -74,11 +74,10 @@ resource "scaleway_container_cron" "daily" {
 
 # --- Observability (Cockpit + Grafana) ---
 
-data "scaleway_cockpit" "main" {}
+resource "scaleway_cockpit" "main" {}
 
-resource "scaleway_cockpit_grafana_user" "admin" {
-  login = "fred"
-  role  = "editor"
+data "scaleway_cockpit_grafana" "main" {
+  depends_on = [scaleway_cockpit.main]
 }
 
 # --- Outputs ---
@@ -89,12 +88,6 @@ output "container_url" {
 }
 
 output "grafana_url" {
-  value       = data.scaleway_cockpit.main.endpoints[0].grafana_url
-  description = "Grafana URL for log inspection"
-}
-
-output "grafana_password" {
-  value       = scaleway_cockpit_grafana_user.admin.password
-  sensitive   = true
-  description = "Grafana password for user 'fred'"
+  value       = data.scaleway_cockpit_grafana.main.grafana_url
+  description = "Open in browser and log in with your Scaleway account (IAM)"
 }

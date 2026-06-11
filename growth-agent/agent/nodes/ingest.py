@@ -106,6 +106,9 @@ def ingest_analytics(storage) -> Insights:
     return insights
 
 
+_METRICS_LOOKBACK = 20  # only fetch engagement for the N most recent posts per platform
+
+
 def _collect_post_metrics(storage) -> None:
     """Fetch per-post engagement counts from Mastodon and Bluesky, write performance.json."""
     try:
@@ -113,8 +116,10 @@ def _collect_post_metrics(storage) -> None:
         published = queue.published
         performance_posts: list[PostMetrics] = []
 
-        # Mastodon: one API call per published post
-        mastodon_published = [d for d in published if d.channel == "mastodon" and d.platform_id]
+        # Mastodon: one API call per published post — capped to avoid timeouts
+        mastodon_published = [d for d in published if d.channel == "mastodon" and d.platform_id][
+            -_METRICS_LOOKBACK:
+        ]
         if mastodon_published:
             try:
                 with MastodonClient(
@@ -142,8 +147,10 @@ def _collect_post_metrics(storage) -> None:
             except Exception:
                 logger.exception("Mastodon per-post metrics failed")
 
-        # Bluesky: direct URI lookup via getPosts (no feed pollution, no 100-item cap)
-        bluesky_published = [d for d in published if d.channel == "bluesky" and d.platform_id]
+        # Bluesky: direct URI lookup via getPosts — capped to avoid timeouts
+        bluesky_published = [d for d in published if d.channel == "bluesky" and d.platform_id][
+            -_METRICS_LOOKBACK:
+        ]
         if bluesky_published:
             try:
                 with BlueskyClient(

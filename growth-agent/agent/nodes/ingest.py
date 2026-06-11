@@ -88,14 +88,16 @@ def _collect_post_metrics(storage) -> None:
         published = queue.published
 
         recent_mastodon = [
-            d for d in published
+            d
+            for d in published
             if d.channel == "mastodon"
             and d.platform_id
             and d.published_at is not None
             and d.published_at >= cutoff
         ]
         recent_bluesky = [
-            d for d in published
+            d
+            for d in published
             if d.channel == "bluesky"
             and d.platform_id
             and d.published_at is not None

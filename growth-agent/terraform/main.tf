@@ -74,11 +74,7 @@ resource "scaleway_container_cron" "daily" {
 
 # --- Observability (Cockpit + Grafana) ---
 
-resource "scaleway_cockpit" "main" {}
-
-data "scaleway_cockpit_grafana" "main" {
-  depends_on = [scaleway_cockpit.main]
-}
+data "scaleway_cockpit_grafana" "main" {}
 
 # --- Outputs ---
 

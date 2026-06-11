@@ -16,6 +16,7 @@ from agent.models import (
     LLMAnalysis,
     PageForSocial,
     Performance,
+    PostMetrics,
     WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
@@ -215,6 +216,97 @@ def test_collect_post_metrics_mastodon_api_failure(MockMasto, mock_storage):
     MockMasto.return_value.__exit__ = MagicMock(return_value=False)
 
     _collect_post_metrics(storage)  # must not raise
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert perf.posts == []
+
+
+@patch("agent.nodes.ingest.MastodonClient")
+def test_collect_post_metrics_preserves_old_posts(MockMasto, mock_storage):
+    """Posts older than 30 days keep their stored metrics; only recent posts are re-fetched."""
+    storage, store = mock_storage
+
+    old_date = datetime.now(timezone.utc) - timedelta(days=45)
+    recent_date = datetime.now(timezone.utc) - timedelta(days=5)
+
+    queue = ContentQueue(
+        published=[
+            Draft(
+                id="old",
+                channel="mastodon",
+                language="en",
+                content="old post",
+                platform_id="old-id",
+                published_at=old_date,
+            ),
+            Draft(
+                id="recent",
+                channel="mastodon",
+                language="en",
+                content="recent post",
+                platform_id="recent-id",
+                published_at=recent_date,
+            ),
+        ]
+    )
+    storage.write("content_queue.json", queue)
+    storage.write(
+        "performance.json",
+        Performance(
+            posts=[
+                PostMetrics(
+                    id="old",
+                    channel="mastodon",
+                    published_at=old_date.isoformat(),
+                    platform_id="old-id",
+                    reblogs=10,
+                    favourites=20,
+                    replies=5,
+                )
+            ]
+        ),
+    )
+
+    masto_ctx = MagicMock()
+    masto_ctx.get_status.return_value = {"reblogs_count": 1, "favourites_count": 2, "replies_count": 0}
+    MockMasto.return_value.__enter__ = MagicMock(return_value=masto_ctx)
+    MockMasto.return_value.__exit__ = MagicMock(return_value=False)
+
+    _collect_post_metrics(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    by_id = {p.id: p for p in perf.posts}
+
+    assert "old" in by_id
+    assert by_id["old"].reblogs == 10
+    assert by_id["old"].favourites == 20
+
+    assert "recent" in by_id
+    assert by_id["recent"].reblogs == 1
+    assert by_id["recent"].favourites == 2
+
+    assert masto_ctx.get_status.call_count == 1  # only the recent post
+
+
+def test_collect_post_metrics_skips_no_published_at(mock_storage):
+    """Posts without published_at are excluded from metrics refresh."""
+    storage, store = mock_storage
+
+    queue = ContentQueue(
+        published=[
+            Draft(
+                id="no-date",
+                channel="mastodon",
+                language="en",
+                content="x",
+                platform_id="111",
+                published_at=None,
+            )
+        ]
+    )
+    storage.write("content_queue.json", queue)
+
+    _collect_post_metrics(storage)  # must not raise, must not call any API
 
     perf = Performance.model_validate(store["performance.json"])
     assert perf.posts == []

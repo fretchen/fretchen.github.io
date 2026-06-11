@@ -4,12 +4,6 @@ variable "registry_image" {
   default     = "placeholder"
 }
 
-variable "umami_website_id" {
-  description = "Umami website ID"
-  type        = string
-  default     = "e41ae7d9-a536-426d-b40e-f2488b11bf95"
-}
-
 variable "ionos_api_token" {
   description = "IONOS AI Model Hub API token"
   type        = string
@@ -24,12 +18,6 @@ variable "mastodon_access_token" {
 
 variable "bluesky_app_password" {
   description = "Bluesky app password"
-  type        = string
-  sensitive   = true
-}
-
-variable "umami_api_key" {
-  description = "Umami Cloud API key"
   type        = string
   sensitive   = true
 }

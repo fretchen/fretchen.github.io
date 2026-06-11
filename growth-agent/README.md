@@ -23,7 +23,6 @@ State is stored as JSON files in Scaleway S3 (`my-imagestore` bucket, `growth-ag
 |---|---|
 | Runtime | Python 3.11 (Scaleway Serverless Container) |
 | LLM | IONOS AI Model Hub (Llama 3.3 70B) |
-| Analytics | Umami Cloud |
 | Social | Mastodon REST API, Bluesky AT Protocol |
 | Storage | Scaleway S3 |
 | Package manager | uv |

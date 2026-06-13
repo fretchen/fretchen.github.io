@@ -771,25 +771,25 @@ def test_handle_resilient_on_failure(mock_get_storage, mock_ingest, mock_publish
 
 
 def test_plan_draft_schedule_empty_queue():
-    """Empty queue → start from tomorrow 09:00 UTC, alternating mastodon/bluesky."""
+    """Empty queue → start from tomorrow 07:00 UTC, alternating mastodon/bluesky."""
     now = datetime(2025, 6, 10, 14, 30, 0, tzinfo=timezone.utc)
     schedule = plan_draft_schedule(ContentQueue(), 4, now=now)
     assert len(schedule) == 4
     assert schedule[0] == (
         "mastodon",
-        datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc),
+        datetime(2025, 6, 11, 7, 0, 0, tzinfo=timezone.utc),
     )
     assert schedule[1] == (
         "bluesky",
-        datetime(2025, 6, 12, 9, 0, 0, tzinfo=timezone.utc),
+        datetime(2025, 6, 12, 7, 0, 0, tzinfo=timezone.utc),
     )
     assert schedule[2] == (
         "mastodon",
-        datetime(2025, 6, 13, 9, 0, 0, tzinfo=timezone.utc),
+        datetime(2025, 6, 13, 7, 0, 0, tzinfo=timezone.utc),
     )
     assert schedule[3] == (
         "bluesky",
-        datetime(2025, 6, 14, 9, 0, 0, tzinfo=timezone.utc),
+        datetime(2025, 6, 14, 7, 0, 0, tzinfo=timezone.utc),
     )
 
 
@@ -803,21 +803,21 @@ def test_plan_draft_schedule_fills_earliest_free_days():
                 channel="mastodon",
                 language="en",
                 content="a",
-                scheduled_at=datetime(2025, 4, 11, 9, 0, tzinfo=timezone.utc),
+                scheduled_at=datetime(2025, 4, 11, 7, 0, tzinfo=timezone.utc),
             ),
             Draft(
                 id="d2",
                 channel="bluesky",
                 language="en",
                 content="b",
-                scheduled_at=datetime(2025, 4, 16, 9, 0, tzinfo=timezone.utc),
+                scheduled_at=datetime(2025, 4, 16, 7, 0, tzinfo=timezone.utc),
             ),
         ]
     )
     schedule = plan_draft_schedule(queue, 3, now=now)
-    assert schedule[0][1] == datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
-    assert schedule[1][1] == datetime(2025, 4, 13, 9, 0, tzinfo=timezone.utc)
-    assert schedule[2][1] == datetime(2025, 4, 14, 9, 0, tzinfo=timezone.utc)
+    assert schedule[0][1] == datetime(2025, 4, 12, 7, 0, tzinfo=timezone.utc)
+    assert schedule[1][1] == datetime(2025, 4, 13, 7, 0, tzinfo=timezone.utc)
+    assert schedule[2][1] == datetime(2025, 4, 14, 7, 0, tzinfo=timezone.utc)
 
 
 def test_plan_draft_schedule_zero_needed():
@@ -862,7 +862,7 @@ def test_create_plan_pipeline_partial(mock_fetch, mock_storage):
             channel="mastodon",
             language="en",
             content=f"Post {i}",
-            scheduled_at=datetime(2025, 4, 10 + i, 9, 0, tzinfo=timezone.utc),
+            scheduled_at=datetime(2025, 4, 10 + i, 7, 0, tzinfo=timezone.utc),
         )
         for i in range(7)
     ]
@@ -912,14 +912,14 @@ def test_create_plan_scheduling_fills_earliest_free_days(mock_fetch, mock_storag
             channel="mastodon",
             language="en",
             content="Existing",
-            scheduled_at=datetime(2025, 4, 11, 9, 0, tzinfo=timezone.utc),
+            scheduled_at=datetime(2025, 4, 11, 7, 0, tzinfo=timezone.utc),
         ),
         Draft(
             id="d_existing_2",
             channel="bluesky",
             language="en",
             content="Existing",
-            scheduled_at=datetime(2025, 4, 16, 9, 0, tzinfo=timezone.utc),
+            scheduled_at=datetime(2025, 4, 16, 7, 0, tzinfo=timezone.utc),
         ),
     ]
     queue = ContentQueue(drafts=existing_drafts)
@@ -946,13 +946,13 @@ def test_create_plan_scheduling_fills_earliest_free_days(mock_fetch, mock_storag
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
         plan = create_plan(storage)
 
-    assert plan.items[0].scheduled_at == datetime(2025, 4, 12, 9, 0, tzinfo=timezone.utc)
-    assert plan.items[1].scheduled_at == datetime(2025, 4, 13, 9, 0, tzinfo=timezone.utc)
+    assert plan.items[0].scheduled_at == datetime(2025, 4, 12, 7, 0, tzinfo=timezone.utc)
+    assert plan.items[1].scheduled_at == datetime(2025, 4, 13, 7, 0, tzinfo=timezone.utc)
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
 def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storage):
-    """With an empty queue, scheduling starts from tomorrow 09:00 UTC."""
+    """With an empty queue, scheduling starts from tomorrow 07:00 UTC."""
     storage, store = mock_storage
 
     storage.write(
@@ -976,7 +976,7 @@ def test_create_plan_empty_queue_schedules_from_tomorrow(mock_fetch, mock_storag
         plan = create_plan(storage)
 
     first_item = plan.items[0]
-    expected_date = datetime(2025, 6, 11, 9, 0, 0, tzinfo=timezone.utc)
+    expected_date = datetime(2025, 6, 11, 7, 0, 0, tzinfo=timezone.utc)
     assert first_item.scheduled_at == expected_date
 
 

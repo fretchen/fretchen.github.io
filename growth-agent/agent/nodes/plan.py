@@ -408,7 +408,7 @@ def plan_draft_schedule(
             return ts.replace(tzinfo=timezone.utc)
         return ts.astimezone(timezone.utc)
 
-    start_slot = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    start_slot = now.replace(hour=7, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
     occupied_days: set[date] = set()
     occupied_channel_by_day: dict[date, str] = {}

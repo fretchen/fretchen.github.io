@@ -1,15 +1,22 @@
-"""Tests for run_local.py -- focus on --prod flag and _make_storage routing."""
+"""Tests for scripts/run_local.py -- focus on --prod flag and _make_storage routing."""
 
 from unittest.mock import MagicMock, call, patch
 
-from run_local import _make_storage, diagnose, run_analytics, run_insights, run_publish, run_refill
+from scripts.run_local import (
+    _make_storage,
+    diagnose,
+    run_analytics,
+    run_insights,
+    run_publish,
+    run_refill,
+)
 
 # ---------------------------------------------------------------------------
 # _make_storage — core routing logic
 # ---------------------------------------------------------------------------
 
 
-@patch("run_local.S3Storage")
+@patch("scripts.run_local.S3Storage")
 def test_make_storage_uses_dev_prefix_by_default(MockS3Storage, monkeypatch):
     monkeypatch.setenv("S3_BUCKET", "my-bucket")
     monkeypatch.setenv("S3_STATE_PREFIX", "growth-agent-dev/")
@@ -27,7 +34,7 @@ def test_make_storage_uses_dev_prefix_by_default(MockS3Storage, monkeypatch):
     )
 
 
-@patch("run_local.S3Storage")
+@patch("scripts.run_local.S3Storage")
 def test_make_storage_uses_prod_prefix_with_flag(MockS3Storage, monkeypatch):
     monkeypatch.setenv("S3_BUCKET", "my-bucket")
     monkeypatch.setenv("S3_STATE_PREFIX", "growth-agent-dev/")
@@ -45,7 +52,7 @@ def test_make_storage_uses_prod_prefix_with_flag(MockS3Storage, monkeypatch):
     )
 
 
-@patch("run_local.S3Storage")
+@patch("scripts.run_local.S3Storage")
 def test_make_storage_prod_and_dev_are_independent(MockS3Storage, monkeypatch):
     """Switching prod does not mutate S3_STATE_PREFIX."""
     monkeypatch.setenv("S3_BUCKET", "my-bucket")
@@ -68,8 +75,8 @@ def test_make_storage_prod_and_dev_are_independent(MockS3Storage, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-@patch("run_local.publish_approved_drafts")
-@patch("run_local._make_storage")
+@patch("scripts.run_local.publish_approved_drafts")
+@patch("scripts.run_local._make_storage")
 def test_run_publish_passes_prod(mock_make_storage, mock_publish):
     mock_make_storage.return_value = MagicMock()
     mock_publish.return_value = []
@@ -77,9 +84,9 @@ def test_run_publish_passes_prod(mock_make_storage, mock_publish):
     mock_make_storage.assert_called_once_with(True)
 
 
-@patch("run_local.create_drafts")
-@patch("run_local.create_plan")
-@patch("run_local._make_storage")
+@patch("scripts.run_local.create_drafts")
+@patch("scripts.run_local.create_plan")
+@patch("scripts.run_local._make_storage")
 def test_run_refill_passes_prod(mock_make_storage, mock_plan, mock_drafts):
     mock_make_storage.return_value = MagicMock()
     mock_plan.return_value = MagicMock(items=[])
@@ -88,8 +95,8 @@ def test_run_refill_passes_prod(mock_make_storage, mock_plan, mock_drafts):
     mock_make_storage.assert_called_once_with(True)
 
 
-@patch("run_local.generate_insights")
-@patch("run_local._make_storage")
+@patch("scripts.run_local.generate_insights")
+@patch("scripts.run_local._make_storage")
 def test_run_insights_passes_prod(mock_make_storage, mock_insights):
     mock_make_storage.return_value = MagicMock()
     mock_insights.return_value = MagicMock(top_topics=[], best_pages_for_social=[])
@@ -97,8 +104,8 @@ def test_run_insights_passes_prod(mock_make_storage, mock_insights):
     mock_make_storage.assert_called_once_with(True)
 
 
-@patch("run_local.ingest_analytics")
-@patch("run_local._make_storage")
+@patch("scripts.run_local.ingest_analytics")
+@patch("scripts.run_local._make_storage")
 def test_run_analytics_passes_prod(mock_make_storage, mock_ingest):
     mock_make_storage.return_value = MagicMock()
     mock_ingest.return_value = MagicMock(
@@ -109,8 +116,8 @@ def test_run_analytics_passes_prod(mock_make_storage, mock_ingest):
     mock_make_storage.assert_called_once_with(True)
 
 
-@patch("run_local.load_model")
-@patch("run_local._make_storage")
+@patch("scripts.run_local.load_model")
+@patch("scripts.run_local._make_storage")
 def test_diagnose_passes_prod(mock_make_storage, mock_load_model):
     fake_storage = MagicMock()
     fake_storage.read.return_value = None

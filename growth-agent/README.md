@@ -4,7 +4,7 @@ AI-powered social media growth pipeline for [fretchen.eu](https://fretchen.eu). 
 
 ## What it does
 
-- **Daily**: Ingests website analytics (Umami), fetches social metrics (Mastodon & Bluesky), publishes approved drafts
+- **Daily**: Fetches social metrics (Mastodon & Bluesky), publishes approved drafts
 - **Weekly (Monday)**: Generates LLM-driven insights from analytics, creates draft social media posts for human approval
 
 ## Architecture
@@ -46,8 +46,10 @@ uv run ruff format .
 ## Deploy
 
 ```bash
-bash bin/deploy.sh       # bootstrap registry, build/push image, tofu apply app stack
+uv run python scripts/deploy.py   # bootstrap registry, build/push image, tofu apply app stack
 ```
+
+Reads credentials from `.env` (inline comments are stripped). Requires podman with buildx and OpenTofu.
 
 After the first deploy, retrieve the Grafana URL:
 
@@ -58,11 +60,9 @@ tofu output grafana_url
 
 Open the URL and log in with your Scaleway account (IAM authentication).
 
-Requires Docker with buildx and OpenTofu. Deploy context comes from your active Scaleway profile in `~/.config/scw/config.yaml`, consistent with the serverless subprojects. `bin/deploy.sh` does not load `.env`; OpenTofu input variables are taken from `terraform/terraform.tfvars` or exported `TF_VAR_*` values.
-
 ### One-time migration for existing checkouts
 
-If your previous setup managed `scaleway_registry_namespace.growth_agent` in `terraform/`, run this once before using `bin/deploy.sh`:
+If your previous setup managed `scaleway_registry_namespace.growth_agent` in `terraform/`, run this once before using `scripts/deploy.py`:
 
 ```bash
 # 1) Read existing registry namespace ID from old state
@@ -79,14 +79,16 @@ cd ../terraform
 tofu state rm scaleway_registry_namespace.growth_agent
 ```
 
-After this migration, `bin/deploy.sh` runs normally without `-target` warnings and without namespace conflicts.
+After this migration, `scripts/deploy.py` runs normally without `-target` warnings and without namespace conflicts.
 
 ## Project structure
 
 ```
 handler.py          # Container entry point (HTTP server + cron handler)
 Dockerfile          # Container image (uv + Python 3.11)
-bin/deploy.sh       # Build, push, tofu apply
+scripts/
+  deploy.py         # Build, push, tofu apply
+  run_local.py      # CLI for local debugging
 terraform-bootstrap/ # OpenTofu bootstrap (registry namespace only)
 terraform/          # OpenTofu config (container, cron, secrets)
 agent/
@@ -100,8 +102,8 @@ agent/
     bluesky.py      # Bluesky AT Protocol client
 test/
   test_handler.py   # Handler unit tests
+  test_deploy.py    # Deploy script unit tests
 notebooks/          # Jupyter prototypes (01-06)
-run_local.py        # CLI for local debugging
 ```
 
 ## Debugging
@@ -111,7 +113,7 @@ When the Scaleway cron doesn't seem to fire or publish, follow these steps:
 ### 1. Check S3 logs (read-only)
 
 ```bash
-uv run python run_local.py --diagnose
+uv run python scripts/run_local.py --diagnose
 ```
 
 This shows the content queue, next scheduled drafts, LLM analysis status, and recent run logs. Log statuses:
@@ -127,16 +129,16 @@ This shows the content queue, next scheduled drafts, LLM analysis status, and re
 
 ```bash
 # Publish overdue approved drafts
-uv run python run_local.py --publish
+uv run python scripts/run_local.py --publish
 
 # Refill the draft pipeline
-uv run python run_local.py --refill
+uv run python scripts/run_local.py --refill
 
 # Generate LLM insights
-uv run python run_local.py --insights
+uv run python scripts/run_local.py --insights
 
 # Ingest analytics
-uv run python run_local.py --analytics
+uv run python scripts/run_local.py --analytics
 ```
 
 These execute against the real S3 state and platform APIs (Mastodon/Bluesky), so they have the same effect as the Scaleway cron.
@@ -170,7 +172,7 @@ Open the URL and log in with your Scaleway account (IAM — no separate Grafana 
 
 ### Common issues
 
-- **No log for today**: Scaleway cron didn't fire. Check Scaleway Console → Containers → Cron Triggers. Check Grafana Loki for startup errors. Try redeploying with `bash bin/deploy.sh`.
+- **No log for today**: Scaleway cron didn't fire. Check Scaleway Console → Containers → Cron Triggers. Check Grafana Loki for startup errors. Try redeploying with `uv run python scripts/deploy.py`.
 - **`status: started`**: Function timed out. Check `memory_limit` in `terraform/main.tf` (currently 1024 MB). LLM insight generation is the heaviest task.
 - **`status: crashed`**: Read the error in the log. Common causes: expired API tokens, S3 permission issues, platform API changes.
 - **Draft not published**: Content may exceed character limits (Mastodon: 500, Bluesky: 300). Check the approval UI for warnings.

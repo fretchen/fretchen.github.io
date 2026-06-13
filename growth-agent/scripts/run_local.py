@@ -1,26 +1,29 @@
 """Run growth-agent functions locally for debugging and diagnostics.
 
 Usage:
-    uv run python run_local.py --diagnose            # Read-only: show S3 state + recent logs
-    uv run python run_local.py --publish             # Only publish approved drafts
-    uv run python run_local.py --refill              # Only pipeline refill (create drafts)
-    uv run python run_local.py --insights            # Only generate LLM insights
-    uv run python run_local.py --analytics           # Ingest analytics
+    uv run python scripts/run_local.py --diagnose    # Read-only: show S3 state + recent logs
+    uv run python scripts/run_local.py --publish     # Only publish approved drafts
+    uv run python scripts/run_local.py --refill      # Only pipeline refill (create drafts)
+    uv run python scripts/run_local.py --insights    # Only generate LLM insights
+    uv run python scripts/run_local.py --analytics   # Ingest analytics
 
 Add --prod to any command to target S3_STATE_PREFIX_PROD instead of S3_STATE_PREFIX:
-    uv run python run_local.py --diagnose --prod
-    uv run python run_local.py --refill --prod
+    uv run python scripts/run_local.py --diagnose --prod
+    uv run python scripts/run_local.py --refill --prod
 
 For a full handler run (all daily tasks), use the Scaleway local framework:
     uv run python handler.py                         # HTTP server on :8080
     curl http://localhost:8080                        # Trigger the handler
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 import os
+import sys
+from pathlib import Path
+
+# Add project root to sys.path so `agent` is importable when running as scripts/run_local.py
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 
@@ -160,6 +163,44 @@ def run_analytics(prod: bool = False) -> None:
     print(json.dumps(result.model_dump(), indent=2, default=str)[:500])
 
 
+def cleanup_orphans() -> None:
+    """Delete malformed-prefix S3 objects and dev startup logs."""
+    import boto3
+
+    region = os.environ.get("S3_REGION", "nl-ams")
+    s3 = boto3.client(
+        "s3",
+        region_name=region,
+        endpoint_url=f"https://s3.{region}.scw.cloud",
+        aws_access_key_id=os.environ["SCW_ACCESS_KEY"],
+        aws_secret_access_key=os.environ["SCW_SECRET_KEY"],
+    )
+    bucket = os.environ.get("S3_BUCKET", "my-imagestore")
+
+    all_keys: list[str] = []
+    kwargs: dict = {"Bucket": bucket, "Prefix": "growth-agent"}
+    while True:
+        resp = s3.list_objects_v2(**kwargs)
+        all_keys.extend(obj["Key"] for obj in resp.get("Contents", []))
+        if not resp.get("IsTruncated"):
+            break
+        kwargs["ContinuationToken"] = resp["NextContinuationToken"]
+
+    bad_keys = [k for k in all_keys if "#" in k]
+    dev_startup_keys = [k for k in all_keys if k.startswith("growth-agent-dev/logs/startup-")]
+    to_delete = bad_keys + dev_startup_keys
+
+    if not to_delete:
+        print("Nothing to clean up.")
+        return
+
+    print(f"Deleting {len(to_delete)} objects:")
+    for k in to_delete:
+        print(f"  {k}")
+    s3.delete_objects(Bucket=bucket, Delete={"Objects": [{"Key": k} for k in to_delete]})
+    print(f"Deleted {len(to_delete)} objects.")
+
+
 def show_graph(output: str = "graph.png") -> None:
     """Export the LangGraph graph as PNG image."""
     from agent.graph import graph
@@ -185,6 +226,11 @@ def main() -> None:
         metavar="FILE",
         help="Export graph as PNG (default: graph.png)",
     )
+    group.add_argument(
+        "--cleanup-orphans",
+        action="store_true",
+        help="Delete malformed-prefix S3 objects and dev startup logs",
+    )
     parser.add_argument(
         "--prod",
         action="store_true",
@@ -208,6 +254,8 @@ def main() -> None:
         run_analytics(prod=args.prod)
     elif args.graph:
         show_graph(args.graph)
+    elif args.cleanup_orphans:
+        cleanup_orphans()
 
 
 if __name__ == "__main__":

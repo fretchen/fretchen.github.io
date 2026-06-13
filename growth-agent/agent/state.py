@@ -1,6 +1,5 @@
 """Agent state definition shared across graph and node modules."""
 
-
 from typing import Any, TypedDict
 
 

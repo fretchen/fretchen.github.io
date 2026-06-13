@@ -1,6 +1,5 @@
 """Insights node — LLM-based analysis of analytics data."""
 
-
 import json
 import logging
 from datetime import datetime, timezone

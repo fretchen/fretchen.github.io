@@ -13,7 +13,6 @@ These tests evaluate draft quality using the golden set baseline.
 They are separate from unit tests and may be slower due to LLM calls.
 """
 
-
 import json
 import os
 from pathlib import Path

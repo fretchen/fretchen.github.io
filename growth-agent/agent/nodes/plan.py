@@ -1,6 +1,5 @@
 """Plan node — decides what to post, when, and on which channel."""
 
-
 import logging
 import math
 import random

@@ -1,6 +1,5 @@
 """Tests for scripts/deploy.py — focused on env loading and validation."""
 
-
 import pytest
 
 from scripts.deploy import REQUIRED, load_env, validate_env

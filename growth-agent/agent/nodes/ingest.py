@@ -1,6 +1,5 @@
 """Ingest node — fetches social media metrics."""
 
-
 import logging
 import os
 from datetime import datetime, timedelta, timezone

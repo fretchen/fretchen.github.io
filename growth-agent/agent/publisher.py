@@ -1,6 +1,5 @@
 """Publish approved drafts to social media platforms."""
 
-
 from agent.models import Draft
 from agent.platforms.bluesky import BlueskyClient
 from agent.platforms.mastodon import MastodonClient

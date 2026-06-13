@@ -9,7 +9,6 @@ Run sequence:
     - Publish approved drafts where scheduled_at <= now
 """
 
-
 import json
 import logging
 import os

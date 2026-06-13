@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Deploy growth-agent to Scaleway: build image, push to registry, apply OpenTofu."""
 
-
 import os
 import subprocess
 import sys
@@ -125,9 +124,14 @@ def main() -> None:
     print(f"==> Building image: {image} (platform: {target_platform})")
     _run(
         [
-            "podman", "build",
-            "--platform", target_platform,
-            "-t", image, "-t", image_latest,
+            "podman",
+            "build",
+            "--platform",
+            target_platform,
+            "-t",
+            image,
+            "-t",
+            image_latest,
             str(_PROJECT_DIR),
         ]
     )

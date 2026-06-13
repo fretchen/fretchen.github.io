@@ -1,6 +1,5 @@
 """Publish node — publishes approved drafts to social platforms."""
 
-
 import logging
 import os
 from datetime import datetime, timezone

@@ -16,7 +16,6 @@ For a full handler run (all daily tasks), use the Scaleway local framework:
     curl http://localhost:8080                        # Trigger the handler
 """
 
-
 import argparse
 import json
 import os

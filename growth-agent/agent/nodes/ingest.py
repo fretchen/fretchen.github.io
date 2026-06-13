@@ -1,9 +1,8 @@
-"""Ingest node — fetches Umami analytics and social media metrics."""
-
-from __future__ import annotations
+"""Ingest node — fetches social media metrics."""
 
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 
 from agent.models import (
     ContentQueue,
@@ -11,17 +10,13 @@ from agent.models import (
     Performance,
     PostMetrics,
     SocialMetrics,
-    WebsiteAnalytics,
 )
 from agent.platforms.bluesky import BlueskyClient
 from agent.platforms.mastodon import MastodonClient
 from agent.state import AgentState
 from agent.storage import load_model
-from agent.umami_client import UmamiClient, ms_timestamp
 
 logger = logging.getLogger("growth-agent")
-
-TOP_PAGES_LIMIT = 50
 
 
 def ingest_node(state: AgentState) -> dict:
@@ -35,41 +30,8 @@ def ingest_node(state: AgentState) -> dict:
 
 
 def ingest_analytics(storage) -> Insights:
-    """Fetch Umami analytics and social metrics, write to insights.json."""
+    """Fetch social metrics and per-post engagement, write to insights.json."""
     insights = load_model(storage, "insights.json", Insights)
-
-    # Umami
-    umami = UmamiClient(
-        api_key=os.environ["UMAMI_API_KEY"],
-        website_id=os.environ.get("UMAMI_WEBSITE_ID", "e41ae7d9-a536-426d-b40e-f2488b11bf95"),
-    )
-    try:
-        start_at = ms_timestamp(days_ago=28)
-        end_at = ms_timestamp(days_ago=0)
-
-        stats = umami.get_stats(start_at, end_at)
-        top_pages = umami.get_metrics(start_at, end_at, "path", limit=TOP_PAGES_LIMIT)
-        top_referrers = umami.get_metrics(start_at, end_at, "referrer", limit=10)
-        top_events = umami.get_metrics(start_at, end_at, "event", limit=20)
-
-        def _stat(val):
-            """Handle both old ({"value": n}) and new (n) Umami formats."""
-            return val.get("value", 0) if isinstance(val, dict) else (val or 0)
-
-        insights.website_analytics = WebsiteAnalytics(
-            pageviews=_stat(stats.get("pageviews", 0)),
-            visitors=_stat(stats.get("visitors", 0)),
-            visits=_stat(stats.get("visits", 0)),
-            bounces=_stat(stats.get("bounces", 0)),
-            totaltime=_stat(stats.get("totaltime", 0)),
-            top_pages=top_pages,
-            top_referrers=top_referrers,
-            top_events=top_events,
-        )
-    except Exception:
-        logger.exception("Umami ingestion failed")
-    finally:
-        umami.close()
 
     # Mastodon metrics
     try:
@@ -106,72 +68,94 @@ def ingest_analytics(storage) -> Insights:
     return insights
 
 
+_METRICS_REFRESH_DAYS = 30  # only re-fetch engagement for posts published within this window
+
+
 def _collect_post_metrics(storage) -> None:
-    """Fetch per-post engagement counts from Mastodon and Bluesky, write performance.json."""
+    """Fetch per-post engagement counts from Mastodon and Bluesky, write performance.json.
+
+    Merges with existing performance.json — posts outside the refresh window are preserved
+    unchanged; only posts published within the last _METRICS_REFRESH_DAYS are re-fetched.
+    """
     try:
         queue = load_model(storage, "content_queue.json", ContentQueue)
-        published = queue.published
-        performance_posts: list[PostMetrics] = []
+        existing = load_model(storage, "performance.json", Performance)
 
-        # Mastodon: one API call per published post
-        mastodon_published = [d for d in published if d.channel == "mastodon" and d.platform_id]
-        if mastodon_published:
+        existing_by_id: dict[str, PostMetrics] = {p.id: p for p in existing.posts}
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_METRICS_REFRESH_DAYS)
+        published = queue.published
+
+        recent_mastodon = [
+            d
+            for d in published
+            if d.channel == "mastodon"
+            and d.platform_id
+            and d.published_at is not None
+            and d.published_at >= cutoff
+        ]
+        recent_bluesky = [
+            d
+            for d in published
+            if d.channel == "bluesky"
+            and d.platform_id
+            and d.published_at is not None
+            and d.published_at >= cutoff
+        ]
+
+        updated: dict[str, PostMetrics] = dict(existing_by_id)
+
+        if recent_mastodon:
             try:
                 with MastodonClient(
                     instance=os.environ.get("MASTODON_INSTANCE", "https://mastodon.social"),
                     access_token=os.environ["MASTODON_ACCESS_TOKEN"],
                 ) as masto:
-                    for draft in mastodon_published:
+                    for draft in recent_mastodon:
                         try:
                             status = masto.get_status(draft.platform_id)  # type: ignore[arg-type]
-                            performance_posts.append(
-                                PostMetrics(
-                                    id=draft.id,
-                                    channel="mastodon",
-                                    published_at=(
-                                        draft.published_at.isoformat() if draft.published_at else ""
-                                    ),
-                                    platform_id=draft.platform_id,
-                                    reblogs=status.get("reblogs_count", 0),
-                                    favourites=status.get("favourites_count", 0),
-                                    replies=status.get("replies_count", 0),
-                                )
+                            updated[draft.id] = PostMetrics(
+                                id=draft.id,
+                                channel="mastodon",
+                                published_at=(
+                                    draft.published_at.isoformat() if draft.published_at else ""
+                                ),
+                                platform_id=draft.platform_id,
+                                reblogs=status.get("reblogs_count", 0),
+                                favourites=status.get("favourites_count", 0),
+                                replies=status.get("replies_count", 0),
                             )
                         except Exception:
                             logger.warning("Failed to fetch Mastodon status %s", draft.platform_id)
             except Exception:
                 logger.exception("Mastodon per-post metrics failed")
 
-        # Bluesky: direct URI lookup via getPosts (no feed pollution, no 100-item cap)
-        bluesky_published = [d for d in published if d.channel == "bluesky" and d.platform_id]
-        if bluesky_published:
+        if recent_bluesky:
             try:
                 with BlueskyClient(
                     handle=os.environ.get("BLUESKY_HANDLE", "fretchen.eu"),
                     app_password=os.environ["BLUESKY_APP_PASSWORD"],
                 ) as bsky:
-                    uris = [d.platform_id for d in bluesky_published]
+                    uris = [d.platform_id for d in recent_bluesky]
                     posts_by_uri = {p["uri"]: p for p in bsky.get_posts(uris)}  # type: ignore[arg-type]
-                    for draft in bluesky_published:
+                    for draft in recent_bluesky:
                         post = posts_by_uri.get(draft.platform_id or "")
                         if post:
-                            performance_posts.append(
-                                PostMetrics(
-                                    id=draft.id,
-                                    channel="bluesky",
-                                    published_at=(
-                                        draft.published_at.isoformat() if draft.published_at else ""
-                                    ),
-                                    platform_id=draft.platform_id,
-                                    reblogs=post.get("repostCount", 0),
-                                    favourites=post.get("likeCount", 0),
-                                    replies=post.get("replyCount", 0),
-                                )
+                            updated[draft.id] = PostMetrics(
+                                id=draft.id,
+                                channel="bluesky",
+                                published_at=(
+                                    draft.published_at.isoformat() if draft.published_at else ""
+                                ),
+                                platform_id=draft.platform_id,
+                                reblogs=post.get("repostCount", 0),
+                                favourites=post.get("likeCount", 0),
+                                replies=post.get("replyCount", 0),
                             )
             except Exception:
                 logger.exception("Bluesky per-post metrics failed")
 
-        storage.write("performance.json", Performance(posts=performance_posts))
-        logger.info("Per-post metrics collected: %d posts", len(performance_posts))
+        refreshed = len(recent_mastodon) + len(recent_bluesky)
+        storage.write("performance.json", Performance(posts=list(updated.values())))
+        logger.info("Per-post metrics: %d total, %d refreshed", len(updated), refreshed)
     except Exception:
         logger.exception("Per-post metrics collection failed")

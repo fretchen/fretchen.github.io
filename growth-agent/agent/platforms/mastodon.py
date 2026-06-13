@@ -1,7 +1,5 @@
 """Mastodon REST API client for posting and metrics."""
 
-from __future__ import annotations
-
 import httpx
 
 
@@ -52,7 +50,7 @@ class MastodonClient:
     def close(self) -> None:
         self.client.close()
 
-    def __enter__(self) -> MastodonClient:
+    def __enter__(self):
         return self
 
     def __exit__(self, *args: object) -> None:

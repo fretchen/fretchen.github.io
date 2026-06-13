@@ -1,6 +1,5 @@
 """Drafts node — LLM-based social media draft generation."""
 
-from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone

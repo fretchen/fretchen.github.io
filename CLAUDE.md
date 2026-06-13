@@ -71,21 +71,21 @@ uv run python -m ipykernel install --user --name=merkle-tree-notebooks
 
 ### growth-agent/
 
-Python cron container (managed with `uv`). Runs daily on Scaleway: ingests Umami analytics, generates LLM social-media drafts, and publishes approved posts to Mastodon and Bluesky. Human-in-the-loop via the website's Growth UI (`/growth`). LangGraph graph: `START -> ingest -> [insights (Monday only) ->] plan -> drafts -> publish -> END`.
+Python cron container (managed with `uv`). Runs daily on Scaleway: generates LLM social-media drafts, and publishes approved posts to Mastodon and Bluesky. Human-in-the-loop via the website's Growth UI (`/growth`). LangGraph graph: `START -> ingest -> [insights (Monday only) ->] plan -> drafts -> publish -> END`.
 
 ```bash
 cd growth-agent/
-uv sync                                      # install deps
-uv run pytest test/                          # run tests
-uv run python run_local.py --diagnose        # inspect current S3 state (read-only)
-uv run python run_local.py --publish         # publish approved drafts
-uv run python run_local.py --refill          # pipeline refill (create drafts)
-uv run python run_local.py --insights        # generate LLM insights
-uv run python run_local.py --analytics       # ingest analytics
-uv run python run_local.py --graph           # export LangGraph as graph.png
-uv run python handler.py                     # start local HTTP server on :8080
-curl http://localhost:8080                   # trigger a full handler run locally
-bash bin/deploy.sh                           # build + push + deploy (needs SCW creds)
+uv sync                                              # install deps
+uv run pytest test/                                  # run tests
+uv run python scripts/run_local.py --diagnose        # inspect current S3 state (read-only)
+uv run python scripts/run_local.py --publish         # publish approved drafts
+uv run python scripts/run_local.py --refill          # pipeline refill (create drafts)
+uv run python scripts/run_local.py --insights        # generate LLM insights
+uv run python scripts/run_local.py --analytics       # ingest analytics
+uv run python scripts/run_local.py --graph           # export LangGraph as graph.png
+uv run python handler.py                             # start local HTTP server on :8080
+curl http://localhost:8080                           # trigger a full handler run locally
+uv run python scripts/deploy.py                      # build + push + deploy (needs SCW creds)
 ```
 
 LLM provider is selected via `LLM_PROVIDER` env var (`ionos` default, or `mistral`). Matching API key env var: `IONOS_API_TOKEN` or `MISTRAL_API_KEY`. Override model with `LLM_MODEL`.

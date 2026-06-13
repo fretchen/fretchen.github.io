@@ -9,7 +9,6 @@ Run sequence:
     - Publish approved drafts where scheduled_at <= now
 """
 
-from __future__ import annotations
 
 import json
 import logging

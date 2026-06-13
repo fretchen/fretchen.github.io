@@ -1,6 +1,5 @@
 """Publish node — publishes approved drafts to social platforms."""
 
-from __future__ import annotations
 
 import logging
 import os

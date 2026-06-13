@@ -1,22 +1,21 @@
 """Run growth-agent functions locally for debugging and diagnostics.
 
 Usage:
-    uv run python run_local.py --diagnose            # Read-only: show S3 state + recent logs
-    uv run python run_local.py --publish             # Only publish approved drafts
-    uv run python run_local.py --refill              # Only pipeline refill (create drafts)
-    uv run python run_local.py --insights            # Only generate LLM insights
-    uv run python run_local.py --analytics           # Ingest analytics
+    uv run python scripts/run_local.py --diagnose    # Read-only: show S3 state + recent logs
+    uv run python scripts/run_local.py --publish     # Only publish approved drafts
+    uv run python scripts/run_local.py --refill      # Only pipeline refill (create drafts)
+    uv run python scripts/run_local.py --insights    # Only generate LLM insights
+    uv run python scripts/run_local.py --analytics   # Ingest analytics
 
 Add --prod to any command to target S3_STATE_PREFIX_PROD instead of S3_STATE_PREFIX:
-    uv run python run_local.py --diagnose --prod
-    uv run python run_local.py --refill --prod
+    uv run python scripts/run_local.py --diagnose --prod
+    uv run python scripts/run_local.py --refill --prod
 
 For a full handler run (all daily tasks), use the Scaleway local framework:
     uv run python handler.py                         # HTTP server on :8080
     curl http://localhost:8080                        # Trigger the handler
 """
 
-from __future__ import annotations
 
 import argparse
 import json

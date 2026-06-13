@@ -1,6 +1,5 @@
 """Insights node — LLM-based analysis of analytics data."""
 
-from __future__ import annotations
 
 import json
 import logging

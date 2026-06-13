@@ -13,7 +13,6 @@ These tests evaluate draft quality using the golden set baseline.
 They are separate from unit tests and may be slower due to LLM calls.
 """
 
-from __future__ import annotations
 
 import json
 import os

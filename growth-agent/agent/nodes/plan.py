@@ -1,6 +1,5 @@
 """Plan node — decides what to post, when, and on which channel."""
 
-from __future__ import annotations
 
 import logging
 import math

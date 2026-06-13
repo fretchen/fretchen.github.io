@@ -1,7 +1,5 @@
 """Bluesky AT Protocol client for posting and metrics."""
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
 
 import httpx
@@ -115,7 +113,7 @@ class BlueskyClient:
     def close(self) -> None:
         self.client.close()
 
-    def __enter__(self) -> BlueskyClient:
+    def __enter__(self):
         return self
 
     def __exit__(self, *args: object) -> None:

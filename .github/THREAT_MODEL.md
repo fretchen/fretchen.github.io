@@ -1,6 +1,6 @@
 # Threat Model
 
-Last updated: 2026-06-16
+Last updated: 2026-06-16 (eth/ section revised after manual code review — initial findings from static analysis contained false positives)
 
 ## Priority Order
 
@@ -9,7 +9,7 @@ Risk priority differs from naive surface-area intuition:
 **eth/ > x402_facilitator/ > website/**
 
 - `website/` is mostly a client-side React app. Sensitive operations (wallet signing, contract calls) run in the user's browser — blast radius is the individual user, not the system.
-- `eth/` contracts hold real ETH and control token URIs. Unguarded ETH transfers in production code are systemic risk.
+- `eth/` contracts hold real ETH and control token URIs. Most ETH transfers correctly follow Checks-Effects-Interactions; the real risk is in CollectorNFT's mint ordering and the single-owner upgrade path.
 - `x402_facilitator/` is the USDC settlement engine. It is Internet-facing with overly permissive CORS.
 
 ---
@@ -20,26 +20,35 @@ Risk priority differs from naive surface-area intuition:
 
 | Contract | Function | Issue | Severity |
 |---|---|---|---|
-| `GenImNFTv4.sol` | `requestImageUpdate()` | No reentrancy guard; pays `msg.sender` after state change | High |
-| `LLMv1.sol` | `withdrawBalance()` | No reentrancy guard; ETH transferred after balance deduction | Medium |
-| `LLMv1.sol` | `processBatch()` | Multiple ETH transfers in loop, no guard | Medium |
-| `CollectorNFT.sol` | `mintCollectorNFT()` | Two ETH transfers (owner then refund) with no guard | Medium |
-| All upgradeable | `_authorizeUpgrade()` | Only `onlyOwner`; no timelock or multi-sig — leaked key = contract takeover | High |
-| `SupportV2.sol` | `donateToken()` | Accepts arbitrary `_token` address; attacker could pass malicious ERC-20 | Medium |
+| `CollectorNFT.sol` | `mintCollectorNFT()` | `_safeMint` triggers `onERC721Received` before `mintCountPerGenImToken` is incremented — allows price manipulation via reentrancy | Medium |
+| All upgradeable | `_authorizeUpgrade()` | Only `onlyOwner`; no timelock or multi-sig — leaked key = immediate contract takeover | Medium (governance) |
+| `SupportV2.sol` | `donateToken()` | Accepts arbitrary `_token` address; attacker can pass a malicious contract | Low (contract holds no funds) |
+| `LLMv1.sol` | `processBatch()` | `processedBatches[merkleRoot] = true` is set after provider payments — technically violates CEI | Informational |
+
+**CollectorNFT attack path:** An attacker deploys a receiver contract whose `onERC721Received` callback re-enters `mintCollectorNFT()` for the same `genImTokenId`. Because `mintCountPerGenImToken` has not been incremented yet when the callback fires, `getCurrentPrice()` returns the pre-increment (lower) price. The attacker can mint multiple CollectorNFTs at base price, defeating the bonding curve. Each reentrant call requires ETH from the attacker, so this is price manipulation rather than fund theft. **Does not merit a CVE** — no fund-loss path and relies on a malicious receiver contract.
+
+**LLMv1 note:** Although `processedBatches[merkleRoot] = true` is set after the payment loop, the issue is not exploitable: all user balances are deducted in the first loop before any payments, so a reentrant call with the same `merkleRoot` would fail the `InsufficientBalance` check.
+
+### Not Issues (Previously Flagged — Confirmed Safe After Code Review)
+
+| Contract | Function | Why it is safe |
+|---|---|---|
+| `GenImNFTv4.sol` | `requestImageUpdate()` | CEI is followed: `_imageUpdated[tokenId] = true` before payment. Reentrant call reverts on `ImageAlreadyUpdated`. |
+| `LLMv1.sol` | `withdrawBalance()` | CEI is followed: `llmBalance[msg.sender] -= amount` before payment. Reentrant call reverts on `InsufficientBalance`. |
 
 ### Mitigations in Place
 
 - CVE-2025-11-26 fixed: `requestImageUpdate()` in v4 requires `_whitelistedAgentWallets[msg.sender]`
-- `SupportV2.donate()` and `donateToken()` are protected with `ReentrancyGuardTransient`
-- Storage layout preserved correctly across v3→v4 upgrade (gap adjusted from 49 to 48 slots)
-- Merkle proof replay protection in `LLMv1.processBatch()` via `processedMerkleRoots` mapping
-- Solidity 0.8+ provides built-in overflow/underflow protection
+- `SupportV2.donate()` and `donateToken()` use `ReentrancyGuardTransient` (OZ 5.x transient storage)
+- All contracts use Solidity 0.8.27 — built-in overflow/underflow protection
+- Storage layout preserved correctly across v3→v4 upgrade (gap 49 → 48 slots)
+- Merkle proof replay protection in `LLMv1.processBatch()` via `processedBatches` mapping
 
 ### Recommended Fixes
 
-1. Add `nonReentrant` to `GenImNFTv4.requestImageUpdate()`, `LLMv1.withdrawBalance()`, `LLMv1.processBatch()`, `CollectorNFT.mintCollectorNFT()` — same pattern as `SupportV2`.
-2. Move contract ownership to a Gnosis Safe or add a `TimelockController` before the upgrade path.
-3. Whitelist accepted token addresses in `SupportV2.donateToken()` to known USDC contract addresses.
+1. **CollectorNFT:** Move `mintCountPerGenImToken[genImTokenId]++` and `collectorTokensByGenImToken[genImTokenId].push(collectorTokenId)` to before the `_safeMint` call, or add `nonReentrant` from `ReentrancyGuardTransient` (same as `SupportV2`).
+2. **Upgrade path:** Move contract ownership to a Gnosis Safe or add a `TimelockController` before `_authorizeUpgrade()`.
+3. **SupportV2:** Consider validating `_token` against a known-good token list; low priority given no funds are at risk.
 
 ---
 

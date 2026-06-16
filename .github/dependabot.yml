@@ -5,7 +5,7 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
+  - package-ecosystem: "npm"
     directories:
       - "website"
       - "eth"
@@ -16,3 +16,13 @@ updates:
       npm-dependencies:
         patterns:
           - "*"
+
+  - package-ecosystem: "pip"
+    directory: "notebooks"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "growth-agent"
+    schedule:
+      interval: "weekly"

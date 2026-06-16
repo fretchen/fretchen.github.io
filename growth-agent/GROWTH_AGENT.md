@@ -241,8 +241,8 @@ website/pages/growth/
 └── +Page.tsx               # (Phase 1d) Draft approval page with Wagmi wallet auth
 ```
 
-> **Note:** `growth-agent/` is its own subproject in the monorepo, managed with `uv`
-> (not Poetry like `notebooks/`). It has its own `pyproject.toml` and `uv.lock`.
+> **Note:** `growth-agent/` is its own subproject in the monorepo, managed with `uv`.
+> It has its own `pyproject.toml` and `uv.lock`.
 > The API in `scw_js/` shares the existing `package.json` and deployment pipeline.
 
 ---

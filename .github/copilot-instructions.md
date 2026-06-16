@@ -189,9 +189,9 @@ When writing or editing blog posts about political economics, game theory, or re
 
 ### Python Notebooks (notebooks/)
 
-- **Poetry for dependency management** - `poetry install`, `poetry shell`, `poetry run jupyter notebook`
+- **uv for dependency management** - `uv sync`, `uv run jupyter notebook`
 - **pyproject.toml** defines dependencies, not requirements.txt
-- Install kernel for VSCode: `poetry run python -m ipykernel install --user --name=merkle-tree-notebooks`
+- Install kernel for VSCode: `uv run python -m ipykernel install --user --name=merkle-tree-notebooks`
 
 ## Integration Points
 

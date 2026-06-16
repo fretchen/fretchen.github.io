@@ -109,66 +109,11 @@ For blockchain systems, **Integrity** dominates. Confidentiality is generally lo
 
 ---
 
-## 6. Smart Contract Findings
+## 6. Component Security Findings
 
-*Code-level issues identified by manual review against the OZ 5.6 codebase (commit 32e91e8e).*
+Detailed code-level findings live alongside the code they describe:
 
-### Open Issues
-
-| Contract | Function | Issue | Severity |
-|---|---|---|---|
-| `CollectorNFT.sol` | `mintCollectorNFT()` | `_safeMint` triggers `onERC721Received` before `mintCountPerGenImToken` is incremented — allows price manipulation via reentrancy | Medium |
-| All upgradeable | `_authorizeUpgrade()` | Only `onlyOwner`; no timelock or multi-sig — leaked owner key = immediate upgrade of all contracts | Medium (governance) |
-| `SupportV2.sol` | `donateToken()` | Accepts arbitrary `_token` address; caller can pass a malicious contract | Low (contract holds no funds) |
-| `LLMv1.sol` | `processBatch()` | `processedBatches[merkleRoot] = true` is set after provider payments — technically violates CEI | Informational |
-
-**CollectorNFT attack path:** An attacker deploys a receiver contract whose `onERC721Received` callback re-enters `mintCollectorNFT()` for the same `genImTokenId`. Because `mintCountPerGenImToken` has not been incremented yet when the callback fires, `getCurrentPrice()` returns the pre-increment (lower) price. The attacker pays base price for mints that should cost 2×, 4×, etc. No fund theft — price manipulation only. Does not merit a CVE.
-
-**LLMv1 note:** Although `processedBatches[merkleRoot] = true` is set after the payment loop, the issue is not exploitable: all user balances are deducted in the first loop before any payments, so a reentrant call with the same `merkleRoot` fails `InsufficientBalance`.
-
-### Confirmed Safe (Previously Questioned)
-
-| Contract | Function | Why it is safe |
+| Component | Findings document | Open issues |
 |---|---|---|
-| `GenImNFTv4.sol` | `requestImageUpdate()` | CEI correct: `_imageUpdated[tokenId] = true` before payment. Reentrant call reverts on `ImageAlreadyUpdated`. |
-| `LLMv1.sol` | `withdrawBalance()` | CEI correct: `llmBalance[msg.sender] -= amount` before payment. Reentrant call reverts on `InsufficientBalance`. |
-
-### Mitigations in Place
-
-- CVE-2025-11-26 fixed: `requestImageUpdate()` requires `_whitelistedAgentWallets[msg.sender]`
-- `SupportV2.donate()` and `donateToken()` use `ReentrancyGuardTransient` (OZ 5.x)
-- Solidity 0.8.27 — built-in overflow/underflow protection
-- Storage layout preserved across v3→v4 upgrade (gap 49 → 48 slots)
-- Merkle proof replay protection in `LLMv1` via `processedBatches` mapping
-
-### Recommended Fixes
-
-1. **CollectorNFT:** Move `mintCountPerGenImToken[genImTokenId]++` and `collectorTokensByGenImToken[genImTokenId].push(collectorTokenId)` to before the `_safeMint` call, or add `nonReentrant` from `ReentrancyGuardTransient`.
-2. **Upgrade path:** Move owner to a Gnosis Safe or add a `TimelockController`.
-3. **SupportV2:** Validate `_token` against a known-good list; low priority given no funds are at risk.
-
----
-
-## 7. Serverless & Frontend Findings
-
-### Open Issues
-
-| File | Issue | Severity |
-|---|---|---|
-| `x402_facilitator.ts` | CORS `*` on payment settlement endpoint — any origin can initiate settlement calls | Medium |
-| `comment_service/comments.ts` | `SCW_SECRET_KEY` passed in Scaleway email API header (may appear in request logs) | Medium |
-| `components/ImageGenerator.tsx` | Image MIME/size validation is client-side only | Low |
-
-### Mitigations in Place
-
-- EIP-712 domain name correctly parameterized per chain (`USDC_NAMES` in `shared/chain-utils/src/addresses.ts`)
-- Growth API: timestamp-scoped signed messages, 5-min window, message-prefix-scoped
-- Comment service: `ALLOWED_ORIGINS` whitelist
-- Wallet auth Bearer tokens are not reusable across services (prefix-scoped)
-- No secrets or private keys in any frontend code
-
-### Recommended Fixes
-
-1. Restrict `Access-Control-Allow-Origin` on the facilitator to `https://www.fretchen.eu` — same pattern as the comment service.
-2. Use a scoped Scaleway API token for the email service instead of `SCW_SECRET_KEY`.
-3. Re-validate image MIME type and size server-side in `scw_js` before forwarding to BFL/IONOS.
+| Smart contracts | [eth/SECURITY.md](../eth/SECURITY.md) | CollectorNFT price manipulation (medium), single-owner upgrade path (medium governance) |
+| Serverless & frontend | — | CORS `*` on x402_facilitator (medium), SCW_SECRET_KEY in email headers (medium), client-side-only image validation (low) |

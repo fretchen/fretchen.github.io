@@ -43,6 +43,7 @@ async function main() {
   const walletClient = createWalletClient({
     account,
     transport: custom(connection.provider),
+    chain: publicClient.chain,
   });
 
   console.log(`Network: ${connection.networkName}`);
@@ -71,7 +72,7 @@ async function main() {
     }
 
     console.log(`⏳ ${name}: transferring...`);
-    const hash = await contract.write.transferOwnership([CONTRACT_OWNER_ADDRESS]);
+    const hash = await contract.write.transferOwnership([CONTRACT_OWNER_ADDRESS], { gas: 100_000n });
     await publicClient.waitForTransactionReceipt({ hash });
 
     const updatedOwner = await contract.read.owner();

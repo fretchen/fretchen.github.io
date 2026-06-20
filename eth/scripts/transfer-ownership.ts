@@ -1,4 +1,24 @@
+/**
+ * Transfers ownership of all upgradeable UUPS proxy contracts to a dedicated owner EOA.
+ *
+ * Usage:
+ *   npx hardhat run scripts/transfer-ownership.ts --network optimisticEthereum
+ *   npx hardhat run scripts/transfer-ownership.ts --network base
+ *   npx hardhat run scripts/transfer-ownership.ts --network optsepolia  # testnet dry-run
+ *
+ * Safety: reads owner() before each transfer and skips contracts already at the
+ * target address — safe to re-run at any time.
+ *
+ * Key access: reads SEPOLIA_PRIVATE_KEY directly from Hardhat's encrypted keystore
+ * via ConfigVariable.getHexString() (the same internal path used by
+ * LocalAccountsHandler), so no plaintext env vars are needed.
+ *
+ * Workaround: gas is hardcoded at 100_000n because Hardhat's AutomaticGasHandler
+ * produces inflated estimates when using custom(provider) against external HTTP
+ * networks (Hardhat 3 upstream bug).
+ */
 import hre from "hardhat";
+import type { ResolvedConfigurationVariable } from "hardhat/types";
 import { getAddress, getContract, createWalletClient, custom } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -42,7 +62,7 @@ async function main() {
   if (!Array.isArray(networkAccounts) || networkAccounts.length === 0) {
     throw new Error("No private key accounts configured for this network");
   }
-  const privateKey = (await (networkAccounts[0] as any).getHexString()) as `0x${string}`;
+  const privateKey = (await (networkAccounts[0] as ResolvedConfigurationVariable).getHexString()) as `0x${string}`;
   const account = privateKeyToAccount(privateKey);
   const walletClient = createWalletClient({
     account,

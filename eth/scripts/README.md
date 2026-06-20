@@ -1,3 +1,23 @@
+# Scripts
+
+## Ownership Management
+
+### `transfer-ownership.ts`
+
+Transfers `owner()` of all upgradeable UUPS proxy contracts to a designated EOA.
+Reads the signing key from Hardhat's encrypted keystore — no plaintext env vars needed.
+Safe to re-run: contracts already at the target owner are skipped with `⚠️`.
+
+```bash
+npx hardhat run scripts/transfer-ownership.ts --network optimisticEthereum
+npx hardhat run scripts/transfer-ownership.ts --network base
+npx hardhat run scripts/transfer-ownership.ts --network optsepolia  # testnet dry-run
+```
+
+Requires `SEPOLIA_PRIVATE_KEY` in the Hardhat keystore (`npx hardhat keystore set SEPOLIA_PRIVATE_KEY`).
+
+---
+
 # CollectorNFT Deployment Configuration
 
 This directory contains configuration files and scripts for deploying the CollectorNFT contract.

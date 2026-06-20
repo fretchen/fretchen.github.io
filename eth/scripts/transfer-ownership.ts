@@ -20,6 +20,8 @@ const CONTRACTS_BY_NETWORK: Record<string, Array<{ name: string; address: `0x${s
     { name: "SupportV2",    address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316" },
   ],
   base: [
+    { name: "GenImNFTv4",   address: "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68" },
+    { name: "CollectorNFT", address: "0x5D0103393DDcD988867437233c197c6A38b23360" },
     { name: "SupportV2",    address: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694" },
   ],
   optsepolia: [
@@ -73,10 +75,11 @@ async function main() {
 
     console.log(`⏳ ${name}: transferring...`);
     const hash = await contract.write.transferOwnership([CONTRACT_OWNER_ADDRESS], { gas: 100_000n });
-    await publicClient.waitForTransactionReceipt({ hash });
-
-    const updatedOwner = await contract.read.owner();
-    console.log(`✅ ${name}: owner is now ${updatedOwner}`);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status === 'reverted') {
+      throw new Error(`${name}: transferOwnership transaction reverted (tx: ${hash})`);
+    }
+    console.log(`✅ ${name}: owner is now ${CONTRACT_OWNER_ADDRESS} (tx: ${hash})`);
   }
 }
 

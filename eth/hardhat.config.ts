@@ -48,7 +48,7 @@ export default defineConfig({
     },
     base: {
       type: "http",
-      url: configVariable("ALCHEMY_API_KEY", "https://base-mainnet.g.alchemy.com/v2/{variable}"),
+      url: "https://mainnet.base.org",
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY"), configVariable("CONTRACT_OWNER_PRIVATE_KEY")],
     },
   },

@@ -1,3 +1,19 @@
+/**
+ * Deploys SupportV2 as a UUPS upgradeable proxy.
+ *
+ * Usage:
+ *   npx hardhat run scripts/deploy-support-v2.ts --network optsepolia
+ *   npx hardhat run scripts/deploy-support-v2.ts --network optimisticEthereum
+ *   npx hardhat run scripts/deploy-support-v2.ts --network base
+ *
+ * Configuration: edit deploy-support-v2.config.json before running.
+ *   parameters.owner     — initial owner address; defaults to deployer if empty
+ *   options.validateOnly — true: validate config + contract only, no deploy
+ *   options.dryRun       — true: simulate deploy, no tx sent
+ *
+ * Requires SEPOLIA_PRIVATE_KEY in Hardhat keystore and ALCHEMY_API_KEY in Hardhat vars.
+ * Writes a deployment receipt to deployments/support-v2-<network>.json.
+ */
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import * as fs from "fs";

@@ -138,8 +138,16 @@ Blog posts are `.md` or `.mdx` in `website/blog/` with frontmatter (`title`, `pu
 
 ## Security
 
+See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for full asset inventory, blast radius, and trust boundaries. See [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings.
+
+**Key hierarchy** (highest-value first):
+- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls all 5 upgradeable contracts. Never use for anything else.
+- `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
+- Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
+- Facilitator wallet — stored as Scaleway secret, receives USDC fees only.
+
 - **CVE-2025-11-26 (GenImNFTv3):** Fixed in v4 with agent whitelist. Any code calling `requestImageUpdate()` must verify `isAuthorizedAgent()`.
-- Private keys via Hardhat vars (`npx hardhat vars set SEPOLIA_PRIVATE_KEY`) — never commit.
+- Private keys via Hardhat keystore (`npx hardhat keystore set SEPOLIA_PRIVATE_KEY`) — never commit.
 - Facilitator wallet key stored as Scaleway secret, not in code.
 - All serverless responses must include CORS headers (`Access-Control-Allow-Origin: *`).
 

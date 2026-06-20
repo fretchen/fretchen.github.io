@@ -1,33 +1,17 @@
-// Contract Validation Script for Deployed Smart Contracts
-//
-// Purpose: Validates the current state and functionality of deployed smart contracts
-// to ensure they are working correctly and are ready for upgrades or operations.
-//
-// This script performs comprehensive validation including:
-// - Contract state verification (name, symbol, total supply, etc.)
-// - Functionality testing (calling key contract methods)
-// - Interface compliance checks (ERC721, ERC721Enumerable, etc.)
-// - Implementation contract validation
-// - Upgrade readiness assessment
-// - Owner/permission verification
-//
-// Supports:
-// - GenImNFT (all versions)
-// - CollectorNFT
-// - Both proxy and implementation contracts
-// - Cross-validation of related contracts
-//
-// Usage:
-// npx hardhat run scripts/validate-contract.ts --network sepolia
-// or with deployment file (recommended):
-// DEPLOYMENT_FILE=path/to/deployment.json npx hardhat run scripts/validate-contract.ts --network sepolia
-// or with manual proxy address:
-// PROXY_ADDRESS=0x123... npx hardhat run scripts/validate-contract.ts --network sepolia
-//
-// Features:
-// - Automatic detection of deployment files from deployments/ directory
-// - Comprehensive testing of all contract functions
-// - Gas price and account balance checks
+/**
+ * Validates the on-chain state of deployed smart contracts.
+ *
+ * Checks contract state (name, symbol, supply), interface compliance (ERC721,
+ * ERC721Enumerable), owner/permission setup, implementation validity, and
+ * upgrade readiness. Also exported as a utility used by deploy scripts.
+ *
+ * Supports: GenImNFT (all versions), CollectorNFT — proxy and implementation.
+ *
+ * Usage:
+ *   npx hardhat run scripts/validate-contract.ts --network optsepolia
+ *   DEPLOYMENT_FILE=deployments/genimg-v4-base.json npx hardhat run scripts/validate-contract.ts --network base
+ *   PROXY_ADDRESS=0x123... npx hardhat run scripts/validate-contract.ts --network optimisticEthereum
+ */
 // - Detailed reporting and summaries
 //t validation script for GenImNFTv2 and CollectorNFT
 //

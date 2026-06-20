@@ -3,30 +3,32 @@ import { getAddress, getContract, createWalletClient, custom } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 const EXPECTED_CURRENT_OWNER = getAddress("0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20");
-const CONTRACT_OWNER_ADDRESS  = getAddress("0x1af51D6D7E0926f42d3595cBA2eE4218af5fBB20");
+const CONTRACT_OWNER_ADDRESS = getAddress("0x1af51D6D7E0926f42d3595cBA2eE4218af5fBB20");
 
 const OWNABLE_ABI = [
-  { name: "owner", type: "function", stateMutability: "view",
-    inputs: [], outputs: [{ type: "address" }] },
-  { name: "transferOwnership", type: "function", stateMutability: "nonpayable",
-    inputs: [{ name: "newOwner", type: "address" }], outputs: [] },
+  { name: "owner", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  {
+    name: "transferOwnership",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newOwner", type: "address" }],
+    outputs: [],
+  },
 ] as const;
 
 const CONTRACTS_BY_NETWORK: Record<string, Array<{ name: string; address: `0x${string}` }>> = {
   optimisticEthereum: [
-    { name: "GenImNFTv4",   address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb" },
-    { name: "LLMv1",        address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1" },
+    { name: "GenImNFTv4", address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb" },
+    { name: "LLMv1", address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1" },
     { name: "CollectorNFT", address: "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea" },
-    { name: "SupportV2",    address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316" },
+    { name: "SupportV2", address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316" },
   ],
   base: [
-    { name: "GenImNFTv4",   address: "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68" },
+    { name: "GenImNFTv4", address: "0xa5d6a3eEDADc3346E22dF9556dc5B99f2777ab68" },
     { name: "CollectorNFT", address: "0x5D0103393DDcD988867437233c197c6A38b23360" },
-    { name: "SupportV2",    address: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694" },
+    { name: "SupportV2", address: "0xB70EA4d714Fed01ce20E93F9033008BadA1c8694" },
   ],
-  optsepolia: [
-    { name: "GenImNFTv4 (testnet)", address: "0x10827cC42a09D0BAD2d43134C69F0e776D853D85" },
-  ],
+  optsepolia: [{ name: "GenImNFTv4 (testnet)", address: "0x10827cC42a09D0BAD2d43134C69F0e776D853D85" }],
 };
 
 async function main() {
@@ -76,7 +78,7 @@ async function main() {
     console.log(`⏳ ${name}: transferring...`);
     const hash = await contract.write.transferOwnership([CONTRACT_OWNER_ADDRESS], { gas: 100_000n });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
-    if (receipt.status === 'reverted') {
+    if (receipt.status === "reverted") {
       throw new Error(`${name}: transferOwnership transaction reverted (tx: ${hash})`);
     }
     console.log(`✅ ${name}: owner is now ${CONTRACT_OWNER_ADDRESS} (tx: ${hash})`);
@@ -85,4 +87,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((e) => { console.error(e.message ?? e); process.exit(1); });
+  .catch((e) => {
+    console.error(e.message ?? e);
+    process.exit(1);
+  });

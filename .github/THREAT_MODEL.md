@@ -1,6 +1,6 @@
 # Threat Model
 
-Last updated: 2026-06-16
+Last updated: 2026-06-20
 
 ---
 
@@ -14,7 +14,7 @@ What has monetary value, irreversibility, or trust significance in this system:
 | ETH in LLMv1 | On-chain | User prepaid balances; withdrawable by users or claimable by providers |
 | USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
 | NFT metadata integrity | On-chain (token URIs) | Authoritative record of what image each token represents |
-| Owner EOA private key | Held by operator | Controls all five upgradeable contracts — the highest-value key in the system |
+| Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls all five upgradeable contracts — the highest-value key in the system |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call |
 | Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
 | Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket and transactional email |
@@ -83,7 +83,7 @@ If a component is fully compromised, what else falls with it:
 
 | Component | Direct impact | Cascades to |
 |---|---|---|
-| **Owner EOA** | Malicious upgrade to all 5 contracts | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise |
+| **Owner EOA** | Malicious upgrade to all 5 contracts | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. |
 | **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
 | **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |

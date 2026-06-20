@@ -2,6 +2,7 @@ import { defineConfig, configVariable } from "hardhat/config";
 import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
 import hardhatUpgrades from "@openzeppelin/hardhat-upgrades";
 import hardhatAbiExporter from "@solidstate/hardhat-abi-exporter";
+import hardhatKeystore from "@nomicfoundation/hardhat-keystore";
 
 export default defineConfig({
   // Sets the default for `npx hardhat run` CLI tasks.
@@ -9,7 +10,7 @@ export default defineConfig({
   // Hardhat 3's hardcoded DEFAULT_NETWORK_NAME ("default") when no --network
   // flag is provided, regardless of this setting.
   defaultNetwork: "hardhat",
-  plugins: [hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter],
+  plugins: [hardhatKeystore, hardhatToolboxViem, hardhatUpgrades, hardhatAbiExporter],
   solidity: {
     compilers: [
       {
@@ -32,22 +33,23 @@ export default defineConfig({
     optsepolia: {
       type: "http",
       url: configVariable("ALCHEMY_API_KEY", "https://opt-sepolia.g.alchemy.com/v2/{variable}"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: [configVariable("SEPOLIA_PRIVATE_KEY"), configVariable("CONTRACT_OWNER_PRIVATE_KEY")],
     },
+
     optimisticEthereum: {
       type: "http",
       url: configVariable("ALCHEMY_API_KEY", "https://opt-mainnet.g.alchemy.com/v2/{variable}"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: [configVariable("SEPOLIA_PRIVATE_KEY"), configVariable("CONTRACT_OWNER_PRIVATE_KEY")],
     },
     baseSepolia: {
       type: "http",
       url: configVariable("ALCHEMY_API_KEY", "https://base-sepolia.g.alchemy.com/v2/{variable}"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: [configVariable("SEPOLIA_PRIVATE_KEY"), configVariable("CONTRACT_OWNER_PRIVATE_KEY")],
     },
     base: {
       type: "http",
       url: configVariable("ALCHEMY_API_KEY", "https://base-mainnet.g.alchemy.com/v2/{variable}"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: [configVariable("SEPOLIA_PRIVATE_KEY"), configVariable("CONTRACT_OWNER_PRIVATE_KEY")],
     },
   },
   etherscan: {

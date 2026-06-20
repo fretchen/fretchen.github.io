@@ -1,52 +1,36 @@
-# Smart Contract Security Findings
+# Security Policy
 
-Covers contracts in `eth/contracts/`. Last reviewed against commit `32e91e8e` (OZ 5.6 upgrade).
+## Reporting a Vulnerability
 
-See [../.github/THREAT_MODEL.md](../.github/THREAT_MODEL.md) for the full threat model, asset inventory, and blast radius analysis.
+Please **do not open a public GitHub issue** for security vulnerabilities.
+
+Report privately via [GitHub Security Advisories](https://github.com/fretchen/fretchen.github.io/security/advisories/new). You will receive a response within 7 days.
 
 ---
 
-## Open Issues
+## Scope
 
-| Contract | Function | Issue | Severity |
+Contracts in `eth/contracts/`. See [../.github/THREAT_MODEL.md](../.github/THREAT_MODEL.md) for the full threat model, asset inventory, and blast radius analysis.
+
+---
+
+## Known Open Issues
+
+Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. The table below lists accepted risks without attack-vector detail.
+
+| Contract | Area | Severity | Status |
 |---|---|---|---|
-| `CollectorNFT.sol` | `mintCollectorNFT()` | `_safeMint` triggers `onERC721Received` before `mintCountPerGenImToken` is incremented — allows price manipulation via reentrancy | Medium |
-| All upgradeable | `_authorizeUpgrade()` | Only `onlyOwner`; no timelock or multi-sig — leaked owner key = immediate upgrade of all contracts | Medium (governance) |
-| `SupportV2.sol` | `donateToken()` | Accepts arbitrary `_token` address; caller can pass a malicious contract | Low (contract holds no funds) |
-| `LLMv1.sol` | `processBatch()` | `processedBatches[merkleRoot] = true` set after provider payments — technically violates CEI | Informational |
-
-### CollectorNFT — reentrancy via `_safeMint`
-
-`_safeMint` calls `onERC721Received` on the recipient if it is a contract. At that point, `mintCountPerGenImToken[genImTokenId]` has not yet been incremented, so `getCurrentPrice()` returns the pre-increment value. An attacker deploys a receiver contract whose callback re-enters `mintCollectorNFT()` for the same `genImTokenId`, paying base price for mints that should cost 2×, 4×, etc.
-
-Impact: price manipulation, not fund theft. Does not merit a CVE.
-
-Fix: move `mintCountPerGenImToken[genImTokenId]++` and `collectorTokensByGenImToken[genImTokenId].push(collectorTokenId)` to before the `_safeMint` call, or add `nonReentrant` from `ReentrancyGuardTransient` (same import already used in `SupportV2`).
-
-### Upgrade path — single owner EOA
-
-`_authorizeUpgrade()` is gated only by `onlyOwner` across all five upgradeable contracts. A compromised owner key gives an attacker immediate control over all contract logic with no delay. This is the highest-impact risk in the system — see the blast radius table in the threat model.
-
-Fix: transfer ownership to a Gnosis Safe, or insert a `TimelockController` between the owner and the upgrade call.
-
-### LLMv1 — `processBatch` CEI ordering
-
-`processedBatches[merkleRoot] = true` is set after the provider payment loop. This is not exploitable: all user balances are deducted in the first pass before any payments are made, so a reentrant call with the same `merkleRoot` would fail `InsufficientBalance`. Noted for correctness.
-
----
-
-## Confirmed Safe (Previously Questioned)
-
-| Contract | Function | Why it is safe |
-|---|---|---|
-| `GenImNFTv4.sol` | `requestImageUpdate()` | CEI correct: `_imageUpdated[tokenId] = true` before payment. Reentrant call reverts on `ImageAlreadyUpdated`. |
-| `LLMv1.sol` | `withdrawBalance()` | CEI correct: `llmBalance[msg.sender] -= amount` before payment. Reentrant call reverts on `InsufficientBalance`. |
+| `CollectorNFT.sol` | Reentrancy via `_safeMint` — price manipulation only, no fund theft | Medium | Open — tracked privately |
+| All upgradeable | Upgrade gated by single EOA only, no timelock or multi-sig | Medium (governance) | Partially mitigated — see below |
+| `SupportV2.sol` | Arbitrary `_token` address accepted in `donateToken()` | Low | Accepted — contract holds no funds |
+| `LLMv1.sol` | `processBatch` CEI ordering (informational, not exploitable) | Informational | Accepted |
 
 ---
 
 ## Mitigations in Place
 
-- CVE-2025-11-26 fixed: `requestImageUpdate()` requires `_whitelistedAgentWallets[msg.sender]`
+- **CVE-2025-11-26 fixed**: `requestImageUpdate()` requires `_whitelistedAgentWallets[msg.sender]`
+- **Owner key separated** (2026-06): ownership of all contracts transferred from daily MetaMask wallet to a dedicated EOA (`0x1af51D6D7E0926f42d3595cBA2eE4218af5fBB20`). Reduces blast radius of a compromised daily wallet. Full fix remains moving to a Gnosis Safe.
 - `SupportV2.donate()` and `donateToken()` use `ReentrancyGuardTransient` (OZ 5.x transient storage)
 - Solidity 0.8.27 — built-in overflow/underflow protection
 - Storage layout preserved across v3→v4 upgrade (gap 49 → 48 slots)

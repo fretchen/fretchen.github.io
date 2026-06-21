@@ -36,6 +36,7 @@ import {
   startNewTree,
   appendToS3Json,
   processMerkleTree,
+  checkWalletBalance,
 } from "../llm_service.js";
 import type { Leaf } from "../llm_service.js";
 
@@ -303,5 +304,59 @@ describe("processMerkleTree — tx failure must not mark tree as processed", () 
     const callArg = mockPutObjectCommand.mock.calls[0][0];
     const persisted = JSON.parse(callArg.Body);
     expect(persisted.trees[0].processed).toBe(true);
+  });
+});
+
+// ===== Security: checkWalletBalance must enforce the ETH deposit gate =====
+
+const USER_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678" as const;
+const REQUIRED = 10_000_000_000_000n; // 0.00001 ETH in wei
+
+describe("checkWalletBalance — ETH deposit gate", () => {
+  const mockCheckBalance = vi.fn();
+
+  beforeEach(() => {
+    setupTestEnvironment();
+    vi.clearAllMocks();
+    mockViemFunctions.createPublicClient.mockReturnValue({});
+    mockViemFunctions.http.mockReturnValue({});
+    mockViemFunctions.getContract.mockReturnValue({
+      read: { checkBalance: mockCheckBalance },
+    });
+  });
+
+  afterEach(() => {
+    cleanupTestEnvironment();
+  });
+
+  test("resolves when on-chain balance meets the requirement", async () => {
+    mockCheckBalance.mockResolvedValue(REQUIRED);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).resolves.toBeUndefined();
+  });
+
+  test("resolves when on-chain balance exceeds the requirement", async () => {
+    mockCheckBalance.mockResolvedValue(REQUIRED * 2n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).resolves.toBeUndefined();
+  });
+
+  test("throws when on-chain balance is zero", async () => {
+    mockCheckBalance.mockResolvedValue(0n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
+      /Insufficient balance/,
+    );
+  });
+
+  test("throws when on-chain balance is one wei short", async () => {
+    mockCheckBalance.mockResolvedValue(REQUIRED - 1n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
+      /Insufficient balance/,
+    );
+  });
+
+  test("error message includes required and current balance", async () => {
+    mockCheckBalance.mockResolvedValue(5_000_000_000_000n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
+      `Insufficient balance. Required: ${REQUIRED}, Current: 5000000000000`,
+    );
   });
 });

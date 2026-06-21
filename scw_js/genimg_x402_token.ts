@@ -4,7 +4,9 @@ import {
   getGenAiNFTAddress,
   getUSDCConfig,
   isTestnet,
+  loadPrivateKey,
 } from "@fretchen/chain-utils";
+import { parseJsonBody } from "./utils.js";
 import {
   getContract,
   createWalletClient,
@@ -277,8 +279,8 @@ async function handle(
       statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "*",
-        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "Content-Type, X-PAYMENT",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Content-Type": "application/json",
       },
       body: "",
@@ -293,13 +295,8 @@ async function handle(
     };
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body =
-      typeof event.body === "string"
-        ? JSON.parse(event.body)
-        : (event.body as Record<string, unknown>);
-  } catch {
+  const body = parseJsonBody(event.body);
+  if (!body) {
     return {
       body: JSON.stringify({ error: "Invalid JSON body" }),
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -320,24 +317,36 @@ async function handle(
 
   console.log(`📝 Prompt: "${prompt}"`);
 
-  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
+  let account: ReturnType<typeof privateKeyToAccount>;
+  try {
+    account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
+  } catch (err) {
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({
         error: "Server configuration error",
-        message: "NFT_WALLET_PRIVATE_KEY not configured",
+        message: (err as Error).message,
       }),
     };
   }
-  const account = privateKeyToAccount(`0x${privateKey.replace(/^0x/, "")}`);
   const serverWallet = account.address;
 
   const mode = (body["mode"] as string | undefined) ?? "generate";
   const size = (body["size"] as string | undefined) ?? "1024x1024";
   const requestedNetwork = (body["network"] as string | undefined) ?? null;
   const isListed = body["isListed"] === true;
+
+  const validModes = ["generate", "edit"];
+  if (!validModes.includes(mode)) {
+    return {
+      body: JSON.stringify({
+        error: `Invalid mode parameter. Must be one of: ${validModes.join(", ")}`,
+      }),
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      statusCode: 400,
+    };
+  }
 
   const validSizes = ["1024x1024", "1792x1024"];
   if (!validSizes.includes(size)) {

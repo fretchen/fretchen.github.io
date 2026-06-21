@@ -30,13 +30,17 @@ export const LLMv1ABI = [
     type: "function",
     stateMutability: "nonpayable",
     inputs: [
-      { name: "root", type: "bytes32" },
+      { name: "merkleRoot", type: "bytes32" },
       {
         name: "leaves",
         type: "tuple[]",
         components: [
+          { name: "id", type: "int256" },
           { name: "user", type: "address" },
-          { name: "amount", type: "uint256" },
+          { name: "serviceProvider", type: "address" },
+          { name: "tokenCount", type: "uint256" },
+          { name: "cost", type: "uint256" },
+          { name: "timestamp", type: "string" },
         ],
       },
       { name: "proofs", type: "bytes32[][]" },

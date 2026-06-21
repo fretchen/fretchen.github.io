@@ -1,9 +1,8 @@
 import { verifyMessage } from "viem";
-
-const MAX_AUTH_AGE_MS = 5 * 60 * 1000;
+import { AUTH_TOKEN_MAX_AGE_MS } from "@fretchen/chain-utils";
 
 export interface BearerPayload {
-  address: string;
+  address: `0x${string}`;
   signature: string;
   message: string;
 }
@@ -31,7 +30,7 @@ export function parseBearerToken(authHeader: string | undefined): BearerPayload 
       typeof message === "string" &&
       message.length > 0
     ) {
-      return { address, signature, message };
+      return { address: address as `0x${string}`, signature, message };
     }
     return null;
   } catch {
@@ -61,7 +60,7 @@ export async function verifySignedMessage(
   if (ts > 9_999_999_999) {
     return "Unauthorized";
   } // guard against year >2286 / integer overflow
-  if (Math.abs(Date.now() - ts * 1000) > MAX_AUTH_AGE_MS) {
+  if (Math.abs(Date.now() - ts * 1000) > AUTH_TOKEN_MAX_AGE_MS) {
     return "Token expired";
   }
 

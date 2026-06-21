@@ -1,5 +1,6 @@
-import { verifyMessage, getContract, createPublicClient, createWalletClient, http } from "viem";
+import { getContract, createPublicClient, createWalletClient, http } from "viem";
 import { getChain, getLLMv1ContractConfig } from "./getChain.js";
+import { loadPrivateKey } from "@fretchen/chain-utils";
 import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { privateKeyToAccount } from "viem/accounts";
@@ -112,25 +113,6 @@ export function convertTokensToCost(tokenCount: bigint | number | string): bigin
   const denom = PRICE_PER_MILLION_TOKENS_IN_EUR_DEN * CONVERSION_RATE_EUR_PER_ETH * MILLION;
 
   return numer / denom;
-}
-
-export async function verify_wallet(
-  address: `0x${string}`,
-  signature: `0x${string}`,
-  message: string,
-): Promise<void> {
-  try {
-    const isValid = await verifyMessage({ address, message, signature });
-    if (!isValid) {
-      logger.warn({ address }, "Invalid wallet signature.");
-      throw new Error("Invalid wallet signature.");
-    } else {
-      logger.info({ address }, "Wallet signature verified successfully.");
-    }
-  } catch (error) {
-    logger.error({ err: error }, "Signature verification failed");
-    throw new Error("Invalid wallet signature.", { cause: error });
-  }
 }
 
 export interface Leaf {
@@ -415,12 +397,7 @@ export async function processMerkleTree(
 
   const proofs = llmLeafsArray.map((_, i) => tree.getProof(i));
 
-  const privateKey = process.env.NFT_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error("NFT_WALLET_PRIVATE_KEY nicht konfiguriert");
-  }
-
-  const account = privateKeyToAccount(`0x${privateKey}`);
+  const account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   const activeChain = getChain();
   const publicClient = createPublicClient({ chain: activeChain, transport: http() });
   const walletClient = createWalletClient({ account, chain: activeChain, transport: http() });
@@ -432,8 +409,16 @@ export async function processMerkleTree(
     client: { public: publicClient, wallet: walletClient },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (llmContract.write as any).processBatch([root, llmLeafStructs, proofs]);
+  const leavesForContract = llmLeafStructs.map((l) => ({ ...l, id: BigInt(l.id) }));
+  const txHash = await llmContract.write.processBatch([
+    root as `0x${string}`,
+    leavesForContract,
+    proofs as `0x${string}`[][],
+  ]);
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  if (receipt.status !== "success") {
+    throw new Error(`processBatch transaction reverted (hash: ${txHash})`);
+  }
   logger.info({ treeIndex: targetTreeIndex, root }, "Processed Merkle tree");
 
   targetTree.processed = true;

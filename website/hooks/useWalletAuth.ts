@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useAccount, useSignMessage } from "wagmi";
+import { buildAuthMessage } from "@fretchen/chain-utils";
 
 const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutes (backend allows 5 min)
 
@@ -18,8 +19,7 @@ async function buildToken(
   messagePrefix: string,
   signMessageAsync: (args: { message: string }) => Promise<string>,
 ): Promise<string> {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const message = `${messagePrefix}:${timestamp}`;
+  const message = buildAuthMessage(messagePrefix);
   const signature = await signMessageAsync({ message });
   const payload = JSON.stringify({ address, signature, message });
   return `Bearer ${btoa(payload)}`;

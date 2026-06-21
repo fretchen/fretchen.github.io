@@ -107,7 +107,7 @@ export function getFeeAmount(): bigint {
  */
 export function getFacilitatorAddress(): Address | null {
   try {
-    return privateKeyToAccount(loadPrivateKey(process.env.FACILITATOR_WALLET_PRIVATE_KEY)).address;
+    return privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY")).address;
   } catch {
     return null;
   }
@@ -204,7 +204,7 @@ export async function collectFee(merchantAddress: Address, network: string): Pro
 
   let account;
   try {
-    account = privateKeyToAccount(loadPrivateKey(process.env.FACILITATOR_WALLET_PRIVATE_KEY));
+    account = privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY"));
   } catch {
     logger.error("Cannot collect fee: FACILITATOR_WALLET_PRIVATE_KEY not configured or invalid");
     return { success: false, error: "facilitator_not_configured" };

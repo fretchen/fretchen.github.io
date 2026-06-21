@@ -8,7 +8,10 @@ const { mockVerifyMessage } = vi.hoisted(() => ({
 
 vi.mock("viem", () => ({
   verifyMessage: mockVerifyMessage,
-  parseEther: (eth: string) => BigInt(Math.floor(parseFloat(eth) * 1e18)),
+  parseEther: (eth: string) => {
+    const [whole = "0", frac = ""] = eth.split(".");
+    return BigInt(whole) * 10n ** 18n + BigInt(frac.padEnd(18, "0").slice(0, 18));
+  },
 }));
 
 vi.mock("../llm_service.js", () => ({

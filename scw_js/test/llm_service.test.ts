@@ -6,9 +6,6 @@ const { mockProcessBatch, mockWaitForTransactionReceipt } = vi.hoisted(() => ({
   mockWaitForTransactionReceipt: vi.fn(),
 }));
 
-vi.mock("./getChain.js", () => ({
-  getChain: vi.fn().mockReturnValue({ id: 10, name: "OP Mainnet" }),
-}));
 vi.mock("../getChain.js", () => ({
   getChain: vi.fn().mockReturnValue({ id: 10, name: "OP Mainnet" }),
   getLLMv1ContractConfig: vi.fn().mockReturnValue({

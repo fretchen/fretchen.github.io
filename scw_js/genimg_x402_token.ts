@@ -319,7 +319,7 @@ async function handle(
 
   let account: ReturnType<typeof privateKeyToAccount>;
   try {
-    account = privateKeyToAccount(loadPrivateKey(process.env.NFT_WALLET_PRIVATE_KEY));
+    account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
     return {
       statusCode: 500,

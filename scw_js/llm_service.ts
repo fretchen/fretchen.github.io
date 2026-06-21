@@ -397,7 +397,7 @@ export async function processMerkleTree(
 
   const proofs = llmLeafsArray.map((_, i) => tree.getProof(i));
 
-  const account = privateKeyToAccount(loadPrivateKey(process.env.NFT_WALLET_PRIVATE_KEY));
+  const account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   const activeChain = getChain();
   const publicClient = createPublicClient({ chain: activeChain, transport: http() });
   const walletClient = createWalletClient({ account, chain: activeChain, transport: http() });

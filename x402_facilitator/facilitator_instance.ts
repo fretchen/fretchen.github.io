@@ -107,7 +107,7 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
 export function createFacilitator(requirePrivateKey = true): InstanceType<typeof x402Facilitator> {
   let account;
   try {
-    account = privateKeyToAccount(loadPrivateKey(process.env.FACILITATOR_WALLET_PRIVATE_KEY));
+    account = privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY"));
   } catch (err) {
     if (!requirePrivateKey) {
       return createReadOnlyFacilitator();

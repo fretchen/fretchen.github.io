@@ -94,10 +94,10 @@ describe("Webmentions Component", () => {
       await waitFor(() => {
         // Should fetch from both URL variants
         expect(global.fetch).toHaveBeenCalledWith(
-          `https://webmention.io/api/mentions.jf2?target=https://www.fretchen.eu/quantum/amo/0`,
+          `https://webmention.io/api/mentions.jf2?target=https%3A%2F%2Fwww.fretchen.eu%2Fquantum%2Famo%2F0`,
         );
         expect(global.fetch).toHaveBeenCalledWith(
-          `https://webmention.io/api/mentions.jf2?target=https://www.fretchen.eu/quantum/amo/0/`,
+          `https://webmention.io/api/mentions.jf2?target=https%3A%2F%2Fwww.fretchen.eu%2Fquantum%2Famo%2F0%2F`,
         );
         expect(global.fetch).toHaveBeenCalledTimes(2);
       });

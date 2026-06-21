@@ -2,7 +2,7 @@ import { verifyMessage } from "viem";
 import { AUTH_TOKEN_MAX_AGE_MS } from "@fretchen/chain-utils";
 
 export interface BearerPayload {
-  address: string;
+  address: `0x${string}`;
   signature: string;
   message: string;
 }
@@ -30,7 +30,7 @@ export function parseBearerToken(authHeader: string | undefined): BearerPayload 
       typeof message === "string" &&
       message.length > 0
     ) {
-      return { address, signature, message };
+      return { address: address as `0x${string}`, signature, message };
     }
     return null;
   } catch {

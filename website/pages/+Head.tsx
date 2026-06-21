@@ -42,6 +42,8 @@ export default function HeadDefault() {
       ))}
       <link rel="webmention" href="https://webmention.io/www.fretchen.eu/webmention" />
 
+      <meta httpEquiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'" />
+
       {/* umami analytics script - disabled when VITE_DISABLE_ANALYTICS is set */}
       {!analyticsConfig.isDisabled && (
         <script defer src={analyticsConfig.scriptUrl} data-website-id={analyticsConfig.websiteId}></script>

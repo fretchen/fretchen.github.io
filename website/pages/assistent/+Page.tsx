@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
   useAccount,
-  useSignMessage,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
@@ -16,6 +15,7 @@ import * as styles from "../../layouts/styles";
 import { useLocale } from "../../hooks/useLocale";
 import { useUmami } from "../../hooks/useUmami";
 import { css } from "../../styled-system/css";
+import { useWalletAuth } from "../../hooks/useWalletAuth";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -211,7 +211,6 @@ export default function Page() {
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [authSignature, setAuthSignature] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Localized messages
@@ -244,7 +243,7 @@ export default function Page() {
   }, []);
 
   const { address, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
+  const getAuth = useWalletAuth("sc-llm");
   const { connectors, connect } = useConnect();
 
   // Handle wallet connection
@@ -277,22 +276,6 @@ export default function Page() {
     }
   };
 
-  // Authenticate wallet once per session
-  const authenticateWallet = async () => {
-    if (!address || !isConnected) {
-      throw new Error("Wallet not connected");
-    }
-
-    if (authSignature) {
-      return authSignature; // Already authenticated
-    }
-
-    const message = `Authenticate wallet: ${address}`;
-    const signature = await signMessageAsync({ message });
-    setAuthSignature(signature);
-    return signature;
-  };
-
   const sendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return;
 
@@ -316,8 +299,7 @@ export default function Page() {
     setCurrentInput("");
 
     try {
-      // Authenticate if needed
-      const signature = await authenticateWallet();
+      const authToken = await getAuth();
 
       // Prepare the prompt as array including full conversation history
       const promptArray = [
@@ -332,21 +314,16 @@ export default function Page() {
       const serverlessEndpoint =
         (import.meta.env.PUBLIC_ENV__LLM_ENDPOINT as string | undefined) ??
         "https://mypersonaljscloudivnad9dy-llm.functions.fnc.fr-par.scw.cloud";
-      // Call the serverless function - format like Python code
       const response = await fetch(serverlessEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: authToken,
         },
-        mode: "cors", // Explicitly enable CORS
+        mode: "cors",
         body: JSON.stringify({
-          auth: {
-            address,
-            signature,
-            message: `Authenticate wallet: ${address}`,
-          },
           data: {
-            prompt: promptArray, // Send as array directly, like in Python notebook
+            prompt: promptArray,
           },
         }),
       });
@@ -380,7 +357,6 @@ export default function Page() {
 
   const clearChat = () => {
     setMessages([]);
-    setAuthSignature(null); // Clear auth for next session
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

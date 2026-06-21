@@ -62,10 +62,10 @@ export async function fetchWebmentions(
 ): Promise<{ mentions: Webmention[]; count: number }> {
   try {
     const [dataWithout, dataWith] = await Promise.all([
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithoutSlash}`).then(
+      fetch(`https://webmention.io/api/mentions.jf2?target=${encodeURIComponent(urlWithoutSlash)}`).then(
         (r): Promise<WebmentionApiResponse> => r.json(),
       ),
-      fetch(`https://webmention.io/api/mentions.jf2?target=${urlWithSlash}`).then(
+      fetch(`https://webmention.io/api/mentions.jf2?target=${encodeURIComponent(urlWithSlash)}`).then(
         (r): Promise<WebmentionApiResponse> => r.json(),
       ),
     ]);

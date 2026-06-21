@@ -73,7 +73,7 @@ Owner EOA ───────────────────────�
   (single key controls all upgrade paths)
 ```
 
-★ The x402 facilitator boundary is the weakest: it accepts requests from any origin, meaning a malicious web page can initiate settlement calls on behalf of a user who has approved USDC to the facilitator.
+★ The x402 facilitator is an intentionally open public service (any merchant on Base or Optimism). `Access-Control-Allow-Origin: *` is required by the open-protocol design. The blast radius of a cross-origin attack is bounded by EIP-712/EIP-3009 cryptography: a malicious page can trigger settlement requests but cannot redirect funds (the signature binds recipient, amount, and nonce) or forge signatures. The residual risk (gas drain via `/settle` spam) is accepted: garbage requests fail before any on-chain transaction is attempted, L2 gas per settlement is negligible (~$0.001), and no realistic threat actor has financial incentive to drain a facilitator wallet whose ETH goes to miners, not the attacker.
 
 ---
 
@@ -116,4 +116,4 @@ Detailed code-level findings live alongside the code they describe:
 | Component | Findings document | Open issues |
 |---|---|---|
 | Smart contracts | [eth/SECURITY.md](../eth/SECURITY.md) | CollectorNFT price manipulation (medium), single-owner upgrade path (medium governance) |
-| Serverless & frontend | — | CORS `*` on x402_facilitator (medium), SCW_SECRET_KEY in email headers (medium), client-side-only image validation (low) |
+| Serverless & frontend | — | x402_facilitator open CORS (intentional; gas-drain risk accepted — negligible on L2, no attacker incentive), SCW_SECRET_KEY in email headers (medium), client-side-only image validation (low) |

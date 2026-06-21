@@ -324,7 +324,10 @@ async function handle(
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Server configuration error", message: (err as Error).message }),
+      body: JSON.stringify({
+        error: "Server configuration error",
+        message: (err as Error).message,
+      }),
     };
   }
   const serverWallet = account.address;
@@ -337,7 +340,9 @@ async function handle(
   const validModes = ["generate", "edit"];
   if (!validModes.includes(mode)) {
     return {
-      body: JSON.stringify({ error: `Invalid mode parameter. Must be one of: ${validModes.join(", ")}` }),
+      body: JSON.stringify({
+        error: `Invalid mode parameter. Must be one of: ${validModes.join(", ")}`,
+      }),
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       statusCode: 400,
     };

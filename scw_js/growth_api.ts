@@ -44,7 +44,6 @@ function filterByStatus(queue: ContentQueue, status: string | undefined): unknow
   return all.filter((d) => d.status === status);
 }
 
-
 export async function handle(
   event: Record<string, unknown>,
   _context: unknown,

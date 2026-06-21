@@ -138,3 +138,4 @@ export * from "./abi";
 // ═══════════════════════════════════════════════════════════════
 
 export { loadPrivateKey } from "./key-utils";
+export { AUTH_TOKEN_MAX_AGE_MS, buildAuthMessage } from "./auth-protocol";

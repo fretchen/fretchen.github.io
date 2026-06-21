@@ -35,4 +35,21 @@ describe("loadPrivateKey", () => {
   test("throws for a key containing non-hex characters", () => {
     expect(() => loadPrivateKey("z".repeat(64))).toThrow("NFT_WALLET_PRIVATE_KEY invalid");
   });
+
+  // Whitespace trimming — keys from Scaleway secrets often arrive with trailing \n
+  test("accepts key with leading whitespace", () => {
+    expect(loadPrivateKey(`  ${VALID_HEX}`)).toBe(`0x${VALID_HEX}`);
+  });
+
+  test("accepts key with trailing newline (Scaleway secret format)", () => {
+    expect(loadPrivateKey(`${VALID_HEX}\n`)).toBe(`0x${VALID_HEX}`);
+  });
+
+  test("accepts key with whitespace around 0x-prefixed value", () => {
+    expect(loadPrivateKey(` 0x${VALID_HEX} `)).toBe(`0x${VALID_HEX}`);
+  });
+
+  test("throws when value is only whitespace", () => {
+    expect(() => loadPrivateKey("   ")).toThrow("NFT_WALLET_PRIVATE_KEY not configured");
+  });
 });

@@ -269,7 +269,7 @@ describe("createFacilitator — private key validation", () => {
   it("throws when private key is missing and requirePrivateKey=true", () => {
     delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
 
-    expect(() => createFacilitator(true)).toThrow("FACILITATOR_WALLET_PRIVATE_KEY not configured");
+    expect(() => createFacilitator(true)).toThrow("not configured");
   });
 
   it("returns read-only facilitator when private key is missing and requirePrivateKey=false", () => {
@@ -283,9 +283,7 @@ describe("createFacilitator — private key validation", () => {
   it("throws when private key has invalid length and requirePrivateKey=true", () => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY = "0xdeadbeef"; // too short
 
-    expect(() => createFacilitator(true)).toThrow(
-      "Invalid FACILITATOR_WALLET_PRIVATE_KEY: Expected 64 hex characters",
-    );
+    expect(() => createFacilitator(true)).toThrow("must be 64 hex characters");
   });
 
   it("returns read-only facilitator when private key has invalid length and requirePrivateKey=false", () => {

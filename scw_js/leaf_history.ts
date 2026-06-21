@@ -60,8 +60,8 @@ async function verifyLeafHistoryAuth(
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Content-Type": "application/json",
   };
 

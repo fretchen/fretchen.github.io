@@ -3,12 +3,13 @@ import {
   callLLMAPI,
   checkWalletBalance,
   saveLeafToTree,
-  verify_wallet,
   processMerkleTree,
   startNewTree,
   type LLMMessage,
 } from "./llm_service.js";
 
+import { parseBearerToken, verifySignedMessage } from "./auth_utils.js";
+import { parseJsonBody } from "./utils.js";
 import { parseEther } from "viem";
 import pino from "pino";
 import type { ScwEvent } from "./types.js";
@@ -34,8 +35,8 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   const headers = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
   };
 
@@ -44,20 +45,19 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   let prompt: LLMMessage[];
-  let body: Record<string, unknown>;
-  if (event.httpMethod === "POST") {
-    body =
-      typeof event.body === "string"
-        ? JSON.parse(event.body)
-        : (event.body as Record<string, unknown>);
-    logger.debug({ body }, "Parsed body");
-  } else {
+  if (event.httpMethod !== "POST") {
     return {
       body: JSON.stringify({ error: "Only POST requests are supported" }),
       headers,
       statusCode: 400,
     };
   }
+
+  const body = parseJsonBody(event.body);
+  if (!body) {
+    return { body: JSON.stringify({ error: "Invalid JSON body" }), headers, statusCode: 400 };
+  }
+  logger.debug({ body }, "Parsed body");
 
   const data = body["data"] as Record<string, unknown> | undefined;
   if (Array.isArray(data?.["prompt"])) {
@@ -79,26 +79,18 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     useDummyData = data["useDummyData"];
   }
 
-  const auth = body["auth"] as Record<string, unknown> | undefined;
-  if (!auth) {
-    return { body: JSON.stringify({ error: "No auth data provided" }), headers, statusCode: 400 };
+  const authPayload = parseBearerToken(
+    event.headers["Authorization"] ?? event.headers["authorization"],
+  );
+  if (!authPayload) {
+    return { body: JSON.stringify({ error: "Unauthorized" }), headers, statusCode: 401 };
   }
-  if (!auth["address"] || !auth["signature"] || !auth["message"]) {
-    return { body: JSON.stringify({ error: "Incomplete auth data" }), headers, statusCode: 400 };
-  }
-  const address = auth["address"] as `0x${string}`;
-  const signature = auth["signature"] as `0x${string}`;
-  const message = auth["message"] as string;
+  const { address, signature, message } = authPayload;
 
-  try {
-    await verify_wallet(address, signature, message);
-  } catch (error) {
-    logger.error({ err: error }, "Wallet verification failed");
-    return {
-      body: JSON.stringify({ error: (error as Error).message }),
-      headers,
-      statusCode: 401,
-    };
+  const authError = await verifySignedMessage(address, signature, message, "sc-llm", address);
+  if (authError) {
+    logger.warn({ address, authError }, "Wallet verification failed");
+    return { body: JSON.stringify({ error: authError }), headers, statusCode: 401 };
   }
 
   const requiredBalanceInWei = parseEther(REQUIRED_BALANCE);

@@ -22,7 +22,7 @@ Look up the manifest path and package name in the tier table below. Most triage 
 | Package | Context | Tier |
 |---------|---------|------|
 | `viem` | scw_js / x402_facilitator prod dep | **T1** |
-| `@x402/core`, `@x402/evm`, `@coinbase/x402` | x402_facilitator prod dep | **T1** |
+| `@x402/core`, `@x402/evm` | x402_facilitator prod dep | **T1** |
 | `@openzeppelin/contracts-upgradeable` | on-chain (deployed bytecode, not runtime dep) | **T1** |
 | `@fretchen/chain-utils` | scw_js / x402_facilitator prod dep | **T1** |
 | `viem` | website prod dep | **T2** |

@@ -12,29 +12,28 @@ import type { NFTMetadata, BlogPost } from "../types/BlogPost";
 vi.mock("../utils/globRegistry", () => ({
   GLOB_REGISTRY: {
     blog: {
-      lazy: {
-        "../blog/post_with_token.md": async () => ({
+      modules: {
+        "../blog/post_with_token.mdx": {
           frontmatter: {
             title: "Post With Token",
             publishing_date: "2025-01-15",
             tokenID: 26,
           },
-        }),
-        "../blog/post_without_token.md": async () => ({
+        },
+        "../blog/post_without_token.mdx": {
           frontmatter: {
             title: "Post Without Token",
             publishing_date: "2025-01-10",
           },
-        }),
-        "../blog/interactive.tsx": async () => ({
+        },
+        "../blog/interactive.tsx": {
           meta: {
             title: "Interactive Post",
             publishing_date: "2025-01-20",
             tokenID: 42,
           },
-        }),
+        },
       },
-      eager: {},
     },
   },
 }));

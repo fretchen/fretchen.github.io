@@ -76,8 +76,7 @@ describe("Post Component Integration Tests", () => {
       // Assert: Publishing date should be rendered (formatted as "Month Day, Year")
       expect(screen.getByText(/December 2, 2024/)).toBeInTheDocument();
 
-      // Assert: Component loading should start
-      expect(screen.getByText(/Lade interaktive Komponente/)).toBeInTheDocument();
+      // Note: loading spinner is no longer visible after render because module loading is now synchronous
     });
 
     it("should render markdown blog with multi-word title", () => {
@@ -86,7 +85,7 @@ describe("Post Component Integration Tests", () => {
         title: "Moving old lectures",
         content: "",
         type: "react" as const,
-        componentPath: "../blog/moving_lectures.md",
+        componentPath: "../blog/moving_lectures.mdx",
         publishing_date: "2025-01-06",
       };
 
@@ -106,7 +105,7 @@ describe("Post Component Integration Tests", () => {
         title: "A gallery of AI images",
         content: "",
         type: "react" as const,
-        componentPath: "../blog/nft_gallery.md",
+        componentPath: "../blog/nft_gallery.mdx",
         publishing_date: "2025-06-03",
         tokenID: 24,
       };

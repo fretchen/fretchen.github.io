@@ -18,7 +18,7 @@ vi.mock("../wagmi.config", () => ({
   },
 }));
 
-vi.mock("@wagmi/core", () => ({
+vi.mock("wagmi/actions", () => ({
   getPublicClient: vi.fn(() => ({
     readContract: vi.fn(),
     chain: { id: 10 },

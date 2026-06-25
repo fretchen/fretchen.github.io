@@ -23,7 +23,7 @@ const CHAIN_NAME = (import.meta.env.PUBLIC_ENV__CHAIN_NAME as string | undefined
  * Set VITE_USE_TESTNET=true in .env for local development
  * Default: false (mainnet)
  */
-const USE_TESTNET = import.meta.env?.VITE_USE_TESTNET === "true";
+const USE_TESTNET = import.meta.env.VITE_USE_TESTNET === "true";
 
 /** SupportV2 contract addresses - mainnet */
 const MAINNET_SUPPORT_V2_ADDRESSES: Record<number, `0x${string}`> = {

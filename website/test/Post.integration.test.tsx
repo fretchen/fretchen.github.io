@@ -76,8 +76,7 @@ describe("Post Component Integration Tests", () => {
       // Assert: Publishing date should be rendered (formatted as "Month Day, Year")
       expect(screen.getByText(/December 2, 2024/)).toBeInTheDocument();
 
-      // Assert: Component loading should start
-      expect(screen.getByText(/Lade interaktive Komponente/)).toBeInTheDocument();
+      // Note: loading spinner is no longer visible after render because module loading is now synchronous
     });
 
     it("should render markdown blog with multi-word title", () => {

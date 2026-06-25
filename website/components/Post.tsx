@@ -40,7 +40,7 @@ const ReactPostRenderer: React.FC<{
         }
 
         // Use centralized glob registry - automatically handles production vs development
-        const module = await loadModuleFromDirectory(directory, filename, import.meta.env.PROD);
+        const module = loadModuleFromDirectory(directory, filename);
 
         // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;

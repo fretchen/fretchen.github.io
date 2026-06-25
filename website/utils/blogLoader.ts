@@ -193,24 +193,16 @@ export async function loadBlogs(
     return [];
   }
 
-  // Use centralized glob registry - automatically handles production vs development
-  const modules = import.meta.env.PROD ? registry.eager : registry.lazy;
-
   // Process all files (MDX and TSX) - they're all React components now
   const blogs: BlogPost[] = [];
 
-  for (const [path, moduleOrLoader] of Object.entries(modules)) {
+  for (const [path, module] of Object.entries(registry.modules)) {
     try {
       const cleanPath = path.replace(/\?.*$/, "");
 
-      // Load the module (in production it's already loaded, in dev we need to await)
       type EagerModule = { default: ComponentType };
-      const module: EagerModule = import.meta.env.PROD
-        ? (moduleOrLoader as EagerModule)
-        : await (moduleOrLoader as () => Promise<EagerModule>)();
 
-      // Use pure function for metadata extraction
-      const metadata = extractMetadataFromModule(module, path);
+      const metadata = extractMetadataFromModule(module as EagerModule, path);
       if (!metadata) {
         console.warn(`[BlogLoader] No valid metadata found in ${cleanPath}, skipping`);
         continue;

@@ -6,35 +6,27 @@
  * Why is this necessary?
  * - Vite's import.meta.glob requires STATIC patterns at build time
  * - We cannot dynamically construct glob patterns from variables
- * - This registry pre-defines all patterns with both eager and lazy loading
  */
 
 import React from "react";
 
 export const GLOB_REGISTRY = {
   blog: {
-    eager: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"], {
+    modules: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"], {
       eager: true,
-    }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"], {
-      eager: false,
     }),
   },
   "quantum/amo": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}", { eager: false }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}", { eager: true }),
   },
   "quantum/basics": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}", { eager: false }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}", { eager: true }),
   },
   "quantum/hardware": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}", { eager: false }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}", { eager: true }),
   },
   "quantum/qml": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: false }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: true }),
   },
 } as const;
 
@@ -46,35 +38,28 @@ export type SupportedDirectory = keyof typeof GLOB_REGISTRY;
  *
  * @param directory - The directory to load from (e.g., "blog", "quantum/amo")
  * @param filename - The filename to load (e.g., "hello_world.mdx")
- * @param isProduction - Whether to use eager (production) or lazy (development) loading
  * @returns The loaded module with a default export
  * @throws Error if directory is unsupported or module not found
  */
-export const loadModuleFromDirectory = async (
+export const loadModuleFromDirectory = (
   directory: SupportedDirectory,
   filename: string,
-  isProduction: boolean,
-): Promise<{ default: React.ComponentType }> => {
+): { default: React.ComponentType } => {
   const registry = GLOB_REGISTRY[directory];
 
   if (!registry) {
     throw new Error(`Unsupported directory: ${directory}. Supported: ${Object.keys(GLOB_REGISTRY).join(", ")}`);
   }
 
-  const modules = isProduction ? registry.eager : registry.lazy;
   const modulePath = `../${directory}/${filename}`;
-  const moduleOrLoader = modules[modulePath];
+  const module = registry.modules[modulePath];
 
-  if (!moduleOrLoader) {
-    const availableModules = Object.keys(modules).join(", ");
-    throw new Error(`Module not found: ${modulePath}. Available modules: ${availableModules}`);
+  if (!module) {
+    const available = Object.keys(registry.modules).join(", ");
+    throw new Error(`Module not found: ${modulePath}. Available modules: ${available}`);
   }
 
-  type EagerMod = { default: React.ComponentType };
-  type LazyMod = () => Promise<{ default: React.ComponentType }>;
-  // If production (eager), moduleOrLoader is the module itself
-  // If development (lazy), moduleOrLoader is a function that returns a Promise
-  return isProduction ? (moduleOrLoader as EagerMod) : await (moduleOrLoader as LazyMod)();
+  return module as { default: React.ComponentType };
 };
 
 /**

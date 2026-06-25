@@ -25,7 +25,7 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
 
   const cleanPath = path.replace(/\?.*$/, "");
   const isTsx = path.endsWith(".tsx");
-  const isMdx = path.endsWith(".md") || path.endsWith(".mdx");
+  const isMdx = path.endsWith(".mdx");
 
   let title: string | undefined;
   let publishingDate: string | undefined;
@@ -68,7 +68,7 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
         .replace(".tsx", "")
         .replace(/_/g, " ")
         .replace(/\b\w/g, (l) => l.toUpperCase())
-    : fileName.replace(/\.(md|mdx)$/, "");
+    : fileName.replace(/\.mdx$/, "");
 
   return {
     title: title || fallbackTitle,

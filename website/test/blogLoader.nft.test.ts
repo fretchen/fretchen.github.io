@@ -13,14 +13,14 @@ vi.mock("../utils/globRegistry", () => ({
   GLOB_REGISTRY: {
     blog: {
       lazy: {
-        "../blog/post_with_token.md": async () => ({
+        "../blog/post_with_token.mdx": async () => ({
           frontmatter: {
             title: "Post With Token",
             publishing_date: "2025-01-15",
             tokenID: 26,
           },
         }),
-        "../blog/post_without_token.md": async () => ({
+        "../blog/post_without_token.mdx": async () => ({
           frontmatter: {
             title: "Post Without Token",
             publishing_date: "2025-01-10",

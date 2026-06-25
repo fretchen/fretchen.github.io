@@ -13,28 +13,28 @@ import React from "react";
 
 export const GLOB_REGISTRY = {
   blog: {
-    eager: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,md,mdx}", "!../blog/*.plan.md"], {
+    eager: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"], {
       eager: true,
     }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,md,mdx}", "!../blog/*.plan.md"], {
+    lazy: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"], {
       eager: false,
     }),
   },
   "quantum/amo": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,md,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,md,mdx}", { eager: false }),
+    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}", { eager: true }),
+    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}", { eager: false }),
   },
   "quantum/basics": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,md,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,md,mdx}", { eager: false }),
+    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}", { eager: true }),
+    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}", { eager: false }),
   },
   "quantum/hardware": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,md,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,md,mdx}", { eager: false }),
+    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}", { eager: true }),
+    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}", { eager: false }),
   },
   "quantum/qml": {
-    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,md,mdx}", { eager: true }),
-    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,md,mdx}", { eager: false }),
+    eager: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: true }),
+    lazy: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: false }),
   },
 } as const;
 

@@ -86,7 +86,7 @@ describe("Post Component Integration Tests", () => {
         title: "Moving old lectures",
         content: "",
         type: "react" as const,
-        componentPath: "../blog/moving_lectures.md",
+        componentPath: "../blog/moving_lectures.mdx",
         publishing_date: "2025-01-06",
       };
 
@@ -106,7 +106,7 @@ describe("Post Component Integration Tests", () => {
         title: "A gallery of AI images",
         content: "",
         type: "react" as const,
-        componentPath: "../blog/nft_gallery.md",
+        componentPath: "../blog/nft_gallery.mdx",
         publishing_date: "2025-06-03",
         tokenID: 24,
       };

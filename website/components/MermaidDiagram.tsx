@@ -26,7 +26,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
         const defaultConfig = {
           startOnLoad: false,
           theme: "default" as const,
-          securityLevel: "loose" as const,
+          securityLevel: "sandbox" as const,
         };
 
         mermaid.initialize({ ...defaultConfig, ...config });
@@ -44,7 +44,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
       } catch (error) {
         console.error("Error rendering Mermaid diagram:", error);
         if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = "<div>Diagram konnte nicht gerendert werden.</div>";
+          mermaidRef.current.textContent = "Diagram konnte nicht gerendert werden.";
         }
       }
     };

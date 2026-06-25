@@ -12,6 +12,7 @@ import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import pino from "pino";
+import { loadPrivateKey } from "@fretchen/chain-utils";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 import { getChainConfig, getSupportedNetworks } from "./chain_utils";
 
@@ -104,32 +105,15 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
  * Uses separate ExactEvmScheme per network (x402 best practice).
  */
 export function createFacilitator(requirePrivateKey = true): InstanceType<typeof x402Facilitator> {
-  let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
-    if (requirePrivateKey) {
-      throw new Error("FACILITATOR_WALLET_PRIVATE_KEY not configured");
-    }
-    return createReadOnlyFacilitator();
-  }
-
-  // Normalize private key format
-  privateKey = privateKey.trim();
-  if (!privateKey.startsWith("0x")) {
-    privateKey = "0x" + privateKey;
-  }
-
-  // Validate private key length
-  if (privateKey.length !== 66) {
+  let account;
+  try {
+    account = privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY"));
+  } catch (err) {
     if (!requirePrivateKey) {
       return createReadOnlyFacilitator();
     }
-    throw new Error(
-      `Invalid FACILITATOR_WALLET_PRIVATE_KEY: Expected 64 hex characters, got ${privateKey.length - 2}`,
-    );
+    throw err;
   }
-
-  // Create account from private key
-  const account = privateKeyToAccount(privateKey as `0x${string}`);
 
   // Create and configure facilitator
   const facilitator = new x402Facilitator();

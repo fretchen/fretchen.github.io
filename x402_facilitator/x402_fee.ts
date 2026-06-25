@@ -20,6 +20,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
+import { loadPrivateKey } from "@fretchen/chain-utils";
 import { getChainConfig } from "./chain_utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -105,22 +106,8 @@ export function getFeeAmount(): bigint {
  * Derived from the same private key used for settlements.
  */
 export function getFacilitatorAddress(): Address | null {
-  let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
-    return null;
-  }
-
-  privateKey = privateKey.trim();
-  if (!privateKey.startsWith("0x")) {
-    privateKey = "0x" + privateKey;
-  }
-  if (privateKey.length !== 66) {
-    return null;
-  }
-
   try {
-    const account = privateKeyToAccount(privateKey as `0x${string}`);
-    return account.address;
+    return privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY")).address;
   } catch {
     return null;
   }
@@ -215,19 +202,15 @@ export async function collectFee(merchantAddress: Address, network: string): Pro
     return { success: true };
   }
 
-  let privateKey = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
-  if (!privateKey) {
-    logger.error("Cannot collect fee: FACILITATOR_WALLET_PRIVATE_KEY not configured");
+  let account;
+  try {
+    account = privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY"));
+  } catch {
+    logger.error("Cannot collect fee: FACILITATOR_WALLET_PRIVATE_KEY not configured or invalid");
     return { success: false, error: "facilitator_not_configured" };
   }
 
-  privateKey = privateKey.trim();
-  if (!privateKey.startsWith("0x")) {
-    privateKey = "0x" + privateKey;
-  }
-
   try {
-    const account = privateKeyToAccount(privateKey as `0x${string}`);
     const config = getChainConfig(network);
 
     const publicClient = createPublicClient({

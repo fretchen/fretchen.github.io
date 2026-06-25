@@ -46,7 +46,8 @@ export const SUPPORT_V2_CHAINS = USE_TESTNET ? ([optimismSepolia, baseSepolia] a
 /** Default chain for read operations and auto-switch target */
 export const DEFAULT_SUPPORT_CHAIN = USE_TESTNET ? optimismSepolia : optimism;
 
-/** Recipient wallet for donations */
+// Donation recipient — intentionally different from the contract owner EOA (0x1af51D…fBB20).
+// This is the general-purpose dev wallet that receives ETH from SupportV2.donate().
 export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
 
 /** Owner wallet for admin pages (growth agent, etc.) */

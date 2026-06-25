@@ -430,10 +430,7 @@ describe("GenImNFTv4 - Upgrade Tests", function () {
       await v4Contract.connect(owner)["safeMint(string,bool)"]("ipfs://funding", true, { value: mintPrice });
 
       // Unauthorized account should NOT be able to update
-      await assert.rejects(
-        v4Contract.connect(thirdAccount).requestImageUpdate(0, "ipfs://hack"),
-        /NotAuthorizedAgent/,
-      );
+      await assert.rejects(v4Contract.connect(thirdAccount).requestImageUpdate(0, "ipfs://hack"), /NotAuthorizedAgent/);
 
       // Token should remain not updated
       expect(await v4Contract.isImageUpdated(0)).to.equal(false);

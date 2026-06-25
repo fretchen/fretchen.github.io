@@ -132,3 +132,10 @@ export type { USDCConfig };
 // ═══════════════════════════════════════════════════════════════
 
 export * from "./abi";
+
+// ═══════════════════════════════════════════════════════════════
+// Key Utilities
+// ═══════════════════════════════════════════════════════════════
+
+export { loadPrivateKey } from "./key-utils";
+export { AUTH_TOKEN_MAX_AGE_MS, buildAuthMessage } from "./auth-protocol";

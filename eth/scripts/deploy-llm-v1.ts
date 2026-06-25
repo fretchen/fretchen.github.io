@@ -1,3 +1,18 @@
+/**
+ * Deploys LLMv1 as a UUPS upgradeable proxy.
+ *
+ * Usage:
+ *   npx hardhat run scripts/deploy-llm-v1.ts --network optsepolia
+ *   npx hardhat run scripts/deploy-llm-v1.ts --network optimisticEthereum
+ *
+ * Configuration: edit llm-v1.config.json before running.
+ *   options.validateOnly — true: validate config + contract only, no deploy
+ *   options.dryRun       — true: simulate deploy, no tx sent
+ *   options.verify       — true: verify on Etherscan after deploy
+ *
+ * Requires SEPOLIA_PRIVATE_KEY in Hardhat keystore and ALCHEMY_API_KEY in Hardhat vars.
+ * Writes a deployment receipt to deployments/llm-v1-<network>.json.
+ */
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";

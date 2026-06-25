@@ -1,3 +1,18 @@
+/**
+ * Upgrades CollectorNFT to CollectorNFTv2 via its UUPS proxy.
+ *
+ * v2 additions: automatic URI inheritance from GenImNFT tokens, enhanced
+ * relationship tracking, backward-compatible custom URI function.
+ *
+ * Usage:
+ *   PROXY_ADDRESS=0x... npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
+ *   PROXY_ADDRESS=0x... npx hardhat run scripts/upgrade-collector-nft.ts --network base
+ *   VALIDATE_ONLY=true  ... -- validate OZ storage layout only, no tx
+ *   DRY_RUN=true        ... -- simulate upgrade, no tx sent
+ *   SKIP_OZ_VALIDATION=true ... -- skip storage layout check (use with care)
+ *
+ * Requires CONTRACT_OWNER_PRIVATE_KEY in Hardhat keystore (owner signs the upgrade).
+ */
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { getAddress } from "viem";
@@ -9,21 +24,6 @@ interface UpgradeOptions {
   skipPreUpgradeValidation?: boolean;
 }
 
-/**
- * Upgrade CollectorNFT to CollectorNFTv2 using OpenZeppelin Upgrades Plugin
- *
- * New features in v2:
- * - Automatic URI inheritance from GenImNFT tokens
- * - Enhanced relationship tracking between CollectorNFT and GenImNFT
- * - Backward compatibility with custom URI function
- *
- * Usage examples:
- * - Environment variable: PROXY_ADDRESS=0xca17B4AB53540470C19658D5B46c6B1a4A17dAA5 npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
- * - Script parameter: npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
- * - Validation only: VALIDATE_ONLY=true npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
- * - Dry run: DRY_RUN=true npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
- * - Skip OZ validation: SKIP_OZ_VALIDATION=true npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
- */
 async function upgradeCollectorNFT(options: UpgradeOptions = {}) {
   const connection = await hre.network.getOrCreate();
   const { ethers } = connection;

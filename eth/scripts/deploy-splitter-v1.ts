@@ -1,3 +1,20 @@
+/**
+ * Deploys EIP3009SplitterV1 as a UUPS upgradeable proxy.
+ *
+ * Usage:
+ *   npx hardhat run scripts/deploy-splitter-v1.ts --network optsepolia
+ *   npx hardhat run scripts/deploy-splitter-v1.ts --network optimisticEthereum
+ *
+ * Configuration: edit deploy-splitter-v1.config.json before running.
+ *   parameters.facilitatorWallet — address that receives the fixed per-request fee
+ *   parameters.fixedFee          — fee amount in raw USDC units (6 decimals)
+ *   options.validateOnly         — true: validate config + contract only, no deploy
+ *   options.dryRun               — true: simulate deploy, no tx sent
+ *   options.verify               — true: verify on Etherscan after deploy
+ *
+ * Requires SEPOLIA_PRIVATE_KEY in Hardhat keystore and ALCHEMY_API_KEY in Hardhat vars.
+ * Writes a deployment receipt to deployments/splitter-v1-<network>.json.
+ */
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";

@@ -106,7 +106,7 @@ export function createMockContract() {
 // ===== ENVIRONMENT SETUP =====
 export const testEnvironment = {
   // Serverless/Handler environment variables
-  NFT_WALLET_PRIVATE_KEY: "test-private-key",
+  NFT_WALLET_PRIVATE_KEY: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 
   // AWS/S3 environment variables
   SCW_ACCESS_KEY: "test-access-key",

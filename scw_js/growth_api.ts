@@ -12,6 +12,7 @@ import {
   type ContentQueue,
 } from "./growth_service.js";
 import { parseBearerToken } from "./auth_utils.js";
+import { parseJsonBody } from "./utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -41,21 +42,6 @@ function filterByStatus(queue: ContentQueue, status: string | undefined): unknow
   }
   const all = [...queue.drafts, ...queue.approved, ...queue.published, ...queue.rejected];
   return all.filter((d) => d.status === status);
-}
-
-function parseJsonBody(raw: unknown): Record<string, unknown> | null {
-  if (raw === null || raw === undefined || raw === "") {
-    return null;
-  }
-  try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
 }
 
 export async function handle(

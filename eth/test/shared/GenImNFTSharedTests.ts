@@ -451,7 +451,11 @@ export function createImageUpdateTests(getFixture: () => Promise<ContractFixture
         const { contract } = await getFixture();
 
         // Versuche, Status eines nicht-existierenden Tokens abzufragen
-        await _networkConn.viem.assertions.revertWithCustomError(contract.read.isImageUpdated([999n]), contract, "TokenDoesNotExist");
+        await _networkConn.viem.assertions.revertWithCustomError(
+          contract.read.isImageUpdated([999n]),
+          contract,
+          "TokenDoesNotExist",
+        );
         await _networkConn.viem.assertions.revertWithCustomError(
           contract.read.getAuthorizedImageUpdater([999n]),
           contract,

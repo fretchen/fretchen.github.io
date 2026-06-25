@@ -45,6 +45,8 @@ describe("x402_facilitator handlers", () => {
 
       expect(result.statusCode).toBe(200);
       expect(result.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(result.headers["Access-Control-Allow-Headers"]).toBe("Content-Type");
+      expect(result.headers["Access-Control-Allow-Methods"]).toBe("GET, POST, OPTIONS");
       expect(result.body).toBe("");
     });
 
@@ -189,6 +191,9 @@ describe("x402_facilitator handlers", () => {
       const result = await handleSettle(event, {});
 
       expect(result.statusCode).toBe(200);
+      expect(result.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(result.headers["Access-Control-Allow-Headers"]).toBe("Content-Type");
+      expect(result.headers["Access-Control-Allow-Methods"]).toBe("GET, POST, OPTIONS");
       expect(result.body).toBe("");
     });
 
@@ -310,6 +315,9 @@ describe("x402_facilitator handlers", () => {
       const result = await handleSupported(event, {});
 
       expect(result.statusCode).toBe(200);
+      expect(result.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(result.headers["Access-Control-Allow-Headers"]).toBe("Content-Type");
+      expect(result.headers["Access-Control-Allow-Methods"]).toBe("GET, POST, OPTIONS");
       expect(result.body).toBe("");
     });
 

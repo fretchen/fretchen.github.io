@@ -228,9 +228,7 @@ describe("Post Component Integration Tests", () => {
       // Check for triple slashes (double slash after protocol)
       expect(targetParam).not.toContain("///");
       // Should fetch both URL variants (with and without trailing slash)
-      expect(fetchUrl).toMatch(
-        /^https:\/\/webmention\.io\/api\/mentions\.jf2\?target=https:\/\/www\.fretchen\.eu\/blog/,
-      );
+      expect(targetParam).toMatch(/^https:\/\/www\.fretchen\.eu\/blog/);
     });
 
     it("should fetch webmentions for the correct post URL", async () => {

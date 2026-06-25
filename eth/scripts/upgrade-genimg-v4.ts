@@ -1,3 +1,21 @@
+/**
+ * Upgrades the GenImNFTv4 implementation via its UUPS proxy.
+ *
+ * Usage:
+ *   npx hardhat run scripts/upgrade-genimg-v4.ts --network optsepolia
+ *   npx hardhat run scripts/upgrade-genimg-v4.ts --network optimisticEthereum
+ *
+ * Configuration: edit upgrade-genimg-v4.config.json before running.
+ *   proxyAddress                  — address of the existing proxy to upgrade
+ *   options.validateOnly          — true: run OZ storage-layout checks only, no tx
+ *   options.dryRun                — true: simulate upgrade, no tx sent
+ *   options.verify                — true: verify new implementation on Etherscan
+ *   options.waitConfirmations     — blocks to wait before verification
+ *   options.authorizeAgentWallet  — if set, calls authorizeAgentWallet() post-upgrade
+ *
+ * Requires CONTRACT_OWNER_PRIVATE_KEY in Hardhat keystore (owner signs the upgrade).
+ * Writes an upgrade receipt to deployments/genimg-v4-upgrade-<network>-<date>.json.
+ */
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";

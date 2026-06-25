@@ -4,27 +4,15 @@ This directory contains Jupyter notebooks for exploring Merkle trees and their a
 
 ## Setup
 
-1. Install Poetry if you haven't already:
+1. Install dependencies:
 
    ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
+   uv sync
    ```
 
-2. Install dependencies:
-
+2. Start Jupyter:
    ```bash
-   poetry install
-   ```
-
-3. Activate the virtual environment:
-
-   ```bash
-   poetry shell
-   ```
-
-4. Start Jupyter:
-   ```bash
-   poetry run jupyter notebook
+   uv run jupyter notebook
    ```
 
 ## Notebooks
@@ -43,25 +31,15 @@ This directory contains Jupyter notebooks for exploring Merkle trees and their a
 
 ## Development
 
-Code formatting is handled by:
-
-- **black**: Code formatter
-- **isort**: Import sorter
-- **flake8**: Linter
-
-Run formatting:
+Code formatting and linting is handled by **ruff**:
 
 ```bash
-poetry run black .
-poetry run isort .
-```
-
-Run linting:
-
-```bash
-poetry run flake8 .
+uv run ruff format .
+uv run ruff check .
 ```
 
 ### Kernel for VSCode
 
-poetry run python -m ipykernel install --user --name=merkle-tree-notebooks
+```bash
+uv run python -m ipykernel install --user --name=merkle-tree-notebooks
+```

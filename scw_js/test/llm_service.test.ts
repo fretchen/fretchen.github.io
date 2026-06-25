@@ -1,5 +1,19 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
+// ===== Additional hoisted mocks for processMerkleTree tests =====
+const { mockProcessBatch, mockWaitForTransactionReceipt } = vi.hoisted(() => ({
+  mockProcessBatch: vi.fn(),
+  mockWaitForTransactionReceipt: vi.fn(),
+}));
+
+vi.mock("../getChain.js", () => ({
+  getChain: vi.fn().mockReturnValue({ id: 10, name: "OP Mainnet" }),
+  getLLMv1ContractConfig: vi.fn().mockReturnValue({
+    address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56",
+    abi: [],
+  }),
+}));
+
 // Import common setup
 import {
   setupGlobalMocks,
@@ -9,13 +23,21 @@ import {
   mockLLMResponse,
   mockS3Send,
   mockPutObjectCommand,
+  mockViemFunctions,
 } from "./setup.js";
 
 // Setup global mocks
 setupGlobalMocks();
 
 // direktes Named-Import statt dynamic import in beforeAll
-import { callLLMAPI, appendLeafToTrees, startNewTree, appendToS3Json } from "../llm_service.js";
+import {
+  callLLMAPI,
+  appendLeafToTrees,
+  startNewTree,
+  appendToS3Json,
+  processMerkleTree,
+  checkWalletBalance,
+} from "../llm_service.js";
 import type { Leaf } from "../llm_service.js";
 
 describe("llm_service.js", () => {
@@ -199,5 +221,142 @@ describe("S3 writes — merkle data must not be public-read", () => {
     expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
     const params = mockPutObjectCommand.mock.calls[0][0];
     expect(params).not.toHaveProperty("ACL");
+  });
+});
+
+// ===== Security: processMerkleTree must not persist state when tx fails (Finding 2) =====
+
+const singleLeafTreesJson = JSON.stringify({
+  currentTreeIndex: 0,
+  trees: [
+    {
+      treeIndex: 0,
+      root: null,
+      processed: false,
+      createdAt: "2024-01-01T00:00:00.000Z",
+      processedAt: null,
+      leaves: [
+        {
+          id: 1,
+          user: "0x1111111111111111111111111111111111111111",
+          serviceProvider: "0x2222222222222222222222222222222222222222",
+          tokenCount: "100",
+          cost: "10",
+          timestamp: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+    },
+  ],
+});
+
+describe("processMerkleTree — tx failure must not mark tree as processed", () => {
+  beforeEach(() => {
+    setupTestEnvironment();
+    vi.clearAllMocks();
+
+    // Set up viem contract mock with processBatch and waitForTransactionReceipt
+    const mockPublicClient = {
+      waitForTransactionReceipt: mockWaitForTransactionReceipt,
+    };
+    const mockContract = {
+      write: { processBatch: mockProcessBatch },
+      read: {},
+    };
+    mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
+    mockViemFunctions.createWalletClient.mockReturnValue({ account: {} });
+    mockViemFunctions.getContract.mockReturnValue(mockContract);
+    mockViemFunctions.http.mockReturnValue({});
+    mockProcessBatch.mockResolvedValue("0xdeadbeef");
+  });
+
+  afterEach(() => {
+    cleanupTestEnvironment();
+  });
+
+  test("throws and does not write to S3 when transaction reverts", async () => {
+    mockS3Send.mockResolvedValueOnce({ Body: makeStream(singleLeafTreesJson) });
+    mockWaitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
+
+    await expect(processMerkleTree("merkle/trees.json")).rejects.toThrow(
+      /processBatch transaction reverted/,
+    );
+
+    // S3 PUT must NOT have been called — tree state must not be persisted
+    expect(mockPutObjectCommand).not.toHaveBeenCalled();
+  });
+
+  test("throws and does not write to S3 when processBatch itself throws", async () => {
+    mockS3Send.mockResolvedValueOnce({ Body: makeStream(singleLeafTreesJson) });
+    mockProcessBatch.mockRejectedValue(new Error("out of gas"));
+
+    await expect(processMerkleTree("merkle/trees.json")).rejects.toThrow("out of gas");
+    expect(mockPutObjectCommand).not.toHaveBeenCalled();
+  });
+
+  test("writes to S3 and marks tree processed when transaction succeeds", async () => {
+    mockS3Send.mockResolvedValueOnce({ Body: makeStream(singleLeafTreesJson) });
+    mockS3Send.mockResolvedValueOnce({});
+    mockWaitForTransactionReceipt.mockResolvedValue({ status: "success", logs: [] });
+
+    await processMerkleTree("merkle/trees.json");
+
+    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
+    const callArg = mockPutObjectCommand.mock.calls[0][0];
+    const persisted = JSON.parse(callArg.Body);
+    expect(persisted.trees[0].processed).toBe(true);
+  });
+});
+
+// ===== Security: checkWalletBalance must enforce the ETH deposit gate =====
+
+const USER_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678" as const;
+const REQUIRED = 10_000_000_000_000n; // 0.00001 ETH in wei
+
+describe("checkWalletBalance — ETH deposit gate", () => {
+  const mockCheckBalance = vi.fn();
+
+  beforeEach(() => {
+    setupTestEnvironment();
+    vi.clearAllMocks();
+    mockViemFunctions.createPublicClient.mockReturnValue({});
+    mockViemFunctions.http.mockReturnValue({});
+    mockViemFunctions.getContract.mockReturnValue({
+      read: { checkBalance: mockCheckBalance },
+    });
+  });
+
+  afterEach(() => {
+    cleanupTestEnvironment();
+  });
+
+  test("resolves when on-chain balance meets the requirement", async () => {
+    mockCheckBalance.mockResolvedValue(REQUIRED);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).resolves.toBeUndefined();
+  });
+
+  test("resolves when on-chain balance exceeds the requirement", async () => {
+    mockCheckBalance.mockResolvedValue(REQUIRED * 2n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).resolves.toBeUndefined();
+  });
+
+  test("throws when on-chain balance is zero", async () => {
+    mockCheckBalance.mockResolvedValue(0n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
+      /Insufficient balance/,
+    );
+  });
+
+  test("throws when on-chain balance is one wei short", async () => {
+    mockCheckBalance.mockResolvedValue(REQUIRED - 1n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
+      /Insufficient balance/,
+    );
+  });
+
+  test("error message includes required and current balance", async () => {
+    mockCheckBalance.mockResolvedValue(5_000_000_000_000n);
+    await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
+      `Insufficient balance. Required: ${REQUIRED}, Current: 5000000000000`,
+    );
   });
 });

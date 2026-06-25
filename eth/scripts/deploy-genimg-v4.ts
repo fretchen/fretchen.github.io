@@ -1,3 +1,22 @@
+/**
+ * Deploys GenImNFTv4 as a UUPS upgradeable proxy.
+ *
+ * Usage:
+ *   npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
+ *   npx hardhat run scripts/deploy-genimg-v4.ts --network optimisticEthereum
+ *   npx hardhat run scripts/deploy-genimg-v4.ts --network base
+ *
+ * Configuration: edit deploy-genimg-v4.config.json before running.
+ *   parameters.mintPrice      — mint fee in ETH (e.g. "0.00003")
+ *   parameters.agentWallet    — backend wallet pre-authorized for requestImageUpdate()
+ *   options.validateOnly      — true: validate config + contract only, no deploy
+ *   options.dryRun            — true: simulate deploy, print params, no tx sent
+ *   options.verify            — true: verify on Etherscan after deploy
+ *   options.waitConfirmations — blocks to wait before verification (default 2)
+ *
+ * Requires SEPOLIA_PRIVATE_KEY in Hardhat keystore and ALCHEMY_API_KEY in Hardhat vars.
+ * Writes a deployment receipt to deployments/genimg-v4-<network>.json.
+ */
 import hre from "hardhat";
 import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { validateImplementation } from "./validate-contract";

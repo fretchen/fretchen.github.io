@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 function getNestedProperty(obj: unknown, path: string): unknown {
-  return path
-    .split(".")
-    .reduce((acc: unknown, key: string) => (acc as Record<string, unknown>)?.[key], obj);
+  return path.split(".").reduce((acc: unknown, key: string) => (acc as Record<string, unknown>)?.[key], obj);
 }
 
 describe("getNestedProperty", () => {

@@ -25,7 +25,7 @@ const ReactPostRenderer: React.FC<{
   const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
-    const loadComponent = async () => {
+    const loadComponent = () => {
       try {
         // Extract directory and filename from componentPath
         const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
@@ -128,13 +128,11 @@ const ReactPostRenderer: React.FC<{
 
 export function Post({
   title,
-  content,
   publishing_date,
   prevPost,
   nextPost,
   basePath = "",
   tokenID,
-  type = "markdown",
   componentPath,
   description,
   category,

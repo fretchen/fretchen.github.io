@@ -1,7 +1,4 @@
 import React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
@@ -202,18 +199,9 @@ export function Post({
           <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
           {/* Render based on post type */}
-          {type === "react" && componentPath ? (
-            <div className="e-content" ref={contentRef}>
-              <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} contentRef={contentRef} />
-            </div>
-          ) : (
-            <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
-              {tokenID && <NFTFloatImage tokenId={tokenID} />}
-              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                {content}
-              </Markdown>
-            </div>
-          )}
+          <div className="e-content" ref={contentRef}>
+            <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} contentRef={contentRef} />
+          </div>
 
           {/* Navigation zwischen Posts */}
           {(prevPost || nextPost) && (

@@ -117,7 +117,7 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 |---|---|---|---|
 | Access control (SC01) | `requestImageUpdate` agent whitelist; single-EOA upgrade governance | Mitigated / partially (governance open) | eth/SECURITY.md; §2 |
 | Reentrancy (SC05) | CollectorNFT `_safeMint` price manipulation; SupportV2 donate paths | Open (price-only, no fund theft) / mitigated via `ReentrancyGuardTransient` | eth/SECURITY.md |
-| Logic errors (SC03) | LLMv1 `processBatch` CEI ordering | Accepted (informational, not exploitable) | eth/SECURITY.md |
+| Logic errors (SC03) | LLMv1 `processBatch` CEI ordering | Low — Open; reentrancy hardening on next upgrade | eth/SECURITY.md |
 | Unchecked external calls (SC06) | SupportV2 arbitrary `_token` in `donateToken` | Accepted (contract holds no funds) | eth/SECURITY.md |
 | Signature replay | LLMv1 Merkle batch submission | Mitigated via `processedBatches` mapping | eth/SECURITY.md |
 | Access control / fund redirection (SC01) | EIP3009 Splitter `executeSplit`; `onlyOwner` `setFacilitatorWallet`/upgrade — **testnet-stage** | Mitigated (testnet): relayer cannot redirect funds — `nonce = keccak256(seller, salt)` binds seller to the buyer signature; owner powers are the residual risk | eth/contracts/EIP3009SplitterV1.sol; §8 |
@@ -129,7 +129,8 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 |---|---|---|---|
 | Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
-| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts | Accepted (negligible L2 gas, no attacker incentive) | §4; §7 |
+| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM settlement-batch stall (Open, medium) | Mixed — gas drain accepted; batch-stall open | §4; scw_js/SECURITY.md |
+| Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |
 | Security misconfiguration / secret exposure (API8) | comment_service sends `SCW_SECRET_KEY` as the `X-Auth-Token` header to the Scaleway transactional-email API | Open (medium) | §7 |
 | Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
 
@@ -156,7 +157,7 @@ Detailed code-level findings live alongside the code they describe:
 | Component | Findings document | Open issues |
 |---|---|---|
 | Smart contracts | [eth/SECURITY.md](../eth/SECURITY.md) | CollectorNFT price manipulation (medium), single-owner upgrade path (medium governance) |
-| Serverless & frontend | — | x402_facilitator open CORS (intentional; gas-drain risk accepted — negligible on L2, no attacker incentive), comment_service sends `SCW_SECRET_KEY` as the email API `X-Auth-Token` header (medium), client-side-only image validation (low) |
+| Serverless & frontend | [scw_js/SECURITY.md](../scw_js/SECURITY.md) | LLM balance-gate (medium) and genimg deliver-before-settle (medium) — see scw_js/SECURITY.md; x402_facilitator open CORS (intentional; gas-drain risk accepted — negligible on L2, no attacker incentive), comment_service sends `SCW_SECRET_KEY` as the email API `X-Auth-Token` header (medium), client-side-only image validation (low) |
 
 ---
 
@@ -167,6 +168,7 @@ Active mitigations and where they live:
 | Area | Document | What it covers |
 |---|---|---|
 | Contract-level findings | [eth/SECURITY.md](../eth/SECURITY.md) | Open issues, known vulnerabilities, fixed CVEs |
+| Serverless findings | [scw_js/SECURITY.md](../scw_js/SECURITY.md) | Open serverless issues (rough; full detail tracked privately via GHSA) |
 | Dependency CVEs | [CVE_TRIAGE.md](CVE_TRIAGE.md) | Threat-model-driven triage framework for Dependabot alerts; `/cve-triage` skill operationalizes it |
 
 **Review triggers** — revisit this document when any of the following occur:

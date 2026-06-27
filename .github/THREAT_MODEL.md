@@ -2,6 +2,15 @@
 
 Last updated: 2026-06-20
 
+This is a lightweight, living threat model. It follows the OWASP four-question framework and the values of the Threat Modeling Manifesto — a maintained document over a one-time audit, design issues over checkbox compliance, action over ceremony.
+
+| Question | Answered in |
+|---|---|
+| What are we working on? | §1 Assets · §4 Trust Boundaries |
+| What can go wrong? | §2 Blast Radius · §3 Threat Actors · §5 Attack Techniques |
+| What are we going to do about it? | §7 Component Findings · §8 Mitigations |
+| Did we do a good enough job? | §8 Review Cadence |
+
 ---
 
 ## 1. Assets
@@ -24,25 +33,42 @@ Notably absent: user wallet keys (never touch the server), user PII (not collect
 
 ---
 
-## 2. Threat Actors
+## 2. Blast Radius
 
-Realistic adversaries for a project of this scale, ordered by capability:
+If a component is fully compromised, what else falls with it:
 
-| Actor | Capability | Motivation | Likely vector |
+| Component | Direct impact | Cascades to |
+|---|---|---|
+| **Owner EOA** | Malicious upgrade to all 5 contracts | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. |
+| **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
+| **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
+| **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
+| **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
+| **x402_facilitator service** | Payment settlements halt | Image generation feature unavailable; already-signed USDC authorizations expire unused |
+| **LLMv1 authorized provider** | Can submit fraudulent Merkle batches; drains user balances up to available ETH | Only affects LLMv1 user balances; no access to other contracts |
+
+Key observation: the **owner EOA** is the single point of catastrophic failure. All other compromises are bounded in scope. This makes key management the highest-priority operational security concern, ahead of any code-level finding.
+
+---
+
+## 3. Threat Actors
+
+Realistic adversaries for a project of this scale, ordered by capability. Each entry describes WHO the actor is — their role, access level, and motivation. Attack methods and vectors are documented in §4 Trust Boundaries and `eth/SECURITY.md`.
+
+| Actor | Capability | Motivation | Primary access |
 |---|---|---|---|
-| **Opportunistic bot** | Low — runs known exploit scripts | Financial: drain any available funds | Scans for common Solidity patterns (no-auth functions, reentrancy) |
-| **Malicious buyer/collector** | Medium — reads the deployed contract ABI | Financial: mint at below-market price, extract ETH | Crafts a receiver contract to exploit ERC721 callbacks |
-| **Phishing / cross-origin site** | Medium — operates a malicious web page | Financial: trigger payment flows without user intent | Exploits open CORS on the facilitator from a different origin |
-| **Compromised service provider** | High — already has partial on-chain trust | Financial or sabotage | Abuses `authorizedProviders` role in LLMv1 to submit fraudulent batches |
-| **Key compromise** | Critical — attacker holds the owner EOA | Total control | Phishing, leaked `.env`, compromised dev machine |
+| **Opportunistic bot** | Low — runs known exploit scripts | Financial: drain any available ETH | Public contract ABI; scans for common Solidity patterns (no-auth functions, reentrancy) |
+| **Financially motivated attacker** | Medium — reads deployed ABIs, may operate a malicious website | Financial: extract ETH, redirect USDC, mint below-market | Direct contract calls; crafted ERC721 receiver contracts; cross-origin requests to x402_facilitator |
+| **Insider / compromised authorized account** | High — already holds partial on-chain trust or serverless secrets | Financial gain or sabotage | `authorizedProviders` role in LLMv1; SCW_SECRET_KEY or agent wallet obtained via credential leak |
+| **Attacker with owner credentials** | Critical — holds the owner EOA or agent wallet key | Total control | Key obtained via phishing, leaked `.env`, or compromised dev machine |
 
 Out of scope: nation-state actors, L1/L2 consensus attacks, Scaleway infrastructure compromise, wallet software vulnerabilities.
 
 ---
 
-## 3. Trust Boundaries
+## 4. Trust Boundaries
 
-Where control or trust changes hands. Each arrow is a potential attack surface.
+This is the attack-**surface** map: each arrow marks where data crosses from a less-trusted zone into a more-trusted one. Read it against §3 — an attack path is an actor reaching one of these arrows. The boundaries most exposed to untrusted callers are starred (★); the owner-EOA boundary carries no external surface but the highest blast radius (§2).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -77,27 +103,39 @@ Owner EOA ───────────────────────�
 
 ---
 
-## 4. Blast Radius
+## 5. Attack Techniques by Surface
 
-If a component is fully compromised, what else falls with it:
+This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete classes of weakness in scope when reviewing or scanning this system. Only *live* categories are listed — a category's absence means it was considered and judged not applicable, not overlooked. Detailed, per-instance findings live in the documents named in the **Tracked in** column. The two halves of the system map to two standard catalogs:
 
-| Component | Direct impact | Cascades to |
-|---|---|---|
-| **Owner EOA** | Malicious upgrade to all 5 contracts | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. |
-| **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
-| **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
-| **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
-| **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
-| **x402_facilitator service** | Payment settlements halt | Image generation feature unavailable; already-signed USDC authorizations expire unused |
-| **LLMv1 authorized provider** | Can submit fraudulent Merkle batches; drains user balances up to available ETH | Only affects LLMv1 user balances; no access to other contracts |
+- [OWASP Smart Contract Top 10 (2025)](https://owasp.org/www-project-smart-contract-top-10/) — for `eth/` contracts.
+- [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) — for the serverless functions and website.
 
-Key observation: the **owner EOA** is the single point of catastrophic failure. All other compromises are bounded in scope. This makes key management the highest-priority operational security concern, ahead of any code-level finding.
+### Contract layer — OWASP Smart Contract Top 10
+
+| Technique (OWASP) | Where it applies | Status | Tracked in |
+|---|---|---|---|
+| Access control (SC01) | `requestImageUpdate` agent whitelist; single-EOA upgrade governance | Mitigated / partially (governance open) | eth/SECURITY.md; §2 |
+| Reentrancy (SC05) | CollectorNFT `_safeMint` price manipulation; SupportV2 donate paths | Open (price-only, no fund theft) / mitigated via `ReentrancyGuardTransient` | eth/SECURITY.md |
+| Logic errors (SC03) | LLMv1 `processBatch` CEI ordering | Accepted (informational, not exploitable) | eth/SECURITY.md |
+| Unchecked external calls (SC06) | SupportV2 arbitrary `_token` in `donateToken` | Accepted (contract holds no funds) | eth/SECURITY.md |
+| Signature replay | LLMv1 Merkle batch submission | Mitigated via `processedBatches` mapping | eth/SECURITY.md |
+| Integer over/underflow (SC08) | All contracts | Mitigated (Solidity 0.8.27 built-in checks) | eth/SECURITY.md |
+
+### API / serverless layer — OWASP API Security Top 10
+
+| Technique (OWASP) | Where it applies | Status | Tracked in |
+|---|---|---|---|
+| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth); origin whitelist (comment_service) | Mitigated | §4; §7 |
+| Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
+| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts | Accepted (negligible L2 gas, no attacker incentive) | §4; §7 |
+| Security misconfiguration / secret exposure (API8) | SCW_SECRET_KEY in email headers | Open (medium) | §7 |
+| Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
 
 ---
 
-## 5. CIA Summary
+## 6. CIA Summary
 
-For blockchain systems, **Integrity** dominates. Confidentiality is generally low concern (code is public, transactions are public). Availability is partially guaranteed by the L2 itself; the serverless layer is the availability risk.
+For blockchain systems, **Integrity** dominates. Confidentiality is generally low concern (code is public, transactions are public). Availability is partially guaranteed by the L2 itself; the serverless layer is the availability risk. **Repudiation** is a structural strength: all on-chain transactions are cryptographically signed and permanently recorded — no actor can deny having submitted a transaction.
 
 | Component | Confidentiality | Integrity | Availability | Notes |
 |---|---|---|---|---|
@@ -109,7 +147,7 @@ For blockchain systems, **Integrity** dominates. Confidentiality is generally lo
 
 ---
 
-## 6. Component Security Findings
+## 7. Component Security Findings
 
 Detailed code-level findings live alongside the code they describe:
 
@@ -117,3 +155,20 @@ Detailed code-level findings live alongside the code they describe:
 |---|---|---|
 | Smart contracts | [eth/SECURITY.md](../eth/SECURITY.md) | CollectorNFT price manipulation (medium), single-owner upgrade path (medium governance) |
 | Serverless & frontend | — | x402_facilitator open CORS (intentional; gas-drain risk accepted — negligible on L2, no attacker incentive), SCW_SECRET_KEY in email headers (medium), client-side-only image validation (low) |
+
+---
+
+## 8. Mitigations and Review Cadence
+
+Active mitigations and where they live:
+
+| Area | Document | What it covers |
+|---|---|---|
+| Contract-level findings | [eth/SECURITY.md](../eth/SECURITY.md) | Open issues, known vulnerabilities, fixed CVEs |
+| Dependency CVEs | [CVE_TRIAGE.md](CVE_TRIAGE.md) | Threat-model-driven triage framework for Dependabot alerts; `/cve-triage` skill operationalizes it |
+
+**Review triggers** — revisit this document when any of the following occur:
+- A contract is upgraded or a new contract is deployed
+- A key is rotated or a new privileged account is added
+- A new serverless function or trust boundary is introduced
+- A CVE is triaged as T1 or T2 (patch required)

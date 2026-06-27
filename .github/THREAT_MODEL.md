@@ -22,8 +22,9 @@ What has monetary value, irreversibility, or trust significance in this system:
 | ETH in GenImNFTv4 | On-chain | Accumulates mint fees until `withdraw()` is called |
 | ETH in LLMv1 | On-chain | User prepaid balances; withdrawable by users or claimable by providers |
 | USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
+| EIP3009 Splitter contract (testnet) | On-chain, Optimism Sepolia only (`eip155:11155420`) | Routes USDC settlements via EIP-3009; owner-upgradeable. Not yet on mainnet — promotes to a live asset on mainnet deployment |
 | NFT metadata integrity | On-chain (token URIs) | Authoritative record of what image each token represents |
-| Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls all five upgradeable contracts — the highest-value key in the system |
+| Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls every upgradeable contract — the highest-value key in the system |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call |
 | Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
 | Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket and transactional email |
@@ -39,7 +40,7 @@ If a component is fully compromised, what else falls with it:
 
 | Component | Direct impact | Cascades to |
 |---|---|---|
-| **Owner EOA** | Malicious upgrade to all 5 contracts | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. |
+| **Owner EOA** | Malicious upgrade to every upgradeable contract | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. The EIP3009 Splitter joins this blast radius once deployed to mainnet. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. |
 | **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
 | **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
@@ -95,7 +96,7 @@ scw_js
   ├─ bearer token ──────────────────────► BFL / IONOS APIs
   └─ AWS SDK ───────────────────────────► Scaleway S3
 
-Owner EOA ───────────────────────────────► All 5 upgradeable contracts
+Owner EOA ───────────────────────────────► Every upgradeable contract
   (single key controls all upgrade paths)
 ```
 
@@ -119,7 +120,8 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 | Logic errors (SC03) | LLMv1 `processBatch` CEI ordering | Accepted (informational, not exploitable) | eth/SECURITY.md |
 | Unchecked external calls (SC06) | SupportV2 arbitrary `_token` in `donateToken` | Accepted (contract holds no funds) | eth/SECURITY.md |
 | Signature replay | LLMv1 Merkle batch submission | Mitigated via `processedBatches` mapping | eth/SECURITY.md |
-| Integer over/underflow (SC08) | All contracts | Mitigated (Solidity 0.8.27 built-in checks) | eth/SECURITY.md |
+| Access control / fund redirection (SC01) | EIP3009 Splitter `executeSplit`; `onlyOwner` `setFacilitatorWallet`/upgrade — **testnet-stage** | Mitigated (testnet): relayer cannot redirect funds — `nonce = keccak256(seller, salt)` binds seller to the buyer signature; owner powers are the residual risk | eth/contracts/EIP3009SplitterV1.sol; §8 |
+| Integer over/underflow (SC08) | All contracts | Mitigated (Solidity ≥0.8.27 built-in checks; Splitter is 0.8.33) | eth/SECURITY.md |
 
 ### API / serverless layer — OWASP API Security Top 10
 
@@ -128,7 +130,7 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 | Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
 | Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts | Accepted (negligible L2 gas, no attacker incentive) | §4; §7 |
-| Security misconfiguration / secret exposure (API8) | SCW_SECRET_KEY in email headers | Open (medium) | §7 |
+| Security misconfiguration / secret exposure (API8) | comment_service sends `SCW_SECRET_KEY` as the `X-Auth-Token` header to the Scaleway transactional-email API | Open (medium) | §7 |
 | Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
 
 ---
@@ -143,7 +145,7 @@ For blockchain systems, **Integrity** dominates. Confidentiality is generally lo
 | x402_facilitator | Low | **High** — invalid settlement = wrong payment routing | Medium — serverless cold starts | Open CORS degrades integrity boundary |
 | scw_js | Low | **High** — agent wallet controls on-chain writes | Medium | API key compromise has no on-chain reach |
 | website frontend | Low | Medium — client-side only; no server state | Low — static hosting | Wallet auth is the integrity boundary |
-| comment_service | Medium — user names/text | Low — like counts only | Low | Lowest risk component |
+| comment_service | Medium — stores anonymous user names/text in S3 | Low — comment content and like counts | Low | Low-value, but holds `SCW_SECRET_KEY` (email) — not zero-secret |
 
 ---
 
@@ -154,7 +156,7 @@ Detailed code-level findings live alongside the code they describe:
 | Component | Findings document | Open issues |
 |---|---|---|
 | Smart contracts | [eth/SECURITY.md](../eth/SECURITY.md) | CollectorNFT price manipulation (medium), single-owner upgrade path (medium governance) |
-| Serverless & frontend | — | x402_facilitator open CORS (intentional; gas-drain risk accepted — negligible on L2, no attacker incentive), SCW_SECRET_KEY in email headers (medium), client-side-only image validation (low) |
+| Serverless & frontend | — | x402_facilitator open CORS (intentional; gas-drain risk accepted — negligible on L2, no attacker incentive), comment_service sends `SCW_SECRET_KEY` as the email API `X-Auth-Token` header (medium), client-side-only image validation (low) |
 
 ---
 
@@ -169,6 +171,7 @@ Active mitigations and where they live:
 
 **Review triggers** — revisit this document when any of the following occur:
 - A contract is upgraded or a new contract is deployed
+- The EIP3009 Splitter (or any testnet-stage contract) is deployed to mainnet — promote it to a full asset/blast-radius entry and re-scope the owner blast radius
 - A key is rotated or a new privileged account is added
 - A new serverless function or trust boundary is introduced
 - A CVE is triaged as T1 or T2 (patch required)

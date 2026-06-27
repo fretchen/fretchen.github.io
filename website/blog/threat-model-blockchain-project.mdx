@@ -1,0 +1,134 @@
+---
+title: "What a threat model actually tells you"
+publishing_date: "2026-06-27"
+category: "blockchain"
+description: "A threat model and asset list are prioritization tools, not documentation. Here's what they revealed after a week of security work on a small blockchain project."
+---
+
+As I work through the website I also keep think about security. I enable different features like dependabot or CodeQL. However,
+all of this felt really quite random. Actually it feels like you are keep buying fancy security stuff for your house but you not 
+quite sure what you are protecting against.
+
+So I turned back to the basics of IT security and really appreciate the approach that is
+based on concrete [threads](https://www.threatmodelingmanifesto.org):
+
+- What are the valuable assets of this website that someone would like to steal ?
+- Who are then realistic actors attacking me and what are they likely looking for ?
+- Finally, how would the attackers likely try to go for the assets ?
+
+Going through this has obviously only been possible with support of an AI assistent. However, each step the answers were quite
+instructive and understandable. So the new approach certainly is a step forward.
+
+This post walks through how I now use the threat based security model on my website, which includes blockchain + AI components.
+
+## Start with the asset list
+
+The first question that helped me was simpler than any framework: what actually has value here?
+
+For this project — a set of upgradeable contracts on Optimism, a serverless image-gen backend, an LLM assistant, and an x402 payment facilitator — the list looks like this:
+
+| Asset | Location | Why it matters |
+|---|---|---|
+| Owner EOA private key | Dedicated keystore (`0x1af51D…fBB20`) | Controls all 5 upgradeable contracts — total system compromise if leaked |
+| ETH in GenImNFTv4 | On-chain | Accumulates mint fees until `withdraw()` is called |
+| ETH in LLMv1 | On-chain | User prepaid balances; withdrawable by users or claimable by providers |
+| USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
+| NFT metadata integrity | On-chain (token URIs) | Irreversible record of what image each token represents |
+| Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call |
+| Facilitator wallet key | x402_facilitator secrets | Receives USDC fees; no upgrade access |
+| Scaleway secrets | Serverless secrets | S3 image bucket and transactional email |
+| BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
+
+Two things fall out immediately from writing this down.
+
+First, the blast radius hierarchy is obvious. The owner EOA is catastrophic — one key controls all five UUPS proxy contracts, so whoever holds it can upgrade every contract to drain every balance. Everything below it is bounded: the agent wallet can drain GenImNFTv4 at mint price per call; the IONOS key loses API quota; the Scaleway secret loses S3 write access. Each is a tier lower than the one above.
+
+Second, you notice what's absent. User wallet keys never touch the server. No PII is collected. These are non-assets — they can't be compromised here because they don't exist here. That scoping is as useful as the list itself.
+
+## Then write the threat actor table
+
+But the asset list alone left me stuck. Without knowing who was actually coming for those assets, every risk felt equally urgent — which is just a more structured form of the same randomness I started with.
+
+For a project at this scale:
+
+| Actor | Capability | Motivation | Realistic vector |
+|---|---|---|---|
+| Opportunistic bot | Low — runs known exploit scripts | Financial: drain any available funds | Scans for unguarded functions, no-auth entrypoints |
+| Malicious buyer/collector | Medium — reads the deployed ABI | Financial: mint below market, extract ETH | Crafts a receiver contract to exploit ERC721 callbacks |
+| Phishing / cross-origin site | Medium — operates a malicious web page | Financial: trigger payment flows | Exploits auth weaknesses from a different origin |
+| Compromised service provider | High — already has partial on-chain trust | Financial or sabotage | Abuses `authorizedProviders` in LLMv1 |
+| Key compromise | Critical — attacker holds owner EOA | Total control | Leaked `.env`, phishing, compromised dev machine |
+
+Nation-states, L1/L2 consensus attacks, and Scaleway infrastructure compromise are explicitly out of scope. Not because they're impossible — because a realistic adversary for a project generating a few hundred dollars in mint fees is an opportunistic bot, not an APT. [We already met one](/blog/161/): a professional bot network extracted 80 cents from a missing authorization check in GenImNFTv3, then moved on.
+
+That last column — realistic vector — ends up doing most of the filtering work. Threats that require capabilities your realistic attackers simply don't have don't need defenses. That sounds obvious until you're staring at a Dependabot queue full of DoS vulnerabilities and asking whether any of those attackers are actually in a position to trigger one.
+
+## Grading four commits against the model
+
+With the asset list and actor table in place, I ran the four recent security commits through them. Here's the honest result:
+
+| Fix | Asset targeted | Realistic attacker | Actually exploitable? | Impact |
+|---|---|---|---|---|
+| EOA separation to dedicated key | Owner EOA | Key compromise | Not a code fix — operational | Catastrophic if skipped |
+| Replay attack on sc-llm auth | LLM endpoint / API quota | Any observer of auth traffic | **Yes** | API quota drain, LLM access as another user |
+| Silent tx failure in processBatch | LLMv1 user balances | Compromised provider | Marginal | Data loss on failed batches |
+| CORS wildcard → specific headers | x402 payment flow | Cross-origin attacker | No — EIP-712 already bounds this | Negligible |
+| Mermaid `securityLevel: "loose"` | Frontend users | Author-controlled content | Theoretical | XSS (no realistic injection path today) |
+
+The replay attack was the only genuine code-level vulnerability. The old auth for the LLM endpoint sent a static signed message in the request body:
+
+```json
+{ "auth": { "address": "0x...", "signature": "0x...", "message": "Authenticate wallet: 0x..." } }
+```
+
+The message never changes, so any captured signature was valid indefinitely. The fix adds a Unix timestamp (`sc-llm:1718123456`) with a five-minute expiry window — a one-line change to the shared auth protocol:
+
+```typescript
+export function buildAuthMessage(prefix: string): string {
+  return `${prefix}:${Math.floor(Date.now() / 1000)}`;
+}
+```
+
+Everything else in that table is either correct-but-theoretical (Mermaid, CORS) or operationally important without being a code bug (EOA separation). That distinction matters when you're deciding where to spend the next hour.
+
+## The same lens on Dependabot noise
+
+Dependabot assigns severity labels against generic CVSS scores — they don't know your architecture. A HIGH alert means "this class of vulnerability has high generic impact." It does not mean "this is exploitable in your project." The threat model is how you bridge the gap.
+
+The triage question has three steps:
+
+1. **Which tier is this package?** Packages in the T1 serverless layer (anything that touches private key signing, on-chain writes, or USDC settlement) get patched within 48 hours. Frontend production deps get a week. Build tools and local notebooks get deferred to the next scheduled update.
+
+2. **What is the impact type?** Integrity (code execution, data corruption, spoofing) always escalates. Availability (DoS) only matters if an untrusted caller can trigger it. Confidentiality is low priority — code and transactions are public.
+
+3. **Is the vulnerable code path reachable?** Does untrusted input actually flow through this package in a way that triggers the vulnerability?
+
+A concrete example from this project: `ws` flagged HIGH in x402_facilitator for memory exhaustion DoS via malicious WebSocket fragments. That sounds alarming. But `ws` is a transitive dependency of `viem`, and `viem` uses it as a *client* connecting outbound to Alchemy RPC — not as a server accepting untrusted frames. Triggering the DoS requires the RPC provider itself to send malicious frames. That's a supply chain attack on Alchemy, which is outside the threat model entirely. Verdict: defer.
+
+Compare `form-data` HIGH (CRLF injection) in scw_js. This package is in the T1 serverless layer that handles agent wallet signing and on-chain writes. Untrusted input does flow through multipart form construction. Verdict: patch immediately.
+
+Same severity label, opposite decisions — because the asset list and actor table tell you which one is reachable by a realistic attacker.
+
+## The model also tells you when to stop
+
+After the EOA separation, the natural next recommendation is a Gnosis Safe multi-sig. For most projects that own five upgradeable contracts, that's correct advice. I considered it and decided it was overshooting.
+
+The reasoning: the threat actors who can realistically compromise this project are opportunistic bots and phishing attackers. Neither has the capability to socially engineer a multi-sig quorum or compromise a hardware wallet used only for contract upgrades. The dedicated EOA already closes the catastrophic failure mode because it's isolated from the daily wallet, never used for anything else, and lives in a hardware keystore.
+
+Gnosis Safe adds real operational overhead — multi-sig coordination for every upgrade, a more complex ceremony for emergency changes. That overhead is justified when your threat actors include sophisticated APTs or when a single compromised key is a plausible outcome. For this project's scale and attacker profile, it isn't.
+
+That's three things from one document: what to fix, what to safely ignore, and when you've done enough. I found the last one the most surprising.
+
+## How to build one for your project
+
+Three questions, in order:
+
+**What has value?** List everything with monetary value, irreversibility, or trust significance. Include private keys, on-chain balances, metadata integrity, and API quotas. Note what's absent — user wallet keys that never touch your server are a non-asset.
+
+**Who wants it?** Write down realistic attackers, not theoretical ones. A small project faces opportunistic bots and phishing, not nation-states. Match the capability level to the actual financial incentive your project provides.
+
+**How would they get it?** For each actor, trace the realistic path from their starting position to the asset. This is where you find which code paths and trust boundaries actually matter.
+
+Then rank by blast radius. The item that, if compromised, takes down everything else is your highest priority — not the loudest Dependabot alert, not the most recent CVE, not the fix that generates the most code. For almost every upgradeable contract project, the answer is the same: it's the key.
+
+The model is a living document. Wrong entries — an actor you overestimated, an asset you forgot — are better than no model. The first version doesn't need to be perfect; it needs to exist before the next security decision.

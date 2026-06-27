@@ -34,11 +34,19 @@ A threat model is not documentation — it's a prioritization tool: without an e
    - Mermaid XSS: real vulnerability class, near-zero exploitability (author-controlled content only)
    - Table summarizing: Fix | Asset targeted | Attacker | Realistic? | Impact if exploited
 
-5. **What the model told us we were NOT doing** (~150 words)
-   - The owner EOA is still a single point of catastrophic failure — Gnosis Safe is the actual fix, and we haven't done it
-   - The threat model surfaces this gap more clearly than any code review would
+5. **The same lens on Dependabot noise** (~300 words)
+   - Dependabot generates a stream of severity-labeled alerts. Without a threat model, HIGH = panic, LOW = ignore. With one, the question changes: "can an untrusted caller reach this code path, and does it threaten a valued asset?"
+   - Concrete example from this project: `ws` HIGH-severity DoS alert in x402_facilitator. CVE says: memory exhaustion from malicious WebSocket fragments. Sounds alarming. But: `ws` is a transitive dep of `viem`, used as a *client* connecting outbound to Alchemy RPC — not a server accepting untrusted frames. Exploiting it requires a compromised RPC provider, which is a supply chain attack outside the threat model's scope. Verdict: defer.
+   - Contrast: `form-data` HIGH (CRLF injection) in scw_js — this IS in the T1 serverless layer that handles on-chain writes. Fix immediately.
+   - Show the triage table (Tier 1–4 classification by manifest path) as the operationalization of the threat model applied to deps
+   - Point: severity labels are written for generic audiences; the threat model makes them project-specific
 
-6. **How to build one for your project** (~200 words)
+6. **The model also tells you when to stop** (~100 words)
+   - The threat model evaluated Gnosis Safe and said no: at this project's threat actor profile (opportunistic bots, malicious collectors — not sophisticated APTs), separating the owner EOA to a dedicated key already closes the catastrophic failure mode
+   - Gnosis Safe adds operational complexity (multi-sig coordination, safe upgrade ceremonies) that isn't justified when the realistic attacker can't socially engineer a multi-sig quorum and doesn't have the capability to compromise a hardware wallet
+   - The model prevents over-investing as much as under-investing — knowing when you've done enough is as important as knowing what to fix
+
+7. **How to build one for your project** (~200 words)
    - Three questions: what has value? who wants it? how would they get it?
    - Start with the asset list, rank by blast radius, then map actors to assets
    - The model is a living document — wrong entries are better than no model

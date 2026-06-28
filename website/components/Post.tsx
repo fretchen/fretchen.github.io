@@ -1,7 +1,4 @@
 import React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
@@ -28,7 +25,7 @@ const ReactPostRenderer: React.FC<{
   const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
-    const loadComponent = async () => {
+    const loadComponent = () => {
       try {
         // Extract directory and filename from componentPath
         const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
@@ -43,7 +40,7 @@ const ReactPostRenderer: React.FC<{
         }
 
         // Use centralized glob registry - automatically handles production vs development
-        const module = await loadModuleFromDirectory(directory, filename, import.meta.env.PROD);
+        const module = loadModuleFromDirectory(directory, filename);
 
         // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;
@@ -131,13 +128,11 @@ const ReactPostRenderer: React.FC<{
 
 export function Post({
   title,
-  content,
   publishing_date,
   prevPost,
   nextPost,
   basePath = "",
   tokenID,
-  type = "markdown",
   componentPath,
   description,
   category,
@@ -202,18 +197,9 @@ export function Post({
           <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 
           {/* Render based on post type */}
-          {type === "react" && componentPath ? (
-            <div className="e-content" ref={contentRef}>
-              <ReactPostRenderer componentPath={componentPath} tokenID={tokenID} contentRef={contentRef} />
-            </div>
-          ) : (
-            <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
-              {tokenID && <NFTFloatImage tokenId={tokenID} />}
-              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                {content}
-              </Markdown>
-            </div>
-          )}
+          <div className="e-content" ref={contentRef}>
+            <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} contentRef={contentRef} />
+          </div>
 
           {/* Navigation zwischen Posts */}
           {(prevPost || nextPost) && (

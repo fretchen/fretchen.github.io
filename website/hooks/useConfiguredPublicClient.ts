@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getPublicClient } from "@wagmi/core";
+import { getPublicClient } from "wagmi/actions";
 import { config } from "../wagmi.config";
 import { fromCAIP2 } from "@fretchen/chain-utils";
 

@@ -138,10 +138,10 @@ Blog posts are `.md` or `.mdx` in `website/blog/` with frontmatter (`title`, `pu
 
 ## Security
 
-See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for full asset inventory, blast radius, and trust boundaries. See [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings.
+See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for full asset inventory, blast radius, and trust boundaries. See [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill (`.claude/skills/cve-triage/`) to evaluate open Dependabot alerts against the threat model; triage criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md).
 
 **Key hierarchy** (highest-value first):
-- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls all 5 upgradeable contracts. Never use for anything else.
+- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract. Never use for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as Scaleway secret, receives USDC fees only.
@@ -153,12 +153,12 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for full asset inventor
 
 ## Blog Post Workflow
 
-### Agents
+### Skills
 
-Two custom agents live in `.github/agents/`:
+Blog skills live in `.claude/skills/`:
 
-- **`blog-planner.agent.md`** — Invoked when planning or writing a new blog post. **Must create a `.plan.md` file before any MDX content is written.** Reads 2–3 existing posts before planning to calibrate style.
-- **`blog-critic.agent.md`** — Invoked when reviewing a draft. Read-only: outputs a `.todos.md` critique file, never edits the post itself.
+- **`blog-planner`** — Invoked when planning or writing a new blog post. **Must create a `.plan.md` file before any MDX content is written.** Reads 2–3 existing posts before planning to calibrate style.
+- **`blog-critic`** — Invoked when reviewing a draft. Read-only: outputs a `.todos.md` critique file, never edits the post itself.
 
 ### Plan-First Rule
 

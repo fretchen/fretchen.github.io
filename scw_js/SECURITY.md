@@ -18,10 +18,10 @@ Serverless functions in `scw_js/`. See [../.github/THREAT_MODEL.md](../.github/T
 
 Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. The table below lists them without attack-vector detail.
 
-| Function | Area | Severity | Status |
-|---|---|---|---|
-| `sc_llm` / `llm_service` | Pre-charge balance gate weaker than the settlement requirement | Medium | Open — tracked privately |
-| `genimg_x402_token` | Resource delivered before payment settlement is confirmed | Medium | Open — tracked privately |
+| Function                 | Area                                                           | Severity | Status                   |
+| ------------------------ | -------------------------------------------------------------- | -------- | ------------------------ |
+| `sc_llm` / `llm_service` | Pre-charge balance gate weaker than the settlement requirement | Medium   | Open — tracked privately |
+| `genimg_x402_token`      | Resource delivered before payment settlement is confirmed      | Medium   | Open — tracked privately |
 
 ---
 

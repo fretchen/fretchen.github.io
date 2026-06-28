@@ -92,6 +92,8 @@ Only needed when tier alone is not enough (T1/T2 alerts, or a T3 alert with inte
 
 When assessing impact, ask: "Could this allow an attacker to corrupt on-chain state, redirect USDC, or tamper with NFT metadata?" If yes → treat as highest priority regardless of tier.
 
+**Reachability shortcut:** when a CVE's CWE or category maps onto a row in [THREAT_MODEL.md §5 Attack Techniques](THREAT_MODEL.md#5-attack-techniques-by-surface), use that row's surface and status to judge reachability faster — e.g. a CVE matching a technique already marked *mitigated* or *accepted* on its only reachable surface defers.
+
 ---
 
 ## Worked Example — `ws` (HIGH) in x402_facilitator

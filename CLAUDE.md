@@ -141,7 +141,7 @@ Blog posts are `.md` or `.mdx` in `website/blog/` with frontmatter (`title`, `pu
 See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for full asset inventory, blast radius, and trust boundaries. See [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill (`.claude/skills/cve-triage/`) to evaluate open Dependabot alerts against the threat model; triage criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md).
 
 **Key hierarchy** (highest-value first):
-- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls all 5 upgradeable contracts. Never use for anything else.
+- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract. Never use for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as Scaleway secret, receives USDC fees only.

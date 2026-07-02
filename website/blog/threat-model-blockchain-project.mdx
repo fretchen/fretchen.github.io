@@ -85,35 +85,23 @@ And this is really where the thread models starts to pay off. Once I mapped thro
 
 With the asset list and actor table in place, I ran the four recent security commits through them. Here's the honest result:
 
-| Fix | Asset targeted | Realistic attacker | Actually exploitable? | Impact |
-|---|---|---|---|---|
-| EOA separation to dedicated key | Owner EOA | Key compromise | Not a code fix — operational | Catastrophic if skipped |
-| Replay attack on sc-llm auth | LLM endpoint / API quota | Any observer of auth traffic | **Yes** | API quota drain, LLM access as another user |
-| Silent tx failure in processBatch | LLMv1 user balances | Compromised provider | Marginal | Data loss on failed batches |
-| CORS wildcard → specific headers | x402 payment flow | Cross-origin attacker | No — EIP-712 already bounds this | Negligible |
-| Mermaid `securityLevel: "loose"` | Frontend users | Author-controlled content | Theoretical | XSS (no realistic injection path today) |
+| What I changed | Could anyone actually exploit it? | Verdict |
+|---|---|---|
+| Moved the master key into its own dedicated wallet | Only mattered if the key already leaked | Good hygiene, not a bug |
+| Made login signatures expire after 5 minutes | **Yes — a copied signature worked forever before** | The one real bug |
+| Made a failed payment batch error out instead of passing silently | Only a trusted insider could trigger it | Minor correctness fix |
+| Restricted which websites may call the payment endpoint | No — the payment crypto already blocks this | Theater |
+| Sandboxed how diagrams render | Only if I embedded attacker-controlled diagrams | Theoretical |
 
-The replay attack was the only genuine code-level vulnerability. The old auth for the LLM endpoint sent a static signed message in the request body:
-
-```json
-{ "auth": { "address": "0x...", "signature": "0x...", "message": "Authenticate wallet: 0x..." } }
-```
-
-The message never changes, so any captured signature was valid indefinitely. The fix adds a Unix timestamp (`sc-llm:1718123456`) with a five-minute expiry window — a one-line change to the shared auth protocol:
-
-```typescript
-export function buildAuthMessage(prefix: string): string {
-  return `${prefix}:${Math.floor(Date.now() / 1000)}`;
-}
-```
-
-Everything else in that table is either correct-but-theoretical (Mermaid, CORS) or operationally important without being a code bug (EOA separation). That distinction matters when you're deciding where to spend the next hour.
+The one real bug is the only one worth a closer look. The login signature never expired — capture it once, from a log or a shared screen, and it kept working forever. The fix was a single line: stamp each signature with the current time and reject anything older than five minutes.
 
 ## The same lens on Dependabot noise
 
-Dependabot assigns severity labels against generic CVSS scores — they don't know your architecture. A HIGH alert means "this class of vulnerability has high generic impact." It does not mean "this is exploitable in your project." The threat model is how you bridge the gap.
+[Dependabot](https://docs.github.com/de/code-security/concepts/supply-chain-security/dependabot-alerts) is security feature that assigns severity labels against generic scores — they don't know my architecture. 
+A HIGH alert means "this class of vulnerability has high generic impact." It does not mean "this is exploitable in my project." 
+The threat model allows me to bridge the gap.
 
-The triage question has three steps:
+The triage has three steps:
 
 1. **Which tier is this package?** Packages in the T1 serverless layer (anything that touches private key signing, on-chain writes, or USDC settlement) get patched within 48 hours. Frontend production deps get a week. Build tools and local notebooks get deferred to the next scheduled update.
 

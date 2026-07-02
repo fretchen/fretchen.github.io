@@ -29,33 +29,27 @@ The neat thing about the threat model is that it directly translates this approa
 ## Getting started with the asset list
 
 The first question is super straight forward to ask: what actually has value here? The answer is less straight forward as most of the code is open source. So what is left over ?
-For this project, I have a set of upgradeable contracts on Optimism, a serverless image-gen backend, an LLM assistant, and an x402 payment facilitator. 
+For this project, I have a set of [upgradeable contracts on Optimism](/blog/24/), a [serverless image-gen backend](/blog/9/), an [LLM assistant](/blog/16/), and an [x402 payment facilitator](/blog/22/). 
 The list then looks like this:
 
-| Asset | Location | Why it matters |
+| Asset category | What it is here | Why it matters |
 |---|---|---|
-| Owner EOA private key | Dedicated keystore (`0x1af51D…fBB20`) | Controls every upgradeable contract — total system compromise if leaked |
-| ETH in GenImNFTv4 | On-chain | Accumulates mint fees until `withdraw()` is called |
-| ETH in LLMv1 | On-chain | User prepaid balances; withdrawable by users or claimable by providers |
-| USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
-| EIP3009 Splitter contract | On-chain (Optimism Sepolia, testnet only) | Routes USDC settlements; owner-upgradeable. Not yet on mainnet — becomes a live asset the day it ships |
-| NFT metadata integrity | On-chain (token URIs) | Irreversible record of what image each token represents |
-| Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call |
-| Facilitator wallet key | x402_facilitator secrets | Receives USDC fees; no upgrade access |
-| Scaleway secrets | Serverless secrets | S3 image bucket and transactional email |
-| BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
+| The keys to everything | Contract owner EOA — owns every upgradeable contract | Total system compromise: upgrade any contract, drain every balance |
+| Money in the system | Mint fees in GenImNFTv4, user prepaid balances in LLMv1, USDC settlements in flight | Direct financial loss — mine or my users' |
+| Operational keys | Backend agent wallet, facilitator fee wallet | Bounded: small per-call value, no upgrade power |
+| Infrastructure access | Serverless secrets — Scaleway, BFL, IONOS | Off-chain only: S3, email, image-gen quota; no on-chain reach |
 
 Two things fall out immediately from writing this down.
 
-First, the blast radius hierarchy is obvious. The owner EOA is catastrophic — one key controls every UUPS proxy contract, so whoever holds it can upgrade every contract to drain every balance. Everything below it is bounded: the agent wallet can drain GenImNFTv4 at mint price per call; the IONOS key loses API quota; the Scaleway secret loses S3 write access. Each is a tier lower than the one above. (The testnet Splitter sits outside this hierarchy today — but the moment it ships to mainnet, it joins the owner EOA's blast radius, which is exactly why it's on the list now and not later.)
+First, the blast radius for each category is obvious — the table is already sorted by it. The top category, the keys to everything, is catastrophic: one key controls every UUPS proxy contract, so whoever holds it can upgrade every contract and drain every balance. 
+Every category below it is bounded: an operational key like the agent wallet can drain GenImNFTv4 at mint price per call but nothing more; infrastructure access loses S3 writes or image-gen quota, with no on-chain reach at all. 
 
-Second, you notice what's absent. User wallet keys never touch the server. No PII is collected. These are non-assets — they can't be compromised here because they don't exist here. That scoping is as useful as the list itself.
+Second, you notice what's absent. User wallet keys never touch the server. No PII is collected. These are non-assets — they can't be compromised here because they don't exist here. So the whole decentral architecture really simplifies the
+the security work massively too me. No one can steal from me the stuff that I do not possess.
 
-## Then write the threat actor table
+## Who would like to steal these assets  ?
 
-But the asset list alone left me stuck. Without knowing who was actually coming for those assets, every risk felt equally urgent — which is just a more structured form of the same randomness I started with.
-
-For a project at this scale:
+The asset list itself is only the starting point. Now I also need to guess who might be actually coming for those assets. Again, I have to keep in mind that this is a tiny project with little financial value. So the list is really not that long for a project at this scale:
 
 | Actor | Capability | Motivation | Primary access |
 |---|---|---|---|
@@ -64,24 +58,28 @@ For a project at this scale:
 | Insider / compromised authorized account | High — already holds partial on-chain trust or a secret | Financial gain or sabotage | `authorizedProviders` in LLMv1; agent wallet or SCW secret via credential leak |
 | Attacker with owner credentials | Critical — holds the owner EOA | Total control | Key leaked via `.env`, phishing, or a compromised dev machine |
 
-Nation-states, L1/L2 consensus attacks, and Scaleway infrastructure compromise are explicitly out of scope. Not because they're impossible — because a realistic adversary for a project generating a few hundred dollars in mint fees is an opportunistic bot, not an APT. [We already met one](/blog/161/): a professional bot network extracted 80 cents from a missing authorization check in GenImNFTv3, then moved on.
+From the list above [I already met one](/blog/21/): a professional bot network extracted 80 cents from a missing authorization check in GenImNFTv3, then moved on.
 
-One thing this table deliberately does *not* contain: how each actor actually breaks in. That column used to be there, and it muddled two different questions. Keeping the table to *who* they are — and pushing *how* into its own catalog (next section) and *where* into the trust-boundary map — is what makes each one usable on its own. Even so, the capability column already does most of the filtering work: threats that require capabilities your realistic attackers simply don't have don't need defenses. That sounds obvious until you're staring at a Dependabot queue full of DoS vulnerabilities and asking whether any of those attackers are actually in a position to trigger one.
+Nation-states, L1/L2 consensus attacks, and Scaleway infrastructure compromise are explicitly out of scope. Not because they're impossible. But is it realistic that such attacks come from for a project the barely generates any mint fees ? Unlikely...
+
 
 ## How would they actually get in?
 
-Knowing *who* is coming and *what* they want still leaves the most concrete question open: through which weakness? This is where I stopped improvising. Inventing my own taxonomy of "ways things go wrong" would have been exactly the kind of busywork the threat model is supposed to prevent — so I leaned on two catalogs that already exist, one for each half of the system:
+Knowing *who* is coming and *what* they want now guides the next question. How are the actors likely to attack ? Here, again I have no reason to guess but I can start with the awesome OWASP lists. I leaned on two catalogs that already exist, one for each half of the system:
 
 - [OWASP Smart Contract Top 10](https://owasp.org/www-project-smart-contract-top-10/) for the `eth/` contracts.
 - [OWASP API Security Top 10](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) for the serverless functions and the website.
 
-The point isn't to walk all twenty categories. It's to list only the ones that are actually *live* for this system, and to be explicit that a category's absence means "considered and ruled out," not "forgot to check." A few concrete entries:
+The point isn't to walk all twenty categories. It's to list only the ones that are actually *important* for this system. Here are a few concrete entries:
 
-**Contract layer.** *Access control (SC01)* is the one that already bit me — the missing authorization check on `requestImageUpdate()` that the bot drained, now closed with an agent whitelist. *Reentrancy (SC05)* applies to CollectorNFT's mint-price path; it's open, but the impact is price manipulation only, no fund theft, so it sits low on the list rather than at the top.
+**Contract layer.** *Access control (SC01)* is the one that already bit me — the missing authorization check on `requestImageUpdate()` that the bot drained. It is now closed with an agent whitelist. *Reentrancy (SC05)* applies to CollectorNFT's mint-price path; it's open, but the impact is price manipulation only, no fund theft, so it sits low on the list rather than at the top.
 
 **API layer.** *Broken function-level authorization (API5)* covers the facilitator's wide-open CORS — accepted on purpose, because EIP-3009 cryptography binds recipient, amount, and nonce, so an open origin can't redirect a cent. *Unrestricted resource consumption (API4)* covers `/settle` spam draining gas — also accepted, because L2 gas is fractions of a cent and the wallet's ETH goes to miners, not the attacker.
 
-This is the quiet payoff that the next two sections cash in. Once every surface is mapped to a named category with a status, both jobs get easier: grading my own fixes becomes "which category did this touch, and did it matter?", and triaging an incoming CVE stops being a judgment call and becomes a lookup — which category does this fall under, and what did I already decide about it?
+And this is really where the thread models starts to pay off. Once I mapped through the threats, I can really decide on the value of my fixes:
+
+- grading my own fixes becomes "which category did this touch, and did it matter?"
+- triaging an incoming CVE stops being a judgment call and becomes a lookup — which category does this fall under, and what did I already decide about it?
 
 ## Grading four commits against the model
 

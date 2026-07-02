@@ -1,10 +1,11 @@
 # Blog Post Plan: Threat Modeling for Small Blockchain Projects
 
 ## Target Audience
-- **Blockchain developers** building small-to-medium on-chain projects (smart contracts + serverless backends)
-- They know Solidity, EVM, wallet auth, and serverless — no need to explain what an EOA or a bearer token is
-- What they likely lack: a structured way to ask "what actually needs protecting?" before starting security work
-- What this post teaches: why the asset list and threat actor table should come first, and how they change which fixes are worth doing
+- **Primary: technically literate builders of small projects who are NOT security specialists** — indie developers, solo maintainers, small-team engineers. Comfortable with "dependency", "API", "private key", "endpoint"; have security features (Dependabot, CodeQL) switched on — but experience security as a random, anxiety-driven checklist. They do NOT want a Solidity/EVM masterclass.
+- **Secondary: blockchain/web3 builders** who get extra payoff from the concrete on-chain examples (owner EOA, EIP-3009, agent wallet) — but the post is deliberately readable without that background.
+- What they lack: a lightweight mental model for *prioritizing* security effort instead of chasing every alert.
+- What this post teaches: ask what's worth protecting, who realistically wants it, and how — then use that to decide which fixes matter and which alerts to ignore.
+- Deliberate accessibility choices this post makes (and the plan must respect): house-security analogy, plain-language asset *categories* over contract names, jargon-free tables, no code blocks. It intentionally sits *between* the CLAUDE.md "blockchain developers" and "academics" audiences rather than squarely in either.
 
 ## Core Thesis
 A threat model is not documentation — it's a prioritization tool: without an explicit asset list and attacker profile, you end up fixing real-but-irrelevant bugs and missing the highest-value targets.

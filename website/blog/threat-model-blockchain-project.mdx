@@ -1,0 +1,120 @@
+---
+title: Focused cybersecurity for a small project
+publishing_date: "2026-06-27"
+category: "webdev"
+secondaryCategory: "blockchain"
+description: "Using a lightweight threat model to focus security work on a small project — figuring out what's actually worth protecting, and which alerts to safely ignore."
+---
+
+As I work on my website, I keep thinking about cybersecurity. And because I am by no means an expert, I mostly enabled whatever security feature I could find: notably dependabot or CodeQL. However, all of this felt really quite random. Actually, it feels like I keep buying fancy security stuff for my house but I am not quite sure what I am protecting against.
+
+So I turned back to the basics of IT security. After some research, I really came to appreciate the approach that is
+based on concrete [threats](https://www.threatmodelingmanifesto.org):
+
+- What are the valuable assets of this website that someone would like to steal ?
+- Who are then realistic actors attacking me and what are they likely looking for ?
+- How would the attackers likely try to go for the assets ?
+- And finally: did I actually do a good enough job — or am I just buying more locks ?
+
+What I like about this approach is that it is very closely aligned to my standard security logic:
+
+- I make a little inventory of my valuable assets. This is cash, electronics, the car etc.
+- Then I think about realistic attackers. These are unlikely to be some state-sponsored armies or big criminal groups. I am just not valuable enough.
+- Then I go through the likely attacks. This is likely an open window, weakly protected door etc.
+- And finally: Is my housing secure enough ? Did I put the cash into a bank account that protects the money professionally ?
+
+The neat thing about the threat model is that it directly translates this approach into the digital world. In this post I walk you through it for my website as an example.
+
+## Getting started with the asset list
+
+The first question is super straightforward to ask: what actually has value here? The answer is less straightforward as most of the code is open source. So what is left over ? For this project, I have a set of [upgradeable contracts on Optimism](/blog/11/), a [serverless image-gen backend](/blog/9/), an [LLM assistant](/blog/16/), and an [x402 payment facilitator](/blog/22/). The list then looks like this:
+
+| Asset category         | What it is here                                                                     | Why it matters                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| The keys to everything | Contract owner EOA — owns every upgradeable contract                                | Total system compromise: upgrade any contract, drain every balance |
+| Money in the system    | Mint fees in GenImNFTv4, user prepaid balances in LLMv1, USDC settlements in flight | Direct financial loss — mine or my users'                          |
+| Operational keys       | Backend agent wallet, facilitator fee wallet                                        | Bounded: small per-call value, no upgrade power                    |
+| Infrastructure access  | Serverless secrets — Scaleway, BFL, IONOS                                           | Off-chain only: S3, email, image-gen quota; no on-chain reach      |
+
+Two things fall out immediately from writing this down.
+
+First, the blast radius for each category is obvious — the table is already sorted by it. The top category, the keys to everything, is catastrophic: one key controls every UUPS proxy contract, so whoever holds it can upgrade every contract and drain every balance. Every category below it is bounded: an operational key like the agent wallet can drain GenImNFTv4 at mint price per call but nothing more; infrastructure access loses S3 writes or image-gen quota, with no on-chain reach at all.
+
+Second, you notice what's absent. User wallet keys never touch the server. No PII is collected. These are non-assets — they can't be compromised here because they don't exist here. So the whole decentralized architecture simplifies the security work massively for me. No one can steal from me what I do not possess.
+
+## Who would like to steal these assets ?
+
+The asset list itself is only the starting point. Now I also need to guess who might be actually coming for those assets. Again, I have to keep in mind that this is a tiny project with little financial value. So the list is really not that long for a project at this scale. The two columns that matter are _capability_ and _motivation_ — the "primary access" column just spells out the technical entry point for each, and you can happily skim it:
+
+| Actor                                    | Capability                                              | Motivation                                               | Primary access                                                                            |
+| ---------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Opportunistic bot                        | Low — runs known exploit scripts                        | Financial: drain any available ETH                       | Public contract ABI; scans for no-auth functions and reentrancy                           |
+| Financially motivated attacker           | Medium — reads deployed ABIs, may run a malicious site  | Financial: extract ETH, redirect USDC, mint below market | Direct contract calls; crafted ERC721 receivers; cross-origin requests to the facilitator |
+| Insider / compromised authorized account | High — already holds partial on-chain trust or a secret | Financial gain or sabotage                               | `authorizedProviders` in LLMv1; agent wallet or SCW secret via credential leak            |
+| Attacker with owner credentials          | Critical — holds the owner EOA                          | Total control                                            | Key leaked via `.env`, phishing, or a compromised dev machine                             |
+
+From the list above [I already met one](/blog/21/): a professional bot network extracted 80 cents from a missing authorization check in GenImNFTv3, then moved on.
+
+Nation-states, L1/L2 consensus attacks, and Scaleway infrastructure compromise are explicitly out of scope. Not because they're impossible. But is it realistic that such an attacker comes for a project that barely generates any mint fees ? Unlikely...
+
+## How would they actually get in?
+
+Knowing _who_ is coming and _what_ they want now guides the next question. How are the actors likely to attack ? Here, again I have no reason to guess but I can start with the awesome OWASP lists. I leaned on two catalogs that already exist, one for each half of the system:
+
+- [OWASP Smart Contract Top 10](https://owasp.org/www-project-smart-contract-top-10/) for the `eth/` contracts.
+- [OWASP API Security Top 10](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) for the serverless functions and the website.
+
+The value here is that I inherit a checklist the whole industry has already vetted, instead of inventing my own list of ways things go wrong. The point isn't to walk all twenty categories, though — it's to list only the ones that are actually _important_ for this system. Here are a few concrete entries, in plain terms:
+
+**Contract layer.** _Access control (SC01)_ — can someone call a function they're not allowed to? — is the one that already bit me: the missing authorization check on `requestImageUpdate()` that the bot drained, now closed with an agent whitelist. _Reentrancy (SC08)_ — can someone slip back into a half-finished transaction to squeeze it? — applies to CollectorNFT's mint-price path; it's open, but the impact is price manipulation only, no fund theft, so it sits low on the list rather than at the top.
+
+**API layer.** _Broken function-level authorization (API5)_ — can a random website call my endpoints? — covers the facilitator's wide-open CORS, accepted on purpose because the payment cryptography (EIP-3009) binds recipient, amount, and nonce, so an open origin can't redirect a cent. _Unrestricted resource consumption (API4)_ — can someone spam me until it costs me? — covers `/settle` spam draining gas, also accepted, because L2 gas is fractions of a cent and the wallet's ETH goes to miners, not the attacker.
+
+And this is really where the threat model starts to pay off. Once I mapped through the threats, I can really decide on the value of my fixes:
+
+- Grading my own fixes becomes "which category did this touch, and did it matter?"
+- Triaging an incoming CVE stops being a judgment call and becomes a lookup — which category does this fall under, and what did I already decide about it?
+
+## Application example: Grading my recent security fixes
+
+With the asset list and actor table in place, I ran my recent security changes through them. Here's the honest result:
+
+| What I changed                                                    | Could anyone actually exploit it?                  | Verdict                 |
+| ----------------------------------------------------------------- | -------------------------------------------------- | ----------------------- |
+| Moved the master key into its own dedicated wallet                | Only mattered if the key already leaked            | Good hygiene, not a bug |
+| Made login signatures expire after 5 minutes                      | **Yes — a copied signature worked forever before** | The one real bug        |
+| Made a failed payment batch error out instead of passing silently | Only a trusted insider could trigger it            | Minor correctness fix   |
+| Restricted which websites may call the payment endpoint           | No — the payment crypto already blocks this        | Theater                 |
+| Sandboxed how diagrams render                                     | Only if I embedded attacker-controlled diagrams    | Theoretical             |
+
+Only the genuine bug earns a closer look. The login signature never expired — capture it once, from a log or a shared screen, and it kept working forever. The fix was a single line: stamp each signature with the current time and reject anything older than five minutes.
+
+## Application example: Cutting through the Dependabot noise
+
+[Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-alerts) is a great feature: it watches every dependency and shouts when one has a known vulnerability. The problem is the volume. Right now my repo has **87 open alerts — 41 tagged "high," 2 "critical."** Taken at face value, that's a weekly fire drill.
+
+But those labels are generic. A "critical" score describes the bug in the abstract; it knows nothing about whether that code runs anywhere near my keys or my money. That's exactly the gap the threat model fills. I run each alert through three plain questions:
+
+1. **Where does this package live?** If it's a build tool or one of my local notebooks, it never runs where the value is — I can stop right there. The ones that matter sit in the serverless code that signs transactions and moves money.
+
+2. **What could an attacker actually do with it?** Stealing or corrupting something is serious. Just crashing it usually isn't — this runs on a cheap L2, and a short outage costs me nothing.
+
+3. **Could a stranger even reach it?** Does hostile input really flow through this code — or is the scary-sounding path only reachable by someone I already trust, like my own hosting provider?
+
+Run through that filter, 87 shrinks fast. The two "critical" alerts are in Jupyter notebooks I run on my own laptop — there's no attacker on the other side of my own screen. Most of the rest are build tools and test libraries that never reach production. Exactly one HIGH sat where it counts — inside `viem`, the library that signs my transactions: a flaw in `ws`, its WebSocket client. Scary on paper. But it can only be triggered by malicious frames from my own RPC provider, so it lands in the defer bucket too. When the dust settles, not one of the 87 needed an urgent patch.
+
+This routine is boring enough to be worth writing down once, so a new alert is ten minutes of lookup rather than a fresh debate. I keep the rules in a `CVE_TRIAGE.md` next to the threat model.
+
+## How to build one for your project
+
+None of this required becoming a security expert — only four questions, asked in order. Here they are stripped of my project's specifics, so you can run them on your own:
+
+**What has value?** List everything with monetary value, irreversibility, or trust significance. Include private keys, on-chain balances, metadata integrity, and API quotas. Note what's absent — user wallet keys that never touch your server are a non-asset.
+
+**Who wants it?** Write down realistic attackers, not theoretical ones. A small project faces opportunistic bots and financially motivated probing, not nation-states. Match the capability level to the actual financial incentive your project provides.
+
+**How would they get it?** Map each surface to a named weakness class — the OWASP Smart Contract and API Top 10 lists save you from inventing your own taxonomy. List only the categories that are live, and record the ones you ruled out so "absent" never means "forgotten."
+
+**Did you do enough?** Rank by blast radius and decide where to stop. The item that, if compromised, takes down everything else is your highest priority — not the loudest Dependabot alert, not the most recent CVE, not the fix that generates the most code. For almost every upgradeable contract project, the answer is the same: it's the key. And I stopped there on purpose — a full multisig setup would defend against attackers a project this size will never attract.
+
+I started this from a vague unease: enabling security features I did not really understand and hoping they covered something. The threat model did not turn me into a security expert. It did something more useful for me — it told me what was actually worth protecting, and gave me the confidence to ignore the rest. For a small project, that focus is the whole point.

@@ -1,15 +1,15 @@
 ---
-title: "What a threat model actually tells you"
+title: Focused cybersecurity for a small project
 publishing_date: "2026-06-27"
 category: "blockchain"
 description: "A threat model and asset list are prioritization tools, not documentation. Here's what they revealed after a week of security work on a small blockchain project."
 ---
 
-As I work through the website I also keep think about security. And because I am by no means THE expert, I mostly enabled whatever I could find:
-notably dependabot or CodeQL. However, all of this felt really quite random. Actually it feels like you are keep buying fancy security stuff for your house but you not 
-quite sure what you are protecting against.
+As I work on my website, I keep thinking about cybersecurity. And because I am by no means an expert, I mostly enabled whatever security feature could I find:
+notably dependabot or CodeQL. However, all of this felt really quite random. Actually, it feels like I keep buying fancy security stuff for my house but I am not 
+quite sure what I am are protecting against.
 
-So I turned back to the basics of IT security and really appreciate the approach that is
+So I turned back to the basics of IT security. After some research, I really came to appreciate the approach that is
 based on concrete [threats](https://www.threatmodelingmanifesto.org):
 
 - What are the valuable assets of this website that someone would like to steal ?
@@ -17,16 +17,20 @@ based on concrete [threats](https://www.threatmodelingmanifesto.org):
 - How would the attackers likely try to go for the assets ?
 - And finally: did I actually do a good enough job — or am I just buying more locks ?
 
-Going through this has obviously only been possible with support of an AI assistent. However, each step the answers were quite
-instructive and understandable. So the new approach certainly is a step forward.
+What I like about this approach is that it is very closely aligned to my standard security logic:
 
-This post walks through how I now use the threat based security model on my website, which includes blockchain + AI components.
+- I make a little inventory of my valuable assets. This is cash, electronics, the car etc.
+- Then I think about realistic attackers. These are unlikely to be some state-sponsored armies or big criminal groups. I am just not valuable enough.
+- Then I go through the likely attacks. This is likely an open window, weakly protected door etc.
+- And finally: Is my housing secure enough ? Did I put the cash into a bank account that protects the money professionally ?
 
-## Start with the asset list
+The neat thing about the threat model is that it directly translates this approach into the digital world. In this post I walk you through it for my website as an example.
 
-The first question that helped me was simpler than any framework: what actually has value here?
+## Getting started with the asset list
 
-For this project — a set of upgradeable contracts on Optimism, a serverless image-gen backend, an LLM assistant, and an x402 payment facilitator — the list looks like this:
+The first question is super straight forward to ask: what actually has value here? The answer is less straight forward as most of the code is open source. So what is left over ?
+For this project, I have a set of upgradeable contracts on Optimism, a serverless image-gen backend, an LLM assistant, and an x402 payment facilitator. 
+The list then looks like this:
 
 | Asset | Location | Why it matters |
 |---|---|---|

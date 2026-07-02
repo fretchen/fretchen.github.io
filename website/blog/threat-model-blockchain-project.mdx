@@ -5,9 +5,7 @@ category: "blockchain"
 description: "Using a lightweight threat model to focus security work on a small project — figuring out what's actually worth protecting, and which alerts to safely ignore."
 ---
 
-As I work on my website, I keep thinking about cybersecurity. And because I am by no means an expert, I mostly enabled whatever security feature I could find:
-notably dependabot or CodeQL. However, all of this felt really quite random. Actually, it feels like I keep buying fancy security stuff for my house but I am not 
-quite sure what I am protecting against.
+As I work on my website, I keep thinking about cybersecurity. And because I am by no means an expert, I mostly enabled whatever security feature I could find: notably dependabot or CodeQL. However, all of this felt really quite random. Actually, it feels like I keep buying fancy security stuff for my house but I am not quite sure what I am protecting against.
 
 So I turned back to the basics of IT security. After some research, I really came to appreciate the approach that is
 based on concrete [threats](https://www.threatmodelingmanifesto.org):
@@ -28,9 +26,7 @@ The neat thing about the threat model is that it directly translates this approa
 
 ## Getting started with the asset list
 
-The first question is super straight forward to ask: what actually has value here? The answer is less straight forward as most of the code is open source. So what is left over ?
-For this project, I have a set of [upgradeable contracts on Optimism](/blog/24/), a [serverless image-gen backend](/blog/9/), an [LLM assistant](/blog/16/), and an [x402 payment facilitator](/blog/22/). 
-The list then looks like this:
+The first question is super straightforward to ask: what actually has value here? The answer is less straightforward as most of the code is open source. So what is left over ? For this project, I have a set of [upgradeable contracts on Optimism](/blog/24/), a [serverless image-gen backend](/blog/9/), an [LLM assistant](/blog/16/), and an [x402 payment facilitator](/blog/22/). The list then looks like this:
 
 | Asset category | What it is here | Why it matters |
 |---|---|---|
@@ -41,12 +37,11 @@ The list then looks like this:
 
 Two things fall out immediately from writing this down.
 
-First, the blast radius for each category is obvious — the table is already sorted by it. The top category, the keys to everything, is catastrophic: one key controls every UUPS proxy contract, so whoever holds it can upgrade every contract and drain every balance. 
-Every category below it is bounded: an operational key like the agent wallet can drain GenImNFTv4 at mint price per call but nothing more; infrastructure access loses S3 writes or image-gen quota, with no on-chain reach at all. 
+First, the blast radius for each category is obvious — the table is already sorted by it. The top category, the keys to everything, is catastrophic: one key controls every UUPS proxy contract, so whoever holds it can upgrade every contract and drain every balance. Every category below it is bounded: an operational key like the agent wallet can drain GenImNFTv4 at mint price per call but nothing more; infrastructure access loses S3 writes or image-gen quota, with no on-chain reach at all.
 
 Second, you notice what's absent. User wallet keys never touch the server. No PII is collected. These are non-assets — they can't be compromised here because they don't exist here. So the whole decentralized architecture simplifies the security work massively for me. No one can steal from me what I do not possess.
 
-## Who would like to steal these assets  ?
+## Who would like to steal these assets ?
 
 The asset list itself is only the starting point. Now I also need to guess who might be actually coming for those assets. Again, I have to keep in mind that this is a tiny project with little financial value. So the list is really not that long for a project at this scale. The two columns that matter are *capability* and *motivation* — the "primary access" column just spells out the technical entry point for each, and you can happily skim it:
 
@@ -60,7 +55,6 @@ The asset list itself is only the starting point. Now I also need to guess who m
 From the list above [I already met one](/blog/21/): a professional bot network extracted 80 cents from a missing authorization check in GenImNFTv3, then moved on.
 
 Nation-states, L1/L2 consensus attacks, and Scaleway infrastructure compromise are explicitly out of scope. Not because they're impossible. But is it realistic that such an attacker comes for a project that barely generates any mint fees ? Unlikely...
-
 
 ## How would they actually get in?
 
@@ -77,10 +71,10 @@ The value here is that I inherit a checklist the whole industry has already vett
 
 And this is really where the threat model starts to pay off. Once I mapped through the threats, I can really decide on the value of my fixes:
 
-- grading my own fixes becomes "which category did this touch, and did it matter?"
-- triaging an incoming CVE stops being a judgment call and becomes a lookup — which category does this fall under, and what did I already decide about it?
+- Grading my own fixes becomes "which category did this touch, and did it matter?"
+- Triaging an incoming CVE stops being a judgment call and becomes a lookup — which category does this fall under, and what did I already decide about it?
 
-## Application example: Grading my recent security fixes against the model
+## Application example: Grading my recent security fixes
 
 With the asset list and actor table in place, I ran my recent security changes through them. Here's the honest result:
 
@@ -92,7 +86,7 @@ With the asset list and actor table in place, I ran my recent security changes t
 | Restricted which websites may call the payment endpoint | No — the payment crypto already blocks this | Theater |
 | Sandboxed how diagrams render | Only if I embedded attacker-controlled diagrams | Theoretical |
 
-The one real bug is the only one worth a closer look. The login signature never expired — capture it once, from a log or a shared screen, and it kept working forever. The fix was a single line: stamp each signature with the current time and reject anything older than five minutes.
+Only the genuine bug earns a closer look. The login signature never expired — capture it once, from a log or a shared screen, and it kept working forever. The fix was a single line: stamp each signature with the current time and reject anything older than five minutes.
 
 ## Application example: Cutting through the Dependabot noise
 
@@ -106,10 +100,9 @@ But those labels are generic. A "critical" score describes the bug in the abstra
 
 3. **Could a stranger even reach it?** Does hostile input really flow through this code — or is the scary-sounding path only reachable by someone I already trust, like my own hosting provider?
 
-Run through that filter, 87 shrinks fast. The two "critical" alerts are in Jupyter notebooks I run on my own laptop — there's no attacker on the other side of my own screen. Most of the rest are build tools and test libraries that never reach production. When the dust settles, exactly **one** of the 87 is worth acting on right away — a dependency deep in the serverless code, close to the keys and the money.
+Run through that filter, 87 shrinks fast. The two "critical" alerts are in Jupyter notebooks I run on my own laptop — there's no attacker on the other side of my own screen. Most of the rest are build tools and test libraries that never reach production. Exactly one HIGH sat where it counts — inside `viem`, the library that signs my transactions: a flaw in `ws`, its WebSocket client. Scary on paper. But it can only be triggered by malicious frames from my own RPC provider, so it lands in the defer bucket too. When the dust settles, not one of the 87 needed an urgent patch.
 
 This routine is boring enough to be worth writing down once, so a new alert is ten minutes of lookup rather than a fresh debate. I keep the rules in a `CVE_TRIAGE.md` next to the threat model.
-
 
 ## How to build one for your project
 

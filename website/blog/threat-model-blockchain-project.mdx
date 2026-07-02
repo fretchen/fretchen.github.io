@@ -81,7 +81,7 @@ And this is really where the thread models starts to pay off. Once I mapped thro
 - grading my own fixes becomes "which category did this touch, and did it matter?"
 - triaging an incoming CVE stops being a judgment call and becomes a lookup — which category does this fall under, and what did I already decide about it?
 
-## Grading four commits against the model
+## Application example: Grading the usefulness of four commits against the model
 
 With the asset list and actor table in place, I ran the four recent security commits through them. Here's the honest result:
 
@@ -95,41 +95,26 @@ With the asset list and actor table in place, I ran the four recent security com
 
 The one real bug is the only one worth a closer look. The login signature never expired — capture it once, from a log or a shared screen, and it kept working forever. The fix was a single line: stamp each signature with the current time and reject anything older than five minutes.
 
-## The same lens on Dependabot noise
+## Application example: Cutting through the Dependabot noise
 
-[Dependabot](https://docs.github.com/de/code-security/concepts/supply-chain-security/dependabot-alerts) is security feature that assigns severity labels against generic scores — they don't know my architecture. 
-A HIGH alert means "this class of vulnerability has high generic impact." It does not mean "this is exploitable in my project." 
-The threat model allows me to bridge the gap.
+[Dependabot](https://docs.github.com/de/code-security/concepts/supply-chain-security/dependabot-alerts) is a great feature: it watches every dependency and shouts when one has a known vulnerability. The problem is the volume. Right now my repo has **87 open alerts — 41 tagged "high," 2 "critical."** Taken at face value, that's a weekly fire drill.
 
-The triage has three steps:
+But those labels are generic. A "critical" score describes the bug in the abstract; it knows nothing about whether that code runs anywhere near my keys or my money. That's exactly the gap the threat model fills. I run each alert through three plain questions:
 
-1. **Which tier is this package?** Packages in the T1 serverless layer (anything that touches private key signing, on-chain writes, or USDC settlement) get patched within 48 hours. Frontend production deps get a week. Build tools and local notebooks get deferred to the next scheduled update.
+1. **Where does this package live?** If it's a build tool or one of my local notebooks, it never runs where the value is — I can stop right there. The ones that matter sit in the serverless code that signs transactions and moves money.
 
-2. **What is the impact type?** Integrity (code execution, data corruption, spoofing) always escalates. Availability (DoS) only matters if an untrusted caller can trigger it. Confidentiality is low priority — code and transactions are public.
+2. **What could an attacker actually do with it?** Stealing or corrupting something is serious. Just crashing it usually isn't — this runs on a cheap L2, and a short outage costs me nothing.
 
-3. **Is the vulnerable code path reachable?** Does untrusted input actually flow through this package in a way that triggers the vulnerability?
+3. **Could a stranger even reach it?** Does hostile input really flow through this code — or is the scary-sounding path only reachable by someone I already trust, like my own hosting provider?
 
-A concrete example from this project: `ws` flagged HIGH in x402_facilitator for memory exhaustion DoS via malicious WebSocket fragments. That sounds alarming. But `ws` is a transitive dependency of `viem`, and `viem` uses it as a *client* connecting outbound to Alchemy RPC — not as a server accepting untrusted frames. Triggering the DoS requires the RPC provider itself to send malicious frames. That's a supply chain attack on Alchemy, which is outside the threat model entirely. Verdict: defer.
+Run through that filter, 87 shrinks fast. The two "critical" alerts are in Jupyter notebooks I run on my own laptop — there's no attacker on the other side of my own screen. Most of the rest are build tools and test libraries that never reach production. When the dust settles, exactly **one** of the 87 is worth acting on right away — a dependency deep in the serverless code, close to the keys and the money.
 
-Compare `form-data` HIGH (CRLF injection) in scw_js. This package is in the T1 serverless layer that handles agent wallet signing and on-chain writes. Untrusted input does flow through multipart form construction. Verdict: patch immediately.
+This routine is boring enough to be worth writing down once, so a new alert is ten minutes of lookup rather than a fresh debate. I keep the rules in a `CVE_TRIAGE.md` next to the threat model.
 
-Same severity label, opposite decisions — because the asset list and actor table tell you which one is reachable by a realistic attacker. This routine is boring enough that it's worth writing down once: I keep the tier assignments and the decision tree in a `CVE_TRIAGE.md` next to the threat model, so a new alert is ten minutes of lookup rather than a fresh debate every time.
-
-## The model also tells you when to stop
-
-After the EOA separation, the natural next recommendation is a Gnosis Safe multi-sig. For most projects that own five upgradeable contracts, that's correct advice. I considered it and decided it was overshooting.
-
-The reasoning: the threat actors who can realistically compromise this project are opportunistic bots and phishing attackers. Neither has the capability to socially engineer a multi-sig quorum or compromise a hardware wallet used only for contract upgrades. The dedicated EOA already closes the catastrophic failure mode because it's isolated from the daily wallet, never used for anything else, and lives in a hardware keystore.
-
-Gnosis Safe adds real operational overhead — multi-sig coordination for every upgrade, a more complex ceremony for emergency changes. That overhead is justified when your threat actors include sophisticated APTs or when a single compromised key is a plausible outcome. For this project's scale and attacker profile, it isn't.
-
-"Done enough" isn't a permanent verdict, though — it's only true for the current shape of the system. So the model carries its own expiry conditions: a short list of review triggers that say *come back and re-check this*. A contract upgrade, a key rotation, a new serverless function, a CVE that triages as high-priority — and, concretely for me, the day that testnet Splitter ships to mainnet and the owner EOA's blast radius grows. Each is a moment where "enough" might quietly have stopped being true.
-
-That's three things from one document: what to fix, what to safely ignore, and when you've done enough — plus a built-in reminder to ask the last question again later. I found that fourth one the most surprising.
 
 ## How to build one for your project
 
-Four questions, in order:
+None of this required becoming a security expert — only four questions, asked in order. Here they are stripped of my project's specifics, so you can run them on your own:
 
 **What has value?** List everything with monetary value, irreversibility, or trust significance. Include private keys, on-chain balances, metadata integrity, and API quotas. Note what's absent — user wallet keys that never touch your server are a non-asset.
 
@@ -139,4 +124,4 @@ Four questions, in order:
 
 **Did you do enough?** Rank by blast radius and decide where to stop. The item that, if compromised, takes down everything else is your highest priority — not the loudest Dependabot alert, not the most recent CVE, not the fix that generates the most code. For almost every upgradeable contract project, the answer is the same: it's the key.
 
-The model is a living document — and "living" is doing real work in that sentence, not decoration. Give it explicit review triggers (a contract upgrade, a key rotation, a high-priority CVE) so it gets revisited on events rather than on guilt. Wrong entries — an actor you overestimated, an asset you forgot — are better than no model. The first version doesn't need to be perfect; it needs to exist before the next security decision.
+I started this from a vague unease: enabling security features I did not really understand and hoping they covered something. The threat model did not turn me into a security expert. It did something more useful for me — it told me what was actually worth protecting, and gave me the confidence to ignore the rest. For a small project, that focus is the whole point.

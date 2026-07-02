@@ -27,7 +27,7 @@ The neat thing about the threat model is that it directly translates this approa
 
 ## Getting started with the asset list
 
-The first question is super straightforward to ask: what actually has value here? The answer is less straightforward as most of the code is open source. So what is left over ? For this project, I have a set of [upgradeable contracts on Optimism](/blog/24/), a [serverless image-gen backend](/blog/9/), an [LLM assistant](/blog/16/), and an [x402 payment facilitator](/blog/22/). The list then looks like this:
+The first question is super straightforward to ask: what actually has value here? The answer is less straightforward as most of the code is open source. So what is left over ? For this project, I have a set of [upgradeable contracts on Optimism](/blog/11/), a [serverless image-gen backend](/blog/9/), an [LLM assistant](/blog/16/), and an [x402 payment facilitator](/blog/22/). The list then looks like this:
 
 | Asset category         | What it is here                                                                     | Why it matters                                                     |
 | ---------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -66,7 +66,7 @@ Knowing _who_ is coming and _what_ they want now guides the next question. How a
 
 The value here is that I inherit a checklist the whole industry has already vetted, instead of inventing my own list of ways things go wrong. The point isn't to walk all twenty categories, though — it's to list only the ones that are actually _important_ for this system. Here are a few concrete entries, in plain terms:
 
-**Contract layer.** _Access control (SC01)_ — can someone call a function they're not allowed to? — is the one that already bit me: the missing authorization check on `requestImageUpdate()` that the bot drained, now closed with an agent whitelist. _Reentrancy (SC05)_ — can someone slip back into a half-finished transaction to squeeze it? — applies to CollectorNFT's mint-price path; it's open, but the impact is price manipulation only, no fund theft, so it sits low on the list rather than at the top.
+**Contract layer.** _Access control (SC01)_ — can someone call a function they're not allowed to? — is the one that already bit me: the missing authorization check on `requestImageUpdate()` that the bot drained, now closed with an agent whitelist. _Reentrancy (SC08)_ — can someone slip back into a half-finished transaction to squeeze it? — applies to CollectorNFT's mint-price path; it's open, but the impact is price manipulation only, no fund theft, so it sits low on the list rather than at the top.
 
 **API layer.** _Broken function-level authorization (API5)_ — can a random website call my endpoints? — covers the facilitator's wide-open CORS, accepted on purpose because the payment cryptography (EIP-3009) binds recipient, amount, and nonce, so an open origin can't redirect a cent. _Unrestricted resource consumption (API4)_ — can someone spam me until it costs me? — covers `/settle` spam draining gas, also accepted, because L2 gas is fractions of a cent and the wallet's ETH goes to miners, not the attacker.
 
@@ -91,7 +91,7 @@ Only the genuine bug earns a closer look. The login signature never expired — 
 
 ## Application example: Cutting through the Dependabot noise
 
-[Dependabot](https://docs.github.com/de/code-security/concepts/supply-chain-security/dependabot-alerts) is a great feature: it watches every dependency and shouts when one has a known vulnerability. The problem is the volume. Right now my repo has **87 open alerts — 41 tagged "high," 2 "critical."** Taken at face value, that's a weekly fire drill.
+[Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-alerts) is a great feature: it watches every dependency and shouts when one has a known vulnerability. The problem is the volume. Right now my repo has **87 open alerts — 41 tagged "high," 2 "critical."** Taken at face value, that's a weekly fire drill.
 
 But those labels are generic. A "critical" score describes the bug in the abstract; it knows nothing about whether that code runs anywhere near my keys or my money. That's exactly the gap the threat model fills. I run each alert through three plain questions:
 

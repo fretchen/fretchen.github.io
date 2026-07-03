@@ -10,6 +10,8 @@ interface TableOfContentsProps {
   minHeadings?: number;
   /** Title shown above the ToC (default: "On this page") */
   title?: string;
+  /** Set false while the container's content is still loading asynchronously (default: true) */
+  isReady?: boolean;
 }
 
 interface TocItemProps {
@@ -79,8 +81,13 @@ function TocItem({ heading, isActive, onItemClick }: TocItemProps) {
  * <TableOfContents contentRef={contentRef} />
  * ```
  */
-export function TableOfContents({ contentRef, minHeadings = 2, title = "On this page" }: TableOfContentsProps) {
-  const headings = useTableOfContents(contentRef);
+export function TableOfContents({
+  contentRef,
+  minHeadings = 2,
+  title = "On this page",
+  isReady = true,
+}: TableOfContentsProps) {
+  const headings = useTableOfContents(contentRef, isReady);
   const headingIds = useMemo(() => headings.map((h) => h.id), [headings]);
   const { activeId, setActiveId } = useActiveHeading(headingIds);
 

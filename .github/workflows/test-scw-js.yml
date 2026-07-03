@@ -49,6 +49,7 @@ jobs:
         env:
           NODE_ENV: test
           CI: true
+          SKIP_RPC_TESTS: "true"
 
       - name: Upload coverage reports to Codecov (optional)
         uses: codecov/codecov-action@v3

@@ -97,6 +97,49 @@ describe("useTableOfContents", () => {
     expect(h3?.id).toBe("another-heading");
   });
 
+  it("should not scan while isReady is false", async () => {
+    container.innerHTML = `
+      <h2>Section 1</h2>
+      <h2>Section 2</h2>
+    `;
+    const ref = { current: container };
+
+    const { result } = renderHook(() => useTableOfContents(ref, false));
+
+    // Give the (gated) 100ms timer ample time to have fired if it existed
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(result.current).toEqual([]);
+  });
+
+  it("should scan content that arrives after mount, once isReady flips true", async () => {
+    // Encodes the lazy-loading race: at mount the container holds only a
+    // loading placeholder; the post content (headings) arrives later.
+    container.innerHTML = "<p>Loading…</p>";
+    const ref = { current: container };
+
+    const { result, rerender } = renderHook(({ ready }) => useTableOfContents(ref, ready), {
+      initialProps: { ready: false },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(result.current).toEqual([]);
+
+    // Content mounts, readiness flips
+    container.innerHTML = `
+      <h2>Late Section</h2>
+      <h3>Late Subsection</h3>
+    `;
+    rerender({ ready: true });
+
+    await waitFor(() => {
+      expect(result.current).toHaveLength(2);
+    });
+
+    expect(result.current[0].text).toBe("Late Section");
+    // Heading IDs must be assigned to the late-arriving DOM (anchor targets)
+    expect(container.querySelector("h2")?.id).toBe("late-section");
+  });
+
   it("should handle German umlauts in slugs", async () => {
     container.innerHTML = `
       <h2>Einführung</h2>

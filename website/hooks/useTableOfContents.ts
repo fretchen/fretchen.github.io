@@ -32,6 +32,9 @@ function slugify(text: string): string {
  * Generates IDs for headings that don't have them
  *
  * @param contentRef - Ref to the content container element
+ * @param isReady - Gate for containers whose content arrives asynchronously
+ *   (e.g. lazily loaded post components): the scan only runs once true,
+ *   mirroring useKaTeXRenderer's isReady parameter
  * @returns Array of TocItem objects
  *
  * @example
@@ -40,11 +43,11 @@ function slugify(text: string): string {
  * const headings = useTableOfContents(contentRef);
  * ```
  */
-export function useTableOfContents(contentRef: RefObject<HTMLElement>): TocItem[] {
+export function useTableOfContents(contentRef: RefObject<HTMLElement>, isReady: boolean = true): TocItem[] {
   const [headings, setHeadings] = useState<TocItem[]>([]);
 
   useEffect(() => {
-    if (!contentRef.current) return;
+    if (!contentRef.current || !isReady) return;
 
     // Small delay to ensure content is rendered (especially for dynamic content)
     const timeoutId = setTimeout(() => {
@@ -88,7 +91,7 @@ export function useTableOfContents(contentRef: RefObject<HTMLElement>): TocItem[
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [contentRef]);
+  }, [contentRef, isReady]);
 
   return headings;
 }

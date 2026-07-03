@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { getGenAiNFTAddress, GenImNFTv4ABI, getViemChain } from "@fretchen/chain-utils";
-import { getPublicClient } from "@wagmi/core";
+import { getPublicClient } from "wagmi/actions";
 import { config } from "../wagmi.config";
 
 vi.mock("../wagmi.config", () => ({
@@ -10,7 +10,7 @@ vi.mock("../wagmi.config", () => ({
   },
 }));
 
-vi.mock("@wagmi/core", () => ({
+vi.mock("wagmi/actions", () => ({
   getPublicClient: vi.fn().mockReturnValue({
     readContract: vi.fn().mockResolvedValue([1, 2, 3]),
     chain: { id: 10 }, // Optimism chain ID

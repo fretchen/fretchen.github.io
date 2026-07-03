@@ -95,7 +95,7 @@ describe("blogLoader - Pure Functions", () => {
         },
       };
 
-      const result = extractMetadataFromModule(module, "../blog/test.md");
+      const result = extractMetadataFromModule(module, "../blog/test.mdx");
 
       expect(result).not.toBeNull();
       expect(result?.title).toBe("My Blog Post");
@@ -128,7 +128,7 @@ describe("blogLoader - Pure Functions", () => {
         },
       };
 
-      const result = extractMetadataFromModule(module, "../blog/my_awesome_post.md");
+      const result = extractMetadataFromModule(module, "../blog/my_awesome_post.mdx");
 
       expect(result?.title).toBe("my_awesome_post");
     });
@@ -152,7 +152,7 @@ describe("blogLoader - Pure Functions", () => {
     it("should return null for MDX without frontmatter", () => {
       const module = {};
 
-      const result = extractMetadataFromModule(module, "../blog/test.md");
+      const result = extractMetadataFromModule(module, "../blog/test.mdx");
 
       expect(result).toBeNull();
     });

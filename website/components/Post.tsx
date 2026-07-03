@@ -4,7 +4,8 @@ import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
-import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
+import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
+import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
@@ -19,13 +20,16 @@ const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
   contentRef: React.RefObject<HTMLDivElement>;
-}> = ({ componentPath, tokenID, contentRef }) => {
+  onReady?: () => void;
+}> = ({ componentPath, tokenID, contentRef, onReady }) => {
   const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
-    const loadComponent = () => {
+    let cancelled = false;
+
+    const loadComponent = async () => {
       try {
         // Extract directory and filename from componentPath
         const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
@@ -35,12 +39,12 @@ const ReactPostRenderer: React.FC<{
         // Validate directory is supported
         if (!isSupportedDirectory(directory)) {
           throw new Error(
-            `Unsupported directory: ${directory}. Supported directories: blog, quantum/amo, quantum/basics, quantum/hardware, quantum/qml`,
+            `Unsupported directory: ${directory}. Supported directories: ${getSupportedDirectories().join(", ")}`,
           );
         }
 
-        // Use centralized glob registry - automatically handles production vs development
-        const module = loadModuleFromDirectory(directory, filename);
+        // Use centralized lazy glob registry - only fetches this post's own chunk
+        const module = await loadLazyModuleFromDirectory(directory, filename);
 
         // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;
@@ -49,9 +53,12 @@ const ReactPostRenderer: React.FC<{
           throw new Error(`No default export found in ${filename}`);
         }
 
+        if (cancelled) return;
         setComponent(() => LoadedComponent);
         setLoading(false);
+        onReady?.();
       } catch (err) {
+        if (cancelled) return;
         console.error("ReactPostRenderer: Error loading React component:", err);
         setError(err instanceof Error ? err.message : "Unknown error occurred");
         setLoading(false);
@@ -59,7 +66,11 @@ const ReactPostRenderer: React.FC<{
     };
 
     void loadComponent();
-  }, [componentPath]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [componentPath, onReady]);
 
   // Use custom hook for KaTeX rendering
   useKaTeXRenderer(contentRef, !!Component);
@@ -97,9 +108,24 @@ const ReactPostRenderer: React.FC<{
           <p>
             <strong>Pfad:</strong> <code>{componentPath}</code>
           </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: "10px",
+              padding: "8px 16px",
+              border: "1px solid #721c24",
+              borderRadius: "4px",
+              backgroundColor: "transparent",
+              color: "#721c24",
+              cursor: "pointer",
+            }}
+          >
+            🔄 Seite neu laden
+          </button>
           <details style={{ marginTop: "10px" }}>
             <summary>Mögliche Lösungen</summary>
             <ul style={{ marginTop: "10px" }}>
+              <li>Laden Sie die Seite neu (hilft nach einem Update der Website)</li>
               <li>Überprüfen Sie, ob die TSX-Datei existiert</li>
               <li>Stellen Sie sicher, dass die Komponente als default export verfügbar ist</li>
               <li>Überprüfen Sie die Konsolenausgabe für weitere Details</li>
@@ -113,15 +139,7 @@ const ReactPostRenderer: React.FC<{
   return (
     <div className={post.contentContainer} ref={contentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
-      <React.Suspense
-        fallback={
-          <div style={{ padding: "20px", textAlign: "center" }}>
-            <p>⚡ Lade Komponente...</p>
-          </div>
-        }
-      >
-        <Component />
-      </React.Suspense>
+      <Component />
     </div>
   );
 };
@@ -141,6 +159,13 @@ export function Post({
   const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
   const [reactionCount, setReactionCount] = React.useState<number>(0);
   const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // Tracks which componentPath has finished loading. Comparing against the current
+  // path (instead of a plain boolean) makes readiness flip false automatically on
+  // post-to-post navigation, so the ToC rescans once the new content mounts.
+  const [readyPath, setReadyPath] = React.useState<string | null>(null);
+  const handleContentReady = React.useCallback(() => setReadyPath(componentPath ?? ""), [componentPath]);
+  const contentReady = readyPath === (componentPath ?? "");
 
   // Format publishing date as ISO8601 for dt-published if available
   const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
@@ -198,7 +223,13 @@ export function Post({
 
           {/* Render based on post type */}
           <div className="e-content" ref={contentRef}>
-            <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} contentRef={contentRef} />
+            <ReactPostRenderer
+              key={componentPath}
+              componentPath={componentPath ?? ""}
+              tokenID={tokenID}
+              contentRef={contentRef}
+              onReady={handleContentReady}
+            />
           </div>
 
           {/* Navigation zwischen Posts */}
@@ -234,7 +265,7 @@ export function Post({
 
         {/* Right sidebar with Table of Contents */}
         <aside className={post.articleSidebar}>
-          <TableOfContents contentRef={contentRef} />
+          <TableOfContents contentRef={contentRef} isReady={contentReady} />
         </aside>
       </div>
     </article>

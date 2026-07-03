@@ -11,10 +11,13 @@ import { config } from "../wagmi.config";
 import { layout } from "./styles";
 import { useIsMounted } from "../hooks/useIsMounted";
 import { OWNER_ADDRESS } from "../utils/getChain";
+import { installPreloadErrorHandler } from "../utils/preloadErrorHandler";
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   const navigationRef = useRef<HTMLDivElement>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => installPreloadErrorHandler(), []);
 
   useEffect(() => {
     const navigationElement = navigationRef.current;

@@ -2,15 +2,16 @@ import "./style.css";
 import "./panda.css";
 import React, { useEffect, useRef } from "react";
 import { Link } from "../components/Link";
-import WalletOptions from "../components/WalletOptions";
 import LanguageToggle from "../components/LanguageToggle";
 import Footer from "../components/Footer";
 
 import { WagmiProvider, useAccount } from "wagmi";
 import { config } from "../wagmi.config";
-import { layout } from "./styles";
+import { layout, walletOptions } from "./styles";
 import { useIsMounted } from "../hooks/useIsMounted";
 import { OWNER_ADDRESS } from "../utils/getChain";
+
+const WalletOptions = React.lazy(() => import("../components/WalletOptions"));
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   const navigationRef = useRef<HTMLDivElement>(null);
@@ -68,7 +69,17 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
             <div className={layout.headerControls}>
               <LanguageToggle />
-              <WalletOptions />
+              <React.Suspense
+                fallback={
+                  <div className={walletOptions.dropdown}>
+                    <button className={walletOptions.button} disabled>
+                      &nbsp;
+                    </button>
+                  </div>
+                }
+              >
+                <WalletOptions />
+              </React.Suspense>
             </div>
           </div>
         </Appbar>

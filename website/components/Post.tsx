@@ -4,7 +4,8 @@ import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { post, titleBar } from "../layouts/styles";
-import { loadModuleFromDirectory, isSupportedDirectory } from "../utils/globRegistry";
+import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
+import { isSupportedDirectory } from "../utils/supportedDirectories";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
@@ -25,7 +26,9 @@ const ReactPostRenderer: React.FC<{
   const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
-    const loadComponent = () => {
+    let cancelled = false;
+
+    const loadComponent = async () => {
       try {
         // Extract directory and filename from componentPath
         const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
@@ -39,8 +42,8 @@ const ReactPostRenderer: React.FC<{
           );
         }
 
-        // Use centralized glob registry - automatically handles production vs development
-        const module = loadModuleFromDirectory(directory, filename);
+        // Use centralized lazy glob registry - only fetches this post's own chunk
+        const module = await loadLazyModuleFromDirectory(directory, filename);
 
         // The component should be the default export (works for both MDX and TSX)
         const LoadedComponent = module.default;
@@ -49,9 +52,11 @@ const ReactPostRenderer: React.FC<{
           throw new Error(`No default export found in ${filename}`);
         }
 
+        if (cancelled) return;
         setComponent(() => LoadedComponent);
         setLoading(false);
       } catch (err) {
+        if (cancelled) return;
         console.error("ReactPostRenderer: Error loading React component:", err);
         setError(err instanceof Error ? err.message : "Unknown error occurred");
         setLoading(false);
@@ -59,6 +64,10 @@ const ReactPostRenderer: React.FC<{
     };
 
     void loadComponent();
+
+    return () => {
+      cancelled = true;
+    };
   }, [componentPath]);
 
   // Use custom hook for KaTeX rendering
@@ -198,7 +207,12 @@ export function Post({
 
           {/* Render based on post type */}
           <div className="e-content" ref={contentRef}>
-            <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} contentRef={contentRef} />
+            <ReactPostRenderer
+              key={componentPath}
+              componentPath={componentPath ?? ""}
+              tokenID={tokenID}
+              contentRef={contentRef}
+            />
           </div>
 
           {/* Navigation zwischen Posts */}

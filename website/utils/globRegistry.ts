@@ -36,34 +36,4 @@ export const GLOB_REGISTRY = {
   "quantum/qml": {
     modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: true }),
   },
-} as const;
-
-/**
- * Helper function to load a module from a supported directory.
- * Used by blogLoader.ts for metadata extraction (server-side only, needs every file eagerly).
- *
- * @param directory - The directory to load from (e.g., "blog", "quantum/amo")
- * @param filename - The filename to load (e.g., "hello_world.mdx")
- * @returns The loaded module with a default export
- * @throws Error if directory is unsupported or module not found
- */
-export const loadModuleFromDirectory = (
-  directory: SupportedDirectory,
-  filename: string,
-): { default: React.ComponentType } => {
-  const registry = GLOB_REGISTRY[directory];
-
-  if (!registry) {
-    throw new Error(`Unsupported directory: ${directory}. Supported: ${Object.keys(GLOB_REGISTRY).join(", ")}`);
-  }
-
-  const modulePath = `../${directory}/${filename}`;
-  const module = registry.modules[modulePath];
-
-  if (!module) {
-    const available = Object.keys(registry.modules).join(", ");
-    throw new Error(`Module not found: ${modulePath}. Available modules: ${available}`);
-  }
-
-  return module as { default: React.ComponentType };
-};
+} as const satisfies Record<SupportedDirectory, { modules: Record<string, unknown> }>;

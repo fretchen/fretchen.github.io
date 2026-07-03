@@ -28,7 +28,7 @@ export const LAZY_GLOB_REGISTRY = {
   "quantum/qml": {
     modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}"),
   },
-} as const;
+} as const satisfies Record<SupportedDirectory, { modules: Record<string, unknown> }>;
 
 /**
  * Helper function to lazily load a module from a supported directory.

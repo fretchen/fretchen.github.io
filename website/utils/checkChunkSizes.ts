@@ -24,11 +24,12 @@ const violations: string[] = [];
 
 for (const file of chunkFiles) {
   const filePath = path.join(CHUNKS_DIR, file);
-  const size = fs.statSync(filePath).size;
+  const buffer = fs.readFileSync(filePath);
+  const size = buffer.length;
 
   if (size <= MAX_CHUNK_SIZE) continue;
 
-  const content = fs.readFileSync(filePath, "utf-8");
+  const content = buffer.toString("utf-8");
   const allowlisted = ALLOWLIST_SIGNATURES.find((signature) => content.includes(signature));
 
   if (allowlisted) {

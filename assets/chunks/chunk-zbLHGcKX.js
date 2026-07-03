@@ -1,1 +1,0 @@
-import"./chunk-u-ScgdE-.js";import{Ft as e,Nn as t,On as n}from"./chunk-CyhjeSmL.js";t();var r=n();function i({label:t,isActive:n,onClick:i}){return(0,r.jsx)(`button`,{className:`${e.tab} ${n?e.activeTab:``}`,onClick:i,"aria-selected":n,children:t})}export{i as t};

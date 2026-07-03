@@ -1,1 +1,0 @@
-import{Gt as e}from"./chunk-jRkNHE2k.js";import{t}from"./chunk-q3e4lkCq.js";function n(n,r=`wei`){return t(n,e[r])}export{n as t};

@@ -13,51 +13,39 @@ What follows will be my attempt to explain the connection from the economics sid
 
 ## The basics of the prisoner's dilemma
 
-I recently, already wrote a blog post on the [prisoner's dilemma](blog/13/). The two players, Jesse and Walter, are in the following situation:
+I already wrote a full post on the [prisoner's dilemma](/blog/13) with Walter White and Jesse Pinkman, so here is the short version. The two have been arrested and are interrogated separately, each offered the same deal: betray your partner and testify for immunity, or stay loyal and say nothing.
 
+The sentences follow from both choices. Both stay loyal: 3 years each. Both betray: 5 years each. But if one betrays while the other stays loyal, the betrayer walks free while the loyal partner takes 15 years.
 
-This is the **perfect** Prisoner's Dilemma scenario. Walter and Jesse each have exactly two choices:
-
-- **Cooperate (C)**: Stay loyal to your partner — "I don't know this person, we've never met."
-- **Defect (D)**: Blame your partner — "He forced me into this, he's the real criminal."
-
-The sentences depend on what both choose:
-
-- **Both cooperate (C, C)**: Each gets 3 years. The DEA has some evidence but not enough for major charges without testimony.
-- **One blames the other (D, C)**: The betrayer walks free with immunity, the cooperator gets 15 years for "being the mastermind."
-- **Both blame each other (D, D)**: Each gets 5 years. Their contradictory stories help neither case.
-
-The prisoner's dilemma gives a beautiful insight into the limits of cooperation: it shows that the intuitively sensible move — cooperating — is almost never the "rational" one. Two people would each be better off if both cooperated, yet each, reasoning individually, ends up defecting. I wrote about this at length in [an earlier post](/blog/13), so here I'll keep it to the essentials.
-
-Two players. Each can **cooperate** or **defect**. If both cooperate, both do reasonably well. If both defect, both do badly. But if one defects while the other cooperates, the defector grabs the biggest prize and the cooperator is left with nothing. Whatever the other player does, defecting looks better — so both defect, and both end up worse off than if they had trusted each other.
-
-This obviously leaves you wondering what it would take to make cooperation rational. Not a lecture on morality — an actual change to the game that makes trusting each other the sensible choice.
+That last outcome is the trap. Whatever your partner does, betraying looks better — so both betray, and both end up worse off than if they had trusted each other. Which leaves the question: what would it take to make loyalty the rational choice? Not a moral lecture — an actual change to the game.
 
 ## What an institution could look like here
 
-If you look into the literature, the same answer keeps coming back: some kind of *institution*, an arbiter that changes the players' incentives. And it doesn't have to be an advisor whispering suggestions. The interesting case is an arbiter with **teeth** — one that can enforce outcomes, not merely recommend them. Think of Hobbes's Leviathan, or a regulator that fishers actually have to obey.
+If you look into the literature, the same answer keeps coming back: some kind of *institution*, a mediator that changes the players' incentives. And it doesn't have to be an advisor whispering suggestions. The interesting case is a mediator with **teeth** — one that can enforce outcomes, not merely recommend them. Think of Hobbes's Leviathan, or a regulator that fishers actually have to obey.
 
-Here is what such an institution can look like concretely. Introduce a trusted referee. Each player secretly hands the referee a move; the referee looks the pair up in an agreed-upon table and pays out. The players never talk to each other — all the coordination flows through the institution.
+Here is what such an institution can look like concretely. Introduce a trusted mediator. Each player secretly hands the mediator a move; the mediator looks the pair up in an agreed-upon table and hands down the sentences. The players never talk to each other — all the coordination flows through the institution.
 
-Crucially, the referee offers a **third option** beyond cooperate and defect. Call it **Commit**. The best way to understand the three moves is as instructions written on a shared scorecard that starts at "both cooperate":
+Crucially, the mediator offers a **third option** beyond staying loyal and betraying. Call it **Commit** — a commitment device in Schelling's sense: a move you lock in ahead of time that binds your fate to your partner's. Isn't adding an option just cheating, though — changing the game? It is changing the game, deliberately — but it's offered symmetrically to both players and rewrites none of the original sentences, and adding an enforceable action like this is *exactly* what building an institution means.
 
-- **Cooperate** — leave the scorecard alone.
-- **Defect** — flip *my own* letter (grab the temptation prize by switching myself from cooperator to defector).
-- **Commit** — flip *both* letters at once, tying the two ledgers together.
+The cleanest way to understand the three moves is as instructions written on a shared scorecard that starts at "both loyal", where each player has a letter — **C** for loyal, **D** for betrayed:
 
-That "flip both" move is the whole trick, and it is worth playing with. In the diagram below, each player sits on their own line, their move is a box on that line, and the referee brackets the moves on both sides — setting up the scorecard before, tallying it after. Click either player's move and watch the outcome change:
+- **Stay loyal** — leave the scorecard alone.
+- **Betray** — flip *your own* letter (switch yourself from loyal to betrayer, and grab the immunity).
+- **Commit** — flip *both* letters at once, tying the two sentences together.
+
+That "flip both" move is the whole trick, and it is worth playing with. In the diagram below, each player sits on their own line, their move is a box on that line, and the mediator brackets the moves on both sides — setting the terms before, settling up after. Click either player's move and watch the sentences change:
 
 <QuantumPDCircuit />
 
-Play with it for a moment and the logic of **Commit** appears. If you Commit and the other player Defects, your "flip both" cancels their "flip mine" and lands the flip on *their* letter instead — the scorecard reads that *they* defected and *you* didn't, so you take the big prize and they get nothing. If you both Commit, the two "flip both" moves cancel entirely and the scorecard stays at mutual cooperation. Here is the full table the referee enforces (your payoff first, theirs second):
+Play with it for a moment and the logic of **Commit** appears. If you Commit and your partner betrays, your "flip both" cancels their "flip mine" and lands the flip on *their* letter instead — the scorecard now reads that *they* betrayed and *you* stayed loyal, so you walk free and they take the 15 years. If you both Commit, the two "flip both" moves cancel entirely and the scorecard stays at mutual loyalty. Here is the full table the mediator enforces, in prison years (your sentence first, your partner's second; lower is better):
 
-|  | They Cooperate | They Defect | They Commit |
+|  | They stay loyal | They betray | They Commit |
 |---|---|---|---|
-| **You Cooperate** | 3, 3 | 0, 5 | 1, 1 |
-| **You Defect** | 5, 0 | 1, 1 | 0, 5 |
-| **You Commit** | 1, 1 | 5, 0 | 3, 3 |
+| **You stay loyal** | 3, 3 | 15, 0 | 5, 5 |
+| **You betray** | 0, 15 | 5, 5 | 15, 0 |
+| **You Commit** | 5, 5 | 0, 15 | 3, 3 |
 
-Now look at what happened to the trap. Against a committer, defecting is punished automatically — you drop to the sucker's payoff of zero. So neither player wants to deviate from *both committing*: that gives each of them 3, and any unilateral change makes them worse off. Mutual cooperation has become the stable, self-interested choice. The institution didn't preach; it just made the punishment for defection credible, and built it into the rules.
+Now look at what happened to the trap. Against a committer, betraying is punished automatically — you jump straight to 15 years. So neither player wants to deviate from *both committing*: that gives each of them just 3 years, while going loyal drops you to the 5-year mutual-betrayal outcome and betraying costs you 15. Mutual loyalty has become the stable, self-interested choice. The institution didn't preach; it just made the punishment for betrayal credible, and built it into the rules.
 
 ## Making the connection to the quantum game
 

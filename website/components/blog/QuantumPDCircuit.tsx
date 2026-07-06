@@ -2,56 +2,61 @@ import React, { useState } from "react";
 import { css } from "../../styled-system/css";
 
 // ============================================================
-// The scorecard game as a two-line "circuit"
+// The mediated prisoner's-dilemma game as a two-line "circuit"
 // ------------------------------------------------------------
-// Two players (A on top, B on bottom). Each picks a move that
-// sits as a box on their own line. The referee's coupling brackets
-// the moves on both sides (J … moves … J†). At the end each line is
-// read out (measured) and the outcome pays out.
+// Two players — Walter (top line) and Jesse (bottom line). Each picks a
+// move that sits as a box on their own line. A trusted Mediator brackets
+// the moves on both sides — setting the terms before, settling up after.
+// At the end each line is read out and the sentences are handed down.
 //
-// The move → outcome map below is the exact, verified table from
-// notebooks/quantum_pd.ipynb — no quantum math runs in the browser.
+// Payoffs are prison YEARS (lower is better), matching the Breaking Bad
+// prisoner's-dilemma post: both loyal = 3, both betray = 5, betrayer walks
+// free (0), the betrayed partner gets 15. The move → outcome map is the
+// verified table from notebooks/quantum_pd.ipynb — no quantum math runs here.
 // ============================================================
 
 type Move = "C" | "D" | "Q";
 
 const MOVES: Move[] = ["C", "D", "Q"];
 
-const MOVE_INFO: Record<Move, { label: string; quantum: string; color: string }> = {
-  C: { label: "Cooperate", quantum: "I", color: "#059669" },
-  D: { label: "Defect", quantum: "iσx", color: "#dc2626" },
-  Q: { label: "Commit", quantum: "iσz", color: "#7b3fa0" },
+// Move colors reuse the Breaking Bad post's palette.
+const MOVE_INFO: Record<Move, { label: string; color: string }> = {
+  C: { label: "Stay loyal", color: "#0066cc" },
+  D: { label: "Betray", color: "#374151" },
+  Q: { label: "Commit", color: "#10b981" },
 };
 
-// Outcome basis state |A B⟩ for each (moveA, moveB) — from quantum_pd.ipynb
+// Outcome basis state |Walter Jesse⟩ for each (moveWalter, moveJesse) — from quantum_pd.ipynb
 const OUTCOME: Record<Move, Record<Move, string>> = {
   C: { C: "CC", D: "CD", Q: "DD" },
   D: { C: "DC", D: "DD", Q: "CD" },
   Q: { C: "DD", D: "DC", Q: "CC" },
 };
 
-// Payoffs by outcome letter pair (T=5, R=3, P=1, S=0)
+// Prison years by outcome letter pair (T=0/Free, R=3, P=5, S=15). Lower is better.
 const PAYOFF: Record<string, [number, number]> = {
   CC: [3, 3],
-  CD: [0, 5],
-  DC: [5, 0],
-  DD: [1, 1],
+  CD: [15, 0],
+  DC: [0, 15],
+  DD: [5, 5],
 };
 
-const LETTER: Record<string, string> = { C: "Cooperate", D: "Defect" };
+const yearsLabel = (y: number): string => (y === 0 ? "Free" : `${y} yrs`);
+const yearsColor = (y: number): string => (y <= 3 ? "#10b981" : y <= 5 ? "#f59e0b" : "#dc2626");
 
 // ── Geometry ────────────────────────────────────────────────
 const W = 560;
 const H = 210;
-const yA = 74; // Player A wire
-const yB = 152; // Player B wire
+const yA = 74; // Walter's wire
+const yB = 152; // Jesse's wire
+const yMid = (yA + yB) / 2;
 const xWire0 = 96;
 const xWire1 = 524;
-const xJ = 136; // referee coupling (J) centre
-const xGate = 256; // player gate centre
-const xJd = 376; // referee un-coupling (J†) centre
-const xMeasure = 448; // measurement centre
-const xOut = 500; // outcome readout on the wire
+const xJ = 136; // Mediator sets the terms
+const xGate = 256; // player move
+const xJd = 376; // Mediator settles up
+const xMeasure = 448; // sentence read-out
+const xOut = 500; // outcome on the wire
 
 // A small measurement-meter glyph centred at (cx, cy)
 const MeasureGlyph: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
@@ -62,11 +67,19 @@ const MeasureGlyph: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
   </g>
 );
 
-const RefereeBox: React.FC<{ cx: number; label: string }> = ({ cx, label }) => (
+const MediatorBox: React.FC<{ cx: number }> = ({ cx }) => (
   <g>
     <rect x={cx - 17} y={yA - 22} width={34} height={yB - yA + 44} rx={5} fill="rgba(55,65,81,0.06)" stroke="#9ca3af" />
-    <text x={cx} y={(yA + yB) / 2 + 5} fontSize={15} fill="#374151" textAnchor="middle" fontWeight="600">
-      {label}
+    <text
+      x={cx}
+      y={yMid}
+      fontSize={13}
+      fill="#374151"
+      textAnchor="middle"
+      fontWeight="600"
+      transform={`rotate(-90 ${cx} ${yMid})`}
+    >
+      Mediator
     </text>
   </g>
 );
@@ -84,7 +97,7 @@ const Gate: React.FC<GateProps> = ({ cy, move, onCycle, player }) => {
     <g
       role="button"
       tabIndex={0}
-      aria-label={`${player} plays ${info.label}. Activate to change.`}
+      aria-label={`${player}: ${info.label}. Activate to change the move.`}
       onClick={onCycle}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -108,31 +121,32 @@ const Gate: React.FC<GateProps> = ({ cy, move, onCycle, player }) => {
         {info.label}
       </text>
       <text x={xGate} y={cy + 13} fontSize={9} fill="#6b7280" textAnchor="middle">
-        {info.quantum} · click to change
+        click to change
       </text>
     </g>
   );
 };
 
 export default function QuantumPDCircuit() {
-  const [moveA, setMoveA] = useState<Move>("D");
-  const [moveB, setMoveB] = useState<Move>("D");
+  const [moveW, setMoveW] = useState<Move>("D");
+  const [moveJ, setMoveJ] = useState<Move>("D");
 
   const cycle = (m: Move): Move => MOVES[(MOVES.indexOf(m) + 1) % MOVES.length];
 
-  const outcome = OUTCOME[moveA][moveB];
-  const [payA, payB] = PAYOFF[outcome];
-  const letterA = outcome[0];
-  const letterB = outcome[1];
+  const outcome = OUTCOME[moveW][moveJ];
+  const [yearsW, yearsJ] = PAYOFF[outcome];
 
-  const both = payA === payB;
-  const verdict = both
-    ? payA === 3
-      ? "Both cooperate — the good outcome."
-      : "Both stuck with the punishment."
-    : payA > payB
-      ? "You walk away ahead."
-      : "You take the sucker's share.";
+  let verdict: string;
+  if (yearsW === yearsJ) {
+    verdict =
+      yearsW === 3
+        ? "Three years each — the mutual-loyalty outcome."
+        : "Five years each — the mutual-betrayal outcome, the classic trap.";
+  } else if (yearsW < yearsJ) {
+    verdict = `Walter walks free; Jesse takes ${yearsJ} years.`;
+  } else {
+    verdict = `Jesse walks free; Walter takes ${yearsW} years.`;
+  }
 
   return (
     <div
@@ -145,11 +159,11 @@ export default function QuantumPDCircuit() {
       })}
     >
       <p className={css({ fontSize: "0.95rem", fontWeight: "bold", marginBottom: "0.35rem", color: "#374151" })}>
-        The scorecard game, drawn as two lines
+        The mediated game, drawn as two lines
       </p>
       <p className={css({ fontSize: "0.8rem", color: "#6b7280", marginBottom: "1rem" })}>
-        Both players start out cooperating. The referee brackets their moves on both sides. Click either player&rsquo;s
-        gate to change their move and watch the tally change. Try setting both to <strong>Commit</strong>.
+        Walter and Jesse each start out loyal. The Mediator brackets their moves on both sides. Click either
+        player&rsquo;s move to change it and watch the sentences change. Try setting both to <strong>Commit</strong>.
       </p>
 
       <svg
@@ -157,11 +171,11 @@ export default function QuantumPDCircuit() {
         className={css({ width: "100%", height: "auto", display: "block", maxWidth: "600px", margin: "0 auto" })}
       >
         {/* Player labels */}
-        <text x={10} y={yA + 4} fontSize={12} fill="#374151" fontWeight="600">
-          You (A)
+        <text x={10} y={yA + 4} fontSize={13} fill="#2563eb" fontWeight="700">
+          Walter
         </text>
-        <text x={10} y={yB + 4} fontSize={12} fill="#374151" fontWeight="600">
-          Them (B)
+        <text x={10} y={yB + 4} fontSize={13} fill="#7c3aed" fontWeight="700">
+          Jesse
         </text>
 
         {/* Wires */}
@@ -172,56 +186,42 @@ export default function QuantumPDCircuit() {
         <circle cx={xWire0} cy={yA} r={3} fill="#9ca3af" />
         <circle cx={xWire0} cy={yB} r={3} fill="#9ca3af" />
 
-        {/* Referee coupling before and after the moves */}
-        <RefereeBox cx={xJ} label="J" />
-        <RefereeBox cx={xJd} label="J†" />
+        {/* Mediator brackets the moves on both sides */}
+        <MediatorBox cx={xJ} />
+        <MediatorBox cx={xJd} />
 
-        {/* Player gates (interactive) */}
-        <Gate cy={yA} move={moveA} onCycle={() => setMoveA(cycle(moveA))} player="You" />
-        <Gate cy={yB} move={moveB} onCycle={() => setMoveB(cycle(moveB))} player="Them" />
+        {/* Player moves (interactive) */}
+        <Gate cy={yA} move={moveW} onCycle={() => setMoveW(cycle(moveW))} player="Walter" />
+        <Gate cy={yB} move={moveJ} onCycle={() => setMoveJ(cycle(moveJ))} player="Jesse" />
 
-        {/* Measurement */}
+        {/* Sentence read-out */}
         <MeasureGlyph cx={xMeasure} cy={yA} />
         <MeasureGlyph cx={xMeasure} cy={yB} />
 
-        {/* Outcome letters on each wire */}
-        <text
-          x={xOut}
-          y={yA + 5}
-          fontSize={16}
-          fontWeight="700"
-          textAnchor="middle"
-          fill={letterA === "D" ? "#dc2626" : "#059669"}
-        >
-          {letterA}
+        {/* Outcome (prison years) on each wire */}
+        <text x={xOut} y={yA + 5} fontSize={13} fontWeight="700" textAnchor="middle" fill={yearsColor(yearsW)}>
+          {yearsLabel(yearsW)}
         </text>
-        <text
-          x={xOut}
-          y={yB + 5}
-          fontSize={16}
-          fontWeight="700"
-          textAnchor="middle"
-          fill={letterB === "D" ? "#dc2626" : "#059669"}
-        >
-          {letterB}
+        <text x={xOut} y={yB + 5} fontSize={13} fontWeight="700" textAnchor="middle" fill={yearsColor(yearsJ)}>
+          {yearsLabel(yearsJ)}
         </text>
 
         {/* Column captions */}
         <text x={xJ} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
-          referee sets up
+          sets the terms
         </text>
         <text x={xGate} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
           players move
         </text>
         <text x={xJd} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
-          referee tallies
+          settles up
         </text>
         <text x={(xMeasure + xOut) / 2} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
-          scorecard
+          sentence
         </text>
       </svg>
 
-      {/* Outcome readout */}
+      {/* Outcome read-out */}
       <div
         className={css({
           marginTop: "1rem",
@@ -239,11 +239,11 @@ export default function QuantumPDCircuit() {
             fontSize: "0.85rem",
             fontWeight: "600",
             border: "1px solid",
-            borderColor: letterA === "D" ? "#dc2626" : "#059669",
-            color: letterA === "D" ? "#dc2626" : "#059669",
+            borderColor: yearsColor(yearsW),
+            color: yearsColor(yearsW),
           })}
         >
-          You: {LETTER[letterA]} → {payA}
+          Walter: {MOVE_INFO[moveW].label} → {yearsLabel(yearsW)}
         </span>
         <span
           className={css({
@@ -252,15 +252,15 @@ export default function QuantumPDCircuit() {
             fontSize: "0.85rem",
             fontWeight: "600",
             border: "1px solid",
-            borderColor: letterB === "D" ? "#dc2626" : "#059669",
-            color: letterB === "D" ? "#dc2626" : "#059669",
+            borderColor: yearsColor(yearsJ),
+            color: yearsColor(yearsJ),
           })}
         >
-          Them: {LETTER[letterB]} → {payB}
+          Jesse: {MOVE_INFO[moveJ].label} → {yearsLabel(yearsJ)}
         </span>
       </div>
       <p className={css({ fontSize: "0.85rem", color: "#374151", textAlign: "center", marginTop: "0.6rem" })}>
-        Scorecard reads <strong>{outcome}</strong>. {verdict}
+        {verdict} <span className={css({ color: "#6b7280" })}>(lower is better)</span>
       </p>
     </div>
   );

@@ -27,56 +27,54 @@ Quantum entanglement escapes the Prisoner's Dilemma not because quantum physics 
 
 ## Outline
 
-1. **The trap, revisited** (very brief — one paragraph)
-   — Micro-recap of classical PD: Walter and Jesse always defect even though cooperation is better. Link to existing post for readers who need the full story.
+> **Reveal order: institution-first.** The whole post is built in familiar economic
+> language (game → institution → scorecard) and the quantum connection lands at the
+> end as the payoff. This defers all quantum machinery to the final third, so the
+> non-STEM reader spends most of the post in language they already own. Q̂ never
+> needs a quantum justification up front — classically it is simply "option 3 that
+> the arbiter enforces." (This inverts the earlier quantum-first draft of this plan;
+> it follows the logic of the user's first `.mdx` draft, which reads better for this
+> audience.)
 
-2. **A cosmic referee enters the room**
-   — The EWL quantum game: a referee prepares a shared "entangled resource" before the players move, then un-does the preparation after. Players still choose independently — no communication.
-   — The key idea: the referee's apparatus brackets the players' moves. Cooperation doesn't mean agreeing with each other; it means choosing a strategy that works with the bracket.
+1. **The trap, revisited** (very brief — one or two paragraphs)
+   — Micro-recap of classical PD: always defect, even though cooperation is better. Link to the existing PD post for readers who need the full story. State plainly the open question it leaves: what would it take to make cooperation rational?
 
-3. **The scoreboard rule: what Q̂ actually does**
-   — Avoid wave functions entirely. Use the "scoreboard" framing from the notebook: D means "flip my letter on the scoreboard," Q̂ means "flip both our letters."
-   — Walk through the key outcomes: Q̂ vs D → scoreboard shows DC, temptation payoff goes to Q̂-player. Q̂ vs Q̂ → both flips cancel → CC, mutual cooperation.
-   — This is exact — not a metaphor. The Pauli algebra is in a collapsible box for curious readers.
+2. **What an institution could look like here**
+   — The recurring answer in the literature: some *institution* or arbiter that makes cooperation rational. Introduce a trusted arbiter with sanctioning power (not merely an advisor).
+   — Give the arbiter a third enforced option beyond C and D — call it the "commit" move. Present the **scorecard game**: players hand sealed choices to the arbiter, who looks up the outcome and pays out. Describe the scorecard rule in plain words: D = "flip my letter"; the commit move = "flip both our letters."
+   — Walk the key outcomes: commit vs D → scorecard reads DC, the defector gets the sucker payoff; commit vs commit → both flips cancel → CC, mutual cooperation. Show the 3×3 outcome table.
+   — Explain why (commit, commit) is stable: deviating to D against a committer yields the sucker payoff. The arbiter makes the punishment credible — this is the whole point of the institution.
 
-4. **The new payoff table and why (Q̂, Q̂) is a Nash equilibrium**
-   — Show the 3×3 table (C, D, Q̂ for each player). Interactive: click a strategy pair, see the outcome.
-   — Explain why neither player wants to deviate unilaterally from (Q̂, Q̂): defecting against Q̂ gives the sucker payoff. Q̂ is a commitment device with automatic punishment.
+3. **Making the connection to the quantum game** (the reveal)
+   — The twist: this exact 3×3 enforced game is known in the quantum-physics community. The arbiter's "prepare then un-prepare" bracket is the EWL entangling operation J / J†; the enforced "commit" option is the quantum strategy Q̂.
+   — van Enk & Pike (2002): the discrete {C, D, Q̂} EWL game is mathematically identical to the classical mediated game just described. Physics plays the role of the trusted enforcer — unitarity is the sanction.
+   — Keep the quantum artifact (circuit / operator algebra) in a collapsible `<details>` block so it does not derail the main line. [OPEN QUESTION — see below: how much quantum to show, and where.]
 
-5. **The twist: it is just a mediator**
-   — van Enk & Pike (2002): the discrete {C, D, Q̂} game with a quantum apparatus is mathematically identical to a classical 3×3 game with a trusted mediator M who enforces the same outcome table.
-   — Show the classical mediator table — identical numbers. The Q̂ option is just a label; M's enforceability is what makes cooperation rational.
-   — The distinction from Aumann's "correlation device": M is an enforcer, not an advisor. Physics plays the Leviathan.
-
-6. **Institutions are physics, physics is an institution**
-   — Map the notebook's economic literature onto the story:
-     - Tennenholtz (2004) "program equilibrium": submitting Q̂ is like writing a contract "cooperate iff you cooperate, defect otherwise" and handing it to a trusted computer.
-     - Ostrom, Walker & Gardner (1992) "Covenants with and without a sword": sanctioning institutions (swords) flip defection outcomes to cooperation. Q̂ is the sword built into the move itself.
-     - Fehr & Gächter (2000/2002): punishment options flip public goods games to cooperation. Entanglement embeds punishment without the punisher paying a cost.
-   — What quantum game theory shows: the social contract is not a social fact — it is a physical structure. Enlightenment philosophers were asking a quantum question.
-
-8. **Conclusion: the open question**
-   — The (Q̂, Q̂) equilibrium requires a referee players trust to provide J and J†. Who builds the referee? Who controls it? In the quantum lab, the physicist does. In society, that is the hard problem.
-   — Tease the open quantum CPR problem: does it generalise to n players? (Spoiler: the parity problem means it does not work the same way for odd n.)
+4. **Connecting the dots and outlook**
+   — Map onto the economic literature: Tennenholtz (2004) program equilibrium (submitting Q̂ ≈ handing a "cooperate iff you do" contract to a trusted computer); Ostrom, Walker & Gardner (1992) "Covenants with and without a sword"; Fehr & Gächter (2000/2002) punishment sustaining cooperation. Cross-reference the Tragedy of the Commons post.
+   — The philosophical punchline: the social contract is not only a social fact — here it is a physical structure. Enlightenment thinkers were, in a sense, asking a quantum question.
+   — The remaining hard problem: (Q̂, Q̂) needs a referee players trust to supply J and J†. Who builds and controls the referee? In the lab, the physicist does; in society, that is the open question.
+   — Tease the common-pool-resource problem as a natural next direction, but flag honestly that it is substantially harder: it maps onto *N interacting spins* rather than a clean two-player gate, so the elegant PD result does not carry over directly. Pointer only; details live in `quantum_cpr.ipynb` for a possible future post.
 
 ---
 
 ## Interactive Elements
 
-- **Classical 2×2 payoff matrix**: reuse or adapt the PayoffMatrix component from `prisoners_dilemma_interactive.tsx`. Show Walter and Jesse's original dilemma.
-- **Quantum 3×3 payoff table**: new component. Click a row/column (Alice's strategy × Bob's strategy) → highlight the cell, show the outcome state (|CC⟩, |DC⟩, etc.) and the payoffs.
-- **Strategy outcome explorer**: two dropdowns (Alice: C / D / Q̂; Bob: C / D / Q̂) → displays the scoreboard rule step-by-step as plain text ("Alice flips both letters → Bob's D flip cancels → scoreboard reads DC → Alice gets 5, Bob gets 0"). No equations in the main widget.
-- **Mediator equivalence**: toggle between "quantum frame" and "mediator frame" — same table, different label on the mechanism. Drives home the van Enk & Pike point.
+Format is `.mdx`, prose-first, embedding *some* inline components. Exactly which is an open design question — keep the set minimal and justify each pedagogically. Candidates:
+
+- **Shared circuit visualization** (the key device): a circuit-style picture that reads as *both* the classical scorecard/institution game and its quantum version. This is what makes the reveal land. Concrete form to be refined during implementation.
+- **Scorecard game table**: the 3×3 outcome table — static Markdown, or clickable (pair → highlighted cell + scorecard outcome + payoffs) if it earns its place.
+- **Strategy outcome explorer** (optional): dropdowns (C / D / commit per player) → the scorecard rule step-by-step in plain text ("You flip both letters → their D flip cancels → scorecard reads DC → you get 5, they get 0"). No equations in the widget.
 
 ---
 
 ## Tone & Style
 
 - **Register**: narrative-first, accessible, intellectually honest about the economics-physics interface
-- **Narrative device**: continue the Walter and Jesse frame from the existing PD post. Introduce the referee/mediator as a character ("the cosmic arbitrator"). This maintains continuity for returning readers.
+- **Narrative device**: the draft uses a first-person essay voice ("Over the last year I enjoyed diving into…") rather than the Walter/Jesse character frame of the existing PD post. Keep the first-person voice; the arbiter/institution can still be personified lightly. Link to the PD post rather than re-running its characters.
 - **Math**: zero equations in the main text. Scoreboard rule described in words. The Q̂ operator, J matrix, and Pauli algebra go in collapsible `<details>` blocks for readers who want them.
 - **Tone**: respectful of the reader's intelligence, playful with the paradox, honest about what quantum physics does and does not add.
-- **Format**: `.tsx` file (same as `prisoners_dilemma_interactive.tsx` and `tragedy_of_commons_fishing.tsx`) for interactive components. Use MarkdownWithLatex component for any inline math.
+- **Format**: `.mdx`, prose-first, embedding *some* interactive components inline (which components is an open design question — keep minimal). A shared circuit-style visualization is the intended device for the classical→quantum reveal.
 
 ---
 
@@ -97,16 +95,33 @@ Quantum entanglement escapes the Prisoner's Dilemma not because quantum physics 
 
 **Related posts:**
 - [`prisoners_dilemma_interactive.tsx`](prisoners_dilemma_interactive.tsx) — same audience, same character frame (Walter/Jesse), same payoff values (T=5, R=3, P=1, S=0). This post **directly extends** that one. Open with one paragraph recap + link; do not re-explain the PD from scratch.
-- [`tragedy_of_commons_fishing.tsx`](tragedy_of_commons_fishing.tsx) — same audience, Moana frame, Ostrom governance focus. The institution-as-sword theme in section 7 of this plan echoes that post's governance arc. Cross-reference explicitly.
+- [`tragedy_of_commons_fishing.tsx`](tragedy_of_commons_fishing.tsx) — same audience, Moana frame, Ostrom governance focus. The institution-as-sword theme in outline §4 echoes that post's governance arc. Cross-reference explicitly.
 
 **Conventions to reuse:**
 - `.tsx` format with named React components
 - `MarkdownWithLatex` for any math passages
 - `css()` from Panda CSS for component styling
-- `meta` export with `{title, publishing_date, category: "others", description, tokenID}`
+- Frontmatter with `title, publishing_date, category, description` (+ `tokenID` when minted). The draft uses `category: "quantum"` / `secondaryCategory: "others"` — consistent with `smart_quantum.md`; keep it. `description` is required and currently missing from the draft.
 - `<details>` blocks for technical derivations
 - Interactive widgets with plain-language labels (no Greek letters in the UI)
 
 **Tone calibration:** The existing PD post is warm, slightly playful, and firmly non-technical. This post should feel like the natural sequel — same voice, one intellectual step further. The quantum material should feel like a revelation, not a physics lecture.
 
 **Audience question (for the user):** The content sits at the intersection of economics and quantum physics. I recommend **non-STEM academics** as the primary audience — the core story (entanglement = enforcer = institution) is most powerful for readers who already think about governance and social contracts. The quantum machinery is entirely explainable in scoreboard language. A secondary "curious physicist" sidebar in a `<details>` block (with the actual Pauli algebra) serves readers who want the rigor without derailing the main narrative.
+
+---
+
+## Resolved decisions
+
+1. **Format** — `.mdx` with *some* interactive components (not a full `.tsx`). MDX can import React components inline, so the post stays prose-first but embeds selected widgets. **Which components, exactly, is itself an open design question** — to be settled during implementation, not now. Do not over-commit to widgets in the plan.
+
+2. **Quantum visualization** — a **circuit-style visualization is the intended unifying device**: the same circuit picture should represent *both* the classical scorecard/institution game *and* its quantum reading. That shared picture is what makes the reveal land ("you were looking at the quantum game the whole time"). Exact form (rendered figure, SVG, or a small component) to be **refined later** — flagged, not fixed.
+
+3. **Scorecard rule** — remains the crux; carries Q̂ ("flip my letter / flip both letters") in plain language before the quantum reveal. Write it out fully in the draft (currently a placeholder).
+
+4. **Outlook** — mention the common-pool-resource (CPR) problem as an interesting next direction, but be explicit that it is **substantially harder**: it maps onto *N interacting spins* rather than a clean two-player gate, so the elegant PD result does not carry over directly. A pointer, not a full treatment; the parity/odd-n detail stays in `quantum_cpr.ipynb` for a possible future post.
+
+## Still-open design questions (for implementation stage)
+
+- **Exactly which interactive components** the MDX embeds (candidates: clickable scorecard table, strategy explorer). Keep minimal; justify each pedagogically.
+- **Concrete form of the shared circuit visualization** and how it is drawn to read as both the institution game and the quantum game.

@@ -1,6 +1,5 @@
 import pino from "pino";
 import { getS3Object } from "@fretchen/s3-utils";
-import { parseBearerToken, verifySignedMessage } from "./auth_utils.js";
 import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -29,23 +28,6 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
-async function verifyLeafHistoryAuth(
-  queryAddress: string,
-  authHeader: string | undefined,
-): Promise<string | null> {
-  const payload = parseBearerToken(authHeader);
-  if (!payload) {
-    return "Unauthorized";
-  }
-  return verifySignedMessage(
-    payload.address,
-    payload.signature,
-    payload.message,
-    "leaf-history",
-    queryAddress,
-  );
-}
-
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Origin": "*",
@@ -69,14 +51,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       };
     }
 
-    // Scaleway normalizes headers to lowercase in production — check both casings
-    const authHeader = event.headers?.["Authorization"] ?? event.headers?.["authorization"];
-    const authError = await verifyLeafHistoryAuth(address, authHeader);
-    if (authError) {
-      logger.warn({ address, error: authError }, "Unauthorized leaf-history request");
-      return { statusCode: 401, headers, body: JSON.stringify({ error: authError }) };
-    }
-
+    // No authentication: leaf data is public by design. Settled batches are
+    // published on-chain as LLMv1.processBatch calldata, and merkle/trees.json
+    // is a public object. This endpoint is a public reader that filters by address.
     try {
       const bodyStr = await getS3Object(MERKLE_TREE_FILE);
       if (bodyStr === null) {
@@ -93,7 +70,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       }
       interface Tree {
         treeIndex?: number;
-        leafs?: TreeLeaf[];
+        leaves?: TreeLeaf[];
         processed?: boolean;
         root?: string;
       }
@@ -102,7 +79,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       const leafs: LeafItem[] = [];
       (treesData.trees ?? []).forEach((tree, idx) => {
         const treeIndex = tree.treeIndex ?? idx;
-        (tree.leafs ?? []).forEach((leaf) => {
+        (tree.leaves ?? []).forEach((leaf) => {
           if (leaf.user?.toLowerCase() === address.toLowerCase()) {
             leafs.push({
               id: leaf.id,

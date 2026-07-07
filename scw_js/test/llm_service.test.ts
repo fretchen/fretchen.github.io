@@ -34,7 +34,6 @@ import {
   callLLMAPI,
   appendLeafToTrees,
   startNewTree,
-  appendToS3Json,
   processMerkleTree,
   checkWalletBalance,
 } from "../llm_service.js";
@@ -151,11 +150,12 @@ const emptyTreesJson = JSON.stringify({
   ],
 });
 
-// Merkle tree data (appendLeafToTrees/startNewTree) is public by design: leaf
-// data is settled on-chain via LLMv1.processBatch calldata, so the usage
-// ledger is treated as public. appendToS3Json is a generic, unrelated helper
-// (no production caller) and stays private by default (no ACL).
-describe("S3 writes — merkle tree ACL", () => {
+// Merkle tree data is public by design: settled batches are published on-chain
+// as LLMv1.processBatch calldata, and the usage ledger is treated as public.
+// Only the merkle root is a commitment; the leaves are not secrets. The write
+// paths therefore set ACL "public-read" deterministically. See scw_js/README.md
+// "S3 Storage Layout & Data Classification".
+describe("S3 writes — merkle data is public-read (public by design)", () => {
   beforeEach(() => {
     setupTestEnvironment();
     // Reset only specific mocks — NOT vi.clearAllMocks(), which would wipe
@@ -198,16 +198,6 @@ describe("S3 writes — merkle tree ACL", () => {
     expect(mockPutS3Object).toHaveBeenCalledTimes(1);
     const [, , opts] = mockPutS3Object.mock.calls[0];
     expect(opts.acl).toBe("public-read");
-  });
-
-  test("appendToS3Json: putS3Object called without ACL (new file)", async () => {
-    mockGetS3Object.mockResolvedValueOnce(null);
-
-    await appendToS3Json(sampleLeaf, "merkle/some.json");
-
-    expect(mockPutS3Object).toHaveBeenCalledTimes(1);
-    const [, , opts] = mockPutS3Object.mock.calls[0];
-    expect(opts.acl).toBeUndefined();
   });
 });
 

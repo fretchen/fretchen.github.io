@@ -219,42 +219,6 @@ export async function startNewTree(fileName: string): Promise<number> {
   return newTreeIndex;
 }
 
-export async function appendToS3Json(dataToAppend: Leaf, fileName: string): Promise<number> {
-  let existingData: Leaf[] | null = null;
-
-  try {
-    const bodyContents = await getS3Object(fileName);
-    if (bodyContents === null) {
-      throw new Error(`File ${fileName} doesn't exist`);
-    }
-    existingData = restoreBigIntsInLeaves(JSON.parse(bodyContents) as Leaf[]);
-  } catch {
-    logger.info({ file: fileName }, "File doesn't exist, creating new file");
-  }
-
-  let updatedData: Leaf[];
-  let batchSize: number;
-
-  if (existingData === null) {
-    updatedData = [dataToAppend];
-    batchSize = 1;
-  } else if (Array.isArray(existingData)) {
-    const existingLength = existingData.length;
-    const dataToAppendWithId: Leaf = { ...dataToAppend, id: existingLength };
-    updatedData = [...existingData, dataToAppendWithId];
-    batchSize = existingLength + 1;
-  } else {
-    throw new Error("Unexpected data format");
-  }
-
-  logger.debug({ updatedData }, `Updated data for ${fileName}`);
-  await putS3Object(fileName, JSON.stringify(updatedData, bigintReplacer, 2), {
-    contentType: "application/json",
-  });
-  logger.info({ file: fileName }, "Successfully appended to file");
-  return batchSize;
-}
-
 export async function checkWalletBalance(
   address: `0x${string}`,
   requiredBalance: bigint,

@@ -1,6 +1,6 @@
 # @fretchen/s3-utils
 
-Minimal SigV4-signed S3 client for the fretchen.github.io Scaleway Object Storage bucket (`my-imagestore`, region `nl-ams`). Not a generic S3 client — bucket and region are fixed constants, matching every current call site in this monorepo.
+Minimal SigV4-signed S3 client for the fretchen.github.io Scaleway Object Storage bucket. Not a generic multi-provider S3 client — the endpoint is Scaleway-specific — but bucket and region are configurable via environment variables (see below), so other packages in this monorepo can point it at their own bucket instead of forking it.
 
 ## Why this exists instead of `@aws-sdk/client-s3` or `aws4fetch`
 
@@ -23,7 +23,7 @@ Rebuild this package (`npm run build`) before rebuilding a dependent package tha
 ## Usage
 
 ```ts
-import { getS3Object, putS3Object } from "@fretchen/s3-utils";
+import { getS3Object, putS3Object, getS3BaseUrl } from "@fretchen/s3-utils";
 
 const body = await getS3Object("growth-agent/content_queue.json"); // string | null (null on 404)
 
@@ -32,6 +32,29 @@ await putS3Object("images/pic.jpg", buffer, {
   acl: "public-read",
   cacheControl: "public, max-age=31536000, immutable",
 });
+
+getS3BaseUrl(); // "https://<bucket>.s3.<region>.scw.cloud/" — the canonical public base URL
 ```
 
-Credentials are read from `SCW_ACCESS_KEY` / `SCW_SECRET_KEY` environment variables.
+## Configuration
+
+| Variable         | Default         | Purpose                                |
+| ---------------- | --------------- | -------------------------------------- |
+| `SCW_ACCESS_KEY` | —               | Required. Scaleway access key.         |
+| `SCW_SECRET_KEY` | —               | Required. Scaleway secret key.         |
+| `SCW_S3_BUCKET`  | `my-imagestore` | Optional. Overrides the target bucket. |
+| `SCW_S3_REGION`  | `nl-ams`        | Optional. Overrides the target region. |
+
+`SCW_S3_BUCKET`/`SCW_S3_REGION` default to the values every current caller in this
+monorepo already uses, so no deployment changes anywhere are needed for this package
+to keep working exactly as before. A different consumer (e.g. `comment_service`, which
+today runs its own separate `@aws-sdk/client-s3` client against the same bucket) can
+adopt this package and point it at a different bucket/region purely via its own env
+config, without forking the client.
+
+## Reliability
+
+Requests retry up to 3 times (fixed, short exponential backoff) on a thrown network
+error or a `5xx` response, re-signing fresh on every attempt. `4xx` responses are not
+retried — they're deterministic (bad signature, missing key) and retrying would only
+mask a real problem. Each request has a 10s timeout.

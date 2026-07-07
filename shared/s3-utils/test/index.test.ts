@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { getS3Object, putS3Object } from "../src/index.js";
+import { getS3Object, putS3Object, getS3BaseUrl } from "../src/index.js";
 
 describe("getS3Object / putS3Object", () => {
   const mockFetch = vi.fn();
@@ -54,7 +54,9 @@ describe("getS3Object / putS3Object", () => {
   });
 
   test("putS3Object throws on non-ok response", async () => {
-    mockFetch.mockResolvedValueOnce(
+    // Sticky (not "once"): a 5xx retries internally, so every attempt sees the
+    // same response until retries are exhausted and the final one is returned.
+    mockFetch.mockResolvedValue(
       new Response("error", { status: 500, statusText: "Internal Error" })
     );
     await expect(
@@ -113,5 +115,81 @@ describe("getS3Object / putS3Object", () => {
     expect(signedHeadersMatch?.[1]).toBe(
       "cache-control;content-type;host;x-amz-acl;x-amz-content-sha256;x-amz-date"
     );
+  });
+
+  describe("retry behavior", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test("retries on a 5xx response and succeeds once a later attempt returns 2xx", async () => {
+      mockFetch
+        .mockResolvedValueOnce(new Response("error", { status: 503, statusText: "Unavailable" }))
+        .mockResolvedValueOnce(new Response("error", { status: 503, statusText: "Unavailable" }))
+        .mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }));
+
+      const promise = getS3Object("some/key.json");
+      await vi.runAllTimersAsync();
+      const result = await promise;
+
+      expect(result).toBe('{"ok":true}');
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    test("retries on a thrown network error and succeeds once a later attempt resolves", async () => {
+      mockFetch
+        .mockRejectedValueOnce(new Error("ECONNRESET"))
+        .mockResolvedValueOnce(new Response("body", { status: 200 }));
+
+      const promise = getS3Object("some/key.json");
+      await vi.runAllTimersAsync();
+      const result = await promise;
+
+      expect(result).toBe("body");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    test("exhausts retries and throws after 3 attempts", async () => {
+      mockFetch.mockRejectedValue(new Error("ECONNRESET"));
+
+      const promise = getS3Object("some/key.json");
+      // Attach a rejection handler immediately so the eventual rejection isn't
+      // reported as unhandled while timers are advanced below.
+      const assertion = expect(promise).rejects.toThrow(/ECONNRESET/);
+      await vi.runAllTimersAsync();
+      await assertion;
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    test("does not retry a 4xx response", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response("forbidden", { status: 403, statusText: "Forbidden" })
+      );
+
+      await expect(getS3Object("some/key.json")).rejects.toThrow(/403/);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe("getS3BaseUrl", () => {
+  afterEach(() => {
+    delete process.env.SCW_S3_BUCKET;
+    delete process.env.SCW_S3_REGION;
+  });
+
+  test("returns the default bucket/region URL when no env vars are set", () => {
+    expect(getS3BaseUrl()).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/");
+  });
+
+  test("reflects SCW_S3_BUCKET and SCW_S3_REGION overrides", () => {
+    process.env.SCW_S3_BUCKET = "other-bucket";
+    process.env.SCW_S3_REGION = "fr-par";
+    expect(getS3BaseUrl()).toBe("https://other-bucket.s3.fr-par.scw.cloud/");
   });
 });

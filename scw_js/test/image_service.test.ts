@@ -10,6 +10,7 @@ const mockPutS3Object = vi.fn();
 vi.mock("@fretchen/s3-utils", () => {
   return {
     putS3Object: mockPutS3Object,
+    getS3BaseUrl: () => "https://my-imagestore.s3.nl-ams.scw.cloud/",
   };
 });
 

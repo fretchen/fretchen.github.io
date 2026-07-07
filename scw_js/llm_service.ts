@@ -8,7 +8,6 @@ import pino from "pino";
 
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
-export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
 const MERKLE_TREE_FILE = "merkle/trees.json";
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -329,11 +328,19 @@ export async function processMerkleTree(
   targetTree.root = root;
   targetTree.processedAt = new Date().toISOString();
 
-  // public-read intentional — see appendLeafToTrees / README data classification.
-  await putS3Object(fileName, JSON.stringify(treesData, bigintReplacer, 2), {
-    contentType: "application/json",
-    acl: "public-read",
-  });
+  try {
+    // public-read intentional — see appendLeafToTrees / README data classification.
+    await putS3Object(fileName, JSON.stringify(treesData, bigintReplacer, 2), {
+      contentType: "application/json",
+      acl: "public-read",
+    });
+  } catch (err) {
+    logger.error(
+      { err, treeIndex: targetTreeIndex, root, txHash },
+      "processBatch succeeded on-chain but persisting the processed tree to S3 failed — manual reconciliation needed",
+    );
+    throw err;
+  }
   logger.info({ treeIndex: targetTreeIndex }, "Tree marked as processed");
 }
 

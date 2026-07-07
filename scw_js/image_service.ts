@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
   }
 }
 
-import { putS3Object } from "@fretchen/s3-utils";
+import { putS3Object, getS3BaseUrl } from "@fretchen/s3-utils";
 import { randomBytes } from "crypto";
 
 type Provider = "ionos" | "bfl";
@@ -33,7 +33,7 @@ const PROVIDER_CONFIGS: Record<Provider, ProviderConfig> = {
   },
 };
 
-export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
+export const JSON_BASE_PATH = getS3BaseUrl();
 
 function getRandomString(length = 6): string {
   return randomBytes(length).toString("hex");

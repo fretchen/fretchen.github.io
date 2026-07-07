@@ -8,6 +8,7 @@ on:
     paths:
       - "scw_js/**"
       - "shared/chain-utils/**"
+      - "shared/s3-utils/**"
       - ".github/workflows/test-scw-js.yml"
   push:
     branches:
@@ -15,6 +16,7 @@ on:
     paths:
       - "scw_js/**"
       - "shared/chain-utils/**"
+      - "shared/s3-utils/**"
 
 jobs:
   test-scw-js:
@@ -36,9 +38,14 @@ jobs:
           cache-dependency-path: |
             scw_js/package-lock.json
             shared/chain-utils/package-lock.json
+            shared/s3-utils/package-lock.json
 
       - name: Install and build chain-utils
         working-directory: ./shared/chain-utils
+        run: npm ci && npm run build
+
+      - name: Install and build s3-utils
+        working-directory: ./shared/s3-utils
         run: npm ci && npm run build
 
       - name: Install dependencies

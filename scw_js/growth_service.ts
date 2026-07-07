@@ -1,10 +1,9 @@
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getS3Object, putS3Object } from "@fretchen/s3-utils";
 import pino from "pino";
 import { verifySignedMessage } from "./auth_utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
-const BUCKET = "my-imagestore";
 const STATE_PREFIX = "growth-agent/";
 // ===== TypeScript interfaces mirroring Python Pydantic models =====
 
@@ -84,56 +83,18 @@ export interface Performance {
 
 // ===== S3 helpers =====
 
-export function createS3Client(): S3Client {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-  if (!accessKey || !secretKey) {
-    throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
-  }
-  return new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-  });
-}
-
-async function streamToString(stream: unknown): Promise<string> {
-  if (typeof stream === "string") {
-    return stream;
-  }
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream as AsyncIterable<Buffer | string>) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks).toString("utf-8");
-}
-
 export async function readJsonFromS3<T>(key: string): Promise<T | null> {
-  const s3 = createS3Client();
-  try {
-    const result = await s3.send(
-      new GetObjectCommand({ Bucket: BUCKET, Key: `${STATE_PREFIX}${key}` }),
-    );
-    const body = await streamToString(result.Body);
-    return JSON.parse(body) as T;
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === "NoSuchKey") {
-      return null;
-    }
-    throw err;
+  const body = await getS3Object(`${STATE_PREFIX}${key}`);
+  if (body === null) {
+    return null;
   }
+  return JSON.parse(body) as T;
 }
 
 export async function writeJsonToS3(key: string, data: unknown): Promise<void> {
-  const s3 = createS3Client();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: `${STATE_PREFIX}${key}`,
-      Body: JSON.stringify(data, null, 2),
-      ContentType: "application/json",
-    }),
-  );
+  await putS3Object(`${STATE_PREFIX}${key}`, JSON.stringify(data, null, 2), {
+    contentType: "application/json",
+  });
 }
 
 // ===== State accessors =====

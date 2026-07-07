@@ -2,17 +2,11 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ===== Mocks =====
 
-const mockS3Send = vi.fn();
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: class MockS3Client {
-    send = mockS3Send;
-  },
-  GetObjectCommand: class MockGetObjectCommand {
-    constructor(public params: unknown) {}
-  },
-  PutObjectCommand: class MockPutObjectCommand {
-    constructor(public params: unknown) {}
-  },
+const mockGetS3Object = vi.fn();
+const mockPutS3Object = vi.fn();
+vi.mock("@fretchen/s3-utils", () => ({
+  getS3Object: mockGetS3Object,
+  putS3Object: mockPutS3Object,
 }));
 
 const mockVerifyMessage = vi.fn();
@@ -121,19 +115,15 @@ function makeEvent(
 }
 
 function mockS3Read(data: unknown) {
-  mockS3Send.mockResolvedValueOnce({
-    Body: JSON.stringify(data),
-  });
+  mockGetS3Object.mockResolvedValueOnce(JSON.stringify(data));
 }
 
 function mockS3ReadNotFound() {
-  const err = new Error("NoSuchKey");
-  err.name = "NoSuchKey";
-  mockS3Send.mockRejectedValueOnce(err);
+  mockGetS3Object.mockResolvedValueOnce(null);
 }
 
 function mockS3Write() {
-  mockS3Send.mockResolvedValueOnce({});
+  mockPutS3Object.mockResolvedValueOnce(undefined);
 }
 
 // ===== Tests =====
@@ -143,7 +133,8 @@ describe("growth_api", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    mockS3Send.mockReset();
+    mockGetS3Object.mockReset();
+    mockPutS3Object.mockReset();
     mockVerifyMessage.mockReset();
     mockVerifyMessage.mockResolvedValue(true);
 
@@ -287,6 +278,13 @@ describe("growth_api", () => {
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
       expect(body.drafts).toHaveLength(0);
+    });
+
+    test("returns 500 when S3 read throws", async () => {
+      mockGetS3Object.mockRejectedValueOnce(new Error("S3 unavailable"));
+      const event = makeEvent("GET", "drafts");
+      const res = (await handle(event, {})) as { statusCode: number };
+      expect(res.statusCode).toBe(500);
     });
   });
 

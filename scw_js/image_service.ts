@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
   }
 }
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { putS3Object, getS3BaseUrl } from "@fretchen/s3-utils";
 import { randomBytes } from "crypto";
 
 type Provider = "ionos" | "bfl";
@@ -33,8 +33,7 @@ const PROVIDER_CONFIGS: Record<Provider, ProviderConfig> = {
   },
 };
 
-export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
-const BUCKET_NAME = "my-imagestore";
+export const JSON_BASE_PATH = getS3BaseUrl();
 
 function getRandomString(length = 6): string {
   return randomBytes(length).toString("hex");
@@ -50,12 +49,6 @@ export async function uploadToS3(
   fileName: string,
   contentType = "application/json",
 ): Promise<string> {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-  if (!accessKey || !secretKey) {
-    throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
-  }
-
   let dataToUpload: Buffer | string;
   if (Buffer.isBuffer(data)) {
     dataToUpload = data;
@@ -65,25 +58,8 @@ export async function uploadToS3(
     dataToUpload = data;
   }
 
-  const s3Client = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: {
-      accessKeyId: accessKey,
-      secretAccessKey: secretKey,
-    },
-  });
-
-  const params = {
-    Bucket: BUCKET_NAME,
-    Key: fileName,
-    Body: dataToUpload,
-    ContentType: contentType,
-    ACL: "public-read" as const,
-  };
-
   try {
-    await s3Client.send(new PutObjectCommand(params));
+    await putS3Object(fileName, dataToUpload, { contentType, acl: "public-read" });
     console.log(`Successfully uploaded ${fileName}`);
     return `${JSON_BASE_PATH}${fileName}`;
   } catch (error) {

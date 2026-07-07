@@ -2,17 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ===== Mocks (vi.hoisted ensures these are available when vi.mock factories run) =====
 
-const { mockS3Send } = vi.hoisted(() => ({
-  mockS3Send: vi.fn(),
+const { mockGetS3Object } = vi.hoisted(() => ({
+  mockGetS3Object: vi.fn(),
 }));
 
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: class MockS3Client {
-    send = mockS3Send;
-  },
-  GetObjectCommand: class MockGetObjectCommand {
-    constructor(public params: unknown) {}
-  },
+vi.mock("@fretchen/s3-utils", () => ({
+  getS3Object: mockGetS3Object,
 }));
 
 // ===== Import after mocks =====
@@ -84,9 +79,7 @@ describe("handle", () => {
   });
 
   it("returns 200 with leaves filtered to the requested address (no auth required)", async () => {
-    mockS3Send.mockResolvedValue({
-      Body: JSON.stringify({ trees: [sampleTree] }),
-    });
+    mockGetS3Object.mockResolvedValue(JSON.stringify({ trees: [sampleTree] }));
 
     const res = await handle(makeEvent(), {});
     expect(res.statusCode).toBe(200);
@@ -99,7 +92,7 @@ describe("handle", () => {
   });
 
   it("returns 500 when S3 read fails", async () => {
-    mockS3Send.mockRejectedValue(new Error("S3 error"));
+    mockGetS3Object.mockRejectedValue(new Error("S3 error"));
 
     const res = await handle(makeEvent(), {});
     expect(res.statusCode).toBe(500);

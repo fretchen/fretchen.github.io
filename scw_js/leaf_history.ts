@@ -1,5 +1,5 @@
 import pino from "pino";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getS3Object } from "@fretchen/s3-utils";
 import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -26,17 +26,6 @@ interface ScwResponse {
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
-}
-
-async function streamToString(stream: AsyncIterable<Uint8Array> | string): Promise<string> {
-  if (typeof stream === "string") {
-    return stream;
-  }
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks).toString("utf-8");
 }
 
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
@@ -66,24 +55,10 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // published on-chain as LLMv1.processBatch calldata, and merkle/trees.json
     // is a public object. This endpoint is a public reader that filters by address.
     try {
-      const accessKey = process.env.SCW_ACCESS_KEY;
-      const secretKey = process.env.SCW_SECRET_KEY;
-      if (!accessKey || !secretKey) {
-        throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
-      }
-      const s3Client = new S3Client({
-        region: "nl-ams",
-        endpoint: "https://s3.nl-ams.scw.cloud",
-        credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-      });
-
-      const getResult = await s3Client.send(
-        new GetObjectCommand({ Bucket: "my-imagestore", Key: MERKLE_TREE_FILE }),
-      );
-      if (!getResult.Body) {
+      const bodyStr = await getS3Object(MERKLE_TREE_FILE);
+      if (bodyStr === null) {
         throw new Error("S3 returned empty body");
       }
-      const bodyStr = await streamToString(getResult.Body as AsyncIterable<Uint8Array>);
 
       interface TreeLeaf {
         user?: string;

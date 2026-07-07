@@ -23,6 +23,7 @@ plugins:
 package:
   patterns:
     - "dist/**"
+    - "!dist/**/*.map"
     - "!node_modules/**"
     - "!test/**"
     - "!coverage/**"

@@ -4,21 +4,13 @@
 
 import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 
-// Mock für AWS SDK
-const mockS3Send = vi.fn();
+// Mock für @fretchen/s3-utils
+const mockPutS3Object = vi.fn();
 
-vi.mock("@aws-sdk/client-s3", () => {
+vi.mock("@fretchen/s3-utils", () => {
   return {
-    S3Client: class {
-      constructor() {
-        this.send = mockS3Send;
-      }
-    },
-    PutObjectCommand: class {
-      constructor(params) {
-        this.params = params;
-      }
-    },
+    putS3Object: mockPutS3Object,
+    getS3BaseUrl: () => "https://my-imagestore.s3.nl-ams.scw.cloud/",
   };
 });
 
@@ -45,7 +37,7 @@ describe("image_service.js Tests", () => {
     vi.clearAllMocks();
 
     // Standard-Mock-Rückgabewerte
-    mockS3Send.mockResolvedValue({});
+    mockPutS3Object.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -62,14 +54,13 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(testData, fileName);
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/test.json");
-      expect(mockS3Send).toHaveBeenCalled();
-      const putCommand = mockS3Send.mock.calls[0][0];
-      expect(putCommand.params).toMatchObject({
-        Bucket: "my-imagestore",
-        Key: fileName,
-        Body: JSON.stringify(testData),
-        ContentType: "application/json",
-        ACL: "public-read",
+      expect(mockPutS3Object).toHaveBeenCalled();
+      const [key, body, opts] = mockPutS3Object.mock.calls[0];
+      expect(key).toBe(fileName);
+      expect(body).toBe(JSON.stringify(testData));
+      expect(opts).toMatchObject({
+        contentType: "application/json",
+        acl: "public-read",
       });
     });
 
@@ -80,14 +71,13 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(testBuffer, fileName, "image/png");
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/test.png");
-      expect(mockS3Send).toHaveBeenCalled();
-      const putCommand = mockS3Send.mock.calls[0][0];
-      expect(putCommand.params).toMatchObject({
-        Bucket: "my-imagestore",
-        Key: fileName,
-        Body: testBuffer,
-        ContentType: "image/png",
-        ACL: "public-read",
+      expect(mockPutS3Object).toHaveBeenCalled();
+      const [key, body, opts] = mockPutS3Object.mock.calls[0];
+      expect(key).toBe(fileName);
+      expect(body).toBe(testBuffer);
+      expect(opts).toMatchObject({
+        contentType: "image/png",
+        acl: "public-read",
       });
     });
 
@@ -98,19 +88,18 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(testString, fileName, "text/plain");
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/test.txt");
-      expect(mockS3Send).toHaveBeenCalled();
-      const putCommand = mockS3Send.mock.calls[0][0];
-      expect(putCommand.params).toMatchObject({
-        Bucket: "my-imagestore",
-        Key: fileName,
-        Body: testString,
-        ContentType: "text/plain",
-        ACL: "public-read",
+      expect(mockPutS3Object).toHaveBeenCalled();
+      const [key, body, opts] = mockPutS3Object.mock.calls[0];
+      expect(key).toBe(fileName);
+      expect(body).toBe(testString);
+      expect(opts).toMatchObject({
+        contentType: "text/plain",
+        acl: "public-read",
       });
     });
 
     test("sollte Fehler bei S3-Upload-Problemen werfen", async () => {
-      mockS3Send.mockRejectedValue(new Error("S3 Upload failed"));
+      mockPutS3Object.mockRejectedValue(new Error("S3 Upload failed"));
 
       const testData = { test: "data" };
       const fileName = "test.json";
@@ -128,7 +117,7 @@ describe("image_service.js Tests", () => {
       delete process.env.SCW_SECRET_KEY;
 
       // Mock S3 um Authentifizierungsfehler zu simulieren
-      mockS3Send.mockRejectedValue(new Error("Missing AWS credentials"));
+      mockPutS3Object.mockRejectedValue(new Error("Missing AWS credentials"));
 
       const testData = { test: "data" };
       const fileName = "test.json";
@@ -162,7 +151,7 @@ describe("image_service.js Tests", () => {
 
     beforeEach(() => {
       global.fetch.mockResolvedValue(mockImageResponse);
-      mockS3Send.mockResolvedValue({});
+      mockPutS3Object.mockResolvedValue(undefined);
     });
 
     test("sollte erfolgreich Bild generieren und hochladen", async () => {
@@ -189,7 +178,7 @@ describe("image_service.js Tests", () => {
       );
 
       // Verify S3 uploads (image + metadata)
-      expect(mockS3Send).toHaveBeenCalledTimes(2);
+      expect(mockPutS3Object).toHaveBeenCalledTimes(2);
 
       // Check result
       expect(result).toMatch(
@@ -236,13 +225,13 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Überprüfe, dass die Metadaten-Upload mit korrektem Format aufgerufen wurde
-      const metadataCall = mockS3Send.mock.calls.find((call) =>
-        call[0].params.Key.startsWith("metadata/"),
+      const metadataCall = mockPutS3Object.mock.calls.find((call) =>
+        call[0].startsWith("metadata/"),
       );
 
       expect(metadataCall).toBeDefined();
 
-      const metadata = JSON.parse(metadataCall[0].params.Body);
+      const metadata = JSON.parse(metadataCall[1]);
       expect(metadata).toEqual({
         name: `AI Generated Art #${tokenId}`,
         description: `AI generated artwork based on the prompt: "${prompt}"`,
@@ -279,19 +268,17 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Überprüfe, dass verschiedene Dateinamen verwendet wurden
-      const imageCalls = mockS3Send.mock.calls.filter((call) =>
-        call[0].params.Key.startsWith("images/"),
-      );
-      const metadataCalls = mockS3Send.mock.calls.filter((call) =>
-        call[0].params.Key.startsWith("metadata/"),
+      const imageCalls = mockPutS3Object.mock.calls.filter((call) => call[0].startsWith("images/"));
+      const metadataCalls = mockPutS3Object.mock.calls.filter((call) =>
+        call[0].startsWith("metadata/"),
       );
 
       expect(imageCalls).toHaveLength(2);
       expect(metadataCalls).toHaveLength(2);
 
       // Dateinamen sollten unterschiedlich sein (wegen zufälligem String)
-      expect(imageCalls[0][0].params.Key).not.toBe(imageCalls[1][0].params.Key);
-      expect(metadataCalls[0][0].params.Key).not.toBe(metadataCalls[1][0].params.Key);
+      expect(imageCalls[0][0]).not.toBe(imageCalls[1][0]);
+      expect(metadataCalls[0][0]).not.toBe(metadataCalls[1][0]);
     });
 
     test("sollte Base64-zu-Buffer-Konvertierung korrekt handhaben", async () => {
@@ -301,13 +288,12 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage(prompt, tokenId, "ionos");
 
       // Finde den Bild-Upload-Aufruf
-      const imageCall = mockS3Send.mock.calls.find(
-        (call) =>
-          call[0].params.Key.startsWith("images/") && call[0].params.ContentType === "image/jpeg",
+      const imageCall = mockPutS3Object.mock.calls.find(
+        (call) => call[0].startsWith("images/") && call[2].contentType === "image/jpeg",
       );
 
       expect(imageCall).toBeDefined();
-      expect(Buffer.isBuffer(imageCall[0].params.Body)).toBe(true);
+      expect(Buffer.isBuffer(imageCall[1])).toBe(true);
     });
 
     test("sollte mit default tokenId umgehen", async () => {
@@ -318,10 +304,10 @@ describe("image_service.js Tests", () => {
       expect(result).toMatch(/metadata_unknown_[a-f0-9]{12}\.json$/);
 
       // Überprüfe Metadaten
-      const metadataCall = mockS3Send.mock.calls.find((call) =>
-        call[0].params.Key.startsWith("metadata/"),
+      const metadataCall = mockPutS3Object.mock.calls.find((call) =>
+        call[0].startsWith("metadata/"),
       );
-      const metadata = JSON.parse(metadataCall[0].params.Body);
+      const metadata = JSON.parse(metadataCall[1]);
       expect(metadata.name).toBe("AI Generated Art #unknown");
     });
 
@@ -427,12 +413,12 @@ describe("image_service.js Tests", () => {
       await generateAndUploadImage("test prompt", "123", "ionos", "1024x1024");
 
       // Überprüfe den Metadaten-Upload Call
-      const metadataCall = mockS3Send.mock.calls.find((call) =>
-        call[0].params.Key.startsWith("metadata/"),
+      const metadataCall = mockPutS3Object.mock.calls.find((call) =>
+        call[0].startsWith("metadata/"),
       );
 
       expect(metadataCall).toBeDefined();
-      const metadataJson = JSON.parse(metadataCall[0].params.Body);
+      const metadataJson = JSON.parse(metadataCall[1]);
 
       // Überprüfe dass size Attribut vorhanden ist
       const sizeAttribute = metadataJson.attributes.find(
@@ -444,7 +430,7 @@ describe("image_service.js Tests", () => {
 
       // Test mit 1792x1024 size
       vi.clearAllMocks();
-      mockS3Send.mockResolvedValue({});
+      mockPutS3Object.mockResolvedValue(undefined);
       global.fetch.mockResolvedValue({
         ok: true,
         json: () =>
@@ -460,11 +446,11 @@ describe("image_service.js Tests", () => {
 
       await generateAndUploadImage("test prompt", "456", "ionos", "1792x1024");
 
-      const metadataCall2 = mockS3Send.mock.calls.find((call) =>
-        call[0].params.Key.startsWith("metadata/"),
+      const metadataCall2 = mockPutS3Object.mock.calls.find((call) =>
+        call[0].startsWith("metadata/"),
       );
 
-      const metadataJson2 = JSON.parse(metadataCall2[0].params.Body);
+      const metadataJson2 = JSON.parse(metadataCall2[1]);
       const sizeAttribute2 = metadataJson2.attributes.find(
         (attr) => attr.trait_type === "Image Size",
       );
@@ -486,8 +472,8 @@ describe("image_service.js Tests", () => {
       for (const testCase of testCases) {
         await uploadToS3(testCase.data, "test-file", testCase.contentType);
 
-        const lastCall = mockS3Send.mock.calls[mockS3Send.mock.calls.length - 1];
-        expect(lastCall[0].params.ContentType).toBe(testCase.contentType);
+        const lastCall = mockPutS3Object.mock.calls[mockPutS3Object.mock.calls.length - 1];
+        expect(lastCall[2].contentType).toBe(testCase.contentType);
       }
     });
 
@@ -498,7 +484,7 @@ describe("image_service.js Tests", () => {
       const result = await uploadToS3(largeBuffer, "large-file.bin", "application/octet-stream");
 
       expect(result).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/large-file.bin");
-      expect(mockS3Send).toHaveBeenCalled();
+      expect(mockPutS3Object).toHaveBeenCalled();
     });
   });
 });

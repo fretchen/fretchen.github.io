@@ -11,11 +11,11 @@ Gemessene Ausgangslage (2026-07-06):
 
 Drei Phasen = drei PRs, sequenziell, jeweils mit Cold-Start-Messpunkt nach dem Deploy:
 
-| Phase | PR-Branch | Inhalt | Charakter |
-| --- | --- | --- | --- |
-| 1 | `perf/build-diet` | Sourcemap-Ausschluss + Minify | 2 Zeilen Config |
-| 2 | `perf/s3-aws4fetch` | AWS SDK → aws4fetch, alle 4 Services | Reiner Refactor, verhaltensgleich |
-| 3 | `perf/cache-headers` | Cache-Header + Backfill-Skript | Erste Verhaltensänderung |
+| Phase | PR-Branch            | Inhalt                               | Charakter                         |
+| ----- | -------------------- | ------------------------------------ | --------------------------------- |
+| 1     | `perf/build-diet`    | Sourcemap-Ausschluss + Minify        | 2 Zeilen Config                   |
+| 2     | `perf/s3-aws4fetch`  | AWS SDK → aws4fetch, alle 4 Services | Reiner Refactor, verhaltensgleich |
+| 3     | `perf/cache-headers` | Cache-Header + Backfill-Skript       | Erste Verhaltensänderung          |
 
 Cold-Start-Messung (nach Scale-to-zero, ~15 min Idle):
 
@@ -74,14 +74,18 @@ Node lädt `.map`-Dateien zur Laufzeit nur mit `--enable-source-maps` — Scalew
 
 - [ ] **`growth_service.ts`** (Z. 87–137): `readJsonFromS3`/`writeJsonToS3` intern auf die Helfer; Präfix `growth-agent/` bleibt dort; Signaturen unverändert → `growth_api.ts` und Business-Logik unberührt. `NoSuchKey`-Handling wird 404→null. Kein ACL, kein Cache-Header (mutabler privater State). Lokales `streamToString` (Z. 100–109) löschen.
 - [ ] **`image_service.ts`** (Z. 48–93): `uploadToS3` intern auf `putS3Object` mit `acl: "public-read"` — **noch ohne** `cacheControl`. Rückgabe `JSON_BASE_PATH + fileName` bleibt.
-- [ ] **`llm_service.ts`**: 4 Client-Konstruktionen (Z. 155/216/253/341), alle GETs/PUTs auf die Helfer; `streamToString` (Z. 301) löschen. **Kein ACL, kein Cache-Header** — Merkle-Daten müssen privat bleiben.
+- [ ] **`llm_service.ts`**: 3 Merkle-Write-Pfade (`appendLeafToTrees`, `startNewTree`, `processMerkleTree`) + GETs auf die Helfer; `streamToString` löschen. Die Merkle-Writes reichen **`acl: "public-read"`** durch (Merkle ist public by design — on-chain Calldata + `leafhistory`-Endpoint; nur der Root ist Commitment). **Kein Cache-Header** (Datei ist mutabel, wird bei jedem Append neu geschrieben). Hinweis: `appendToS3Json` wurde bereits als Dead Code entfernt.
 - [ ] **`leaf_history.ts`** (Z. 97–109): GET auf `getS3Object`; lokales `streamToString` (Z. 32) löschen.
 
 ### 2.3 Tests: Mock-Tausch (einheitliches Muster)
 
 ```ts
 const mockS3Fetch = vi.fn();
-vi.mock("aws4fetch", () => ({ AwsClient: class { fetch = mockS3Fetch; } }));
+vi.mock("aws4fetch", () => ({
+  AwsClient: class {
+    fetch = mockS3Fetch;
+  },
+}));
 // Read:  mockResolvedValueOnce(new Response(JSON.stringify(data), { status: 200 }))
 // 404:   new Response("NoSuchKey", { status: 404 })
 // Write: new Response("", { status: 200 })
@@ -89,7 +93,7 @@ vi.mock("aws4fetch", () => ({ AwsClient: class { fetch = mockS3Fetch; } }));
 
 - [ ] `test/growth_api.test.ts`: Mock-Schicht (Z. 5–16), Helfer (Z. 124–137), Reset (Z. 146) tauschen; alle Assertions gegen `handle()`-HTTP-Antworten bleiben gültig. Neu: „S3 liefert 500 → Handler antwortet 500"
 - [ ] `test/image_service.test.ts` (ab Z. 57): Assertions auf `mockS3Fetch.mock.calls` (`[url, init]`): Key in URL, `x-amz-acl: public-read`, korrekter Content-Type
-- [ ] `test/llm_service.test.ts` (Z. 167): Guard „merkle data must not be public-read" portieren → PUT-Calls der Merkle-Writes enthalten **keinen** `x-amz-acl`-Header (Invariante bleibt erhalten, wird nicht gelöscht)
+- [ ] `test/llm_service.test.ts`: Der Merkle-Block prüft jetzt `params.ACL === "public-read"` (public by design). Bei der aws4fetch-Portierung entsprechend auf `x-amz-acl: public-read` im PUT-Header umstellen.
 - [ ] `test/leaf_history.test.ts`: GET-Mock analog
 - [ ] Neu: Unit-Tests für `s3_utils.ts` (404→null, Fehler-Throw, Header-Mapping)
 
@@ -118,7 +122,7 @@ vi.mock("aws4fetch", () => ({ AwsClient: class { fetch = mockS3Fetch; } }));
 **Datei:** `scw_js/image_service.ts`
 
 - [ ] `uploadToS3`: `cacheControl: "public, max-age=31536000, immutable"` an `putS3Object` übergeben. Betrifft beide Call-Sites (JPEG ~Z. 264, Metadaten-JSON ~Z. 279) — beide korrekt, da Dateinamen Zufalls-Suffix tragen und nie überschrieben werden
-- [ ] **Nicht** anfassen: `growth_service`-Writes und `llm_service`-Merkle-Writes (mutabel bzw. privat)
+- [ ] **Nicht** anfassen: `growth_service`-Writes (privat) und `llm_service`-Merkle-Writes (public-read, aber mutabel → kein `immutable`-Cache-Header)
 - [ ] `test/image_service.test.ts`: Header-Assertion `Cache-Control: public, max-age=31536000, immutable` ergänzen
 
 ### 3.2 Backfill-Skript für Bestandsobjekte
@@ -140,7 +144,7 @@ new CopyObjectCommand({
   ContentType: head.ContentType, // REPLACE resettet ihn sonst
   CacheControl: "public, max-age=31536000, immutable",
   ACL: "public-read", // KRITISCH: Copy resettet die ACL auf privat
-})
+});
 ```
 
 - [ ] Log pro Key + Summary; ~5 Requests parallel; Fail-fast mit Ausgabe des fehlgeschlagenen Keys

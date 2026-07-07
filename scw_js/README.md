@@ -118,6 +118,20 @@ API for reviewing, editing, and approving AI-generated social media drafts. Used
 | ---------- | -------- | -------------------------------------------- |
 | GenImNFTv4 | Optimism | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` |
 
+## 🗄️ S3 Storage Layout & Data Classification
+
+All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.
+
+| Prefix / object                            | Access        | Why                                                                                                                                                                                                                     |
+| ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `images/`, `metadata/`, root `image*.json` | `public-read` | NFT assets referenced on-chain via `tokenURI` — must be publicly fetchable.                                                                                                                                             |
+| `merkle/trees.json`                        | `public-read` | LLM settlement data. The leaves are **already public** — posted on-chain as `LLMv1.processBatch` calldata and served by the `leafhistory` endpoint. Only the merkle _root_ is a commitment; the leaves are not secrets. |
+| `growth-agent/`, `growth-agent-dev/`       | private       | Internal growth-agent state; owner-only, read/written via the authenticated `growthapi` function.                                                                                                                       |
+| `comments/`                                | private       | Comment-service state.                                                                                                                                                                                                  |
+| `terraform/`                               | private       | Infrastructure-as-code state.                                                                                                                                                                                           |
+
+> Note: anonymous bucket **listing** is currently enabled, which exposes object _key names_ (not contents) of the private prefixes. This is an accepted low-severity item — see [SECURITY.md](./SECURITY.md).
+
 ## Local Testing
 
 ```bash

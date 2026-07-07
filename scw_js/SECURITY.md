@@ -18,40 +18,36 @@ Serverless functions in `scw_js/`. See [../.github/THREAT_MODEL.md](../.github/T
 
 Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. The table below lists them without attack-vector detail.
 
-| Function                 | Area                                                           | Severity | Status                   |
-| ------------------------ | -------------------------------------------------------------- | -------- | ------------------------ |
-| `sc_llm` / `llm_service` | Pre-charge balance gate weaker than the settlement requirement | Medium   | Open — tracked privately |
-| `genimg_x402_token`      | Resource delivered before payment settlement is confirmed      | Medium   | Open — tracked privately |
-| S3 bucket `my-imagestore` | Anonymous bucket listing enabled (information disclosure)     | Low      | Open — see below         |
+| Function                  | Area                                                           | Severity | Status                          |
+| ------------------------- | -------------------------------------------------------------- | -------- | ------------------------------- |
+| `sc_llm` / `llm_service`  | Pre-charge balance gate weaker than the settlement requirement | Medium   | Open — tracked privately        |
+| `genimg_x402_token`       | Resource delivered before payment settlement is confirmed      | Medium   | Open — tracked privately        |
+| S3 bucket `my-imagestore` | Anonymous bucket listing enabled (key-name disclosure)         | Low      | Accepted / deferred — see below |
 
 ---
 
-## Infrastructure Finding: Anonymous S3 Bucket Listing (2026-07-06)
+## Infrastructure Finding: Anonymous S3 Bucket Listing (2026-07-06, updated 2026-07-07)
 
-**Finding:** The bucket `my-imagestore` (Scaleway Object Storage, `nl-ams`) allows anonymous `ListBucket`: `GET https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2` returns 200 and enumerates all object keys, including the private `growth-agent/` state prefix. Object *contents* are correctly protected (verified: `growth-agent/content_queue.json` returns 403 anonymously). Impact is limited to key-name disclosure — no secret content is exposed. No GHSA: this is an infrastructure configuration issue, not a vulnerability in shipped code.
+**Finding:** The bucket `my-imagestore` (Scaleway Object Storage, `nl-ams`) allows anonymous `ListBucket`: `GET https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2` returns 200 and enumerates all object keys, including the private `growth-agent/`, `comments/`, and `terraform/` prefixes. Object _contents_ are correctly protected (verified: `growth-agent/content_queue.json` and `terraform/*.tfstate` return 403 anonymously). Impact is limited to **key-name disclosure** — no secret content is exposed. No GHSA: this is an infrastructure configuration issue, not a vulnerability in shipped code.
 
-**Write paths are already clean** — no code change is needed to keep future objects correct:
+**Not a finding — `merkle/trees.json` is public by design.** An earlier draft of this note flagged the merkle tree as a content leak. That was incorrect. Its leaves (`{user, tokenCount, cost, timestamp, …}`) are already public: they are posted on-chain as `LLMv1.processBatch` calldata and served by the `leafhistory` endpoint. Only the merkle _root_ is a commitment. The write paths in `llm_service.ts` now set `ACL: public-read` deterministically, matching the [README data classification](./README.md). No user data is exposed that isn't already public.
 
-- Public assets (`images/`, `metadata/`) set `ACL: public-read` explicitly per object at upload (`image_service.ts`, `uploadToS3`). Public readability does not depend on the bucket ACL.
-- Growth-agent state and merkle-tree writes set no ACL and default to private (`growth_service.ts`, `llm_service.ts`, `growth-agent/agent/storage.py`).
+**Write paths are correct** — each object's ACL matches its classification:
 
-**Remediation** (single infra action, no code deploy; nothing in the repo relies on anonymous listing — the website only fetches direct object URLs, growth-agent lists with credentials):
+- Public assets (`images/`, `metadata/`) and `merkle/trees.json` set `ACL: public-read` explicitly per object (`image_service.ts` `uploadToS3`; `llm_service.ts` merkle writes).
+- Growth-agent state and comment-service writes set no ACL and default to private (`growth_service.ts`, `growth-agent/agent/storage.py`).
+
+**Status: accepted low-severity risk.** The only residual exposure is enumeration of private _key names_ (e.g. growth-agent operational cadence from log filenames). Deferred, not fixed. If closed later, the single infra action is:
 
 ```bash
 aws s3api put-bucket-acl --bucket my-imagestore --acl private \
   --endpoint-url https://s3.nl-ams.scw.cloud
-```
-
-**Verification after the flip:**
-
-```bash
-# Listing must now be denied
+# verify: listing denied, public objects still readable (per-object ACL is independent of bucket ACL)
 curl -s -o /dev/null -w "%{http_code}" "https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2"   # expect 403
-# Public objects must remain readable (per-object ACL is independent of the bucket ACL)
 curl -s -o /dev/null -w "%{http_code}" "https://my-imagestore.s3.nl-ams.scw.cloud/metadata/metadata_0_01b0e48e5d91.json"  # expect 200
 ```
 
-Then confirm in the browser that the NFT gallery renders and the Growth UI (authenticated) still works. Rollback, if ever needed: `put-bucket-acl --acl public-read`.
+Nothing in the repo relies on anonymous listing (the website fetches direct object URLs; growth-agent lists with credentials), so the flip is safe whenever desired.
 
 ---
 

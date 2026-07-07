@@ -205,6 +205,11 @@ export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): P
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
+      // public-read intentional: the leaves are already public — on-chain via
+      // LLMv1.processBatch calldata and via the leafhistory endpoint. Only the
+      // merkle root is a commitment; the leaves are not secrets. See README
+      // "S3 Storage Layout & Data Classification".
+      ACL: "public-read",
     }),
   );
   logger.info({ treeIndex: treesData.currentTreeIndex }, "Successfully appended leaf to tree");
@@ -242,60 +247,12 @@ export async function startNewTree(fileName: string): Promise<number> {
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
+      // public-read intentional — see appendLeafToTrees / README data classification.
+      ACL: "public-read",
     }),
   );
   logger.info({ newTreeIndex }, "Started new tree");
   return newTreeIndex;
-}
-
-export async function appendToS3Json(dataToAppend: Leaf, fileName: string): Promise<number> {
-  const { accessKey, secretKey } = getS3Credentials();
-  const s3Client = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-  });
-
-  let existingData: Leaf[] | null = null;
-
-  try {
-    const getResult = await s3Client.send(
-      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
-    );
-    const bodyContents = await streamToString(
-      getResult.Body as unknown as AsyncIterable<Uint8Array>,
-    );
-    existingData = restoreBigIntsInLeaves(JSON.parse(bodyContents) as Leaf[]);
-  } catch {
-    logger.info({ file: fileName }, "File doesn't exist, creating new file");
-  }
-
-  let updatedData: Leaf[];
-  let batchSize: number;
-
-  if (existingData === null) {
-    updatedData = [dataToAppend];
-    batchSize = 1;
-  } else if (Array.isArray(existingData)) {
-    const existingLength = existingData.length;
-    const dataToAppendWithId: Leaf = { ...dataToAppend, id: existingLength };
-    updatedData = [...existingData, dataToAppendWithId];
-    batchSize = existingLength + 1;
-  } else {
-    throw new Error("Unexpected data format");
-  }
-
-  logger.debug({ updatedData }, `Updated data for ${fileName}`);
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: JSON.stringify(updatedData, bigintReplacer, 2),
-      ContentType: "application/json",
-    }),
-  );
-  logger.info({ file: fileName }, "Successfully appended to file");
-  return batchSize;
 }
 
 async function streamToString(stream: AsyncIterable<Uint8Array>): Promise<string> {
@@ -431,6 +388,8 @@ export async function processMerkleTree(
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
+      // public-read intentional — see appendLeafToTrees / README data classification.
+      ACL: "public-read",
     }),
   );
   logger.info({ treeIndex: targetTreeIndex }, "Tree marked as processed");

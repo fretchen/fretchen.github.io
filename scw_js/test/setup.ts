@@ -19,10 +19,9 @@ export const mockViemFunctions = {
 // ===== X402 MOCKS =====
 export const mockPreparePaymentHeader = vi.fn();
 
-// ===== AWS SDK MOCKS =====
-export const mockS3Send = vi.fn();
-export const mockPutObjectCommand = vi.fn();
-export const mockGetObjectCommand = vi.fn();
+// ===== S3 MOCKS =====
+export const mockGetS3Object = vi.fn();
+export const mockPutS3Object = vi.fn();
 
 // ===== IMAGE SERVICE MOCKS =====
 export const mockGenerateAndUploadImage = vi.fn();
@@ -67,13 +66,10 @@ export function setupGlobalMocks() {
     signature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
   });
 
-  // Mock AWS SDK
-  vi.mock("@aws-sdk/client-s3", () => ({
-    S3Client: vi.fn().mockImplementation(function () {
-      return { send: mockS3Send };
-    }),
-    PutObjectCommand: mockPutObjectCommand,
-    GetObjectCommand: mockGetObjectCommand,
+  // Mock S3 client
+  vi.mock("@fretchen/s3-utils", () => ({
+    getS3Object: mockGetS3Object,
+    putS3Object: mockPutS3Object,
   }));
 
   // Mock image_service
@@ -189,9 +185,9 @@ export function setupDefaultMocks(mockContract: any) {
   );
   mockUploadToS3.mockResolvedValue("https://my-imagestore.s3.nl-ams.scw.cloud/test_file.json");
 
-  // AWS S3 defaults
-  mockS3Send.mockResolvedValue({});
-  mockPutObjectCommand.mockImplementation((params: any) => params);
+  // S3 defaults
+  mockGetS3Object.mockResolvedValue(null);
+  mockPutS3Object.mockResolvedValue(undefined);
 
   // Contract write defaults
   mockContract.write.requestImageUpdate.mockResolvedValue(

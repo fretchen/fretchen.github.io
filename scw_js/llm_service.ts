@@ -1,7 +1,7 @@
 import { getContract, createPublicClient, createWalletClient, http } from "viem";
 import { getChain, getLLMv1ContractConfig } from "./getChain.js";
 import { loadPrivateKey } from "@fretchen/chain-utils";
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getS3Object, putS3Object } from "@fretchen/s3-utils";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
@@ -9,7 +9,6 @@ import pino from "pino";
 const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
 const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 export const JSON_BASE_PATH = "https://my-imagestore.s3.nl-ams.scw.cloud/";
-const BUCKET_NAME = "my-imagestore";
 const MERKLE_TREE_FILE = "merkle/trees.json";
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -26,15 +25,6 @@ interface LLMResponse {
     total_tokens: number;
   };
   model: string;
-}
-
-function getS3Credentials(): { accessKey: string; secretKey: string } {
-  const accessKey = process.env.SCW_ACCESS_KEY;
-  const secretKey = process.env.SCW_SECRET_KEY;
-  if (!accessKey || !secretKey) {
-    throw new Error("Missing S3 credentials: SCW_ACCESS_KEY and SCW_SECRET_KEY must be set");
-  }
-  return { accessKey, secretKey };
 }
 
 export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<LLMResponse> {
@@ -151,22 +141,13 @@ export async function saveLeafToTree(
 }
 
 export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): Promise<number> {
-  const { accessKey, secretKey } = getS3Credentials();
-  const s3Client = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-  });
-
   let treesData: TreesData | null = null;
 
   try {
-    const getResult = await s3Client.send(
-      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
-    );
-    const bodyContents = await streamToString(
-      getResult.Body as unknown as AsyncIterable<Uint8Array>,
-    );
+    const bodyContents = await getS3Object(fileName);
+    if (bodyContents === null) {
+      throw new Error(`File ${fileName} doesn't exist`);
+    }
     const parsed = JSON.parse(bodyContents) as TreesData;
     treesData = {
       ...parsed,
@@ -199,30 +180,23 @@ export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): P
   const leafWithId: Leaf = { ...dataToAppend, id: currentTree.leaves.length };
   currentTree.leaves.push(leafWithId);
 
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: JSON.stringify(treesData, bigintReplacer, 2),
-      ContentType: "application/json",
-    }),
-  );
+  // public-read intentional: leaf data is public by design. Settled batches are
+  // published on-chain as LLMv1.processBatch calldata, and the usage ledger is
+  // treated as public (transparent). Only the merkle root is a commitment; the
+  // leaves are not secrets. See README "S3 Storage Layout & Data Classification".
+  await putS3Object(fileName, JSON.stringify(treesData, bigintReplacer, 2), {
+    contentType: "application/json",
+    acl: "public-read",
+  });
   logger.info({ treeIndex: treesData.currentTreeIndex }, "Successfully appended leaf to tree");
   return currentTree.leaves.length;
 }
 
 export async function startNewTree(fileName: string): Promise<number> {
-  const { accessKey, secretKey } = getS3Credentials();
-  const s3Client = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-  });
-
-  const getResult = await s3Client.send(
-    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
-  );
-  const bodyContents = await streamToString(getResult.Body as unknown as AsyncIterable<Uint8Array>);
+  const bodyContents = await getS3Object(fileName);
+  if (bodyContents === null) {
+    throw new Error(`File ${fileName} doesn't exist`);
+  }
   const treesData = JSON.parse(bodyContents) as TreesData;
 
   const newTreeIndex = treesData.trees.length;
@@ -236,35 +210,23 @@ export async function startNewTree(fileName: string): Promise<number> {
   });
   treesData.currentTreeIndex = newTreeIndex;
 
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: JSON.stringify(treesData, bigintReplacer, 2),
-      ContentType: "application/json",
-    }),
-  );
+  // public-read intentional — see appendLeafToTrees / README data classification.
+  await putS3Object(fileName, JSON.stringify(treesData, bigintReplacer, 2), {
+    contentType: "application/json",
+    acl: "public-read",
+  });
   logger.info({ newTreeIndex }, "Started new tree");
   return newTreeIndex;
 }
 
 export async function appendToS3Json(dataToAppend: Leaf, fileName: string): Promise<number> {
-  const { accessKey, secretKey } = getS3Credentials();
-  const s3Client = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-  });
-
   let existingData: Leaf[] | null = null;
 
   try {
-    const getResult = await s3Client.send(
-      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
-    );
-    const bodyContents = await streamToString(
-      getResult.Body as unknown as AsyncIterable<Uint8Array>,
-    );
+    const bodyContents = await getS3Object(fileName);
+    if (bodyContents === null) {
+      throw new Error(`File ${fileName} doesn't exist`);
+    }
     existingData = restoreBigIntsInLeaves(JSON.parse(bodyContents) as Leaf[]);
   } catch {
     logger.info({ file: fileName }, "File doesn't exist, creating new file");
@@ -286,24 +248,11 @@ export async function appendToS3Json(dataToAppend: Leaf, fileName: string): Prom
   }
 
   logger.debug({ updatedData }, `Updated data for ${fileName}`);
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: JSON.stringify(updatedData, bigintReplacer, 2),
-      ContentType: "application/json",
-    }),
-  );
+  await putS3Object(fileName, JSON.stringify(updatedData, bigintReplacer, 2), {
+    contentType: "application/json",
+  });
   logger.info({ file: fileName }, "Successfully appended to file");
   return batchSize;
-}
-
-async function streamToString(stream: AsyncIterable<Uint8Array>): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks).toString("utf8");
 }
 
 export async function checkWalletBalance(
@@ -337,21 +286,12 @@ export async function processMerkleTree(
     throw new Error("Missing file name");
   }
 
-  const { accessKey, secretKey } = getS3Credentials();
-  const s3Client = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
-  });
-
   let treesData: TreesData;
   try {
-    const getResult = await s3Client.send(
-      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fileName }),
-    );
-    const bodyContents = await streamToString(
-      getResult.Body as unknown as AsyncIterable<Uint8Array>,
-    );
+    const bodyContents = await getS3Object(fileName);
+    if (bodyContents === null) {
+      throw new Error(`File ${fileName} doesn't exist`);
+    }
     const parsed = JSON.parse(bodyContents) as TreesData;
     treesData = {
       ...parsed,
@@ -425,14 +365,11 @@ export async function processMerkleTree(
   targetTree.root = root;
   targetTree.processedAt = new Date().toISOString();
 
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: JSON.stringify(treesData, bigintReplacer, 2),
-      ContentType: "application/json",
-    }),
-  );
+  // public-read intentional — see appendLeafToTrees / README data classification.
+  await putS3Object(fileName, JSON.stringify(treesData, bigintReplacer, 2), {
+    contentType: "application/json",
+    acl: "public-read",
+  });
   logger.info({ treeIndex: targetTreeIndex }, "Tree marked as processed");
 }
 

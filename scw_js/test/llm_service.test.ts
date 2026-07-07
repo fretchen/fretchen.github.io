@@ -21,8 +21,8 @@ import {
   cleanupTestEnvironment,
   mockFetchResponse,
   mockLLMResponse,
-  mockS3Send,
-  mockPutObjectCommand,
+  mockGetS3Object,
+  mockPutS3Object,
   mockViemFunctions,
 } from "./setup.js";
 
@@ -128,16 +128,6 @@ describe("llm_service.js", () => {
   });
 });
 
-// Helper: create a minimal async-iterable stream from a string, matching the
-// AsyncIterable<Uint8Array> shape that llm_service's streamToString expects.
-function makeStream(data: string): AsyncIterable<Uint8Array> {
-  return {
-    [Symbol.asyncIterator]: async function* () {
-      yield Buffer.from(data) as unknown as Uint8Array;
-    },
-  };
-}
-
 const sampleLeaf: Leaf = {
   id: 0,
   user: "0x1111111111111111111111111111111111111111",
@@ -161,66 +151,63 @@ const emptyTreesJson = JSON.stringify({
   ],
 });
 
-// Security: merkle tree data must never be written with ACL "public-read".
-// The file contains wallet addresses and usage data for all users — it is
-// only ever read server-side using S3 credentials, so public access is wrong.
-describe("S3 writes — merkle data must not be public-read", () => {
+// Merkle tree data (appendLeafToTrees/startNewTree) is public by design: leaf
+// data is settled on-chain via LLMv1.processBatch calldata, so the usage
+// ledger is treated as public. appendToS3Json is a generic, unrelated helper
+// (no production caller) and stays private by default (no ACL).
+describe("S3 writes — merkle tree ACL", () => {
   beforeEach(() => {
     setupTestEnvironment();
     // Reset only specific mocks — NOT vi.clearAllMocks(), which would wipe
-    // the S3Client constructor implementation set in setupGlobalMocks().
-    mockS3Send.mockReset();
-    mockPutObjectCommand.mockReset();
+    // the S3-utils mock implementation set in setupGlobalMocks().
+    mockGetS3Object.mockReset();
+    mockPutS3Object.mockReset();
   });
 
   afterEach(() => {
     cleanupTestEnvironment();
   });
 
-  test("appendLeafToTrees: PutObjectCommand has no ACL field (new file)", async () => {
-    // GET throws → file doesn't exist yet → function creates a fresh structure
-    mockS3Send.mockRejectedValueOnce(new Error("NoSuchKey"));
-    mockS3Send.mockResolvedValueOnce({});
+  test("appendLeafToTrees: putS3Object called with ACL public-read (new file)", async () => {
+    // GET returns null → file doesn't exist yet → function creates a fresh structure
+    mockGetS3Object.mockResolvedValueOnce(null);
 
     await appendLeafToTrees(sampleLeaf, "merkle/trees.json");
 
-    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
-    const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(mockPutS3Object).toHaveBeenCalledTimes(1);
+    const [, , opts] = mockPutS3Object.mock.calls[0];
+    expect(opts.acl).toBe("public-read");
   });
 
-  test("appendLeafToTrees: PutObjectCommand has no ACL field (existing file)", async () => {
+  test("appendLeafToTrees: putS3Object called with ACL public-read (existing file)", async () => {
     // GET succeeds with existing trees data
-    mockS3Send.mockResolvedValueOnce({ Body: makeStream(emptyTreesJson) });
-    mockS3Send.mockResolvedValueOnce({});
+    mockGetS3Object.mockResolvedValueOnce(emptyTreesJson);
 
     await appendLeafToTrees(sampleLeaf, "merkle/trees.json");
 
-    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
-    const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(mockPutS3Object).toHaveBeenCalledTimes(1);
+    const [, , opts] = mockPutS3Object.mock.calls[0];
+    expect(opts.acl).toBe("public-read");
   });
 
-  test("startNewTree: PutObjectCommand has no ACL field", async () => {
-    mockS3Send.mockResolvedValueOnce({ Body: makeStream(emptyTreesJson) });
-    mockS3Send.mockResolvedValueOnce({});
+  test("startNewTree: putS3Object called with ACL public-read", async () => {
+    mockGetS3Object.mockResolvedValueOnce(emptyTreesJson);
 
     await startNewTree("merkle/trees.json");
 
-    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
-    const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(mockPutS3Object).toHaveBeenCalledTimes(1);
+    const [, , opts] = mockPutS3Object.mock.calls[0];
+    expect(opts.acl).toBe("public-read");
   });
 
-  test("appendToS3Json: PutObjectCommand has no ACL field (new file)", async () => {
-    mockS3Send.mockRejectedValueOnce(new Error("NoSuchKey"));
-    mockS3Send.mockResolvedValueOnce({});
+  test("appendToS3Json: putS3Object called without ACL (new file)", async () => {
+    mockGetS3Object.mockResolvedValueOnce(null);
 
     await appendToS3Json(sampleLeaf, "merkle/some.json");
 
-    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
-    const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(mockPutS3Object).toHaveBeenCalledTimes(1);
+    const [, , opts] = mockPutS3Object.mock.calls[0];
+    expect(opts.acl).toBeUndefined();
   });
 });
 
@@ -274,7 +261,7 @@ describe("processMerkleTree — tx failure must not mark tree as processed", () 
   });
 
   test("throws and does not write to S3 when transaction reverts", async () => {
-    mockS3Send.mockResolvedValueOnce({ Body: makeStream(singleLeafTreesJson) });
+    mockGetS3Object.mockResolvedValueOnce(singleLeafTreesJson);
     mockWaitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
 
     await expect(processMerkleTree("merkle/trees.json")).rejects.toThrow(
@@ -282,28 +269,28 @@ describe("processMerkleTree — tx failure must not mark tree as processed", () 
     );
 
     // S3 PUT must NOT have been called — tree state must not be persisted
-    expect(mockPutObjectCommand).not.toHaveBeenCalled();
+    expect(mockPutS3Object).not.toHaveBeenCalled();
   });
 
   test("throws and does not write to S3 when processBatch itself throws", async () => {
-    mockS3Send.mockResolvedValueOnce({ Body: makeStream(singleLeafTreesJson) });
+    mockGetS3Object.mockResolvedValueOnce(singleLeafTreesJson);
     mockProcessBatch.mockRejectedValue(new Error("out of gas"));
 
     await expect(processMerkleTree("merkle/trees.json")).rejects.toThrow("out of gas");
-    expect(mockPutObjectCommand).not.toHaveBeenCalled();
+    expect(mockPutS3Object).not.toHaveBeenCalled();
   });
 
   test("writes to S3 and marks tree processed when transaction succeeds", async () => {
-    mockS3Send.mockResolvedValueOnce({ Body: makeStream(singleLeafTreesJson) });
-    mockS3Send.mockResolvedValueOnce({});
+    mockGetS3Object.mockResolvedValueOnce(singleLeafTreesJson);
     mockWaitForTransactionReceipt.mockResolvedValue({ status: "success", logs: [] });
 
     await processMerkleTree("merkle/trees.json");
 
-    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
-    const callArg = mockPutObjectCommand.mock.calls[0][0];
-    const persisted = JSON.parse(callArg.Body);
+    expect(mockPutS3Object).toHaveBeenCalledTimes(1);
+    const [, body, opts] = mockPutS3Object.mock.calls[0];
+    const persisted = JSON.parse(body);
     expect(persisted.trees[0].processed).toBe(true);
+    expect(opts.acl).toBe("public-read");
   });
 });
 

@@ -9,8 +9,9 @@ export default defineConfig({
   outDir: "dist",
   splitting: false,
   clean: true,
-  // Keep readable for debugging
-  minify: false,
+  // Minified for cold-start parse time; correlate production stack traces
+  // locally against the sourcemap of the same build (sourcemap: true below).
+  minify: true,
   sourcemap: true,
   // Node.js built-ins must be external (async_hooks, fs, path, etc.)
   external: [...builtinModules, ...builtinModules.map((m) => `node:${m}`)],

@@ -2,18 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ===== Mocks (vi.hoisted ensures these are available when vi.mock factories run) =====
 
-const { mockS3Send, mockVerifyMessage } = vi.hoisted(() => ({
-  mockS3Send: vi.fn(),
+const { mockGetS3Object, mockVerifyMessage } = vi.hoisted(() => ({
+  mockGetS3Object: vi.fn(),
   mockVerifyMessage: vi.fn(),
 }));
 
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: class MockS3Client {
-    send = mockS3Send;
-  },
-  GetObjectCommand: class MockGetObjectCommand {
-    constructor(public params: unknown) {}
-  },
+vi.mock("@fretchen/s3-utils", () => ({
+  getS3Object: mockGetS3Object,
 }));
 
 vi.mock("viem", () => ({
@@ -130,9 +125,7 @@ describe("handle", () => {
 
   it("returns 200 with leafs filtered to the requesting address", async () => {
     mockVerifyMessage.mockResolvedValue(true);
-    mockS3Send.mockResolvedValue({
-      Body: JSON.stringify({ trees: [sampleTree] }),
-    });
+    mockGetS3Object.mockResolvedValue(JSON.stringify({ trees: [sampleTree] }));
 
     const res = await handle(makeEvent(), {});
     expect(res.statusCode).toBe(200);
@@ -146,7 +139,7 @@ describe("handle", () => {
 
   it("reads Authorization header in capitalized form", async () => {
     mockVerifyMessage.mockResolvedValue(true);
-    mockS3Send.mockResolvedValue({ Body: JSON.stringify({ trees: [] }) });
+    mockGetS3Object.mockResolvedValue(JSON.stringify({ trees: [] }));
     const res = await handle(
       {
         httpMethod: "GET",
@@ -160,7 +153,7 @@ describe("handle", () => {
 
   it("returns 500 when S3 read fails", async () => {
     mockVerifyMessage.mockResolvedValue(true);
-    mockS3Send.mockRejectedValue(new Error("S3 error"));
+    mockGetS3Object.mockRejectedValue(new Error("S3 error"));
 
     const res = await handle(makeEvent(), {});
     expect(res.statusCode).toBe(500);

@@ -160,8 +160,8 @@ const emptyTreesJson = JSON.stringify({
   ],
 });
 
-// Merkle tree data is public by design: the leaves are already public on-chain
-// (LLMv1.processBatch calldata) and are served via the leafhistory endpoint.
+// Merkle tree data is public by design: settled batches are published on-chain
+// as LLMv1.processBatch calldata, and the usage ledger is treated as public.
 // Only the merkle root is a commitment; the leaves are not secrets. The write
 // paths therefore set ACL "public-read" deterministically. See scw_js/README.md
 // "S3 Storage Layout & Data Classification".

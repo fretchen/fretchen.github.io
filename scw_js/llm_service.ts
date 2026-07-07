@@ -205,10 +205,10 @@ export async function appendLeafToTrees(dataToAppend: Leaf, fileName: string): P
       Key: fileName,
       Body: JSON.stringify(treesData, bigintReplacer, 2),
       ContentType: "application/json",
-      // public-read intentional: the leaves are already public — on-chain via
-      // LLMv1.processBatch calldata and via the leafhistory endpoint. Only the
-      // merkle root is a commitment; the leaves are not secrets. See README
-      // "S3 Storage Layout & Data Classification".
+      // public-read intentional: leaf data is public by design. Settled batches are
+      // published on-chain as LLMv1.processBatch calldata, and the usage ledger is
+      // treated as public (transparent). Only the merkle root is a commitment; the
+      // leaves are not secrets. See README "S3 Storage Layout & Data Classification".
       ACL: "public-read",
     }),
   );

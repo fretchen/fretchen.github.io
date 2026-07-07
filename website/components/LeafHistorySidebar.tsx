@@ -1,7 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatEther } from "viem";
-import { useWalletAuth } from "../hooks/useWalletAuth";
 
 interface LeafHistoryItem {
   id: number;
@@ -26,15 +25,12 @@ const LEAF_BASE_URL =
   "https://mypersonaljscloudivnad9dy-leafhistory.functions.fnc.fr-par.scw.cloud";
 
 export default function LeafHistorySidebar({ address, isOpen, onClose }: LeafHistorySidebarProps) {
-  const getAuth = useWalletAuth("leaf-history");
-
+  // Leaf data is public by design (settled on-chain via processBatch calldata; the
+  // merkle store is a public object), so this read needs no wallet signature.
   const { data: leaves = [], isPending } = useQuery({
     queryKey: ["leafHistory", address],
     queryFn: async () => {
-      const auth = await getAuth();
-      const response = await fetch(`${LEAF_BASE_URL}?address=${encodeURIComponent(address!)}`, {
-        headers: { Authorization: auth },
-      });
+      const response = await fetch(`${LEAF_BASE_URL}?address=${encodeURIComponent(address!)}`);
       const data = (await response.json()) as { leafs?: LeafHistoryItem[] };
       return data.leafs ?? [];
     },

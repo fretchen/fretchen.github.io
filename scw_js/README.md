@@ -13,7 +13,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 | ---------------- | ----------------- | ----------------------------------------------------- |
 | Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment) |
 | LLM              | `llm`             | Blockchain-authenticated LLM                          |
-| Leaf History     | `leafhistory`     | Merkle tree leaf queries                              |
+| Leaf History     | `leafhistory`     | Public merkle-tree leaf queries (no auth)             |
 | Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)     |
 
 ## Functions
@@ -93,7 +93,7 @@ LLM service with wallet signature authentication and Merkle-tree based usage tra
 
 ### `leaf_history.js`
 
-Query Merkle tree leaves for usage tracking.
+Public, unauthenticated reader of Merkle-tree leaves for usage tracking. `GET ?address=0x…` returns that address's leaves. The underlying data is public by design (see S3 data classification below), so no wallet signature is required.
 
 ### `growth_api.ts` - Growth Agent Draft Approval
 
@@ -117,6 +117,20 @@ API for reviewing, editing, and approving AI-generated social media drafts. Used
 | Contract   | Chain    | Address                                      |
 | ---------- | -------- | -------------------------------------------- |
 | GenImNFTv4 | Optimism | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` |
+
+## 🗄️ S3 Storage Layout & Data Classification
+
+All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.
+
+| Prefix / object                            | Access        | Why                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `images/`, `metadata/`, root `image*.json` | `public-read` | NFT assets referenced on-chain via `tokenURI` — must be publicly fetchable.                                                                                                                                                                                                                                                                           |
+| `merkle/trees.json`                        | `public-read` | LLM usage/settlement data, **public by design**. Settled batches are published on-chain as `LLMv1.processBatch` calldata; pending entries are treated as public too (transparent usage ledger). The `leafhistory` endpoint is an unauthenticated public reader of this same data. Only the merkle _root_ is a commitment; the leaves are not secrets. |
+| `growth-agent/`, `growth-agent-dev/`       | private       | Internal growth-agent state; owner-only, read/written via the authenticated `growthapi` function.                                                                                                                                                                                                                                                     |
+| `comments/`                                | private       | Comment-service state.                                                                                                                                                                                                                                                                                                                                |
+| `terraform/`                               | private       | Infrastructure-as-code state.                                                                                                                                                                                                                                                                                                                         |
+
+> Note: anonymous bucket **listing** is currently enabled, which exposes object _key names_ (not contents) of the private prefixes. This is an accepted low-severity item — see [SECURITY.md](./SECURITY.md).
 
 ## Local Testing
 

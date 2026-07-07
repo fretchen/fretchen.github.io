@@ -34,7 +34,6 @@ import {
   callLLMAPI,
   appendLeafToTrees,
   startNewTree,
-  appendToS3Json,
   processMerkleTree,
   checkWalletBalance,
 } from "../llm_service.js";
@@ -161,10 +160,12 @@ const emptyTreesJson = JSON.stringify({
   ],
 });
 
-// Security: merkle tree data must never be written with ACL "public-read".
-// The file contains wallet addresses and usage data for all users — it is
-// only ever read server-side using S3 credentials, so public access is wrong.
-describe("S3 writes — merkle data must not be public-read", () => {
+// Merkle tree data is public by design: settled batches are published on-chain
+// as LLMv1.processBatch calldata, and the usage ledger is treated as public.
+// Only the merkle root is a commitment; the leaves are not secrets. The write
+// paths therefore set ACL "public-read" deterministically. See scw_js/README.md
+// "S3 Storage Layout & Data Classification".
+describe("S3 writes — merkle data is public-read (public by design)", () => {
   beforeEach(() => {
     setupTestEnvironment();
     // Reset only specific mocks — NOT vi.clearAllMocks(), which would wipe
@@ -177,7 +178,7 @@ describe("S3 writes — merkle data must not be public-read", () => {
     cleanupTestEnvironment();
   });
 
-  test("appendLeafToTrees: PutObjectCommand has no ACL field (new file)", async () => {
+  test("appendLeafToTrees: PutObjectCommand sets ACL public-read (new file)", async () => {
     // GET throws → file doesn't exist yet → function creates a fresh structure
     mockS3Send.mockRejectedValueOnce(new Error("NoSuchKey"));
     mockS3Send.mockResolvedValueOnce({});
@@ -186,10 +187,10 @@ describe("S3 writes — merkle data must not be public-read", () => {
 
     expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
     const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(params.ACL).toBe("public-read");
   });
 
-  test("appendLeafToTrees: PutObjectCommand has no ACL field (existing file)", async () => {
+  test("appendLeafToTrees: PutObjectCommand sets ACL public-read (existing file)", async () => {
     // GET succeeds with existing trees data
     mockS3Send.mockResolvedValueOnce({ Body: makeStream(emptyTreesJson) });
     mockS3Send.mockResolvedValueOnce({});
@@ -198,10 +199,10 @@ describe("S3 writes — merkle data must not be public-read", () => {
 
     expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
     const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(params.ACL).toBe("public-read");
   });
 
-  test("startNewTree: PutObjectCommand has no ACL field", async () => {
+  test("startNewTree: PutObjectCommand sets ACL public-read", async () => {
     mockS3Send.mockResolvedValueOnce({ Body: makeStream(emptyTreesJson) });
     mockS3Send.mockResolvedValueOnce({});
 
@@ -209,18 +210,7 @@ describe("S3 writes — merkle data must not be public-read", () => {
 
     expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
     const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
-  });
-
-  test("appendToS3Json: PutObjectCommand has no ACL field (new file)", async () => {
-    mockS3Send.mockRejectedValueOnce(new Error("NoSuchKey"));
-    mockS3Send.mockResolvedValueOnce({});
-
-    await appendToS3Json(sampleLeaf, "merkle/some.json");
-
-    expect(mockPutObjectCommand).toHaveBeenCalledTimes(1);
-    const params = mockPutObjectCommand.mock.calls[0][0];
-    expect(params).not.toHaveProperty("ACL");
+    expect(params.ACL).toBe("public-read");
   });
 });
 

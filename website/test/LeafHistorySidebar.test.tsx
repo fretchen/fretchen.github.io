@@ -4,11 +4,6 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithQuery } from "./testUtils";
 import LeafHistorySidebar from "../components/LeafHistorySidebar";
 
-// Mock the shared auth hook — avoids wagmi setup in this test file
-vi.mock("../hooks/useWalletAuth", () => ({
-  useWalletAuth: vi.fn(() => vi.fn().mockResolvedValue("Bearer test-token")),
-}));
-
 // Mock viem formatEther to avoid bigint formatting in tests
 vi.mock("viem", () => ({
   formatEther: vi.fn(() => "0.001"),

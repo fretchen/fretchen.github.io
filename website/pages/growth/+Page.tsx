@@ -13,6 +13,7 @@ import {
 } from "../../hooks/useGrowthApi";
 import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
+import { normalizePageUrl } from "../../utils/urlUtils";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
@@ -589,18 +590,6 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
       </details>
     </div>
   );
-}
-
-// ===== URL Normalization =====
-
-function normalizePageUrl(raw: string): string {
-  try {
-    const { origin, pathname } = new URL(raw);
-    const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
-    return origin + path;
-  } catch {
-    return raw;
-  }
 }
 
 // ===== Main Page =====

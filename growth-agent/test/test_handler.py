@@ -521,6 +521,11 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     assert result.top_topics == ["quantum"]
     updated = Insights.model_validate(store["insights.json"])
     assert updated.growth_opportunities == ["Post more quantum content"]
+    # insights.json must also carry the LLM analysis fields (merged for the frontend)
+    assert updated.top_topics == ["quantum"]
+    assert len(updated.best_pages_for_social) == 1
+    assert updated.best_pages_for_social[0].url == "https://fretchen.eu/quantum"
+    assert updated.best_pages_for_social[0].reason == "High traffic"
     # LLMAnalysis should be persisted for daily reuse
     assert "llm_analysis.json" in store
     persisted_analysis = LLMAnalysis.model_validate(store["llm_analysis.json"])

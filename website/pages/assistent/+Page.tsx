@@ -356,11 +356,7 @@ export default function Page() {
 
   const handleSendClick = () => {
     if (!isConnected) {
-      // Track connect button click
-      trackEvent("assistant-connect-button-click", {
-        hasInput: currentInput.trim().length > 0,
-      });
-      connectWallet();
+      connectWallet("assistant", { hasInput: currentInput.trim().length > 0 });
       return;
     }
     void sendMessage(currentInput);

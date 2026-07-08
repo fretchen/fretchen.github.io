@@ -1,10 +1,10 @@
 import * as React from "react";
-import { useConnect, useAccount, useDisconnect, useEnsName } from "wagmi";
+import { useConnect, useDisconnect, useEnsName } from "wagmi";
 import { walletOptions } from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { WalletEvents } from "../utils/analytics";
-import { useIsMounted } from "../hooks/useIsMounted";
+import { useWalletConnection } from "../hooks/useWalletConnection";
 import WalletConnectIcon from "./WalletConnectIcon";
 /**
  * WalletOptions Component
@@ -17,7 +17,7 @@ import WalletConnectIcon from "./WalletConnectIcon";
 export default function WalletOptions() {
   // Connection hooks
   const { connectors, connect, error } = useConnect();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWalletConnection();
   const { disconnect } = useDisconnect();
   const { data: ensName } = useEnsName({ address });
 
@@ -27,7 +27,6 @@ export default function WalletOptions() {
   // UI state
   const [isOpen, setIsOpen] = React.useState(false);
   const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
-  const isMounted = useIsMounted();
   const [isMobile, setIsMobile] = React.useState(false);
   const [buttonRect, setButtonRect] = React.useState<DOMRect | null>(null);
   const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -140,12 +139,11 @@ export default function WalletOptions() {
   // Display address or connect message
   const connectLabel = useLocale({ label: "walletoptions.connect" });
   const connectAccountLabel = useLocale({ label: "walletoptions.connectAccount" });
-  const displayText =
-    isMounted && isConnected
-      ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
-      : isMobile
-        ? connectLabel
-        : connectAccountLabel;
+  const displayText = isConnected
+    ? ensName || (address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "")
+    : isMobile
+      ? connectLabel
+      : connectAccountLabel;
 
   const disconnectLabel = useLocale({ label: "walletoptions.disconnect" });
 
@@ -175,7 +173,7 @@ export default function WalletOptions() {
 
       {isOpen && (
         <div className={styles.menu} style={isMobile ? getMobileMenuStyle() : undefined}>
-          {isMounted && isConnected ? (
+          {isConnected ? (
             <div
               key="disconnect"
               className={`${styles.menuItem} ${hoveredItem === "disconnect" ? styles.menuItemHover : ""}`}

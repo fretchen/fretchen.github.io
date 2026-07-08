@@ -39,26 +39,14 @@ describe("useWalletConnection", () => {
   it("connectWallet picks the injected connector and calls connect with it", async () => {
     const connect = mockConnect([wcConnector, injectedConnector]);
     const { result } = renderHook(() => useWalletConnection());
-    result.current.connectWallet();
+    result.current.connectWallet("test-source");
     expect(connect).toHaveBeenCalledWith({ connector: injectedConnector });
   });
 
   it("connectWallet is a no-op when there are no connectors", () => {
     const connect = mockConnect([]);
     const { result } = renderHook(() => useWalletConnection());
-    result.current.connectWallet();
+    result.current.connectWallet("test-source");
     expect(connect).not.toHaveBeenCalled();
-  });
-
-  it("canConnect reflects whether any connector is available", () => {
-    mockConnect([wcConnector]);
-    const { result } = renderHook(() => useWalletConnection());
-    expect(result.current.canConnect).toBe(true);
-  });
-
-  it("canConnect is false with an empty connector list", () => {
-    mockConnect([]);
-    const { result } = renderHook(() => useWalletConnection());
-    expect(result.current.canConnect).toBe(false);
   });
 });

@@ -554,7 +554,7 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
 // ===== Main Page =====
 
 export default function Page() {
-  const { address, hasMounted, isConnected, canConnect, connectWallet } = useWalletConnection();
+  const { address, hasMounted, isConnected, connectWallet } = useWalletConnection();
 
   useEffect(() => {
     prewarmGrowthApi();
@@ -692,13 +692,11 @@ export default function Page() {
       <div className={growthContainer}>
         <h1 className={titleBar.title}>Growth Agent</h1>
         <div className={infoBox}>
-          {canConnect && (
-            <div className={css({ display: "flex", justifyContent: "center" })}>
-              <button className={primaryButton} onClick={connectWallet}>
-                Connect Wallet
-              </button>
-            </div>
-          )}
+          <div className={css({ display: "flex", justifyContent: "center" })}>
+            <button className={primaryButton} onClick={() => connectWallet("growth")}>
+              Connect Wallet
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -459,11 +459,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   // Handle expansion trigger for collapsed state
   const handleExpand = () => {
-    // Track user clicking the connect button
-    trackEvent("imagegen-connect-click");
-
     // Always trigger wallet connection when in collapsed state
-    connectWallet();
+    connectWallet("imagegen");
   };
 
   return (

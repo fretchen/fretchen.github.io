@@ -81,7 +81,6 @@ def _mastodon_prompt(item, language: str, strategy: Strategy, former_context: st
 URL: {url}
 Titel: {item.page_title}
 Zusammenfassung: {item.page_description}
-Warum bewerben: {item.reason}
 {history_block}
 Anforderungen:
 - Hook im ersten Satz (Frage oder starke These)
@@ -99,7 +98,6 @@ Gib NUR den Post-Text zurück, nichts anderes."""
 URL: {url}
 Title: {item.page_title}
 Article summary: {item.page_description}
-Why promote: {item.reason}
 {history_block}
 Context: {strategy.website_url} covers {pillars}.
 Target audience: {strategy.target_audience}
@@ -124,7 +122,6 @@ def _bluesky_prompt(item, language: str, strategy: Strategy, former_context: str
 URL: {url}
 Titel: {item.page_title}
 Zusammenfassung: {item.page_description}
-Warum bewerben: {item.reason}
 {history_block}
 Anforderungen:
 - Knackiger Hook
@@ -139,7 +136,6 @@ Gib NUR den Post-Text zurück, nichts anderes."""
 URL: {url}
 Title: {item.page_title}
 Article summary: {item.page_description}
-Why promote: {item.reason}
 {history_block}
 Target audience: {strategy.target_audience}
 

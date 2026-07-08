@@ -353,20 +353,11 @@ def build_plan_items(
         meta = page_metas.get(page_url)
         page_desc = (meta.description or "(no description)") if meta else "(no description)"
         page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
-        t_days = sampled["t_days"]
-        if t_days is None:
-            reason = "random draw from registry (unpublished page)"
-        else:
-            reason = (
-                "random draw with half-life weighting "
-                f"(last published {float(t_days):.1f} days ago)"
-            )
         items.append(
             ContentPlanItem(
                 page_url=page_url,
                 page_title=page_title,
                 page_description=page_desc,
-                reason=reason,
                 channel=channel,
                 scheduled_at=slot,
             )

@@ -64,6 +64,8 @@ class Insights(BaseModel):
     website_analytics: WebsiteAnalytics = Field(default_factory=WebsiteAnalytics)
     social_metrics: dict[str, SocialMetrics] = Field(default_factory=dict)
     growth_opportunities: list[str] = Field(default_factory=list)
+    top_topics: list[str] = Field(default_factory=list)
+    best_pages_for_social: list[PageForSocial] = Field(default_factory=list)
     last_analysis: datetime | None = None
 
 
@@ -160,7 +162,6 @@ class ContentPlanItem(BaseModel):
     page_url: str
     page_title: str
     page_description: str
-    reason: str
     channel: str
     scheduled_at: datetime
 

@@ -106,6 +106,8 @@ candidates when the data allows it.
         assert isinstance(result, LLMAnalysis)
 
         insights.growth_opportunities = result.growth_opportunities
+        insights.top_topics = result.top_topics
+        insights.best_pages_for_social = result.best_pages_for_social
         insights.last_analysis = datetime.now(timezone.utc)
         storage.write("insights.json", insights)
         storage.write("llm_analysis.json", result)

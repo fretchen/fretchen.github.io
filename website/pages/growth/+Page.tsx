@@ -525,9 +525,49 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
         <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>
           Insights & Analytics (28 days)
         </summary>
+        {(insights.top_topics ?? []).length > 0 && (
+          <>
+            <h4 style={{ fontWeight: 600, marginBottom: "4px", marginTop: "8px" }}>Top Topics</h4>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+              {insights.top_topics!.map((topic, i) => (
+                <span
+                  key={i}
+                  style={{
+                    background: "#e8f0fe",
+                    color: "#1a73e8",
+                    borderRadius: "12px",
+                    padding: "2px 10px",
+                    fontSize: "13px",
+                  }}
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+        {(insights.best_pages_for_social ?? []).length > 0 && (
+          <>
+            <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Best Pages for Social</h4>
+            <ul className={insightsList}>
+              {insights.best_pages_for_social!.map((page, i) => (
+                <li key={i}>
+                  <a href={page.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 500 }}>
+                    {page.title}
+                  </a>
+                  {page.selection_type && (
+                    <span style={{ marginLeft: "6px", fontSize: "11px", color: "#888" }}>[{page.selection_type}]</span>
+                  )}
+                  <br />
+                  <span style={{ fontSize: "13px", color: "#555" }}>{page.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         {(insights.growth_opportunities ?? []).length > 0 && (
           <>
-            <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Growth Opportunities</h4>
+            <h4 style={{ fontWeight: 600, marginBottom: "4px", marginTop: "8px" }}>Growth Opportunities</h4>
             <ul className={insightsList}>
               {insights.growth_opportunities.map((opp, i) => (
                 <li key={i}>{opp}</li>
@@ -549,6 +589,18 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
       </details>
     </div>
   );
+}
+
+// ===== URL Normalization =====
+
+function normalizePageUrl(raw: string): string {
+  try {
+    const { origin, pathname } = new URL(raw);
+    const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+    return origin + path;
+  } catch {
+    return raw;
+  }
 }
 
 // ===== Main Page =====
@@ -584,8 +636,9 @@ export default function Page() {
   const historyByPage = useMemo(() => {
     const map: Record<string, Draft[]> = {};
     for (const d of queue?.published ?? []) {
-      const key = d.link ?? d.source_blog_post ?? "";
-      if (!key) continue;
+      const raw = d.link ?? d.source_blog_post ?? "";
+      if (!raw) continue;
+      const key = normalizePageUrl(raw);
       (map[key] ??= []).push(d);
     }
     for (const arr of Object.values(map)) {
@@ -622,16 +675,17 @@ export default function Page() {
     >();
 
     for (const draft of queue?.published ?? []) {
-      const url = draft.link ?? draft.source_blog_post ?? "(no link)";
-      if (!map.has(url)) {
+      const raw = draft.link ?? draft.source_blog_post ?? "(no link)";
+      const key = normalizePageUrl(raw);
+      if (!map.has(key)) {
         let path: string;
         try {
-          path = new URL(url).pathname;
+          path = new URL(key).pathname;
         } catch {
-          path = url;
+          path = key;
         }
-        map.set(url, {
-          url,
+        map.set(key, {
+          url: key,
           displayUrl: path,
           drafts: [],
           totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
@@ -640,7 +694,7 @@ export default function Page() {
           pageviews: trafficByPath.get(path) ?? null,
         });
       }
-      const group = map.get(url)!;
+      const group = map.get(key)!;
       group.drafts.push(draft);
       group.channels.add(draft.channel);
       const m = metricsByDraftId[draft.id];
@@ -654,7 +708,9 @@ export default function Page() {
       }
     }
 
-    return [...map.values()].sort((a, b) => (b.lastPublished ?? "").localeCompare(a.lastPublished ?? ""));
+    const totalEng = (g: { totalEngagement: { favourites: number; reblogs: number; replies: number } }) =>
+      g.totalEngagement.favourites + g.totalEngagement.reblogs + g.totalEngagement.replies;
+    return [...map.values()].sort((a, b) => totalEng(b) - totalEng(a));
   }, [queue?.published, insights?.website_analytics?.top_pages, metricsByDraftId]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
@@ -807,7 +863,7 @@ export default function Page() {
                 key={draft.id}
                 draft={draft}
                 showActions={showActions}
-                history={historyByPage[draft.link ?? draft.source_blog_post ?? ""] ?? []}
+                history={historyByPage[normalizePageUrl(draft.link ?? draft.source_blog_post ?? "")] ?? []}
                 metrics={metricsByDraftId[draft.id]}
                 onApprove={handleApprove}
                 onReject={handleReject}

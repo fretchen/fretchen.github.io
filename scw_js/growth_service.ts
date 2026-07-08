@@ -58,11 +58,20 @@ export interface SocialMetrics {
   top_posts: Record<string, unknown>[];
 }
 
+export interface PageForSocial {
+  url: string;
+  title: string;
+  reason: string;
+  selection_type: "proven" | "exploratory" | null;
+}
+
 export interface Insights {
   website_analytics: WebsiteAnalytics;
   social_metrics: Record<string, SocialMetrics>;
   growth_opportunities: string[];
   last_analysis: string | null;
+  top_topics?: string[];
+  best_pages_for_social?: PageForSocial[];
 }
 
 export interface PostMetrics {

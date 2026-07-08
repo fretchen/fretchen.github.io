@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useAccount, useConnect } from "wagmi";
 import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-utils";
@@ -10,8 +9,8 @@ import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
-import { useIsMounted } from "../hooks/useIsMounted";
 import { AgentInfoPanel } from "./AgentInfoPanel";
+import { useWalletConnection } from "../hooks/useWalletConnection";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -135,9 +134,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
 
-  // Hydration safety: prevent SSR/client mismatch by showing collapsed state until mounted
-  const hasMounted = useIsMounted();
-
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
 
@@ -145,13 +141,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const [referenceImageBase64, setReferenceImageBase64] = useState<string | null>(null);
   const [referenceImageMimeType, setReferenceImageMimeType] = useState<string>("image/jpeg");
 
-  // Blockchain interaction
-  const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
-
-  // Effective connection state: only true after client has mounted
-  // This prevents hydration mismatch between SSR (always false) and client (may be true)
-  const isEffectivelyConnected = hasMounted && isConnected;
+  // Blockchain interaction. `isConnected` is hydration-safe + reconnect-aware (see hook).
+  const { address, isConnected, connectWallet } = useWalletConnection();
 
   // Determine target chain from useAutoNetwork (no auto-switch, switch at interaction)
   const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
@@ -167,13 +158,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const [isListed, setIsListed] = useState(false); // Default: not publicly listed
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Handle wallet connection
-  const handleWalletConnection = () => {
-    if (connectors.length > 0) {
-      connect({ connector: connectors[0] }); // Use first available connector
-    }
-  };
 
   // Helper functions for button state
   // Localized button texts
@@ -475,11 +459,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   // Handle expansion trigger for collapsed state
   const handleExpand = () => {
-    // Track user clicking the connect button
-    trackEvent("imagegen-connect-click");
-
     // Always trigger wallet connection when in collapsed state
-    handleWalletConnection();
+    connectWallet("imagegen");
   };
 
   return (
@@ -519,7 +500,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             AI Image Generation is currently under maintenance. Please check back later.
           </p>
         </div>
-      ) : !isEffectivelyConnected ? (
+      ) : !isConnected ? (
         // Collapsed State - Clean & Simple (also shown during SSR before hydration)
         <div
           className={css({

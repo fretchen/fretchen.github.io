@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useIsMounted } from "../../hooks/useIsMounted";
-import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
-import { titleBar, tabs as tabStyles } from "../../layouts/styles";
+import { titleBar, tabs as tabStyles, primaryButton } from "../../layouts/styles";
 import { Tab } from "../../components/Tab";
 import {
   useGrowthDrafts,
@@ -15,6 +13,7 @@ import {
 } from "../../hooks/useGrowthApi";
 import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
+import { useWalletConnection } from "../../hooks/useWalletConnection";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
 
@@ -242,18 +241,6 @@ const insightsList = css({
   fontSize: "sm",
   color: "gray.700",
   lineHeight: "1.6",
-});
-
-const connectButton = css({
-  padding: "sm lg",
-  backgroundColor: "blue.600",
-  color: "white",
-  border: "none",
-  borderRadius: "sm",
-  cursor: "pointer",
-  fontWeight: "medium",
-  fontSize: "sm",
-  _hover: { backgroundColor: "blue.700" },
 });
 
 const reviewMeta = css({
@@ -567,20 +554,17 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
 // ===== Main Page =====
 
 export default function Page() {
-  const hasMounted = useIsMounted();
+  const { address, hasMounted, isConnected, connectWallet } = useWalletConnection();
 
   useEffect(() => {
     prewarmGrowthApi();
   }, []);
 
-  const { address, status } = useAccount();
-  const { connectors, connect } = useConnect();
-
   const [tab, setTab] = useState<Tab>("drafts");
 
-  // Use status === "connected" (not just isConnected) to ensure wagmi's
-  // reconnect is fully complete before we call signMessageAsync.
-  const isOwner = hasMounted && status === "connected" && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  // isConnected is reconnect-aware (status === "connected") + hydration-safe, so the
+  // owner check never trusts `address` before wagmi's reconnect completes.
+  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
 
   const { data: queue, isPending: loadingDrafts, error: draftsError } = useGrowthDrafts(isOwner);
   const { data: insights } = useGrowthInsights(isOwner);
@@ -703,21 +687,16 @@ export default function Page() {
   }
 
   // Not connected or still reconnecting
-  if (status !== "connected") {
+  if (!isConnected) {
     return (
       <div className={growthContainer}>
         <h1 className={titleBar.title}>Growth Agent</h1>
         <div className={infoBox}>
-          <p>Connect your wallet to manage drafts.</p>
-          {connectors.length > 0 && (
-            <button
-              className={connectButton}
-              onClick={() => connect({ connector: connectors[0] })}
-              style={{ marginTop: "12px" }}
-            >
+          <div className={css({ display: "flex", justifyContent: "center" })}>
+            <button className={primaryButton} onClick={() => connectWallet("growth")}>
               Connect Wallet
             </button>
-          )}
+          </div>
         </div>
       </div>
     );

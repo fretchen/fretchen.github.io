@@ -6,10 +6,10 @@ import WalletOptions from "../components/WalletOptions";
 import LanguageToggle from "../components/LanguageToggle";
 import Footer from "../components/Footer";
 
-import { WagmiProvider, useAccount } from "wagmi";
+import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
 import { layout } from "./styles";
-import { useIsMounted } from "../hooks/useIsMounted";
+import { useWalletConnection } from "../hooks/useWalletConnection";
 import { OWNER_ADDRESS } from "../utils/getChain";
 import { installPreloadErrorHandler } from "../utils/preloadErrorHandler";
 
@@ -103,9 +103,8 @@ function Content({ children }: { children: React.ReactNode }) {
 }
 
 function GrowthNavLink() {
-  const hasMounted = useIsMounted();
-  const { address, status } = useAccount();
-  const isOwner = hasMounted && status === "connected" && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  const { address, isConnected } = useWalletConnection();
+  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
   if (!isOwner) return null;
   return (
     <div className={layout.navigationLink}>

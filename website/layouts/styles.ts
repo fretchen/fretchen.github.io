@@ -651,7 +651,9 @@ export const walletOptions = {
   menuItem: css({
     padding: "10px 16px", // Slightly larger padding for easier clicking
     textDecoration: "none",
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: "xs",
     color: "text",
     textAlign: "left",
     cursor: "pointer",
@@ -663,6 +665,11 @@ export const walletOptions = {
       backgroundColor: "rgba(59, 130, 246, 0.08)", // Subtle brand color hover
       color: "brand",
     },
+  }),
+  menuItemIcon: css({
+    width: "16px",
+    height: "16px",
+    flexShrink: 0,
   }),
   menuItemHover: css({
     backgroundColor: "rgba(59, 130, 246, 0.08)",

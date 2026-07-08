@@ -22,6 +22,7 @@
     "@openzeppelin/merkle-tree": "^1.0.8",
     "@tanstack/react-query": "^5.101.2",
     "@vitejs/plugin-react": "^6.0.3",
+    "@walletconnect/ethereum-provider": "^2.23.10",
     "@x402/evm": "^2.17.0",
     "@x402/fetch": "^2.17.0",
     "chart.js": "^4.5.1",

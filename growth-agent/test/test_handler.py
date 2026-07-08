@@ -545,18 +545,16 @@ def test_create_drafts(MockLLM, mock_storage):
     plan = ContentPlan(
         items=[
             ContentPlanItem(
-                page_url="https://fretchen.eu/quantum",
+                page_url="https://fretchen.eu/quantum/",
                 page_title="Quantum Blog",
                 page_description="Quantum computing intro",
-                reason="High traffic",
                 channel="mastodon",
                 scheduled_at=now + timedelta(days=1),
             ),
             ContentPlanItem(
-                page_url="https://fretchen.eu/quantum",
+                page_url="https://fretchen.eu/quantum/",
                 page_title="Quantum Blog",
                 page_description="Quantum computing intro",
-                reason="High traffic",
                 channel="bluesky",
                 scheduled_at=now + timedelta(days=2),
             ),
@@ -617,6 +615,9 @@ def test_create_drafts(MockLLM, mock_storage):
     # Mastodon hashtags should be persisted separately; Bluesky remains empty
     assert updated_queue.drafts[0].hashtags == ["#Quantum", "#AI"]
     assert updated_queue.drafts[1].hashtags == []
+    # Links must use trailing slash (consistent with sitemap / canonical site URLs)
+    assert updated_queue.drafts[0].link == "https://fretchen.eu/quantum/?utm_source=mastodon&utm_campaign=growth-agent"
+    assert updated_queue.drafts[1].link == "https://fretchen.eu/quantum/?utm_source=bluesky&utm_campaign=growth-agent"
 
 
 @patch("agent.nodes.drafts.LLMClient")
@@ -627,10 +628,9 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
     plan = ContentPlan(
         items=[
             ContentPlanItem(
-                page_url="https://fretchen.eu/quantum",
+                page_url="https://fretchen.eu/quantum/",
                 page_title="Quantum Blog",
                 page_description="Quantum computing intro",
-                reason="High traffic",
                 channel="mastodon",
                 scheduled_at=now + timedelta(days=1),
             ),
@@ -642,7 +642,7 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
         MastodonDraftOutput(
             content=(
                 "Old framing about quantum "
-                "https://fretchen.eu/quantum?utm_source=mastodon&utm_campaign=growth-agent "
+                "https://fretchen.eu/quantum/?utm_source=mastodon&utm_campaign=growth-agent "
                 "#Old"
             ),
             hashtags=["#Old"],
@@ -1026,16 +1026,16 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
     from agent.models import PageMeta
 
     mock_fetch.return_value = {
-        "https://fretchen.eu/from-clean": PageMeta(
-            url="https://fretchen.eu/from-clean", title="Clean", description="Desc"
+        "https://fretchen.eu/from-clean/": PageMeta(
+            url="https://fretchen.eu/from-clean/", title="Clean", description="Desc"
         )
     }
 
     plan = create_plan(storage)
     assert plan.items
-    assert plan.items[0].page_url == "https://fretchen.eu/from-clean"
+    assert plan.items[0].page_url == "https://fretchen.eu/from-clean/"
     persisted = ContentPlan.model_validate(store["content_plan.json"])
-    assert persisted.items[0].page_url == "https://fretchen.eu/from-clean"
+    assert persisted.items[0].page_url == "https://fretchen.eu/from-clean/"
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
@@ -1081,8 +1081,8 @@ def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_
     from agent.models import PageMeta
 
     mock_fetch.return_value = {
-        "https://fretchen.eu/allowed": PageMeta(
-            url="https://fretchen.eu/allowed", title="Allowed", description="Desc"
+        "https://fretchen.eu/allowed/": PageMeta(
+            url="https://fretchen.eu/allowed/", title="Allowed", description="Desc"
         )
     }
 
@@ -1092,7 +1092,7 @@ def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_
         plan = create_plan(storage)
 
     assert plan.items
-    assert all(item.page_url == "https://fretchen.eu/allowed" for item in plan.items)
+    assert all(item.page_url == "https://fretchen.eu/allowed/" for item in plan.items)
 
 
 # ---------------------------------------------------------------------------

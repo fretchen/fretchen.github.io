@@ -5,6 +5,7 @@ import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { WalletEvents } from "../utils/analytics";
 import { useIsMounted } from "../hooks/useIsMounted";
+import WalletConnectIcon from "./WalletConnectIcon";
 /**
  * WalletOptions Component
  *
@@ -215,6 +216,11 @@ export default function WalletOptions() {
                   }
                 }}
               >
+                {connector.icon ? (
+                  <img src={connector.icon} alt="" className={styles.menuItemIcon} />
+                ) : (
+                  <WalletConnectIcon className={styles.menuItemIcon} />
+                )}
                 {connector.name}
               </div>
             ))

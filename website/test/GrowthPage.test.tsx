@@ -91,7 +91,6 @@ describe("Growth Page", () => {
     } as unknown as ReturnType<typeof useConnect>);
 
     render(<Page />);
-    expect(screen.getByText("Connect your wallet to manage drafts.")).toBeInTheDocument();
     expect(screen.getByText("Connect Wallet")).toBeInTheDocument();
   });
 

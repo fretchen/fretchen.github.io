@@ -193,7 +193,12 @@ describe("WalletOptions Component", () => {
   // These exercise the code paths that the connect/disconnect regressions lived in and
   // that the mocked-`connectors: []` tests above never touched.
 
-  const mmConnector = { uid: "mm", name: "MetaMask", type: "injected" };
+  const mmConnector = {
+    uid: "mm",
+    name: "MetaMask",
+    type: "injected",
+    icon: "data:image/svg+xml;base64,PHN2Zy8+",
+  };
   const wcConnector = { uid: "wc", name: "WalletConnect", type: "walletConnect" };
 
   function openDropdown() {
@@ -228,6 +233,39 @@ describe("WalletOptions Component", () => {
 
     expect(await screen.findByText("MetaMask")).toBeInTheDocument();
     expect(screen.getByText("WalletConnect")).toBeInTheDocument();
+  });
+
+  it("shows the connector's own icon when provided, and a fallback icon otherwise", async () => {
+    vi.mocked(wagmi.useConnect).mockReturnValue({
+      connectors: [wcConnector, mmConnector],
+      connect: vi.fn(),
+      error: null,
+      data: undefined,
+      isError: false,
+      isPending: false,
+      isSuccess: false,
+      status: "idle",
+      failureCount: 0,
+      failureReason: null,
+      isPaused: false,
+      reset: vi.fn(),
+      connectAsync: vi.fn(),
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      submittedAt: 0,
+      variables: undefined,
+    } as unknown as ReturnType<typeof wagmi.useConnect>);
+
+    const { container } = render(<WalletOptions />);
+    openDropdown();
+
+    await screen.findByText("MetaMask");
+    // MetaMask supplies its own icon (EIP-6963 `.icon`) -> rendered as a decorative <img>
+    // (alt="" removes it from the accessibility tree, so query the DOM directly).
+    const mmImg = container.querySelector("img");
+    expect(mmImg).toHaveAttribute("src", mmConnector.icon);
+    // WalletConnect has no `.icon` -> falls back to the generic glyph.
+    expect(screen.getByRole("img", { name: "WalletConnect" })).toBeInTheDocument();
   });
 
   it("clicking a connector calls connect with that exact connector", async () => {

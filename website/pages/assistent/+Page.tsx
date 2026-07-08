@@ -1,12 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  useAccount,
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useSimulateContract,
-  useConnect,
-} from "wagmi";
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useSimulateContract } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { getChain, llmV1ContractConfig } from "../../utils/getChain";
 import LeafHistorySidebar from "../../components/LeafHistorySidebar";
@@ -16,7 +9,7 @@ import { useLocale } from "../../hooks/useLocale";
 import { useUmami } from "../../hooks/useUmami";
 import { css } from "../../styled-system/css";
 import { useWalletAuth } from "../../hooks/useWalletAuth";
-import { pickWalletConnector } from "../../utils/walletConnector";
+import { useWalletConnection } from "../../hooks/useWalletConnection";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -243,17 +236,8 @@ export default function Page() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connectWallet } = useWalletConnection();
   const getAuth = useWalletAuth("sc-llm");
-  const { connectors, connect } = useConnect();
-
-  // Handle wallet connection
-  const handleWalletConnection = () => {
-    const target = pickWalletConnector(connectors);
-    if (target) {
-      connect({ connector: target });
-    }
-  };
 
   // Button state logic similar to ImageGenerator
   const buttonState = useMemo(() => {
@@ -376,7 +360,7 @@ export default function Page() {
       trackEvent("assistant-connect-button-click", {
         hasInput: currentInput.trim().length > 0,
       });
-      handleWalletConnection();
+      connectWallet();
       return;
     }
     void sendMessage(currentInput);
@@ -525,7 +509,6 @@ export default function Page() {
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
               className={styles.primaryButton}
             >
-              {buttonState === "connect" ? "🔗 " : ""}
               {getButtonText(buttonState)}
             </button>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useIsMounted } from "../../hooks/useIsMounted";
 import { useAccount, useConnect } from "wagmi";
 import { css } from "../../styled-system/css";
@@ -11,6 +11,7 @@ import {
   useApproveDraft,
   useRejectDraft,
   useUpdateDraft,
+  prewarmGrowthApi,
 } from "../../hooks/useGrowthApi";
 import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
@@ -567,6 +568,10 @@ function InsightsSection({ insights }: { insights: Insights | null }) {
 
 export default function Page() {
   const hasMounted = useIsMounted();
+
+  useEffect(() => {
+    prewarmGrowthApi();
+  }, []);
 
   const { address, status } = useAccount();
   const { connectors, connect } = useConnect();

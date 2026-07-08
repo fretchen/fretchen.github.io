@@ -147,7 +147,6 @@ export async function getS3Object(key: string): Promise<string | null> {
 export interface PutS3ObjectOptions {
   contentType: string;
   acl?: "public-read";
-  /** Reserved for a future cache-header phase; unused today. */
   cacheControl?: string;
 }
 

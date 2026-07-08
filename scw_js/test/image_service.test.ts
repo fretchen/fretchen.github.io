@@ -61,6 +61,7 @@ describe("image_service.js Tests", () => {
       expect(opts).toMatchObject({
         contentType: "application/json",
         acl: "public-read",
+        cacheControl: "public, max-age=31536000, immutable",
       });
     });
 
@@ -78,6 +79,7 @@ describe("image_service.js Tests", () => {
       expect(opts).toMatchObject({
         contentType: "image/png",
         acl: "public-read",
+        cacheControl: "public, max-age=31536000, immutable",
       });
     });
 
@@ -95,6 +97,7 @@ describe("image_service.js Tests", () => {
       expect(opts).toMatchObject({
         contentType: "text/plain",
         acl: "public-read",
+        cacheControl: "public, max-age=31536000, immutable",
       });
     });
 

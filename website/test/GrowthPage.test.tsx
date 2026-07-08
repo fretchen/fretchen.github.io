@@ -13,6 +13,7 @@ const mockUpdateMutateAsync = vi.fn();
 const mockApproveReset = vi.fn();
 const mockRejectReset = vi.fn();
 const mockUpdateReset = vi.fn();
+const mockPrewarmGrowthApi = vi.fn();
 // Mutable error state for approve mutation (used in tab-switch test)
 let mockApproveError: Error | null = null;
 
@@ -28,6 +29,7 @@ vi.mock("../hooks/useGrowthApi", () => ({
   }),
   useRejectDraft: () => ({ mutateAsync: mockRejectMutateAsync, isPending: false, error: null, reset: mockRejectReset }),
   useUpdateDraft: () => ({ mutateAsync: mockUpdateMutateAsync, isPending: false, error: null, reset: mockUpdateReset }),
+  prewarmGrowthApi: () => mockPrewarmGrowthApi(),
 }));
 
 // Mock styled-system
@@ -91,6 +93,22 @@ describe("Growth Page", () => {
     render(<Page />);
     expect(screen.getByText("Connect your wallet to manage drafts.")).toBeInTheDocument();
     expect(screen.getByText("Connect Wallet")).toBeInTheDocument();
+  });
+
+  it("prewarms the growth API on mount even when wallet is not connected", () => {
+    vi.mocked(useAccount).mockReturnValue({
+      address: undefined,
+      isConnected: false,
+      status: "disconnected",
+    } as ReturnType<typeof useAccount>);
+
+    vi.mocked(useConnect).mockReturnValue({
+      connectors: [{ name: "MetaMask" }],
+      connect: vi.fn(),
+    } as unknown as ReturnType<typeof useConnect>);
+
+    render(<Page />);
+    expect(mockPrewarmGrowthApi).toHaveBeenCalledOnce();
   });
 
   it("shows owner-only message for wrong address", () => {

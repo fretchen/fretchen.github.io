@@ -59,7 +59,11 @@ export async function uploadToS3(
   }
 
   try {
-    await putS3Object(fileName, dataToUpload, { contentType, acl: "public-read" });
+    await putS3Object(fileName, dataToUpload, {
+      contentType,
+      acl: "public-read",
+      cacheControl: "public, max-age=31536000, immutable",
+    });
     console.log(`Successfully uploaded ${fileName}`);
     return `${JSON_BASE_PATH}${fileName}`;
   } catch (error) {

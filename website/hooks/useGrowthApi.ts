@@ -10,6 +10,10 @@ const API_BASE =
   (import.meta.env.PUBLIC_ENV__GROWTH_API_URL as string | undefined) ??
   "https://mypersonaljscloudivnad9dy-growthapi.functions.fnc.fr-par.scw.cloud";
 
+export function prewarmGrowthApi(): void {
+  fetch(`${API_BASE}/drafts`, { method: "OPTIONS" }).catch(() => {});
+}
+
 async function apiFetch<T>(path: string, auth: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}/${path}`, {
     ...options,

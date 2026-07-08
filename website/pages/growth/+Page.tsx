@@ -15,6 +15,7 @@ import {
 } from "../../hooks/useGrowthApi";
 import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
 import { OWNER_ADDRESS } from "../../utils/getChain";
+import { pickWalletConnector } from "../../utils/walletConnector";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
 
@@ -712,7 +713,12 @@ export default function Page() {
           {connectors.length > 0 && (
             <button
               className={connectButton}
-              onClick={() => connect({ connector: connectors[0] })}
+              onClick={() => {
+                const target = pickWalletConnector(connectors);
+                if (target) {
+                  connect({ connector: target });
+                }
+              }}
               style={{ marginTop: "12px" }}
             >
               Connect Wallet

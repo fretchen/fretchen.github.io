@@ -16,6 +16,7 @@ import { useLocale } from "../../hooks/useLocale";
 import { useUmami } from "../../hooks/useUmami";
 import { css } from "../../styled-system/css";
 import { useWalletAuth } from "../../hooks/useWalletAuth";
+import { pickWalletConnector } from "../../utils/walletConnector";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -248,8 +249,9 @@ export default function Page() {
 
   // Handle wallet connection
   const handleWalletConnection = () => {
-    if (connectors.length > 0) {
-      connect({ connector: connectors[0] }); // Use first available connector
+    const target = pickWalletConnector(connectors);
+    if (target) {
+      connect({ connector: target });
     }
   };
 

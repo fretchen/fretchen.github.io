@@ -12,6 +12,7 @@ import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { useIsMounted } from "../hooks/useIsMounted";
 import { AgentInfoPanel } from "./AgentInfoPanel";
+import { pickWalletConnector } from "../utils/walletConnector";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -170,8 +171,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
   // Handle wallet connection
   const handleWalletConnection = () => {
-    if (connectors.length > 0) {
-      connect({ connector: connectors[0] }); // Use first available connector
+    const target = pickWalletConnector(connectors);
+    if (target) {
+      connect({ connector: target });
     }
   };
 

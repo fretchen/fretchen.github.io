@@ -499,7 +499,6 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
 
     analysis = LLMAnalysis(
         top_topics=["quantum"],
-        traffic_sources=["organic"],
         best_pages_for_social=[
             PageForSocial(
                 url="https://fretchen.eu/quantum",
@@ -507,7 +506,6 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
                 reason="High traffic",
             )
         ],
-        content_gaps=["AI"],
         growth_opportunities=["Post more quantum content"],
     )
 
@@ -722,9 +720,7 @@ def test_handle_weekly_on_monday(
 
     analysis = LLMAnalysis(
         top_topics=["q"],
-        traffic_sources=["o"],
         best_pages_for_social=[],
-        content_gaps=[],
         growth_opportunities=[],
     )
     mock_insights.return_value = analysis

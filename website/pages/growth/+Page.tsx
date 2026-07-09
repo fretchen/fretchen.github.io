@@ -11,7 +11,8 @@ import {
   useUpdateDraft,
   prewarmGrowthApi,
 } from "../../hooks/useGrowthApi";
-import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
+import { CHANNEL_CHAR_LIMITS, type Draft, type PostMetrics } from "../../types/growth";
+import InsightsSection from "../../components/InsightsSection";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 import { normalizePageUrl } from "../../utils/urlUtils";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
@@ -229,19 +230,6 @@ const loadingText = css({
   padding: "lg",
   textAlign: "center",
   color: "gray.500",
-});
-
-const insightsPanel = css({
-  mt: "sm",
-  mb: "md",
-});
-
-const insightsList = css({
-  listStyle: "disc",
-  paddingLeft: "lg",
-  fontSize: "sm",
-  color: "gray.700",
-  lineHeight: "1.6",
 });
 
 const reviewMeta = css({
@@ -514,80 +502,6 @@ function DraftCardView({
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function InsightsSection({ insights }: { insights: Insights | null }) {
-  if (!insights) return null;
-  return (
-    <div className={insightsPanel}>
-      <details>
-        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>
-          Insights & Analytics (28 days)
-        </summary>
-        {(insights.top_topics ?? []).length > 0 && (
-          <>
-            <h4 style={{ fontWeight: 600, marginBottom: "4px", marginTop: "8px" }}>Top Topics</h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
-              {insights.top_topics!.map((topic, i) => (
-                <span
-                  key={i}
-                  style={{
-                    background: "#e8f0fe",
-                    color: "#1a73e8",
-                    borderRadius: "12px",
-                    padding: "2px 10px",
-                    fontSize: "13px",
-                  }}
-                >
-                  {topic}
-                </span>
-              ))}
-            </div>
-          </>
-        )}
-        {(insights.best_pages_for_social ?? []).length > 0 && (
-          <>
-            <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Best Pages for Social</h4>
-            <ul className={insightsList}>
-              {insights.best_pages_for_social!.map((page, i) => (
-                <li key={i}>
-                  <a href={page.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 500 }}>
-                    {page.title}
-                  </a>
-                  {page.selection_type && (
-                    <span style={{ marginLeft: "6px", fontSize: "11px", color: "#888" }}>[{page.selection_type}]</span>
-                  )}
-                  <br />
-                  <span style={{ fontSize: "13px", color: "#555" }}>{page.reason}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-        {(insights.growth_opportunities ?? []).length > 0 && (
-          <>
-            <h4 style={{ fontWeight: 600, marginBottom: "4px", marginTop: "8px" }}>Growth Opportunities</h4>
-            <ul className={insightsList}>
-              {insights.growth_opportunities.map((opp, i) => (
-                <li key={i}>{opp}</li>
-              ))}
-            </ul>
-          </>
-        )}
-        {Object.entries(insights.social_metrics ?? {}).map(([platform, metrics]) => (
-          <p key={platform} style={{ fontSize: "14px", color: "#555", marginTop: "4px" }}>
-            <strong>{platform}:</strong> {metrics.followers} followers, {(metrics.engagement_rate * 100).toFixed(1)}%
-            engagement
-          </p>
-        ))}
-        {insights.last_analysis && (
-          <p style={{ fontSize: "12px", color: "#999", marginTop: "8px" }}>
-            Last analysis: {new Date(insights.last_analysis).toLocaleString()}
-          </p>
-        )}
-      </details>
     </div>
   );
 }

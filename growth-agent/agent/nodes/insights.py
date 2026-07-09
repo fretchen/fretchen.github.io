@@ -75,10 +75,8 @@ Tracked events (user engagement funnels):
 
 Based on this data, identify:
 1. Which blog topics have the most visitor interest?
-2. Where is traffic coming from? Any social media referrals?
-3. Which pages should be tested on social media next?
-4. What content gaps exist — popular topics with no recent social posts?
-5. Suggest 3-5 specific, actionable growth opportunities for Mastodon and Bluesky."""
+2. Which pages should be tested on social media next?
+3. Suggest 3-5 specific, actionable growth opportunities for Mastodon and Bluesky."""
 
         insight_prompt += f"""
 

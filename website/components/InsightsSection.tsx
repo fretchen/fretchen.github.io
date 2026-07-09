@@ -15,39 +15,18 @@ const insightsList = css({
   lineHeight: "1.6",
 });
 
-const sectionHeading: React.CSSProperties = {
-  fontWeight: 600,
-  marginBottom: "4px",
-  marginTop: "12px",
-};
+const sectionHeading = { fontWeight: 600, marginBottom: "4px", marginTop: "12px" } as const;
 
 export default function InsightsSection({ insights }: { insights: Insights | null }) {
   if (!insights) return null;
+  const hasLLMData = (insights.best_pages_for_social ?? []).length > 0 || insights.growth_opportunities.length > 0;
   return (
     <div className={insightsPanel}>
       <details>
         <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>Insights & Analysis</summary>
 
-        {(insights.top_topics ?? []).length > 0 && (
-          <>
-            <h4 style={sectionHeading}>Audience Interests</h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
-              {insights.top_topics!.map((topic, i) => (
-                <span
-                  key={i}
-                  style={{
-                    background: "#e8f0fe",
-                    color: "#1a73e8",
-                    borderRadius: "12px",
-                    padding: "2px 10px",
-                    fontSize: "13px",
-                  }}
-                >
-                  {topic}
-                </span>
-              ))}
-            </div>
-          </>
+        {!hasLLMData && (
+          <p style={{ fontSize: "13px", color: "#999", margin: "8px 0" }}>No analysis yet — runs every Monday.</p>
         )}
 
         {(insights.best_pages_for_social ?? []).length > 0 && (

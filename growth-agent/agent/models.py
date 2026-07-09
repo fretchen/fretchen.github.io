@@ -45,12 +45,11 @@ class PageForSocial(BaseModel):
 class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
-    top_topics: list[str] = Field(description="Most popular topics based on page views")
     best_pages_for_social: list[PageForSocial] = Field(
         description="Blog pages best suited for social media promotion"
     )
     growth_opportunities: list[str] = Field(
-        description="Actionable growth opportunities based on the data"
+        description="Exactly 5 plain-text sentences. No markdown syntax, bold, or bullet points."
     )
 
 
@@ -60,7 +59,6 @@ class Insights(BaseModel):
     website_analytics: WebsiteAnalytics = Field(default_factory=WebsiteAnalytics)
     social_metrics: dict[str, SocialMetrics] = Field(default_factory=dict)
     growth_opportunities: list[str] = Field(default_factory=list)
-    top_topics: list[str] = Field(default_factory=list)
     best_pages_for_social: list[PageForSocial] = Field(default_factory=list)
     last_analysis: datetime | None = None
 

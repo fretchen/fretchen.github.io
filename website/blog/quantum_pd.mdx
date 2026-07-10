@@ -9,29 +9,39 @@ description: A story-first tour of the quantum prisoner's dilemma that shows how
 import QuantumPDCircuit from "../components/blog/QuantumPDCircuit";
 
 Over the last year, I really enjoyed diving a bit deeper into the prisoner's dilemma.  Interestingly, I recently understood that its quantum version provides a beautiful connection to the role of institutions, which a central pillar in modern political economics. 
-What follows will be my attempt to explain the connection from the economics side because it seems far more interesting than the physics perspective.
+What follows will be my attempt to explain the connection from the economics side because it seems more consequential than the physics perspective.
 
 ## The basics of the prisoner's dilemma
 
-I already wrote a full post on the [prisoner's dilemma](/blog/13) with Walter White and Jesse Pinkman, so here is the short version. The two have been arrested and are interrogated separately, each offered the same deal: betray your partner and testify for immunity, or stay loyal and say nothing.
+I already wrote a full post on the [prisoner's dilemma](/blog/13) with Walter White and Jesse Pinkman, so is a quick summary wich the essential information that is important to this post. Jesse and Walter have been arrested and are interrogated separately, each offered the same deal: betray your partner and testify for immunity, or stay loyal and say nothing.
 
-The sentences follow from both choices. Both stay loyal: 3 years each. Both betray: 5 years each. But if one betrays while the other stays loyal, the betrayer walks free while the loyal partner takes 15 years.
+The sentences follow from both choices:
 
-That last outcome is the trap. Whatever your partner does, betraying looks better — so both betray, and both end up worse off than if they had trusted each other. Which leaves the question: what would it take to make loyalty the rational choice? Not a moral lecture — an actual change to the game.
+- Both stay loyal: 3 years each. 
+- Both betray: 5 years each. 
+- But if one betrays while the other stays loyal, the betrayer walks free while the loyal partner takes 15 years.
+
+That last outcome is the crux of the dilemma. Whatever your partner does, betraying looks better — so both betray, and both end up worse off than if they had trusted each other. 
+
+This leaves the question: what would it take to make loyalty the rational choice? 
 
 ## What an institution could look like here
 
-If you look into the literature, the same answer keeps coming back: some kind of *institution*, a mediator that changes the players' incentives. And it doesn't have to be an advisor whispering suggestions. The interesting case is a mediator with **teeth** — one that can enforce outcomes, not merely recommend them. Think of Hobbes's Leviathan, or a regulator that fishers actually have to obey.
+The economics literature keeps returning to the same answer: an **institution** the players route their decisions through instead of acting in isolation. It does two things, and both are essential:
 
-Here is what such an institution can look like concretely. Introduce a trusted mediator. Each player secretly hands the mediator a move; the mediator looks the pair up in an agreed-upon table and hands down the sentences. The players never talk to each other — all the coordination flows through the institution.
+- First, it couples their choices: rather than chatting freely, each player submits a single move, and the mediator links the two by a rule fixed in advance. 
+- Second, it enforces that rule — whatever it dictates becomes the sentence, with no appeal. 
 
-Crucially, the mediator offers a **third option** beyond staying loyal and betraying. Call it **Commit** — a commitment device in Schelling's sense: a move you lock in ahead of time that binds your fate to your partner's. Isn't adding an option just cheating, though — changing the game? It is changing the game, deliberately — but it's offered symmetrically to both players and rewrites none of the original sentences, and adding an enforceable action like this is *exactly* what building an institution means.
 
-The cleanest way to understand the three moves is as instructions written on a shared scorecard that starts at "both loyal", where each player has a letter — **C** for loyal, **D** for betrayed:
+In the prisoners dilemma, that institution has a face: **Saul Goodman**, the lawyer both Walter and Jesse hire. And Saul is not a neutral bystander — a client who testifies unravels the whole operation and buries Saul along with it, so he has every reason to make loyalty each man's own best move. Here is how he arranges it. Before the interrogations, Saul prepares a single defense file holding two sworn statements — one for Walter, one for Jesse — both drafted to *deny everything*. Each client then privately leaves Saul one standing instruction for what to do with the statements. Saul carries out the instructions, files the result with the court, and the court hands down sentences by the original deal. The two men never speak; everything routes through Saul.
 
-- **Stay loyal** — leave the scorecard alone.
-- **Betray** — flip *your own* letter (switch yourself from loyal to betrayer, and grab the immunity).
-- **Commit** — flip *both* letters at once, tying the two sentences together.
+Crucially, Saul offers a **third instruction** beyond staying loyal and betraying. Call it **Commit** — a commitment device in Schelling's sense: a move you lock in ahead of time that binds your fate to your partner's. Isn't adding an option just cheating, though — changing the game? It is changing the game, deliberately — but Saul offers it symmetrically to both clients and rewrites none of the original sentences, and adding an enforceable action like this is *exactly* what building an institution means.
+
+Each instruction just tells Saul how to edit the file, which starts with both statements denying everything. And switching a statement twice returns it to the original — that toggle is what makes the third instruction work:
+
+- **Stay loyal** — file my statement as drafted (deny everything).
+- **Betray** — switch my statement to testimony against him, and grab the immunity.
+- **Commit** — switch both statements at once, his and mine together.
 
 That "flip both" move is the whole trick, and it is worth playing with. In the diagram below, each player sits on their own line, their move is a box on that line, and the mediator brackets the moves on both sides — setting the terms before, settling up after. Click either player's move and watch the sentences change:
 

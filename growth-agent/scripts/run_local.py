@@ -150,7 +150,10 @@ def run_insights(prod: bool = False) -> None:
     storage = _make_storage(prod)
     analysis = generate_insights(storage)
     if analysis:
-        print(f"Insights generated — pages for social: {len(analysis.best_pages_for_social)}, growth opportunities: {len(analysis.growth_opportunities)}")
+        print(
+            f"Insights generated — pages for social: {len(analysis.best_pages_for_social)}, "
+            f"growth opportunities: {len(analysis.growth_opportunities)}"
+        )
     else:
         print("No insights generated (missing analytics data?)")
 

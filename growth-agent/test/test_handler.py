@@ -600,8 +600,14 @@ def test_create_drafts(MockLLM, mock_storage):
     assert updated_queue.drafts[0].hashtags == ["#Quantum", "#AI"]
     assert updated_queue.drafts[1].hashtags == []
     # Links must use trailing slash (consistent with sitemap / canonical site URLs)
-    assert updated_queue.drafts[0].link == "https://fretchen.eu/quantum/?utm_source=mastodon&utm_campaign=growth-agent"
-    assert updated_queue.drafts[1].link == "https://fretchen.eu/quantum/?utm_source=bluesky&utm_campaign=growth-agent"
+    assert (
+        updated_queue.drafts[0].link
+        == "https://fretchen.eu/quantum/?utm_source=mastodon&utm_campaign=growth-agent"
+    )
+    assert (
+        updated_queue.drafts[1].link
+        == "https://fretchen.eu/quantum/?utm_source=bluesky&utm_campaign=growth-agent"
+    )
 
 
 @patch("agent.nodes.drafts.LLMClient")

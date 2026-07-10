@@ -4,7 +4,10 @@ from urllib.parse import urlsplit, urlunsplit
 
 
 def normalize_url(url: str) -> str:
-    """Canonicalize a URL: lowercase scheme/host, ensure trailing slash on non-root paths, strip query/fragment."""
+    """Canonicalize a URL: lowercase scheme/host, ensure trailing slash on non-root paths.
+
+    Also strips query/fragment.
+    """
     parts = urlsplit(url.strip())
     path = parts.path or "/"
     if path != "/" and not path.endswith("/"):

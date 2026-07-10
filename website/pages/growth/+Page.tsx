@@ -11,8 +11,10 @@ import {
   useUpdateDraft,
   prewarmGrowthApi,
 } from "../../hooks/useGrowthApi";
-import { CHANNEL_CHAR_LIMITS, type Draft, type Insights, type PostMetrics } from "../../types/growth";
+import { CHANNEL_CHAR_LIMITS, type Draft, type PostMetrics } from "../../types/growth";
+import InsightsSection from "../../components/InsightsSection";
 import { OWNER_ADDRESS } from "../../utils/getChain";
+import { normalizePageUrl } from "../../utils/urlUtils";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
 
 type Tab = "drafts" | "approved" | "published" | "rejected";
@@ -228,19 +230,6 @@ const loadingText = css({
   padding: "lg",
   textAlign: "center",
   color: "gray.500",
-});
-
-const insightsPanel = css({
-  mt: "sm",
-  mb: "md",
-});
-
-const insightsList = css({
-  listStyle: "disc",
-  paddingLeft: "lg",
-  fontSize: "sm",
-  color: "gray.700",
-  lineHeight: "1.6",
 });
 
 const reviewMeta = css({
@@ -517,40 +506,6 @@ function DraftCardView({
   );
 }
 
-function InsightsSection({ insights }: { insights: Insights | null }) {
-  if (!insights) return null;
-  return (
-    <div className={insightsPanel}>
-      <details>
-        <summary style={{ cursor: "pointer", fontWeight: "bold", marginBottom: "8px" }}>
-          Insights & Analytics (28 days)
-        </summary>
-        {(insights.growth_opportunities ?? []).length > 0 && (
-          <>
-            <h4 style={{ fontWeight: 600, marginBottom: "4px" }}>Growth Opportunities</h4>
-            <ul className={insightsList}>
-              {insights.growth_opportunities.map((opp, i) => (
-                <li key={i}>{opp}</li>
-              ))}
-            </ul>
-          </>
-        )}
-        {Object.entries(insights.social_metrics ?? {}).map(([platform, metrics]) => (
-          <p key={platform} style={{ fontSize: "14px", color: "#555", marginTop: "4px" }}>
-            <strong>{platform}:</strong> {metrics.followers} followers, {(metrics.engagement_rate * 100).toFixed(1)}%
-            engagement
-          </p>
-        ))}
-        {insights.last_analysis && (
-          <p style={{ fontSize: "12px", color: "#999", marginTop: "8px" }}>
-            Last analysis: {new Date(insights.last_analysis).toLocaleString()}
-          </p>
-        )}
-      </details>
-    </div>
-  );
-}
-
 // ===== Main Page =====
 
 export default function Page() {
@@ -584,8 +539,9 @@ export default function Page() {
   const historyByPage = useMemo(() => {
     const map: Record<string, Draft[]> = {};
     for (const d of queue?.published ?? []) {
-      const key = d.link ?? d.source_blog_post ?? "";
-      if (!key) continue;
+      const raw = d.link ?? d.source_blog_post ?? "";
+      if (!raw) continue;
+      const key = normalizePageUrl(raw);
       (map[key] ??= []).push(d);
     }
     for (const arr of Object.values(map)) {
@@ -603,11 +559,6 @@ export default function Page() {
   }, [performance?.posts]);
 
   const pageGroups = useMemo(() => {
-    const trafficByPath = new Map<string, number>();
-    for (const p of insights?.website_analytics?.top_pages ?? []) {
-      trafficByPath.set(p.x as string, p.y as number);
-    }
-
     const map = new Map<
       string,
       {
@@ -617,30 +568,29 @@ export default function Page() {
         totalEngagement: { favourites: number; reblogs: number; replies: number };
         lastPublished: string | null;
         channels: Set<string>;
-        pageviews: number | null;
       }
     >();
 
     for (const draft of queue?.published ?? []) {
-      const url = draft.link ?? draft.source_blog_post ?? "(no link)";
-      if (!map.has(url)) {
+      const raw = draft.link ?? draft.source_blog_post ?? "(no link)";
+      const key = normalizePageUrl(raw);
+      if (!map.has(key)) {
         let path: string;
         try {
-          path = new URL(url).pathname;
+          path = new URL(key).pathname;
         } catch {
-          path = url;
+          path = key;
         }
-        map.set(url, {
-          url,
+        map.set(key, {
+          url: key,
           displayUrl: path,
           drafts: [],
           totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
           lastPublished: null,
           channels: new Set(),
-          pageviews: trafficByPath.get(path) ?? null,
         });
       }
-      const group = map.get(url)!;
+      const group = map.get(key)!;
       group.drafts.push(draft);
       group.channels.add(draft.channel);
       const m = metricsByDraftId[draft.id];
@@ -654,8 +604,10 @@ export default function Page() {
       }
     }
 
-    return [...map.values()].sort((a, b) => (b.lastPublished ?? "").localeCompare(a.lastPublished ?? ""));
-  }, [queue?.published, insights?.website_analytics?.top_pages, metricsByDraftId]);
+    const totalEng = (g: { totalEngagement: { favourites: number; reblogs: number; replies: number } }) =>
+      g.totalEngagement.favourites + g.totalEngagement.reblogs + g.totalEngagement.replies;
+    return [...map.values()].sort((a, b) => totalEng(b) - totalEng(a));
+  }, [queue?.published, metricsByDraftId]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
@@ -776,9 +728,6 @@ export default function Page() {
                           ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
                         </span>
                       )}
-                      <span className={group.pageviews !== null ? pageGroupMeta : pageGroupDim}>
-                        {group.pageviews !== null ? `${group.pageviews} views (28d)` : "—"}
-                      </span>
                     </summary>
                     <div className={pageGroupBody}>
                       {group.drafts.map((draft) => (
@@ -807,7 +756,7 @@ export default function Page() {
                 key={draft.id}
                 draft={draft}
                 showActions={showActions}
-                history={historyByPage[draft.link ?? draft.source_blog_post ?? ""] ?? []}
+                history={historyByPage[normalizePageUrl(draft.link ?? draft.source_blog_post ?? "")] ?? []}
                 metrics={metricsByDraftId[draft.id]}
                 onApprove={handleApprove}
                 onReject={handleReject}

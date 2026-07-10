@@ -17,12 +17,10 @@ from agent.models import (
     PageForSocial,
     Performance,
     PostMetrics,
-    WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
     MastodonDraftOutput,
     _former_posts_context,
-    _normalize_url,
     create_drafts,
 )
 from agent.nodes.ingest import _collect_post_metrics, ingest_analytics
@@ -477,15 +475,7 @@ def test_publish_skips_oversized_content(mock_storage):
 def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     storage, store = mock_storage
 
-    # Seed analytics
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(
-            pageviews=500,
-            visitors=100,
-            top_pages=[{"x": "/quantum", "y": 42}],
-        )
-    )
-    storage.write("insights.json", insights)
+    storage.write("insights.json", Insights())
 
     from agent.models import PageMeta
 
@@ -498,8 +488,6 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     }
 
     analysis = LLMAnalysis(
-        top_topics=["quantum"],
-        traffic_sources=["organic"],
         best_pages_for_social=[
             PageForSocial(
                 url="https://fretchen.eu/quantum",
@@ -507,7 +495,6 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
                 reason="High traffic",
             )
         ],
-        content_gaps=["AI"],
         growth_opportunities=["Post more quantum content"],
     )
 
@@ -518,13 +505,50 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     result = generate_insights(storage)
 
     assert result is not None
-    assert result.top_topics == ["quantum"]
     updated = Insights.model_validate(store["insights.json"])
     assert updated.growth_opportunities == ["Post more quantum content"]
+    # insights.json must also carry the LLM analysis fields (merged for the frontend)
+    assert len(updated.best_pages_for_social) == 1
+    assert updated.best_pages_for_social[0].url == "https://fretchen.eu/quantum"
+    assert updated.best_pages_for_social[0].reason == "High traffic"
     # LLMAnalysis should be persisted for daily reuse
     assert "llm_analysis.json" in store
-    persisted_analysis = LLMAnalysis.model_validate(store["llm_analysis.json"])
-    assert persisted_analysis.top_topics == ["quantum"]
+
+
+@patch("agent.nodes.insights.fetch_pages_meta")
+@patch("agent.nodes.insights.LLMClient")
+def test_generate_insights_handles_missing_registry(MockLLM, mock_fetch, mock_storage):
+    """generate_insights must not crash when registry_clean.json is absent."""
+    storage, store = mock_storage
+    storage.write("insights.json", Insights())
+    # registry_clean.json intentionally not written → storage.read returns None
+
+    analysis = LLMAnalysis(best_pages_for_social=[], growth_opportunities=["Grow!"])
+    llm_inst = MockLLM.from_env.return_value
+    llm_inst.structured_output.return_value = analysis
+    llm_inst.close.return_value = None
+
+    result = generate_insights(storage)
+    assert result is not None
+    mock_fetch.assert_not_called()
+
+
+@patch("agent.nodes.insights.fetch_pages_meta")
+@patch("agent.nodes.insights.LLMClient")
+def test_generate_insights_handles_corrupt_registry(MockLLM, mock_fetch, mock_storage):
+    """generate_insights must not crash when registry_clean.json is a JSON array."""
+    storage, store = mock_storage
+    storage.write("insights.json", Insights())
+    store["registry_clean.json"] = ["/foo/", "/bar/"]  # non-dict → should not crash
+
+    analysis = LLMAnalysis(best_pages_for_social=[], growth_opportunities=["Grow!"])
+    llm_inst = MockLLM.from_env.return_value
+    llm_inst.structured_output.return_value = analysis
+    llm_inst.close.return_value = None
+
+    result = generate_insights(storage)
+    assert result is not None
+    mock_fetch.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -540,18 +564,16 @@ def test_create_drafts(MockLLM, mock_storage):
     plan = ContentPlan(
         items=[
             ContentPlanItem(
-                page_url="https://fretchen.eu/quantum",
+                page_url="https://fretchen.eu/quantum/",
                 page_title="Quantum Blog",
                 page_description="Quantum computing intro",
-                reason="High traffic",
                 channel="mastodon",
                 scheduled_at=now + timedelta(days=1),
             ),
             ContentPlanItem(
-                page_url="https://fretchen.eu/quantum",
+                page_url="https://fretchen.eu/quantum/",
                 page_title="Quantum Blog",
                 page_description="Quantum computing intro",
-                reason="High traffic",
                 channel="bluesky",
                 scheduled_at=now + timedelta(days=2),
             ),
@@ -612,6 +634,15 @@ def test_create_drafts(MockLLM, mock_storage):
     # Mastodon hashtags should be persisted separately; Bluesky remains empty
     assert updated_queue.drafts[0].hashtags == ["#Quantum", "#AI"]
     assert updated_queue.drafts[1].hashtags == []
+    # Links must use trailing slash (consistent with sitemap / canonical site URLs)
+    assert (
+        updated_queue.drafts[0].link
+        == "https://fretchen.eu/quantum/?utm_source=mastodon&utm_campaign=growth-agent"
+    )
+    assert (
+        updated_queue.drafts[1].link
+        == "https://fretchen.eu/quantum/?utm_source=bluesky&utm_campaign=growth-agent"
+    )
 
 
 @patch("agent.nodes.drafts.LLMClient")
@@ -622,10 +653,9 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
     plan = ContentPlan(
         items=[
             ContentPlanItem(
-                page_url="https://fretchen.eu/quantum",
+                page_url="https://fretchen.eu/quantum/",
                 page_title="Quantum Blog",
                 page_description="Quantum computing intro",
-                reason="High traffic",
                 channel="mastodon",
                 scheduled_at=now + timedelta(days=1),
             ),
@@ -637,7 +667,7 @@ def test_create_drafts_mastodon_refine_failure_keeps_original(MockLLM, mock_stor
         MastodonDraftOutput(
             content=(
                 "Old framing about quantum "
-                "https://fretchen.eu/quantum?utm_source=mastodon&utm_campaign=growth-agent "
+                "https://fretchen.eu/quantum/?utm_source=mastodon&utm_campaign=growth-agent "
                 "#Old"
             ),
             hashtags=["#Old"],
@@ -716,10 +746,7 @@ def test_handle_weekly_on_monday(
     mock_ingest.return_value = MagicMock()
 
     analysis = LLMAnalysis(
-        top_topics=["q"],
-        traffic_sources=["o"],
         best_pages_for_social=[],
-        content_gaps=[],
         growth_opportunities=[],
     )
     mock_insights.return_value = analysis
@@ -1021,16 +1048,16 @@ def test_create_plan_uses_registry_clean_before_registry(mock_fetch, mock_storag
     from agent.models import PageMeta
 
     mock_fetch.return_value = {
-        "https://fretchen.eu/from-clean": PageMeta(
-            url="https://fretchen.eu/from-clean", title="Clean", description="Desc"
+        "https://fretchen.eu/from-clean/": PageMeta(
+            url="https://fretchen.eu/from-clean/", title="Clean", description="Desc"
         )
     }
 
     plan = create_plan(storage)
     assert plan.items
-    assert plan.items[0].page_url == "https://fretchen.eu/from-clean"
+    assert plan.items[0].page_url == "https://fretchen.eu/from-clean/"
     persisted = ContentPlan.model_validate(store["content_plan.json"])
-    assert persisted.items[0].page_url == "https://fretchen.eu/from-clean"
+    assert persisted.items[0].page_url == "https://fretchen.eu/from-clean/"
 
 
 @patch("agent.nodes.plan.fetch_pages_meta")
@@ -1076,8 +1103,8 @@ def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_
     from agent.models import PageMeta
 
     mock_fetch.return_value = {
-        "https://fretchen.eu/allowed": PageMeta(
-            url="https://fretchen.eu/allowed", title="Allowed", description="Desc"
+        "https://fretchen.eu/allowed/": PageMeta(
+            url="https://fretchen.eu/allowed/", title="Allowed", description="Desc"
         )
     }
 
@@ -1087,7 +1114,7 @@ def test_create_plan_excludes_urls_already_in_pending_pipeline(mock_fetch, mock_
         plan = create_plan(storage)
 
     assert plan.items
-    assert all(item.page_url == "https://fretchen.eu/allowed" for item in plan.items)
+    assert all(item.page_url == "https://fretchen.eu/allowed/" for item in plan.items)
 
 
 # ---------------------------------------------------------------------------
@@ -1216,19 +1243,9 @@ def test_publish_sets_published_at(MockMasto, mock_storage):
     assert saved.published[0].published_at is not None
 
 
-def test_normalize_url_strips_query_and_fragment():
-    """_normalize_url removes UTM params and fragments."""
-    url = "https://fretchen.eu/blog/post?utm_source=mastodon&utm_campaign=growth-agent#section"
-    assert _normalize_url(url) == "https://fretchen.eu/blog/post"
-
-
-def test_normalize_url_leaves_clean_url_unchanged():
-    assert _normalize_url("https://fretchen.eu/blog/post") == "https://fretchen.eu/blog/post"
-
-
 def test_former_posts_context_filters_by_channel():
     """_former_posts_context returns only entries matching the requested channel."""
-    page = "https://fretchen.eu/blog/post"
+    page = "https://fretchen.eu/blog/post/"
     now = datetime.now(timezone.utc)
 
     published = [
@@ -1261,7 +1278,7 @@ def test_former_posts_context_filters_by_channel():
 def test_former_posts_context_empty_when_no_history():
     """_former_posts_context returns empty string when no history exists."""
     queue = ContentQueue()
-    assert _former_posts_context(queue, "https://fretchen.eu/blog/post", "mastodon") == ""
+    assert _former_posts_context(queue, "https://fretchen.eu/blog/post/", "mastodon") == ""
 
 
 @patch("agent.nodes.publish.publish_draft")

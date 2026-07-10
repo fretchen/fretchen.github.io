@@ -75,8 +75,8 @@ def diagnose(prod: bool = False) -> None:
     print("\n=== LLM Analysis ===")
     if analysis_data:
         analysis = LLMAnalysis.model_validate(analysis_data)
-        print(f"  Top topics: {analysis.top_topics}")
         print(f"  Pages for social: {len(analysis.best_pages_for_social)}")
+        print(f"  Growth opportunities: {len(analysis.growth_opportunities)}")
     else:
         print("  NOT FOUND — pipeline refill will be skipped!")
 
@@ -150,8 +150,10 @@ def run_insights(prod: bool = False) -> None:
     storage = _make_storage(prod)
     analysis = generate_insights(storage)
     if analysis:
-        print(f"Insights generated — top topics: {analysis.top_topics}")
-        print(f"Pages for social: {len(analysis.best_pages_for_social)}")
+        print(
+            f"Insights generated — pages for social: {len(analysis.best_pages_for_social)}, "
+            f"growth opportunities: {len(analysis.growth_opportunities)}"
+        )
     else:
         print("No insights generated (missing analytics data?)")
 
@@ -159,7 +161,7 @@ def run_insights(prod: bool = False) -> None:
 def run_analytics(prod: bool = False) -> None:
     storage = _make_storage(prod)
     result = ingest_analytics(storage)
-    print(f"Analytics ingested — pageviews: {result.website_analytics.pageviews}")
+    print(f"Analytics ingested — followers: {list(result.social_metrics.keys())}")
     print(json.dumps(result.model_dump(), indent=2, default=str)[:500])
 
 

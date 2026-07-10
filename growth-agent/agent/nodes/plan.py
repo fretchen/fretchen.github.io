@@ -5,7 +5,7 @@ import math
 import random
 from datetime import date, datetime, timedelta, timezone
 from typing import TypedDict
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
@@ -18,6 +18,7 @@ from agent.models import (
 from agent.page_meta import fetch_pages_meta
 from agent.state import AgentState
 from agent.storage import load_model
+from agent.utils import normalize_url as _normalize_url
 
 logger = logging.getLogger("growth-agent")
 
@@ -34,14 +35,6 @@ class SelectedPage(TypedDict):
     page_url: str
     t_days: float | None
     weight: float
-
-
-def _normalize_url(url: str) -> str:
-    parts = urlsplit(url.strip())
-    path = parts.path or "/"
-    if path != "/" and path.endswith("/"):
-        path = path[:-1]
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, "", ""))
 
 
 def _page_title_from_url(url: str) -> str:
@@ -353,20 +346,11 @@ def build_plan_items(
         meta = page_metas.get(page_url)
         page_desc = (meta.description or "(no description)") if meta else "(no description)"
         page_title = (meta.title if meta else None) or _page_title_from_url(page_url)
-        t_days = sampled["t_days"]
-        if t_days is None:
-            reason = "random draw from registry (unpublished page)"
-        else:
-            reason = (
-                "random draw with half-life weighting "
-                f"(last published {float(t_days):.1f} days ago)"
-            )
         items.append(
             ContentPlanItem(
                 page_url=page_url,
                 page_title=page_title,
                 page_description=page_desc,
-                reason=reason,
                 channel=channel,
                 scheduled_at=slot,
             )

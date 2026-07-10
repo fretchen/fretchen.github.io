@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime, timezone
-from urllib.parse import urlparse, urlunparse
 
 from pydantic import BaseModel, Field
 
@@ -10,6 +9,7 @@ from agent.llm_client import LLMClient
 from agent.models import ContentPlan, ContentQueue, Draft, DraftCritique, Strategy
 from agent.state import AgentState
 from agent.storage import load_model
+from agent.utils import normalize_url as _normalize_url
 
 logger = logging.getLogger("growth-agent")
 
@@ -81,7 +81,6 @@ def _mastodon_prompt(item, language: str, strategy: Strategy, former_context: st
 URL: {url}
 Titel: {item.page_title}
 Zusammenfassung: {item.page_description}
-Warum bewerben: {item.reason}
 {history_block}
 Anforderungen:
 - Hook im ersten Satz (Frage oder starke These)
@@ -99,7 +98,6 @@ Gib NUR den Post-Text zurück, nichts anderes."""
 URL: {url}
 Title: {item.page_title}
 Article summary: {item.page_description}
-Why promote: {item.reason}
 {history_block}
 Context: {strategy.website_url} covers {pillars}.
 Target audience: {strategy.target_audience}
@@ -124,7 +122,6 @@ def _bluesky_prompt(item, language: str, strategy: Strategy, former_context: str
 URL: {url}
 Titel: {item.page_title}
 Zusammenfassung: {item.page_description}
-Warum bewerben: {item.reason}
 {history_block}
 Anforderungen:
 - Knackiger Hook
@@ -139,7 +136,6 @@ Gib NUR den Post-Text zurück, nichts anderes."""
 URL: {url}
 Title: {item.page_title}
 Article summary: {item.page_description}
-Why promote: {item.reason}
 {history_block}
 Target audience: {strategy.target_audience}
 
@@ -203,12 +199,6 @@ Requirements:
 - {"Max 500 chars, 2-3 hashtags" if channel == "mastodon" else "Max 300 chars, NO hashtags"}
 
 Return ONLY the improved post text, nothing else."""
-
-
-def _normalize_url(url: str) -> str:
-    """Strip query string and fragment so UTM-decorated URLs match their canonical form."""
-    p = urlparse(url)
-    return urlunparse(p._replace(query="", fragment=""))
 
 
 def _former_posts_context(queue: ContentQueue, page_url: str, channel: str, n: int = 3) -> str:

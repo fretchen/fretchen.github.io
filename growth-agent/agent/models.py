@@ -6,19 +6,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class WebsiteAnalytics(BaseModel):
-    """Aggregated website analytics (reserved for future analytics integration)."""
-
-    pageviews: int = 0
-    visitors: int = 0
-    visits: int = 0
-    bounces: int = 0
-    totaltime: int = 0
-    top_pages: list[dict] = Field(default_factory=list)
-    top_referrers: list[dict] = Field(default_factory=list)
-    top_events: list[dict] = Field(default_factory=list)
-
-
 class PageMeta(BaseModel):
     """Metadata fetched from a web page's HTML head."""
 
@@ -45,59 +32,22 @@ class PageForSocial(BaseModel):
 class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
-    top_topics: list[str] = Field(description="Most popular topics based on page views")
-    traffic_sources: list[str] = Field(description="Key traffic sources and their significance")
     best_pages_for_social: list[PageForSocial] = Field(
-        description="Blog pages best suited for social media promotion"
-    )
-    content_gaps: list[str] = Field(
-        description="Topics the audience wants but are underrepresented"
+        description="Blog pages best suited for social media promotion",
+        max_length=5,
     )
     growth_opportunities: list[str] = Field(
-        description="Actionable growth opportunities based on the data"
+        description="Exactly 5 plain-text sentences. No markdown syntax, bold, or bullet points."
     )
 
 
 class Insights(BaseModel):
     """Combined insights from all data sources."""
 
-    website_analytics: WebsiteAnalytics = Field(default_factory=WebsiteAnalytics)
     social_metrics: dict[str, SocialMetrics] = Field(default_factory=dict)
     growth_opportunities: list[str] = Field(default_factory=list)
+    best_pages_for_social: list[PageForSocial] = Field(default_factory=list)
     last_analysis: datetime | None = None
-
-
-class StrategyChange(BaseModel):
-    """Audit log entry for a strategy adjustment."""
-
-    timestamp: datetime
-    field: str
-    old_value: str
-    new_value: str
-    reason: str
-
-
-class StrategyAdjustment(BaseModel):
-    """Structured LLM output for strategy adjustments."""
-
-    should_adjust: bool = Field(description="Whether any adjustment is recommended")
-    pillar_change: str | None = Field(
-        default=None,
-        description="New content pillar to replace the least effective one, or null",
-    )
-    pillar_to_replace: str | None = Field(
-        default=None,
-        description="Which existing pillar to replace, or null",
-    )
-    frequency_channel: str | None = Field(
-        default=None,
-        description="Channel to adjust frequency for, or null",
-    )
-    frequency_new_value: int | None = Field(
-        default=None,
-        description="New posting frequency for that channel, or null",
-    )
-    reasoning: str = Field(description="Brief explanation for the recommendation")
 
 
 class Strategy(BaseModel):
@@ -112,14 +62,9 @@ class Strategy(BaseModel):
         ]
     )
     channels: list[str] = Field(default_factory=lambda: ["mastodon", "bluesky"])
-    posting_frequency: dict[str, int] = Field(default_factory=lambda: {"mastodon": 4, "bluesky": 3})
     tone: str = "insightful, technical, opinionated, accessible"
-    languages: list[str] = Field(default_factory=lambda: ["en", "de"])
     target_audience: str = "Tech-curious academics, developers, blockchain enthusiasts"
     website_url: str = "https://fretchen.eu"
-    planning_exploratory_fraction: float = 0.3
-    planning_cooldown_days: int = 14
-    changes: list[StrategyChange] = Field(default_factory=list)
 
 
 class Draft(BaseModel):
@@ -160,7 +105,6 @@ class ContentPlanItem(BaseModel):
     page_url: str
     page_title: str
     page_description: str
-    reason: str
     channel: str
     scheduled_at: datetime
 

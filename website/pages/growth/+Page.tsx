@@ -559,11 +559,6 @@ export default function Page() {
   }, [performance?.posts]);
 
   const pageGroups = useMemo(() => {
-    const trafficByPath = new Map<string, number>();
-    for (const p of insights?.website_analytics?.top_pages ?? []) {
-      trafficByPath.set(p.x as string, p.y as number);
-    }
-
     const map = new Map<
       string,
       {
@@ -573,7 +568,6 @@ export default function Page() {
         totalEngagement: { favourites: number; reblogs: number; replies: number };
         lastPublished: string | null;
         channels: Set<string>;
-        pageviews: number | null;
       }
     >();
 
@@ -594,7 +588,6 @@ export default function Page() {
           totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
           lastPublished: null,
           channels: new Set(),
-          pageviews: trafficByPath.get(path) ?? null,
         });
       }
       const group = map.get(key)!;
@@ -614,7 +607,7 @@ export default function Page() {
     const totalEng = (g: { totalEngagement: { favourites: number; reblogs: number; replies: number } }) =>
       g.totalEngagement.favourites + g.totalEngagement.reblogs + g.totalEngagement.replies;
     return [...map.values()].sort((a, b) => totalEng(b) - totalEng(a));
-  }, [queue?.published, insights?.website_analytics?.top_pages, metricsByDraftId]);
+  }, [queue?.published, metricsByDraftId]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
@@ -735,9 +728,6 @@ export default function Page() {
                           ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
                         </span>
                       )}
-                      <span className={group.pageviews !== null ? pageGroupMeta : pageGroupDim}>
-                        {group.pageviews !== null ? `${group.pageviews} views (28d)` : "—"}
-                      </span>
                     </summary>
                     <div className={pageGroupBody}>
                       {group.drafts.map((draft) => (

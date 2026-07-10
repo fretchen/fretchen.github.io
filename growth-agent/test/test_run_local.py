@@ -99,7 +99,7 @@ def test_run_refill_passes_prod(mock_make_storage, mock_plan, mock_drafts):
 @patch("scripts.run_local._make_storage")
 def test_run_insights_passes_prod(mock_make_storage, mock_insights):
     mock_make_storage.return_value = MagicMock()
-    mock_insights.return_value = MagicMock(top_topics=[], best_pages_for_social=[])
+    mock_insights.return_value = MagicMock(best_pages_for_social=[], growth_opportunities=[])
     run_insights(prod=True)
     mock_make_storage.assert_called_once_with(True)
 
@@ -108,10 +108,7 @@ def test_run_insights_passes_prod(mock_make_storage, mock_insights):
 @patch("scripts.run_local._make_storage")
 def test_run_analytics_passes_prod(mock_make_storage, mock_ingest):
     mock_make_storage.return_value = MagicMock()
-    mock_ingest.return_value = MagicMock(
-        website_analytics=MagicMock(pageviews=0),
-        model_dump=lambda **kw: {},
-    )
+    mock_ingest.return_value = MagicMock(model_dump=lambda **kw: {})
     run_analytics(prod=True)
     mock_make_storage.assert_called_once_with(True)
 

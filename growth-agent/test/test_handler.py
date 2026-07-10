@@ -17,7 +17,6 @@ from agent.models import (
     PageForSocial,
     Performance,
     PostMetrics,
-    WebsiteAnalytics,
 )
 from agent.nodes.drafts import (
     MastodonDraftOutput,
@@ -477,15 +476,7 @@ def test_publish_skips_oversized_content(mock_storage):
 def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     storage, store = mock_storage
 
-    # Seed analytics
-    insights = Insights(
-        website_analytics=WebsiteAnalytics(
-            pageviews=500,
-            visitors=100,
-            top_pages=[{"x": "/quantum", "y": 42}],
-        )
-    )
-    storage.write("insights.json", insights)
+    storage.write("insights.json", Insights())
 
     from agent.models import PageMeta
 

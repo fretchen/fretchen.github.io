@@ -1,6 +1,5 @@
 """Insights node — LLM-based analysis of analytics data."""
 
-import json
 import logging
 from datetime import datetime, timezone
 
@@ -13,7 +12,7 @@ from agent.utils import normalize_url
 
 logger = logging.getLogger("growth-agent")
 
-INSIGHTS_TOP_PAGES_LIMIT = 30
+INSIGHTS_REGISTRY_LIMIT = 30
 INSIGHTS_CANDIDATE_TARGET = 5
 
 
@@ -53,12 +52,11 @@ def generate_insights(storage) -> LLMAnalysis:
 
     llm = LLMClient.from_env()
     try:
-        # Fetch page descriptions using top-visited pages as seed URLs.
-        page_urls = [
-            f"https://fretchen.eu{p.get('x', p.get('name', ''))}"
-            for p in insights.website_analytics.top_pages[:INSIGHTS_TOP_PAGES_LIMIT]
-            if p.get("x") or p.get("name")
-        ]
+        # Seed page descriptions from the sitemap registry (independent of analytics).
+        clean_data = storage.read("registry_clean.json")
+        page_urls = list(dict.fromkeys(
+            normalize_url(u) for u in (clean_data or {}).get("urls", []) if isinstance(u, str)
+        ))[:INSIGHTS_REGISTRY_LIMIT]
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
             f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()
@@ -90,12 +88,6 @@ Page descriptions (from the site):
 
 Social engagement by page (past 30 days, from Mastodon and Bluesky):
 {engagement_block}
-
-Top referrers:
-{json.dumps(insights.website_analytics.top_referrers[:10], indent=2)}
-
-Tracked events (user engagement funnels):
-{json.dumps(insights.website_analytics.top_events[:10], indent=2)}
 
 Based on this data, identify:
 1. Which pages should be tested on social media next? Use the social engagement history to distinguish proven pages (prior engagement) from exploratory ones (not yet shared or low signal).

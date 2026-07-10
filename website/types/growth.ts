@@ -32,25 +32,6 @@ export interface ContentQueue {
   rejected: Draft[];
 }
 
-export interface EventFunnel {
-  hovers: number;
-  clicks: number;
-  successes: number;
-  conversion: number;
-}
-
-export interface WebsiteAnalytics {
-  pageviews: number;
-  visitors: number;
-  visits: number;
-  bounces: number;
-  totaltime: number;
-  top_pages: Record<string, unknown>[];
-  top_referrers: Record<string, unknown>[];
-  top_events: Record<string, unknown>[];
-  event_funnels: Record<string, EventFunnel>;
-}
-
 export interface SocialMetrics {
   followers: number;
   engagement_rate: number;
@@ -65,7 +46,6 @@ export interface PageForSocial {
 }
 
 export interface Insights {
-  website_analytics: WebsiteAnalytics;
   social_metrics: Record<string, SocialMetrics>;
   growth_opportunities: string[];
   last_analysis: string | null;

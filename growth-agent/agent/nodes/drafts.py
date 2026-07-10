@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime, timezone
-from urllib.parse import urlparse, urlunparse
 
 from pydantic import BaseModel, Field
 
@@ -10,6 +9,7 @@ from agent.llm_client import LLMClient
 from agent.models import ContentPlan, ContentQueue, Draft, DraftCritique, Strategy
 from agent.state import AgentState
 from agent.storage import load_model
+from agent.utils import normalize_url as _normalize_url
 
 logger = logging.getLogger("growth-agent")
 
@@ -199,12 +199,6 @@ Requirements:
 - {"Max 500 chars, 2-3 hashtags" if channel == "mastodon" else "Max 300 chars, NO hashtags"}
 
 Return ONLY the improved post text, nothing else."""
-
-
-def _normalize_url(url: str) -> str:
-    """Strip query string and fragment so UTM-decorated URLs match their canonical form."""
-    p = urlparse(url)
-    return urlunparse(p._replace(query="", fragment=""))
 
 
 def _former_posts_context(queue: ContentQueue, page_url: str, channel: str, n: int = 3) -> str:

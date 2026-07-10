@@ -56,11 +56,17 @@ def generate_insights(storage) -> LLMAnalysis:
     try:
         # Seed page descriptions from the sitemap registry (independent of analytics).
         clean_data = storage.read("registry_clean.json")
+        _registry_urls = clean_data.get("urls", []) if isinstance(clean_data, dict) else []
         page_urls = list(
             dict.fromkeys(
-                normalize_url(u) for u in (clean_data or {}).get("urls", []) if isinstance(u, str)
+                normalize_url(u) for u in _registry_urls if isinstance(u, str) and u.strip()
             )
         )[:INSIGHTS_REGISTRY_LIMIT]
+        if not page_urls:
+            logger.warning(
+                "registry_clean.json absent or empty — page descriptions will be missing "
+                "from prompt"
+            )
         page_metas = fetch_pages_meta(page_urls) if page_urls else {}
         page_desc_block = "\n".join(
             f"- {m.url}: {m.description or '(no description)'}" for m in page_metas.values()

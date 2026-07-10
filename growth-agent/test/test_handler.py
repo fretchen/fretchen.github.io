@@ -21,7 +21,6 @@ from agent.models import (
 from agent.nodes.drafts import (
     MastodonDraftOutput,
     _former_posts_context,
-    _normalize_url,
     create_drafts,
 )
 from agent.nodes.ingest import _collect_post_metrics, ingest_analytics
@@ -514,6 +513,42 @@ def test_generate_insights(MockLLM, mock_fetch, mock_storage):
     assert updated.best_pages_for_social[0].reason == "High traffic"
     # LLMAnalysis should be persisted for daily reuse
     assert "llm_analysis.json" in store
+
+
+@patch("agent.nodes.insights.fetch_pages_meta")
+@patch("agent.nodes.insights.LLMClient")
+def test_generate_insights_handles_missing_registry(MockLLM, mock_fetch, mock_storage):
+    """generate_insights must not crash when registry_clean.json is absent."""
+    storage, store = mock_storage
+    storage.write("insights.json", Insights())
+    # registry_clean.json intentionally not written → storage.read returns None
+
+    analysis = LLMAnalysis(best_pages_for_social=[], growth_opportunities=["Grow!"])
+    llm_inst = MockLLM.from_env.return_value
+    llm_inst.structured_output.return_value = analysis
+    llm_inst.close.return_value = None
+
+    result = generate_insights(storage)
+    assert result is not None
+    mock_fetch.assert_not_called()
+
+
+@patch("agent.nodes.insights.fetch_pages_meta")
+@patch("agent.nodes.insights.LLMClient")
+def test_generate_insights_handles_corrupt_registry(MockLLM, mock_fetch, mock_storage):
+    """generate_insights must not crash when registry_clean.json is a JSON array."""
+    storage, store = mock_storage
+    storage.write("insights.json", Insights())
+    store["registry_clean.json"] = ["/foo/", "/bar/"]  # non-dict → should not crash
+
+    analysis = LLMAnalysis(best_pages_for_social=[], growth_opportunities=["Grow!"])
+    llm_inst = MockLLM.from_env.return_value
+    llm_inst.structured_output.return_value = analysis
+    llm_inst.close.return_value = None
+
+    result = generate_insights(storage)
+    assert result is not None
+    mock_fetch.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -1208,19 +1243,9 @@ def test_publish_sets_published_at(MockMasto, mock_storage):
     assert saved.published[0].published_at is not None
 
 
-def test_normalize_url_strips_query_and_fragment():
-    """_normalize_url removes UTM params and fragments."""
-    url = "https://fretchen.eu/blog/post?utm_source=mastodon&utm_campaign=growth-agent#section"
-    assert _normalize_url(url) == "https://fretchen.eu/blog/post"
-
-
-def test_normalize_url_leaves_clean_url_unchanged():
-    assert _normalize_url("https://fretchen.eu/blog/post") == "https://fretchen.eu/blog/post"
-
-
 def test_former_posts_context_filters_by_channel():
     """_former_posts_context returns only entries matching the requested channel."""
-    page = "https://fretchen.eu/blog/post"
+    page = "https://fretchen.eu/blog/post/"
     now = datetime.now(timezone.utc)
 
     published = [
@@ -1253,7 +1278,7 @@ def test_former_posts_context_filters_by_channel():
 def test_former_posts_context_empty_when_no_history():
     """_former_posts_context returns empty string when no history exists."""
     queue = ContentQueue()
-    assert _former_posts_context(queue, "https://fretchen.eu/blog/post", "mastodon") == ""
+    assert _former_posts_context(queue, "https://fretchen.eu/blog/post/", "mastodon") == ""
 
 
 @patch("agent.nodes.publish.publish_draft")

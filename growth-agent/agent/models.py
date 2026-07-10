@@ -33,7 +33,8 @@ class LLMAnalysis(BaseModel):
     """Structured LLM output for website analytics analysis."""
 
     best_pages_for_social: list[PageForSocial] = Field(
-        description="Blog pages best suited for social media promotion"
+        description="Blog pages best suited for social media promotion",
+        max_length=5,
     )
     growth_opportunities: list[str] = Field(
         description="Exactly 5 plain-text sentences. No markdown syntax, bold, or bullet points."

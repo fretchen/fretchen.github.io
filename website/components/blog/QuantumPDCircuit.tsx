@@ -23,7 +23,7 @@ const MOVES: Move[] = ["C", "D", "Q"];
 const MOVE_INFO: Record<Move, { label: string; color: string }> = {
   C: { label: "Stay loyal", color: "#0066cc" },
   D: { label: "Betray", color: "#374151" },
-  Q: { label: "Commit", color: "#10b981" },
+  Q: { label: "Flip both", color: "#10b981" },
 };
 
 // Outcome basis state |Walter Jesse⟩ for each (moveWalter, moveJesse) — from quantum_pd.ipynb
@@ -163,7 +163,7 @@ export default function QuantumPDCircuit() {
       </p>
       <p className={css({ fontSize: "0.8rem", color: "#6b7280", marginBottom: "1rem" })}>
         Walter and Jesse each start out loyal. The Mediator brackets their moves on both sides. Click either
-        player&rsquo;s move to change it and watch the sentences change. Try setting both to <strong>Commit</strong>.
+        player&rsquo;s move to change it and watch the sentences change. Try setting both to <strong>Flip both</strong>.
       </p>
 
       <svg

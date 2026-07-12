@@ -87,26 +87,13 @@ const MediatorBox: React.FC<{ cx: number }> = ({ cx }) => (
 interface GateProps {
   cy: number;
   move: Move;
-  onCycle: () => void;
-  player: string;
 }
 
-const Gate: React.FC<GateProps> = ({ cy, move, onCycle, player }) => {
+// Presentational only — the segmented-control matrix above is the sole input surface.
+const Gate: React.FC<GateProps> = ({ cy, move }) => {
   const info = MOVE_INFO[move];
   return (
-    <g
-      role="button"
-      tabIndex={0}
-      aria-label={`${player}: ${info.label}. Activate to change the move.`}
-      onClick={onCycle}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onCycle();
-        }
-      }}
-      className={css({ cursor: "pointer", outline: "none", _hover: { opacity: 0.85 } })}
-    >
+    <g>
       <rect
         x={xGate - 52}
         y={cy - 19}
@@ -124,52 +111,104 @@ const Gate: React.FC<GateProps> = ({ cy, move, onCycle, player }) => {
   );
 };
 
-interface MoveSelectorProps {
-  player: string;
-  color: string;
-  move: Move;
-  onSelect: (move: Move) => void;
+// One connected segment (a radio option) inside a player's segmented control.
+const Segment: React.FC<{ move: Move; active: boolean; idx: number; onSelect: () => void }> = ({
+  move,
+  active,
+  idx,
+  onSelect,
+}) => {
+  const info = MOVE_INFO[move];
+  const isFirst = idx === 0;
+  const isLast = idx === MOVES.length - 1;
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onSelect}
+      className={css({
+        fontSize: "0.72rem",
+        fontWeight: "600",
+        padding: "0.4rem 0.3rem",
+        whiteSpace: "nowrap",
+        cursor: "pointer",
+        border: "1px solid #d1d5db",
+        borderLeftWidth: isFirst ? "1px" : "0",
+        borderTopLeftRadius: isFirst ? "6px" : "0",
+        borderBottomLeftRadius: isFirst ? "6px" : "0",
+        borderTopRightRadius: isLast ? "6px" : "0",
+        borderBottomRightRadius: isLast ? "6px" : "0",
+        backgroundColor: active ? info.color : "#fff",
+        color: active ? "#fff" : "#374151",
+        transition: "opacity 0.15s",
+        _hover: { opacity: 0.85 },
+      })}
+    >
+      {info.label}
+    </button>
+  );
+};
+
+interface MoveMatrixProps {
+  moveW: Move;
+  moveJ: Move;
+  onSelectW: (move: Move) => void;
+  onSelectJ: (move: Move) => void;
 }
 
-// The primary, unambiguous control: real buttons, not the clickable-but-easy-to-miss SVG boxes.
-const MoveSelector: React.FC<MoveSelectorProps> = ({ player, color, move, onSelect }) => (
-  <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" })}>
-    <span className={css({ fontSize: "0.8rem", fontWeight: "700", color, minWidth: "3.5rem" })}>{player}</span>
-    {MOVES.map((m) => {
-      const info = MOVE_INFO[m];
-      const active = move === m;
-      return (
-        <button
+// Aligned segmented-control matrix: two players × three moves, columns lined up under a
+// shared, colour-coded header. The sole input surface (the SVG diagram is a read-out).
+const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSelectJ }) => {
+  const players: { name: string; color: string; move: Move; onSelect: (m: Move) => void }[] = [
+    { name: "Walter", color: "#2563eb", move: moveW, onSelect: onSelectW },
+    { name: "Jesse", color: "#7c3aed", move: moveJ, onSelect: onSelectJ },
+  ];
+  return (
+    <div
+      className={css({
+        display: "grid",
+        gridTemplateColumns: "auto repeat(3, minmax(0, 1fr))",
+        alignItems: "center",
+        rowGap: "0.4rem",
+        columnGap: "0",
+        maxWidth: "480px",
+        margin: "0 auto 1.25rem",
+      })}
+    >
+      {/* Header row: empty name cell + colour-coded move names */}
+      <span />
+      {MOVES.map((m) => (
+        <span
           key={m}
-          type="button"
-          aria-pressed={active}
-          onClick={() => onSelect(m)}
           className={css({
-            fontSize: "0.78rem",
-            fontWeight: "600",
-            padding: "0.3rem 0.65rem",
-            borderRadius: "999px",
-            border: "2px solid",
-            borderColor: info.color,
-            backgroundColor: active ? info.color : "transparent",
-            color: active ? "#fff" : info.color,
-            cursor: "pointer",
-            transition: "opacity 0.15s",
-            _hover: { opacity: 0.85 },
+            fontSize: "0.72rem",
+            fontWeight: "700",
+            textAlign: "center",
+            color: MOVE_INFO[m].color,
           })}
         >
-          {info.label}
-        </button>
-      );
-    })}
-  </div>
-);
+          {MOVE_INFO[m].label}
+        </span>
+      ))}
+
+      {/* One row per player */}
+      {players.map((p) => (
+        <React.Fragment key={p.name}>
+          <span className={css({ fontSize: "0.8rem", fontWeight: "700", color: p.color, paddingRight: "0.6rem" })}>
+            {p.name}
+          </span>
+          {MOVES.map((m, idx) => (
+            <Segment key={m} move={m} idx={idx} active={p.move === m} onSelect={() => p.onSelect(m)} />
+          ))}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
 
 export default function QuantumPDCircuit() {
   const [moveW, setMoveW] = useState<Move>("D");
   const [moveJ, setMoveJ] = useState<Move>("D");
-
-  const cycle = (m: Move): Move => MOVES[(MOVES.indexOf(m) + 1) % MOVES.length];
 
   const outcome = OUTCOME[moveW][moveJ];
   const [yearsW, yearsJ] = PAYOFF[outcome];
@@ -209,24 +248,16 @@ export default function QuantumPDCircuit() {
         Try it yourself: can loyalty become the smart move?
       </p>
       <p className={css({ fontSize: "0.8rem", color: "#6b7280", marginBottom: "1rem" })}>
-        Right now, Walter and Jesse both betray — the classic trap, five years each. Pick a move for each of them below
-        and watch Saul&rsquo;s file, and the sentences, update live. Try setting both to <strong>Flip both</strong>.
+        Right now, Walter and Jesse both betray — the classic trap, five years each. Set each man&rsquo;s move in the
+        grid below and watch Saul&rsquo;s file, and the sentences, update live. Try setting both to{" "}
+        <strong>Flip both</strong>.
       </p>
 
-      <div
-        className={css({
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
-          marginBottom: "1.25rem",
-        })}
-      >
-        <MoveSelector player="Walter" color="#2563eb" move={moveW} onSelect={setMoveW} />
-        <MoveSelector player="Jesse" color="#7c3aed" move={moveJ} onSelect={setMoveJ} />
-      </div>
+      <MoveMatrix moveW={moveW} moveJ={moveJ} onSelectW={setMoveW} onSelectJ={setMoveJ} />
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        aria-hidden="true"
         className={css({ width: "100%", height: "auto", display: "block", maxWidth: "600px", margin: "0 auto" })}
       >
         {/* Player labels */}
@@ -249,9 +280,9 @@ export default function QuantumPDCircuit() {
         <MediatorBox cx={xJ} />
         <MediatorBox cx={xJd} />
 
-        {/* Player moves (interactive) */}
-        <Gate cy={yA} move={moveW} onCycle={() => setMoveW(cycle(moveW))} player="Walter" />
-        <Gate cy={yB} move={moveJ} onCycle={() => setMoveJ(cycle(moveJ))} player="Jesse" />
+        {/* Player moves (read-out; the segmented matrix above is the control) */}
+        <Gate cy={yA} move={moveW} />
+        <Gate cy={yB} move={moveJ} />
 
         {/* Sentence read-out */}
         <MeasureGlyph cx={xMeasure} cy={yA} />

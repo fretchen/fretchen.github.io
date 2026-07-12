@@ -23,7 +23,7 @@ const MOVES: Move[] = ["C", "D", "Q"];
 const MOVE_INFO: Record<Move, { label: string; color: string }> = {
   C: { label: "Stay loyal", color: "#0066cc" },
   D: { label: "Betray", color: "#374151" },
-  Q: { label: "Flip both", color: "#10b981" },
+  Q: { label: "Flip both", color: "#047857" },
 };
 
 // Outcome basis state |Walter Jesse⟩ for each (moveWalter, moveJesse) — from quantum_pd.ipynb
@@ -138,11 +138,13 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; onSelect: ()
         borderBottomLeftRadius: isFirst ? "6px" : "0",
         borderTopRightRadius: isLast ? "6px" : "0",
         borderBottomRightRadius: isLast ? "6px" : "0",
-        backgroundColor: active ? info.color : "#fff",
         color: active ? "#fff" : "#374151",
         transition: "opacity 0.15s",
         _hover: { opacity: 0.85 },
       })}
+      // Panda's build-time static extraction can't resolve `info.color` (a runtime
+      // value keyed off `move`), so a colour that varies per-move must go inline.
+      style={{ backgroundColor: active ? info.color : "#fff" }}
     >
       {info.label}
     </button>
@@ -180,12 +182,8 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {MOVES.map((m) => (
         <span
           key={m}
-          className={css({
-            fontSize: "0.72rem",
-            fontWeight: "700",
-            textAlign: "center",
-            color: MOVE_INFO[m].color,
-          })}
+          className={css({ fontSize: "0.72rem", fontWeight: "700", textAlign: "center" })}
+          style={{ color: MOVE_INFO[m].color }}
         >
           {MOVE_INFO[m].label}
         </span>
@@ -194,7 +192,10 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {/* One row per player */}
       {players.map((p) => (
         <React.Fragment key={p.name}>
-          <span className={css({ fontSize: "0.8rem", fontWeight: "700", color: p.color, paddingRight: "0.6rem" })}>
+          <span
+            className={css({ fontSize: "0.8rem", fontWeight: "700", paddingRight: "0.6rem" })}
+            style={{ color: p.color }}
+          >
             {p.name}
           </span>
           {MOVES.map((m, idx) => (

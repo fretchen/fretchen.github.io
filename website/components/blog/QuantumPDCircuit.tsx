@@ -5,8 +5,8 @@ import { css } from "../../styled-system/css";
 // The mediated prisoner's-dilemma game as a two-line "circuit"
 // ------------------------------------------------------------
 // Two players — Walter (top line) and Jesse (bottom line). Each picks a
-// move that sits as a box on their own line. A trusted Mediator brackets
-// the moves on both sides — setting the terms before, settling up after.
+// move that sits as a box on their own line. Saul brackets the moves on
+// both sides — setting the terms before, settling up after.
 // At the end each line is read out and the sentences are handed down.
 //
 // Payoffs are prison YEARS (lower is better), matching the Breaking Bad
@@ -51,7 +51,7 @@ const yA = 74; // Walter's wire
 const yB = 152; // Jesse's wire
 const yMid = (yA + yB) / 2;
 const xWire0 = 96;
-const xWire1 = 524;
+const xWire1 = 466; // stops just past the measurement glyph, before the outcome text
 const xJ = 136; // Mediator sets the terms
 const xGate = 256; // player move
 const xJd = 376; // Mediator settles up
@@ -79,7 +79,7 @@ const MediatorBox: React.FC<{ cx: number }> = ({ cx }) => (
       fontWeight="600"
       transform={`rotate(-90 ${cx} ${yMid})`}
     >
-      Mediator
+      Saul
     </text>
   </g>
 );
@@ -117,15 +117,53 @@ const Gate: React.FC<GateProps> = ({ cy, move, onCycle, player }) => {
         stroke={info.color}
         strokeWidth={2}
       />
-      <text x={xGate} y={cy - 1} fontSize={14} fill={info.color} textAnchor="middle" fontWeight="700">
+      <text x={xGate} y={cy + 5} fontSize={14} fill={info.color} textAnchor="middle" fontWeight="700">
         {info.label}
-      </text>
-      <text x={xGate} y={cy + 13} fontSize={9} fill="#6b7280" textAnchor="middle">
-        click to change
       </text>
     </g>
   );
 };
+
+interface MoveSelectorProps {
+  player: string;
+  color: string;
+  move: Move;
+  onSelect: (move: Move) => void;
+}
+
+// The primary, unambiguous control: real buttons, not the clickable-but-easy-to-miss SVG boxes.
+const MoveSelector: React.FC<MoveSelectorProps> = ({ player, color, move, onSelect }) => (
+  <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" })}>
+    <span className={css({ fontSize: "0.8rem", fontWeight: "700", color, minWidth: "3.5rem" })}>{player}</span>
+    {MOVES.map((m) => {
+      const info = MOVE_INFO[m];
+      const active = move === m;
+      return (
+        <button
+          key={m}
+          type="button"
+          aria-pressed={active}
+          onClick={() => onSelect(m)}
+          className={css({
+            fontSize: "0.78rem",
+            fontWeight: "600",
+            padding: "0.3rem 0.65rem",
+            borderRadius: "999px",
+            border: "2px solid",
+            borderColor: info.color,
+            backgroundColor: active ? info.color : "transparent",
+            color: active ? "#fff" : info.color,
+            cursor: "pointer",
+            transition: "opacity 0.15s",
+            _hover: { opacity: 0.85 },
+          })}
+        >
+          {info.label}
+        </button>
+      );
+    })}
+  </div>
+);
 
 export default function QuantumPDCircuit() {
   const [moveW, setMoveW] = useState<Move>("D");
@@ -137,11 +175,20 @@ export default function QuantumPDCircuit() {
   const [yearsW, yearsJ] = PAYOFF[outcome];
 
   let verdict: string;
-  if (yearsW === yearsJ) {
+  if (moveW === "Q" && moveJ === "Q") {
     verdict =
-      yearsW === 3
-        ? "Three years each — the mutual-loyalty outcome."
-        : "Five years each — the mutual-betrayal outcome, the classic trap.";
+      "Three years each — and this time it's stable. Flip both is the new equilibrium: betraying against it costs 15 years instead of paying off.";
+  } else if (moveW === "C" && moveJ === "C") {
+    verdict =
+      "Three years each — the mutual-loyalty outcome. Fragile, though: either player can do better by betraying.";
+  } else if (moveW === "Q" && moveJ === "C") {
+    verdict =
+      "Five years each — Walter's flip-both drags loyal Jesse's stack into it too: mutual betrayal, even though Jesse never chose to betray.";
+  } else if (moveW === "C" && moveJ === "Q") {
+    verdict =
+      "Five years each — Jesse's flip-both drags loyal Walter's stack into it too: mutual betrayal, even though Walter never chose to betray.";
+  } else if (yearsW === yearsJ) {
+    verdict = "Five years each — the mutual-betrayal outcome, the classic trap.";
   } else if (yearsW < yearsJ) {
     verdict = `Walter walks free; Jesse takes ${yearsJ} years.`;
   } else {
@@ -159,12 +206,24 @@ export default function QuantumPDCircuit() {
       })}
     >
       <p className={css({ fontSize: "0.95rem", fontWeight: "bold", marginBottom: "0.35rem", color: "#374151" })}>
-        The mediated game, drawn as two lines
+        Try it yourself: can loyalty become the smart move?
       </p>
       <p className={css({ fontSize: "0.8rem", color: "#6b7280", marginBottom: "1rem" })}>
-        Walter and Jesse each start out loyal. The Mediator brackets their moves on both sides. Click either
-        player&rsquo;s move to change it and watch the sentences change. Try setting both to <strong>Flip both</strong>.
+        Right now, Walter and Jesse both betray — the classic trap, five years each. Pick a move for each of them below
+        and watch Saul&rsquo;s file, and the sentences, update live. Try setting both to <strong>Flip both</strong>.
       </p>
+
+      <div
+        className={css({
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.5rem",
+          marginBottom: "1.25rem",
+        })}
+      >
+        <MoveSelector player="Walter" color="#2563eb" move={moveW} onSelect={setMoveW} />
+        <MoveSelector player="Jesse" color="#7c3aed" move={moveJ} onSelect={setMoveJ} />
+      </div>
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -207,59 +266,21 @@ export default function QuantumPDCircuit() {
         </text>
 
         {/* Column captions */}
-        <text x={xJ} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
+        <text x={xJ} y={H - 6} fontSize={10} fill="#9ca3af" textAnchor="middle">
           sets the terms
         </text>
-        <text x={xGate} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
+        <text x={xGate} y={H - 6} fontSize={10} fill="#9ca3af" textAnchor="middle">
           players move
         </text>
-        <text x={xJd} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
+        <text x={xJd} y={H - 6} fontSize={10} fill="#9ca3af" textAnchor="middle">
           settles up
         </text>
-        <text x={(xMeasure + xOut) / 2} y={H - 6} fontSize={9} fill="#9ca3af" textAnchor="middle">
+        <text x={(xMeasure + xOut) / 2} y={H - 6} fontSize={10} fill="#9ca3af" textAnchor="middle">
           sentence
         </text>
       </svg>
 
-      {/* Outcome read-out */}
-      <div
-        className={css({
-          marginTop: "1rem",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-          alignItems: "center",
-          justifyContent: "center",
-        })}
-      >
-        <span
-          className={css({
-            padding: "0.35rem 0.8rem",
-            borderRadius: "6px",
-            fontSize: "0.85rem",
-            fontWeight: "600",
-            border: "1px solid",
-            borderColor: yearsColor(yearsW),
-            color: yearsColor(yearsW),
-          })}
-        >
-          Walter: {MOVE_INFO[moveW].label} → {yearsLabel(yearsW)}
-        </span>
-        <span
-          className={css({
-            padding: "0.35rem 0.8rem",
-            borderRadius: "6px",
-            fontSize: "0.85rem",
-            fontWeight: "600",
-            border: "1px solid",
-            borderColor: yearsColor(yearsJ),
-            color: yearsColor(yearsJ),
-          })}
-        >
-          Jesse: {MOVE_INFO[moveJ].label} → {yearsLabel(yearsJ)}
-        </span>
-      </div>
-      <p className={css({ fontSize: "0.85rem", color: "#374151", textAlign: "center", marginTop: "0.6rem" })}>
+      <p className={css({ fontSize: "0.85rem", color: "#374151", textAlign: "center", marginTop: "1rem" })}>
         {verdict} <span className={css({ color: "#6b7280" })}>(lower is better)</span>
       </p>
     </div>

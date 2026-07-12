@@ -9,7 +9,7 @@ description: A story-first tour of the quantum prisoner's dilemma that shows how
 import QuantumPDCircuit from "../components/blog/QuantumPDCircuit";
 
 Over the last year, I really enjoyed diving a bit deeper into the prisoner's dilemma.  Interestingly, I recently understood that its quantum version provides a beautiful connection to the role of institutions, which a central pillar in modern political economics. 
-What follows will be my attempt to explain the connection from the economics side because it seems more consequential than the physics perspective.
+What follows will be my attempt to explain the connection from the economics side because it seems possibly more consequential than the physics perspective.
 
 ## The basics of the prisoner's dilemma
 
@@ -59,7 +59,7 @@ Now look at what happened to the trap. Against a partner who flips both, betrayi
 ## Making the connection to the quantum game
 
 At this stage you can make a connection that still strikes me as fairly surprising.
-The exact game we just described — the two lines, the mediator's bracket, the "flip both" move — is also known, in a completely different language, to the quantum-physics community as the [Eisert–Wilkens–Lewenstein](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.83.3077) prisoners dilemma.
+The exact game we just described is also known, in a completely different language, to the quantum-physics community as the [Eisert–Wilkens–Lewenstein](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.83.3077) prisoners dilemma.
 
 In this case, the picture above is just a **quantum circuit**. The two lines are two qubits. The mediator's bracket is the entangling operations $\hat{J}$ (before) and $\hat{J}^\dagger$ (after). The three moves are single-qubit gates: staying loyal is doing nothing, Betray is a bit-flip of your own qubit — and **Flip both, remarkably, is a phase-flip of your own qubit alone** — in quantum language it is named $\hat{Q}$: entanglement carries the local action onto both.
 [Van Enk & Pike, *Physical Review A*, 2002](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.66.024306) showed that this discrete quantum game is *mathematically identical* to the classical mediated game we built with Saul and his case file. The entanglement isn't doing anything a trusted enforcer couldn't do. In the quantum version, the laws of physics play the role of the enforcer: unitarity is the sanction, and it executes the punishment automatically, simultaneously, with no communication and no one to bribe.

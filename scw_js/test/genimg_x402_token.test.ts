@@ -356,6 +356,19 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
       expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
       expect(response.body).toBe("");
+
+      // Regression guard (see #525 / genimg_x402_token.ts): the preflight allow-list
+      // must cover every header @x402/fetch sets on the paid retry request, or the
+      // browser blocks it with "... is not allowed by Access-Control-Allow-Headers".
+      const allowedHeaders = response.headers["Access-Control-Allow-Headers"].toLowerCase();
+      for (const header of [
+        "content-type",
+        "payment-signature",
+        "x-payment",
+        "access-control-expose-headers",
+      ]) {
+        expect(allowedHeaders).toContain(header);
+      }
     });
 
     test("should reject non-POST requests", async () => {

@@ -279,7 +279,14 @@ async function handle(
       statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, X-PAYMENT",
+        // Must cover every header @x402/fetch sets on the paid retry request, or the
+        // browser preflight fails with "... is not allowed by Access-Control-Allow-Headers".
+        // - PAYMENT-SIGNATURE: x402 v2 payment header (we negotiate x402Version: 2)
+        // - X-PAYMENT: x402 v1 payment header (fallback)
+        // - Access-Control-Expose-Headers: set on the request by @x402/fetch (spec-odd but real)
+        // Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
+        "Access-Control-Allow-Headers":
+          "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Content-Type": "application/json",
       },

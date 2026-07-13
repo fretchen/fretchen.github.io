@@ -8,6 +8,7 @@ website/public/quantum
 
 # ignore the books folder
 books
+literature
 
 # solidity
 cache

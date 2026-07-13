@@ -15,7 +15,7 @@ What follows is the one clean example that got me thinking this way.
 
 ## The basics of the prisoner's dilemma
 
-I already wrote a full post on the [prisoner's dilemma](/blog/13) with Walter White and Jesse Pinkman, so here is a quick summary with the essential information that matters for this post. 
+I already wrote a full post on the [prisoner's dilemma](/blog/13/) with Walter White and Jesse Pinkman, so here is a quick summary with the essential information that matters for this post. 
 Jesse and Walter have been arrested and are interrogated separately, each offered the same deal: betray your partner and testify for immunity, or stay loyal and say nothing.
 
 The sentences follow from both choices:
@@ -65,14 +65,14 @@ At this stage you can make a connection that still strikes me as fairly surprisi
 In this case, the picture above is just a **quantum circuit**. The two lines are two qubits. The mediator's bracket is the entangling operations $\hat{J}$ (before) and $\hat{J}^\dagger$ (after). The three moves are single-qubit gates: staying loyal is doing nothing, Betray is a bit-flip of your own qubit — and **Flip both, remarkably, is a phase-flip of your own qubit alone** — in quantum language it is named $\hat{Q}$: entanglement carries the local action onto both.
 [Van Enk & Pike, *Physical Review A*, 2002](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.66.024306) made the match precise: for this discrete set of three moves, the quantum game is *mathematically identical* to the classical mediated game we built with Saul and his case file. 
 
-And here is the part I find genuinely striking. We had to *design* Saul's institution — the two-statement file, the "flip both" move, the enforcement — by hand and with some care. The physicists did not design any of it. They wrote down the natural quantum operations, turned the crank, and the very same institution fell out. The entanglement is not doing anything a trusted enforcer couldn't do; rather, the quantum machinery *handed us the enforcer*. It executes the punishment automatically, simultaneously, with no communication and no one to bribe.
+And here is the part I find genuinely striking. We had to *design* Saul's institution — the two-statement file, the "flip both" move, the enforcement — by hand and with some care. In physics it is mostly part of the framework. There, they wrote down the natural quantum operations, optimized the gates and the very institution fell out. The quantum entanglement is physics description of the non-verbal communication and the build-in punishment mechanism.
 
 ## Connecting the dots and outlook
 
-Let me be honest about what this is and isn't. What we have is *one* worked example. And in this two-player case it is, frankly not super new: the quantum version buys nothing a plain referee couldn't have delivered — Saul got there first, with a folder and a filing deadline. If all quantum did was reproduce an institution we can already build by hand, that would be a cute coincidence and not much more.
+Let me be put this curiosity into some perspective. What we have is *one* worked example. And in this two-player case it is, frankly not super new: the quantum approach did not buy anything completely unknown — Saul got there first, with a folder and a filing deadline. 
+Here the institution was easy enough to design by hand, so watching physics regenerate it is a nice check but no great help. The prize would be a problem where the institution is *hard* to find — and where you could roll out the quantum formulation and have a candidate mechanism fall out. 
+That is the real question I like: **Is quantum game theory a way to *generate* economic institutions, especially for cooperation problems where we don't already know the answer?**
 
-What keeps me curious is the other direction. Here the institution was easy enough to design by hand, so watching physics regenerate it is a nice check but no great help. The prize would be a problem where the institution is *hard* to find — and where you could roll out the quantum formulation and have a candidate mechanism fall out. That is the real question I like: **Is quantum game theory a way to *generate* institutions, especially for cooperation problems where we don't already know the answer?**
-
-An obvious next step is the tragedy of the commons — the many-player version I explored in [an earlier post](/blog/14). It is tempting, but much harder. With many players and several options each, the clean two-line gate turns into something more like a lattice of interacting spins, and I have no idea whether the elegant result here carries over — I could not find literature that settles it. 
+An obvious next step is the tragedy of the commons — the many-player version I explored in [an earlier post](/blog/14/). It is tempting, but much harder. With many players and several options each, the clean two-line gate turns into something more like a lattice of interacting spins, and I have no idea whether the elegant result here carries over — I could not find literature that settles it. 
 
 If you have thought about this — whether the quantum formalism can actually *produce* institutions for hard cooperation problems, or whether the two-player tidiness is where it ends — I would genuinely love to hear from you.

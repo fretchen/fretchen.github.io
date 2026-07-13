@@ -112,10 +112,11 @@ const Gate: React.FC<GateProps> = ({ cy, move }) => {
 };
 
 // One connected segment (a radio option) inside a player's segmented control.
-const Segment: React.FC<{ move: Move; active: boolean; idx: number; onSelect: () => void }> = ({
+const Segment: React.FC<{ move: Move; active: boolean; idx: number; player: string; onSelect: () => void }> = ({
   move,
   active,
   idx,
+  player,
   onSelect,
 }) => {
   const info = MOVE_INFO[move];
@@ -125,6 +126,7 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; onSelect: ()
     <button
       type="button"
       aria-pressed={active}
+      aria-label={`${player}: ${info.label}`}
       onClick={onSelect}
       className={css({
         fontSize: "0.72rem",
@@ -199,7 +201,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
             {p.name}
           </span>
           {MOVES.map((m, idx) => (
-            <Segment key={m} move={m} idx={idx} active={p.move === m} onSelect={() => p.onSelect(m)} />
+            <Segment key={m} move={m} idx={idx} active={p.move === m} player={p.name} onSelect={() => p.onSelect(m)} />
           ))}
         </React.Fragment>
       ))}
@@ -312,7 +314,10 @@ export default function QuantumPDCircuit() {
         </text>
       </svg>
 
-      <p className={css({ fontSize: "0.85rem", color: "#374151", textAlign: "center", marginTop: "1rem" })}>
+      <p
+        aria-live="polite"
+        className={css({ fontSize: "0.85rem", color: "#374151", textAlign: "center", marginTop: "1rem" })}
+      >
         {verdict} <span className={css({ color: "#6b7280" })}>(lower is better)</span>
       </p>
     </div>

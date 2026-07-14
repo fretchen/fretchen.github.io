@@ -67,7 +67,9 @@ export async function settlePayment(
       const facilitator = getFacilitator();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
-      const claims = payload?.claims as Array<{ voucher?: { channel?: { payer?: string } } }> | undefined;
+      const claims = payload?.claims as
+        | Array<{ voucher?: { channel?: { payer?: string } } }>
+        | undefined;
       const payer = claims?.[0]?.voucher?.channel?.payer;
       const network = accepted?.network as string | undefined;
 

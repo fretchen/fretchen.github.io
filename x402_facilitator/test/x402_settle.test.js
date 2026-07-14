@@ -750,7 +750,10 @@ describe("x402_settle with mocked facilitator", () => {
         type: "claim",
         claims: [
           {
-            voucher: { channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" }, maxClaimableAmount: "12000" },
+            voucher: {
+              channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" },
+              maxClaimableAmount: "12000",
+            },
             signature: "0x" + "ab".repeat(65),
             totalClaimed: "0",
           },
@@ -763,7 +766,10 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi
         .fn()
-        .mockResolvedValue({ success: false, errorReason: "invalid_batch_settlement_evm_claim_authorizer_signature" }),
+        .mockResolvedValue({
+          success: false,
+          errorReason: "invalid_batch_settlement_evm_claim_authorizer_signature",
+        }),
     };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 

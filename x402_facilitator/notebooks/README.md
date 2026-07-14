@@ -5,14 +5,14 @@ exercise the `/verify`, `/settle`, and `/supported` endpoints against a locally 
 facilitator (`localhost:8080`, and `localhost:8081` for the fee variant) or the deployed
 `https://facilitator.fretchen.eu`.
 
-| Notebook | Kernel | What it does |
-|---|---|---|
-| `x402_facilitator_demo.ipynb` | Python 3 | Full verify→settle walkthrough vs. `localhost:8080`; EIP-712 signing with `web3` + `eth_account` |
-| `x402_facilitator_demo_ts.ipynb` | Deno/TS | Same flow in TypeScript via `@x402/*` + `viem`, vs. `localhost:8080` |
-| `x402_fee_facilitator_demo.ipynb` | Deno/TS | Fee facilitator vs. `localhost:8080` |
-| `x402_facilitator_demo_with_fees.ipynb` | Deno/TS | Fee-splitting facilitator (deployed `-feefacilitator` URL / `localhost:8081`) |
-| `genimg_x402_buyer.ipynb` | Deno/TS | End-to-end buyer: `wrapFetchWithPayment` against a paid service + `facilitator.fretchen.eu` |
-| `x402_batch_settlement_buyer.ipynb` | Deno/TS | **batch-settlement** scheme spike (Phase 0): `/supported` check + deposit/voucher verify→settle vs. `localhost:8080`. Runs on **Base Sepolia** (canonical contract there, not OP Sepolia); needs a Base Sepolia-funded `TEST_WALLET_PRIVATE_KEY` |
+| Notebook                                | Kernel   | What it does                                                                                                                                                                                                                                     |
+| --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `x402_facilitator_demo.ipynb`           | Python 3 | Full verify→settle walkthrough vs. `localhost:8080`; EIP-712 signing with `web3` + `eth_account`                                                                                                                                                 |
+| `x402_facilitator_demo_ts.ipynb`        | Deno/TS  | Same flow in TypeScript via `@x402/*` + `viem`, vs. `localhost:8080`                                                                                                                                                                             |
+| `x402_fee_facilitator_demo.ipynb`       | Deno/TS  | Fee facilitator vs. `localhost:8080`                                                                                                                                                                                                             |
+| `x402_facilitator_demo_with_fees.ipynb` | Deno/TS  | Fee-splitting facilitator (deployed `-feefacilitator` URL / `localhost:8081`)                                                                                                                                                                    |
+| `genimg_x402_buyer.ipynb`               | Deno/TS  | End-to-end buyer: `wrapFetchWithPayment` against a paid service + `facilitator.fretchen.eu`                                                                                                                                                      |
+| `x402_batch_settlement_buyer.ipynb`     | Deno/TS  | **batch-settlement** scheme spike (Phase 0): `/supported` check + deposit/voucher verify→settle vs. `localhost:8080`. Runs on **Base Sepolia** (canonical contract there, not OP Sepolia); needs a Base Sepolia-funded `TEST_WALLET_PRIVATE_KEY` |
 
 ## Setup
 
@@ -57,7 +57,7 @@ Alternatively, point the notebook's `FACILITATOR_URL` at the deployed
 This directory has its own scoped `deno.json` (`nodeModulesDir: "auto"`, `lock: false`) — Deno
 manages a local `node_modules/` here automatically the first time a notebook imports an
 `npm:` package, fully separate from the parent `x402_facilitator/node_modules` (which only has
-the *facilitator's own* deps and will not satisfy notebook-only imports like `@x402/fetch`).
+the _facilitator's own_ deps and will not satisfy notebook-only imports like `@x402/fetch`).
 No manual install step needed; just register the Jupyter kernel once:
 
 ```bash

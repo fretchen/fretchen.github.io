@@ -87,7 +87,12 @@ vi.mock("../x402_fee.js", () => ({
   getFacilitatorAddress: vi.fn(),
 }));
 
-import { createFacilitator, resetFacilitator, getFacilitator } from "../facilitator_instance.js";
+import {
+  createFacilitator,
+  createReadOnlyFacilitator,
+  resetFacilitator,
+  getFacilitator,
+} from "../facilitator_instance.js";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "../x402_fee.js";
 
 // ═══════════════════════════════════════════════════════════════
@@ -137,17 +142,37 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(typeof hookHolder.current).toBe("function");
   });
 
-  it("registers both exact and batch-settlement schemes for every supported network", () => {
-    // getSupportedNetworks() => OP, OP Sepolia, Base, Base Sepolia
+  it("registers exact on every supported network, but batch-settlement only where the contract is deployed", () => {
+    // getSupportedNetworks() => OP, OP Sepolia, Base, Base Sepolia (4 networks — USDC
+    // exists everywhere, so `exact` is registered for all of them).
     const exact = registerCalls.filter((c) => c.scheme?.scheme === "exact");
     const batch = registerCalls.filter((c) => c.scheme?.scheme === "batch-settlement");
     expect(exact).toHaveLength(4);
-    expect(batch).toHaveLength(4);
-    // Batch-settlement registered for each network alongside exact
+
+    // REGRESSION GUARD: batch-settlement must be registered ONLY on networks where
+    // the canonical BATCH_SETTLEMENT_ADDRESS contract is actually deployed —
+    // Optimism mainnet, Base mainnet, Base Sepolia. Optimism Sepolia has no
+    // deployment; registering it there would advertise support via /supported for
+    // a network where any deposit/claim/settle fails on-chain.
     const batchNetworks = batch.map((c) => c.network).sort();
-    expect(batchNetworks).toEqual(
-      ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"].sort(),
-    );
+    expect(batchNetworks).toEqual(["eip155:10", "eip155:8453", "eip155:84532"].sort());
+    expect(batchNetworks).not.toContain("eip155:11155420");
+  });
+
+  it("read-only facilitator also excludes Optimism Sepolia from batch-settlement registration", () => {
+    // Same regression guard as above, but for createReadOnlyFacilitator() — a
+    // separate registration loop (used when no private key is configured / for
+    // /supported-only mode) that must apply the same deployment-scoped gating.
+    registerCalls.length = 0;
+    createReadOnlyFacilitator();
+
+    const exact = registerCalls.filter((c) => c.scheme?.scheme === "exact");
+    const batch = registerCalls.filter((c) => c.scheme?.scheme === "batch-settlement");
+    expect(exact).toHaveLength(4);
+
+    const batchNetworks = batch.map((c) => c.network).sort();
+    expect(batchNetworks).toEqual(["eip155:10", "eip155:8453", "eip155:84532"].sort());
+    expect(batchNetworks).not.toContain("eip155:11155420");
   });
 
   it("skips fee gating for batch-settlement payments (fee-free channels)", async () => {

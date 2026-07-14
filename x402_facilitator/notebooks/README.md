@@ -18,14 +18,23 @@ facilitator (`localhost:8080`, and `localhost:8081` for the fee variant) or the 
 
 ### 1. Configure the test wallet
 
+All notebooks load env from the **single `x402_facilitator/.env`** one level up — there is
+no separate `.env` in this directory. Add the missing keys there:
+
 ```bash
-cp .env.example .env
-# then edit .env and set TEST_WALLET_PRIVATE_KEY
+cd ..
+$EDITOR .env   # add TEST_WALLET_PRIVATE_KEY (and NFT_WALLET_PUBLIC_KEY as the recipient)
 ```
 
 `TEST_WALLET_PRIVATE_KEY` must be a wallet funded with testnet USDC (Optimism Sepolia /
-Base Sepolia — see `https://faucet.circle.com/`). Both the Deno and Python notebooks load
-this from `.env` in this directory.
+Base Sepolia — see `https://faucet.circle.com/`).
+
+- **Python notebooks** find `../.env` automatically — `python-dotenv`'s `load_dotenv()`
+  walks up from the notebook's cwd.
+- **Deno/TS notebooks** do not search upward by default, so each one loads explicitly:
+  `load({ envPath: "../.env", examplePath: null, export: true })`. (`examplePath: null`
+  disables dotenv's "every key in a local `.env.example` must be present" check — this
+  directory intentionally has no `.env.example` of its own.)
 
 ### 2. Run a facilitator to talk to
 

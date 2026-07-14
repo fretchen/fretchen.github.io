@@ -205,7 +205,7 @@ describe("x402_settle", () => {
       expect(result.success).toBe(false);
       // x402 v2 validates signature FIRST before checking validBefore
       // Modified authorization makes signature invalid
-      expect(result.errorReason).toBe("invalid_exact_evm_payload_signature");
+      expect(result.errorReason).toBe("invalid_exact_evm_signature");
     });
 
     it("handles authorization not yet valid", async () => {
@@ -225,7 +225,7 @@ describe("x402_settle", () => {
       expect(result.success).toBe(false);
       // x402 v2 validates signature FIRST before checking validAfter
       // Modified authorization makes signature invalid
-      expect(result.errorReason).toBe("invalid_exact_evm_payload_signature");
+      expect(result.errorReason).toBe("invalid_exact_evm_signature");
     });
 
     it("handles insufficient amount", async () => {
@@ -245,7 +245,7 @@ describe("x402_settle", () => {
       expect(result.success).toBe(false);
       // x402 v2 validates signature FIRST before checking amount
       // Modified authorization makes signature invalid
-      expect(result.errorReason).toBe("invalid_exact_evm_payload_signature");
+      expect(result.errorReason).toBe("invalid_exact_evm_signature");
     });
 
     it("handles recipient mismatch", async () => {
@@ -267,7 +267,7 @@ describe("x402_settle", () => {
       expect(result.success).toBe(false);
       // x402 v2 validates signature FIRST before checking recipient
       // Modified authorization makes signature invalid
-      expect(result.errorReason).toBe("invalid_exact_evm_payload_signature");
+      expect(result.errorReason).toBe("invalid_exact_evm_signature");
     });
 
     it("validates network format", async () => {

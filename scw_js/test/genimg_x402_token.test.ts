@@ -116,7 +116,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
       )
       .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
-      .mockResolvedValueOnce(makeMockResponse({ success: true, transaction: "0xsettlement" }));
+      .mockResolvedValueOnce(
+        makeMockResponse({ success: true, transaction: "0xsettlement", network }),
+      );
   }
 
   describe("create402Response() - x402 v2 Payment Header", () => {
@@ -1022,7 +1024,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
           makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
         )
         .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
-        .mockResolvedValueOnce(makeMockResponse({ success: true, transaction: "0xsettlement" }));
+        .mockResolvedValueOnce(
+          makeMockResponse({ success: true, transaction: "0xsettlement", network: "eip155:10" }),
+        );
 
       const event = {
         httpMethod: "POST",
@@ -1389,6 +1393,12 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const mockTokenId = 88;
       setupSuccessfulMintingFlow(mockTokenId);
 
+      // Settlement runs fire-and-forget and only logs on failure, so without
+      // this spy a malformed settle fixture (e.g. missing a required field in
+      // the facilitator's response schema) would fail silently.
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
       const event = {
         httpMethod: "POST",
         headers: {
@@ -1420,6 +1430,19 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       // Verify settlement endpoint was called (3rd fetch call)
       expect(global.fetch).toHaveBeenCalledTimes(3);
+
+      // Verify settlement actually resolved successfully, not just that the
+      // facilitator was called. Catches schema drift in the settle response
+      // (e.g. a required field missing from the mock) that would otherwise be
+      // silently swallowed by the fire-and-forget .catch() in genimg_x402_token.ts.
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "✅ Payment settled:",
+        expect.objectContaining({ success: true, transaction: "0xsettlement" }),
+      );
+
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
     });
   });
 });

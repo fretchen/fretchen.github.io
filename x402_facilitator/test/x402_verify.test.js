@@ -101,7 +101,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // Signature validation happens first, so we get signature error
     // (The test signature is from a different address/message)
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects invalid x402 version", async () => {
@@ -123,7 +123,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 EVM exact scheme returns unsupported_scheme
-    expect(result.invalidReason).toBe("unsupported_scheme");
+    expect(result.invalidReason).toBe("invalid_exact_evm_scheme");
   });
 
   test("rejects unsupported network", async () => {
@@ -135,7 +135,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 returns network_mismatch for unsupported networks
-    expect(result.invalidReason).toBe("network_mismatch");
+    expect(result.invalidReason).toBe("invalid_exact_evm_network_mismatch");
   });
 
   test("rejects expired authorization", async () => {
@@ -154,7 +154,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before timing check
     // To properly test validBefore, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects not yet valid authorization", async () => {
@@ -173,7 +173,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before timing check
     // To properly test validAfter, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects insufficient amount (less than payment)", async () => {
@@ -192,7 +192,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before amount check
     // To properly test amount validation, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects mismatched recipient", async () => {
@@ -213,7 +213,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before recipient check
     // To properly test recipient validation, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects missing payload", async () => {
@@ -241,7 +241,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 EVM exact scheme precise error reason
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects signature with invalid length", async () => {
@@ -257,7 +257,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 EVM exact scheme precise error reason
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("uses x402 v2 ExactEvmScheme for Optimism networks", async () => {
@@ -269,7 +269,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // Should fail on signature validation (test signature doesn't match the payload)
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   /**
@@ -341,7 +341,7 @@ describe("x402 Verify", () => {
     // The signature validation should succeed (or fail with insufficient_funds)
     // We accept insufficient_funds because the test wallet doesn't have real USDC on Sepolia
     //
-    // What matters is that we DON'T get "invalid_exact_evm_payload_signature"
+    // What matters is that we DON'T get "invalid_exact_evm_signature"
     // which would indicate a signer configuration problem (the bug we fixed)
     //
     // Success cases:
@@ -349,7 +349,7 @@ describe("x402 Verify", () => {
     // - invalidReason: "insufficient_funds" (signature valid, but no balance)
     //
     // Failure case:
-    // - invalidReason: "invalid_exact_evm_payload_signature" (signer bug)
+    // - invalidReason: "invalid_exact_evm_signature" (signer bug)
 
     if (!result.isValid) {
       // Signature was validated correctly, but wallet doesn't have sufficient balance
@@ -420,7 +420,7 @@ describe("x402 Verify", () => {
     const result = await verifyPayment(paymentPayload, paymentRequirements);
 
     // We accept both insufficient_funds and unauthorized_agent - we're testing signature validation
-    // The important part is that we DON'T get "invalid_exact_evm_payload_signature"
+    // The important part is that we DON'T get "invalid_exact_evm_signature"
     // which would indicate the signer is using the wrong chain client
     if (!result.isValid) {
       // Valid errors: insufficient_funds (no USDC) or unauthorized_agent (not whitelisted on Mainnet)

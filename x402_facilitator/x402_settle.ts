@@ -85,8 +85,12 @@ export async function settlePayment(
 
     logger.info({ hash: result.transaction, network: accepted?.network }, "Transaction confirmed");
 
-    // Settlement succeeded — check if fee collection is needed
-    const feeRequired = verifyResult.feeRequired;
+    // Settlement succeeded — check if fee collection is needed.
+    // Batch-settlement channels are fee-free: the post-settlement transferFrom fee
+    // model is exact-scheme only. The onAfterVerify hook already sets feeRequired=false
+    // for batch-settlement; this scheme guard makes that explicit and defensive.
+    const isBatchSettlement = accepted?.scheme === "batch-settlement";
+    const feeRequired = verifyResult.feeRequired && !isBatchSettlement;
     const recipient = verifyResult.recipient;
     const network = accepted?.network as string | undefined;
 

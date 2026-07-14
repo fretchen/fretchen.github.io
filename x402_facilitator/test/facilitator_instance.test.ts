@@ -18,24 +18,29 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 type HookArgs = {
   paymentPayload: {
-    accepted?: { network?: string };
+    accepted?: { network?: string; scheme?: string };
     payload?: { authorization?: { to?: string } };
   };
   result: Record<string, unknown>;
 };
 
-// Use vi.hoisted() to ensure the holder is available before mocks run
-const { hookHolder } = vi.hoisted(() => ({
+type RegisterCall = { network: unknown; scheme: { scheme?: string } };
+
+// Use vi.hoisted() to ensure the holders are available before mocks run
+const { hookHolder, registerCalls } = vi.hoisted(() => ({
   hookHolder: {
     current: null as ((args: HookArgs) => Promise<void>) | null,
   },
+  registerCalls: [] as RegisterCall[],
 }));
 
-// Mock x402 libraries — we only need to capture the onAfterVerify callback
+// Mock x402 libraries — capture the onAfterVerify callback and every register() call
 vi.mock("@x402/core/facilitator", () => ({
   // Use a regular function (not arrow) so it works as a constructor with `new`
   x402Facilitator: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
-    this.register = vi.fn();
+    this.register = vi.fn((network: unknown, scheme: { scheme?: string }) => {
+      registerCalls.push({ network, scheme });
+    });
     this.onAfterVerify = vi.fn((cb: (args: HookArgs) => Promise<void>) => {
       hookHolder.current = cb;
     });
@@ -46,8 +51,18 @@ vi.mock("@x402/evm", () => ({
   toFacilitatorEvmSigner: vi.fn(() => ({})),
 }));
 
+// Tag the mocked scheme instances so register() assertions can tell them apart.
+// Use regular functions (not arrows) so they work as constructors with `new`.
 vi.mock("@x402/evm/exact/facilitator", () => ({
-  ExactEvmScheme: vi.fn(),
+  ExactEvmScheme: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.scheme = "exact";
+  }),
+}));
+
+vi.mock("@x402/evm/batch-settlement/facilitator", () => ({
+  BatchSettlementEvmScheme: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.scheme = "batch-settlement";
+  }),
 }));
 
 vi.mock("viem", async () => {
@@ -88,13 +103,14 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     vi.clearAllMocks();
     hookHolder.current = null;
+    registerCalls.length = 0;
     resetFacilitator();
 
     // Default fee configuration
     vi.mocked(getFeeAmount).mockReturnValue(10000n);
     vi.mocked(getFacilitatorAddress).mockReturnValue("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
-    // Create facilitator — this registers the onAfterVerify hook
+    // Create facilitator — this registers the schemes + the onAfterVerify hook
     createFacilitator();
   });
 
@@ -119,6 +135,35 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   it("registers onAfterVerify hook during facilitator creation", () => {
     expect(hookHolder.current).not.toBeNull();
     expect(typeof hookHolder.current).toBe("function");
+  });
+
+  it("registers both exact and batch-settlement schemes for every supported network", () => {
+    // getSupportedNetworks() => OP, OP Sepolia, Base, Base Sepolia
+    const exact = registerCalls.filter((c) => c.scheme?.scheme === "exact");
+    const batch = registerCalls.filter((c) => c.scheme?.scheme === "batch-settlement");
+    expect(exact).toHaveLength(4);
+    expect(batch).toHaveLength(4);
+    // Batch-settlement registered for each network alongside exact
+    const batchNetworks = batch.map((c) => c.network).sort();
+    expect(batchNetworks).toEqual(
+      ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"].sort(),
+    );
+  });
+
+  it("skips fee gating for batch-settlement payments (fee-free channels)", async () => {
+    // Fees are enabled (getFeeAmount=10000n), but batch-settlement must bypass the
+    // exact-scheme fee model entirely — and must NOT be rejected for lacking an
+    // exact-style authorization.to recipient.
+    const args: HookArgs = {
+      paymentPayload: { accepted: { network: "eip155:11155420", scheme: "batch-settlement" } },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(checkMerchantAllowance).not.toHaveBeenCalled();
   });
 
   it("skips processing when verification already failed", async () => {

@@ -640,4 +640,36 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeUndefined();
     expect(collectFeeSpy).not.toHaveBeenCalled();
   });
+
+  it("never collects a fee for batch-settlement, even if feeRequired+recipient are set", async () => {
+    // Batch-settlement channels are fee-free. Even if the verify result somehow
+    // carries feeRequired=true and a recipient, the scheme guard in x402_settle.ts
+    // must suppress fee collection (defensive; the onAfterVerify hook also sets
+    // feeRequired=false for batch-settlement).
+    const batchPayload = {
+      ...validPaymentPayload,
+      accepted: { ...validPaymentPayload.accepted, scheme: "batch-settlement" },
+    };
+    const batchRequirements = { ...validPaymentRequirements, scheme: "batch-settlement" };
+
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
+
+    const result = await settlePayment(batchPayload, batchRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.fee).toBeUndefined();
+    expect(collectFeeSpy).not.toHaveBeenCalled();
+  });
 });

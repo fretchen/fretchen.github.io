@@ -5,7 +5,7 @@ import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
 import { resetFacilitator } from "../facilitator_instance.js";
 import { getChainConfig } from "../chain_utils.js";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 
 describe("x402 Verify", () => {
@@ -287,21 +287,18 @@ describe("x402 Verify", () => {
    * Unlike other tests that use mock signatures, this creates an authentic
    * EIP-3009 authorization signature that the facilitator must validate.
    *
-   * TODO(x402-2.18): Skipped after the @x402/evm 2.0 -> 2.18 bump (required for
-   * batch-settlement). The client signature is cryptographically valid (verified
-   * offline against TransferWithAuthorization) and 2.18's verify recovers the
-   * correct payer, but it then performs an additional on-chain check that fails
-   * here — the facilitator uses viem's default public RPC with no configured
-   * endpoint. Re-enable once the facilitator gets a real RPC endpoint (tracked as
-   * a separate follow-up). Real on-chain verification is covered meanwhile by the
-   * Phase 0 batch-settlement notebook against Base Sepolia.
+   * NOTE: uses a FRESH random key, not the shared Hardhat account #0. Since
+   * @x402/evm 2.17+ validates signatures via ERC-1271 `isValidSignature` when the
+   * signer address has code, and the well-known Hardhat key has a stray EIP-7702
+   * delegation on public testnets, that shared key takes the smart-wallet path and
+   * fails. A clean EOA (no code) uses ecrecover, as real users do.
    */
-  test.skip("E2E: validates real signature created with x402 client", async () => {
+  test("E2E: validates real signature created with x402 client", async () => {
     // CLIENT SIDE: Create a real signature using the client library
     // This simulates what happens in a Jupyter notebook or web client
 
-    // Use Hardhat test account #0 as the payer
-    const payerPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    // Fresh random key => clean EOA (no code / no EIP-7702 delegation), the ecrecover path
+    const payerPrivateKey = generatePrivateKey();
     const payerAccount = privateKeyToAccount(payerPrivateKey);
 
     // Create x402 EVM client for signing
@@ -353,23 +350,17 @@ describe("x402 Verify", () => {
     // FACILITATOR SIDE: Verify the signature
     const result = await verifyPayment(paymentPayload, paymentRequirements);
 
-    // The signature validation should succeed (or fail with insufficient_funds)
-    // We accept insufficient_funds because the test wallet doesn't have real USDC on Sepolia
+    // The signature validation should succeed, then fail at the balance check
+    // (invalid_exact_evm_insufficient_balance — the 2.17+ rename of insufficient_funds)
+    // because the fresh test wallet holds no USDC on Sepolia.
     //
-    // What matters is that we DON'T get "invalid_exact_evm_signature"
-    // which would indicate a signer configuration problem (the bug we fixed)
-    //
-    // Success cases:
-    // - isValid: true (wallet has funds - unlikely in tests)
-    // - invalidReason: "insufficient_funds" (signature valid, but no balance)
-    //
-    // Failure case:
-    // - invalidReason: "invalid_exact_evm_signature" (signer bug)
+    // What matters is that we DON'T get "invalid_exact_evm_signature", which would
+    // indicate a signature-verification / signer configuration problem.
 
     if (!result.isValid) {
       // Signature was validated correctly, but wallet doesn't have sufficient balance
       // This is expected in test environment without real testnet funds
-      expect(result.invalidReason).toBe("insufficient_funds");
+      expect(result.invalidReason).toBe("invalid_exact_evm_insufficient_balance");
       console.log("✓ Signature validation successful (insufficient funds is expected)");
     } else {
       // If the wallet happens to have funds, that's also valid
@@ -384,16 +375,12 @@ describe("x402 Verify", () => {
     );
   });
 
-  // TODO(x402-2.18): Skipped — same cause as the E2E test above. 2.18's exact
-  // verify does an on-chain check that fails against the facilitator's default
-  // (unconfigured) public RPC. Re-enable once a real RPC endpoint is configured.
-  test.skip("validates signature for Optimism Mainnet (chainId 10)", async () => {
+  test("validates signature for Optimism Mainnet (chainId 10)", async () => {
     // This test would have failed before the multi-chain fix
-    // because the facilitator was hardcoded to use Sepolia client for all chains
-
-    const payerAccount = privateKeyToAccount(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-    );
+    // because the facilitator was hardcoded to use Sepolia client for all chains.
+    // Fresh random key => clean EOA (ecrecover path); see the E2E test note re:
+    // the shared Hardhat key's EIP-7702 delegation under @x402 2.17+.
+    const payerAccount = privateKeyToAccount(generatePrivateKey());
 
     // Create a client for Optimism Mainnet (chainId 10)
     const evmClient = new ExactEvmScheme({
@@ -441,12 +428,14 @@ describe("x402 Verify", () => {
     // The domain.chainId would be 10 (Mainnet) but the client would be configured for 11155420 (Sepolia)
     const result = await verifyPayment(paymentPayload, paymentRequirements);
 
-    // We accept both insufficient_funds and unauthorized_agent - we're testing signature validation
-    // The important part is that we DON'T get "invalid_exact_evm_signature"
-    // which would indicate the signer is using the wrong chain client
+    // We accept insufficient-balance or unauthorized_agent — we're testing signature
+    // validation. The important part is that we DON'T get "invalid_exact_evm_signature",
+    // which would indicate the signer is using the wrong chain client.
     if (!result.isValid) {
-      // Valid errors: insufficient_funds (no USDC) or unauthorized_agent (not whitelisted on Mainnet)
-      expect(["insufficient_funds", "unauthorized_agent"]).toContain(result.invalidReason);
+      // Valid errors: no USDC balance, or agent not whitelisted on Mainnet
+      expect(["invalid_exact_evm_insufficient_balance", "unauthorized_agent"]).toContain(
+        result.invalidReason,
+      );
       console.log(
         `✓ Mainnet signature validation successful (${result.invalidReason} is expected)`,
       );

@@ -95,7 +95,11 @@ This supersedes the earlier open question ("flat fee vs. token budget vs. prepai
 - vs. trusted off-chain credits: strictly better — server can't claim more than the signed voucher or the escrow, client loss is bounded by the deposit, and `withdrawDelay` is a unilateral exit. Client never depends on server goodwill for custody.
 - Conceptually close to LLMv1's existing "deposit a balance, spend it down" model (`depositForLLM`), so UX continuity for users is decent.
 
-**Blocks on Investigation E below** (state/Redis) before it can be scoped into PRs.
+**Contract question — RESOLVED (no deployment needed).** Unlike the exact scheme (which calls USDC's own `transferWithAuthorization`, no custom contract), batch settlement needs on-chain *escrow* logic USDC lacks (`deposit`, `claimWithSignature`, `refund`, `refundWithSignature`, `withdrawRequestedAt`, `settle`). BUT x402 ships this as a **canonical, pre-deployed contract at a deterministic CREATE2 address** baked into the SDK: `BATCH_SETTLEMENT_ADDRESS = 0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003` (same on every EVM chain; used as the EIP-712 voucher `verifyingContract` + the contract the facilitator calls; plus EIP3009/Permit2 token-collector addresses for the deposit paths). So operationally it's just like exact: **you deploy nothing, point at the built-in address, facilitator just needs a funded wallet.** Verified on-chain (`eth_getCode`, 2026-07-14): deployed on Optimism mainnet ✅, Base mainnet ✅, Base Sepolia ✅ — but **NOT on Optimism Sepolia ❌**, so run the Phase-0 testnet spike on **Base Sepolia** (`eip155:84532`, already supported in `x402_server.ts`).
+
+**Storage question — RESOLVED (Investigation E): S3 compare-and-swap, no new infra.** Scaleway conditional-write support tested and confirmed.
+
+Both prior gates are now cleared; A is ready to be scoped into the Phase 1–5 PRs (section F).
 
 ### B. Merkle-tree / usage-ledger privacy — resolved as a consequence of A
 Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes the public per-request ledger entirely, which *is* the privacy fix. A standalone patch to the current model would be cosmetic — `processBatch` calldata is public on Optimism forever regardless of S3 ACLs, and the contract needs the plaintext address to debit `llmBalance`. Retire `merkle/trees.json` + the `leafhistory` endpoint + LLMv1's merkle path when A ships.
@@ -112,20 +116,25 @@ Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes
 - SDK docstring names the acceptable atomic backends verbatim: "Redis/Valkey Lua scripts, SQL transactions, or Durable Objects." `InMemoryChannelStorage` only works inside one JS runtime.
 - **Risk reframe:** a lost voucher update = you *under-claim* (leak your own revenue), NOT user fund loss — the client is always protected by the on-chain escrow + `withdrawDelay`. So the correctness bar is forgiving; start simple.
 
-**Three storage options (cheapest first):**
-- **A. Single-instance** — pin `llm` function `maxScale: 1` (already done for `growthapi`) + `InMemoryChannelStorage` + periodic S3 snapshot. Zero new infra; loses in-flight state on cold start/redeploy → occasional under-claim. Fine for tiny amounts.
-- **B. S3 compare-and-swap** — extend `@fretchen/s3-utils` with conditional PUT (`If-Match`/ETag) to implement `updateChannel` as a CAS retry loop. Zero new service. **Depends on Scaleway Object Storage supporting conditional writes — VERIFY.** (Current s3-utils does plain PUT, no conditional headers.)
-- **C. Managed Redis/Valkey** — the Scaleway "Managed Database for Redis™" product is the right category (Lua `EVAL` = atomic RMW, satisfies the SDK). Caveat: always-on provisioned instance (monthly floor cost), a shift from pay-per-use serverless. Probably overkill for a low-traffic assistant; check for a Valkey/smaller tier. Prefer B if Scaleway supports conditional PUT.
+**DECISION: Option B (S3 compare-and-swap).** The blocking unknown is resolved — Scaleway Object Storage supports ETag conditional writes (tested against `my-imagestore`/`nl-ams` on 2026-07-14): `If-None-Match:*` → 412 on existing (create guard), `If-Match:<stale>` → 412 (CAS reject), `If-Match:<current>` → 200 (CAS write). So we get atomic `updateChannel` with **zero new infrastructure**, a perfect stateless-serverless fit. Options A (single-instance) and C (Managed Redis) are set aside; C stays as the escape hatch only if channel counts ever grow enough that S3's `list()` cost (below) bites.
 
-**Architectural split (do this):** separate the concurrency-sensitive hot path (per-request `updateChannel`, in the `llm` serverless function) from the periodic claim/settle loop (`BatchSettlementChannelManager` interval runner → run in a scheduled container, growth-agent-style, where the on-chain-tx cron pattern already exists).
+**S3 `ChannelStorage` sketch:**
+- **Layout:** one object per channel, `channels/<channelId>.json` (private ACL — this is server-internal state, NOT the public `merkle/` prefix). Store the SDK `Channel` record as JSON.
+- **`get(id)`:** GET `channels/<id>.json`, parse; null → `undefined`.
+- **`updateChannel(id, fn)`:** GET (capture ETag) → run `fn(current)` → conditional PUT. New channel: `If-None-Match:*`. Existing: `If-Match:<etag>`. On **412** (or transient network error) → re-GET and retry with bounded backoff. Map result to `{channel, status: "updated"|"unchanged"|"deleted"}`; `fn` returning `undefined` → conditional DELETE.
+- **`list()`:** `ListObjectsV2` on `channels/` prefix → GET each object. **This is the one wart** — N+1 requests per claim sweep. Acceptable at modest channel counts (tens–low hundreds); it's the only reason you'd ever switch to Option C.
+- **s3-utils extension needed (first task):** `@fretchen/s3-utils` currently does plain GET/PUT with no conditional headers. Add: (1) return ETag from GET, (2) accept `If-Match`/`If-None-Match` on PUT + surface 412 (don't throw), (3) a `listObjects(prefix)` helper, (4) conditional DELETE. Keep it a thin, typed addition — the existing SigV4 signer already handles arbitrary signed headers (verified: the CAS test reused `sigv4.js` unchanged).
+- **Retry semantics:** treat 412 AND network errors as retryable in the CAS loop (the existing s3-utils already retries 5xx/network for unconditional calls; mirror that). Cap retries; on exhaustion, fail the request (client just re-signs a fresh voucher next turn — no fund risk).
 
-**#1 UNKNOWN — gates everything:** where is the on-chain escrow/channel contract? Not found as a hardcoded address in the installed types. Either a canonical x402 deployment on Optimism (point at via config) or BYO-deploy via `eth/` (Hardhat/UUPS). Resolve first.
+**Architectural split (do this):** separate the concurrency-sensitive hot path (per-request `updateChannel`, in the `llm` serverless function) from the periodic claim/settle loop (`BatchSettlementChannelManager` interval runner → run in a scheduled container, growth-agent-style, where the on-chain-tx cron pattern already exists). Both share the same S3 `ChannelStorage`.
+
+**On-chain contract — RESOLVED (see section A):** no deployment needed. Canonical `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003` is baked into the SDK and already deployed on Optimism/Base mainnet + Base Sepolia. Only caveat: NOT on Optimism Sepolia → do the testnet spike on Base Sepolia.
 
 ### F. Batch-settlement transition — phased step estimate
 
 Spans 5 packages (`eth?` / `x402_facilitator` / `scw_js` / a scheduled container / `website`). SDK carries the channel-manager weight; real work = one storage adapter + client voucher flow + retiring the old path.
 
-- **Phase 0 — Spike (throwaway, gates the rest):** ① confirm/deploy the batch-settlement contract on Optimism mainnet + your USDC; ② confirm Scaleway Object Storage conditional-PUT support (picks storage B vs C); ③ run one channel end-to-end on Optimism Sepolia with `InMemoryChannelStorage` + testnet USDC.
+- **Phase 0 — Spike (throwaway).** Both former gates now cleared (canonical contract deployed; S3 CAS confirmed). Remaining goal: run one channel end-to-end — deposit → sign cumulative vouchers → claim → settle → refund — on **Base Sepolia** (`eip155:84532`; canonical contract present, unlike Optimism Sepolia) with `InMemoryChannelStorage` + testnet USDC, to learn the SDK's client/facilitator/server API surface before touching production code.
 - **Phase 1 — Facilitator:** register `BatchSettlementEvmScheme` in `x402_facilitator` (deposit/claim/settle/refund) alongside existing `ExactEvmScheme`.
 - **Phase 2 — Server hot path:** implement chosen `ChannelStorage`, wire `SettlementEvmScheme` into the `llm` function (verify voucher → `updateChannel` → serve), set scaling. Use `setSettlementOverrides` to claim actual (post-generation) token cost ≤ authorized max.
 - **Phase 3 — Claim runner:** `BatchSettlementChannelManager` on a schedule in a container.

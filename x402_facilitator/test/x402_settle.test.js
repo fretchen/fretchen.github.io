@@ -672,4 +672,105 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeUndefined();
     expect(collectFeeSpy).not.toHaveBeenCalled();
   });
+
+  it("skips verifyPayment entirely for a batch-settlement claim payload and settles directly", async () => {
+    // The SDK's own scheme.verify() has no branch for "claim" payloads (only
+    // deposit/voucher/refund are verifiable) and would unconditionally reject them
+    // with invalid_batch_settlement_evm_payload_type. settlePayment must bypass the
+    // verify-first gate for claim/settle payload types and call facilitator.settle()
+    // directly — that's the whole point of this regression test.
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: {
+              channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const claimRequirements = { scheme: "batch-settlement", network: "eip155:84532" };
+
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    const verifyPaymentSpy = vi.spyOn(verifyModule, "verifyPayment");
+
+    const result = await settlePayment(claimPayload, claimRequirements);
+
+    expect(verifyPaymentSpy).not.toHaveBeenCalled();
+    expect(mockFacilitator.settle).toHaveBeenCalledWith(claimPayload, claimRequirements);
+    expect(result).toEqual({
+      success: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      transaction: "0xclaimtxhash",
+      network: "eip155:84532",
+    });
+  });
+
+  it("skips verifyPayment for a batch-settlement 'settle' payload too", async () => {
+    const settlePayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "settle",
+        receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+        token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      },
+    };
+    const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
+
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    const verifyPaymentSpy = vi.spyOn(verifyModule, "verifyPayment");
+
+    const result = await settlePayment(settlePayload, requirements);
+
+    expect(verifyPaymentSpy).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(result.transaction).toBe("0xsweeptxhash");
+  });
+
+  it("surfaces the facilitator's error reason when a batch-settlement claim fails", async () => {
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: { channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" }, maxClaimableAmount: "12000" },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
+
+    const mockFacilitator = {
+      settle: vi
+        .fn()
+        .mockResolvedValue({ success: false, errorReason: "invalid_batch_settlement_evm_claim_authorizer_signature" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_claim_authorizer_signature");
+    expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+  });
 });

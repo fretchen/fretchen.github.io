@@ -105,7 +105,7 @@ describe("x402 Splitter Verify", () => {
 
     expect(result.isValid).toBe(false);
     // Signature validation happens, test signature doesn't match modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects unsupported scheme", async () => {
@@ -121,7 +121,7 @@ describe("x402 Splitter Verify", () => {
 
     expect(result.isValid).toBe(false);
     // After passing scheme check, signature validation happens
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects unsupported network", async () => {
@@ -155,7 +155,7 @@ describe("x402 Splitter Verify", () => {
 
     expect(result.isValid).toBe(false);
     // Signature validation happens first, so modified payload fails signature check
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects not yet valid authorization", async () => {
@@ -173,7 +173,7 @@ describe("x402 Splitter Verify", () => {
 
     expect(result.isValid).toBe(false);
     // Signature validation happens first
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects insufficient amount (less than fixed fee)", async () => {
@@ -264,7 +264,7 @@ describe("x402 Splitter Verify", () => {
 
     expect(result.isValid).toBe(false);
     // Should fail on signature validation (test signature doesn't match)
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("requires seller field in payload", async () => {
@@ -333,7 +333,7 @@ describe("x402 Splitter Verify", () => {
     const result = await verifySplitterPayment(validPaymentPayload, mismatchedRequirements);
 
     expect(result.isValid).toBe(false);
-    expect(result.invalidReason).toBe("network_mismatch");
+    expect(result.invalidReason).toBe("invalid_exact_evm_network_mismatch");
   });
 
   test("rejects asset mismatch", async () => {

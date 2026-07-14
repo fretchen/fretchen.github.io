@@ -68,7 +68,7 @@ export async function verifyPayment(
     const signature = payload?.signature as string | undefined;
     if (signature !== undefined && !signature.startsWith("0x")) {
       logger.warn({ signature: `${signature.slice(0, 8)}…` }, "Signature missing 0x prefix");
-      return { isValid: false, invalidReason: "invalid_exact_evm_payload_signature" };
+      return { isValid: false, invalidReason: "invalid_exact_evm_signature" };
     }
 
     const facilitator = getFacilitator();

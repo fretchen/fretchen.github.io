@@ -1,14 +1,18 @@
 /**
  * INTEGRATION test for the batch-settlement scheme (Base Sepolia, live RPC).
  *
- * Builds a real deposit+voucher payload with the @x402 batch-settlement client and
- * runs it through the facilitator's verify path in-process (no HTTP server needed).
- * A fresh, unfunded payer means verify reaches the on-chain balance check and returns
- * `invalid_batch_settlement_evm_insufficient_balance` — which proves the client↔facilitator
+ * Builds a real deposit+voucher payload with the @x402 batch-settlement BUYER scheme
+ * (SDK name "client" — the paying wallet; in production this code lives in `website/`,
+ * NOT scw_js, which plays the seller/resource-server role) and runs it through the
+ * facilitator's verify path in-process (no HTTP server needed). A fresh, unfunded payer
+ * means verify reaches the on-chain balance check and returns
+ * `invalid_batch_settlement_evm_insufficient_balance` — which proves the buyer↔facilitator
  * wiring (payload shape, signature, EIP-712 domain, channel config) is all accepted; only
  * the empty USDC balance stops it. No funds move (verify is read-only; no deposit is settled).
  *
- * Base Sepolia only — the canonical BATCH_SETTLEMENT_ADDRESS is deployed there (not OP Sepolia).
+ * Base Sepolia only — the canonical BATCH_SETTLEMENT_ADDRESS is deployed there (not OP Sepolia,
+ * enforced by getBatchSettlementNetworks() in chain_utils.ts — see facilitator_instance.test.ts's
+ * "excludes Optimism Sepolia" regression tests for the /supported-side guard).
  * Network-dependent, so it lives in the integration suite: `npm run test:integration`.
  */
 import { describe, test, expect, beforeEach, afterEach } from "vitest";

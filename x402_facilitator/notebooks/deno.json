@@ -1,0 +1,5 @@
+{
+  "$comment": "Scoped to this dir only — does not affect the parent x402_facilitator npm/vitest project. Without this file, Deno auto-detects ../package.json as an ancestor and switches npm: resolution to that package's node_modules (byonm-style), which only has the facilitator's OWN deps (@x402/core, @x402/evm, viem, ...) — not buyer-only packages the notebooks import (e.g. @x402/fetch). nodeModulesDir: none restores Deno's own global npm cache resolution, independent of any ancestor package.json. lock: false disables deno.lock creation/checking for this dir.",
+  "nodeModulesDir": "none",
+  "lock": false
+}

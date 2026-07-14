@@ -764,12 +764,10 @@ describe("x402_settle with mocked facilitator", () => {
     const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
 
     const mockFacilitator = {
-      settle: vi
-        .fn()
-        .mockResolvedValue({
-          success: false,
-          errorReason: "invalid_batch_settlement_evm_claim_authorizer_signature",
-        }),
+      settle: vi.fn().mockResolvedValue({
+        success: false,
+        errorReason: "invalid_batch_settlement_evm_claim_authorizer_signature",
+      }),
     };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 

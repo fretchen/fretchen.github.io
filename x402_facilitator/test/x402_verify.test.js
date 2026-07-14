@@ -4,7 +4,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
 import { resetFacilitator } from "../facilitator_instance.js";
-import { ExactEvmScheme } from "@x402/evm/exact/client";
 
 describe("x402 Verify", () => {
   const originalEnv = { ...process.env };

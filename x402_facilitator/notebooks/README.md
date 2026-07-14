@@ -12,6 +12,7 @@ facilitator (`localhost:8080`, and `localhost:8081` for the fee variant) or the 
 | `x402_fee_facilitator_demo.ipynb` | Deno/TS | Fee facilitator vs. `localhost:8080` |
 | `x402_facilitator_demo_with_fees.ipynb` | Deno/TS | Fee-splitting facilitator (deployed `-feefacilitator` URL / `localhost:8081`) |
 | `genimg_x402_buyer.ipynb` | Deno/TS | End-to-end buyer: `wrapFetchWithPayment` against a paid service + `facilitator.fretchen.eu` |
+| `x402_batch_settlement_buyer.ipynb` | Deno/TS | **batch-settlement** scheme spike (Phase 0): `/supported` check + deposit/voucher verify→settle vs. `localhost:8080`. Runs on **Base Sepolia** (canonical contract there, not OP Sepolia); needs a Base Sepolia-funded `TEST_WALLET_PRIVATE_KEY` |
 
 ## Setup
 

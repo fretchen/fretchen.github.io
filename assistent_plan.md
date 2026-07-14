@@ -146,16 +146,50 @@ Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes
 
 **On-chain contract — RESOLVED (see section A):** no deployment needed. Canonical `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003` is baked into the SDK and already deployed on Optimism/Base mainnet + Base Sepolia. Only caveat: NOT on Optimism Sepolia → do the testnet spike on Base Sepolia.
 
-### F. Batch-settlement transition — phased step estimate
+### F. Batch-settlement transition — concrete implementation plan
 
-Spans 5 packages (`eth?` / `x402_facilitator` / `scw_js` / a scheduled container / `website`). SDK carries the channel-manager weight; real work = one storage adapter + client voucher flow + retiring the old path.
+**Phasing decision:** phase it — three phases matching the SDK's own `facilitator` / `server` / `client` split, plus a spike and a cleanup. Not just risk-reduction (facilitator + scw_js have historically been tricky) — the dependency order *forces* sequencing: **facilitator must speak batch-settlement → before scw_js can settle → before the website can pay.** Each phase is independently testable via the Phase 0 Node harness (no browser UI needed to validate A/B).
 
-- **Phase 0 — Spike (throwaway).** Both former gates now cleared (canonical contract deployed; S3 CAS confirmed). Remaining goal: run one channel end-to-end — deposit → sign cumulative vouchers → claim → settle → refund — on **Base Sepolia** (`eip155:84532`; canonical contract present, unlike Optimism Sepolia) with `InMemoryChannelStorage` + testnet USDC, to learn the SDK's client/facilitator/server API surface before touching production code.
-- **Phase 1 — Facilitator:** register `BatchSettlementEvmScheme` in `x402_facilitator` (deposit/claim/settle/refund) alongside existing `ExactEvmScheme`.
-- **Phase 2 — Server hot path:** implement chosen `ChannelStorage`, wire `SettlementEvmScheme` into the `llm` function (verify voucher → `updateChannel` → serve), set scaling. Use `setSettlementOverrides` to claim actual (post-generation) token cost ≤ authorized max.
-- **Phase 3 — Claim runner:** `BatchSettlementChannelManager` on a schedule in a container.
-- **Phase 4 — Client:** `ClientChannelStorage` (localStorage) + channel-open deposit (reuse existing EIP-3009 signing from the image flow) + per-request voucher signing + top-up/refund UX in the assistant page.
-- **Phase 5 — Retire merkle:** remove LLMv1 merkle path, `leaf_history`, `trees.json`, ETH-balance UI. No user migration (no real balances).
+**Locked decisions (from planning Q&A):**
+- **Auth:** drop the separate `sc-llm` EIP-191 Bearer token — the payment voucher proves wallet control. Remove `auth_utils` from the LLM path.
+- **Fee:** LLM channels are **fee-free** — skip the facilitator fee hook + collection for batch-settlement (exact-scheme image fee untouched).
+- **Settle trigger:** **periodic cron sweep only** (`claimAndSettle` across all claimable channels), in a new scheduled scw_js function. Interval « 24h `withdrawDelay`. Coarse many-channels-per-tx aggregation best serves the privacy goal.
+- **Networks:** Base Sepolia for all pre-prod (OP Sepolia lacks the contract); Optimism mainnet for production cutover.
+- **Storage:** S3 CAS via extended `@fretchen/s3-utils` (`file:` package at `shared/s3-utils/`).
+
+**Full detail:** `~/.claude/plans/now-propose-a-concrete-majestic-patterson.md` (file paths, SDK API names, per-phase verify steps). Progress tracker below.
+
+**Phase 0 — Spike + reusable harness** (Base Sepolia + testnet USDC)
+- [ ] Node script driving the client SDK (`@x402/evm/batch-settlement/client`): `createBatchSettlementEIP3009DepositPayload` → `signVoucher` → `wrapFetchWithPayment` → `claimAndSettle` → `refund`.
+- [ ] Confirm during spike: receiverAuthorizer self-managed by server (→ facilitator needs no authorizer key); batch payment header name(s) for CORS; `setSettlementOverrides` for post-generation actual-cost claim.
+
+**Phase A — Facilitator (`x402_facilitator/`)** — scheme registration only, no new routes
+- [ ] Bump `@x402/core` + `@x402/evm` `^2.0.0` → `^2.17.0` (step zero — installed 2.0.0 lacks batch-settlement).
+- [ ] `facilitator_instance.ts`: register `new BatchSettlementEvmScheme(signer)` alongside `ExactEvmScheme` in the per-network loop.
+- [ ] Make `onAfterVerify` fee hook scheme-aware — skip fee logic when `accepted.scheme === "batch-settlement"` (it reads exact-only `authorization.to`).
+- [ ] `x402_settle.ts`: guard `collectFee` to the exact scheme only.
+- [ ] Tests: assert batch scheme registered per network; assert no fee `transferFrom` for batch payloads.
+- [ ] Verify via Phase 0 harness against locally-run facilitator.
+
+**Phase B — Server (`scw_js/` + `shared/s3-utils/`)**
+- [ ] **B1** Extend `@fretchen/s3-utils` (`shared/s3-utils/src/index.ts`): return ETag on GET; `ifMatch`/`ifNoneMatch` on PUT surfacing **412 (no throw)**; add `listObjects(prefix)` + conditional delete. Rebuild before scw_js.
+- [ ] **B2** S3 `ChannelStorage` (get/list/updateChannel), mirroring `RedisChannelStorage` CAS loop: `channels/<id>.json` private ACL; `updateChannel` = GET+ETag → callback → conditional PUT → retry on 412/network; `list` = `listObjects` + GET each.
+- [ ] **B3** New x402 LLM handler (fork `sc_llm.ts`): register server `BatchSettlementEvmScheme(receiver, { storage })`; flow `extractPaymentPayload` → `create402Response` → `verifyPayment` (pre-LLM) → `callLLMAPI` → `convertTokensToCost` (keep) → `settlePayment` w/ `setSettlementOverrides` → `createSettlementHeaders`. Keep `body.data.prompt`. Remove bearer auth + `checkWalletBalance` + merkle calls. Update OPTIONS allow-headers.
+- [ ] **B4** Scheduled claim/settle function (`serverless.yml` cron): `scheme.createChannelManager(...).claimAndSettle()` + `refundIdleChannels`. New secret `RECEIVER_AUTHORIZER_PRIVATE_KEY`; real RPC endpoint.
+- [ ] Tests: S3 `ChannelStorage` CAS, handler verify→LLM→settle, cron manager wiring.
+- [ ] Verify end-to-end via Phase 0 harness on Base Sepolia.
+
+**Phase C — Client (`website/`)** — `@x402/evm`/`@x402/fetch` already deps; mirror `hooks/useX402ImageGeneration.ts`
+- [ ] New `hooks/useX402Chat.ts`: manual `client.register(network, new BatchSettlementEvmScheme(signer, { storage }))` (no register helper) + `wrapFetchWithPayment`; extend signer with `readContract` via `toClientEvmSigner` + `usePublicClient`.
+- [ ] Browser `ClientChannelStorage` backed by `localStorage`.
+- [ ] `+Page.tsx sendMessage`: swap bearer-token fetch for `fetchWithPayment`; drop `useWalletAuth("sc-llm")`.
+- [ ] `BalanceDisplay`: `readChannelBalanceAndTotalClaimed` + channel deposit instead of `checkBalance`/`depositForLLM`; USDC (6 decimals) not ETH.
+- [ ] Verify in browser on Base Sepolia (deposit-on-first-chat, voucher per message, aggregated on-chain claim).
+
+**Phase D — Retire merkle** (after C proven on mainnet)
+- [ ] Remove `llm_service.ts` merkle code (keep `convertTokensToCost`); remove `leaf_history.ts` + `leafhistory`; stop writing `trees.json`.
+- [ ] Remove LLMv1 balance UI; retire `LLMv1` (leave `withdrawBalance` open briefly — no real balances).
+- [ ] Update `scw_js/README.md` + `.github/THREAT_MODEL.md` (one fewer owned upgradeable contract; asset now USDC).
 
 ## Backlog — deferred (not part of the first renovation)
 

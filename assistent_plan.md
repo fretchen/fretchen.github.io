@@ -4,16 +4,26 @@ Scope: the website's LLM chat assistant (`website/pages/assistent/`, `scw_js/llm
 
 ## Decisions from the investigation (don't re-derive these)
 
-- **x402 does not touch the `LLMv1` contract.** It's a stateless, per-request flow: server quotes a price, client signs an EIP-3009 `transferWithAuthorization` off-chain, facilitator submits it, USDC moves wallet-to-wallet directly. No balance mapping, no Merkle batching. It's the opposite of the current LLM billing model, not a variant of it.
-- **No real balance is deposited today** — any future billing redesign is greenfield, no user migration path needed.
-- **x402 migration for LLM billing is deferred.** It needs its own pricing-model decision first (LLM cost is only known *after* generation, but x402 wants a price *before*). Not started — see Backlog A.
-- **Merkle-tree privacy is blocked on the above**, not a standalone fix. Hashing the address in the S3 JSON wouldn't help — `LLMv1.processBatch` calldata is permanently public on Optimism regardless of S3 ACLs, and the contract needs the real address to debit `llmBalance[user]`. See Backlog B.
-- **Tool/function calling is backlog**, flagged as "interesting, uncertain importance" — not part of the near-term work.
-- Confirmed near-term scope: **provider support (Mistral)**, then **selectable personas/system prompts**, reusing growth-agent's persona content where practical.
+- **x402 payment is now the FIRST renovation workstream** (see "Primary workstream" below). Investigation is complete and both former gates are cleared, so it's ready to build — it is no longer deferred/backlog.
+- **The billing model is x402 batch-settlement payment *channels*** (not per-request x402). Correcting an earlier note: batch-settlement *does* rely on a dedicated on-chain escrow contract (USDC alone can't escrow + claim-against-voucher), BUT that contract is **canonical x402 infrastructure you consume, not deploy** — `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003`, verified deployed on Optimism/Base mainnet + Base Sepolia (not Optimism Sepolia).
+- **This replaces `LLMv1` on-chain wholesale** (escrow, settlement, withdrawal) and changes the payment asset **ETH → USDC**. LLMv1 gets retired. Net threat-surface win: one fewer owned upgradeable contract under `CONTRACT_OWNER_PRIVATE_KEY`.
+- **No real balance is deposited today** — greenfield, no user migration path needed.
+- **Merkle-tree privacy is resolved as a consequence**, not a standalone fix — batch-settlement deletes the public per-request ledger entirely (`merkle/trees.json`, `leafhistory`, `LLMv1.processBatch` calldata all go away).
+- **Storage decided: S3 compare-and-swap**, no new infra — Scaleway conditional-write support tested and confirmed (2026-07-14).
+- **Mistral provider support + personas (PR 1–3) are independent smaller wins** — they don't block and aren't blocked by the x402 work, and can land in parallel or after. Kept in the plan but secondary to the payment workstream.
+- **Tool/function calling stays backlog**, flagged "interesting, uncertain importance."
 
 ---
 
-## PR 1 — Mistral provider support in `scw_js`
+## Renovation order (start here)
+
+**The first renovation work focuses on x402 payment.** That is the Primary workstream (below): migrate LLM billing from the ETH-prepaid + merkle-settlement model to x402 batch-settlement USDC payment channels, in the Phase 0–5 sequence (section F). Start with the Phase 0 spike on Base Sepolia.
+
+The Mistral/persona PRs (PR 1–3) remain in this document as independent, lower-effort improvements. They touch different code (`llm_service.ts` provider config, website UI) and carry no billing/architecture risk, so they can proceed in parallel or slot in whenever convenient — but the payment workstream is the priority and the reason for this renovation. Read the **Primary workstream** section first; PR 1–3 are documented afterward.
+
+---
+
+## PR 1 — Mistral provider support in `scw_js` *(secondary — independent quick win)*
 
 **Why:** `scw_js/llm_service.ts` hardcodes a single IONOS endpoint/model. `growth-agent/agent/llm_client.py` already solved this with a `PROVIDERS` dict keyed by `LLM_PROVIDER`. Port the same shape to TypeScript.
 
@@ -68,7 +78,13 @@ Scope: the website's LLM chat assistant (`website/pages/assistent/`, `scw_js/llm
 
 ---
 
-## Backlog — investigated but deliberately not scoped yet
+## Primary workstream — x402 batch-settlement payment (FIRST / active)
+
+This is the primary renovation focus and the reason for the whole effort. Investigation is complete and both former gates are cleared:
+- **Contract:** canonical, already deployed — you consume `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003`, no deployment. (Testnet spike → Base Sepolia, since Optimism Sepolia lacks it.)
+- **Storage:** S3 compare-and-swap, confirmed working on Scaleway — no new infra.
+
+Sub-sections **A/B/E** below are the design record; **F** is the concrete Phase 0–5 build breakdown — **start there**. (Sub-sections C/D are separate deferred backlog, further down.)
 
 ### A. x402 batch-settlement payment channels for LLM billing (the target design)
 
@@ -140,6 +156,8 @@ Spans 5 packages (`eth?` / `x402_facilitator` / `scw_js` / a scheduled container
 - **Phase 3 — Claim runner:** `BatchSettlementChannelManager` on a schedule in a container.
 - **Phase 4 — Client:** `ClientChannelStorage` (localStorage) + channel-open deposit (reuse existing EIP-3009 signing from the image flow) + per-request voucher signing + top-up/refund UX in the assistant page.
 - **Phase 5 — Retire merkle:** remove LLMv1 merkle path, `leaf_history`, `trees.json`, ETH-balance UI. No user migration (no real balances).
+
+## Backlog — deferred (not part of the first renovation)
 
 ### C. Tool / function calling
 Flagged as "interesting, uncertain importance." Revisit after personas (PR 2/3) ship and if usage patterns show a real need (e.g. users asking things the assistant should be able to look up on-chain).

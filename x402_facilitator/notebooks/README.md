@@ -54,14 +54,22 @@ Alternatively, point the notebook's `FACILITATOR_URL` at the deployed
 
 ### 3a. Deno/TypeScript notebooks
 
-Dependencies (`@x402/*`, `viem`, `deno.land/std`) are resolved inline — no package install
-needed. Just register the Jupyter kernel once:
+This directory has its own scoped `deno.json` (`nodeModulesDir: "auto"`, `lock: false`) — Deno
+manages a local `node_modules/` here automatically the first time a notebook imports an
+`npm:` package, fully separate from the parent `x402_facilitator/node_modules` (which only has
+the *facilitator's own* deps and will not satisfy notebook-only imports like `@x402/fetch`).
+No manual install step needed; just register the Jupyter kernel once:
 
 ```bash
 deno jupyter --install
 ```
 
 Then open a notebook and select the **Deno** kernel.
+
+> Chosen over Deno's global npm-cache resolution (`nodeModulesDir: "none"`) after repeated
+> `ERR_MODULE_NOT_FOUND` failures from that scheme's internal multi-version dependency
+> deduplication (a real bug where Deno expected a duplicate `viem` install variant that was
+> never actually written to its cache). A real, local `node_modules` sidesteps that entirely.
 
 ### 3b. Python notebook
 

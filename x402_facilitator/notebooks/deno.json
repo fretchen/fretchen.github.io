@@ -1,5 +1,5 @@
 {
-  "$comment": "Scoped to this dir only — does not affect the parent x402_facilitator npm/vitest project. Without this file, Deno auto-detects ../package.json as an ancestor and switches npm: resolution to that package's node_modules (byonm-style), which only has the facilitator's OWN deps (@x402/core, @x402/evm, viem, ...) — not buyer-only packages the notebooks import (e.g. @x402/fetch). nodeModulesDir: none restores Deno's own global npm cache resolution, independent of any ancestor package.json. lock: false disables deno.lock creation/checking for this dir.",
-  "nodeModulesDir": "none",
+  "$comment": "Scoped to this dir only — does not affect the parent x402_facilitator npm/vitest project. nodeModulesDir: auto gives THIS folder its own local node_modules (x402_facilitator/notebooks/node_modules), fully installed and hoisted/deduped via standard npm resolution, driven purely by the npm: specifiers in the notebooks (no package.json needed). This is a DIFFERENT, complete, self-contained node_modules — not the ancestor ../node_modules (which only has the facilitator's own deps and caused an earlier, unrelated resolution failure). Chosen over Deno's global-npm-cache resolution (nodeModulesDir: none) after repeated ERR_MODULE_NOT_FOUND failures from that scheme's internal multi-version dedup (a real viem@2.55.1_1 duplicate-folder bug that kept recurring even after clean cache wipes). lock: false disables deno.lock creation/checking for this dir.",
+  "nodeModulesDir": "auto",
   "lock": false
 }

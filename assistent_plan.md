@@ -5,7 +5,7 @@ Scope: the website's LLM chat assistant (`website/pages/assistent/`, `scw_js/llm
 ## Decisions from the investigation (don't re-derive these)
 
 - **x402 payment is now the FIRST renovation workstream** (see "Primary workstream" below). Investigation is complete and both former gates are cleared, so it's ready to build — it is no longer deferred/backlog.
-- **The billing model is x402 batch-settlement payment *channels*** (not per-request x402). Correcting an earlier note: batch-settlement *does* rely on a dedicated on-chain escrow contract (USDC alone can't escrow + claim-against-voucher), BUT that contract is **canonical x402 infrastructure you consume, not deploy** — `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003`, verified deployed on Optimism/Base mainnet + Base Sepolia (not Optimism Sepolia).
+- **The billing model is x402 batch-settlement payment _channels_** (not per-request x402). Correcting an earlier note: batch-settlement _does_ rely on a dedicated on-chain escrow contract (USDC alone can't escrow + claim-against-voucher), BUT that contract is **canonical x402 infrastructure you consume, not deploy** — `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003`, verified deployed on Optimism/Base mainnet + Base Sepolia (not Optimism Sepolia).
 - **This replaces `LLMv1` on-chain wholesale** (escrow, settlement, withdrawal) and changes the payment asset **ETH → USDC**. LLMv1 gets retired. Net threat-surface win: one fewer owned upgradeable contract under `CONTRACT_OWNER_PRIVATE_KEY`.
 - **No real balance is deposited today** — greenfield, no user migration path needed.
 - **Merkle-tree privacy is resolved as a consequence**, not a standalone fix — batch-settlement deletes the public per-request ledger entirely (`merkle/trees.json`, `leafhistory`, `LLMv1.processBatch` calldata all go away).
@@ -23,13 +23,14 @@ The Mistral/persona PRs (PR 1–3) remain in this document as independent, lower
 
 ---
 
-## PR 1 — Mistral provider support in `scw_js` *(secondary — independent quick win)*
+## PR 1 — Mistral provider support in `scw_js` _(secondary — independent quick win)_
 
 **Why:** `scw_js/llm_service.ts` hardcodes a single IONOS endpoint/model. `growth-agent/agent/llm_client.py` already solved this with a `PROVIDERS` dict keyed by `LLM_PROVIDER`. Port the same shape to TypeScript.
 
 **Touches:** `scw_js/llm_service.ts`, `scw_js/serverless.yml`, `scw_js/test/llm_service.test.ts`, `scw_js/test/sc_llm.test.ts`, `scw_js/README.md`, `scw_js/.env` (local only, not committed).
 
 **Steps:**
+
 1. In `llm_service.ts`, replace the hardcoded `MODEL_NAME` / `ENDPOINT` constants with a `PROVIDERS` map mirroring `growth-agent/agent/llm_client.py:18-29` (`ionos` and `mistral`, each with `baseUrl`, `apiKeyEnv`, `defaultModel`).
 2. Add provider selection via `LLM_PROVIDER` env var (default `"ionos"`, matching growth-agent's default), and an optional `LLM_MODEL` override — same two env vars growth-agent already uses, for consistency across the repo.
 3. Update `callLLMAPI` to look up the active provider config instead of reading `IONOS_API_TOKEN` and the hardcoded endpoint directly. Keep the `dummy` short-circuit path unchanged.
@@ -50,8 +51,9 @@ The Mistral/persona PRs (PR 1–3) remain in this document as independent, lower
 **Touches:** `website/pages/assistent/+Page.tsx`, `website/locales/en.ts` / `de.ts`, possibly a new `website/pages/assistent/personas.ts` (or similar) module.
 
 **Steps:**
+
 1. Define a small persona registry as a plain TS array/object: `{ id, label, systemPrompt }[]`. Start with 2-3 personas (e.g. "General assistant" = current default, "Blockchain helper", one reused from growth-agent per PR 3).
-2. Decide localization approach: persona *labels* should be localized (like other UI strings), but persona *prompt content* likely stays in one language (English) regardless of UI locale — confirm this during the PR rather than assuming.
+2. Decide localization approach: persona _labels_ should be localized (like other UI strings), but persona _prompt content_ likely stays in one language (English) regardless of UI locale — confirm this during the PR rather than assuming.
 3. Add a persona selector (dropdown or button group) to the sidebar in `+Page.tsx`, next to the existing Balance/Actions/Agent sections.
 4. Wire selected persona into `sendMessage()` — replace the fixed `systemPromptMessage` with the selected persona's prompt when building `promptArray` (`+Page.tsx:291-298`).
 5. Persist the selected persona in local component state (reset behavior on `clearChat()` is a judgment call — decide whether switching persona should also clear history).
@@ -81,6 +83,7 @@ The Mistral/persona PRs (PR 1–3) remain in this document as independent, lower
 ## Primary workstream — x402 batch-settlement payment (FIRST / active)
 
 This is the primary renovation focus and the reason for the whole effort. Investigation is complete and both former gates are cleared:
+
 - **Contract:** canonical, already deployed — you consume `BATCH_SETTLEMENT_ADDRESS = 0x4020…0003`, no deployment. (Testnet spike → Base Sepolia, since Optimism Sepolia lacks it.)
 - **Storage:** S3 compare-and-swap, confirmed working on Scaleway — no new infra.
 
@@ -90,51 +93,58 @@ Sub-sections **A/B/E** below are the design record; **F** is the concrete Phase 
 
 This supersedes the earlier open question ("flat fee vs. token budget vs. prepaid credits"). After investigation, the answer is **x402 batch-settlement payment channels** ([docs.x402.org/schemes/batch-settlement](https://docs.x402.org/schemes/batch-settlement)). It solves all three problems at once: the per-request settlement economics, the "price known only after generation" mismatch, and the usage/spending-pattern privacy goal.
 
-**Privacy goal (decided):** obfuscate usage and spending *pattern* as much as possible. It is NOT necessary to hide that a wallet used the AI at all. This ranks the options and makes batch-settlement a strong fit.
+**Privacy goal (decided):** obfuscate usage and spending _pattern_ as much as possible. It is NOT necessary to hide that a wallet used the AI at all. This ranks the options and makes batch-settlement a strong fit.
 
 **How the scheme works:**
+
 1. **Deposit (on-chain, once):** client signs EIP-3009 auth; facilitator submits it, locking USDC into an escrow/channel contract. Default `depositMultiplier: 5` (client escrows 5× the max per-request price upfront).
-2. **Per-request voucher (off-chain):** client signs a *cumulative* voucher ("total owed on this channel so far", monotonically increasing, with a nonce). No transaction. Server verifies the signature and serves the response immediately.
+2. **Per-request voucher (off-chain):** client signs a _cumulative_ voucher ("total owed on this channel so far", monotonically increasing, with a nonce). No transaction. Server verifies the signature and serves the response immediately.
 3. **Claim (on-chain, periodic, batched):** the server's channel manager submits the latest voucher from many channels in one tx (`claimIntervalSecs`, `maxClaimsPerBatch`). Contract validates each signature, moves claimed USDC out of escrow.
 4. **Settle:** claimed funds swept to receiver in a separate batched tx.
 5. **Exit:** `withdrawDelay` (default 24h) lets the client unilaterally reclaim escrow if the server sits on vouchers; idle channels cooperatively refunded.
 
 **Why it fits (all three problems):**
-- **Economics:** one claim per channel per interval, many channels per tx — amortizes gas + the 0.01 USDC facilitator fee over hundreds of requests. Per-request settlement of a ~$0.001 LLM turn is otherwise 10–50× the service cost.
-- **Post-generation pricing:** client authorizes an *upper bound* (bounded by the 5× escrow); server claims the *actual* amount via `setSettlementOverrides(res, { amount })` after it knows the real token count. Over-authorize / under-claim = clean fit for LLM.
-- **Privacy:** the itemized public ledger (`wallet, tokenCount, cost, timestamp` per request, queryable via `leafhistory`) disappears. Only the deposit and a per-channel *cumulative* claim total ever hit chain.
 
-**Honest caveat — aggregation, not anonymization:** each channel's cumulative claim is individually listed on-chain (not blended across users), and the deposit links wallet→channel. So an observer can watch a channel's cumulative total tick up and read *per-interval* spend from the deltas. Individual request size/timing within an interval is hidden; coarse spend-over-time is not. Granularity is tunable via the claim interval (longer = more aggregation = more privacy, at the cost of locked capital + server-side voucher risk).
+- **Economics:** one claim per channel per interval, many channels per tx — amortizes gas + the 0.01 USDC facilitator fee over hundreds of requests. Per-request settlement of a ~$0.001 LLM turn is otherwise 10–50× the service cost.
+- **Post-generation pricing:** client authorizes an _upper bound_ (bounded by the 5× escrow); server claims the _actual_ amount via `setSettlementOverrides(res, { amount })` after it knows the real token count. Over-authorize / under-claim = clean fit for LLM.
+- **Privacy:** the itemized public ledger (`wallet, tokenCount, cost, timestamp` per request, queryable via `leafhistory`) disappears. Only the deposit and a per-channel _cumulative_ claim total ever hit chain.
+
+**Honest caveat — aggregation, not anonymization:** each channel's cumulative claim is individually listed on-chain (not blended across users), and the deposit links wallet→channel. So an observer can watch a channel's cumulative total tick up and read _per-interval_ spend from the deltas. Individual request size/timing within an interval is hidden; coarse spend-over-time is not. Granularity is tunable via the claim interval (longer = more aggregation = more privacy, at the cost of locked capital + server-side voucher risk).
 
 **Trust comparison (why this beats plain prepaid credits):**
-- vs. today's merkle: gives up *public itemized* auditability (the thing leaking privacy) but keeps client-side cryptographic safety.
+
+- vs. today's merkle: gives up _public itemized_ auditability (the thing leaking privacy) but keeps client-side cryptographic safety.
 - vs. trusted off-chain credits: strictly better — server can't claim more than the signed voucher or the escrow, client loss is bounded by the deposit, and `withdrawDelay` is a unilateral exit. Client never depends on server goodwill for custody.
 - Conceptually close to LLMv1's existing "deposit a balance, spend it down" model (`depositForLLM`), so UX continuity for users is decent.
 
-**Contract question — RESOLVED (no deployment needed).** Unlike the exact scheme (which calls USDC's own `transferWithAuthorization`, no custom contract), batch settlement needs on-chain *escrow* logic USDC lacks (`deposit`, `claimWithSignature`, `refund`, `refundWithSignature`, `withdrawRequestedAt`, `settle`). BUT x402 ships this as a **canonical, pre-deployed contract at a deterministic CREATE2 address** baked into the SDK: `BATCH_SETTLEMENT_ADDRESS = 0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003` (same on every EVM chain; used as the EIP-712 voucher `verifyingContract` + the contract the facilitator calls; plus EIP3009/Permit2 token-collector addresses for the deposit paths). So operationally it's just like exact: **you deploy nothing, point at the built-in address, facilitator just needs a funded wallet.** Verified on-chain (`eth_getCode`, 2026-07-14): deployed on Optimism mainnet ✅, Base mainnet ✅, Base Sepolia ✅ — but **NOT on Optimism Sepolia ❌**, so run the Phase-0 testnet spike on **Base Sepolia** (`eip155:84532`, already supported in `x402_server.ts`).
+**Contract question — RESOLVED (no deployment needed).** Unlike the exact scheme (which calls USDC's own `transferWithAuthorization`, no custom contract), batch settlement needs on-chain _escrow_ logic USDC lacks (`deposit`, `claimWithSignature`, `refund`, `refundWithSignature`, `withdrawRequestedAt`, `settle`). BUT x402 ships this as a **canonical, pre-deployed contract at a deterministic CREATE2 address** baked into the SDK: `BATCH_SETTLEMENT_ADDRESS = 0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003` (same on every EVM chain; used as the EIP-712 voucher `verifyingContract` + the contract the facilitator calls; plus EIP3009/Permit2 token-collector addresses for the deposit paths). So operationally it's just like exact: **you deploy nothing, point at the built-in address, facilitator just needs a funded wallet.** Verified on-chain (`eth_getCode`, 2026-07-14): deployed on Optimism mainnet ✅, Base mainnet ✅, Base Sepolia ✅ — but **NOT on Optimism Sepolia ❌**, so run the Phase-0 testnet spike on **Base Sepolia** (`eip155:84532`, already supported in `x402_server.ts`).
 
 **Storage question — RESOLVED (Investigation E): S3 compare-and-swap, no new infra.** Scaleway conditional-write support tested and confirmed.
 
 Both prior gates are now cleared; A is ready to be scoped into the Phase 1–5 PRs (section F).
 
 ### B. Merkle-tree / usage-ledger privacy — resolved as a consequence of A
-Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes the public per-request ledger entirely, which *is* the privacy fix. A standalone patch to the current model would be cosmetic — `processBatch` calldata is public on Optimism forever regardless of S3 ACLs, and the contract needs the plaintext address to debit `llmBalance`. Retire `merkle/trees.json` + the `leafhistory` endpoint + LLMv1's merkle path when A ships.
+
+Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes the public per-request ledger entirely, which _is_ the privacy fix. A standalone patch to the current model would be cosmetic — `processBatch` calldata is public on Optimism forever regardless of S3 ACLs, and the contract needs the plaintext address to debit `llmBalance`. Retire `merkle/trees.json` + the `leafhistory` endpoint + LLMv1's merkle path when A ships.
 
 ### E. State/infra investigation — FINDINGS (SDK already installed: `@x402/evm@2.17.0`)
 
 **The SDK ships batch-settlement.** `@x402/evm` exports `BatchSettlementEvmScheme`, `SettlementEvmScheme`, and `BatchSettlementChannelManager` (with `claim()` / `settle()` / `claimAndSettle()` / `refundIdleChannels()` + an interval runner). The channel-manager complexity is done for you.
 
 **What you must implement is small:**
+
 - Server `ChannelStorage` — 3 methods: `get(channelId)`, `list()`, and atomic `updateChannel(id, fn)`.
 - Client `ClientChannelStorage` — trivial `get`/`set`/`delete`, lives in browser localStorage (no server infra).
 
 **Statefulness is intrinsic** (cumulative vouchers = the aggregation IS the state; can't be stateless), BUT:
+
 - SDK docstring names the acceptable atomic backends verbatim: "Redis/Valkey Lua scripts, SQL transactions, or Durable Objects." `InMemoryChannelStorage` only works inside one JS runtime.
-- **Risk reframe:** a lost voucher update = you *under-claim* (leak your own revenue), NOT user fund loss — the client is always protected by the on-chain escrow + `withdrawDelay`. So the correctness bar is forgiving; start simple.
+- **Risk reframe:** a lost voucher update = you _under-claim_ (leak your own revenue), NOT user fund loss — the client is always protected by the on-chain escrow + `withdrawDelay`. So the correctness bar is forgiving; start simple.
 
 **DECISION: Option B (S3 compare-and-swap).** The blocking unknown is resolved — Scaleway Object Storage supports ETag conditional writes (tested against `my-imagestore`/`nl-ams` on 2026-07-14): `If-None-Match:*` → 412 on existing (create guard), `If-Match:<stale>` → 412 (CAS reject), `If-Match:<current>` → 200 (CAS write). So we get atomic `updateChannel` with **zero new infrastructure**, a perfect stateless-serverless fit. Options A (single-instance) and C (Managed Redis) are set aside; C stays as the escape hatch only if channel counts ever grow enough that S3's `list()` cost (below) bites.
 
 **S3 `ChannelStorage` sketch:**
+
 - **Layout:** one object per channel, `channels/<channelId>.json` (private ACL — this is server-internal state, NOT the public `merkle/` prefix). Store the SDK `Channel` record as JSON.
 - **`get(id)`:** GET `channels/<id>.json`, parse; null → `undefined`.
 - **`updateChannel(id, fn)`:** GET (capture ETag) → run `fn(current)` → conditional PUT. New channel: `If-None-Match:*`. Existing: `If-Match:<etag>`. On **412** (or transient network error) → re-GET and retry with bounded backoff. Map result to `{channel, status: "updated"|"unchanged"|"deleted"}`; `fn` returning `undefined` → conditional DELETE.
@@ -148,9 +158,10 @@ Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes
 
 ### F. Batch-settlement transition — concrete implementation plan
 
-**Phasing decision:** phase it — three phases matching the SDK's own `facilitator` / `server` / `client` split, plus a spike and a cleanup. Not just risk-reduction (facilitator + scw_js have historically been tricky) — the dependency order *forces* sequencing: **facilitator must speak batch-settlement → before scw_js can settle → before the website can pay.** Each phase is independently testable via the Phase 0 Node harness (no browser UI needed to validate A/B).
+**Phasing decision:** phase it — three phases matching the SDK's own `facilitator` / `server` / `client` split, plus a spike and a cleanup. Not just risk-reduction (facilitator + scw_js have historically been tricky) — the dependency order _forces_ sequencing: **facilitator must speak batch-settlement → before scw_js can settle → before the website can pay.** Each phase is independently testable via the Phase 0 Node harness (no browser UI needed to validate A/B).
 
 **Locked decisions (from planning Q&A):**
+
 - **Auth:** drop the separate `sc-llm` EIP-191 Bearer token — the payment voucher proves wallet control. Remove `auth_utils` from the LLM path.
 - **Fee:** LLM channels are **fee-free** — skip the facilitator fee hook + collection for batch-settlement (exact-scheme image fee untouched).
 - **Settle trigger:** **periodic cron sweep only** (`claimAndSettle` across all claimable channels), in a new scheduled scw_js function. Interval « 24h `withdrawDelay`. Coarse many-channels-per-tx aggregation best serves the privacy goal.
@@ -168,6 +179,7 @@ Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes
    - Full walkthrough + real on-chain proof (decoded `Claimed` event, before/after `channels()` state) in `notebooks/x402_batch_settlement_buyer.ipynb`.
 
 Checklist (for reference — all done except where noted):
+
 - [x] Interactive harness driving the client SDK (`@x402/evm/batch-settlement/client`) — shipped as `notebooks/x402_batch_settlement_buyer.ipynb` (Deno notebook, not a plain Node script, but the same purpose): deposit → `signVoucher` (accumulate) → claim, all proven on real Base Sepolia transactions. `wrapFetchWithPayment`, `claimAndSettle`'s settle-sweep step, and `refund` were **not** exercised — good candidates for a follow-up spike, not blockers for Phase B.
 - [x] Confirmed: receiverAuthorizer self-managed by server (`/supported` shows no `receiverAuthorizer` for batch-settlement → facilitator needs no authorizer key).
 - [ ] **Not yet confirmed** (defer to their natural phases): batch payment header name(s) for CORS (Phase C — needs a real browser fetch flow to observe) — `setSettlementOverrides` for post-generation actual-cost claims (Phase B — needs the real LLM handler).
@@ -181,12 +193,14 @@ Checklist (for reference — all done except where noted):
 **Phase B — Server (`scw_js/` + `shared/s3-utils/`)** — B0 through B4 implemented (2026-07-15); real Base Sepolia verification remains before Phase C. Full original plan also at `~/.claude/plans/now-propose-a-concrete-majestic-patterson.md`.
 
 **Locked decisions for Phase B:**
+
 - **New parallel file, not a replacement.** The live website calls `sc_llm.ts`'s `llm` function via bearer auth today — replacing it in place would break the UI before Phase C (website) is ready to switch payment methods. Phase B ships `sc_llm_x402.ts` as a **new, additional** serverless function (`llmx402`) alongside the untouched `sc_llm.ts`/`llm`. Retiring `sc_llm.ts` is Phase D, after Phase C cuts the website over.
-- **Second correction, from reading the actual SDK source (supersedes the `chargedCumulativeAmount`-override note below):** `@x402/evm/batch-settlement/server`'s `handleBeforeVerify`/`handleBeforeSettle` (see `index.mjs`) enforce that a voucher's `maxClaimableAmount` **exactly equals** `chargedCumulativeAmount + requirements.amount` — there is no room for the handler to charge a different, actual-token-cost-derived amount after the fact by directly mutating `chargedCumulativeAmount` (that would just make the next request's mismatch check fail). Real usage-based billing would require the SDK's corrective-402 mismatch flow (client re-signs after learning the true cumulative amount from a settlement response) — legitimate, but real client-side work belonging to Phase C at the earliest, and untested here. **B3 therefore charges a flat nominal price per message**, but that flat number is *derived*, not arbitrary: a new `convertTokensToUsdcCost()` in `llm_service.ts` reuses the same real IONOS per-token price as `convertTokensToCost()` (0.71 EUR / 1M tokens) but converts straight to USDC atomic units instead of ETH wei (the two 1e6 factors — USDC's 6 decimals and the per-million-tokens quote — cancel exactly, so it's just `tokens * 71n / 100n`). Treats 1 EUR = 1 USDC (documented simplification, same level of approximation as the existing static EUR/ETH rate — no live FX oracle). `sc_llm_x402.ts` applies it to `LLM_ESTIMATED_TOKENS_PER_MESSAGE` (env var, default `"2000"` → $0.00142/message) to get the fixed per-message price — still an estimate agreed before generation, not the request's real usage, for the SDK reason above, but now principled rather than guessed. `resourceServer.settlePayment()` commits `chargedCumulativeAmount += requirements.amount` itself via `handleBeforeSettle`, which also **confirmed a second useful fact**: for a voucher payload this hook returns `{ skip: true }`, so `settlePayment()` never calls the facilitator (no HTTP round-trip, no on-chain tx) — only a `deposit` payload actually reaches the facilitator/chain.
+- **Second correction, from reading the actual SDK source (supersedes the `chargedCumulativeAmount`-override note below):** `@x402/evm/batch-settlement/server`'s `handleBeforeVerify`/`handleBeforeSettle` (see `index.mjs`) enforce that a voucher's `maxClaimableAmount` **exactly equals** `chargedCumulativeAmount + requirements.amount` — there is no room for the handler to charge a different, actual-token-cost-derived amount after the fact by directly mutating `chargedCumulativeAmount` (that would just make the next request's mismatch check fail). Real usage-based billing would require the SDK's corrective-402 mismatch flow (client re-signs after learning the true cumulative amount from a settlement response) — legitimate, but real client-side work belonging to Phase C at the earliest, and untested here. **B3 therefore charges a flat nominal price per message**, but that flat number is _derived_, not arbitrary: a new `convertTokensToUsdcCost()` in `llm_service.ts` reuses the same real IONOS per-token price as `convertTokensToCost()` (0.71 EUR / 1M tokens) but converts straight to USDC atomic units instead of ETH wei (the two 1e6 factors — USDC's 6 decimals and the per-million-tokens quote — cancel exactly, so it's just `tokens * 71n / 100n`). Treats 1 EUR = 1 USDC (documented simplification, same level of approximation as the existing static EUR/ETH rate — no live FX oracle). `sc_llm_x402.ts` applies it to `LLM_ESTIMATED_TOKENS_PER_MESSAGE` (env var, default `"2000"` → $0.00142/message) to get the fixed per-message price — still an estimate agreed before generation, not the request's real usage, for the SDK reason above, but now principled rather than guessed. `resourceServer.settlePayment()` commits `chargedCumulativeAmount += requirements.amount` itself via `handleBeforeSettle`, which also **confirmed a second useful fact**: for a voucher payload this hook returns `{ skip: true }`, so `settlePayment()` never calls the facilitator (no HTTP round-trip, no on-chain tx) — only a `deposit` payload actually reaches the facilitator/chain.
 - **Stepwise, spike-first** (x402 has repeatedly hidden real bugs behind plausible-looking code all through Phase 0/A — network-gating, claim-verify-skip, `totalClaimed` semantics, EIP-7702 signature gotcha, Deno module resolution). Verify each risky assumption against real behavior before composing the full handler, same discipline as Phase A.
 - **`scw_js` gets its own `scw_js/notebooks/` folder** (Deno kernel, own scoped `deno.json`, same `nodeModulesDir: "auto"` + `lock: false` fix already proven in `x402_facilitator/notebooks/deno.json`) — mirrors the existing per-package convention (`growth-agent/notebooks/` is already its own thing). B0's spike lives there, not in `x402_facilitator/notebooks/`, since it tests scw_js's own server behavior, not the facilitator.
 
 **Steps:**
+
 - [x] **B0 — Spike:** `scw_js/notebooks/x402_batch_settlement_server_spike.ipynb` — registered a **server**-side `BatchSettlementEvmScheme` with `InMemoryChannelStorage`, drove it with a real buyer-side deposit + voucher flow on Base Sepolia, confirmed `verifyPayment()` auto-manages `ChannelStorage` and that `onchainStateTtlMs` defaults to a fixed 5 minutes (must override explicitly, e.g. 5000ms). The spike's step 7 ("manually bump `chargedCumulativeAmount`") turned out to be a red herring superseded by the SDK-source finding above — left in the notebook as a recorded (disproven) hypothesis, not deleted, since it explains why B3 doesn't do that.
 - [x] **B1** Extended `@fretchen/s3-utils` (`shared/s3-utils/src/index.ts`, additive only): `getS3ObjectWithMeta` (ETag on GET); `putS3ObjectConditional` (`ifMatch`/`ifNoneMatch`, **412 surfaced as `{ok:false,status:412}`, not a throw**); `deleteS3Object` (conditional, 404 treated as success); `listObjects(prefix)` (`ListObjectsV2` + minimal XML parsing). 48 unit tests green, package rebuilt.
 - [x] **B2** `scw_js/x402_channel_storage.ts` — `S3ChannelStorage` implementing `get`/`list`/`updateChannel`: `channels/<id-lowercased>.json`, private ACL; `updateChannel` = GET+ETag → callback → conditional PUT/DELETE → retry from a fresh read on 412 (bounded, 3 attempts) → throws past that. 12 unit tests green (create, update, CAS-conflict-then-retry, delete, delete-of-nonexistent, list-sorted).
@@ -197,6 +211,7 @@ Checklist (for reference — all done except where noted):
 `sc_llm.ts`, `llm_service.ts`'s merkle functions, `leaf_history.ts`, and `LLMv1` retirement remain untouched until Phase D (after Phase C proves the website can pay via the new handler).
 
 **Phase C — Client (`website/`)** — `@x402/evm`/`@x402/fetch` already deps; mirror `hooks/useX402ImageGeneration.ts`
+
 - [ ] New `hooks/useX402Chat.ts`: manual `client.register(network, new BatchSettlementEvmScheme(signer, { storage }))` (no register helper) + `wrapFetchWithPayment`; extend signer with `readContract` via `toClientEvmSigner` + `usePublicClient`.
 - [ ] Browser `ClientChannelStorage` backed by `localStorage`.
 - [ ] `+Page.tsx sendMessage`: swap bearer-token fetch for `fetchWithPayment`; drop `useWalletAuth("sc-llm")`.
@@ -204,6 +219,7 @@ Checklist (for reference — all done except where noted):
 - [ ] Verify in browser on Base Sepolia (deposit-on-first-chat, voucher per message, aggregated on-chain claim).
 
 **Phase D — Retire merkle** (after C proven on mainnet)
+
 - [ ] Remove `llm_service.ts` merkle code (keep `convertTokensToCost`); remove `leaf_history.ts` + `leafhistory`; stop writing `trees.json`.
 - [ ] Remove LLMv1 balance UI; retire `LLMv1` (leave `withdrawBalance` open briefly — no real balances).
 - [ ] Update `scw_js/README.md` + `.github/THREAT_MODEL.md` (one fewer owned upgradeable contract; asset now USDC).
@@ -211,9 +227,15 @@ Checklist (for reference — all done except where noted):
 ## Backlog — deferred (not part of the first renovation)
 
 ### C. Tool / function calling
+
 Flagged as "interesting, uncertain importance." Revisit after personas (PR 2/3) ship and if usage patterns show a real need (e.g. users asking things the assistant should be able to look up on-chain).
 
 ### D. Other modernization items noticed during investigation, not requested yet
+
 - Streaming responses (currently full-response-only; both IONOS and Mistral endpoints are OpenAI-compatible and support streaming).
 - Conversation persistence (chat history currently lives only in React state, lost on refresh).
 - Structured output on the LLM chat path (growth-agent's `llm_client.py` has `structured_output()` via Pydantic; `sc_llm.ts` has nothing equivalent — only relevant if a future feature needs it, e.g. tool calling).
+
+### F. Facilitator-hosted `receiverAuthorizer` (simplify scw_js's key management)
+
+`x402_facilitator`'s `BatchSettlementEvmScheme` constructor accepts an optional `authorizerSigner` — if configured, the facilitator advertises its own address as `receiverAuthorizer` in `/supported`, and `scw_js` could then omit `RECEIVER_AUTHORIZER_PRIVATE_KEY` entirely (one fewer secret to manage; `createLLMResourceServer()` would just not pass `receiverAuthorizerSigner`). Considered during Phase B's buyer-notebook verification work and deferred: the SDK's own doc comment requires that "a facilitator that advertises a `receiverAuthorizer` for servers to delegate to must authenticate refund requests" — i.e. the facilitator would need a way to verify an incoming refund request for receiver X is actually from/approved by receiver X, not an impersonator. That authentication mechanism doesn't exist in `x402_facilitator` today and is real security design work, not a config toggle. Revisit only with proper design attention to that auth mechanism — don't just flip the constructor argument.

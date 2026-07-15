@@ -14,10 +14,16 @@ const SUPPORTED_NETWORKS = [
   "eip155:84532", // Base Sepolia
 ];
 
-// The x402BatchSettlement contract (CREATE2, canonical address) is deployed on these
-// networks only — not Optimism Sepolia. Keep in sync with
-// x402_facilitator/chain_utils.ts::getBatchSettlementNetworks().
-const BATCH_SETTLEMENT_NETWORKS = ["eip155:10", "eip155:8453", "eip155:84532"];
+// The x402BatchSettlement contract (CREATE2, canonical address) is deployed on Optimism
+// mainnet too, but @x402/evm's own `DEFAULT_STABLECOINS` registry (consulted internally
+// by BatchSettlementEvmScheme.enhancePaymentRequirements(), regardless of the `asset`
+// address we already pass in) has no entry for "eip155:10" — enhancing throws
+// "No default asset configured for network eip155:10", which would 500 the *entire* 402
+// response (Promise.all in createBatchSettlementPaymentRequirements below), not just the
+// Optimism entry. Confirmed live via the sc_llm_x402_buyer.ipynb notebook run (2026-07-15).
+// Omit Optimism mainnet here until the SDK adds it. Keep in sync (for the deployed-contract
+// fact, not this SDK limitation) with x402_facilitator/chain_utils.ts::getBatchSettlementNetworks().
+const BATCH_SETTLEMENT_NETWORKS = ["eip155:8453", "eip155:84532"];
 
 // Onchain channel state (balance/totalClaimed) is cached for this long before a fresh
 // RPC read; the SDK's default resolves to a fixed 5 minutes (floored by the protocol's

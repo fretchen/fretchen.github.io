@@ -14,21 +14,31 @@ const {
   mockGetUSDCConfig,
   mockVerifyPayment,
   mockSettlePayment,
-} = vi.hoisted(() => ({
-  mockCallLLMAPI: vi.fn(),
-  // Called once at module load to compute USDC_PRICE_PER_MESSAGE — must have a
-  // usable default here (not just in beforeEach, which runs after import).
-  mockConvertTokensToUsdcCost: vi.fn().mockReturnValue(1420n),
-  mockCreateLLMResourceServer: vi.fn(),
-  mockCreateBatchSettlementPaymentRequirements: vi.fn(),
-  mockCreate402Response: vi.fn(),
-  mockExtractPaymentPayload: vi.fn(),
-  mockCreateSettlementHeaders: vi.fn(),
-  mockGetBatchSettlementNetworks: vi.fn(),
-  mockGetUSDCConfig: vi.fn(),
-  mockVerifyPayment: vi.fn(),
-  mockSettlePayment: vi.fn(),
-}));
+  mockEnhancePaymentRequirements,
+  mockScheme,
+} = vi.hoisted(() => {
+  // enhancePaymentRequirements() is called for real verify/settle calls (not just the
+  // 402-building path) — see sc_llm_x402.ts's paymentRequirements construction. Echo the
+  // base requirements back unchanged, which is enough for the handler-logic tests here.
+  const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
+  return {
+    mockCallLLMAPI: vi.fn(),
+    // Called once at module load to compute USDC_PRICE_PER_MESSAGE — must have a
+    // usable default here (not just in beforeEach, which runs after import).
+    mockConvertTokensToUsdcCost: vi.fn().mockReturnValue(1420n),
+    mockCreateLLMResourceServer: vi.fn(),
+    mockCreateBatchSettlementPaymentRequirements: vi.fn(),
+    mockCreate402Response: vi.fn(),
+    mockExtractPaymentPayload: vi.fn(),
+    mockCreateSettlementHeaders: vi.fn(),
+    mockGetBatchSettlementNetworks: vi.fn(),
+    mockGetUSDCConfig: vi.fn(),
+    mockVerifyPayment: vi.fn(),
+    mockSettlePayment: vi.fn(),
+    mockEnhancePaymentRequirements,
+    mockScheme: { enhancePaymentRequirements: mockEnhancePaymentRequirements },
+  };
+});
 
 vi.mock("../llm_service.js", () => ({
   callLLMAPI: mockCallLLMAPI,
@@ -80,7 +90,7 @@ describe("sc_llm_x402", () => {
 
     mockCreateLLMResourceServer.mockReturnValue({
       resourceServer: { verifyPayment: mockVerifyPayment, settlePayment: mockSettlePayment },
-      scheme: {},
+      scheme: mockScheme,
     });
     mockGetBatchSettlementNetworks.mockReturnValue(["eip155:10", "eip155:8453", "eip155:84532"]);
     mockGetUSDCConfig.mockReturnValue({
@@ -173,7 +183,7 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(402);
       expect(mockCreateBatchSettlementPaymentRequirements).toHaveBeenCalledWith(
-        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: {}, amount: "1420" }),
+        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: mockScheme, amount: "1420" }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();
     });
@@ -249,6 +259,18 @@ describe("sc_llm_x402", () => {
       expect(JSON.parse(res.body).content).toBe("answer");
       expect(res.headers["Payment-Response"]).toBe("encoded");
       expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+
+      // The requirements passed to verify/settle must go through the scheme's own
+      // enhancePaymentRequirements() — a raw, un-enhanced object is missing
+      // extra.receiverAuthorizer/withdrawDelay, which makes the facilitator reject every
+      // real deposit with receiver_authorizer_mismatch (found via a live Base Sepolia run).
+      expect(mockEnhancePaymentRequirements).toHaveBeenCalledWith(
+        expect.objectContaining({ scheme: "batch-settlement", network: "eip155:84532" }),
+        expect.objectContaining({ scheme: "batch-settlement", network: "eip155:84532" }),
+        [],
+      );
+      const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
+      expect(mockVerifyPayment).toHaveBeenCalledWith(samplePaymentPayload, enhancedRequirements);
     });
 
     it("returns 402 when settlement reports success:false", async () => {

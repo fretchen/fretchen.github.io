@@ -127,7 +127,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   const usdcConfig = getUSDCConfig(clientNetwork);
-  const paymentRequirements = {
+  const baseRequirements = {
     scheme: "batch-settlement",
     network: clientNetwork,
     amount: USDC_PRICE_PER_MESSAGE,
@@ -135,8 +135,23 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     payTo: receiverAddress,
     maxTimeoutSeconds: 3600,
     extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
+  };
+  // Must be the SAME enhanced requirements (extra.receiverAuthorizer/withdrawDelay) the
+  // client signed its channelConfig against when it saw the 402 — a raw, un-enhanced
+  // requirements object here makes the facilitator's validateChannelConfig() reject every
+  // deposit with receiver_authorizer_mismatch, since it treats a missing extra field as a
+  // mismatch rather than "not required". Confirmed via a real Base Sepolia run.
+  const paymentRequirements = await scheme.enhancePaymentRequirements(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any;
+    baseRequirements as any,
+    {
+      x402Version: 2,
+      scheme: "batch-settlement",
+      network: clientNetwork as `${string}:${string}`,
+      extra: baseRequirements.extra,
+    },
+    [],
+  );
 
   let verification: { isValid: boolean; invalidReason?: string; payer?: string };
   try {

@@ -1,0 +1,266 @@
+import { callLLMAPI, convertTokensToUsdcCost, type LLMMessage } from "./llm_service.js";
+import { parseJsonBody } from "./utils.js";
+import { getUSDCConfig } from "@fretchen/chain-utils";
+import pino from "pino";
+import {
+  createLLMResourceServer,
+  createBatchSettlementPaymentRequirements,
+  create402Response,
+  extractPaymentPayload,
+  createSettlementHeaders,
+  getBatchSettlementNetworks,
+} from "./x402_server.js";
+import type { ScwEvent } from "./types.js";
+
+export type { ScwEvent };
+
+interface ScwResponse {
+  body: string;
+  statusCode: number;
+  headers: Record<string, string>;
+}
+
+const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+// Fixed nominal price per message, in USDC atomic units (6 decimals), derived from
+// convertTokensToUsdcCost() applied to an estimated per-message token count — not an
+// arbitrary number, but still not the request's actual usage: the SDK requires each
+// voucher's maxClaimableAmount to exactly equal chargedCumulativeAmount +
+// requirements.amount (see @x402/evm batch-settlement/server
+// handleBeforeVerify/handleBeforeSettle), so the charge must be fixed and agreed
+// *before* the client signs, before the real completion token count is known. Real
+// usage-based billing would need the SDK's corrective-402 mismatch flow (client
+// re-signs after learning the true cumulative amount) — that's Phase C+ work; this
+// estimate-derived flat rate is the correct, SDK-idiomatic choice for a server-only
+// phase.
+const ESTIMATED_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
+const USDC_PRICE_PER_MESSAGE = convertTokensToUsdcCost(
+  BigInt(ESTIMATED_TOKENS_PER_MESSAGE),
+).toString();
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  // Must cover every header @x402/fetch sets on the paid retry request — see
+  // genimg_x402_token.ts's identical OPTIONS block for the same reasoning.
+  "Access-Control-Allow-Headers":
+    "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
+};
+
+function isHexAddress(addr: unknown): addr is `0x${string}` {
+  return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
+
+function errorResponse(statusCode: number, error: string): ScwResponse {
+  return { body: JSON.stringify({ error }), headers: CORS_HEADERS, statusCode };
+}
+
+export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return errorResponse(400, "Only POST requests are supported");
+  }
+
+  const body = parseJsonBody(event.body);
+  if (!body) {
+    return errorResponse(400, "Invalid JSON body");
+  }
+
+  const data = body["data"] as Record<string, unknown> | undefined;
+  if (!Array.isArray(data?.["prompt"])) {
+    return errorResponse(400, "No prompt provided");
+  }
+  const prompt = data["prompt"] as LLMMessage[];
+
+  let useDummyData = false;
+  if (data["useDummyData"] !== undefined) {
+    if (typeof data["useDummyData"] !== "boolean") {
+      return errorResponse(400, "Invalid useDummyData flag");
+    }
+    useDummyData = data["useDummyData"];
+  }
+
+  const receiverAddress = process.env.NFT_WALLET_PUBLIC_KEY;
+  if (!receiverAddress || !isHexAddress(receiverAddress)) {
+    return errorResponse(
+      500,
+      "Service provider address not configured or invalid. Set NFT_WALLET_PUBLIC_KEY to a 0x-prefixed 40-hex-char address.",
+    );
+  }
+
+  let resourceServer: ReturnType<typeof createLLMResourceServer>["resourceServer"];
+  let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
+  try {
+    ({ resourceServer, scheme } = createLLMResourceServer(receiverAddress));
+  } catch (err) {
+    logger.error({ err }, "Failed to configure batch-settlement resource server");
+    return errorResponse(500, "Server configuration error");
+  }
+
+  const paymentPayload = extractPaymentPayload(event.headers) ?? body["payment"];
+
+  if (!paymentPayload) {
+    logger.info("No payment provided, returning 402");
+    const paymentRequirements = await createBatchSettlementPaymentRequirements({
+      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+      description: "AI Assistant chat message",
+      mimeType: "application/json",
+      amount: USDC_PRICE_PER_MESSAGE,
+      payTo: receiverAddress,
+      scheme,
+    });
+    return create402Response(paymentRequirements);
+  }
+
+  const clientNetwork = (paymentPayload as Record<string, unknown>)["accepted"]
+    ? (((paymentPayload as Record<string, unknown>)["accepted"] as Record<string, unknown>)[
+        "network"
+      ] as string | undefined)
+    : undefined;
+
+  if (!clientNetwork || !getBatchSettlementNetworks().includes(clientNetwork)) {
+    return errorResponse(402, "Unsupported or missing network for batch-settlement payment");
+  }
+
+  const usdcConfig = getUSDCConfig(clientNetwork);
+  const paymentRequirements = {
+    scheme: "batch-settlement",
+    network: clientNetwork,
+    amount: USDC_PRICE_PER_MESSAGE,
+    asset: usdcConfig.address,
+    payTo: receiverAddress,
+    maxTimeoutSeconds: 3600,
+    extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
+
+  let verification: { isValid: boolean; invalidReason?: string; payer?: string };
+  try {
+    verification = await resourceServer.verifyPayment(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      paymentPayload as any,
+      paymentRequirements,
+    );
+  } catch (error) {
+    logger.error({ err: error }, "Payment verification error");
+    return errorResponse(402, `Payment verification failed: ${(error as Error).message}`);
+  }
+
+  if (!verification.isValid) {
+    logger.warn({ reason: verification.invalidReason }, "Payment verification failed");
+    return {
+      statusCode: 402,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        error: "Payment verification failed",
+        reason: verification.invalidReason,
+        payer: verification.payer,
+      }),
+    };
+  }
+
+  let llmData: Awaited<ReturnType<typeof callLLMAPI>>;
+  try {
+    logger.info({ prompt }, "Generating answer for prompt");
+    llmData = await callLLMAPI(prompt, useDummyData);
+  } catch (error) {
+    logger.error({ err: error }, "Error during answer generation");
+    const msg = (error as Error).message;
+    const statusCode = msg.includes("API Token nicht gefunden") ? 401 : 500;
+    return errorResponse(statusCode, msg);
+  }
+
+  // Commits chargedCumulativeAmount locally for a voucher payload (no on-chain tx, no
+  // facilitator call — confirmed from @x402/evm source: handleBeforeSettle returns
+  // `{ skip: true }`); for a deposit payload this is the one real on-chain settlement.
+  try {
+    const settlement = await resourceServer.settlePayment(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      paymentPayload as any,
+      paymentRequirements,
+    );
+    if (!settlement.success) {
+      logger.error({ settlement }, "Settlement failed");
+      return errorResponse(402, `Settlement failed: ${settlement.errorReason ?? "unknown"}`);
+    }
+
+    logger.info({ data: llmData }, "Answer generated and settled");
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
+      body: JSON.stringify(llmData),
+    };
+  } catch (error) {
+    logger.error({ err: error }, "Settlement error");
+    return errorResponse(402, `Settlement failed: ${(error as Error).message}`);
+  }
+}
+
+if (process.env.NODE_ENV === "test" && !process.env.CI) {
+  import("dotenv").then((dotenv) => {
+    dotenv.config();
+    import("fastify").then((fastifyModule) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fastify = (fastifyModule.default as any)({ bodyLimit: 10 * 1024 * 1024 });
+
+      import("@fastify/cors").then((corsModule) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fastify.register((corsModule as any).default, {
+          origin: true,
+          methods: ["GET", "POST", "OPTIONS"],
+          allowedHeaders: "*",
+          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
+        });
+
+        import("@fastify/url-data").then((urlDataModule) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fastify.register((urlDataModule as any).default);
+
+          fastify.addContentTypeParser(
+            "application/json",
+            { parseAs: "string" },
+            fastify.defaultTextParser,
+          );
+
+          fastify.route({
+            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            url: "/*",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            handler: async (request: any, reply: any) => {
+              try {
+                const event: ScwEvent = {
+                  httpMethod: request.method,
+                  headers: request.headers,
+                  body: request.body,
+                  path: request.url,
+                  queryStringParameters: request.query,
+                };
+                const result = await handle(event, {});
+                reply.status(result.statusCode ?? 200);
+                for (const [key, value] of Object.entries(result.headers ?? {})) {
+                  reply.header(key, value);
+                }
+                return result.body;
+              } catch (error) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                reply.status(500).send({ error: (error as any).message });
+              }
+            },
+          });
+
+          fastify.listen({ port: 8085, host: "0.0.0.0" }, (err: unknown, address: string) => {
+            if (err) {
+              console.error("Failed to start server:", err);
+              process.exit(1);
+            }
+            console.log(`🚀 LLM x402 batch-settlement Local Server listening at ${address}`);
+          });
+        });
+      });
+    });
+  });
+}

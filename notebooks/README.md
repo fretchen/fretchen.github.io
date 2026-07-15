@@ -1,6 +1,12 @@
-# Merkle Tree Notebooks
+# Notebooks
 
-This directory contains Jupyter notebooks for exploring Merkle trees and their application to LLM API batching.
+This directory contains Jupyter notebooks for blog-post research and analysis (game
+theory, quantum computing, economics/toll scenarios, and similar topics) — not tied to
+any specific package in this repo. Notebooks exploring a particular package's own
+backend/API behavior live with that package instead (e.g. `scw_js/notebooks/`,
+`growth-agent/notebooks/`, `x402_facilitator/notebooks/`); the merkle-tree/IONOS/BFL/
+genimg-client notebooks that used to live here moved to `scw_js/notebooks/` for that
+reason.
 
 ## Setup
 
@@ -14,11 +20,6 @@ This directory contains Jupyter notebooks for exploring Merkle trees and their a
    ```bash
    uv run jupyter notebook
    ```
-
-## Notebooks
-
-- `merkle_tree.ipynb` - Basic exploration of Merkle tree concepts and implementation
-- `ionos_llm.ipynb` - Tutorial for text generation using foundation models via the IONOS AI Model Hub API. Demonstrates how to retrieve available models, send prompts to generate text responses, and interpret results. Includes examples for building conversational agents, virtual assistants, and content creation applications using various LLMs including Llama 3.1, Mistral, and other models.
 
 ## Dependencies
 

@@ -16,6 +16,8 @@ provider:
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
     OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
+    LLM_ESTIMATED_TOKENS_PER_MESSAGE: ${env:LLM_ESTIMATED_TOKENS_PER_MESSAGE, "2000"}
+    RECEIVER_AUTHORIZER_PRIVATE_KEY: ${env:RECEIVER_AUTHORIZER_PRIVATE_KEY}
 
 plugins:
   - serverless-scaleway-functions
@@ -41,6 +43,15 @@ functions:
       - imagegen-agent.fretchen.eu
   llm:
     handler: dist/sc_llm.handle
+  llmx402:
+    handler: dist/sc_llm_x402.handle
+    description: "x402 batch-settlement LLM chat (USDC payment channels)"
+  llmx402cron:
+    handler: dist/llm_x402_cron.handle
+    description: "Claims and settles accumulated x402 batch-settlement channels hourly"
+    events:
+      - schedule:
+          rate: "0 * * * *"
   leafhistory:
     handler: dist/leaf_history.handle
   growthapi:

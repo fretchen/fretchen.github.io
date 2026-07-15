@@ -1,6 +1,9 @@
 import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { getUSDCConfig } from "@fretchen/chain-utils";
+import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
+import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
+import { privateKeyToAccount } from "viem/accounts";
+import { S3ChannelStorage } from "./x402_channel_storage.js";
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 
@@ -11,17 +14,129 @@ const SUPPORTED_NETWORKS = [
   "eip155:84532", // Base Sepolia
 ];
 
+// The x402BatchSettlement contract (CREATE2, canonical address) is deployed on these
+// networks only — not Optimism Sepolia. Keep in sync with
+// x402_facilitator/chain_utils.ts::getBatchSettlementNetworks().
+const BATCH_SETTLEMENT_NETWORKS = ["eip155:10", "eip155:8453", "eip155:84532"];
+
+// Onchain channel state (balance/totalClaimed) is cached for this long before a fresh
+// RPC read; the SDK's default resolves to a fixed 5 minutes (floored by the protocol's
+// MIN_WITHDRAW_DELAY), which would make a user's first chat message right after
+// depositing spuriously fail with cumulative_exceeds_balance. Confirmed via the B0 spike.
+const ONCHAIN_STATE_TTL_MS = 5_000;
+
 export function getSupportedNetworks(): string[] {
   return SUPPORTED_NETWORKS;
 }
 
+export function getBatchSettlementNetworks(): string[] {
+  return BATCH_SETTLEMENT_NETWORKS;
+}
+
+export function createFacilitatorClient(): HTTPFacilitatorClient {
+  return new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+}
+
 export function createResourceServer(): x402ResourceServer {
-  const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
-  const server = new x402ResourceServer(facilitatorClient);
+  const server = new x402ResourceServer(createFacilitatorClient());
   for (const network of getSupportedNetworks()) {
     server.register(network as `${string}:${string}`, new ExactEvmScheme());
   }
   return server;
+}
+
+export interface LLMResourceServer {
+  resourceServer: x402ResourceServer;
+  scheme: BatchSettlementEvmScheme;
+}
+
+/**
+ * Resource server for the LLM assistant's x402 batch-settlement channels. A single
+ * `BatchSettlementEvmScheme` instance is shared across every supported network (the
+ * scheme is receiver-bound, not network-bound — see B0 spike) and reused by the
+ * claim/settle cron via `scheme.createChannelManager()`.
+ */
+export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMResourceServer {
+  const resourceServer = new x402ResourceServer(createFacilitatorClient());
+
+  const authorizerAccount = privateKeyToAccount(loadPrivateKey("RECEIVER_AUTHORIZER_PRIVATE_KEY"));
+  const scheme = new BatchSettlementEvmScheme(receiverAddress, {
+    storage: new S3ChannelStorage(),
+    receiverAuthorizerSigner: {
+      address: authorizerAccount.address,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      signTypedData: (params: any) => authorizerAccount.signTypedData(params),
+    },
+    onchainStateTtlMs: ONCHAIN_STATE_TTL_MS,
+  });
+
+  for (const network of BATCH_SETTLEMENT_NETWORKS) {
+    resourceServer.register(network as `${string}:${string}`, scheme);
+  }
+
+  return { resourceServer, scheme };
+}
+
+export interface BatchSettlementPaymentRequirementsOptions {
+  resourceUrl: string;
+  description: string;
+  mimeType: string;
+  amount: string;
+  payTo: string;
+  scheme: BatchSettlementEvmScheme;
+  networks?: readonly string[];
+}
+
+/**
+ * Builds the 402 `accepts` array for batch-settlement: each network's base requirements
+ * must be run through the scheme's own `enhancePaymentRequirements` so the client
+ * receives the `receiverAuthorizer`/`withdrawDelay`/EIP-712 domain fields it needs to
+ * build a deposit payload (confirmed necessary in the B0 spike).
+ */
+export async function createBatchSettlementPaymentRequirements({
+  resourceUrl,
+  description,
+  mimeType,
+  amount,
+  payTo,
+  scheme,
+  networks = BATCH_SETTLEMENT_NETWORKS,
+}: BatchSettlementPaymentRequirementsOptions): Promise<{
+  x402Version: number;
+  resource: { url: string; description: string; mimeType: string };
+  accepts: unknown[];
+}> {
+  const accepts = await Promise.all(
+    networks.map(async (network) => {
+      const config = getUSDCConfig(network);
+      const base = {
+        scheme: "batch-settlement",
+        network,
+        amount,
+        asset: config.address,
+        payTo,
+        maxTimeoutSeconds: 3600,
+        extra: { name: config.usdcName, version: config.usdcVersion },
+      };
+      return scheme.enhancePaymentRequirements(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        base as any,
+        {
+          x402Version: 2,
+          scheme: "batch-settlement",
+          network: network as `${string}:${string}`,
+          extra: base.extra,
+        },
+        [],
+      );
+    }),
+  );
+
+  return {
+    x402Version: 2,
+    resource: { url: resourceUrl, description, mimeType },
+    accepts,
+  };
 }
 
 export interface PaymentRequirementsOptions {
@@ -84,7 +199,11 @@ export interface HttpResponse {
   body: string;
 }
 
-export function create402Response(paymentRequirements: PaymentRequirements): HttpResponse {
+export function create402Response(paymentRequirements: {
+  x402Version: number;
+  resource: { url: string; description: string; mimeType: string };
+  accepts: unknown[];
+}): HttpResponse {
   const paymentRequiredHeader = Buffer.from(JSON.stringify(paymentRequirements)).toString("base64");
 
   return {

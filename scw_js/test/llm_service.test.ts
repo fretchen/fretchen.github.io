@@ -36,6 +36,8 @@ import {
   startNewTree,
   processMerkleTree,
   checkWalletBalance,
+  convertTokensToCost,
+  convertTokensToUsdcCost,
 } from "../llm_service.js";
 import type { Leaf } from "../llm_service.js";
 
@@ -335,5 +337,60 @@ describe("checkWalletBalance — ETH deposit gate", () => {
     await expect(checkWalletBalance(USER_ADDRESS, REQUIRED)).rejects.toThrow(
       `Insufficient balance. Required: ${REQUIRED}, Current: 5000000000000`,
     );
+  });
+});
+
+describe("convertTokensToCost — ETH wei conversion (regression check after parseTokenCount refactor)", () => {
+  test("converts a known token count to the expected wei amount", () => {
+    // 1,000,000 tokens * 0.71 EUR / 3000 EUR/ETH = 0.71/3000 ETH
+    expect(convertTokensToCost(1_000_000n)).toBe(236_666_666_666_666n);
+  });
+
+  test("accepts number and numeric-string inputs equivalently to bigint", () => {
+    const viaBigint = convertTokensToCost(1500n);
+    expect(convertTokensToCost(1500)).toBe(viaBigint);
+    expect(convertTokensToCost("1500")).toBe(viaBigint);
+  });
+
+  test("rejects a negative number", () => {
+    expect(() => convertTokensToCost(-5)).toThrow(TypeError);
+  });
+
+  test("rejects a non-numeric string", () => {
+    expect(() => convertTokensToCost("abc")).toThrow(TypeError);
+  });
+});
+
+describe("convertTokensToUsdcCost — direct EUR-to-USDC conversion (no ETH hop)", () => {
+  test("converts a known token count to the expected USDC atomic units", () => {
+    // 1,000,000 tokens * 0.71 EUR/USDC per 1M tokens = 710,000 atomic units ($0.71)
+    expect(convertTokensToUsdcCost(1_000_000n)).toBe(710_000n);
+  });
+
+  test("matches the estimated-tokens-per-message default used by sc_llm_x402.ts", () => {
+    // 2000 tokens * 71 / 100 = 1420 atomic units ($0.00142)
+    expect(convertTokensToUsdcCost(2000n)).toBe(1420n);
+  });
+
+  test("accepts number and numeric-string inputs equivalently to bigint", () => {
+    const viaBigint = convertTokensToUsdcCost(1500n);
+    expect(convertTokensToUsdcCost(1500)).toBe(viaBigint);
+    expect(convertTokensToUsdcCost("1500")).toBe(viaBigint);
+  });
+
+  test("returns zero for zero tokens", () => {
+    expect(convertTokensToUsdcCost(0n)).toBe(0n);
+  });
+
+  test("rejects a negative number", () => {
+    expect(() => convertTokensToUsdcCost(-5)).toThrow(TypeError);
+  });
+
+  test("rejects a non-finite number", () => {
+    expect(() => convertTokensToUsdcCost(Infinity)).toThrow(TypeError);
+  });
+
+  test("rejects a non-numeric string", () => {
+    expect(() => convertTokensToUsdcCost("abc")).toThrow(TypeError);
   });
 });

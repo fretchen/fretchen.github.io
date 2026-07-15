@@ -14,6 +14,7 @@ import {
   encodeCanonicalUri,
   formatAmzDate,
   sha256Hex,
+  uriEncode,
 } from "./sigv4.js";
 
 const SERVICE = "s3";
@@ -70,11 +71,24 @@ async function fetchWithRetry(
   throw lastError;
 }
 
+/**
+ * Builds a SigV4 canonical query string: sorted by key, each key/value
+ * URI-encoded per the spec. Used only by `listObjects` (a query on the bucket
+ * root); GET/PUT/DELETE on an object key never carry a query string.
+ */
+function buildCanonicalQueryString(params: Record<string, string>): string {
+  return Object.keys(params)
+    .sort()
+    .map((k) => `${uriEncode(k)}=${uriEncode(params[k])}`)
+    .join("&");
+}
+
 async function signedFetch(
-  method: "GET" | "PUT",
+  method: "GET" | "PUT" | "DELETE",
   key: string,
   body: string | Uint8Array | undefined,
-  extraHeaders: Record<string, string>
+  extraHeaders: Record<string, string>,
+  query: Record<string, string> = {}
 ): Promise<Response> {
   const accessKeyId = process.env.SCW_ACCESS_KEY;
   const secretAccessKey = process.env.SCW_SECRET_KEY;
@@ -86,6 +100,7 @@ async function signedFetch(
 
   return fetchWithRetry(() => {
     const canonicalUri = encodeCanonicalUri(key);
+    const canonicalQueryString = buildCanonicalQueryString(query);
     const payloadHash = sha256Hex(body ?? "");
     const { amzDate, dateStamp } = formatAmzDate(new Date());
 
@@ -103,7 +118,7 @@ async function signedFetch(
     const { canonicalRequest, signedHeaders } = buildCanonicalRequest({
       method,
       canonicalUri,
-      canonicalQueryString: "",
+      canonicalQueryString,
       headers,
       hashedPayload: payloadHash,
     });
@@ -122,7 +137,11 @@ async function signedFetch(
     const requestHeaders: Record<string, string> = Object.fromEntries(headers);
     requestHeaders.authorization = authorization;
 
-    return fetch(`https://${host}${canonicalUri}`, {
+    const url = canonicalQueryString
+      ? `https://${host}${canonicalUri}?${canonicalQueryString}`
+      : `https://${host}${canonicalUri}`;
+
+    return fetch(url, {
       method,
       headers: requestHeaders,
       body: body as BodyInit | undefined,
@@ -142,6 +161,26 @@ export async function getS3Object(key: string): Promise<string | null> {
     throw new Error(`S3 GetObject failed for ${key}: ${res.status} ${res.statusText}`);
   }
   return res.text();
+}
+
+export interface GetS3ObjectMetaResult {
+  body: string;
+  etag: string;
+}
+
+/**
+ * GET an object along with its ETag, for callers implementing an
+ * optimistic-concurrency read-modify-write loop (see `putS3ObjectConditional`).
+ * Returns null on 404. Throws on any other non-2xx status or network failure.
+ */
+export async function getS3ObjectWithMeta(key: string): Promise<GetS3ObjectMetaResult | null> {
+  const res = await signedFetch("GET", key, undefined, {});
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`S3 GetObject failed for ${key}: ${res.status} ${res.statusText}`);
+  }
+  const body = await res.text();
+  return { body, etag: res.headers.get("etag") ?? "" };
 }
 
 export interface PutS3ObjectOptions {
@@ -164,4 +203,98 @@ export async function putS3Object(
   if (!res.ok) {
     throw new Error(`S3 PutObject failed for ${key}: ${res.status} ${res.statusText}`);
   }
+}
+
+export interface PutS3ObjectConditionalOptions extends PutS3ObjectOptions {
+  /** Require the object's current ETag to match (compare-and-swap on an existing object). */
+  ifMatch?: string;
+  /** Require the object to not already exist. Only `"*"` is meaningful per the S3 spec. */
+  ifNoneMatch?: "*";
+}
+
+export type PutS3ObjectConditionalResult =
+  | { ok: true; etag: string }
+  | { ok: false; status: 412 };
+
+/**
+ * Conditional PUT for optimistic-concurrency callers (e.g. a `ChannelStorage`
+ * CAS loop): pass `ifMatch` to update only if the object is unchanged since a
+ * prior `getS3ObjectWithMeta`, or `ifNoneMatch: "*"` to create only if absent.
+ * On a precondition mismatch, returns `{ ok: false, status: 412 }` instead of
+ * throwing — the caller re-reads and retries. Any other non-2xx still throws.
+ */
+export async function putS3ObjectConditional(
+  key: string,
+  body: string | Uint8Array,
+  opts: PutS3ObjectConditionalOptions
+): Promise<PutS3ObjectConditionalResult> {
+  const extraHeaders: Record<string, string> = { "content-type": opts.contentType };
+  if (opts.acl) extraHeaders["x-amz-acl"] = opts.acl;
+  if (opts.cacheControl) extraHeaders["cache-control"] = opts.cacheControl;
+  if (opts.ifMatch) extraHeaders["if-match"] = opts.ifMatch;
+  if (opts.ifNoneMatch) extraHeaders["if-none-match"] = opts.ifNoneMatch;
+
+  const res = await signedFetch("PUT", key, body, extraHeaders);
+  if (res.status === 412) return { ok: false, status: 412 };
+  if (!res.ok) {
+    throw new Error(`S3 PutObject (conditional) failed for ${key}: ${res.status} ${res.statusText}`);
+  }
+  return { ok: true, etag: res.headers.get("etag") ?? "" };
+}
+
+export interface DeleteS3ObjectOptions {
+  /** Require the object's current ETag to match before deleting. */
+  ifMatch?: string;
+}
+
+export type DeleteS3ObjectResult = { ok: true } | { ok: false; status: 412 };
+
+/**
+ * DELETE an object. A missing object (404) is treated as success (the end
+ * state — "not present" — is already achieved). With `ifMatch` set, a stale
+ * ETag returns `{ ok: false, status: 412 }` instead of throwing.
+ */
+export async function deleteS3Object(
+  key: string,
+  opts: DeleteS3ObjectOptions = {}
+): Promise<DeleteS3ObjectResult> {
+  const extraHeaders: Record<string, string> = {};
+  if (opts.ifMatch) extraHeaders["if-match"] = opts.ifMatch;
+
+  const res = await signedFetch("DELETE", key, undefined, extraHeaders);
+  if (res.status === 412) return { ok: false, status: 412 };
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`S3 DeleteObject failed for ${key}: ${res.status} ${res.statusText}`);
+  }
+  return { ok: true };
+}
+
+/**
+ * Lists object keys under a prefix (S3 `ListObjectsV2`, one unpaginated page —
+ * fine at the modest object counts this monorepo's callers deal with; a
+ * caller needing more than 1000 keys under one prefix should paginate via
+ * `continuation-token`, not something any current caller needs).
+ */
+export async function listObjects(prefix: string): Promise<string[]> {
+  const res = await signedFetch("GET", "", undefined, {}, { "list-type": "2", prefix });
+  if (!res.ok) {
+    throw new Error(`S3 ListObjectsV2 failed for prefix ${prefix}: ${res.status} ${res.statusText}`);
+  }
+  const xml = await res.text();
+  const keys: string[] = [];
+  const keyTagPattern = /<Key>([^<]*)<\/Key>/g;
+  for (const match of xml.matchAll(keyTagPattern)) {
+    keys.push(decodeXmlEntities(match[1]));
+  }
+  return keys;
+}
+
+/** Decodes the small set of XML entities S3 actually emits in `<Key>` text content. */
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
 }

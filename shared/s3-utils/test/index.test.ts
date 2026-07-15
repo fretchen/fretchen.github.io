@@ -1,5 +1,13 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { getS3Object, putS3Object, getS3BaseUrl } from "../src/index.js";
+import {
+  getS3Object,
+  putS3Object,
+  getS3BaseUrl,
+  getS3ObjectWithMeta,
+  putS3ObjectConditional,
+  deleteS3Object,
+  listObjects,
+} from "../src/index.js";
 
 describe("getS3Object / putS3Object", () => {
   const mockFetch = vi.fn();
@@ -174,6 +182,204 @@ describe("getS3Object / putS3Object", () => {
       await expect(getS3Object("some/key.json")).rejects.toThrow(/403/);
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("getS3ObjectWithMeta", () => {
+  const mockFetch = vi.fn();
+
+  beforeEach(() => {
+    process.env.SCW_ACCESS_KEY = "test-access-key";
+    process.env.SCW_SECRET_KEY = "test-secret-key";
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.SCW_ACCESS_KEY;
+    delete process.env.SCW_SECRET_KEY;
+  });
+
+  test("returns null on 404", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("NoSuchKey", { status: 404 }));
+    const result = await getS3ObjectWithMeta("channels/abc.json");
+    expect(result).toBeNull();
+  });
+
+  test("returns body and etag on success", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response('{"a":1}', { status: 200, headers: { etag: '"abc123"' } })
+    );
+    const result = await getS3ObjectWithMeta("channels/abc.json");
+    expect(result).toEqual({ body: '{"a":1}', etag: '"abc123"' });
+  });
+
+  test("throws on non-ok, non-404 response", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("forbidden", { status: 403, statusText: "Forbidden" }));
+    await expect(getS3ObjectWithMeta("channels/abc.json")).rejects.toThrow(/403/);
+  });
+});
+
+describe("putS3ObjectConditional", () => {
+  const mockFetch = vi.fn();
+
+  beforeEach(() => {
+    process.env.SCW_ACCESS_KEY = "test-access-key";
+    process.env.SCW_SECRET_KEY = "test-secret-key";
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.SCW_ACCESS_KEY;
+    delete process.env.SCW_SECRET_KEY;
+  });
+
+  test("returns ok:false, status:412 on precondition failure instead of throwing", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("", { status: 412, statusText: "Precondition Failed" }));
+    const result = await putS3ObjectConditional("channels/abc.json", "{}", {
+      contentType: "application/json",
+      ifMatch: '"stale-etag"',
+    });
+    expect(result).toEqual({ ok: false, status: 412 });
+  });
+
+  test("returns ok:true with etag on success", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("", { status: 200, headers: { etag: '"new-etag"' } }));
+    const result = await putS3ObjectConditional("channels/abc.json", "{}", {
+      contentType: "application/json",
+      ifNoneMatch: "*",
+    });
+    expect(result).toEqual({ ok: true, etag: '"new-etag"' });
+  });
+
+  test("sends if-match and if-none-match headers when provided", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("", { status: 200 }));
+    await putS3ObjectConditional("channels/abc.json", "{}", {
+      contentType: "application/json",
+      ifMatch: '"etag-1"',
+    });
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init.headers["if-match"]).toBe('"etag-1"');
+    expect(init.headers["if-none-match"]).toBeUndefined();
+  });
+
+  test("throws on non-ok, non-412 response", async () => {
+    mockFetch.mockResolvedValue(new Response("error", { status: 500, statusText: "Internal Error" }));
+    await expect(
+      putS3ObjectConditional("channels/abc.json", "{}", {
+        contentType: "application/json",
+        ifNoneMatch: "*",
+      })
+    ).rejects.toThrow(/500/);
+  });
+});
+
+describe("deleteS3Object", () => {
+  const mockFetch = vi.fn();
+
+  beforeEach(() => {
+    process.env.SCW_ACCESS_KEY = "test-access-key";
+    process.env.SCW_SECRET_KEY = "test-secret-key";
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.SCW_ACCESS_KEY;
+    delete process.env.SCW_SECRET_KEY;
+  });
+
+  test("returns ok:true on success", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const result = await deleteS3Object("channels/abc.json");
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("treats a 404 as success", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("", { status: 404 }));
+    const result = await deleteS3Object("channels/abc.json");
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("returns ok:false, status:412 on precondition failure", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("", { status: 412 }));
+    const result = await deleteS3Object("channels/abc.json", { ifMatch: '"stale"' });
+    expect(result).toEqual({ ok: false, status: 412 });
+  });
+
+  test("sends the DELETE method and if-match header", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await deleteS3Object("channels/abc.json", { ifMatch: '"etag-1"' });
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init.method).toBe("DELETE");
+    expect(init.headers["if-match"]).toBe('"etag-1"');
+  });
+
+  test("throws on non-ok, non-404, non-412 response", async () => {
+    mockFetch.mockResolvedValue(new Response("error", { status: 500, statusText: "Internal Error" }));
+    await expect(deleteS3Object("channels/abc.json")).rejects.toThrow(/500/);
+  });
+});
+
+describe("listObjects", () => {
+  const mockFetch = vi.fn();
+
+  beforeEach(() => {
+    process.env.SCW_ACCESS_KEY = "test-access-key";
+    process.env.SCW_SECRET_KEY = "test-secret-key";
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.SCW_ACCESS_KEY;
+    delete process.env.SCW_SECRET_KEY;
+  });
+
+  test("parses Key entries out of the ListObjectsV2 XML response", async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult>
+  <Contents><Key>channels/0xabc.json</Key></Contents>
+  <Contents><Key>channels/0xdef.json</Key></Contents>
+</ListBucketResult>`;
+    mockFetch.mockResolvedValueOnce(new Response(xml, { status: 200 }));
+    const result = await listObjects("channels/");
+    expect(result).toEqual(["channels/0xabc.json", "channels/0xdef.json"]);
+  });
+
+  test("returns an empty array when there are no matching keys", async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult></ListBucketResult>`;
+    mockFetch.mockResolvedValueOnce(new Response(xml, { status: 200 }));
+    const result = await listObjects("channels/");
+    expect(result).toEqual([]);
+  });
+
+  test("sends list-type and prefix as a signed query string against the bucket root", async () => {
+    const xml = `<ListBucketResult></ListBucketResult>`;
+    mockFetch.mockResolvedValueOnce(new Response(xml, { status: 200 }));
+    await listObjects("channels/");
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe(
+      "https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2&prefix=channels%2F"
+    );
+    expect(init.method).toBe("GET");
+  });
+
+  test("throws on non-ok response", async () => {
+    mockFetch.mockResolvedValue(new Response("error", { status: 500, statusText: "Internal Error" }));
+    await expect(listObjects("channels/")).rejects.toThrow(/500/);
+  });
+
+  test("decodes XML entities in key names", async () => {
+    const xml = `<ListBucketResult><Contents><Key>channels/a&amp;b.json</Key></Contents></ListBucketResult>`;
+    mockFetch.mockResolvedValueOnce(new Response(xml, { status: 200 }));
+    const result = await listObjects("channels/");
+    expect(result).toEqual(["channels/a&b.json"]);
   });
 });
 

@@ -3,17 +3,13 @@ import type { Channel } from "@x402/evm/batch-settlement/server";
 
 // ===== Mocks (vi.hoisted ensures these are available when vi.mock factories run) =====
 
-const {
-  mockGetS3ObjectWithMeta,
-  mockPutS3ObjectConditional,
-  mockDeleteS3Object,
-  mockListObjects,
-} = vi.hoisted(() => ({
-  mockGetS3ObjectWithMeta: vi.fn(),
-  mockPutS3ObjectConditional: vi.fn(),
-  mockDeleteS3Object: vi.fn(),
-  mockListObjects: vi.fn(),
-}));
+const { mockGetS3ObjectWithMeta, mockPutS3ObjectConditional, mockDeleteS3Object, mockListObjects } =
+  vi.hoisted(() => ({
+    mockGetS3ObjectWithMeta: vi.fn(),
+    mockPutS3ObjectConditional: vi.fn(),
+    mockDeleteS3Object: vi.fn(),
+    mockListObjects: vi.fn(),
+  }));
 
 vi.mock("@fretchen/s3-utils", () => ({
   getS3ObjectWithMeta: mockGetS3ObjectWithMeta,
@@ -61,7 +57,10 @@ describe("S3ChannelStorage", () => {
 
     it("returns the parsed channel and lowercases the key", async () => {
       const channel = makeChannel();
-      mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify(channel), etag: '"etag-1"' });
+      mockGetS3ObjectWithMeta.mockResolvedValue({
+        body: JSON.stringify(channel),
+        etag: '"etag-1"',
+      });
       const storage = new S3ChannelStorage();
       const result = await storage.get("0xChannel1");
       expect(result).toEqual(channel);
@@ -110,7 +109,10 @@ describe("S3ChannelStorage", () => {
 
     it("updates an existing channel with If-Match on its current etag", async () => {
       const current = makeChannel();
-      mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify(current), etag: '"etag-1"' });
+      mockGetS3ObjectWithMeta.mockResolvedValue({
+        body: JSON.stringify(current),
+        etag: '"etag-1"',
+      });
       mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"etag-2"' });
 
       const storage = new S3ChannelStorage();
@@ -124,7 +126,10 @@ describe("S3ChannelStorage", () => {
 
     it("returns unchanged without writing when the callback returns the same reference", async () => {
       const current = makeChannel();
-      mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify(current), etag: '"etag-1"' });
+      mockGetS3ObjectWithMeta.mockResolvedValue({
+        body: JSON.stringify(current),
+        etag: '"etag-1"',
+      });
 
       const storage = new S3ChannelStorage();
       // Since get() re-parses JSON, "current" as seen by the callback is a fresh object;
@@ -158,18 +163,24 @@ describe("S3ChannelStorage", () => {
     });
 
     it("throws after exceeding the max CAS attempts", async () => {
-      mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify(makeChannel()), etag: '"e"' });
+      mockGetS3ObjectWithMeta.mockResolvedValue({
+        body: JSON.stringify(makeChannel()),
+        etag: '"e"',
+      });
       mockPutS3ObjectConditional.mockResolvedValue({ ok: false, status: 412 });
 
       const storage = new S3ChannelStorage();
       await expect(
-        storage.updateChannel("0xChannel1", (c) => ({ ...c!, chargedCumulativeAmount: "999" }))
+        storage.updateChannel("0xChannel1", (c) => ({ ...c!, chargedCumulativeAmount: "999" })),
       ).rejects.toThrow(/CAS attempts/);
     });
 
     it("deletes the object with If-Match when the callback returns undefined", async () => {
       const current = makeChannel();
-      mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify(current), etag: '"etag-1"' });
+      mockGetS3ObjectWithMeta.mockResolvedValue({
+        body: JSON.stringify(current),
+        etag: '"etag-1"',
+      });
       mockDeleteS3Object.mockResolvedValue({ ok: true });
 
       const storage = new S3ChannelStorage();
@@ -193,7 +204,10 @@ describe("S3ChannelStorage", () => {
 
     it("retries the delete on a 412 conflict", async () => {
       const current = makeChannel();
-      mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify(current), etag: '"etag-1"' });
+      mockGetS3ObjectWithMeta.mockResolvedValue({
+        body: JSON.stringify(current),
+        etag: '"etag-1"',
+      });
       mockDeleteS3Object
         .mockResolvedValueOnce({ ok: false, status: 412 })
         .mockResolvedValueOnce({ ok: true });

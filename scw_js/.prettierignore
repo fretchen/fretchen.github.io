@@ -10,3 +10,8 @@ yarn.lock
 .vscode/
 .env
 *.log
+# Python envs under notebooks/ (e.g. scw_js/notebooks/.venv) — not JS, and huge.
+.venv/
+.ruff_cache/
+__pycache__/
+*.ipynb

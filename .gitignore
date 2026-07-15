@@ -167,3 +167,8 @@ amo/blogs.json
 
 # Webmention temp directory
 website/.temp-gh-pages
+
+# Python virtualenvs and caches (notebooks/, growth-agent/, scw_js/notebooks/, etc.)
+.venv/
+.ruff_cache/
+__pycache__/

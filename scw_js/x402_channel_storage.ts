@@ -1,4 +1,8 @@
-import type { Channel, ChannelStorage, ChannelUpdateResult } from "@x402/evm/batch-settlement/server";
+import type {
+  Channel,
+  ChannelStorage,
+  ChannelUpdateResult,
+} from "@x402/evm/batch-settlement/server";
 import {
   getS3ObjectWithMeta,
   putS3ObjectConditional,
@@ -73,6 +77,8 @@ export class S3ChannelStorage implements ChannelStorage {
       // 412 precondition failure: another writer won the race — retry from a fresh read.
     }
 
-    throw new Error(`S3ChannelStorage.updateChannel: exceeded ${MAX_CAS_ATTEMPTS} CAS attempts for ${channelId}`);
+    throw new Error(
+      `S3ChannelStorage.updateChannel: exceeded ${MAX_CAS_ATTEMPTS} CAS attempts for ${channelId}`,
+    );
   }
 }

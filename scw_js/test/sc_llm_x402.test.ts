@@ -106,7 +106,11 @@ describe("sc_llm_x402", () => {
       model: "test-model",
     });
     mockVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
-    mockSettlePayment.mockResolvedValue({ success: true, transaction: "", network: "eip155:84532" });
+    mockSettlePayment.mockResolvedValue({
+      success: true,
+      transaction: "",
+      network: "eip155:84532",
+    });
   });
 
   describe("basic request validation", () => {

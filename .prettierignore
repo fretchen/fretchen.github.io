@@ -1,0 +1,26 @@
+# Applies whenever Prettier is invoked from the repo root (e.g. an editor
+# extension with no closer .prettierignore in scope). Each per-package
+# .prettierignore (scw_js/, shared/*/) still applies for in-package runs.
+
+node_modules/
+dist/
+build/
+coverage/
+.git/
+.vscode/
+
+# Python virtualenvs and caches (notebooks/, growth-agent/, scw_js/notebooks/, etc.)
+.venv/
+.ruff_cache/
+__pycache__/
+
+# Jupyter notebooks — no Prettier parser is configured for these; formatting
+# them as JSON would rewrite cell source line-wrapping Jupyter cares about.
+*.ipynb
+
+*.log
+*.min.js
+*.bundle.js
+package-lock.json
+yarn.lock
+uv.lock

@@ -2,7 +2,19 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
+  {
+    ignores: [
+      "node_modules/",
+      "coverage/",
+      "dist/",
+      "build/",
+      ".serverless/",
+      // Not part of scw_js's own TS codebase: Deno spikes + Python API-exploration
+      // notebooks with their own .venv/node_modules trees (e.g. bundled jupyterlab
+      // JS assets) that eslint:recommended would otherwise sweep in as plain .js.
+      "notebooks/",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   // TypeScript source files (excluded from tsconfig: test files use non-type-aware rules below)

@@ -120,7 +120,7 @@ describe("x402_splitter_settle", () => {
       const result = await settleSplitterPayment(invalidPayload, validPaymentRequirements);
 
       expect(result.success).toBe(false);
-      expect(result.errorReason).toBe("invalid_exact_evm_payload_signature");
+      expect(result.errorReason).toBe("invalid_exact_evm_signature");
       expect(result.transaction).toBe("");
     });
 
@@ -215,7 +215,7 @@ describe("x402_splitter_settle", () => {
 
       expect(result.success).toBe(false);
       // Signature validation happens first, so we get signature error
-      expect(result.errorReason).toBe("invalid_exact_evm_payload_signature");
+      expect(result.errorReason).toBe("invalid_exact_evm_signature");
     });
 
     it("requires seller field in payload", async () => {

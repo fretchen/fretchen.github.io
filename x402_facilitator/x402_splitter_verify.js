@@ -64,7 +64,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
         { expected: paymentRequirements.network, received: accepted.network },
         "Network mismatch",
       );
-      return { isValid: false, invalidReason: "network_mismatch" };
+      return { isValid: false, invalidReason: "invalid_exact_evm_network_mismatch" };
     }
 
     // Check asset matches
@@ -224,7 +224,7 @@ export async function verifySplitterPayment(paymentPayload, paymentRequirements)
 
     if (!isValidSignature) {
       logger.warn({ from }, "Invalid EIP-712 signature");
-      return { isValid: false, invalidReason: "invalid_exact_evm_payload_signature", payer: from };
+      return { isValid: false, invalidReason: "invalid_exact_evm_signature", payer: from };
     }
 
     // Check time window

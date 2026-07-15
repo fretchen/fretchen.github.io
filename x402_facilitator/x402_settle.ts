@@ -50,11 +50,45 @@ export async function settlePayment(
   paymentRequirements: Record<string, unknown>,
 ): Promise<SettleResult> {
   try {
+    const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
+    const payload = paymentPayload.payload as Record<string, unknown> | undefined;
+    const payloadType = payload?.type as string | undefined;
+
+    // Batch-settlement "claim" and "settle" payloads are settlement COMMANDS, not
+    // future payments to verify — the SDK's own scheme.verify() has no branch for
+    // them at all (only deposit/voucher/refund are verifiable) and unconditionally
+    // rejects them with invalid_batch_settlement_evm_payload_type. Skip the
+    // verify-first gate for these two types and settle directly; the scheme's own
+    // settle() does its own type-appropriate validation internally (e.g.
+    // executeClaimWithSignature verifies the claimAuthorizerSignature and each
+    // voucher signature on-chain before moving funds).
+    const isBatchSettlement = accepted?.scheme === "batch-settlement";
+    if (isBatchSettlement && (payloadType === "claim" || payloadType === "settle")) {
+      const facilitator = getFacilitator();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+      const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
+      const claims = payload?.claims as
+        | Array<{ voucher?: { channel?: { payer?: string } } }>
+        | undefined;
+      const payer = claims?.[0]?.voucher?.channel?.payer;
+      const network = accepted?.network as string | undefined;
+
+      if (!result.success) {
+        logger.warn({ errorReason: result.errorReason }, "Batch-settlement claim/settle failed");
+        return { success: false, errorReason: result.errorReason, payer, transaction: "", network };
+      }
+
+      logger.info(
+        { hash: result.transaction, network },
+        "Batch-settlement claim/settle transaction confirmed",
+      );
+      // Fee-free — no fee collection for batch-settlement (see the fee guard below).
+      return { success: true, payer, transaction: result.transaction, network };
+    }
+
     // First verify the payment (includes fee allowance check)
     logger.info("Verifying payment before settlement");
     const verifyResult = await verifyPayment(paymentPayload, paymentRequirements);
-
-    const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     if (!verifyResult.isValid) {
       logger.warn({ invalidReason: verifyResult.invalidReason }, "Payment verification failed");
@@ -85,8 +119,12 @@ export async function settlePayment(
 
     logger.info({ hash: result.transaction, network: accepted?.network }, "Transaction confirmed");
 
-    // Settlement succeeded — check if fee collection is needed
-    const feeRequired = verifyResult.feeRequired;
+    // Settlement succeeded — check if fee collection is needed.
+    // Batch-settlement channels are fee-free: the post-settlement transferFrom fee
+    // model is exact-scheme only. The onAfterVerify hook already sets feeRequired=false
+    // for batch-settlement; this scheme guard makes that explicit and defensive.
+    // (isBatchSettlement already computed above.)
+    const feeRequired = verifyResult.feeRequired && !isBatchSettlement;
     const recipient = verifyResult.recipient;
     const network = accepted?.network as string | undefined;
 

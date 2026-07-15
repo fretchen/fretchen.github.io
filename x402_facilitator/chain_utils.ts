@@ -42,3 +42,22 @@ export function getChainConfig(network: string): ChainConfig {
 export function getSupportedNetworks(): string[] {
   return ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
 }
+
+/**
+ * Get networks where the canonical x402 batch-settlement contract
+ * (`BATCH_SETTLEMENT_ADDRESS`) is actually deployed.
+ *
+ * This is a STRICT SUBSET of `getSupportedNetworks()`. The exact scheme works on
+ * every supported network (USDC exists everywhere), but batch-settlement is a
+ * single fixed contract address that the @x402 SDK does not track deployment
+ * status for — that's on us. Verified deployed on Optimism mainnet, Base mainnet,
+ * and Base Sepolia; NOT on Optimism Sepolia (`eip155:11155420`).
+ *
+ * Registering BatchSettlementEvmScheme outside this list would advertise support
+ * via `/supported` for a network with no contract, and any deposit/claim/settle
+ * against it would fail on-chain.
+ * @returns Array of CAIP-2 network identifiers with a deployed batch-settlement contract
+ */
+export function getBatchSettlementNetworks(): string[] {
+  return ["eip155:10", "eip155:8453", "eip155:84532"];
+}

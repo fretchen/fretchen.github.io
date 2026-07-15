@@ -2,8 +2,12 @@
  * x402 v2 Facilitator Instance
  * Centralized facilitator configuration with multi-chain support
  *
- * Architecture: One ExactEvmScheme per network (following x402 best practices)
- * Each network has its own dedicated viem client, eliminating chain selection issues
+ * Architecture: One ExactEvmScheme per network (following x402 best practices),
+ * plus one BatchSettlementEvmScheme per network THAT HAS THE CONTRACT DEPLOYED
+ * (see getBatchSettlementNetworks() in chain_utils.ts — a strict subset of
+ * getSupportedNetworks()). Each network has its own dedicated viem client,
+ * eliminating chain selection issues. The facilitator routes by scheme, so both
+ * schemes coexist on the same /verify and /settle endpoints.
  */
 
 import { createPublicClient, createWalletClient, http, type Account } from "viem";
@@ -11,10 +15,11 @@ import { privateKeyToAccount } from "viem/accounts";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
+import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator";
 import pino from "pino";
 import { loadPrivateKey } from "@fretchen/chain-utils";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
-import { getChainConfig, getSupportedNetworks } from "./chain_utils";
+import { getChainConfig, getSupportedNetworks, getBatchSettlementNetworks } from "./chain_utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -90,6 +95,12 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
     });
 
     facilitator.register(network, new ExactEvmScheme(readOnlySigner));
+    // Only advertise batch-settlement where the contract is actually deployed —
+    // see getBatchSettlementNetworks(). No authorizerSigner → no receiverAuthorizer
+    // advertised; servers self-manage it.
+    if (getBatchSettlementNetworks().includes(network)) {
+      facilitator.register(network, new BatchSettlementEvmScheme(readOnlySigner));
+    }
   }
 
   logger.info({
@@ -118,16 +129,32 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
   // Create and configure facilitator
   const facilitator = new x402Facilitator();
 
-  // Register a separate ExactEvmScheme for each network
+  // Register a separate ExactEvmScheme + BatchSettlementEvmScheme for each network
   const supportedNetworks = getSupportedNetworks();
   for (const network of supportedNetworks) {
     const signer = createSignerForNetwork(account, network);
     facilitator.register(network, new ExactEvmScheme(signer));
+    // Only advertise batch-settlement where the contract is actually deployed —
+    // see getBatchSettlementNetworks(). No authorizerSigner → no receiverAuthorizer
+    // advertised; servers self-manage it (self-managed receiver, per the
+    // batch-settlement migration plan).
+    if (getBatchSettlementNetworks().includes(network)) {
+      facilitator.register(network, new BatchSettlementEvmScheme(signer));
+    }
   }
 
   // Add fee allowance check AFTER verification
   facilitator.onAfterVerify(async ({ paymentPayload, result }) => {
     if (!result.isValid) {
+      return;
+    }
+
+    // Batch-settlement channels are fee-free. The facilitator fee model
+    // (post-settlement USDC transferFrom) is specific to the exact scheme, and
+    // batch-settlement payloads have no `authorization.to`, so run no fee gating
+    // for them — otherwise the recipient check below would reject every request.
+    if (paymentPayload.accepted?.scheme === "batch-settlement") {
+      (result as Record<string, unknown>).feeRequired = false;
       return;
     }
 

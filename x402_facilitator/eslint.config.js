@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
+  { ignores: ["node_modules/", "notebooks/", "coverage/", "dist/", "build/", ".serverless/"] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {

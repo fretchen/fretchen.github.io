@@ -4,8 +4,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { verifyPayment } from "../x402_verify.js";
 import { resetFacilitator } from "../facilitator_instance.js";
-import { privateKeyToAccount } from "viem/accounts";
-import { ExactEvmScheme } from "@x402/evm/exact/client";
 
 describe("x402 Verify", () => {
   const originalEnv = { ...process.env };
@@ -101,7 +99,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // Signature validation happens first, so we get signature error
     // (The test signature is from a different address/message)
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects invalid x402 version", async () => {
@@ -123,7 +121,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 EVM exact scheme returns unsupported_scheme
-    expect(result.invalidReason).toBe("unsupported_scheme");
+    expect(result.invalidReason).toBe("invalid_exact_evm_scheme");
   });
 
   test("rejects unsupported network", async () => {
@@ -135,7 +133,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 returns network_mismatch for unsupported networks
-    expect(result.invalidReason).toBe("network_mismatch");
+    expect(result.invalidReason).toBe("invalid_exact_evm_network_mismatch");
   });
 
   test("rejects expired authorization", async () => {
@@ -154,7 +152,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before timing check
     // To properly test validBefore, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects not yet valid authorization", async () => {
@@ -173,7 +171,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before timing check
     // To properly test validAfter, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects insufficient amount (less than payment)", async () => {
@@ -192,7 +190,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before amount check
     // To properly test amount validation, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects mismatched recipient", async () => {
@@ -213,7 +211,7 @@ describe("x402 Verify", () => {
     expect(result.isValid).toBe(false);
     // x402 v2 validates signature FIRST, so we get signature error before recipient check
     // To properly test recipient validation, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects missing payload", async () => {
@@ -241,7 +239,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 EVM exact scheme precise error reason
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("rejects signature with invalid length", async () => {
@@ -257,7 +255,7 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // x402 v2 EVM exact scheme precise error reason
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
   test("uses x402 v2 ExactEvmScheme for Optimism networks", async () => {
@@ -269,174 +267,10 @@ describe("x402 Verify", () => {
 
     expect(result.isValid).toBe(false);
     // Should fail on signature validation (test signature doesn't match the payload)
-    expect(result.invalidReason).toBe("invalid_exact_evm_payload_signature");
+    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
   });
 
-  /**
-   * END-TO-END SIGNATURE VALIDATION TEST
-   *
-   * This test creates a REAL signature using viem and x402 client libraries,
-   * then validates it through the full facilitator flow.
-   *
-   * This is critical because:
-   * 1. It tests the actual cryptographic signature verification
-   * 2. It catches signer configuration issues (like the toFacilitatorEvmSigner bug)
-   * 3. It serves as a reference implementation for TypeScript clients
-   *
-   * Unlike other tests that use mock signatures, this creates an authentic
-   * EIP-3009 authorization signature that the facilitator must validate.
-   */
-  test("E2E: validates real signature created with x402 client", async () => {
-    // CLIENT SIDE: Create a real signature using the client library
-    // This simulates what happens in a Jupyter notebook or web client
-
-    // Use Hardhat test account #0 as the payer
-    const payerPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-    const payerAccount = privateKeyToAccount(payerPrivateKey);
-
-    // Create x402 EVM client for signing
-    const evmClient = new ExactEvmScheme({
-      address: payerAccount.address,
-      signTypedData: async (args) => {
-        return payerAccount.signTypedData(args);
-      },
-    });
-
-    // Payment parameters
-    const paymentAmount = "100000"; // $0.10 in 6-decimal USDC
-    const tokenAddress = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7"; // Sepolia USDC
-    const recipientAddress = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
-
-    const paymentRequirements = {
-      scheme: "exact",
-      network: "eip155:11155420", // Optimism Sepolia
-      amount: paymentAmount,
-      asset: tokenAddress,
-      payTo: recipientAddress,
-      maxTimeoutSeconds: 300,
-      extra: {
-        name: "USDC",
-        version: "2",
-      },
-    };
-
-    // Create payment payload with REAL signature using x402 v2 API
-    const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
-
-    // Combine with resource information to create full payment payload
-    const paymentPayload = {
-      x402Version: 2,
-      resource: {
-        url: "https://api.example.com/e2e-test",
-        description: "End-to-end signature validation test",
-        mimeType: "application/json",
-      },
-      accepted: paymentRequirements,
-      payload: partialPayload.payload,
-    };
-
-    // FACILITATOR SIDE: Verify the signature
-    const result = await verifyPayment(paymentPayload, paymentRequirements);
-
-    // The signature validation should succeed (or fail with insufficient_funds)
-    // We accept insufficient_funds because the test wallet doesn't have real USDC on Sepolia
-    //
-    // What matters is that we DON'T get "invalid_exact_evm_payload_signature"
-    // which would indicate a signer configuration problem (the bug we fixed)
-    //
-    // Success cases:
-    // - isValid: true (wallet has funds - unlikely in tests)
-    // - invalidReason: "insufficient_funds" (signature valid, but no balance)
-    //
-    // Failure case:
-    // - invalidReason: "invalid_exact_evm_payload_signature" (signer bug)
-
-    if (!result.isValid) {
-      // Signature was validated correctly, but wallet doesn't have sufficient balance
-      // This is expected in test environment without real testnet funds
-      expect(result.invalidReason).toBe("insufficient_funds");
-      console.log("✓ Signature validation successful (insufficient funds is expected)");
-    } else {
-      // If the wallet happens to have funds, that's also valid
-      expect(result.isValid).toBe(true);
-      expect(result.invalidReason).toBeUndefined();
-      console.log("✓ Full payment verification successful");
-    }
-
-    // Verify the payer address is correctly identified
-    expect(paymentPayload.payload.authorization.from.toLowerCase()).toBe(
-      payerAccount.address.toLowerCase(),
-    );
-  });
-
-  test("validates signature for Optimism Mainnet (chainId 10)", async () => {
-    // This test would have failed before the multi-chain fix
-    // because the facilitator was hardcoded to use Sepolia client for all chains
-
-    const payerAccount = privateKeyToAccount(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-    );
-
-    // Create a client for Optimism Mainnet (chainId 10)
-    const evmClient = new ExactEvmScheme({
-      address: payerAccount.address,
-      signTypedData: async (args) => payerAccount.signTypedData(args),
-    });
-
-    const paymentAmount = "1000000"; // $1.00 in 6-decimal USDC
-    const tokenAddress = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"; // USDC on Optimism Mainnet
-    const recipientAddress = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
-
-    const paymentRequirements = {
-      scheme: "exact",
-      network: "eip155:10", // Optimism Mainnet
-      amount: paymentAmount,
-      asset: tokenAddress,
-      payTo: recipientAddress,
-      maxTimeoutSeconds: 300,
-      extra: {
-        name: "USDC",
-        version: "2",
-      },
-    };
-
-    // Create payment payload with REAL signature for Mainnet (chainId 10)
-    const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
-
-    const paymentPayload = {
-      x402Version: 2,
-      resource: {
-        url: "https://api.example.com/mainnet-test",
-        description: "Mainnet multi-chain signature validation test",
-        mimeType: "application/json",
-      },
-      accepted: paymentRequirements,
-      payload: partialPayload.payload,
-    };
-
-    // CRITICAL TEST: Without the multi-chain fix, this would fail because
-    // verifyTypedData would use the Sepolia client instead of Mainnet client
-    // The domain.chainId would be 10 (Mainnet) but the client would be configured for 11155420 (Sepolia)
-    const result = await verifyPayment(paymentPayload, paymentRequirements);
-
-    // We accept both insufficient_funds and unauthorized_agent - we're testing signature validation
-    // The important part is that we DON'T get "invalid_exact_evm_payload_signature"
-    // which would indicate the signer is using the wrong chain client
-    if (!result.isValid) {
-      // Valid errors: insufficient_funds (no USDC) or unauthorized_agent (not whitelisted on Mainnet)
-      expect(["insufficient_funds", "unauthorized_agent"]).toContain(result.invalidReason);
-      console.log(
-        `✓ Mainnet signature validation successful (${result.invalidReason} is expected)`,
-      );
-    } else {
-      expect(result.isValid).toBe(true);
-      console.log("✓ Mainnet full payment verification successful");
-    }
-
-    // Verify it's actually using mainnet chainId
-    expect(paymentPayload.accepted.network).toBe("eip155:10");
-  });
-
-  // Note: Additional blockchain integration tests (actual settlement on testnet)
-  // would require testnet funds and transaction execution
+  // Real-signature verification (live RPC) lives in the integration suite:
+  // test/integration/x402_verify_signature.integration.test.js — run via
+  // `npm run test:integration`. It's kept out of the hermetic unit run.
 });

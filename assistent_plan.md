@@ -17,7 +17,7 @@ Scope: the website's LLM chat assistant (`website/pages/assistent/`, `scw_js/llm
 
 ## Renovation order (start here)
 
-**The first renovation work focuses on x402 payment.** That is the Primary workstream (below): migrate LLM billing from the ETH-prepaid + merkle-settlement model to x402 batch-settlement USDC payment channels, in the Phase 0–5 sequence (section F). Start with the Phase 0 spike on Base Sepolia.
+**The first renovation work focuses on x402 payment.** That is the Primary workstream (below): migrate LLM billing from the ETH-prepaid + merkle-settlement model to x402 batch-settlement USDC payment channels, in the Phase 0–5 sequence (section F). **Phase 0 (spike/harness) and Phase A (facilitator) are done — see PR #543.** Next up: **Phase B (`scw_js/` server + `shared/s3-utils/`)** — that's where work should focus now.
 
 The Mistral/persona PRs (PR 1–3) remain in this document as independent, lower-effort improvements. They touch different code (`llm_service.ts` provider config, website UI) and carry no billing/architecture risk, so they can proceed in parallel or slot in whenever convenient — but the payment workstream is the priority and the reason for this renovation. Read the **Primary workstream** section first; PR 1–3 are documented afterward.
 
@@ -159,17 +159,24 @@ Not a separate task. Moving LLM billing to batch-settlement channels (A) deletes
 
 **Full detail:** `~/.claude/plans/now-propose-a-concrete-majestic-patterson.md` (file paths, SDK API names, per-phase verify steps). Progress tracker below.
 
-**Phase 0 — Spike + reusable harness** (Base Sepolia + testnet USDC)
-- [ ] Node script driving the client SDK (`@x402/evm/batch-settlement/client`): `createBatchSettlementEIP3009DepositPayload` → `signVoucher` → `wrapFetchWithPayment` → `claimAndSettle` → `refund`.
-- [ ] Confirm during spike: receiverAuthorizer self-managed by server (→ facilitator needs no authorizer key); batch payment header name(s) for CORS; `setSettlementOverrides` for post-generation actual-cost claim.
+**Phase 0 + Phase A: DONE — shipped in PR #543** (`x402-batch-settlement-facilitator` branch). Went beyond the original checklist below in two ways worth carrying into Phase B:
 
-**Phase A — Facilitator (`x402_facilitator/`)** — scheme registration only, no new routes
-- [ ] Bump `@x402/core` + `@x402/evm` `^2.0.0` → `^2.17.0` (step zero — installed 2.0.0 lacks batch-settlement).
-- [ ] `facilitator_instance.ts`: register `new BatchSettlementEvmScheme(signer)` alongside `ExactEvmScheme` in the per-network loop.
-- [ ] Make `onAfterVerify` fee hook scheme-aware — skip fee logic when `accepted.scheme === "batch-settlement"` (it reads exact-only `authorization.to`).
-- [ ] `x402_settle.ts`: guard `collectFee` to the exact scheme only.
-- [ ] Tests: assert batch scheme registered per network; assert no fee `transferFrom` for batch payloads.
-- [ ] Verify via Phase 0 harness against locally-run facilitator.
+1. **Network gating fix (not in the original plan):** batch-settlement was initially registered on all 4 `getSupportedNetworks()`, including Optimism Sepolia — which has no deployed contract. Added `getBatchSettlementNetworks()` (`chain_utils.ts`) as a strict subset (OP mainnet, Base mainnet, Base Sepolia) and gated registration on it, with regression tests. **Phase B's scw_js server must apply the same gating** — don't assume all 4 networks are safe for batch-settlement.
+2. **Claim-settlement bug fix + protocol discovery (not in the original plan):** `x402_settle.ts::settlePayment()` unconditionally called `verifyPayment()` before `settle()`, but the SDK's `scheme.verify()` has no branch for `"claim"`/`"settle"` payload types (only deposit/voucher/refund) — every claim failed before reaching real claim logic. Fixed by skipping verify for those two payload types. Along the way, confirmed from the **actual verified contract source** (Basescan) two facts Phase B needs:
+   - `VoucherClaim.totalClaimed` is the **new cumulative target being claimed to**, not "amount already claimed" — get this wrong and the contract silently no-ops (no revert, `success: true` from the facilitator, zero value moved). The SDK's `BatchSettlementChannelManager` is expected to compute this correctly from its own tracked state — **verify this in Phase B rather than assuming**, since our own hand-rolled construction got it wrong initially.
+   - **Claim and settle are a genuine two-step protocol**, not one: `claim`/`claimWithSignature` moves escrow into a per-`(receiver, token)` pending-payout bucket (no ERC-20 transfer, no visible balance change); a separate `settle(receiver, token)` call sweeps that bucket to the receiver's wallet. `claimAndSettle()` in the SDK does both as two transactions.
+   - Full walkthrough + real on-chain proof (decoded `Claimed` event, before/after `channels()` state) in `notebooks/x402_batch_settlement_buyer.ipynb`.
+
+Checklist (for reference — all done except where noted):
+- [x] Interactive harness driving the client SDK (`@x402/evm/batch-settlement/client`) — shipped as `notebooks/x402_batch_settlement_buyer.ipynb` (Deno notebook, not a plain Node script, but the same purpose): deposit → `signVoucher` (accumulate) → claim, all proven on real Base Sepolia transactions. `wrapFetchWithPayment`, `claimAndSettle`'s settle-sweep step, and `refund` were **not** exercised — good candidates for a follow-up spike, not blockers for Phase B.
+- [x] Confirmed: receiverAuthorizer self-managed by server (`/supported` shows no `receiverAuthorizer` for batch-settlement → facilitator needs no authorizer key).
+- [ ] **Not yet confirmed** (defer to their natural phases): batch payment header name(s) for CORS (Phase C — needs a real browser fetch flow to observe) — `setSettlementOverrides` for post-generation actual-cost claims (Phase B — needs the real LLM handler).
+- [x] Bump `@x402/core` + `@x402/evm` → `^2.17.0` (resolved 2.18.0).
+- [x] `facilitator_instance.ts`: register `BatchSettlementEvmScheme` alongside `ExactEvmScheme`, gated by `getBatchSettlementNetworks()` (both `createFacilitator` and `createReadOnlyFacilitator`).
+- [x] `onAfterVerify` fee hook made scheme-aware (skips for batch-settlement).
+- [x] `x402_settle.ts`: `collectFee` guarded to exact scheme only; **plus** the unplanned claim-verify-skip fix above.
+- [x] Tests: batch scheme registration (both facilitator variants) + no-fee assertions + claim/settle routing regression tests, in `test/facilitator_instance.test.ts` + `test/x402_settle.test.js`. Real-signature tests split into `test/integration/` (`npm run test:integration`, live RPC) to keep `npm test` hermetic.
+- [x] Verified against a locally-run facilitator — and beyond the original scope, against **real Base Sepolia transactions** (deposit, accumulate, claim), with on-chain state independently confirmed via direct contract reads.
 
 **Phase B — Server (`scw_js/` + `shared/s3-utils/`)**
 - [ ] **B1** Extend `@fretchen/s3-utils` (`shared/s3-utils/src/index.ts`): return ETag on GET; `ifMatch`/`ifNoneMatch` on PUT surfacing **412 (no throw)**; add `listObjects(prefix)` + conditional delete. Rebuild before scw_js.

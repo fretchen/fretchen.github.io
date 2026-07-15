@@ -9,17 +9,24 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 The x402 Facilitator bridges the gap between Resource Servers and blockchain payments. It provides three core functions:
 
 1. **Verify** - Validates EIP-3009 payment authorizations off-chain
-2. **Settle** - Executes verified payments on Optimism L2
+2. **Settle** - Executes verified payments on-chain (Optimism / Base L2)
 3. **Supported** - Advertises accepted networks, assets, and payment schemes
+
+### Payment Schemes
+
+The facilitator supports two x402 schemes on the same `/verify` and `/settle` endpoints (it routes by the payload's `scheme` field):
+
+- **`exact`** — one EIP-3009 `transferWithAuthorization` per request, USDC moved wallet-to-wallet. Supported on all networks. A flat facilitator fee may be collected post-settlement.
+- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. **Fee-free.** Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement_buyer.ipynb`](./notebooks/x402_batch_settlement_buyer.ipynb) for an end-to-end walkthrough.
 
 ### Key Features
 
-- ✅ EIP-3009 `transferWithAuthorization` for USDC payments
-- ✅ Optimism Mainnet and Sepolia testnet support
+- ✅ EIP-3009 `transferWithAuthorization` for USDC payments (`exact` scheme)
+- ✅ `batch-settlement` payment channels (fee-free, deploy-gated per network)
+- ✅ Optimism + Base, Mainnet and testnet support
 - ✅ Multi-source recipient whitelist (GenImNFTv4 + LLMv1 NFT holders)
 - ✅ Single Scaleway Function with path-based routing
 - ✅ Custom domain with TLS termination
-- ✅ Comprehensive test coverage (63+ tests)
 - ✅ CORS-enabled for browser-based applications
 
 ## Architecture
@@ -249,32 +256,28 @@ Executes verified payment on-chain.
 The `/verify` endpoint validates:
 
 1. ✅ **Protocol Version** - Must be x402 v2
-2. ✅ **Scheme Support** - Must be "exact"
-3. ✅ **Network Support** - Must be supported Optimism network
-4. ✅ **Recipient Whitelist** - Authorization.to must be whitelisted
-5. ✅ **EIP-712 Signature** - Valid signature from payer
-6. ✅ **Time Window** - validAfter ≤ now < validBefore
-7. ✅ **Amount Match** - Authorization value ≥ required amount
-8. ✅ **Recipient Match** - Authorization.to === paymentRequirements.payTo
-9. ✅ **Nonce Check** - Nonce not already used on-chain
-10. ✅ **Balance Check** - Payer has sufficient USDC balance
+2. ✅ **Scheme Support** - Must be `exact` or `batch-settlement`
+3. ✅ **Network Support** - Must be a supported Optimism/Base network
+
+> Note: `/verify` applies to `exact` payments and to `batch-settlement` deposit/voucher payloads. `batch-settlement` **claim** and **settle** payloads are settlement _commands_ (not future payments) and are handled directly by `/settle` without a verify step — the scheme validates them internally. 4. ✅ **Recipient Whitelist** - Authorization.to must be whitelisted 5. ✅ **EIP-712 Signature** - Valid signature from payer 6. ✅ **Time Window** - validAfter ≤ now < validBefore 7. ✅ **Amount Match** - Authorization value ≥ required amount 8. ✅ **Recipient Match** - Authorization.to === paymentRequirements.payTo 9. ✅ **Nonce Check** - Nonce not already used on-chain 10. ✅ **Balance Check** - Payer has sufficient USDC balance
 
 ## Error Codes
 
-| Error Code                                             | Description                    |
-| ------------------------------------------------------ | ------------------------------ |
-| `insufficient_funds`                                   | Payer doesn't have enough USDC |
-| `invalid_exact_evm_payload_signature`                  | Invalid EIP-712 signature      |
-| `invalid_exact_evm_payload_authorization_value`        | Amount too low                 |
-| `invalid_exact_evm_payload_authorization_valid_after`  | Not yet valid                  |
-| `invalid_exact_evm_payload_authorization_valid_before` | Expired                        |
-| `invalid_exact_evm_payload_recipient_mismatch`         | Wrong recipient                |
-| `invalid_exact_evm_payload_recipient_not_whitelisted`  | Recipient not authorized       |
-| `invalid_network`                                      | Network not supported          |
-| `invalid_payload`                                      | Malformed payload              |
-| `unsupported_scheme`                                   | Scheme not supported           |
-| `invalid_x402_version`                                 | Wrong protocol version         |
-| `unexpected_verify_error`                              | Unexpected error               |
+Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`invalid_exact_evm_*` / `invalid_batch_settlement_evm_*`). Common ones:
+
+| Error Code                                          | Description                               |
+| --------------------------------------------------- | ----------------------------------------- |
+| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)  |
+| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                 |
+| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch        |
+| `invalid_exact_evm_scheme`                          | Scheme not supported                      |
+| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher   |
+| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify` |
+| `invalid_network`                                   | Network not supported                     |
+| `invalid_payload`                                   | Malformed payload                         |
+| `unexpected_verify_error`                           | Unexpected error                          |
+
+> These strings were renamed by `@x402/evm` in the 2.x line; the tests in `test/` are the source of truth for the current values.
 
 ## Security Considerations
 
@@ -404,7 +407,7 @@ TLS termination is handled automatically by Scaleway.
 ## Testing
 
 ```bash
-# Run all tests
+# Run the hermetic unit suite (no network)
 npm test
 
 # Run with coverage
@@ -412,23 +415,26 @@ npm run test:coverage
 
 # Run specific test file
 npm test -- x402_verify.test.js
+
+# Run the integration suite (real EIP-712 signatures against live Base Sepolia /
+# Optimism RPC — network-dependent, kept out of `npm test`)
+npm run test:integration
 ```
 
-**Test Results:** 63 tests passing, 1 skipped
+Unit tests (`npm test`) are hermetic — the `@x402/evm` SDK and viem are mocked. Tests that build a real signature and exercise on-chain reads live under `test/integration/` and run via `npm run test:integration` (see `vitest.integration.config.js`).
 
 ## Supported Networks & Assets
 
-### Optimism Mainnet (eip155:10)
+USDC addresses and EIP-712 domain names come from `@fretchen/chain-utils`; `chain_utils.ts` is the source of truth. `exact` works on all four networks; `batch-settlement` is gated to those with the contract deployed (last column).
 
-| Token | Contract Address                             |
-| ----- | -------------------------------------------- |
-| USDC  | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
+| Network          | CAIP-2            | USDC                                         | USDC domain name | batch-settlement |
+| ---------------- | ----------------- | -------------------------------------------- | ---------------- | ---------------- |
+| Optimism Mainnet | `eip155:10`       | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | `USD Coin`       | ✅               |
+| Optimism Sepolia | `eip155:11155420` | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` | `USDC`           | ❌ (no contract) |
+| Base Mainnet     | `eip155:8453`     | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | `USD Coin`       | ✅               |
+| Base Sepolia     | `eip155:84532`    | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | `USDC`           | ✅               |
 
-### Optimism Sepolia (eip155:11155420)
-
-| Token | Contract Address                             |
-| ----- | -------------------------------------------- |
-| USDC  | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` |
+The canonical `batch-settlement` contract is deployed at the same address on every supported chain: `0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003`.
 
 ## EIP-712 Signature Verification
 
@@ -436,7 +442,7 @@ The facilitator uses [viem](https://viem.sh/) for EIP-712 signature verification
 
 **Critical Implementation Details:**
 
-1. **Token Name**: Must use `"USDC"` (not `"USD Coin"`)
+1. **Token Name**: The EIP-712 domain name is **per-network** — testnets use `"USDC"`, mainnets use `"USD Coin"` (see the table above). Never hardcode it; source it from `chain_utils.ts` / `@fretchen/chain-utils`. Getting this wrong silently breaks signature verification.
 2. **Full EIP-712 Hash**: `keccak256("\x19\x01" || domainSeparator || messageHash)`
 3. **BigInt Conversion**: All uint256 fields must be BigInt
 

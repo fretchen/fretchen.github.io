@@ -22,21 +22,14 @@ plugins:
 
 package:
   patterns:
-    # Only include bundled output
+    # Exclude everything, then include ONLY the bundled runtime output.
+    # (tsup inlines all deps into dist/*.js, so nothing else is needed at runtime.)
+    # This is robust: it won't accidentally package new large dirs like
+    # notebooks/node_modules (created by Deno), which previously bloated the
+    # upload archive past Scaleway's limit.
+    - "!**"
     - "dist/**"
-    # Exclude everything else
-    - "!.gitignore"
-    - "!.git/**"
-    - "!test/**"
-    - "!coverage/**"
-    - "!.prettierrc"
-    - "!eslint.config.js"
-    - "!vitest.config.js"
-    - "!tsup.config.js"
-    - "!README.md"
-    - "!EIP712_VERIFICATION.md"
-    - "!*.js"
-    - "!node_modules/**"
+    - "!dist/**/*.map"
 
 functions:
   # Single function with path-based routing

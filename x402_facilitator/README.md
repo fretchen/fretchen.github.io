@@ -17,7 +17,7 @@ The x402 Facilitator bridges the gap between Resource Servers and blockchain pay
 The facilitator supports two x402 schemes on the same `/verify` and `/settle` endpoints (it routes by the payload's `scheme` field):
 
 - **`exact`** — one EIP-3009 `transferWithAuthorization` per request, USDC moved wallet-to-wallet. Supported on all networks. A flat facilitator fee may be collected post-settlement.
-- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. **Fee-free.** Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement_buyer.ipynb`](./notebooks/x402_batch_settlement_buyer.ipynb) for an end-to-end walkthrough.
+- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. **Fee-free.** Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement_buyer.ipynb`](./notebooks/x402_batch_settlement_buyer.ipynb) for an end-to-end walkthrough. Since it's fee-free, the facilitator can't gate abuse via an allowance check the way it does for `exact` — instead, the recipient (`payTo`) must be in the `BATCH_SETTLEMENT_MANUAL_WHITELIST` / `BATCH_SETTLEMENT_TEST_WALLETS` allowlist (see `x402_whitelist.ts`), or every `/verify` and `/settle` call for that scheme is rejected with `recipient_not_whitelisted`.
 
 ### Key Features
 
@@ -100,6 +100,14 @@ SCW_DEFAULT_PROJECT_ID=your_project_id
 
 # Manual whitelist (optional, comma-separated addresses)
 MANUAL_WHITELIST=0x1234...,0x5678...
+
+# batch-settlement recipient (payTo) whitelist — required for batch-settlement to
+# accept anyone, since that scheme is fee-free and has no allowance-based gate to
+# fall back on the way `exact` does. Comma-separated addresses.
+BATCH_SETTLEMENT_MANUAL_WHITELIST=0x1234...,0x5678...
+# Same, but only honored on testnets (Optimism Sepolia, Base Sepolia) — lets a
+# testnet dev key in here without it also being valid on mainnet.
+BATCH_SETTLEMENT_TEST_WALLETS=0x1234...,0x5678...
 
 # RPC endpoints (optional - have defaults)
 OPTIMISM_RPC_URL=https://mainnet.optimism.io
@@ -265,17 +273,18 @@ The `/verify` endpoint validates:
 
 Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`invalid_exact_evm_*` / `invalid_batch_settlement_evm_*`). Common ones:
 
-| Error Code                                          | Description                               |
-| --------------------------------------------------- | ----------------------------------------- |
-| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)  |
-| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                 |
-| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch        |
-| `invalid_exact_evm_scheme`                          | Scheme not supported                      |
-| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher   |
-| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify` |
-| `invalid_network`                                   | Network not supported                     |
-| `invalid_payload`                                   | Malformed payload                         |
-| `unexpected_verify_error`                           | Unexpected error                          |
+| Error Code                                          | Description                                                 |
+| --------------------------------------------------- | ----------------------------------------------------------- |
+| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)                    |
+| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                                   |
+| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch                          |
+| `invalid_exact_evm_scheme`                          | Scheme not supported                                        |
+| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                     |
+| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`                   |
+| `recipient_not_whitelisted`                         | `batch-settlement` `payTo` isn't in the recipient whitelist |
+| `invalid_network`                                   | Network not supported                                       |
+| `invalid_payload`                                   | Malformed payload                                           |
+| `unexpected_verify_error`                           | Unexpected error                                            |
 
 > These strings were renamed by `@x402/evm` in the 2.x line; the tests in `test/` are the source of truth for the current values.
 

@@ -18,9 +18,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 type HookArgs = {
   paymentPayload: {
-    accepted?: { network?: string; scheme?: string };
+    accepted?: { network?: string; scheme?: string; payTo?: string };
     payload?: { authorization?: { to?: string } };
   };
+  requirements?: { network?: string; scheme?: string; payTo?: string };
   result: Record<string, unknown>;
 };
 
@@ -87,6 +88,11 @@ vi.mock("../x402_fee.js", () => ({
   getFacilitatorAddress: vi.fn(),
 }));
 
+// Mock the whitelist module — the hook's batch-settlement gating dependency
+vi.mock("../x402_whitelist.js", () => ({
+  isRecipientWhitelisted: vi.fn(),
+}));
+
 import {
   createFacilitator,
   createReadOnlyFacilitator,
@@ -94,6 +100,7 @@ import {
   getFacilitator,
 } from "../facilitator_instance.js";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "../x402_fee.js";
+import { isRecipientWhitelisted } from "../x402_whitelist.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Tests
@@ -114,6 +121,8 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     // Default fee configuration
     vi.mocked(getFeeAmount).mockReturnValue(10000n);
     vi.mocked(getFacilitatorAddress).mockReturnValue("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    // Default: recipient is whitelisted for batch-settlement tests
+    vi.mocked(isRecipientWhitelisted).mockReturnValue(true);
 
     // Create facilitator — this registers the schemes + the onAfterVerify hook
     createFacilitator();
@@ -180,7 +189,18 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     // exact-scheme fee model entirely — and must NOT be rejected for lacking an
     // exact-style authorization.to recipient.
     const args: HookArgs = {
-      paymentPayload: { accepted: { network: "eip155:11155420", scheme: "batch-settlement" } },
+      paymentPayload: {
+        accepted: {
+          network: "eip155:11155420",
+          scheme: "batch-settlement",
+          payTo: "0x1111111111111111111111111111111111111111",
+        },
+      },
+      requirements: {
+        network: "eip155:11155420",
+        scheme: "batch-settlement",
+        payTo: "0x1111111111111111111111111111111111111111",
+      },
       result: { isValid: true },
     };
 
@@ -189,6 +209,108 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(false);
     expect(checkMerchantAllowance).not.toHaveBeenCalled();
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Batch-settlement recipient whitelist gate
+  // ───────────────────────────────────────────────────────────
+
+  it("rejects a non-whitelisted recipient for batch-settlement", async () => {
+    vi.mocked(isRecipientWhitelisted).mockReturnValue(false);
+
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: {
+          network: "eip155:84532",
+          scheme: "batch-settlement",
+          payTo: "0x2222222222222222222222222222222222222222",
+        },
+      },
+      requirements: {
+        network: "eip155:84532",
+        scheme: "batch-settlement",
+        payTo: "0x2222222222222222222222222222222222222222",
+      },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
+    expect(isRecipientWhitelisted).toHaveBeenCalledWith(
+      "0x2222222222222222222222222222222222222222",
+      "eip155:84532",
+    );
+  });
+
+  it("rejects batch-settlement when payTo is missing from the requirements", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: { network: "eip155:84532", scheme: "batch-settlement" },
+      },
+      requirements: { network: "eip155:84532", scheme: "batch-settlement" },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
+    expect(isRecipientWhitelisted).not.toHaveBeenCalled();
+  });
+
+  // REGRESSION: the SDK never reads accepted.payTo and never binds it to anything —
+  // only requirements.payTo is tied to the channel's receiver (by validateChannelConfig,
+  // inside verify(), before this hook runs). Gating on accepted.payTo would let a caller
+  // pass a whitelisted address while the channel pays out to an address they control.
+  it("ignores accepted.payTo and gates on requirements.payTo", async () => {
+    vi.mocked(isRecipientWhitelisted).mockImplementation(
+      (address: string) => address === "0x1111111111111111111111111111111111111111",
+    );
+
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: {
+          network: "eip155:84532",
+          scheme: "batch-settlement",
+          // Whitelisted, caller-supplied, and bound to nothing.
+          payTo: "0x1111111111111111111111111111111111111111",
+        },
+      },
+      requirements: {
+        network: "eip155:84532",
+        scheme: "batch-settlement",
+        // The address validateChannelConfig ties the channel receiver to — not whitelisted.
+        payTo: "0x3333333333333333333333333333333333333333",
+      },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
+    expect(isRecipientWhitelisted).toHaveBeenCalledWith(
+      "0x3333333333333333333333333333333333333333",
+      "eip155:84532",
+    );
+  });
+
+  it("does not apply the batch-settlement whitelist gate to the exact scheme", async () => {
+    // exact-scheme recipients are gated by the fee-allowance model only.
+    vi.mocked(isRecipientWhitelisted).mockReturnValue(false);
+    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+      allowance: 100000n,
+      remainingSettlements: 10,
+      sufficient: true,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(isRecipientWhitelisted).not.toHaveBeenCalled();
   });
 
   it("skips processing when verification already failed", async () => {

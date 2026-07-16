@@ -52,12 +52,11 @@ describe("isRecipientWhitelisted", () => {
     });
 
     it("rejects an address not in the manual whitelist", () => {
-      process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST =
-        "0x1111111111111111111111111111111111111111";
+      process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST = "0x1111111111111111111111111111111111111111";
 
-      expect(
-        isRecipientWhitelisted("0x2222222222222222222222222222222222222222", MAINNET),
-      ).toBe(false);
+      expect(isRecipientWhitelisted("0x2222222222222222222222222222222222222222", MAINNET)).toBe(
+        false,
+      );
     });
   });
 
@@ -93,9 +92,9 @@ describe("isRecipientWhitelisted", () => {
 
   describe("no whitelist configured", () => {
     it("rejects everything when both env vars are unset", () => {
-      expect(
-        isRecipientWhitelisted("0x1111111111111111111111111111111111111111", MAINNET),
-      ).toBe(false);
+      expect(isRecipientWhitelisted("0x1111111111111111111111111111111111111111", MAINNET)).toBe(
+        false,
+      );
       expect(
         isRecipientWhitelisted("0x1111111111111111111111111111111111111111", BASE_SEPOLIA),
       ).toBe(false);

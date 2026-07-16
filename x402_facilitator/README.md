@@ -273,18 +273,18 @@ The `/verify` endpoint validates:
 
 Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`invalid_exact_evm_*` / `invalid_batch_settlement_evm_*`). Common ones:
 
-| Error Code                                          | Description                               |
-| --------------------------------------------------- | ----------------------------------------- |
-| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)  |
-| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                 |
-| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch        |
-| `invalid_exact_evm_scheme`                          | Scheme not supported                      |
-| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher   |
-| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify` |
+| Error Code                                          | Description                                                 |
+| --------------------------------------------------- | ----------------------------------------------------------- |
+| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)                    |
+| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                                   |
+| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch                          |
+| `invalid_exact_evm_scheme`                          | Scheme not supported                                        |
+| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                     |
+| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`                   |
 | `recipient_not_whitelisted`                         | `batch-settlement` `payTo` isn't in the recipient whitelist |
-| `invalid_network`                                   | Network not supported                     |
-| `invalid_payload`                                   | Malformed payload                         |
-| `unexpected_verify_error`                           | Unexpected error                          |
+| `invalid_network`                                   | Network not supported                                       |
+| `invalid_payload`                                   | Malformed payload                                           |
+| `unexpected_verify_error`                           | Unexpected error                                            |
 
 > These strings were renamed by `@x402/evm` in the 2.x line; the tests in `test/` are the source of truth for the current values.
 

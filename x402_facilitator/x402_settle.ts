@@ -55,7 +55,9 @@ export interface SettleResult {
  * Returns null when the payload carries no usable receiver, so the caller rejects rather
  * than relaying an unauthorized command.
  */
-function getBatchSettlementReceivers(payload: Record<string, unknown> | undefined): string[] | null {
+function getBatchSettlementReceivers(
+  payload: Record<string, unknown> | undefined,
+): string[] | null {
   if (payload?.type === "settle") {
     const receiver = payload?.receiver as string | undefined;
     return receiver ? [receiver] : null;
@@ -150,7 +152,13 @@ export async function settlePayment(
         "Batch-settlement claim/settle transaction confirmed",
       );
       // Fee-free — no fee collection for batch-settlement (see the fee guard below).
-      return { success: true, payer, transaction: result.transaction, network, extra: result.extra };
+      return {
+        success: true,
+        payer,
+        transaction: result.transaction,
+        network,
+        extra: result.extra,
+      };
     }
 
     // First verify the payment (includes fee allowance check)

@@ -78,21 +78,21 @@ describe("x402 /supported endpoint", () => {
   // Asset information is not provided in the kinds array by the facilitator
   // If needed, asset details would need to be added separately in the response
 
-  test("does not include signer addresses (read-only mode)", () => {
-    // getSupportedCapabilities uses read-only facilitator without private key
-    // Even if FACILITATOR_WALLET_PRIVATE_KEY is set, supported endpoint doesn't use it
+  test("reports the real facilitator address when a valid private key is configured", () => {
+    // getSupportedCapabilities always uses the read-only facilitator (never signs
+    // anything), but it must still report the *real* signer address here — newer SDK
+    // clients (e.g. x402HTTPResourceServer.initialize()) reject a zero-address signer.
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
     const capabilities = getSupportedCapabilities();
 
-    // signers contains the zero address in read-only mode (each scheme has a signer)
     expect(capabilities.signers).toBeDefined();
     expect(capabilities.signers["eip155:*"]).toBeDefined();
     expect(Array.isArray(capabilities.signers["eip155:*"])).toBe(true);
-    // Read-only mode uses zero address as placeholder
+    // Real address derived from the private key above (well-known Hardhat/Anvil account #0)
     expect(capabilities.signers["eip155:*"]).toEqual([
-      "0x0000000000000000000000000000000000000000",
+      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     ]);
   });
 

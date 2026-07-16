@@ -149,7 +149,7 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
   }
 
   // Add fee allowance check AFTER verification
-  facilitator.onAfterVerify(async ({ paymentPayload, result }) => {
+  facilitator.onAfterVerify(async ({ paymentPayload, requirements, result }) => {
     if (!result.isValid) {
       return;
     }
@@ -163,8 +163,15 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // standing between this facilitator and relaying transactions for free on
     // anyone's self-managed channel (see x402_whitelist.ts).
     if (paymentPayload.accepted?.scheme === "batch-settlement") {
-      const network = paymentPayload.accepted?.network;
-      const payTo = paymentPayload.accepted?.payTo as string | undefined;
+      // Gate on `requirements`, NOT on the client's `accepted` envelope. This hook only
+      // runs for deposit/voucher/refund payloads, and for those the SDK has already tied
+      // requirements to the transaction before we get here: validateChannelConfig()
+      // enforces `channelConfig.receiver === requirements.payTo`, and verify() rejects
+      // `accepted.network !== requirements.network`. Nothing binds `accepted.payTo` to
+      // anything at all — the SDK never reads it — so whitelisting it would check a field
+      // the caller can set freely while the channel pays out somewhere else entirely.
+      const network = requirements?.network;
+      const payTo = requirements?.payTo as string | undefined;
 
       if (!network || !payTo || !isRecipientWhitelisted(payTo, network)) {
         result.isValid = false;

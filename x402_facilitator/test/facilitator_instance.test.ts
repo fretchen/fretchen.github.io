@@ -21,6 +21,7 @@ type HookArgs = {
     accepted?: { network?: string; scheme?: string; payTo?: string };
     payload?: { authorization?: { to?: string } };
   };
+  requirements?: { network?: string; scheme?: string; payTo?: string };
   result: Record<string, unknown>;
 };
 
@@ -195,6 +196,11 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
           payTo: "0x1111111111111111111111111111111111111111",
         },
       },
+      requirements: {
+        network: "eip155:11155420",
+        scheme: "batch-settlement",
+        payTo: "0x1111111111111111111111111111111111111111",
+      },
       result: { isValid: true },
     };
 
@@ -220,6 +226,11 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
           payTo: "0x2222222222222222222222222222222222222222",
         },
       },
+      requirements: {
+        network: "eip155:84532",
+        scheme: "batch-settlement",
+        payTo: "0x2222222222222222222222222222222222222222",
+      },
       result: { isValid: true },
     };
 
@@ -233,11 +244,12 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     );
   });
 
-  it("rejects batch-settlement when payTo is missing from the payload", async () => {
+  it("rejects batch-settlement when payTo is missing from the requirements", async () => {
     const args: HookArgs = {
       paymentPayload: {
         accepted: { network: "eip155:84532", scheme: "batch-settlement" },
       },
+      requirements: { network: "eip155:84532", scheme: "batch-settlement" },
       result: { isValid: true },
     };
 
@@ -246,6 +258,43 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
     expect(isRecipientWhitelisted).not.toHaveBeenCalled();
+  });
+
+  // REGRESSION: the SDK never reads accepted.payTo and never binds it to anything —
+  // only requirements.payTo is tied to the channel's receiver (by validateChannelConfig,
+  // inside verify(), before this hook runs). Gating on accepted.payTo would let a caller
+  // pass a whitelisted address while the channel pays out to an address they control.
+  it("ignores accepted.payTo and gates on requirements.payTo", async () => {
+    vi.mocked(isRecipientWhitelisted).mockImplementation(
+      (address: string) => address === "0x1111111111111111111111111111111111111111",
+    );
+
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: {
+          network: "eip155:84532",
+          scheme: "batch-settlement",
+          // Whitelisted, caller-supplied, and bound to nothing.
+          payTo: "0x1111111111111111111111111111111111111111",
+        },
+      },
+      requirements: {
+        network: "eip155:84532",
+        scheme: "batch-settlement",
+        // The address validateChannelConfig ties the channel receiver to — not whitelisted.
+        payTo: "0x3333333333333333333333333333333333333333",
+      },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
+    expect(isRecipientWhitelisted).toHaveBeenCalledWith(
+      "0x3333333333333333333333333333333333333333",
+      "eip155:84532",
+    );
   });
 
   it("does not apply the batch-settlement whitelist gate to the exact scheme", async () => {

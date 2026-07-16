@@ -45,6 +45,39 @@ export interface SettleResult {
 }
 
 /**
+ * Derive the receiver(s) a batch-settlement claim/settle command would actually pay out to.
+ *
+ * These are read straight from the payload because that is what the SDK acts on:
+ * `executeSettle()` takes its target from `payload.receiver`, and
+ * `executeClaimWithSignature()` builds its claim args solely from `payload.claims` —
+ * neither reads `paymentRequirements.payTo`.
+ *
+ * Returns null when the payload carries no usable receiver, so the caller rejects rather
+ * than relaying an unauthorized command.
+ */
+function getBatchSettlementReceivers(payload: Record<string, unknown> | undefined): string[] | null {
+  if (payload?.type === "settle") {
+    const receiver = payload?.receiver as string | undefined;
+    return receiver ? [receiver] : null;
+  }
+
+  // "claim": one claimWithSignature() call settles the whole batch atomically, so EVERY
+  // claim's receiver must be whitelisted — checking only the first would let a single
+  // non-whitelisted entry ride along inside an otherwise-legitimate batch.
+  const claims = payload?.claims as
+    | Array<{ voucher?: { channel?: { receiver?: string } } }>
+    | undefined;
+  if (!Array.isArray(claims) || claims.length === 0) {
+    return null;
+  }
+  const receivers = claims.map((claim) => claim?.voucher?.channel?.receiver);
+  if (receivers.some((receiver) => !receiver)) {
+    return null;
+  }
+  return receivers as string[];
+}
+
+/**
  * Settle a payment by executing transferWithAuthorization on-chain.
  * If fee is configured, collect fee after successful settlement.
  */
@@ -72,10 +105,25 @@ export async function settlePayment(
       // anyone with a valid (self-managed) channel could get the facilitator to relay
       // claim/settle transactions at its own gas expense, for free — batch-settlement
       // has no fee to fall back on the way the exact scheme does.
-      const payTo = paymentRequirements.payTo as string | undefined;
-      const network = accepted?.network as string | undefined;
-      if (!payTo || !network || !isRecipientWhitelisted(payTo, network)) {
-        logger.warn({ payTo, network }, "Batch-settlement recipient not whitelisted");
+      //
+      // BOTH gate inputs must come from what the SDK actually executes on, never from
+      // the client's `accepted` envelope or `paymentRequirements.payTo`:
+      //  - receivers: `requirements.payTo` is bound to the channel's receiver only by
+      //    validateChannelConfig(), which runs inside verify() — the very path this
+      //    branch skips. On the settle path it is an unchecked, caller-supplied string.
+      //  - network: verify() enforces `accepted.network === requirements.network`, but
+      //    settle() does not, while executeClaimWithSignature()/executeSettle() both
+      //    dispatch on `requirements.network`. Gating on `accepted.network` would let a
+      //    caller claim a testnet (admitting BATCH_SETTLEMENT_TEST_WALLETS) while the
+      //    transaction executes on mainnet.
+      const network = paymentRequirements.network as string | undefined;
+      const receivers = getBatchSettlementReceivers(payload);
+      if (
+        !network ||
+        !receivers ||
+        !receivers.every((receiver) => isRecipientWhitelisted(receiver, network))
+      ) {
+        logger.warn({ receivers, network }, "Batch-settlement recipient not whitelisted");
         return {
           success: false,
           errorReason: "recipient_not_whitelisted",

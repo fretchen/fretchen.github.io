@@ -733,7 +733,10 @@ describe("x402_settle with mocked facilitator", () => {
         claims: [
           {
             voucher: {
-              channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" },
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
               maxClaimableAmount: "12000",
             },
             signature: "0x" + "ab".repeat(65),
@@ -820,7 +823,10 @@ describe("x402_settle with mocked facilitator", () => {
         claims: [
           {
             voucher: {
-              channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" },
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
               maxClaimableAmount: "12000",
             },
             signature: "0x" + "ab".repeat(65),
@@ -855,7 +861,7 @@ describe("x402_settle with mocked facilitator", () => {
   // Batch-settlement recipient whitelist gate
   // ═══════════════════════════════════════════════════════════
 
-  it("rejects a batch-settlement claim when payTo is not whitelisted", async () => {
+  it("rejects a batch-settlement claim when the claim's receiver is not whitelisted", async () => {
     delete process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST;
 
     const claimPayload = {
@@ -865,7 +871,12 @@ describe("x402_settle with mocked facilitator", () => {
         type: "claim",
         claims: [
           {
-            voucher: { channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" } },
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
+            },
             signature: "0x" + "ab".repeat(65),
           },
         ],
@@ -888,17 +899,22 @@ describe("x402_settle with mocked facilitator", () => {
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
   });
 
-  it("rejects a batch-settlement settle command when payTo is missing from requirements", async () => {
+  it("rejects a batch-settlement settle command when receiver is missing from the payload", async () => {
+    // requirements.payTo is deliberately whitelisted here — the payload carries no
+    // receiver, and that alone must be fatal. The gate reads the payload, not payTo.
     const settlePayload = {
       x402Version: 2,
       accepted: { scheme: "batch-settlement", network: "eip155:84532" },
       payload: {
         type: "settle",
-        receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
         token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       },
     };
-    const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
 
     const mockFacilitator = { settle: vi.fn() };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
@@ -907,6 +923,201 @@ describe("x402_settle with mocked facilitator", () => {
 
     expect(result.success).toBe(false);
     expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("rejects a batch-settlement claim with an empty claims array", async () => {
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: { type: "claim", claims: [], claimAuthorizerSignature: "0x" + "cd".repeat(65) },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // REGRESSION: the whitelist must gate on what the SDK executes on
+  //
+  // The SDK's settle() path acts only on the payload —
+  // executeSettle() uses payload.receiver, executeClaimWithSignature() uses
+  // payload.claims — and dispatches the chain on paymentRequirements.network.
+  // Neither reads paymentRequirements.payTo, and settle() (unlike verify()) does
+  // no accepted-vs-requirements cross-check. Gating on either of those fields let
+  // a caller spoof one string and relay claims on their own channel for free.
+  // ═══════════════════════════════════════════════════════════
+
+  it("rejects a settle command whose payload.receiver differs from a whitelisted payTo", async () => {
+    const settlePayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "settle",
+        // The address the on-chain settle() would actually pay out to — NOT whitelisted.
+        receiver: "0x3333333333333333333333333333333333333333",
+        token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      // Whitelisted, but never read by the SDK on this path — must not authorize.
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(settlePayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("rejects a claim whose channel receiver differs from a whitelisted payTo", async () => {
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x3333333333333333333333333333333333333333",
+              },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("rejects a claim batch mixing a whitelisted receiver with a non-whitelisted one", async () => {
+    // claimWithSignature() settles the batch atomically — checking only claims[0] would
+    // let the second claim ride along for free.
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+          {
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x3333333333333333333333333333333333333333",
+              },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("rejects a claim gating on accepted.network when the tx executes on another network", async () => {
+    // Test wallets are testnet-only. accepted.network claims Base Sepolia, but
+    // executeClaimWithSignature() dispatches on requirements.network — Optimism
+    // mainnet. Gating on accepted.network would admit a test wallet on mainnet.
+    delete process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST;
+    process.env.BATCH_SETTLEMENT_TEST_WALLETS = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:10",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(result.network).toBe("eip155:10");
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
   });
 });

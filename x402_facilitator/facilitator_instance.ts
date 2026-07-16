@@ -20,6 +20,7 @@ import pino from "pino";
 import { loadPrivateKey } from "@fretchen/chain-utils";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 import { getChainConfig, getSupportedNetworks, getBatchSettlementNetworks } from "./chain_utils";
+import { isRecipientWhitelisted } from "./x402_whitelist";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -153,7 +154,20 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // (post-settlement USDC transferFrom) is specific to the exact scheme, and
     // batch-settlement payloads have no `authorization.to`, so run no fee gating
     // for them — otherwise the recipient check below would reject every request.
+    // It's not fee-gated, but it IS whitelist-gated: batch-settlement has no fee
+    // to fall back on, so an explicit recipient allowlist is the only thing
+    // standing between this facilitator and relaying transactions for free on
+    // anyone's self-managed channel (see x402_whitelist.ts).
     if (paymentPayload.accepted?.scheme === "batch-settlement") {
+      const network = paymentPayload.accepted?.network;
+      const payTo = paymentPayload.accepted?.payTo as string | undefined;
+
+      if (!network || !payTo || !isRecipientWhitelisted(payTo, network)) {
+        result.isValid = false;
+        result.invalidReason = "recipient_not_whitelisted";
+        return;
+      }
+
       (result as Record<string, unknown>).feeRequired = false;
       return;
     }

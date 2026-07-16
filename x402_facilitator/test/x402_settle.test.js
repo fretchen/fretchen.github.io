@@ -355,6 +355,8 @@ describe("x402_settle with mocked facilitator", () => {
       "0x1234567890123456789012345678901234567890123456789012345678901234";
     // Pin fee amount for deterministic assertions on facilitatorFeePaid
     vi.spyOn(feeModule, "getFeeAmount").mockReturnValue(10000n);
+    // Whitelist the fixture payTo address for batch-settlement claim/settle tests
+    process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
   });
 
   afterEach(() => {
@@ -697,7 +699,11 @@ describe("x402_settle with mocked facilitator", () => {
         claimAuthorizerSignature: "0x" + "cd".repeat(65),
       },
     };
-    const claimRequirements = { scheme: "batch-settlement", network: "eip155:84532" };
+    const claimRequirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
 
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
@@ -727,7 +733,11 @@ describe("x402_settle with mocked facilitator", () => {
         token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       },
     };
-    const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
 
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
@@ -761,7 +771,11 @@ describe("x402_settle with mocked facilitator", () => {
         claimAuthorizerSignature: "0x" + "cd".repeat(65),
       },
     };
-    const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
 
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({
@@ -776,5 +790,64 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.success).toBe(false);
     expect(result.errorReason).toBe("invalid_batch_settlement_evm_claim_authorizer_signature");
     expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Batch-settlement recipient whitelist gate
+  // ═══════════════════════════════════════════════════════════
+
+  it("rejects a batch-settlement claim when payTo is not whitelisted", async () => {
+    delete process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST;
+
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: { channel: { payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" } },
+            signature: "0x" + "ab".repeat(65),
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const claimRequirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, claimRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("rejects a batch-settlement settle command when payTo is missing from requirements", async () => {
+    const settlePayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "settle",
+        receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+        token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      },
+    };
+    const requirements = { scheme: "batch-settlement", network: "eip155:84532" };
+
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(settlePayload, requirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
   });
 });

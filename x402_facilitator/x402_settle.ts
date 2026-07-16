@@ -8,6 +8,7 @@ import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
 import { collectFee, getFeeAmount } from "./x402_fee";
 import { getChainConfig } from "./chain_utils";
+import { isRecipientWhitelisted } from "./x402_whitelist";
 import type { Address } from "viem";
 import pino from "pino";
 
@@ -64,6 +65,23 @@ export async function settlePayment(
     // voucher signature on-chain before moving funds).
     const isBatchSettlement = accepted?.scheme === "batch-settlement";
     if (isBatchSettlement && (payloadType === "claim" || payloadType === "settle")) {
+      // Claim/settle payloads never reach verifyPayment()/onAfterVerify() (see the
+      // comment above), so this is the only gate they ever pass through. Without it,
+      // anyone with a valid (self-managed) channel could get the facilitator to relay
+      // claim/settle transactions at its own gas expense, for free — batch-settlement
+      // has no fee to fall back on the way the exact scheme does.
+      const payTo = paymentRequirements.payTo as string | undefined;
+      const network = accepted?.network as string | undefined;
+      if (!payTo || !network || !isRecipientWhitelisted(payTo, network)) {
+        logger.warn({ payTo, network }, "Batch-settlement recipient not whitelisted");
+        return {
+          success: false,
+          errorReason: "recipient_not_whitelisted",
+          transaction: "",
+          network,
+        };
+      }
+
       const facilitator = getFacilitator();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
@@ -71,7 +89,6 @@ export async function settlePayment(
         | Array<{ voucher?: { channel?: { payer?: string } } }>
         | undefined;
       const payer = claims?.[0]?.voucher?.channel?.payer;
-      const network = accepted?.network as string | undefined;
 
       if (!result.success) {
         logger.warn({ errorReason: result.errorReason }, "Batch-settlement claim/settle failed");

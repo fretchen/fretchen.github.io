@@ -14,6 +14,7 @@ const {
   mockGetUSDCConfig,
   mockVerifyPayment,
   mockSettlePayment,
+  mockCreatePaymentRequiredResponse,
   mockEnhancePaymentRequirements,
   mockScheme,
 } = vi.hoisted(() => {
@@ -35,6 +36,7 @@ const {
     mockGetUSDCConfig: vi.fn(),
     mockVerifyPayment: vi.fn(),
     mockSettlePayment: vi.fn(),
+    mockCreatePaymentRequiredResponse: vi.fn(),
     mockEnhancePaymentRequirements,
     mockScheme: { enhancePaymentRequirements: mockEnhancePaymentRequirements },
   };
@@ -89,7 +91,11 @@ describe("sc_llm_x402", () => {
     process.env.NFT_WALLET_PUBLIC_KEY = VALID_ADDRESS;
 
     mockCreateLLMResourceServer.mockReturnValue({
-      resourceServer: { verifyPayment: mockVerifyPayment, settlePayment: mockSettlePayment },
+      resourceServer: {
+        verifyPayment: mockVerifyPayment,
+        settlePayment: mockSettlePayment,
+        createPaymentRequiredResponse: mockCreatePaymentRequiredResponse,
+      },
       scheme: mockScheme,
     });
     mockGetBatchSettlementNetworks.mockReturnValue(["eip155:10", "eip155:8453", "eip155:84532"]);
@@ -108,6 +114,12 @@ describe("sc_llm_x402", () => {
       statusCode: 402,
       headers: { "Content-Type": "application/json" },
       body: "{}",
+    });
+    mockCreatePaymentRequiredResponse.mockResolvedValue({
+      x402Version: 2,
+      error: "cap_exceeded",
+      resource: { url: "/llmx402", description: "", mimeType: "application/json" },
+      accepts: [],
     });
     mockCreateSettlementHeaders.mockReturnValue({ "Payment-Response": "encoded" });
     mockCallLLMAPI.mockResolvedValue({
@@ -214,11 +226,43 @@ describe("sc_llm_x402", () => {
     });
 
     it("returns 402 when verification is invalid", async () => {
+      mockVerifyPayment.mockResolvedValue({
+        isValid: false,
+        invalidReason: "cap_exceeded",
+        payer: "0xpayer",
+      });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+
+      // The failed paymentPayload must be passed through — that's what triggers the SDK's
+      // response-time scheme enrichment (e.g. cumulative-amount-mismatch channelState) for
+      // the client's corrective-retry flow to have anything to recover from.
+      expect(mockCreatePaymentRequiredResponse).toHaveBeenCalledWith(
+        [expect.objectContaining({ scheme: "batch-settlement" })],
+        expect.objectContaining({ mimeType: "application/json" }),
+        "cap_exceeded",
+        { payer: "0xpayer" },
+        undefined,
+        samplePaymentPayload,
+      );
+      expect(mockCreate402Response).toHaveBeenCalledWith(
+        await mockCreatePaymentRequiredResponse.mock.results[0].value,
+      );
+    });
+
+    it("returns 402 when verification is invalid and omits payer from extensions if absent", async () => {
       mockVerifyPayment.mockResolvedValue({ isValid: false, invalidReason: "cap_exceeded" });
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(402);
-      expect(JSON.parse(res.body).reason).toBe("cap_exceeded");
-      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+      expect(mockCreatePaymentRequiredResponse).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        "cap_exceeded",
+        undefined,
+        undefined,
+        samplePaymentPayload,
+      );
     });
 
     it("returns 402 when verifyPayment throws", async () => {

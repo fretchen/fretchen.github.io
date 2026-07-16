@@ -207,8 +207,10 @@ export interface HttpResponse {
 
 export function create402Response(paymentRequirements: {
   x402Version: number;
-  resource: { url: string; description: string; mimeType: string };
+  error?: string;
+  resource: { url: string; description?: string; mimeType?: string };
   accepts: unknown[];
+  extensions?: Record<string, unknown>;
 }): HttpResponse {
   const paymentRequiredHeader = Buffer.from(JSON.stringify(paymentRequirements)).toString("base64");
 

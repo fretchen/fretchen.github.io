@@ -167,15 +167,27 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
 
   if (!verification.isValid) {
     logger.warn({ reason: verification.invalidReason }, "Payment verification failed");
-    return {
-      statusCode: 402,
-      headers: CORS_HEADERS,
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: verification.invalidReason,
-        payer: verification.payer,
-      }),
-    };
+    // Must go through createPaymentRequiredResponse (not a hand-rolled body) so the SDK's
+    // response-time scheme enrichment runs — e.g. for batch-settlement's
+    // invalid_batch_settlement_evm_cumulative_amount_mismatch, this attaches
+    // accepts[].extra.channelState/voucherState, which is what the client SDK's
+    // processCorrectivePaymentRequired needs to resync and retry automatically. Passing the
+    // failed paymentPayload is what triggers that enrichment (see the SDK's own doc comment
+    // on this param). Confirmed via a real Base Sepolia run through the buyer notebook.
+    const paymentRequired = await resourceServer.createPaymentRequiredResponse(
+      [paymentRequirements],
+      {
+        url: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+        description: "AI Assistant chat message",
+        mimeType: "application/json",
+      },
+      verification.invalidReason,
+      verification.payer ? { payer: verification.payer } : undefined,
+      undefined,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      paymentPayload as any,
+    );
+    return create402Response(paymentRequired);
   }
 
   let llmData: Awaited<ReturnType<typeof callLLMAPI>>;

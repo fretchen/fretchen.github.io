@@ -15,6 +15,9 @@ export interface VerifyResult {
   recipient?: string;
   /** Whether fee collection is required at settle time */
   feeRequired?: boolean;
+  /** Scheme-specific extras from the facilitator (e.g. batch-settlement's channelState). Already
+   * passed through at runtime via the `...result` spread below — declared here for typing/documentation. */
+  extra?: Record<string, unknown>;
 }
 
 /**

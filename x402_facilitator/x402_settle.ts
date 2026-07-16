@@ -40,6 +40,8 @@ export interface SettleResult {
       info: FacilitatorFeePaid;
     };
   };
+  /** Scheme-specific extras passed through from the facilitator (e.g. batch-settlement's channelState) */
+  extra?: Record<string, unknown>;
 }
 
 /**
@@ -100,7 +102,7 @@ export async function settlePayment(
         "Batch-settlement claim/settle transaction confirmed",
       );
       // Fee-free — no fee collection for batch-settlement (see the fee guard below).
-      return { success: true, payer, transaction: result.transaction, network };
+      return { success: true, payer, transaction: result.transaction, network, extra: result.extra };
     }
 
     // First verify the payment (includes fee allowance check)
@@ -190,15 +192,19 @@ export async function settlePayment(
           error: feeResult.error,
         },
         extensions: facilitatorFeesExtension,
+        extra: result.extra,
       };
     }
 
-    // No fee required (fee=0 or feeRequired not set)
+    // No fee required (fee=0 or feeRequired not set) — this is the path batch-settlement
+    // deposit/voucher payloads always take (feeRequired is forced false for them), so
+    // result.extra (e.g. channelState.channelId) must be passed through here too.
     return {
       success: true,
       payer: verifyResult.payer,
       transaction: result.transaction,
       network: accepted?.network as string,
+      extra: result.extra,
     };
   } catch (error) {
     const err = error as Error;

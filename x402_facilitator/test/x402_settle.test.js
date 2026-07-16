@@ -675,6 +675,50 @@ describe("x402_settle with mocked facilitator", () => {
     expect(collectFeeSpy).not.toHaveBeenCalled();
   });
 
+  it("passes through the facilitator's extra (channelState) for a batch-settlement deposit/voucher payload", async () => {
+    // This is the general (non claim/settle) path a batch-settlement "deposit" payload
+    // takes: verifyPayment() succeeds, feeRequired is false, and facilitator.settle()
+    // is called directly. The SDK's real facilitator.settle() returns
+    // extra: { channelState: { channelId, ... } } here, which the client needs —
+    // this was silently dropped before the fix (see the settle response `extra` bug).
+    const batchPayload = {
+      ...validPaymentPayload,
+      accepted: { ...validPaymentPayload.accepted, scheme: "batch-settlement" },
+    };
+    const batchRequirements = { ...validPaymentRequirements, scheme: "batch-settlement" };
+
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xdeposittxhash",
+        extra: {
+          channelState: {
+            channelId: "0xchannelid00000000000000000000000000000000000000000000000000000",
+            balance: "20000",
+          },
+        },
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: false,
+    });
+
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(batchPayload, batchRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.extra).toEqual({
+      channelState: {
+        channelId: "0xchannelid00000000000000000000000000000000000000000000000000000",
+        balance: "20000",
+      },
+    });
+  });
+
   it("skips verifyPayment entirely for a batch-settlement claim payload and settles directly", async () => {
     // The SDK's own scheme.verify() has no branch for "claim" payloads (only
     // deposit/voucher/refund are verifiable) and would unconditionally reject them
@@ -706,7 +750,16 @@ describe("x402_settle with mocked facilitator", () => {
     };
 
     const mockFacilitator = {
-      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xclaimtxhash",
+        extra: {
+          channelState: {
+            channelId: "0xchannelid00000000000000000000000000000000000000000000000000000",
+            balance: "88000",
+          },
+        },
+      }),
     };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
     const verifyPaymentSpy = vi.spyOn(verifyModule, "verifyPayment");
@@ -720,6 +773,12 @@ describe("x402_settle with mocked facilitator", () => {
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       transaction: "0xclaimtxhash",
       network: "eip155:84532",
+      extra: {
+        channelState: {
+          channelId: "0xchannelid00000000000000000000000000000000000000000000000000000",
+          balance: "88000",
+        },
+      },
     });
   });
 

@@ -76,7 +76,11 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
     });
 
     const readOnlySigner = toFacilitatorEvmSigner({
-      address: "0x0000000000000000000000000000000000000000",
+      // Report the real facilitator address when a private key is configured — required
+      // for /supported to pass newer SDK clients' strict validation (e.g. the official
+      // x402HTTPResourceServer.initialize() path); falls back to the zero address only
+      // when no valid key exists (this instance never signs anything either way).
+      address: getFacilitatorAddress() ?? "0x0000000000000000000000000000000000000000",
       readContract: (args) =>
         publicClient.readContract({
           ...args,

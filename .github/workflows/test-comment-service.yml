@@ -40,12 +40,3 @@ jobs:
               env:
                   NODE_ENV: test
                   CI: true
-
-            - name: Upload coverage reports to Codecov (optional)
-              uses: codecov/codecov-action@v3
-              with:
-                  directory: ./comment_service/coverage
-                  flags: comment-service
-                  name: comment-service-coverage
-                  fail_ci_if_error: false
-              continue-on-error: true

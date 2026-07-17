@@ -45,18 +45,6 @@ jobs:
         run: REPORT_GAS=true npx hardhat test
         continue-on-error: true
 
-      - name: Run coverage (optional)
-        run: npx hardhat coverage
-        continue-on-error: true
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        if: success()
-        with:
-          file: ./eth/coverage/lcov.info
-          flags: smart-contracts
-        continue-on-error: true
-
   lint-contracts:
     runs-on: ubuntu-latest
 

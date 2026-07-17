@@ -7,12 +7,14 @@ on:
     pull_request:
         paths:
             - "comment_service/**"
+            - "shared/s3-utils/**"
             - ".github/workflows/test-comment-service.yml"
     push:
         branches:
             - main
         paths:
             - "comment_service/**"
+            - "shared/s3-utils/**"
             - ".github/workflows/test-comment-service.yml"
 
 jobs:
@@ -28,7 +30,13 @@ jobs:
               with:
                   node-version: "24"
                   cache: "npm"
-                  cache-dependency-path: comment_service/package-lock.json
+                  cache-dependency-path: |
+                      comment_service/package-lock.json
+                      shared/s3-utils/package-lock.json
+
+            - name: Install and build s3-utils
+              working-directory: ./shared/s3-utils
+              run: npm ci && npm run build
 
             - name: Install dependencies
               working-directory: ./comment_service

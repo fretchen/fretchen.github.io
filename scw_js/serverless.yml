@@ -48,10 +48,10 @@ functions:
     description: "x402 batch-settlement LLM chat (USDC payment channels)"
   llmx402cron:
     handler: dist/llm_x402_cron.handle
-    description: "Claims and settles accumulated x402 batch-settlement channels hourly"
+    description: "Claims and settles accumulated x402 batch-settlement channels every 12h"
     events:
       - schedule:
-          rate: "0 * * * *"
+          rate: "0 */12 * * *"
   leafhistory:
     handler: dist/leaf_history.handle
   growthapi:

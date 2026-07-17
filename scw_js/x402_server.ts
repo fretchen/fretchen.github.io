@@ -31,6 +31,15 @@ const BATCH_SETTLEMENT_NETWORKS = ["eip155:8453", "eip155:84532"];
 // depositing spuriously fail with cumulative_exceeds_balance. Confirmed via the B0 spike.
 const ONCHAIN_STATE_TTL_MS = 5_000;
 
+// How long a client must wait after requesting a unilateral exit before they can pull
+// their escrow back out. Must stay well above the claim/settle cron's interval
+// (llmx402cron, serverless.yml) or the server risks losing already-earned revenue on a
+// channel that goes quiet — a channel could become withdrawable before the cron ever
+// gets a chance to claim it. Previously unset here, which silently fell back to the
+// SDK's own default (`MIN_WITHDRAW_DELAY`, 900s / 15 minutes) — far below the cron's
+// hourly interval at the time. 24h leaves the (now 12h) cron a 2x safety margin.
+const WITHDRAW_DELAY_SECONDS = Number(process.env.LLM_WITHDRAW_DELAY_SECONDS ?? "86400");
+
 export function getSupportedNetworks(): string[] {
   return SUPPORTED_NETWORKS;
 }
@@ -74,6 +83,7 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
       signTypedData: (params: any) => authorizerAccount.signTypedData(params),
     },
     onchainStateTtlMs: ONCHAIN_STATE_TTL_MS,
+    withdrawDelay: WITHDRAW_DELAY_SECONDS,
   });
 
   for (const network of BATCH_SETTLEMENT_NETWORKS) {

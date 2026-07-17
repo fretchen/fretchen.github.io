@@ -16,6 +16,11 @@ updates:
       npm-dependencies:
         patterns:
           - "*"
+    ignore:
+      # typescript-eslint 8.x declares a peer range of typescript <6.1.0.
+      # Lift this once typescript-eslint supports TypeScript 7.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
 
   - package-ecosystem: "pip"
     directory: "notebooks"

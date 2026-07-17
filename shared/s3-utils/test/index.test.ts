@@ -216,7 +216,9 @@ describe("getS3ObjectWithMeta", () => {
   });
 
   test("throws on non-ok, non-404 response", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("forbidden", { status: 403, statusText: "Forbidden" }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("forbidden", { status: 403, statusText: "Forbidden" })
+    );
     await expect(getS3ObjectWithMeta("channels/abc.json")).rejects.toThrow(/403/);
   });
 });
@@ -238,7 +240,9 @@ describe("putS3ObjectConditional", () => {
   });
 
   test("returns ok:false, status:412 on precondition failure instead of throwing", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("", { status: 412, statusText: "Precondition Failed" }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("", { status: 412, statusText: "Precondition Failed" })
+    );
     const result = await putS3ObjectConditional("channels/abc.json", "{}", {
       contentType: "application/json",
       ifMatch: '"stale-etag"',
@@ -247,7 +251,9 @@ describe("putS3ObjectConditional", () => {
   });
 
   test("returns ok:true with etag on success", async () => {
-    mockFetch.mockResolvedValueOnce(new Response("", { status: 200, headers: { etag: '"new-etag"' } }));
+    mockFetch.mockResolvedValueOnce(
+      new Response("", { status: 200, headers: { etag: '"new-etag"' } })
+    );
     const result = await putS3ObjectConditional("channels/abc.json", "{}", {
       contentType: "application/json",
       ifNoneMatch: "*",
@@ -267,7 +273,9 @@ describe("putS3ObjectConditional", () => {
   });
 
   test("throws on non-ok, non-412 response", async () => {
-    mockFetch.mockResolvedValue(new Response("error", { status: 500, statusText: "Internal Error" }));
+    mockFetch.mockResolvedValue(
+      new Response("error", { status: 500, statusText: "Internal Error" })
+    );
     await expect(
       putS3ObjectConditional("channels/abc.json", "{}", {
         contentType: "application/json",
@@ -320,7 +328,9 @@ describe("deleteS3Object", () => {
   });
 
   test("throws on non-ok, non-404, non-412 response", async () => {
-    mockFetch.mockResolvedValue(new Response("error", { status: 500, statusText: "Internal Error" }));
+    mockFetch.mockResolvedValue(
+      new Response("error", { status: 500, statusText: "Internal Error" })
+    );
     await expect(deleteS3Object("channels/abc.json")).rejects.toThrow(/500/);
   });
 });
@@ -364,14 +374,14 @@ describe("listObjects", () => {
     mockFetch.mockResolvedValueOnce(new Response(xml, { status: 200 }));
     await listObjects("channels/");
     const [url, init] = mockFetch.mock.calls[0];
-    expect(url).toBe(
-      "https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2&prefix=channels%2F"
-    );
+    expect(url).toBe("https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2&prefix=channels%2F");
     expect(init.method).toBe("GET");
   });
 
   test("throws on non-ok response", async () => {
-    mockFetch.mockResolvedValue(new Response("error", { status: 500, statusText: "Internal Error" }));
+    mockFetch.mockResolvedValue(
+      new Response("error", { status: 500, statusText: "Internal Error" })
+    );
     await expect(listObjects("channels/")).rejects.toThrow(/500/);
   });
 

@@ -212,9 +212,7 @@ export interface PutS3ObjectConditionalOptions extends PutS3ObjectOptions {
   ifNoneMatch?: "*";
 }
 
-export type PutS3ObjectConditionalResult =
-  | { ok: true; etag: string }
-  | { ok: false; status: 412 };
+export type PutS3ObjectConditionalResult = { ok: true; etag: string } | { ok: false; status: 412 };
 
 /**
  * Conditional PUT for optimistic-concurrency callers (e.g. a `ChannelStorage`
@@ -237,7 +235,9 @@ export async function putS3ObjectConditional(
   const res = await signedFetch("PUT", key, body, extraHeaders);
   if (res.status === 412) return { ok: false, status: 412 };
   if (!res.ok) {
-    throw new Error(`S3 PutObject (conditional) failed for ${key}: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `S3 PutObject (conditional) failed for ${key}: ${res.status} ${res.statusText}`
+    );
   }
   return { ok: true, etag: res.headers.get("etag") ?? "" };
 }
@@ -278,7 +278,9 @@ export async function deleteS3Object(
 export async function listObjects(prefix: string): Promise<string[]> {
   const res = await signedFetch("GET", "", undefined, {}, { "list-type": "2", prefix });
   if (!res.ok) {
-    throw new Error(`S3 ListObjectsV2 failed for prefix ${prefix}: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `S3 ListObjectsV2 failed for prefix ${prefix}: ${res.status} ${res.statusText}`
+    );
   }
   const xml = await res.text();
   const keys: string[] = [];

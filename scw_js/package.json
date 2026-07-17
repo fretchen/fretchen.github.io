@@ -23,7 +23,6 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.1088.0",
     "@eslint/js": "^10.0.0",
     "@fastify/cors": "^11.3.0",
     "@fastify/url-data": "^6.0.3",

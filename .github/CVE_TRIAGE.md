@@ -29,7 +29,6 @@ Look up the manifest path and package name in the tier table below. Most triage 
 | `wagmi`, `@tanstack/react-query` | website prod dep | **T2** |
 | `mermaid` | website prod dep | **T2** |
 | `@openzeppelin/merkle-tree` | website prod dep | **T2** |
-| `@aws-sdk/client-s3` | scw_js prod dep | **T3** |
 | `pino` | scw_js / x402_facilitator prod dep | **T3** |
 | `dotenv` | serverless prod dep | **T3** |
 | `undici` | transitive dep in `eth/` (Hardhat) | **T4** |

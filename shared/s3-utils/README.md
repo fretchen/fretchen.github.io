@@ -47,10 +47,9 @@ getS3BaseUrl(); // "https://<bucket>.s3.<region>.scw.cloud/" — the canonical p
 
 `SCW_S3_BUCKET`/`SCW_S3_REGION` default to the values every current caller in this
 monorepo already uses, so no deployment changes anywhere are needed for this package
-to keep working exactly as before. A different consumer (e.g. `comment_service`, which
-today runs its own separate `@aws-sdk/client-s3` client against the same bucket) can
-adopt this package and point it at a different bucket/region purely via its own env
-config, without forking the client.
+to keep working exactly as before. A consumer that needs a different bucket or region
+can point this package at one purely via its own env config, without forking the
+client.
 
 ## Reliability
 

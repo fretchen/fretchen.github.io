@@ -4,34 +4,16 @@
 
 import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 
-// Mock AWS SDK
-const mockS3Send = vi.fn();
+// Mock the shared S3 client
+const mockListObjects = vi.fn();
+const mockGetS3Object = vi.fn();
+const mockPutS3Object = vi.fn();
 
-vi.mock("@aws-sdk/client-s3", () => {
-  return {
-    S3Client: class {
-      send = mockS3Send;
-    },
-    PutObjectCommand: class {
-      params: Record<string, unknown>;
-      constructor(params: Record<string, unknown>) {
-        this.params = params;
-      }
-    },
-    ListObjectsV2Command: class {
-      params: Record<string, unknown>;
-      constructor(params: Record<string, unknown>) {
-        this.params = params;
-      }
-    },
-    GetObjectCommand: class {
-      params: Record<string, unknown>;
-      constructor(params: Record<string, unknown>) {
-        this.params = params;
-      }
-    },
-  };
-});
+vi.mock("@fretchen/s3-utils", () => ({
+  listObjects: mockListObjects,
+  getS3Object: mockGetS3Object,
+  putS3Object: mockPutS3Object,
+}));
 
 // Mock global fetch for email notifications
 global.fetch = vi.fn() as any;
@@ -51,7 +33,9 @@ describe("comments.ts", () => {
     process.env.TEM_PROJECT_ID = "test-project-id";
 
     vi.clearAllMocks();
-    mockS3Send.mockResolvedValue({});
+    mockListObjects.mockResolvedValue([]);
+    mockGetS3Object.mockResolvedValue(null);
+    mockPutS3Object.mockResolvedValue(undefined);
     (global.fetch as any).mockResolvedValue({ ok: true });
   });
 
@@ -136,7 +120,7 @@ describe("comments.ts", () => {
     });
 
     test("returns empty array when no comments exist", async () => {
-      mockS3Send.mockResolvedValueOnce({ Contents: null });
+      mockListObjects.mockResolvedValueOnce([]);
 
       const res = await handle(
         {
@@ -168,18 +152,16 @@ describe("comments.ts", () => {
         suspectedAgent: false,
       };
 
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: "comments/abc/2026-03-21T10:00:00.000Z-2.json" },
-          { Key: "comments/abc/2026-03-20T10:00:00.000Z-1.json" },
-        ],
-      });
-      mockS3Send.mockResolvedValueOnce({
-        Body: { transformToString: () => Promise.resolve(JSON.stringify(comment2)) },
-      });
-      mockS3Send.mockResolvedValueOnce({
-        Body: { transformToString: () => Promise.resolve(JSON.stringify(comment1)) },
-      });
+      const key1 = "comments/abc/2026-03-20T10:00:00.000Z-1.json";
+      const key2 = "comments/abc/2026-03-21T10:00:00.000Z-2.json";
+      const stored: Record<string, string> = {
+        [key1]: JSON.stringify(comment1),
+        [key2]: JSON.stringify(comment2),
+      };
+
+      // Listed newest-first, so the handler has to sort them itself.
+      mockListObjects.mockResolvedValueOnce([key2, key1]);
+      mockGetS3Object.mockImplementation((key: string) => Promise.resolve(stored[key] ?? null));
 
       const res = await handle(
         {
@@ -197,50 +179,31 @@ describe("comments.ts", () => {
     });
 
     test("limits suspected agent comments to 10 per page", async () => {
-      const contents: { Key: string }[] = [];
-      const getResponses: { Body: { transformToString: () => Promise<string> } }[] = [];
+      const stored: Record<string, string> = {};
 
       for (let i = 0; i < 12; i++) {
-        contents.push({ Key: `comments/abc/agent-${i}.json` });
-        getResponses.push({
-          Body: {
-            transformToString: () =>
-              Promise.resolve(
-                JSON.stringify({
-                  id: `agent-${i}`,
-                  name: "Bot",
-                  text: `Spam ${i}`,
-                  page: "/blog/test",
-                  timestamp: `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00.000Z`,
-                  suspectedAgent: true,
-                }),
-              ),
-          },
+        stored[`comments/abc/agent-${i}.json`] = JSON.stringify({
+          id: `agent-${i}`,
+          name: "Bot",
+          text: `Spam ${i}`,
+          page: "/blog/test",
+          timestamp: `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00.000Z`,
+          suspectedAgent: true,
         });
       }
       for (let i = 0; i < 2; i++) {
-        contents.push({ Key: `comments/abc/normal-${i}.json` });
-        getResponses.push({
-          Body: {
-            transformToString: () =>
-              Promise.resolve(
-                JSON.stringify({
-                  id: `normal-${i}`,
-                  name: "Human",
-                  text: `Real ${i}`,
-                  page: "/blog/test",
-                  timestamp: `2026-03-${String(i + 15).padStart(2, "0")}T10:00:00.000Z`,
-                  suspectedAgent: false,
-                }),
-              ),
-          },
+        stored[`comments/abc/normal-${i}.json`] = JSON.stringify({
+          id: `normal-${i}`,
+          name: "Human",
+          text: `Real ${i}`,
+          page: "/blog/test",
+          timestamp: `2026-03-${String(i + 15).padStart(2, "0")}T10:00:00.000Z`,
+          suspectedAgent: false,
         });
       }
 
-      mockS3Send.mockResolvedValueOnce({ Contents: contents });
-      for (const resp of getResponses) {
-        mockS3Send.mockResolvedValueOnce(resp);
-      }
+      mockListObjects.mockResolvedValueOnce(Object.keys(stored));
+      mockGetS3Object.mockImplementation((key: string) => Promise.resolve(stored[key] ?? null));
 
       const res = await handle(
         {
@@ -300,13 +263,12 @@ describe("comments.ts", () => {
         {},
       );
 
-      expect(mockS3Send).toHaveBeenCalled();
-      const putCommand = mockS3Send.mock.calls[0][0] as any;
-      expect(putCommand.params.Bucket).toBe("my-imagestore");
-      expect(putCommand.params.Key).toContain("comments/");
-      expect(putCommand.params.ContentType).toBe("application/json");
+      expect(mockPutS3Object).toHaveBeenCalled();
+      const [key, body, opts] = mockPutS3Object.mock.calls[0] as [string, string, any];
+      expect(key).toContain("comments/");
+      expect(opts.contentType).toBe("application/json");
 
-      const storedComment = JSON.parse(putCommand.params.Body);
+      const storedComment = JSON.parse(body);
       expect(storedComment.name).toBe("Alice");
       expect(storedComment.text).toBe("Hello");
     });
@@ -511,8 +473,8 @@ describe("comments.ts", () => {
         {},
       );
 
-      expect(mockS3Send).toHaveBeenCalled();
-      const storedComment = JSON.parse((mockS3Send.mock.calls[0][0] as any).params.Body);
+      expect(mockPutS3Object).toHaveBeenCalled();
+      const storedComment = JSON.parse(mockPutS3Object.mock.calls[0][1] as string);
       expect(storedComment.suspectedAgent).toBe(true);
     });
 
@@ -652,7 +614,7 @@ describe("comments.ts", () => {
       );
 
       expect(res.statusCode).toBe(201);
-      expect(mockS3Send).toHaveBeenCalled();
+      expect(mockPutS3Object).toHaveBeenCalled();
     });
   });
 });

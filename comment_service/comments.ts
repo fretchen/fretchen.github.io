@@ -2,7 +2,7 @@
  * Blog comment system – anonymous comments stored in S3 with email notification.
  * Honeypot-triggered comments are stored with suspectedAgent flag.
  */
-import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getS3Object, listObjects, putS3Object } from "@fretchen/s3-utils";
 import crypto from "crypto";
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -38,7 +38,6 @@ interface HandlerResponse {
 
 // ── Constants ───────────────────────────────────────────────────────────
 
-const BUCKET_NAME = "my-imagestore";
 const COMMENTS_PREFIX = "comments/";
 const MAX_NAME_LENGTH = 100;
 const MAX_TEXT_LENGTH = 2000;
@@ -133,11 +132,7 @@ async function sendEmailNotification(comment: Comment): Promise<void> {
 
 // ── GET handler ─────────────────────────────────────────────────────────
 
-async function handleGetComments(
-  event: ScalewayEvent,
-  s3: S3Client,
-  corsHeaders: Record<string, string>,
-): Promise<HandlerResponse> {
+async function handleGetComments(event: ScalewayEvent, corsHeaders: Record<string, string>): Promise<HandlerResponse> {
   const rawPage = event.queryStringParameters?.page;
   if (!rawPage) {
     return {
@@ -158,8 +153,8 @@ async function handleGetComments(
 
   const prefix = `${COMMENTS_PREFIX}${pageHash(page)}/`;
 
-  const listed = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET_NAME, Prefix: prefix }));
-  if (!listed.Contents || listed.Contents.length === 0) {
+  const keys = await listObjects(prefix);
+  if (keys.length === 0) {
     return {
       statusCode: 200,
       headers: corsHeaders,
@@ -167,13 +162,11 @@ async function handleGetComments(
     };
   }
 
-  const comments: Comment[] = await Promise.all(
-    listed.Contents.filter((obj) => obj.Key).map(async (obj) => {
-      const data = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key! }));
-      const text = await data.Body!.transformToString();
-      return JSON.parse(text) as Comment;
-    }),
-  );
+  const fetched = await Promise.all(keys.map((key) => getS3Object(key)));
+  // A key can 404 if the object was deleted between the list and the read.
+  const comments: Comment[] = fetched
+    .filter((text): text is string => text !== null)
+    .map((text) => JSON.parse(text) as Comment);
 
   // Sort by timestamp ascending (oldest first)
   comments.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -195,11 +188,7 @@ async function handleGetComments(
 
 // ── POST handler ────────────────────────────────────────────────────────
 
-async function handlePostComment(
-  event: ScalewayEvent,
-  s3: S3Client,
-  corsHeaders: Record<string, string>,
-): Promise<HandlerResponse> {
+async function handlePostComment(event: ScalewayEvent, corsHeaders: Record<string, string>): Promise<HandlerResponse> {
   if (!event.body) {
     return {
       statusCode: 400,
@@ -273,14 +262,7 @@ async function handlePostComment(
   const hash = pageHash(page);
   const key = `${COMMENTS_PREFIX}${hash}/${comment.timestamp}-${comment.id.slice(0, 8)}.json`;
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key,
-      Body: JSON.stringify(comment),
-      ContentType: "application/json",
-    }),
-  );
+  await putS3Object(key, JSON.stringify(comment), { contentType: "application/json" });
 
   await sendEmailNotification(comment);
 
@@ -301,21 +283,12 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
     return { statusCode: 200, headers: corsHeaders, body: "" };
   }
 
-  const s3 = new S3Client({
-    region: "nl-ams",
-    endpoint: "https://s3.nl-ams.scw.cloud",
-    credentials: {
-      accessKeyId: process.env.SCW_ACCESS_KEY!,
-      secretAccessKey: process.env.SCW_SECRET_KEY!,
-    },
-  });
-
   if (event.httpMethod === "GET") {
-    return handleGetComments(event, s3, corsHeaders);
+    return handleGetComments(event, corsHeaders);
   }
 
   if (event.httpMethod === "POST") {
-    return handlePostComment(event, s3, corsHeaders);
+    return handlePostComment(event, corsHeaders);
   }
 
   return {

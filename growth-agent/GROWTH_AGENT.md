@@ -221,7 +221,7 @@ growth-agent/
 ### scw_js/ additions (TypeScript — Draft Approval API)
 
 The API lives in `scw_js/` alongside existing functions (LLM, image gen, leaf history).
-This avoids a new project, reuses `viem`, `@aws-sdk/client-s3`, `pino`, and the
+This avoids a new project, reuses `viem`, `@fretchen/s3-utils`, `pino`, and the
 existing Serverless Framework deployment.
 
 ```
@@ -1476,7 +1476,7 @@ The growth API in `scw_js/` reuses existing dependencies:
 
 ```
 # Already in scw_js/package.json:
-@aws-sdk/client-s3       # S3 read/write for growth-agent/*.json
+@fretchen/s3-utils       # S3 read/write for growth-agent/*.json
 viem                     # verifyMessage() for EIP-191 wallet auth
 pino                     # Structured logging
 ```

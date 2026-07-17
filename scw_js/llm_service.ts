@@ -45,7 +45,7 @@ export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<L
   if (!prompt || !prompt.length) {
     throw new Error("No prompt provided.");
   }
-  logger.info({ prompt }, "Generating answer for prompt");
+  logger.debug({ prompt }, "Generating answer for prompt");
 
   const body = { model: MODEL_NAME, messages: prompt };
 

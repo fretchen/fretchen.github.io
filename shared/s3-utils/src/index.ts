@@ -180,7 +180,15 @@ export async function getS3ObjectWithMeta(key: string): Promise<GetS3ObjectMetaR
     throw new Error(`S3 GetObject failed for ${key}: ${res.status} ${res.statusText}`);
   }
   const body = await res.text();
-  return { body, etag: res.headers.get("etag") ?? "" };
+  const etag = res.headers.get("etag");
+  if (!etag) {
+    // A successful GET of an existing object must carry an ETag; without one the
+    // caller's CAS loop would silently degrade to an unconditional write (the
+    // `ifMatch` truthy guards in putS3ObjectConditional/deleteS3Object drop an empty
+    // string), defeating the compare-and-swap guarantee. Fail loud instead.
+    throw new Error(`S3 GetObject for ${key} returned no ETag; cannot honor compare-and-swap`);
+  }
+  return { body, etag };
 }
 
 export interface PutS3ObjectOptions {

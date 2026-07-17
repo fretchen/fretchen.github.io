@@ -221,6 +221,13 @@ describe("getS3ObjectWithMeta", () => {
     );
     await expect(getS3ObjectWithMeta("channels/abc.json")).rejects.toThrow(/403/);
   });
+
+  test("throws when a successful GET carries no ETag (protects CAS)", async () => {
+    // Without an ETag the caller's compare-and-swap would silently degrade to an
+    // unconditional write, so this must fail loud rather than return etag: "".
+    mockFetch.mockResolvedValueOnce(new Response('{"a":1}', { status: 200 }));
+    await expect(getS3ObjectWithMeta("channels/abc.json")).rejects.toThrow(/no ETag/);
+  });
 });
 
 describe("putS3ObjectConditional", () => {

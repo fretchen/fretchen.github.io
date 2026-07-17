@@ -12,6 +12,7 @@ const {
   mockCreateSettlementHeaders,
   mockGetBatchSettlementNetworks,
   mockGetUSDCConfig,
+  mockIsTestnet,
   mockVerifyPayment,
   mockSettlePayment,
   mockCreatePaymentRequiredResponse,
@@ -34,6 +35,13 @@ const {
     mockCreateSettlementHeaders: vi.fn(),
     mockGetBatchSettlementNetworks: vi.fn(),
     mockGetUSDCConfig: vi.fn(),
+    // Testnet networks (Base/Optimism Sepolia) must take the mock-LLM path — see the
+    // useMock gate in sc_llm_x402.ts. Default matches chain-utils' TESTNET_NETWORKS.
+    mockIsTestnet: vi
+      .fn()
+      .mockImplementation(
+        (net: string) => net === "eip155:84532" || net === "eip155:11155420",
+      ),
     mockVerifyPayment: vi.fn(),
     mockSettlePayment: vi.fn(),
     mockCreatePaymentRequiredResponse: vi.fn(),
@@ -58,6 +66,7 @@ vi.mock("../x402_server.js", () => ({
 
 vi.mock("@fretchen/chain-utils", () => ({
   getUSDCConfig: mockGetUSDCConfig,
+  isTestnet: mockIsTestnet,
 }));
 
 // ===== Import after mocks =====
@@ -289,6 +298,25 @@ describe("sc_llm_x402", () => {
       mockCallLLMAPI.mockRejectedValue(new Error("upstream exploded"));
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(500);
+    });
+
+    it("forces the mock LLM path on a testnet payment (no real inference spend)", async () => {
+      // Base Sepolia payment is valueless, so callLLMAPI must be invoked with dummy=true
+      // even though the request did not ask for it — mirrors genimg's useMockImage.
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload); // eip155:84532
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true);
+    });
+
+    it("uses the real LLM path on a mainnet payment", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        accepted: { network: "eip155:8453", scheme: "batch-settlement" },
+        payload: { type: "voucher" },
+      });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false);
     });
   });
 

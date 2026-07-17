@@ -1,6 +1,6 @@
 import { callLLMAPI, convertTokensToUsdcCost, type LLMMessage } from "./llm_service.js";
 import { parseJsonBody } from "./utils.js";
-import { getUSDCConfig } from "@fretchen/chain-utils";
+import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
   createLLMResourceServer,
@@ -126,6 +126,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return errorResponse(402, "Unsupported or missing network for batch-settlement payment");
   }
 
+  // Never spend real IONOS inference budget on a valueless testnet payment. As with
+  // genimg's useMockImage (genimg_x402_token.ts), a testnet payment still runs the real
+  // x402 verify/settle but gets a mock completion instead of a paid API call.
+  const useMock = useDummyData || isTestnet(clientNetwork);
+
   const usdcConfig = getUSDCConfig(clientNetwork);
   const baseRequirements = {
     scheme: "batch-settlement",
@@ -192,8 +197,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
 
   let llmData: Awaited<ReturnType<typeof callLLMAPI>>;
   try {
-    logger.info({ prompt }, "Generating answer for prompt");
-    llmData = await callLLMAPI(prompt, useDummyData);
+    if (useMock) {
+      logger.info({ network: clientNetwork }, "Using mock LLM response (test mode)");
+    }
+    logger.debug({ prompt }, "Generating answer for prompt");
+    llmData = await callLLMAPI(prompt, useMock);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     const msg = (error as Error).message;
@@ -215,7 +223,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       return errorResponse(402, `Settlement failed: ${settlement.errorReason ?? "unknown"}`);
     }
 
-    logger.info({ data: llmData }, "Answer generated and settled");
+    logger.info(
+      { usage: llmData.usage, model: llmData.model },
+      "Answer generated and settled",
+    );
+    logger.debug({ data: llmData }, "Answer content");
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },

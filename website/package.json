@@ -41,7 +41,7 @@
     "viem": "^2.54.2",
     "vike-react": "^0.6.25",
     "vike-react-query": "^0.1.13",
-    "wagmi": "^3.7.1"
+    "wagmi": "^3.7.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",

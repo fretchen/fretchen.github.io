@@ -25,16 +25,16 @@ plugins:
 
 package:
   patterns:
+    # Exclude everything by default, then re-include only what the deployed
+    # functions actually need. The previous allowlist-shaped patterns below
+    # (without a leading "!**") did NOT act as an allowlist — Scaleway's
+    # serverless plugin still zips the whole service directory by default,
+    # which silently dragged in scw_js/notebooks/ (a 400MB+ local Deno/Jupyter
+    # dev environment with its own node_modules) into every function's
+    # deploy package, tripping Scaleway's function-size limit.
+    - "!**"
     - "dist/**"
     - "!dist/**/*.map"
-    - "!node_modules/**"
-    - "!test/**"
-    - "!coverage/**"
-    - "!.git/**"
-    - "!*.test.js"
-    - "!tsup.config.js"
-    - "!vitest.config.js"
-    - "!eslint.config.js"
 
 functions:
   genimgx402token:

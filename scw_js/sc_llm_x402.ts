@@ -35,7 +35,9 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // setSettlementOverrides() wraps for Express apps — we do it manually here since we call
 // settlePayment() directly. See getSettleAmount() below.
 const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
-const USDC_MAX_PRICE_PER_MESSAGE = convertTokensToUsdcCost(BigInt(MAX_TOKENS_PER_MESSAGE)).toString();
+const USDC_MAX_PRICE_PER_MESSAGE = convertTokensToUsdcCost(
+  BigInt(MAX_TOKENS_PER_MESSAGE),
+).toString();
 
 /**
  * Real, usage-derived charge for this message, capped at the pre-authorized ceiling

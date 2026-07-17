@@ -46,9 +46,7 @@ const {
     // useMock gate in sc_llm_x402.ts. Default matches chain-utils' TESTNET_NETWORKS.
     mockIsTestnet: vi
       .fn()
-      .mockImplementation(
-        (net: string) => net === "eip155:84532" || net === "eip155:11155420",
-      ),
+      .mockImplementation((net: string) => net === "eip155:84532" || net === "eip155:11155420"),
     mockVerifyPayment: vi.fn(),
     mockSettlePayment: vi.fn(),
     mockCreatePaymentRequiredResponse: vi.fn(),

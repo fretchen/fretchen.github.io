@@ -16,22 +16,25 @@ provider:
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
     OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
+    LLM_ESTIMATED_TOKENS_PER_MESSAGE: ${env:LLM_ESTIMATED_TOKENS_PER_MESSAGE, "2000"}
+    LLM_WITHDRAW_DELAY_SECONDS: ${env:LLM_WITHDRAW_DELAY_SECONDS, "86400"}
+    RECEIVER_AUTHORIZER_PRIVATE_KEY: ${env:RECEIVER_AUTHORIZER_PRIVATE_KEY}
 
 plugins:
   - serverless-scaleway-functions
 
 package:
   patterns:
+    # Exclude everything by default, then re-include only what the deployed
+    # functions actually need. The previous allowlist-shaped patterns below
+    # (without a leading "!**") did NOT act as an allowlist — Scaleway's
+    # serverless plugin still zips the whole service directory by default,
+    # which silently dragged in scw_js/notebooks/ (a 400MB+ local Deno/Jupyter
+    # dev environment with its own node_modules) into every function's
+    # deploy package, tripping Scaleway's function-size limit.
+    - "!**"
     - "dist/**"
     - "!dist/**/*.map"
-    - "!node_modules/**"
-    - "!test/**"
-    - "!coverage/**"
-    - "!.git/**"
-    - "!*.test.js"
-    - "!tsup.config.js"
-    - "!vitest.config.js"
-    - "!eslint.config.js"
 
 functions:
   genimgx402token:
@@ -41,6 +44,18 @@ functions:
       - imagegen-agent.fretchen.eu
   llm:
     handler: dist/sc_llm.handle
+  llmx402:
+    handler: dist/sc_llm_x402.handle
+    description: "x402 batch-settlement LLM chat (USDC payment channels)"
+  llmx402cron:
+    handler: dist/llm_x402_cron.handle
+    description: "Claims and settles accumulated x402 batch-settlement channels every 12h"
+    events:
+      - schedule:
+          # Scaleway's cron validator (serverless-scaleway-functions/shared/validate.js)
+          # doesn't support the standard */N step syntax (its regex requires digits on
+          # both sides of the "/") — "0/12" (start at 0, every 12h) works, "*/12" doesn't.
+          rate: "0 0/12 * * *"
   leafhistory:
     handler: dist/leaf_history.handle
   growthapi:

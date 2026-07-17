@@ -1,0 +1,5 @@
+{
+  "$comment": "Scoped to this dir only — does not affect the parent scw_js npm/vitest project. nodeModulesDir: auto gives THIS folder its own local node_modules (scw_js/notebooks/node_modules), fully installed and hoisted/deduped via standard npm resolution, driven purely by the npm: specifiers in the notebooks (no package.json needed). This is the same fix proven in x402_facilitator/notebooks/deno.json — without it, Deno auto-detects ../package.json as an ancestor and switches npm: resolution to that package's node_modules (byonm-style), which only has scw_js's own deps, not necessarily everything a spike notebook needs. lock: false disables deno.lock creation/checking for this dir.",
+  "nodeModulesDir": "auto",
+  "lock": false
+}

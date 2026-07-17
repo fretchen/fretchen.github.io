@@ -45,7 +45,7 @@ export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<L
   if (!prompt || !prompt.length) {
     throw new Error("No prompt provided.");
   }
-  logger.info({ prompt }, "Generating answer for prompt");
+  logger.debug({ prompt }, "Generating answer for prompt");
 
   const body = { model: MODEL_NAME, messages: prompt };
 
@@ -77,23 +77,29 @@ export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<L
   };
 }
 
-export function convertTokensToCost(tokenCount: bigint | number | string): bigint {
-  let tc: bigint;
+function parseTokenCount(tokenCount: bigint | number | string): bigint {
   if (typeof tokenCount === "bigint") {
-    tc = tokenCount;
-  } else if (typeof tokenCount === "number") {
+    return tokenCount;
+  }
+  if (typeof tokenCount === "number") {
     if (!Number.isFinite(tokenCount) || tokenCount < 0) {
       throw new TypeError("tokenCount must be a non-negative finite number when given as number");
     }
-    tc = BigInt(Math.floor(tokenCount));
-  } else if (typeof tokenCount === "string" && /^\d+$/.test(tokenCount)) {
-    tc = BigInt(tokenCount);
-  } else {
-    throw new TypeError("tokenCount must be a bigint, number, or numeric string");
+    return BigInt(Math.floor(tokenCount));
   }
+  if (typeof tokenCount === "string" && /^\d+$/.test(tokenCount)) {
+    return BigInt(tokenCount);
+  }
+  throw new TypeError("tokenCount must be a bigint, number, or numeric string");
+}
 
-  const PRICE_PER_MILLION_TOKENS_IN_EUR_NUM = 71n;
-  const PRICE_PER_MILLION_TOKENS_IN_EUR_DEN = 100n;
+// IONOS's actual per-token price, shared by both cost conversions below.
+const PRICE_PER_MILLION_TOKENS_IN_EUR_NUM = 71n;
+const PRICE_PER_MILLION_TOKENS_IN_EUR_DEN = 100n;
+
+export function convertTokensToCost(tokenCount: bigint | number | string): bigint {
+  const tc = parseTokenCount(tokenCount);
+
   const CONVERSION_RATE_EUR_PER_ETH = 3000n;
   const MILLION = 1_000_000n;
   const WEI_PER_ETH = 1_000_000_000_000_000_000n;
@@ -102,6 +108,19 @@ export function convertTokensToCost(tokenCount: bigint | number | string): bigin
   const denom = PRICE_PER_MILLION_TOKENS_IN_EUR_DEN * CONVERSION_RATE_EUR_PER_ETH * MILLION;
 
   return numer / denom;
+}
+
+/**
+ * Same IONOS per-token price as `convertTokensToCost`, but converted directly to
+ * USDC atomic units (6 decimals) instead of ETH wei — no EUR/ETH rate involved.
+ * USDC has 6 decimals and the price is quoted per 1,000,000 tokens, so the two
+ * 1e6 factors cancel exactly. Treats 1 EUR = 1 USDC (documented simplification,
+ * matching this codebase's existing static/approximate EUR-per-ETH rate above —
+ * no live FX oracle here either).
+ */
+export function convertTokensToUsdcCost(tokenCount: bigint | number | string): bigint {
+  const tc = parseTokenCount(tokenCount);
+  return (tc * PRICE_PER_MILLION_TOKENS_IN_EUR_NUM) / PRICE_PER_MILLION_TOKENS_IN_EUR_DEN;
 }
 
 export interface Leaf {

@@ -17,6 +17,7 @@ provider:
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
     OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
     LLM_ESTIMATED_TOKENS_PER_MESSAGE: ${env:LLM_ESTIMATED_TOKENS_PER_MESSAGE, "2000"}
+    LLM_WITHDRAW_DELAY_SECONDS: ${env:LLM_WITHDRAW_DELAY_SECONDS, "86400"}
     RECEIVER_AUTHORIZER_PRIVATE_KEY: ${env:RECEIVER_AUTHORIZER_PRIVATE_KEY}
 
 plugins:
@@ -51,7 +52,10 @@ functions:
     description: "Claims and settles accumulated x402 batch-settlement channels every 12h"
     events:
       - schedule:
-          rate: "0 */12 * * *"
+          # Scaleway's cron validator (serverless-scaleway-functions/shared/validate.js)
+          # doesn't support the standard */N step syntax (its regex requires digits on
+          # both sides of the "/") — "0/12" (start at 0, every 12h) works, "*/12" doesn't.
+          rate: "0 0/12 * * *"
   leafhistory:
     handler: dist/leaf_history.handle
   growthapi:

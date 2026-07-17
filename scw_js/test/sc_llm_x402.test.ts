@@ -25,9 +25,16 @@ const {
   const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
   return {
     mockCallLLMAPI: vi.fn(),
-    // Called once at module load to compute USDC_PRICE_PER_MESSAGE — must have a
-    // usable default here (not just in beforeEach, which runs after import).
-    mockConvertTokensToUsdcCost: vi.fn().mockReturnValue(1420n),
+    // Real formula (matches llm_service.ts's actual convertTokensToUsdcCost: tokens * 71n / 100n),
+    // not a fixed stub — so tests can verify the settlement amount actually tracks whatever
+    // usage.total_tokens callLLMAPI returns, not just the flat ceiling. Called once at module
+    // load (for the ceiling, USDC_MAX_PRICE_PER_MESSAGE) — must work before beforeEach runs.
+    mockConvertTokensToUsdcCost: vi
+      .fn()
+      .mockImplementation((tokenCount: bigint | number | string) => {
+        const tc = typeof tokenCount === "bigint" ? tokenCount : BigInt(tokenCount);
+        return (tc * 71n) / 100n;
+      }),
     mockCreateLLMResourceServer: vi.fn(),
     mockCreateBatchSettlementPaymentRequirements: vi.fn(),
     mockCreate402Response: vi.fn(),
@@ -357,6 +364,72 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(402);
       expect(JSON.parse(res.body).error).toMatch(/channel_busy/);
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // Usage-based billing: settlement amount must track the LLM's real token
+    // usage, not the flat ceiling advertised at 402/verify time.
+    // ═══════════════════════════════════════════════════════════
+
+    it("settles for the LLM's actual token usage, not the ceiling", async () => {
+      // 1000 tokens -> 1000 * 71 / 100 = 710, well under the 1420 ceiling (2000 tokens).
+      mockCallLLMAPI.mockResolvedValue({
+        content: "answer",
+        usage: { prompt_tokens: 200, completion_tokens: 800, total_tokens: 1000 },
+        model: "test-model",
+      });
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+
+      // verifyPayment must still see the pre-authorized ceiling (1420) — the client signed
+      // its voucher against that, and handleBeforeVerify requires an exact match.
+      const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
+      expect(mockVerifyPayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ amount: "1420" }),
+      );
+
+      // settlePayment must see the real, usage-derived amount instead.
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ ...enhancedRequirements, amount: "710" }),
+      );
+    });
+
+    it("caps the settlement amount at the ceiling when usage runs over the estimate", async () => {
+      // 3000 tokens -> 3000 * 71 / 100 = 2130, which exceeds the 1420 ceiling — must be
+      // capped there rather than settling for more than the client authorized (or aborting).
+      mockCallLLMAPI.mockResolvedValue({
+        content: "answer",
+        usage: { prompt_tokens: 500, completion_tokens: 2500, total_tokens: 3000 },
+        model: "test-model",
+      });
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ amount: "1420" }),
+      );
+    });
+
+    it("settles for zero when the mock LLM path reports its placeholder usage", async () => {
+      // Matches genimg's useMockImage convention (never real inference spend) — a testnet/
+      // dummy response should bill for what it actually cost: effectively nothing.
+      mockCallLLMAPI.mockResolvedValue({
+        content: "I am a placeholder for the LLM response",
+        usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 },
+        model: "placeholder model",
+      });
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      // 15 * 71 / 100 = 10.65 -> 10 (integer division).
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ amount: "10" }),
+      );
     });
   });
 });

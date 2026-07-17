@@ -22,21 +22,33 @@ interface ScwResponse {
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
-// Fixed nominal price per message, in USDC atomic units (6 decimals), derived from
-// convertTokensToUsdcCost() applied to an estimated per-message token count — not an
-// arbitrary number, but still not the request's actual usage: the SDK requires each
-// voucher's maxClaimableAmount to exactly equal chargedCumulativeAmount +
-// requirements.amount (see @x402/evm batch-settlement/server
-// handleBeforeVerify/handleBeforeSettle), so the charge must be fixed and agreed
-// *before* the client signs, before the real completion token count is known. Real
-// usage-based billing would need the SDK's corrective-402 mismatch flow (client
-// re-signs after learning the true cumulative amount) — that's Phase C+ work; this
-// estimate-derived flat rate is the correct, SDK-idiomatic choice for a server-only
-// phase.
-const ESTIMATED_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
-const USDC_PRICE_PER_MESSAGE = convertTokensToUsdcCost(
-  BigInt(ESTIMATED_TOKENS_PER_MESSAGE),
-).toString();
+// Ceiling price per message, in USDC atomic units (6 decimals) — the *maximum* a message
+// can cost, not what it actually costs. This is what the 402 advertises and what the
+// client's voucher signs against, because @x402/evm batch-settlement/server's
+// handleBeforeVerify requires an *exact* match between the voucher's signed
+// maxClaimableAmount and chargedCumulativeAmount + requirements.amount at verify time.
+// The REAL, usage-derived charge is computed after the LLM call and passed to
+// settlePayment() as a *separate*, smaller requirements.amount — handleBeforeSettle only
+// enforces chargedCumulativeAmount + requirements.amount <= voucher.maxClaimableAmount (a
+// ceiling, not equality), so verify and settle are free to use different amounts. This is
+// the "authorize an upper bound, claim the real amount" pattern the SDK's
+// setSettlementOverrides() wraps for Express apps — we do it manually here since we call
+// settlePayment() directly. See getSettleAmount() below.
+const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
+const USDC_MAX_PRICE_PER_MESSAGE = convertTokensToUsdcCost(BigInt(MAX_TOKENS_PER_MESSAGE)).toString();
+
+/**
+ * Real, usage-derived charge for this message, capped at the pre-authorized ceiling
+ * (`USDC_MAX_PRICE_PER_MESSAGE`) — a response that somehow runs over the estimate still
+ * settles for the max rather than aborting with cap_exceeded; the difference is absorbed
+ * as under-billing, not a fund-safety issue (the client is always protected by the
+ * voucher's signed ceiling).
+ */
+function getSettleAmount(totalTokens: number): string {
+  const actualCost = convertTokensToUsdcCost(totalTokens);
+  const maxCost = BigInt(USDC_MAX_PRICE_PER_MESSAGE);
+  return (actualCost > maxCost ? maxCost : actualCost).toString();
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -109,7 +121,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
       description: "AI Assistant chat message",
       mimeType: "application/json",
-      amount: USDC_PRICE_PER_MESSAGE,
+      amount: USDC_MAX_PRICE_PER_MESSAGE,
       payTo: receiverAddress,
       scheme,
     });
@@ -135,7 +147,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   const baseRequirements = {
     scheme: "batch-settlement",
     network: clientNetwork,
-    amount: USDC_PRICE_PER_MESSAGE,
+    amount: USDC_MAX_PRICE_PER_MESSAGE,
     asset: usdcConfig.address,
     payTo: receiverAddress,
     maxTimeoutSeconds: 3600,
@@ -212,11 +224,18 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // Commits chargedCumulativeAmount locally for a voucher payload (no on-chain tx, no
   // facilitator call — confirmed from @x402/evm source: handleBeforeSettle returns
   // `{ skip: true }`); for a deposit payload this is the one real on-chain settlement.
+  //
+  // Settling with a DIFFERENT (smaller, real-usage) amount than what verifyPayment() used
+  // is intentional — see getSettleAmount()'s comment above. handleBeforeSettle only checks
+  // this against the voucher's signed ceiling, not against what verify saw.
+  const settleAmount = getSettleAmount(llmData.usage.total_tokens);
+  const settleRequirements = { ...paymentRequirements, amount: settleAmount };
+
   try {
     const settlement = await resourceServer.settlePayment(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       paymentPayload as any,
-      paymentRequirements,
+      settleRequirements,
     );
     if (!settlement.success) {
       logger.error({ settlement }, "Settlement failed");
@@ -224,7 +243,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     }
 
     logger.info(
-      { usage: llmData.usage, model: llmData.model },
+      { usage: llmData.usage, model: llmData.model, settleAmount },
       "Answer generated and settled",
     );
     logger.debug({ data: llmData }, "Answer content");

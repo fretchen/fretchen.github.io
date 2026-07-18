@@ -32,3 +32,28 @@ export interface X402PaymentReceipt {
 }
 
 export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" | "success" | "error";
+
+/**
+ * x402 Payment Types for the batch-settlement LLM chat service (sc_llm_x402).
+ *
+ * Unlike the exact scheme above, chat uses batch-settlement payment channels:
+ * the first message opens a channel (one on-chain deposit), later messages are
+ * off-chain voucher signatures. See hooks/useX402Chat.ts.
+ */
+
+/** A single chat turn, matching the `data.prompt[]` contract of sc_llm_x402.ts. */
+export interface X402ChatMessage {
+  role: string;
+  content: string;
+}
+
+/** Response body from sc_llm_x402.ts on a settled request. */
+export interface X402ChatResponse {
+  content: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  model?: string;
+}

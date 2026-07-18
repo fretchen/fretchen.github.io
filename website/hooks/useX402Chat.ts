@@ -14,6 +14,7 @@
 
 import { useState, useCallback } from "react";
 import { useWalletClient, useAccount } from "wagmi";
+import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { useConfiguredPublicClient } from "./useConfiguredPublicClient";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
@@ -31,7 +32,7 @@ const X402_LLM_URL =
  * equivalent of the notebook's file/localStorage storage). Channel context is all
  * strings, so plain JSON round-trips cleanly.
  */
-class WebStorageClientChannelStorage implements ClientChannelStorage {
+export class WebStorageClientChannelStorage implements ClientChannelStorage {
   constructor(
     private backend: Storage,
     private prefix = "x402-channel:",
@@ -51,6 +52,30 @@ class WebStorageClientChannelStorage implements ClientChannelStorage {
     this.backend.removeItem(this.keyFor(key));
     return Promise.resolve();
   }
+}
+
+/**
+ * Returns a stable, locally-generated delegate signer for voucher signing, persisted to
+ * `localStorage` and keyed by the connected wallet address. Passing this as `voucherSigner`
+ * to `BatchSettlementEvmScheme` means only the channel deposit (and later top-ups) prompts
+ * the real wallet — every off-chain voucher after that signs in-memory, with no wallet popup.
+ *
+ * IMPORTANT: this key's address is baked into the channel's `payerAuthorizer` field (part of
+ * the EIP-712 struct hashed into `channelId`) at deposit time. It must stay stable for the
+ * life of an open channel — rotating it independently of the channel storage below would make
+ * the SDK compute a different channelId and silently open an unwanted new channel. Bounded
+ * risk: this key can only sign vouchers up to the currently escrowed deposit (never pull in
+ * additional funds) and can request a cooperative refund, which returns funds to the real
+ * wallet, not an attacker — same plaintext-localStorage trust model as the channel state below.
+ */
+function getOrCreateVoucherSigner(walletAddress: string) {
+  const storageKey = `x402-voucher-signer:${walletAddress.toLowerCase()}`;
+  let privateKey = window.localStorage.getItem(storageKey) as `0x${string}` | null;
+  if (!privateKey) {
+    privateKey = generatePrivateKey();
+    window.localStorage.setItem(storageKey, privateKey);
+  }
+  return privateKeyToAccount(privateKey);
 }
 
 export interface UseX402ChatResult {
@@ -113,7 +138,10 @@ export function useX402Chat(network: string): UseX402ChatResult {
 
         // === Batch-settlement scheme (no register helper) + localStorage channel store ===
         const storage = new WebStorageClientChannelStorage(window.localStorage);
-        const scheme = new BatchSettlementEvmScheme(signer, { storage });
+        // Delegate voucher signing to a persisted local key so only the deposit/top-up
+        // prompts the real wallet — see getOrCreateVoucherSigner's doc comment.
+        const voucherSigner = getOrCreateVoucherSigner(walletClient.account.address);
+        const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner });
 
         const client = new x402Client();
         client.register(network, scheme);

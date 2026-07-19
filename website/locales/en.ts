@@ -111,6 +111,7 @@ export default {
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",
+    viewPayment: "View payment",
   },
   walletoptions: {
     connect: "Connect",

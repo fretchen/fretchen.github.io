@@ -12,7 +12,7 @@
  */
 
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toCAIP2, fromCAIP2 } from "@fretchen/chain-utils";
 
 interface UseAutoNetworkResult {
@@ -22,6 +22,15 @@ interface UseAutoNetworkResult {
   isOnCorrectNetwork: boolean;
   /** Call before submitting a transaction - switches chain if needed */
   switchIfNeeded: () => Promise<boolean>;
+  /**
+   * The error message from the most recent failed switchIfNeeded() call, if any.
+   * Null on success or before any switch attempt. Useful for surfacing why a switch
+   * failed instead of a generic "please switch" message — e.g. a wallet connector
+   * without automatic `wallet_addEthereumChain` fallback (some WalletConnect-linked
+   * wallets) will reject with the raw "Unrecognized chain ID" RPC error here, whereas
+   * MetaMask's own injected connector recovers from that automatically (see switchIfNeeded).
+   */
+  switchError: string | null;
 }
 
 /**
@@ -49,6 +58,7 @@ export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNet
   const chainId = useChainId();
   const { isConnected } = useAccount();
   const { switchChainAsync } = useSwitchChain();
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const defaultNetwork = supportedNetworks[0];
   const currentNetwork = toCAIP2(chainId);
@@ -64,12 +74,19 @@ export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNet
     // Not connected - nothing to switch
     if (!isConnected) return true;
 
-    // Try to switch
+    // Try to switch. If the wallet doesn't know this chain yet, MetaMask (and any
+    // wallet using wagmi's generic injected connector) rejects the switch with RPC
+    // error 4902 and the connector automatically retries via `wallet_addEthereumChain`
+    // before switching — i.e. two separate wallet approval prompts before the switch
+    // resolves. That's expected, not a bug; not every connector has this fallback
+    // (e.g. some WalletConnect-linked wallets), so a failure here is still possible.
     try {
       await switchChainAsync({ chainId: fromCAIP2(defaultNetwork) });
+      setSwitchError(null);
       return true;
-    } catch {
-      // User rejected or error
+    } catch (err) {
+      // User rejected, or the wallet couldn't add/switch to the chain
+      setSwitchError(err instanceof Error ? err.message : "Failed to switch network");
       return false;
     }
   }, [isSupported, isConnected, switchChainAsync, defaultNetwork]);
@@ -78,5 +95,6 @@ export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNet
     network,
     isOnCorrectNetwork: isSupported,
     switchIfNeeded,
+    switchError,
   };
 }

@@ -187,6 +187,41 @@ describe("useX402Chat", () => {
       expect(result.current.paymentReceipt).toEqual({ transaction: "0xdeposit", network: NETWORK });
     });
 
+    it("keeps the deposit receipt after a later voucher-only message returns an empty transaction", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }))),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      // First message: channel deposit, real tx hash.
+      mockGetPaymentSettleResponse.mockReturnValueOnce({
+        success: true,
+        transaction: "0xdeposit",
+        network: NETWORK,
+      });
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "First" }]);
+      });
+      expect(result.current.paymentReceipt).toEqual({ transaction: "0xdeposit", network: NETWORK });
+
+      // Second message: voucher-only settlement — real server returns transaction: "".
+      mockGetPaymentSettleResponse.mockReturnValueOnce({
+        success: true,
+        transaction: "",
+        network: NETWORK,
+      });
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Second" }]);
+      });
+
+      // The deposit receipt must survive — it's still the valid, open channel's tx.
+      expect(result.current.paymentReceipt).toEqual({ transaction: "0xdeposit", network: NETWORK });
+    });
+
     it("sets status to error and rethrows when the server responds with a failure", async () => {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("payment failed", { status: 402 })));
 

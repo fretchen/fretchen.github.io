@@ -116,7 +116,10 @@ export function useX402Chat(network: string): UseX402ChatResult {
 
       setStatus("awaiting-signature");
       setError(null);
-      setPaymentReceipt(null);
+      // Don't clear paymentReceipt here: it represents the currently-open channel's
+      // deposit tx, which stays valid across every message until the channel closes.
+      // Voucher-only settlements report transaction: "" (see extraction below), so
+      // clearing here would blank the link on every message after the first.
 
       try {
         // === Dynamic imports (browser-only, like the notebook) ===
@@ -198,7 +201,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
         try {
           const httpClient = new x402HTTPClient(client);
           const receipt = httpClient.getPaymentSettleResponse((name: string) => response.headers.get(name));
-          if (receipt) {
+          if (receipt?.transaction) {
             setPaymentReceipt({ transaction: receipt.transaction, network: receipt.network });
           }
         } catch {

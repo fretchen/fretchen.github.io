@@ -1,5 +1,3 @@
-// @ts-check
-
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   getFeeAmount,
@@ -7,6 +5,17 @@ import {
   checkMerchantAllowance,
   collectFee,
 } from "../x402_fee.js";
+import type { createPublicClient, getContract } from "viem";
+
+// Test mocks only implement the subset of the viem client/contract surface that
+// x402_fee.ts actually calls — cast through `unknown` rather than satisfying the
+// full (much larger) viem return types.
+function mockContract(shape: Record<string, unknown>) {
+  return shape as unknown as ReturnType<typeof getContract>;
+}
+function mockPublicClient(shape: Record<string, unknown>) {
+  return shape as unknown as ReturnType<typeof createPublicClient>;
+}
 
 // Mock viem
 vi.mock("viem", async () => {
@@ -137,11 +146,13 @@ describe("x402_fee", () => {
 
     it("returns sufficient=true when allowance exceeds fee", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        read: {
-          allowance: vi.fn().mockResolvedValue(100000n), // 0.10 USDC
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(100000n), // 0.10 USDC
+          },
+        }),
+      );
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
@@ -152,11 +163,13 @@ describe("x402_fee", () => {
 
     it("returns sufficient=false when allowance is zero", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        read: {
-          allowance: vi.fn().mockResolvedValue(0n),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(0n),
+          },
+        }),
+      );
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
@@ -167,11 +180,13 @@ describe("x402_fee", () => {
 
     it("returns sufficient=false when allowance is less than fee", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        read: {
-          allowance: vi.fn().mockResolvedValue(5000n), // Half the fee
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(5000n), // Half the fee
+          },
+        }),
+      );
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
@@ -199,11 +214,13 @@ describe("x402_fee", () => {
 
     it("handles RPC errors gracefully (fails open — does not block payment)", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        read: {
-          allowance: vi.fn().mockRejectedValue(new Error("RPC timeout")),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockRejectedValue(new Error("RPC timeout")),
+          },
+        }),
+      );
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
@@ -215,11 +232,13 @@ describe("x402_fee", () => {
 
     it("correctly calculates remaining settlements", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        read: {
-          allowance: vi.fn().mockResolvedValue(35000n), // 3.5 fees
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(35000n), // 3.5 fees
+          },
+        }),
+      );
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
@@ -257,18 +276,22 @@ describe("x402_fee", () => {
       const mockTxHash = "0xfee1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
       const { getContract, createPublicClient } = await import("viem");
 
-      vi.mocked(createPublicClient).mockReturnValue({
-        waitForTransactionReceipt: vi.fn(async () => ({
-          status: "success",
-          transactionHash: mockTxHash,
-        })),
-      });
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
 
-      vi.mocked(getContract).mockReturnValue({
-        write: {
-          transferFrom: vi.fn().mockResolvedValue(mockTxHash),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
 
       const result = await collectFee(merchant, "eip155:11155420");
 
@@ -280,18 +303,22 @@ describe("x402_fee", () => {
       const mockTxHash = "0xfail234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
       const { getContract, createPublicClient } = await import("viem");
 
-      vi.mocked(createPublicClient).mockReturnValue({
-        waitForTransactionReceipt: vi.fn(async () => ({
-          status: "reverted",
-          transactionHash: mockTxHash,
-        })),
-      });
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "reverted",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
 
-      vi.mocked(getContract).mockReturnValue({
-        write: {
-          transferFrom: vi.fn().mockResolvedValue(mockTxHash),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
 
       const result = await collectFee(merchant, "eip155:11155420");
 
@@ -302,11 +329,13 @@ describe("x402_fee", () => {
 
     it("returns insufficient_fee_allowance error", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        write: {
-          transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientAllowance")),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientAllowance")),
+          },
+        }),
+      );
 
       const result = await collectFee(merchant, "eip155:11155420");
 
@@ -316,11 +345,13 @@ describe("x402_fee", () => {
 
     it("returns insufficient_merchant_balance error", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        write: {
-          transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientBalance")),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientBalance")),
+          },
+        }),
+      );
 
       const result = await collectFee(merchant, "eip155:11155420");
 
@@ -330,11 +361,13 @@ describe("x402_fee", () => {
 
     it("returns generic error for unknown failures", async () => {
       const { getContract } = await import("viem");
-      vi.mocked(getContract).mockReturnValue({
-        write: {
-          transferFrom: vi.fn().mockRejectedValue(new Error("Network error")),
-        },
-      });
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockRejectedValue(new Error("Network error")),
+          },
+        }),
+      );
 
       const result = await collectFee(merchant, "eip155:11155420");
 

@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { handleVerify, handleSettle, handleSupported, handle } from "../x402_facilitator.ts";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { handleVerify, handleSettle, handleSupported, handle } from "../x402_facilitator.js";
+import type { verifyPayment as verifyPaymentType } from "../x402_verify.js";
+import type { settlePayment as settlePaymentType } from "../x402_settle.js";
 
 // Mock the dependencies
 vi.mock("../x402_verify.js", () => ({
@@ -23,15 +25,15 @@ vi.mock("../x402_supported.js", () => ({
 }));
 
 describe("x402_facilitator handlers", () => {
-  let verifyPayment;
-  let settlePayment;
+  let verifyPayment: Mock<typeof verifyPaymentType>;
+  let settlePayment: Mock<typeof settlePaymentType>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     const verifyModule = await import("../x402_verify.js");
     const settleModule = await import("../x402_settle.js");
-    verifyPayment = verifyModule.verifyPayment;
-    settlePayment = settleModule.settlePayment;
+    verifyPayment = verifyModule.verifyPayment as Mock<typeof verifyPaymentType>;
+    settlePayment = settleModule.settlePayment as Mock<typeof settlePaymentType>;
   });
 
   afterEach(() => {

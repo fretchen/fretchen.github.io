@@ -218,6 +218,10 @@ async function handlePaymentRequest(
         logger.warn(
           {
             errorReason: result.errorReason,
+            // Underlying SDK detail (e.g. the decoded revert reason). Logged only —
+            // deliberately omitted from the response body below, which returns the
+            // stable `errorReason` code instead. See SettleResult.errorMessage.
+            errorMessage: result.errorMessage,
             payer: result.payer,
           },
           "Settlement failed",

@@ -134,8 +134,13 @@ export type { USDCConfig };
 export * from "./abi";
 
 // ═══════════════════════════════════════════════════════════════
-// Key Utilities
+// Environment Utilities (Node-only — read process.env, see env-utils.ts)
 // ═══════════════════════════════════════════════════════════════
 
-export { loadPrivateKey } from "./key-utils";
+export { loadPrivateKey, getRpcUrl } from "./env-utils";
+
+// ═══════════════════════════════════════════════════════════════
+// Auth Protocol (isomorphic — shared by scw_js and website)
+// ═══════════════════════════════════════════════════════════════
+
 export { AUTH_TOKEN_MAX_AGE_MS, buildAuthMessage } from "./auth-protocol";

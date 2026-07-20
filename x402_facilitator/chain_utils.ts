@@ -20,22 +20,10 @@ export interface ChainConfig {
   USDC_NAME: string;
 }
 
-/**
- * Optional per-network RPC endpoint, read from `RPC_URL_<NETWORK>` — e.g.
- * `RPC_URL_EIP155_8453` for Base mainnet. Returns `undefined` when unset, which
- * makes viem's `http()` fall back to the chain's default public endpoint.
- *
- * Configure this for any network carrying real traffic. The public defaults
- * (e.g. `https://mainnet.base.org`) are aggressively rate-limited: a single
- * batch-settlement deposit issues a Multicall3 batch of channel-state reads and
- * comes back `over rate limit`, which surfaces as the generic
- * `..._deposit_transaction_failed` even though nothing was ever submitted
- * on-chain. It also explains multi-second latency on otherwise trivial reads.
- */
-export function getRpcUrl(network: string): string | undefined {
-  const key = `RPC_URL_${network.replace(/[:-]/g, "_").toUpperCase()}`;
-  return process.env[key] || undefined;
-}
+// Per-network RPC endpoint resolution lives in the shared package so `scw_js` (which
+// has the same bare-`http()` exposure) uses one implementation and one env-var
+// convention. Re-exported here so existing local imports keep working.
+export { getRpcUrl } from "@fretchen/chain-utils";
 
 /**
  * Get chain configuration including contract addresses

@@ -450,8 +450,8 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
 
         <p>
           The fee amount and facilitator address are advertised in the <code>/supported</code> endpoint in the{" "}
-          <code>facilitatorFees</code> object (with the <code>facilitator_fee</code> and{" "}
-          <code>facilitatorFees</code> keys listed under <code>extensions</code>).
+          <code>facilitatorFees</code> object (with the <code>facilitator_fee</code> and <code>facilitatorFees</code>{" "}
+          keys listed under <code>extensions</code>).
         </p>
 
         {/* ── 4. How it works ──────────────────────────────────────────── */}

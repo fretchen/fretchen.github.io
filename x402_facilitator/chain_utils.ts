@@ -11,6 +11,7 @@ import {
   tryGetEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
+  type Network,
 } from "@fretchen/chain-utils";
 
 export interface ChainConfig {
@@ -44,7 +45,7 @@ export function getChainConfig(network: string): ChainConfig {
  * Get all supported networks
  * @returns Array of supported CAIP-2 network identifiers
  */
-export function getSupportedNetworks(): string[] {
+export function getSupportedNetworks(): Network[] {
   return ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
 }
 
@@ -63,6 +64,6 @@ export function getSupportedNetworks(): string[] {
  * against it would fail on-chain.
  * @returns Array of CAIP-2 network identifiers with a deployed batch-settlement contract
  */
-export function getBatchSettlementNetworks(): string[] {
+export function getBatchSettlementNetworks(): Network[] {
   return ["eip155:10", "eip155:8453", "eip155:84532"];
 }

@@ -7,36 +7,50 @@ import { formatUnits } from "viem";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
 import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 
-/** Facilitator fee model disclosure per x402 Fee Disclosure proposal (coinbase/x402#1016) */
-interface FacilitatorFeesExtension {
-  name: string;
+/**
+ * Facilitator fee disclosure, per x402 Fee Disclosure proposal (coinbase/x402#1016).
+ *
+ * Wire-format note: the base x402 `SupportedResponse.extensions` is `string[]` (a list
+ * of extension KEY names). We advertise the key `"facilitatorFees"` in that array and
+ * carry the machine-readable detail in this top-level sibling object — mirroring the
+ * `/settle` response, whose `extensions` map also nests a `facilitatorFees` receipt.
+ * This keeps `/supported` conformant with the SDK type while still disclosing the fee
+ * model for fee-aware multi-facilitator routing.
+ */
+interface FacilitatorFeesDisclosure {
   version: string;
   model: string;
   asset: string;
   flatFee: string;
   decimals: number;
+  /** Facilitator address that collects the fee (fee recipient / approval spender). */
+  recipient: string;
+  /** CAIP-2 networks this fee model applies to. */
   networks: string[];
-}
-
-interface FeeExtension {
-  name: string;
-  description: string;
   fee: {
     amount: string;
-    asset: string;
-    decimals: number;
     description: string;
     collection: string;
-    recipient: string | null;
   };
   setup: {
     description: string;
     function: string;
-    spender: string | null;
+    spender: string;
     recommended_amount: string;
   };
 }
 
+/** Extension key advertised in `extensions` when a fee is configured. */
+const FACILITATOR_FEE_EXTENSION_KEY = "facilitator_fee";
+const FACILITATOR_FEES_EXTENSION_KEY = "facilitatorFees";
+
+/**
+ * Shape of our `/supported` response. Matches `x402Facilitator.getSupported()` (whose
+ * `extensions` is `string[]`) plus our optional top-level `facilitatorFees` disclosure.
+ * `network` is `string` here to match the class's return type; the base SDK
+ * `SupportedResponse` narrows it to `Network`, but that distinction is irrelevant to
+ * this response and forcing it would require casting the base return.
+ */
 interface SupportedCapabilities {
   kinds: Array<{
     x402Version: number;
@@ -44,8 +58,10 @@ interface SupportedCapabilities {
     network: string;
     extra?: Record<string, unknown>;
   }>;
-  extensions: Array<FeeExtension | FacilitatorFeesExtension | Record<string, unknown>>;
+  extensions: string[];
   signers: Record<string, string[]>;
+  /** Present only when a fee is configured (feeAmount > 0 and a facilitator key exists). */
+  facilitatorFees?: FacilitatorFeesDisclosure;
 }
 
 /**
@@ -55,28 +71,35 @@ interface SupportedCapabilities {
 export function getSupportedCapabilities(): SupportedCapabilities {
   const facilitator = createReadOnlyFacilitator();
 
-  // Get base supported capabilities from facilitator
-  const supported = facilitator.getSupported() as SupportedCapabilities;
+  // Base response: { kinds, extensions: string[], signers }
+  const base = facilitator.getSupported();
+  const supported: SupportedCapabilities = {
+    ...base,
+    extensions: [...(base.extensions ?? [])],
+  };
 
-  // Ensure extensions array exists
-  supported.extensions = supported.extensions || [];
-
-  // Add fee extension for public access
   const feeAmount = getFeeAmount();
   const facilitatorAddress = getFacilitatorAddress();
 
+  // Advertise the fee only when it is actually chargeable: a positive amount AND a
+  // configured facilitator address to collect it. In read-only mode (no key) both the
+  // extension keys and the disclosure object are omitted.
   if (feeAmount > 0n && facilitatorAddress) {
-    const feeExtension: FeeExtension = {
-      name: "facilitator_fee",
-      description:
-        "Per-transaction fee for facilitator operation. Merchants must approve USDC spending for the facilitator address. Fee is collected post-settlement via ERC-20 transferFrom.",
+    supported.extensions.push(FACILITATOR_FEE_EXTENSION_KEY, FACILITATOR_FEES_EXTENSION_KEY);
+
+    // Derive networks from `kinds` to stay consistent with the advertised response.
+    supported.facilitatorFees = {
+      version: "1",
+      model: "flat",
+      asset: "USDC",
+      flatFee: feeAmount.toString(),
+      decimals: 6,
+      recipient: facilitatorAddress,
+      networks: [...new Set(supported.kinds.map((k) => k.network))],
       fee: {
         amount: feeAmount.toString(),
-        asset: "USDC",
-        decimals: 6,
         description: `${formatUnits(feeAmount, 6)} USDC per settlement`,
         collection: "post_settlement_transferFrom",
-        recipient: facilitatorAddress,
       },
       setup: {
         description:
@@ -86,21 +109,6 @@ export function getSupportedCapabilities(): SupportedCapabilities {
         recommended_amount: "100000000", // 100 USDC = 10,000 settlements
       },
     };
-    supported.extensions.push(feeExtension);
-
-    // Add facilitatorFees extension per x402 Fee Disclosure proposal (#1016)
-    // Static fee model disclosure for fee-aware multi-facilitator routing
-    // Derive networks from supported.kinds to stay consistent with the response
-    const facilitatorFeesExtension: FacilitatorFeesExtension = {
-      name: "facilitatorFees",
-      version: "1",
-      model: "flat",
-      asset: "USDC",
-      flatFee: feeAmount.toString(),
-      decimals: 6,
-      networks: [...new Set(supported.kinds.map((k) => k.network))],
-    };
-    supported.extensions.push(facilitatorFeesExtension);
   }
 
   return supported;

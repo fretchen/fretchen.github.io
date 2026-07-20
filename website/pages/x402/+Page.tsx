@@ -449,8 +449,9 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <MermaidDiagram definition={feeFlowDiagram} title="Fee Collection Flow" />
 
         <p>
-          The fee amount and facilitator address are advertised in the <code>/supported</code> endpoint under the{" "}
-          <code>facilitator_fee</code> extension.
+          The fee amount and facilitator address are advertised in the <code>/supported</code> endpoint in the{" "}
+          <code>facilitatorFees</code> object (with the <code>facilitator_fee</code> and{" "}
+          <code>facilitatorFees</code> keys listed under <code>extensions</code>).
         </p>
 
         {/* ── 4. How it works ──────────────────────────────────────────── */}
@@ -556,8 +557,9 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
             <code>{`curl https://facilitator.fretchen.eu/supported`}</code>
           </pre>
           <p>
-            Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code> (fee
-            configuration), and <code>signers</code> (facilitator addresses per network).
+            Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code>{" "}
+            (advertised extension keys), <code>signers</code> (facilitator addresses per network), and{" "}
+            <code>facilitatorFees</code> (fee amount and recipient, when a fee is configured).
           </p>
         </div>
 

@@ -120,48 +120,51 @@ describe("x402 /supported endpoint", () => {
     ]);
   });
 
-  test("includes facilitator_fee extension", () => {
+  test("advertises fee extension keys (spec-conformant string[] extensions)", () => {
     // Ensure a valid private key is set
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
     const capabilities = getSupportedCapabilities();
 
-    expect(capabilities.extensions).toBeDefined();
-    expect(capabilities.extensions.length).toBeGreaterThan(0);
-
-    const feeExtension = capabilities.extensions.find((e) => e.name === "facilitator_fee");
-    expect(feeExtension).toBeDefined();
-    expect(feeExtension.description).toBeDefined();
-    expect(feeExtension.fee.recipient).toBeDefined();
-    expect(feeExtension.fee.recipient).not.toBeNull();
-    expect(feeExtension.setup.spender).not.toBeNull();
+    // `extensions` is a list of extension KEY strings, per the x402 SupportedResponse type.
+    expect(Array.isArray(capabilities.extensions)).toBe(true);
+    expect(capabilities.extensions).toContain("facilitator_fee");
+    expect(capabilities.extensions).toContain("facilitatorFees");
+    // No objects leak into the array.
+    capabilities.extensions.forEach((e) => expect(typeof e).toBe("string"));
   });
 
-  test("includes facilitatorFees extension for fee-aware routing (#1016)", () => {
+  test("discloses fee detail in the top-level facilitatorFees object (#1016)", () => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
     const capabilities = getSupportedCapabilities();
 
-    const feesExtension = capabilities.extensions.find((e) => e.name === "facilitatorFees");
-    expect(feesExtension).toBeDefined();
-    expect(feesExtension.version).toBe("1");
-    expect(feesExtension.model).toBe("flat");
-    expect(feesExtension.asset).toBe("USDC");
-    expect(feesExtension.flatFee).toBe("10000");
-    expect(feesExtension.decimals).toBe(6);
-    expect(feesExtension.networks).toContain("eip155:10");
-    expect(feesExtension.networks).toContain("eip155:8453");
-    expect(feesExtension.networks).toContain("eip155:11155420");
-    expect(feesExtension.networks).toContain("eip155:84532");
+    const fees = capabilities.facilitatorFees;
+    expect(fees).toBeDefined();
+    expect(fees.version).toBe("1");
+    expect(fees.model).toBe("flat");
+    expect(fees.asset).toBe("USDC");
+    expect(fees.flatFee).toBe("10000");
+    expect(fees.decimals).toBe(6);
+    // Facilitator address (fee recipient / approval spender) lives here now, not in `extensions`.
+    expect(fees.recipient).toBeDefined();
+    expect(fees.recipient).not.toBeNull();
+    expect(fees.setup.spender).toBe(fees.recipient);
+    expect(fees.fee.collection).toBe("post_settlement_transferFrom");
+    expect(fees.networks).toContain("eip155:10");
+    expect(fees.networks).toContain("eip155:8453");
+    expect(fees.networks).toContain("eip155:11155420");
+    expect(fees.networks).toContain("eip155:84532");
   });
 
-  test("omits facilitator_fee extension when private key is missing", () => {
+  test("omits fee extension keys and disclosure when private key is missing", () => {
     delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
     const capabilities = getSupportedCapabilities();
 
-    const feeExtension = capabilities.extensions.find((e) => e.name === "facilitator_fee");
-    expect(feeExtension).toBeUndefined();
+    expect(capabilities.extensions).not.toContain("facilitator_fee");
+    expect(capabilities.extensions).not.toContain("facilitatorFees");
+    expect(capabilities.facilitatorFees).toBeUndefined();
   });
 });

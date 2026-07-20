@@ -69,21 +69,24 @@ vi.mock("../styled-system/css", () => ({
   css: vi.fn((..._args: unknown[]) => "mock-css-class"),
 }));
 
-// Mock global fetch for /supported endpoint
+// Mock global fetch for /supported endpoint.
+// `extensions` is a spec-conformant string[] of extension keys; the facilitator address
+// is disclosed in the top-level `facilitatorFees` object.
 const MOCK_SUPPORTED_RESPONSE = {
   kinds: [
     { x402Version: 2, scheme: "exact", network: "eip155:10" },
     { x402Version: 2, scheme: "exact", network: "eip155:8453" },
   ],
-  extensions: [
-    {
-      name: "facilitator_fee",
-      fee: {
-        amount: "10000",
-        recipient: "0xFacilitatorAddress1234567890123456789012",
-      },
-    },
-  ],
+  extensions: ["facilitator_fee", "facilitatorFees"],
+  facilitatorFees: {
+    version: "1",
+    model: "flat",
+    asset: "USDC",
+    flatFee: "10000",
+    decimals: 6,
+    recipient: "0xFacilitatorAddress1234567890123456789012",
+    networks: ["eip155:10", "eip155:8453"],
+  },
 };
 
 const FACILITATOR_ADDRESS = "0xFacilitatorAddress1234567890123456789012";
@@ -398,7 +401,9 @@ describe("FacilitatorApproval", () => {
       });
     });
 
-    it("shows error when /supported response has no fee extension", async () => {
+    it("shows error when /supported response has no facilitatorFees disclosure", async () => {
+      // Read-only facilitator (no fee configured): extension keys and the
+      // facilitatorFees object are both absent, so no address can be resolved.
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ kinds: [], extensions: [] }),

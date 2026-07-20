@@ -57,7 +57,11 @@ function createSignerForNetwork(account: Account, network: string) {
         ...args,
         args: args.args || [],
       }),
-    verifyTypedData: (args) => publicClient.verifyTypedData(args),
+    // The SDK's FacilitatorEvmSigner.verifyTypedData types `types` loosely as
+    // Record<string, unknown>; viem's VerifyTypedDataParameters wants the strict
+    // TypedDataParameter mapping. Runtime-correct pass-through — cast at the boundary.
+    verifyTypedData: (args) =>
+      publicClient.verifyTypedData(args as Parameters<typeof publicClient.verifyTypedData>[0]),
     writeContract: (args) =>
       walletClient.writeContract({
         ...args,
@@ -94,7 +98,11 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
           ...args,
           args: args.args || [],
         }),
-      verifyTypedData: (args) => publicClient.verifyTypedData(args),
+      // The SDK's FacilitatorEvmSigner.verifyTypedData types `types` loosely as
+    // Record<string, unknown>; viem's VerifyTypedDataParameters wants the strict
+    // TypedDataParameter mapping. Runtime-correct pass-through — cast at the boundary.
+    verifyTypedData: (args) =>
+      publicClient.verifyTypedData(args as Parameters<typeof publicClient.verifyTypedData>[0]),
       writeContract: () => {
         throw new Error("Read-only facilitator cannot write contracts");
       },
@@ -191,8 +199,31 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       return;
     }
 
-    const network = paymentPayload.accepted?.network;
-    const recipient = paymentPayload.payload?.authorization?.to as string | undefined;
+    // The `exact` scheme accepts two payload shapes (@x402/evm ExactEvmPayloadV2):
+    // EIP-3009 (`authorization`) and Permit2 (`permit2Authorization`). We only support
+    // the EIP-3009 variant. Permit2 is unsupported on three independent axes:
+    //   1. the fee model below (post-settlement USDC transferFrom) was never designed
+    //      or tested for it — the recipient lives at permit2Authorization.witness.to,
+    //      not authorization.to;
+    //   2. the x402 Permit2 proxy is a single hardcoded address with no per-network
+    //      deployment registry in the SDK (cf. getBatchSettlementNetworks(), where we
+    //      maintain our own list precisely because the SDK doesn't track deployment);
+    //   3. no end-to-end coverage exists for it here.
+    // Reject explicitly with a dedicated reason rather than a misleading generic
+    // `invalid_payload`. Discriminator matches the SDK's isPermit2Payload().
+    if ("permit2Authorization" in (paymentPayload.payload ?? {})) {
+      logger.warn("Permit2 payload rejected — only the EIP-3009 exact variant is supported");
+      result.isValid = false;
+      result.invalidReason = "permit2_not_supported";
+      return;
+    }
+
+    // Gate on `requirements`, NOT on the client's payload envelope — consistent with the
+    // batch-settlement branch above. verifyEIP3009 already enforced
+    // `authorization.to === requirements.payTo` (ErrRecipientMismatch) before this hook
+    // runs, so requirements.payTo is the same value, shape-independent, not client-set.
+    const network = requirements?.network;
+    const recipient = requirements?.payTo as string | undefined;
 
     if (!network || !recipient) {
       logger.warn("Missing network or recipient after verification");

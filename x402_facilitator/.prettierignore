@@ -1,0 +1,19 @@
+node_modules/
+coverage/
+dist/
+build/
+*.min.js
+*.bundle.js
+package-lock.json
+yarn.lock
+.git/
+.vscode/
+.env
+*.log
+# Python envs under notebooks/ (e.g. notebooks/.venv) — not JS, and huge.
+.venv/
+.ruff_cache/
+__pycache__/
+*.ipynb
+# Vendored / draft upstream material — not our source to format.
+upstream/

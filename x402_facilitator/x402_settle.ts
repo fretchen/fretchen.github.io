@@ -299,6 +299,8 @@ export async function settlePayment(
     }
 
     const payload = paymentPayload.payload as Record<string, unknown> | undefined;
+    // EIP-3009 shape only. Permit2 payloads (payer at permit2Authorization.from) are
+    // rejected at verify time (permit2_not_supported), so they never reach settle.
     const authorization = payload?.authorization as Record<string, unknown> | undefined;
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 

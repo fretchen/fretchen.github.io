@@ -19,7 +19,12 @@ import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator
 import pino from "pino";
 import { loadPrivateKey } from "@fretchen/chain-utils";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
-import { getChainConfig, getSupportedNetworks, getBatchSettlementNetworks } from "./chain_utils";
+import {
+  getChainConfig,
+  getSupportedNetworks,
+  getBatchSettlementNetworks,
+  getRpcUrl,
+} from "./chain_utils";
 import { isRecipientWhitelisted } from "./x402_whitelist";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -30,16 +35,19 @@ const logger = pino({ level: process.env.LOG_LEVEL || "info" });
  */
 function createSignerForNetwork(account: Account, network: string) {
   const config = getChainConfig(network);
+  // Falls back to the chain's public endpoint when unset — fine for testnets, but
+  // set RPC_URL_<NETWORK> for anything carrying real traffic (see getRpcUrl).
+  const rpcUrl = getRpcUrl(network);
 
   const publicClient = createPublicClient({
     chain: config.chain,
-    transport: http(),
+    transport: http(rpcUrl),
   });
 
   const walletClient = createWalletClient({
     account,
     chain: config.chain,
-    transport: http(),
+    transport: http(rpcUrl),
   });
 
   return toFacilitatorEvmSigner({
@@ -72,7 +80,7 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
 
     const publicClient = createPublicClient({
       chain: config.chain,
-      transport: http(),
+      transport: http(getRpcUrl(network)),
     });
 
     const readOnlySigner = toFacilitatorEvmSigner({

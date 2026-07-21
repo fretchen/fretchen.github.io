@@ -27,6 +27,8 @@ import {
   getGenAiNFTTestnetNetworks,
   getViemChain,
   getUSDCConfig,
+  getRpcUrl,
+  toCAIP2,
 } from "@fretchen/chain-utils";
 
 // USDC contracts expose name() and version() functions for EIP-712 domain
@@ -233,9 +235,16 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
    * @returns {Promise<{name: string, version: string}>}
    */
   async function readOnChainDomain(chain, contractAddress) {
+    // Uses RPC_URL_<NETWORK> when configured (see getRpcUrl in @fretchen/chain-utils)
+    // instead of viem's public default. This is the actual, concrete verification
+    // that a dedicated RPC provider (e.g. Alchemy) works end-to-end: set
+    // RPC_URL_EIP155_10 to a real Alchemy URL locally, leave SKIP_RPC_TESTS unset,
+    // and re-run this suite — the withRetry/backoff helper above exists precisely
+    // because the public endpoints rate-limit under repeated calls like these; a
+    // dedicated provider sidesteps that instead of just retrying through it.
     const client = createPublicClient({
       chain,
-      transport: http(),
+      transport: http(getRpcUrl(toCAIP2(chain.id))),
     });
 
     const name = await withRetry(() =>

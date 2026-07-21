@@ -25,16 +25,32 @@ const {
   const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
   return {
     mockCallLLMAPI: vi.fn(),
-    // Real formula (matches llm_service.ts's actual convertTokensToUsdcCost: tokens * 71n / 100n),
-    // not a fixed stub — so tests can verify the settlement amount actually tracks whatever
-    // usage.total_tokens callLLMAPI returns, not just the flat ceiling. Called once at module
-    // load (for the ceiling, USDC_MAX_PRICE_PER_MESSAGE) — must work before beforeEach runs.
-    mockConvertTokensToUsdcCost: vi
-      .fn()
-      .mockImplementation((tokenCount: bigint | number | string) => {
-        const tc = typeof tokenCount === "bigint" ? tokenCount : BigInt(tokenCount);
-        return (tc * 71n) / 100n;
-      }),
+    // Real formula (matches llm_service.ts's actual convertTokensToUsdcCost: separate
+    // input/output rates per provider — see LLM_PROVIDERS there), not a fixed stub — so
+    // tests can verify the settlement amount actually tracks whatever usage callLLMAPI
+    // returns, not just the flat ceiling. Called once at module load (for the ceiling,
+    // USDC_MAX_PRICE_PER_MESSAGE) — must work before beforeEach runs. Simplified to a
+    // single shared denominator (valid since both providers below have inDen === outDen
+    // === 100n today; the real implementation cross-multiplies to not assume that).
+    mockConvertTokensToUsdcCost: vi.fn().mockImplementation(
+      (
+        usage: {
+          prompt_tokens: bigint | number | string;
+          completion_tokens: bigint | number | string;
+        },
+        provider: string,
+      ) => {
+        const RATES: Record<string, { in: bigint; out: bigint; den: bigint }> = {
+          ionos: { in: 71n, out: 71n, den: 100n },
+          mistral: { in: 50n, out: 150n, den: 100n },
+        };
+        const rate = RATES[provider];
+        if (!rate) throw new Error(`Unknown LLM provider: ${provider}`);
+        const p = BigInt(usage.prompt_tokens);
+        const c = BigInt(usage.completion_tokens);
+        return (p * rate.in + c * rate.out) / rate.den;
+      },
+    ),
     mockCreateLLMResourceServer: vi.fn(),
     mockCreateBatchSettlementPaymentRequirements: vi.fn(),
     mockCreate402Response: vi.fn(),
@@ -208,8 +224,10 @@ describe("sc_llm_x402", () => {
     it("returns a 402 built from createBatchSettlementPaymentRequirements", async () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(402);
+      // Ceiling: the whole 2000-token estimate priced as completion (output) tokens
+      // at Mistral's $1.50/M rate — 2000 * 150 / 100 = 3000.
       expect(mockCreateBatchSettlementPaymentRequirements).toHaveBeenCalledWith(
-        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: mockScheme, amount: "1420" }),
+        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: mockScheme, amount: "3000" }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();
     });
@@ -311,7 +329,8 @@ describe("sc_llm_x402", () => {
       mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload); // eip155:84532
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
-      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true);
+      // Third arg is the fixed provider — this endpoint always uses Mistral, live or mock.
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral");
     });
 
     it("uses the real LLM path on a mainnet payment", async () => {
@@ -321,7 +340,59 @@ describe("sc_llm_x402", () => {
       });
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
-      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral");
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // SECURITY: testnet must never reach the real Mistral API — see the guard
+    // in sc_llm_x402.ts. Absent/true stay mocked (unaffected, both real callers
+    // — website + notebook — never send useDummyData at all); an explicit
+    // false is a caller error, rejected outright rather than silently downgraded.
+    // ═══════════════════════════════════════════════════════════
+
+    it("rejects an explicit useDummyData=false on a testnet network", async () => {
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: false },
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error).toMatch(/Real inference is not available on testnet/);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+    });
+
+    it("allows an explicit useDummyData=true on a testnet network (still mocks)", async () => {
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: true },
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral");
+    });
+
+    it("allows an explicit useDummyData=false on a mainnet network (real path proceeds)", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        accepted: { network: "eip155:8453", scheme: "batch-settlement" },
+        payload: { type: "voucher" },
+      });
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: false },
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral");
     });
   });
 
@@ -370,7 +441,8 @@ describe("sc_llm_x402", () => {
     // ═══════════════════════════════════════════════════════════
 
     it("settles for the LLM's actual token usage, not the ceiling", async () => {
-      // 1000 tokens -> 1000 * 71 / 100 = 710, well under the 1420 ceiling (2000 tokens).
+      // 200 prompt + 800 completion -> 0.5*200 + 1.5*800 = 100 + 1200 = 1300 (Mistral
+      // rates), well under the 3000 ceiling (2000 tokens, all priced as completion).
       mockCallLLMAPI.mockResolvedValue({
         content: "answer",
         usage: { prompt_tokens: 200, completion_tokens: 800, total_tokens: 1000 },
@@ -380,24 +452,25 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
 
-      // verifyPayment must still see the pre-authorized ceiling (1420) — the client signed
+      // verifyPayment must still see the pre-authorized ceiling (3000) — the client signed
       // its voucher against that, and handleBeforeVerify requires an exact match.
       const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
       expect(mockVerifyPayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "1420" }),
+        expect.objectContaining({ amount: "3000" }),
       );
 
       // settlePayment must see the real, usage-derived amount instead.
       expect(mockSettlePayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ ...enhancedRequirements, amount: "710" }),
+        expect.objectContaining({ ...enhancedRequirements, amount: "1300" }),
       );
     });
 
     it("caps the settlement amount at the ceiling when usage runs over the estimate", async () => {
-      // 3000 tokens -> 3000 * 71 / 100 = 2130, which exceeds the 1420 ceiling — must be
-      // capped there rather than settling for more than the client authorized (or aborting).
+      // 500 prompt + 2500 completion -> 0.5*500 + 1.5*2500 = 250 + 3750 = 4000, which
+      // exceeds the 3000 ceiling — must be capped there rather than settling for more
+      // than the client authorized (or aborting).
       mockCallLLMAPI.mockResolvedValue({
         content: "answer",
         usage: { prompt_tokens: 500, completion_tokens: 2500, total_tokens: 3000 },
@@ -408,7 +481,7 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(200);
       expect(mockSettlePayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "1420" }),
+        expect.objectContaining({ amount: "3000" }),
       );
     });
 
@@ -423,10 +496,10 @@ describe("sc_llm_x402", () => {
 
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
-      // 15 * 71 / 100 = 10.65 -> 10 (integer division).
+      // 5 prompt + 15 completion -> 0.5*5 + 1.5*15 = 2.5 + 22.5 = 25 exactly.
       expect(mockSettlePayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "10" }),
+        expect.objectContaining({ amount: "25" }),
       );
     });
   });

@@ -1,15 +1,55 @@
 import { getContract, createPublicClient, createWalletClient, http } from "viem";
 import { getChain, getLLMv1ContractConfig } from "./getChain.js";
-import { loadPrivateKey } from "@fretchen/chain-utils";
+import { loadPrivateKey, getRpcUrl, toCAIP2 } from "@fretchen/chain-utils";
 import { getS3Object, putS3Object } from "@fretchen/s3-utils";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
 
-const MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct";
-const ENDPOINT = "https://openai.inference.de-txl.ionos.com/v1/chat/completions";
 const MERKLE_TREE_FILE = "merkle/trees.json";
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+interface LLMProviderConfig {
+  displayName: string; // for error messages/logs — e.g. "Could not reach IONOS: ..."
+  baseUrl: string; // no trailing "/chat/completions" — appended at call time
+  defaultModel: string;
+  apiKeyEnvVar: string;
+  // Price per 1,000,000 tokens, num/den to stay exact bigint math. USD for mistral;
+  // EUR for ionos (see convertTokensToUsdcCost's doc comment on the EUR/USDC simplification).
+  inputPricePerMillion: { num: bigint; den: bigint };
+  outputPricePerMillion: { num: bigint; den: bigint };
+}
+
+const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
+  ionos: {
+    displayName: "IONOS",
+    baseUrl: "https://openai.inference.de-txl.ionos.com/v1",
+    defaultModel: "meta-llama/Llama-3.3-70B-Instruct",
+    apiKeyEnvVar: "IONOS_API_TOKEN",
+    inputPricePerMillion: { num: 71n, den: 100n },
+    outputPricePerMillion: { num: 71n, den: 100n }, // blended rate, unchanged — legacy sc_llm.ts path
+  },
+  mistral: {
+    displayName: "Mistral",
+    baseUrl: "https://api.mistral.ai/v1",
+    defaultModel: "mistral-large-latest",
+    apiKeyEnvVar: "MISTRAL_API_KEY",
+    // Mistral Large 3, mistral.ai/pricing/api (fetched 2026-07-21) — re-verify before any
+    // mainnet cutover; Mistral has repriced materially before.
+    inputPricePerMillion: { num: 50n, den: 100n },
+    outputPricePerMillion: { num: 150n, den: 100n },
+  },
+};
+
+function getLLMProviderConfig(provider: string): LLMProviderConfig {
+  const config = LLM_PROVIDERS[provider];
+  if (!config) {
+    throw new Error(
+      `Unknown LLM provider: ${provider}. Valid providers: ${Object.keys(LLM_PROVIDERS).join(", ")}`,
+    );
+  }
+  return config;
+}
 
 export interface LLMMessage {
   role: string;
@@ -26,7 +66,11 @@ interface LLMResponse {
   model: string;
 }
 
-export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<LLMResponse> {
+export async function callLLMAPI(
+  prompt: LLMMessage[],
+  dummy = false,
+  provider = "ionos",
+): Promise<LLMResponse> {
   if (dummy) {
     return {
       content: "I am a placeholder for the LLM response",
@@ -34,11 +78,12 @@ export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<L
       model: "placeholder model",
     };
   }
-  const ionosApiToken = process.env.IONOS_API_TOKEN;
-  logger.info("Work with real API");
-  if (!ionosApiToken) {
+  const config = getLLMProviderConfig(provider);
+  const apiToken = process.env[config.apiKeyEnvVar];
+  logger.info({ provider }, "Work with real API");
+  if (!apiToken) {
     throw new Error(
-      "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
+      `API token not found. Please configure the ${config.apiKeyEnvVar} environment variable.`,
     );
   }
 
@@ -47,18 +92,23 @@ export async function callLLMAPI(prompt: LLMMessage[], dummy = false): Promise<L
   }
   logger.debug({ prompt }, "Generating answer for prompt");
 
-  const body = { model: MODEL_NAME, messages: prompt };
+  const body = { model: config.defaultModel, messages: prompt };
 
   logger.debug("Sending answer generation request...");
-  const response = await fetch(ENDPOINT, {
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${ionosApiToken}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    logger.error({ status: response.status, statusText: response.statusText }, "IONOS API Error");
-    throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
+    logger.error(
+      { provider, status: response.status, statusText: response.statusText },
+      "LLM API error",
+    );
+    throw new Error(
+      `Could not reach ${config.displayName}: ${response.status} ${response.statusText}`,
+    );
   }
 
   const data = (await response.json()) as {
@@ -93,34 +143,55 @@ function parseTokenCount(tokenCount: bigint | number | string): bigint {
   throw new TypeError("tokenCount must be a bigint, number, or numeric string");
 }
 
-// IONOS's actual per-token price, shared by both cost conversions below.
-const PRICE_PER_MILLION_TOKENS_IN_EUR_NUM = 71n;
-const PRICE_PER_MILLION_TOKENS_IN_EUR_DEN = 100n;
-
+/**
+ * ETH-denominated cost — legacy `sc_llm.ts` merkle-settlement path only, IONOS-only
+ * (untouched by the multi-provider work above). Uses IONOS's blended input===output
+ * rate from `LLM_PROVIDERS.ionos`, since this function predates and doesn't need the
+ * input/output split `convertTokensToUsdcCost` now tracks.
+ */
 export function convertTokensToCost(tokenCount: bigint | number | string): bigint {
   const tc = parseTokenCount(tokenCount);
+  const { num, den } = LLM_PROVIDERS.ionos!.inputPricePerMillion;
 
   const CONVERSION_RATE_EUR_PER_ETH = 3000n;
   const MILLION = 1_000_000n;
   const WEI_PER_ETH = 1_000_000_000_000_000_000n;
 
-  const numer = tc * PRICE_PER_MILLION_TOKENS_IN_EUR_NUM * WEI_PER_ETH;
-  const denom = PRICE_PER_MILLION_TOKENS_IN_EUR_DEN * CONVERSION_RATE_EUR_PER_ETH * MILLION;
+  const numer = tc * num * WEI_PER_ETH;
+  const denom = den * CONVERSION_RATE_EUR_PER_ETH * MILLION;
 
   return numer / denom;
 }
 
 /**
- * Same IONOS per-token price as `convertTokensToCost`, but converted directly to
- * USDC atomic units (6 decimals) instead of ETH wei — no EUR/ETH rate involved.
- * USDC has 6 decimals and the price is quoted per 1,000,000 tokens, so the two
- * 1e6 factors cancel exactly. Treats 1 EUR = 1 USDC (documented simplification,
- * matching this codebase's existing static/approximate EUR-per-ETH rate above —
- * no live FX oracle here either).
+ * USDC-denominated cost (6 decimals) for the given provider, pricing prompt and
+ * completion tokens separately — providers typically charge more for completion
+ * (output) tokens than prompt (input) tokens, so a single blended rate would
+ * systematically mis-price a provider with an asymmetric split (e.g. Mistral:
+ * $0.50/M input vs $1.50/M output — a 3x gap. See LLM_PROVIDERS above).
+ *
+ * USDC has 6 decimals and prices are quoted per 1,000,000 tokens, so the 1e6
+ * factors cancel exactly — no separate decimals conversion needed. Treats 1
+ * EUR = 1 USD = 1 USDC (documented simplification; only relevant for `ionos`,
+ * whose price is EUR-quoted — `mistral`'s price is already USD, so USD≈USDC
+ * needs no cross-currency approximation at all).
  */
-export function convertTokensToUsdcCost(tokenCount: bigint | number | string): bigint {
-  const tc = parseTokenCount(tokenCount);
-  return (tc * PRICE_PER_MILLION_TOKENS_IN_EUR_NUM) / PRICE_PER_MILLION_TOKENS_IN_EUR_DEN;
+export function convertTokensToUsdcCost(
+  usage: {
+    prompt_tokens: bigint | number | string;
+    completion_tokens: bigint | number | string;
+  },
+  provider: string,
+): bigint {
+  const config = getLLMProviderConfig(provider);
+  const p = parseTokenCount(usage.prompt_tokens);
+  const c = parseTokenCount(usage.completion_tokens);
+  const { num: inNum, den: inDen } = config.inputPricePerMillion;
+  const { num: outNum, den: outDen } = config.outputPricePerMillion;
+  // Cross-multiply to keep one shared denominator instead of assuming inDen === outDen.
+  // No explicit 1e6 factor here — as in the single-rate formula this replaces, the
+  // "per 1,000,000 tokens" divisor and USDC's 6 decimals cancel exactly.
+  return (p * inNum * outDen + c * outNum * inDen) / (inDen * outDen);
 }
 
 export interface Leaf {
@@ -242,7 +313,10 @@ export async function checkWalletBalance(
   requiredBalance: bigint,
 ): Promise<void> {
   const activeChain = getChain();
-  const publicClient = createPublicClient({ chain: activeChain, transport: http() });
+  // Falls back to the chain's public endpoint when unset — fine for testnets, but
+  // set RPC_URL_<NETWORK> for anything carrying real traffic (see getRpcUrl).
+  const rpcUrl = getRpcUrl(toCAIP2(activeChain.id));
+  const publicClient = createPublicClient({ chain: activeChain, transport: http(rpcUrl) });
 
   const { address: contractAddress, abi: llmAbi } = getLLMv1ContractConfig();
   const contract = getContract({
@@ -321,8 +395,15 @@ export async function processMerkleTree(
 
   const account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   const activeChain = getChain();
-  const publicClient = createPublicClient({ chain: activeChain, transport: http() });
-  const walletClient = createWalletClient({ account, chain: activeChain, transport: http() });
+  // Falls back to the chain's public endpoint when unset — fine for testnets, but
+  // set RPC_URL_<NETWORK> for anything carrying real traffic (see getRpcUrl).
+  const rpcUrl = getRpcUrl(toCAIP2(activeChain.id));
+  const publicClient = createPublicClient({ chain: activeChain, transport: http(rpcUrl) });
+  const walletClient = createWalletClient({
+    account,
+    chain: activeChain,
+    transport: http(rpcUrl),
+  });
 
   const { address: contractAddress, abi: llmAbi } = getLLMv1ContractConfig();
   const llmContract = getContract({

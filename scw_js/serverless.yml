@@ -12,6 +12,8 @@ provider:
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
     BFL_API_TOKEN: ${env:BFL_API_TOKEN}
+    # Used by sc_llm_x402.ts (llmx402 function) — see LLM_PROVIDERS in llm_service.ts.
+    MISTRAL_API_KEY: ${env:MISTRAL_API_KEY}
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
@@ -19,6 +21,13 @@ provider:
     LLM_ESTIMATED_TOKENS_PER_MESSAGE: ${env:LLM_ESTIMATED_TOKENS_PER_MESSAGE, "2000"}
     LLM_WITHDRAW_DELAY_SECONDS: ${env:LLM_WITHDRAW_DELAY_SECONDS, "86400"}
     RECEIVER_AUTHORIZER_PRIVATE_KEY: ${env:RECEIVER_AUTHORIZER_PRIVATE_KEY}
+    # Per-network RPC endpoints (see getRpcUrl in @fretchen/chain-utils). Unset => viem
+    # falls back to the public endpoint, which is aggressively rate-limited under real
+    # traffic. A real value here embeds an API key (e.g. an Alchemy URL) — secret, not env.
+    RPC_URL_EIP155_10: ${env:RPC_URL_EIP155_10, ''}
+    RPC_URL_EIP155_8453: ${env:RPC_URL_EIP155_8453, ''}
+    RPC_URL_EIP155_11155420: ${env:RPC_URL_EIP155_11155420, ''}
+    RPC_URL_EIP155_84532: ${env:RPC_URL_EIP155_84532, ''}
 
 plugins:
   - serverless-scaleway-functions

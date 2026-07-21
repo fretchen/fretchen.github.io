@@ -797,6 +797,90 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       );
     });
 
+    test("uses the configured RPC_URL_<NETWORK> endpoint for the mint client's network", async () => {
+      const rpcUrl = "https://opt-mainnet.g.alchemy.com/v2/test-key";
+      setupTestEnvironment({ RPC_URL_EIP155_10: rpcUrl });
+      setupSuccessfulMintingFlow(102);
+
+      const mainnetPayment = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:10",
+          amount: "1000",
+          asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        },
+        payload: {
+          authorization: {
+            from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+            to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            value: "1000",
+          },
+        },
+        network: "eip155:10",
+      };
+
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(mainnetPayment) },
+        body: JSON.stringify({ prompt: "Test RPC wiring" }),
+        path: "/genimg",
+      };
+
+      try {
+        const response = await handle(event, {});
+        expect(response.statusCode).toBe(200);
+
+        // Both the public and wallet clients must use the configured RPC endpoint,
+        // not viem's rate-limited public default.
+        expect(mockViemFunctions.http).toHaveBeenCalledWith(rpcUrl);
+      } finally {
+        // setupTestEnvironment's custom overrides aren't cleaned up by the shared
+        // afterEach (which only clears the base testEnvironment keys) — clear this
+        // one explicitly so it can't leak into the next test.
+        cleanupTestEnvironment(["RPC_URL_EIP155_10"]);
+      }
+    });
+
+    test("falls back to the public endpoint when no RPC_URL_<NETWORK> is configured", async () => {
+      // No RPC_URL_EIP155_10 set — default test env from setupTestEnvironment().
+      setupSuccessfulMintingFlow(103);
+
+      const mainnetPayment = {
+        x402Version: 2,
+        accepted: {
+          scheme: "exact",
+          network: "eip155:10",
+          amount: "1000",
+          asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        },
+        payload: {
+          authorization: {
+            from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+            to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+            value: "1000",
+          },
+        },
+        network: "eip155:10",
+      };
+
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(mainnetPayment) },
+        body: JSON.stringify({ prompt: "Test RPC fallback" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+
+      // Unset RPC_URL_* => getRpcUrl returns undefined => viem's http() falls back
+      // to the chain's public default, same as before this change.
+      expect(mockViemFunctions.http).toHaveBeenCalledWith(undefined);
+    });
+
     test("should reject unsupported network (production only accepts Optimism/Base)", async () => {
       const unsupportedPayment = {
         x402Version: 2,

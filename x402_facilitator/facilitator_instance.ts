@@ -99,10 +99,10 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
           args: args.args || [],
         }),
       // The SDK's FacilitatorEvmSigner.verifyTypedData types `types` loosely as
-    // Record<string, unknown>; viem's VerifyTypedDataParameters wants the strict
-    // TypedDataParameter mapping. Runtime-correct pass-through — cast at the boundary.
-    verifyTypedData: (args) =>
-      publicClient.verifyTypedData(args as Parameters<typeof publicClient.verifyTypedData>[0]),
+      // Record<string, unknown>; viem's VerifyTypedDataParameters wants the strict
+      // TypedDataParameter mapping. Runtime-correct pass-through — cast at the boundary.
+      verifyTypedData: (args) =>
+        publicClient.verifyTypedData(args as Parameters<typeof publicClient.verifyTypedData>[0]),
       writeContract: () => {
         throw new Error("Read-only facilitator cannot write contracts");
       },

@@ -5,6 +5,7 @@ import {
   getUSDCConfig,
   isTestnet,
   loadPrivateKey,
+  getRpcUrl,
 } from "@fretchen/chain-utils";
 import { parseJsonBody } from "./utils.js";
 import {
@@ -492,8 +493,11 @@ async function handle(
     console.log(`🔗 Using chain: ${viemChain.name} (${clientNetwork})`);
 
     const chain = viemChain as unknown as Chain;
-    const publicClient = createPublicClient({ chain, transport: http() });
-    const walletClient = createWalletClient({ account, chain, transport: http() });
+    // Falls back to the chain's public endpoint when unset — fine for testnets, but
+    // set RPC_URL_<NETWORK> for anything carrying real traffic (see getRpcUrl).
+    const rpcUrl = getRpcUrl(clientNetwork!);
+    const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
+    const walletClient = createWalletClient({ account, chain, transport: http(rpcUrl) });
 
     const contract = getContract({
       address: contractAddress,

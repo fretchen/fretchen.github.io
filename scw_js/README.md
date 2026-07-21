@@ -118,6 +118,18 @@ API for reviewing, editing, and approving AI-generated social media drafts. Used
 | ---------- | -------- | -------------------------------------------- |
 | GenImNFTv4 | Optimism | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` |
 
+### RPC configuration
+
+Direct on-chain calls (image mint, legacy LLMv1 merkle settlement) use `getRpcUrl` from
+`@fretchen/chain-utils`, falling back to each chain's public endpoint when unset — fine
+for local dev, but the public endpoints are aggressively rate-limited under real traffic.
+Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
+
+- `RPC_URL_EIP155_10` — Optimism mainnet
+- `RPC_URL_EIP155_8453` — Base mainnet
+- `RPC_URL_EIP155_11155420` — Optimism Sepolia
+- `RPC_URL_EIP155_84532` — Base Sepolia
+
 ## 🗄️ S3 Storage Layout & Data Classification
 
 All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.

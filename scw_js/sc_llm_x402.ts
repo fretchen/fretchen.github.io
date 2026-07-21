@@ -9,6 +9,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
   getBatchSettlementNetworks,
+  LLM_MAX_TIMEOUT_SECONDS,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
 
@@ -34,9 +35,19 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // the "authorize an upper bound, claim the real amount" pattern the SDK's
 // setSettlementOverrides() wraps for Express apps — we do it manually here since we call
 // settlePayment() directly. See getSettleAmount() below.
+// This endpoint uses Mistral, not IONOS — see llm_service.ts's LLM_PROVIDERS. Legacy
+// sc_llm.ts (merkle settlement) is untouched and stays on IONOS.
+const LLM_PROVIDER = "mistral";
+
 const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
+// No real prompt/completion split exists yet for the ceiling, so price the entire
+// estimate as completion (output) tokens — the pricier of the two rates for a
+// provider with an asymmetric split like Mistral's. This guarantees the ceiling is
+// never an underestimate relative to whatever the real split turns out to be;
+// getSettleAmount's cap below still protects the ceiling from ever being exceeded.
 const USDC_MAX_PRICE_PER_MESSAGE = convertTokensToUsdcCost(
-  BigInt(MAX_TOKENS_PER_MESSAGE),
+  { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
+  LLM_PROVIDER,
 ).toString();
 
 /**
@@ -46,8 +57,8 @@ const USDC_MAX_PRICE_PER_MESSAGE = convertTokensToUsdcCost(
  * as under-billing, not a fund-safety issue (the client is always protected by the
  * voucher's signed ceiling).
  */
-function getSettleAmount(totalTokens: number): string {
-  const actualCost = convertTokensToUsdcCost(totalTokens);
+function getSettleAmount(usage: { prompt_tokens: number; completion_tokens: number }): string {
+  const actualCost = convertTokensToUsdcCost(usage, LLM_PROVIDER);
   const maxCost = BigInt(USDC_MAX_PRICE_PER_MESSAGE);
   return (actualCost > maxCost ? maxCost : actualCost).toString();
 }
@@ -90,7 +101,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
   const prompt = data["prompt"] as LLMMessage[];
 
-  let useDummyData = false;
+  // Deliberately left undefined (not defaulted to false) when absent — the testnet
+  // reject check below needs to distinguish "not sent" from "explicitly false".
+  let useDummyData: boolean | undefined;
   if (data["useDummyData"] !== undefined) {
     if (typeof data["useDummyData"] !== "boolean") {
       return errorResponse(400, "Invalid useDummyData flag");
@@ -140,10 +153,22 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return errorResponse(402, "Unsupported or missing network for batch-settlement payment");
   }
 
-  // Never spend real IONOS inference budget on a valueless testnet payment. As with
+  // SECURITY: testnet must never reach the real Mistral API. Neither real caller
+  // (website's useX402Chat.ts, this endpoint's buyer notebook) ever sends
+  // useDummyData — they rely entirely on network selection. An explicit
+  // `useDummyData: false` on a testnet network is therefore always a caller error,
+  // not a legitimate request for a real answer — reject it loudly instead of
+  // silently downgrading to a mock response.
+  if (isTestnet(clientNetwork) && useDummyData === false) {
+    return errorResponse(
+      400,
+      "Real inference is not available on testnet — this network always returns a mocked LLM response. Omit useDummyData or set it to true, or use a mainnet network for a real completion.",
+    );
+  }
+  // Never spend real inference budget on a valueless testnet payment. As with
   // genimg's useMockImage (genimg_x402_token.ts), a testnet payment still runs the real
   // x402 verify/settle but gets a mock completion instead of a paid API call.
-  const useMock = useDummyData || isTestnet(clientNetwork);
+  const useMock = useDummyData === true || isTestnet(clientNetwork);
 
   const usdcConfig = getUSDCConfig(clientNetwork);
   const baseRequirements = {
@@ -152,7 +177,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     amount: USDC_MAX_PRICE_PER_MESSAGE,
     asset: usdcConfig.address,
     payTo: receiverAddress,
-    maxTimeoutSeconds: 3600,
+    // Must match the value advertised in the 402 (createBatchSettlementPaymentRequirements)
+    // — the SDK treats maxTimeoutSeconds as immutable between advertise and verify.
+    maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
     extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
   };
   // Must be the SAME enhanced requirements (extra.receiverAuthorizer/withdrawDelay) the
@@ -172,7 +199,12 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     [],
   );
 
-  let verification: { isValid: boolean; invalidReason?: string; payer?: string };
+  let verification: {
+    isValid: boolean;
+    invalidReason?: string;
+    invalidMessage?: string;
+    payer?: string;
+  };
   try {
     verification = await resourceServer.verifyPayment(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,7 +217,15 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   if (!verification.isValid) {
-    logger.warn({ reason: verification.invalidReason }, "Payment verification failed");
+    // Log the SDK's human-readable invalidMessage alongside the machine reason — e.g. for
+    // `channel_busy` it reads "Channel is already processing a request", which explains an
+    // otherwise-opaque, transient rejection (a per-channel lock held across verify→settle;
+    // self-heals within LLM_MAX_TIMEOUT_SECONDS). The response body keeps `invalidReason` as
+    // the raw code, which the client SDK's corrective-recovery path matches on.
+    logger.warn(
+      { reason: verification.invalidReason, message: verification.invalidMessage },
+      "Payment verification failed",
+    );
     // Must go through createPaymentRequiredResponse (not a hand-rolled body) so the SDK's
     // response-time scheme enrichment runs — e.g. for batch-settlement's
     // invalid_batch_settlement_evm_cumulative_amount_mismatch, this attaches
@@ -215,7 +255,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       logger.info({ network: clientNetwork }, "Using mock LLM response (test mode)");
     }
     logger.debug({ prompt }, "Generating answer for prompt");
-    llmData = await callLLMAPI(prompt, useMock);
+    llmData = await callLLMAPI(prompt, useMock, LLM_PROVIDER);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     const msg = (error as Error).message;
@@ -230,7 +270,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // Settling with a DIFFERENT (smaller, real-usage) amount than what verifyPayment() used
   // is intentional — see getSettleAmount()'s comment above. handleBeforeSettle only checks
   // this against the voucher's signed ceiling, not against what verify saw.
-  const settleAmount = getSettleAmount(llmData.usage.total_tokens);
+  const settleAmount = getSettleAmount(llmData.usage);
   const settleRequirements = { ...paymentRequirements, amount: settleAmount };
 
   try {

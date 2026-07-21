@@ -117,9 +117,34 @@ describe("useX402Chat", () => {
         expect.objectContaining({
           storage: expect.any(WebStorageClientChannelStorage),
           voucherSigner: expect.objectContaining({ address: expect.stringMatching(/^0x[a-fA-F0-9]{40}$/) }),
+          depositStrategy: expect.any(Function),
         }),
       );
       expect(mockRegister).toHaveBeenCalledWith(NETWORK, expect.anything());
+    });
+
+    it("deposit strategy floors deposits/top-ups at $0.50, ignoring the SDK's smaller default", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 })),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      const { depositStrategy } = mockBatchSettlementEvmScheme.mock.calls[0][1] as {
+        depositStrategy: (ctx: { minimumDepositAmount: string }) => string;
+      };
+
+      // Below the floor (e.g. the SDK's own ~1-3 cent default): clamp up to $0.50.
+      expect(depositStrategy({ minimumDepositAmount: "15000" })).toBe("500000");
+      // Above the floor (an unusually expensive top-up): the SDK requires >= this amount,
+      // so it must be respected, not clamped down.
+      expect(depositStrategy({ minimumDepositAmount: "600000" })).toBe("600000");
+      // Exactly at the floor: either value is correct; assert it's still >= minimum.
+      expect(BigInt(depositStrategy({ minimumDepositAmount: "500000" }))).toBeGreaterThanOrEqual(500_000n);
     });
 
     it("reuses the same delegated voucher signer across multiple messages", async () => {
@@ -239,6 +264,36 @@ describe("useX402Chat", () => {
       expect(thrown?.message).toContain("402");
       expect(result.current.status).toBe("error");
       expect(result.current.error).toContain("402");
+    });
+
+    it("surfaces a friendly, actionable message for a channel_busy 402", async () => {
+      // The transient per-channel lock the server holds across verify→settle. The raw code
+      // is opaque and the client SDK does not auto-recover from it, so the hook maps it to
+      // a "wait and retry" line instead of dumping the reason code.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ error: "invalid_batch_settlement_evm_channel_busy" }), {
+            status: 402,
+          }),
+        ),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toMatch(/still being settled/i);
+      expect(thrown?.message).not.toContain("channel_busy");
+      expect(result.current.status).toBe("error");
+      expect(result.current.error).toMatch(/wait a few seconds/i);
     });
   });
 

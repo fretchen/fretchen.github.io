@@ -127,6 +127,48 @@ describe("llm_service.js", () => {
       }),
     );
   });
+
+  test("uses the Mistral endpoint/model/auth when provider is 'mistral'", async () => {
+    setupTestEnvironment({ MISTRAL_API_KEY: "test-mistral-key" });
+    const prompt = [{ role: "user", content: "Test" }];
+
+    try {
+      await callLLMAPI(prompt, false, "mistral");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://api.mistral.ai/v1/chat/completions",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: expect.stringContaining("test-mistral-key"),
+          }),
+          body: JSON.stringify({
+            model: "mistral-large-latest",
+            messages: [{ role: "user", content: "Test" }],
+          }),
+        }),
+      );
+    } finally {
+      // setupTestEnvironment's custom overrides aren't cleared by the shared afterEach
+      // (base testEnvironment keys only) — clear this one explicitly.
+      cleanupTestEnvironment(["MISTRAL_API_KEY"]);
+    }
+  });
+
+  test("throws when MISTRAL_API_KEY is not set", async () => {
+    delete process.env.MISTRAL_API_KEY;
+    const prompt = [{ role: "user", content: "Test" }];
+    await expect(callLLMAPI(prompt, false, "mistral")).rejects.toThrow(
+      "API token not found. Please configure the MISTRAL_API_KEY environment variable.",
+    );
+  });
+
+  test("throws a friendly error for an unknown provider", async () => {
+    const prompt = [{ role: "user", content: "Test" }];
+    await expect(callLLMAPI(prompt, false, "openai")).rejects.toThrow(
+      /Unknown LLM provider: openai/,
+    );
+  });
 });
 
 const sampleLeaf: Leaf = {
@@ -338,6 +380,35 @@ describe("checkWalletBalance — ETH deposit gate", () => {
       `Insufficient balance. Required: ${REQUIRED}, Current: 5000000000000`,
     );
   });
+
+  // ===== RPC endpoint wiring (getChain().id -> CAIP-2 -> getRpcUrl -> http()) =====
+  // getChain() is mocked above to return { id: 10, ... } (OP Mainnet), so the
+  // relevant env var is RPC_URL_EIP155_10.
+
+  test("uses the configured RPC_URL_EIP155_10 endpoint when set", async () => {
+    const rpcUrl = "https://opt-mainnet.g.alchemy.com/v2/test-key";
+    setupTestEnvironment({ RPC_URL_EIP155_10: rpcUrl });
+    mockCheckBalance.mockResolvedValue(REQUIRED);
+
+    try {
+      await checkWalletBalance(USER_ADDRESS, REQUIRED);
+      // Not viem's rate-limited public default.
+      expect(mockViemFunctions.http).toHaveBeenCalledWith(rpcUrl);
+    } finally {
+      // setupTestEnvironment's custom overrides aren't cleared by the shared
+      // afterEach (base testEnvironment keys only) — clear this one explicitly.
+      cleanupTestEnvironment(["RPC_URL_EIP155_10"]);
+    }
+  });
+
+  test("falls back to the public endpoint when RPC_URL_EIP155_10 is unset", async () => {
+    // No RPC_URL_EIP155_10 set — default test env from setupTestEnvironment().
+    mockCheckBalance.mockResolvedValue(REQUIRED);
+
+    await checkWalletBalance(USER_ADDRESS, REQUIRED);
+
+    expect(mockViemFunctions.http).toHaveBeenCalledWith(undefined);
+  });
 });
 
 describe("convertTokensToCost — ETH wei conversion (regression check after parseTokenCount refactor)", () => {
@@ -361,36 +432,106 @@ describe("convertTokensToCost — ETH wei conversion (regression check after par
   });
 });
 
-describe("convertTokensToUsdcCost — direct EUR-to-USDC conversion (no ETH hop)", () => {
-  test("converts a known token count to the expected USDC atomic units", () => {
-    // 1,000,000 tokens * 0.71 EUR/USDC per 1M tokens = 710,000 atomic units ($0.71)
-    expect(convertTokensToUsdcCost(1_000_000n)).toBe(710_000n);
+describe("convertTokensToUsdcCost — per-provider, input/output-split USDC conversion", () => {
+  describe("ionos — blended rate (input === output), unchanged math", () => {
+    test("converts a known token split to the expected USDC atomic units", () => {
+      // 500,000 prompt + 500,000 completion = 1,000,000 tokens total, both priced at
+      // ionos's blended 0.71 EUR/USDC per 1M tokens = 710,000 atomic units ($0.71) —
+      // same total as the old single-rate formula, since input === output for ionos.
+      expect(
+        convertTokensToUsdcCost({ prompt_tokens: 500_000n, completion_tokens: 500_000n }, "ionos"),
+      ).toBe(710_000n);
+    });
+
+    test("blended rate is split-independent — same total regardless of prompt/completion mix", () => {
+      const allPrompt = convertTokensToUsdcCost(
+        { prompt_tokens: 1_000_000n, completion_tokens: 0n },
+        "ionos",
+      );
+      const allCompletion = convertTokensToUsdcCost(
+        { prompt_tokens: 0n, completion_tokens: 1_000_000n },
+        "ionos",
+      );
+      expect(allPrompt).toBe(710_000n);
+      expect(allCompletion).toBe(710_000n);
+    });
+
+    test("returns zero for zero tokens", () => {
+      expect(convertTokensToUsdcCost({ prompt_tokens: 0n, completion_tokens: 0n }, "ionos")).toBe(
+        0n,
+      );
+    });
   });
 
-  test("matches the estimated-tokens-per-message default used by sc_llm_x402.ts", () => {
-    // 2000 tokens * 71 / 100 = 1420 atomic units ($0.00142)
-    expect(convertTokensToUsdcCost(2000n)).toBe(1420n);
+  describe("mistral — asymmetric input/output rates ($0.50/M in, $1.50/M out)", () => {
+    test("matches the estimated-tokens-per-message ceiling convention used by sc_llm_x402.ts", () => {
+      // sc_llm_x402.ts prices the whole pre-auth estimate as completion (output)
+      // tokens (the pricier rate) since no real split exists yet for the ceiling.
+      // 2000 tokens * $1.50/M = 3000 atomic units ($0.003).
+      expect(
+        convertTokensToUsdcCost({ prompt_tokens: 0n, completion_tokens: 2000n }, "mistral"),
+      ).toBe(3000n);
+    });
+
+    test("prices input tokens at the input rate only", () => {
+      // 1,000,000 prompt tokens * $0.50/M = 500,000 atomic units.
+      expect(
+        convertTokensToUsdcCost({ prompt_tokens: 1_000_000n, completion_tokens: 0n }, "mistral"),
+      ).toBe(500_000n);
+    });
+
+    test("prices completion tokens at the (higher) output rate only", () => {
+      // 1,000,000 completion tokens * $1.50/M = 1,500,000 atomic units.
+      expect(
+        convertTokensToUsdcCost({ prompt_tokens: 0n, completion_tokens: 1_000_000n }, "mistral"),
+      ).toBe(1_500_000n);
+    });
+
+    test("sums input and output cost for a mixed split", () => {
+      // 500,000 * $0.50/M + 500,000 * $1.50/M = 250,000 + 750,000 = 1,000,000 atomic units.
+      expect(
+        convertTokensToUsdcCost(
+          { prompt_tokens: 500_000n, completion_tokens: 500_000n },
+          "mistral",
+        ),
+      ).toBe(1_000_000n);
+    });
   });
 
   test("accepts number and numeric-string inputs equivalently to bigint", () => {
-    const viaBigint = convertTokensToUsdcCost(1500n);
-    expect(convertTokensToUsdcCost(1500)).toBe(viaBigint);
-    expect(convertTokensToUsdcCost("1500")).toBe(viaBigint);
-  });
-
-  test("returns zero for zero tokens", () => {
-    expect(convertTokensToUsdcCost(0n)).toBe(0n);
+    const viaBigint = convertTokensToUsdcCost(
+      { prompt_tokens: 1000n, completion_tokens: 500n },
+      "mistral",
+    );
+    expect(
+      convertTokensToUsdcCost({ prompt_tokens: 1000, completion_tokens: 500 }, "mistral"),
+    ).toBe(viaBigint);
+    expect(
+      convertTokensToUsdcCost({ prompt_tokens: "1000", completion_tokens: "500" }, "mistral"),
+    ).toBe(viaBigint);
   });
 
   test("rejects a negative number", () => {
-    expect(() => convertTokensToUsdcCost(-5)).toThrow(TypeError);
+    expect(() =>
+      convertTokensToUsdcCost({ prompt_tokens: -5, completion_tokens: 0 }, "mistral"),
+    ).toThrow(TypeError);
   });
 
   test("rejects a non-finite number", () => {
-    expect(() => convertTokensToUsdcCost(Infinity)).toThrow(TypeError);
+    expect(() =>
+      convertTokensToUsdcCost({ prompt_tokens: Infinity, completion_tokens: 0 }, "mistral"),
+    ).toThrow(TypeError);
   });
 
   test("rejects a non-numeric string", () => {
-    expect(() => convertTokensToUsdcCost("abc")).toThrow(TypeError);
+    expect(() =>
+      convertTokensToUsdcCost({ prompt_tokens: "abc", completion_tokens: 0 }, "mistral"),
+    ).toThrow(TypeError);
+  });
+
+  test("rejects an unknown provider", () => {
+    expect(() =>
+      convertTokensToUsdcCost({ prompt_tokens: 100n, completion_tokens: 100n }, "openai"),
+    ).toThrow(/Unknown LLM provider: openai/);
   });
 });

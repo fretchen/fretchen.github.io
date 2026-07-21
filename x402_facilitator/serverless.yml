@@ -22,15 +22,6 @@ provider:
     #                      can never authorize real funds. Keep testnet-only wallets here.
     BATCH_SETTLEMENT_MANUAL_WHITELIST: ${env:BATCH_SETTLEMENT_MANUAL_WHITELIST, ''}
     BATCH_SETTLEMENT_TEST_WALLETS: ${env:BATCH_SETTLEMENT_TEST_WALLETS, ''}
-    # Per-network RPC endpoints (see getRpcUrl in chain_utils.ts). Unset => viem falls
-    # back to the chain's public endpoint, which is aggressively rate-limited: a single
-    # batch-settlement deposit does a Multicall3 read batch and fails with "over rate
-    # limit", surfacing as the generic ..._deposit_transaction_failed. Set these for any
-    # network carrying real traffic.
-    RPC_URL_EIP155_8453: ${env:RPC_URL_EIP155_8453, ''}
-    RPC_URL_EIP155_10: ${env:RPC_URL_EIP155_10, ''}
-    RPC_URL_EIP155_84532: ${env:RPC_URL_EIP155_84532, ''}
-    RPC_URL_EIP155_11155420: ${env:RPC_URL_EIP155_11155420, ''}
   # Secrets (set via Scaleway Console or CLI)
   secret:
     FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}

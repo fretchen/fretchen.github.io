@@ -28,6 +28,14 @@ export interface SettleResult {
   transaction?: string;
   network?: string;
   errorReason?: string;
+  /**
+   * Underlying failure detail from the SDK (e.g. the decoded EVM revert reason behind a
+   * generic `errorReason` like `..._deposit_transaction_failed`). **Logged, never returned
+   * over HTTP** — it is SDK-generated text that can embed addresses and calldata, and
+   * callers get the stable `errorReason` code instead. Without this the real cause is
+   * silently discarded, which has previously turned a one-line revert into days of guessing.
+   */
+  errorMessage?: string;
   /** Fee collection info (present when fee is configured) */
   fee?: {
     collected: boolean;
@@ -143,8 +151,18 @@ export async function settlePayment(
       const payer = claims?.[0]?.voucher?.channel?.payer;
 
       if (!result.success) {
-        logger.warn({ errorReason: result.errorReason }, "Batch-settlement claim/settle failed");
-        return { success: false, errorReason: result.errorReason, payer, transaction: "", network };
+        logger.warn(
+          { errorReason: result.errorReason, errorMessage: result.errorMessage },
+          "Batch-settlement claim/settle failed",
+        );
+        return {
+          success: false,
+          errorReason: result.errorReason,
+          errorMessage: result.errorMessage,
+          payer,
+          transaction: "",
+          network,
+        };
       }
 
       logger.info(
@@ -182,10 +200,14 @@ export async function settlePayment(
     const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
 
     if (!result.success) {
-      logger.warn({ errorReason: result.errorReason }, "Settlement failed");
+      logger.warn(
+        { errorReason: result.errorReason, errorMessage: result.errorMessage },
+        "Settlement failed",
+      );
       return {
         success: false,
         errorReason: result.errorReason,
+        errorMessage: result.errorMessage,
         payer: verifyResult.payer,
         transaction: "",
         network: accepted?.network as string,
@@ -277,6 +299,8 @@ export async function settlePayment(
     }
 
     const payload = paymentPayload.payload as Record<string, unknown> | undefined;
+    // EIP-3009 shape only. Permit2 payloads (payer at permit2Authorization.from) are
+    // rejected at verify time (permit2_not_supported), so they never reach settle.
     const authorization = payload?.authorization as Record<string, unknown> | undefined;
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 

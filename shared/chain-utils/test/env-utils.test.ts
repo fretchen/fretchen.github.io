@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { loadPrivateKey } from "../src/key-utils";
+import { loadPrivateKey, getRpcUrl } from "../src/env-utils";
 
 const VALID_HEX = "a".repeat(64);
 const KEY = "TEST_PRIVATE_KEY";
@@ -99,5 +99,51 @@ describe("loadPrivateKey", () => {
     } finally {
       if (oldVal !== undefined) process.env[OTHER] = oldVal;
     }
+  });
+});
+
+describe("getRpcUrl", () => {
+  function withRpcEnv(key: string, value: string | undefined, fn: () => void) {
+    const old = process.env[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+    try {
+      fn();
+    } finally {
+      if (old === undefined) delete process.env[key];
+      else process.env[key] = old;
+    }
+  }
+
+  test("maps a CAIP-2 network to RPC_URL_<NETWORK>", () => {
+    withRpcEnv("RPC_URL_EIP155_8453", "https://base-mainnet.example/v2/key", () => {
+      expect(getRpcUrl("eip155:8453")).toBe("https://base-mainnet.example/v2/key");
+    });
+  });
+
+  test("returns undefined when unset, so viem falls back to the public endpoint", () => {
+    withRpcEnv("RPC_URL_EIP155_10", undefined, () => {
+      expect(getRpcUrl("eip155:10")).toBeUndefined();
+    });
+  });
+
+  // Must be undefined, not "" — viem treats an empty string as an invalid URL
+  // rather than as "use the default".
+  test("returns undefined for an empty env var", () => {
+    withRpcEnv("RPC_URL_EIP155_8453", "", () => {
+      expect(getRpcUrl("eip155:8453")).toBeUndefined();
+    });
+  });
+
+  test("uppercases and replaces separators (testnet ids keep their digits)", () => {
+    withRpcEnv("RPC_URL_EIP155_11155420", "https://op-sepolia.example", () => {
+      expect(getRpcUrl("eip155:11155420")).toBe("https://op-sepolia.example");
+    });
+  });
+
+  test("does not leak one network's endpoint to another", () => {
+    withRpcEnv("RPC_URL_EIP155_8453", "https://base-only.example", () => {
+      expect(getRpcUrl("eip155:84532")).toBeUndefined();
+    });
   });
 });

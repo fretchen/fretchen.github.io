@@ -19,7 +19,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 type HookArgs = {
   paymentPayload: {
     accepted?: { network?: string; scheme?: string; payTo?: string };
-    payload?: { authorization?: { to?: string } };
+    payload?: {
+      authorization?: { to?: string };
+      permit2Authorization?: { witness?: { to?: string }; from?: string };
+    };
   };
   requirements?: { network?: string; scheme?: string; payTo?: string };
   result: Record<string, unknown>;
@@ -132,13 +135,44 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     process.env = { ...originalEnv };
   });
 
-  /** Helper: create mock hook arguments simulating a valid payment */
+  /**
+   * Helper: create mock hook arguments simulating a valid EIP-3009 exact payment.
+   * The SDK enforces `authorization.to === requirements.payTo` before this hook runs,
+   * so the helper keeps both fields equal to `recipient`. The hook itself now reads
+   * `requirements.payTo` (not the client payload), so `requirements` must be populated.
+   */
   function hookArgs(recipient: string, network: string): HookArgs {
     return {
       paymentPayload: {
-        accepted: { network },
+        accepted: { network, scheme: "exact" },
         payload: { authorization: { to: recipient } },
       },
+      requirements: { network, scheme: "exact", payTo: recipient },
+      result: {
+        isValid: true,
+        payer: "0xSomePayer000000000000000000000000000000",
+      },
+    };
+  }
+
+  /**
+   * Helper: create mock hook arguments simulating a Permit2 exact payment. Same
+   * scheme ("exact") as EIP-3009, but the payload carries `permit2Authorization`
+   * (recipient at witness.to) instead of `authorization`. This facilitator does not
+   * support Permit2 — the hook must reject it with `permit2_not_supported`.
+   */
+  function permit2HookArgs(recipient: string, network: string): HookArgs {
+    return {
+      paymentPayload: {
+        accepted: { network, scheme: "exact" },
+        payload: {
+          permit2Authorization: {
+            witness: { to: recipient },
+            from: "0xSomePayer000000000000000000000000000000",
+          },
+        },
+      },
+      requirements: { network, scheme: "exact", payTo: recipient },
       result: {
         isValid: true,
         payer: "0xSomePayer000000000000000000000000000000",
@@ -413,14 +447,15 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.invalidReason).toBe("facilitator_not_configured");
   });
 
-  it("rejects when network is missing from payload", async () => {
+  it("rejects when network is missing from requirements", async () => {
     const args: HookArgs = {
       paymentPayload: {
-        accepted: {},
+        accepted: { scheme: "exact" },
         payload: {
           authorization: { to: "0x1111111111111111111111111111111111111111" },
         },
       },
+      requirements: { scheme: "exact", payTo: "0x1111111111111111111111111111111111111111" },
       result: { isValid: true },
     };
 
@@ -430,12 +465,13 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.invalidReason).toBe("invalid_payload");
   });
 
-  it("rejects when recipient is missing from payload", async () => {
+  it("rejects when recipient is missing from requirements", async () => {
     const args: HookArgs = {
       paymentPayload: {
-        accepted: { network: "eip155:11155420" },
+        accepted: { network: "eip155:11155420", scheme: "exact" },
         payload: { authorization: {} },
       },
+      requirements: { network: "eip155:11155420", scheme: "exact" },
       result: { isValid: true },
     };
 
@@ -443,6 +479,28 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("invalid_payload");
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Permit2 rejection — only the EIP-3009 exact variant is supported
+  // ───────────────────────────────────────────────────────────
+
+  it("rejects Permit2 exact payloads with permit2_not_supported", async () => {
+    // Even a valid, well-formed Permit2 payment must be rejected: the fee model, the
+    // proxy deployment registry, and end-to-end coverage all assume EIP-3009.
+    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+      allowance: 100000n,
+      remainingSettlements: 10,
+      sufficient: true,
+    });
+
+    const args = permit2HookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("permit2_not_supported");
+    // Must reject before touching the fee-allowance path.
+    expect(checkMerchantAllowance).not.toHaveBeenCalled();
   });
 });
 

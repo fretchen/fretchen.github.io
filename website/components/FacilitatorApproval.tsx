@@ -189,10 +189,11 @@ export function FacilitatorApproval({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((json: { extensions?: Array<{ name: string; fee?: { recipient: string } }> }) => {
-        // Extract facilitator address from fee extension
-        const feeExt = json.extensions?.find((ext) => ext.name === "facilitator_fee");
-        const recipient = feeExt?.fee?.recipient;
+      .then((json: { facilitatorFees?: { recipient?: string } }) => {
+        // The facilitator address (fee recipient) is disclosed in the top-level
+        // `facilitatorFees` object; `extensions` is now a spec-conformant string[] of
+        // extension keys. Absent when the facilitator runs without a fee configured.
+        const recipient = json.facilitatorFees?.recipient;
         if (recipient) {
           setFacilitatorAddress(recipient as Address);
         } else {

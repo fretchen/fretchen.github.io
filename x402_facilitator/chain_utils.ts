@@ -11,6 +11,7 @@ import {
   tryGetEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
+  type Network,
 } from "@fretchen/chain-utils";
 
 export interface ChainConfig {
@@ -19,6 +20,11 @@ export interface ChainConfig {
   USDC_ADDRESS: string;
   USDC_NAME: string;
 }
+
+// Per-network RPC endpoint resolution lives in the shared package so `scw_js` (which
+// has the same bare-`http()` exposure) uses one implementation and one env-var
+// convention. Re-exported here so existing local imports keep working.
+export { getRpcUrl } from "@fretchen/chain-utils";
 
 /**
  * Get chain configuration including contract addresses
@@ -39,7 +45,7 @@ export function getChainConfig(network: string): ChainConfig {
  * Get all supported networks
  * @returns Array of supported CAIP-2 network identifiers
  */
-export function getSupportedNetworks(): string[] {
+export function getSupportedNetworks(): Network[] {
   return ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"];
 }
 
@@ -58,6 +64,6 @@ export function getSupportedNetworks(): string[] {
  * against it would fail on-chain.
  * @returns Array of CAIP-2 network identifiers with a deployed batch-settlement contract
  */
-export function getBatchSettlementNetworks(): string[] {
+export function getBatchSettlementNetworks(): Network[] {
   return ["eip155:10", "eip155:8453", "eip155:84532"];
 }

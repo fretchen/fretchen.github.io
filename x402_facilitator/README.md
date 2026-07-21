@@ -136,41 +136,46 @@ curl -X POST http://localhost:8080/verify -H "Content-Type: application/json" -d
 
 ### GET /supported
 
-Returns supported networks, schemes, and assets.
+Returns supported networks and schemes, the advertised extension keys, and — when a
+fee is configured — the fee disclosure.
+
+`extensions` is a list of extension **key strings** (per the x402 `SupportedResponse`
+type). The machine-readable fee detail, including the facilitator address that collects
+the fee, is carried in the top-level `facilitatorFees` object (x402 Fee Disclosure
+proposal, coinbase/x402#1016). Both the keys and `facilitatorFees` are omitted when the
+facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amount 0).
 
 **Response:**
 
 ```json
 {
   "kinds": [
-    {
-      "x402Version": 2,
-      "scheme": "exact",
-      "network": "eip155:10",
-      "assets": [
-        {
-          "address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-          "name": "USDC",
-          "symbol": "USDC",
-          "decimals": 6
-        }
-      ]
-    }
+    { "x402Version": 2, "scheme": "exact", "network": "eip155:10" },
+    { "x402Version": 2, "scheme": "batch-settlement", "network": "eip155:10" }
   ],
-  "extensions": [
-    {
-      "name": "recipient_whitelist",
-      "description": "Whitelisted recipients (NFT holders)",
-      "contracts": {
-        "mainnet": {
-          "genimg_v4": "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
-          "llmv1": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1"
-        }
-      }
-    }
-  ],
+  "extensions": ["facilitator_fee", "facilitatorFees"],
   "signers": {
-    "eip155:*": ["0x..."]
+    "eip155:*": ["0xFacilitatorAddress..."]
+  },
+  "facilitatorFees": {
+    "version": "1",
+    "model": "flat",
+    "asset": "USDC",
+    "flatFee": "10000",
+    "decimals": 6,
+    "recipient": "0xFacilitatorAddress...",
+    "networks": ["eip155:10", "eip155:8453", "eip155:11155420", "eip155:84532"],
+    "fee": {
+      "amount": "10000",
+      "description": "0.01 USDC per settlement",
+      "collection": "post_settlement_transferFrom"
+    },
+    "setup": {
+      "description": "One-time USDC approval required. Call approve() on the USDC contract for the facilitator's address.",
+      "function": "approve(address spender, uint256 amount)",
+      "spender": "0xFacilitatorAddress...",
+      "recommended_amount": "100000000"
+    }
   }
 }
 ```
@@ -178,6 +183,14 @@ Returns supported networks, schemes, and assets.
 ### POST /verify
 
 Validates payment authorization off-chain.
+
+> **Scheme support:** the `exact` scheme is supported only via its **EIP-3009**
+> payload variant (an `authorization` object, as shown below). **Permit2** payloads
+> (a `permit2Authorization` object) are rejected with `invalidReason:
+"permit2_not_supported"` — the fee model (post-settlement USDC `transferFrom`) is
+> EIP-3009-specific, and the x402 Permit2 proxy has no per-network deployment registry
+> here. The `batch-settlement` scheme is supported on the networks listed by
+> `getBatchSettlementNetworks()`.
 
 **Request:**
 

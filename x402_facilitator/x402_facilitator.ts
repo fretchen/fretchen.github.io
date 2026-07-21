@@ -218,6 +218,10 @@ async function handlePaymentRequest(
         logger.warn(
           {
             errorReason: result.errorReason,
+            // Underlying SDK detail (e.g. the decoded revert reason). Logged only —
+            // deliberately omitted from the response body below, which returns the
+            // stable `errorReason` code instead. See SettleResult.errorMessage.
+            errorMessage: result.errorMessage,
             payer: result.payer,
           },
           "Settlement failed",
@@ -322,7 +326,10 @@ if (process.env.NODE_ENV === "test") {
     dotenvModule.config();
 
     const scw_fnc_node = await import("@scaleway/serverless-functions");
-    scw_fnc_node.serveHandler(handle, 8080);
+    // The local dev server's Handler type models Scaleway's raw Lambda-style event
+    // (headers: Record<string, unknown> | null), which is narrower than our
+    // ScalewayEvent — this cast is a dev-only harness boundary, not a real runtime risk.
+    scw_fnc_node.serveHandler(handle as Parameters<typeof scw_fnc_node.serveHandler>[0], 8080);
 
     logger.info("🚀 Local server started at http://localhost:8080");
     logger.info("   POST http://localhost:8080/verify");

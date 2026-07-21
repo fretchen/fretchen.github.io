@@ -40,6 +40,21 @@ const ONCHAIN_STATE_TTL_MS = 5_000;
 // hourly interval at the time. 24h leaves the (now 12h) cron a 2x safety margin.
 const WITHDRAW_DELAY_SECONDS = Number(process.env.LLM_WITHDRAW_DELAY_SECONDS ?? "86400");
 
+// TTL for the batch-settlement per-channel "pendingRequest" lock. @x402/evm sets this lock
+// in onBeforeVerify and clears it in onAfterSettle to serialize concurrent requests on one
+// channel; a second request while the lock is live is rejected with `channel_busy`.
+// maxTimeoutSeconds is the ONLY thing that drives this TTL in the batch-settlement scheme —
+// it does not gate voucher freshness or payment expiry (verified against the SDK). The SDK
+// clamps the derived TTL to [5s, 10min] (pendingExpiresAt), so a large value like the
+// previous 3600 pinned it to the 10-minute ceiling: if a request is abandoned between verify
+// and settle (tab close, network drop, notebook interrupt) the lock is orphaned and the
+// channel stays busy for the full 10 minutes — and the client SDK does NOT auto-recover from
+// `channel_busy`. 120s keeps ample headroom over the real verify + LLM + settle wall-clock
+// (seconds, even for a slow mainnet completion + on-chain claim) while cutting the worst-case
+// orphan lockout to 2 minutes. Must be used identically at 402-advertise time (below) AND at
+// verify time (sc_llm_x402.ts) — the SDK treats maxTimeoutSeconds as immutable across the two.
+export const LLM_MAX_TIMEOUT_SECONDS = 120;
+
 export function getSupportedNetworks(): string[] {
   return SUPPORTED_NETWORKS;
 }
@@ -131,7 +146,7 @@ export async function createBatchSettlementPaymentRequirements({
         amount,
         asset: config.address,
         payTo,
-        maxTimeoutSeconds: 3600,
+        maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
         extra: { name: config.usdcName, version: config.usdcVersion },
       };
       return scheme.enhancePaymentRequirements(

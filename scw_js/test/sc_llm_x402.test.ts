@@ -83,6 +83,9 @@ vi.mock("../x402_server.js", () => ({
   extractPaymentPayload: mockExtractPaymentPayload,
   createSettlementHeaders: mockCreateSettlementHeaders,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
+  // Real constant (not a mock fn) — imported by sc_llm_x402.ts for the verify-time
+  // maxTimeoutSeconds; keep in sync with x402_server.ts's exported value.
+  LLM_MAX_TIMEOUT_SECONDS: 120,
 }));
 
 vi.mock("@fretchen/chain-utils", () => ({

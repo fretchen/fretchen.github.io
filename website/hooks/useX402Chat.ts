@@ -78,6 +78,26 @@ function getOrCreateVoucherSigner(walletAddress: string) {
   return privateKeyToAccount(privateKey);
 }
 
+/**
+ * Turn a non-OK payment response into a user-facing message. Batch-settlement's
+ * `channel_busy` is a transient, self-healing per-channel lock — the server holds it across
+ * a single message's verify→settle to serialize requests on one channel, and the x402 client
+ * SDK does NOT auto-recover from it — so it warrants an actionable "wait and retry" line
+ * rather than dumping the raw reason code. Any other reason keeps the informative default.
+ */
+function describePaymentError(status: number, body: string): string {
+  let errorCode: string | undefined;
+  try {
+    errorCode = (JSON.parse(body) as { error?: string }).error;
+  } catch {
+    // Non-JSON body — fall through to the generic message.
+  }
+  if (errorCode?.includes("channel_busy")) {
+    return "Your previous message is still being settled on-chain. Please wait a few seconds and send it again.";
+  }
+  return `Request failed: ${status} - ${body}`;
+}
+
 export interface UseX402ChatResult {
   sendMessage: (prompt: X402ChatMessage[]) => Promise<X402ChatResponse>;
   status: X402GenerationStatus;
@@ -192,7 +212,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Request failed: ${response.status} - ${errorText}`);
+          throw new Error(describePaymentError(response.status, errorText));
         }
 
         const result = (await response.json()) as X402ChatResponse;

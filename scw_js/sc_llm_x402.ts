@@ -9,6 +9,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
   getBatchSettlementNetworks,
+  LLM_MAX_TIMEOUT_SECONDS,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
 
@@ -176,7 +177,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     amount: USDC_MAX_PRICE_PER_MESSAGE,
     asset: usdcConfig.address,
     payTo: receiverAddress,
-    maxTimeoutSeconds: 3600,
+    // Must match the value advertised in the 402 (createBatchSettlementPaymentRequirements)
+    // — the SDK treats maxTimeoutSeconds as immutable between advertise and verify.
+    maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
     extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
   };
   // Must be the SAME enhanced requirements (extra.receiverAuthorizer/withdrawDelay) the
@@ -196,7 +199,12 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     [],
   );
 
-  let verification: { isValid: boolean; invalidReason?: string; payer?: string };
+  let verification: {
+    isValid: boolean;
+    invalidReason?: string;
+    invalidMessage?: string;
+    payer?: string;
+  };
   try {
     verification = await resourceServer.verifyPayment(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -209,7 +217,15 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   if (!verification.isValid) {
-    logger.warn({ reason: verification.invalidReason }, "Payment verification failed");
+    // Log the SDK's human-readable invalidMessage alongside the machine reason — e.g. for
+    // `channel_busy` it reads "Channel is already processing a request", which explains an
+    // otherwise-opaque, transient rejection (a per-channel lock held across verify→settle;
+    // self-heals within LLM_MAX_TIMEOUT_SECONDS). The response body keeps `invalidReason` as
+    // the raw code, which the client SDK's corrective-recovery path matches on.
+    logger.warn(
+      { reason: verification.invalidReason, message: verification.invalidMessage },
+      "Payment verification failed",
+    );
     // Must go through createPaymentRequiredResponse (not a hand-rolled body) so the SDK's
     // response-time scheme enrichment runs — e.g. for batch-settlement's
     // invalid_batch_settlement_evm_cumulative_amount_mismatch, this attaches

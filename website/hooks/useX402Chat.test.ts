@@ -240,6 +240,36 @@ describe("useX402Chat", () => {
       expect(result.current.status).toBe("error");
       expect(result.current.error).toContain("402");
     });
+
+    it("surfaces a friendly, actionable message for a channel_busy 402", async () => {
+      // The transient per-channel lock the server holds across verify→settle. The raw code
+      // is opaque and the client SDK does not auto-recover from it, so the hook maps it to
+      // a "wait and retry" line instead of dumping the reason code.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ error: "invalid_batch_settlement_evm_channel_busy" }), {
+            status: 402,
+          }),
+        ),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toMatch(/still being settled/i);
+      expect(thrown?.message).not.toContain("channel_busy");
+      expect(result.current.status).toBe("error");
+      expect(result.current.error).toMatch(/wait a few seconds/i);
+    });
   });
 
   describe("Reset Functionality", () => {

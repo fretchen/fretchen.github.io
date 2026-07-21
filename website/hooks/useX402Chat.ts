@@ -18,7 +18,11 @@ import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { useConfiguredPublicClient } from "./useConfiguredPublicClient";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
-import type { ClientChannelStorage, BatchSettlementClientContext } from "@x402/evm/batch-settlement/client";
+import type {
+  ClientChannelStorage,
+  BatchSettlementClientContext,
+  BatchSettlementDepositStrategyContext,
+} from "@x402/evm/batch-settlement/client";
 
 // Endpoint of the batch-settlement chat function (override for local dev with
 // PUBLIC_ENV__LLM_X402_ENDPOINT=http://localhost:8085).
@@ -76,6 +80,32 @@ function getOrCreateVoucherSigner(walletAddress: string) {
     window.localStorage.setItem(storageKey, privateKey);
   }
   return privateKeyToAccount(privateKey);
+}
+
+// Floor for channel deposits/top-ups, in USDC atomic units (6 decimals) — $0.50.
+// The SDK's own default (depositMultiplier x per-message ceiling) tracks whatever the
+// ceiling happens to be, currently ~$0.003/message, so it sizes deposits at ~1-3 cents:
+// enough for only ~5 messages worst-case before another on-chain top-up (a real tx, a
+// real wallet-adjacent wait) is needed. $0.50 comfortably covers a full multi-message
+// session (100s of messages even at worst-case per-message pricing) while keeping the
+// number small on the two axes that actually matter for this app: it's the blast radius
+// of the localStorage voucher-signer above if it ever leaks (bounded to this amount,
+// never more), and the capital a user has locked up if the server stops cooperating and
+// they have to wait out withdrawDelay to exit unilaterally. Both are trivial at $0.50;
+// neither improves by going lower, so lower just buys more top-up friction for no benefit.
+const MINIMUM_DEPOSIT_ATOMIC = 500_000n;
+
+/**
+ * Custom deposit sizing: always deposit/top-up to at least `MINIMUM_DEPOSIT_ATOMIC`,
+ * regardless of the SDK's default multiplier-of-ceiling formula — see the constant's
+ * comment for why a fixed floor is the right lever here, not `depositPolicy.depositMultiplier`
+ * (which would still scale with the ceiling rather than decoupling from it).
+ * `minimumDepositAmount` is the true minimum the SDK needs for the top-up in progress; the
+ * SDK requires the returned amount be >= it, so it's respected as a floor of its own.
+ */
+function depositStrategy(context: BatchSettlementDepositStrategyContext): string {
+  const required = BigInt(context.minimumDepositAmount);
+  return (required > MINIMUM_DEPOSIT_ATOMIC ? required : MINIMUM_DEPOSIT_ATOMIC).toString();
 }
 
 /**
@@ -164,7 +194,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
         // Delegate voucher signing to a persisted local key so only the deposit/top-up
         // prompts the real wallet — see getOrCreateVoucherSigner's doc comment.
         const voucherSigner = getOrCreateVoucherSigner(walletClient.account.address);
-        const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner });
+        const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
 
         const client = new x402Client();
         client.register(network, scheme);

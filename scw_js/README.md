@@ -9,12 +9,12 @@ Serverless functions for AI image generation and LLM services with blockchain in
 
 ### Quick Links
 
-| Service          | Endpoint          | Description                                           |
-| ---------------- | ----------------- | ----------------------------------------------------- |
-| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment) |
-| LLM              | `llm`             | Blockchain-authenticated LLM                          |
-| Leaf History     | `leafhistory`     | Public merkle-tree leaf queries (no auth)             |
-| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)     |
+| Service          | Endpoint          | Description                                            |
+| ---------------- | ----------------- | ------------------------------------------------------ |
+| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment)  |
+| LLM Chat         | `llmx402`         | x402 batch-settlement LLM chat (USDC payment channels) |
+| LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h  |
+| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)      |
 
 ## Functions
 
@@ -64,36 +64,9 @@ Generates AI images using Black Forest Labs API with USDC payment via x402 proto
 }
 ```
 
-### `sc_llm.js` - Blockchain LLM
+### `sc_llm_x402.js` / `llm_x402_cron.js` - x402 Batch-Settlement LLM Chat
 
-LLM service with wallet signature authentication and Merkle-tree based usage tracking.
-
-**Endpoint:** POST
-
-**Parameters:**
-
-```json
-{
-  "data": {
-    "prompt": "Your question here",
-    "useDummyData": false
-  },
-  "auth": {
-    "address": "0xYourWalletAddress",
-    "signature": "0x...",
-    "message": "Signed message"
-  }
-}
-```
-
-**Requirements:**
-
-- Wallet must have minimum balance of 0.00001 ETH
-- Valid EIP-191 signature required
-
-### `leaf_history.js`
-
-Public, unauthenticated reader of Merkle-tree leaves for usage tracking. `GET ?address=0x…` returns that address's leaves. The underlying data is public by design (see S3 data classification below), so no wallet signature is required.
+LLM chat paid via x402 batch-settlement USDC payment channels — no bearer token, the payment voucher itself proves wallet control. `llmx402` handles chat requests (deposit/voucher/402 flow); `llmx402cron` claims and settles accumulated channels on a 12h schedule. See [`assistent_plan.md`](../assistent_plan.md) at the repo root for the full design record (deposit/voucher/claim/settle lifecycle, pricing model, gotchas).
 
 ### `growth_api.ts` - Growth Agent Draft Approval
 
@@ -120,7 +93,7 @@ API for reviewing, editing, and approving AI-generated social media drafts. Used
 
 ### RPC configuration
 
-Direct on-chain calls (image mint, legacy LLMv1 merkle settlement) use `getRpcUrl` from
+Direct on-chain calls (image mint, x402 batch-settlement claim/settle) use `getRpcUrl` from
 `@fretchen/chain-utils`, falling back to each chain's public endpoint when unset — fine
 for local dev, but the public endpoints are aggressively rate-limited under real traffic.
 Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
@@ -134,13 +107,13 @@ Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
 
 All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.
 
-| Prefix / object                            | Access        | Why                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `images/`, `metadata/`, root `image*.json` | `public-read` | NFT assets referenced on-chain via `tokenURI` — must be publicly fetchable.                                                                                                                                                                                                                                                                           |
-| `merkle/trees.json`                        | `public-read` | LLM usage/settlement data, **public by design**. Settled batches are published on-chain as `LLMv1.processBatch` calldata; pending entries are treated as public too (transparent usage ledger). The `leafhistory` endpoint is an unauthenticated public reader of this same data. Only the merkle _root_ is a commitment; the leaves are not secrets. |
-| `growth-agent/`, `growth-agent-dev/`       | private       | Internal growth-agent state; owner-only, read/written via the authenticated `growthapi` function.                                                                                                                                                                                                                                                     |
-| `comments/`                                | private       | Comment-service state.                                                                                                                                                                                                                                                                                                                                |
-| `terraform/`                               | private       | Infrastructure-as-code state.                                                                                                                                                                                                                                                                                                                         |
+| Prefix / object                            | Access        | Why                                                                                                                                                                                                                                |
+| ------------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `images/`, `metadata/`, root `image*.json` | `public-read` | NFT assets referenced on-chain via `tokenURI` — must be publicly fetchable.                                                                                                                                                        |
+| `channels/`                                | private       | x402 batch-settlement channel state (`x402_channel_storage.ts`) — per-channel balance, cumulative claim, pending-request lock. Not public; settled totals are independently verifiable on-chain via the batch-settlement contract. |
+| `growth-agent/`, `growth-agent-dev/`       | private       | Internal growth-agent state; owner-only, read/written via the authenticated `growthapi` function.                                                                                                                                  |
+| `comments/`                                | private       | Comment-service state.                                                                                                                                                                                                             |
+| `terraform/`                               | private       | Infrastructure-as-code state.                                                                                                                                                                                                      |
 
 > Note: anonymous bucket **listing** is currently enabled, which exposes object _key names_ (not contents) of the private prefixes. This is an accepted low-severity item — see [SECURITY.md](./SECURITY.md).
 
@@ -153,8 +126,9 @@ npm run dev:x402
 # Growth API (port 8083)
 npm run dev:growth
 
-# LLM Service
-NODE_ENV=test node sc_llm.js
+# LLM Chat (x402 batch-settlement)
+npm run dev:llmx402
+npm run dev:llmx402cron
 ```
 
 ## Deployment

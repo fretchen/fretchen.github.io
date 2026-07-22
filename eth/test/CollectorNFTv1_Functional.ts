@@ -1,26 +1,39 @@
+import { describe, it, before } from "node:test";
+import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { getAddress } from "viem";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
+import { getAddress, parseEther } from "viem";
 
-const GEN_IM_MINT_PRICE = hre.ethers.parseEther("0.01");
-const BASE_MINT_PRICE = hre.ethers.parseEther("0.001");
+let networkConn: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof networkConn.ethers;
+let upgradesApi: HardhatUpgrades;
+
+const GEN_IM_MINT_PRICE = parseEther("0.01");
+const BASE_MINT_PRICE = parseEther("0.001");
 
 describe("CollectorNFTv1 - Functional Tests", function () {
+  before(async () => {
+    networkConn = await hre.network.getOrCreate();
+    ethers = networkConn.ethers;
+    upgradesApi = await upgradesPlugin(hre, networkConn);
+  });
+
   // Fixture to deploy GenImNFTv3 for testing (using ethers for deployment, viem for testing)
   async function deployGenImNFTv3Fixture() {
-    const [owner, otherAccount] = await hre.viem.getWalletClients();
+    const [owner, otherAccount] = await networkConn.viem.getWalletClients();
 
     // Deploy GenImNFTv3 using ethers (required for OpenZeppelin upgrades)
-    const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
-    const genImProxy = await hre.upgrades.deployProxy(GenImNFTv3Factory, [], {
+    const GenImNFTv3Factory = await ethers.getContractFactory("GenImNFTv3");
+    const genImProxy = await upgradesApi.deployProxy(GenImNFTv3Factory, [], {
       initializer: "initialize",
       kind: "uups",
     });
     await genImProxy.waitForDeployment();
 
     const genImAddress = await genImProxy.getAddress();
-    const genImNFT = await hre.viem.getContractAt("GenImNFTv3", genImAddress);
+    const genImNFT = await networkConn.viem.getContractAt("GenImNFTv3", genImAddress as `0x${string}`);
 
     return {
       genImNFT,
@@ -32,18 +45,19 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   // Fixture to deploy CollectorNFTv1
   async function deployCollectorNFTv1Fixture() {
-    const { genImNFT, genImAddress, owner, otherAccount } = await loadFixture(deployGenImNFTv3Fixture);
+    const { genImNFT, genImAddress, owner, otherAccount } =
+      await networkConn.networkHelpers.loadFixture(deployGenImNFTv3Fixture);
 
     // Deploy CollectorNFTv1 using ethers (required for OpenZeppelin upgrades)
-    const CollectorNFTv1Factory = await hre.ethers.getContractFactory("CollectorNFTv1");
-    const collectorProxy = await hre.upgrades.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
+    const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
+    const collectorProxy = await upgradesApi.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
       initializer: "initialize",
       kind: "uups",
     });
     await collectorProxy.waitForDeployment();
 
     const proxyAddress = await collectorProxy.getAddress();
-    const collectorNFTv1 = await hre.viem.getContractAt("CollectorNFTv1", proxyAddress);
+    const collectorNFTv1 = await networkConn.viem.getContractAt("CollectorNFTv1", proxyAddress as `0x${string}`);
 
     return {
       genImNFT,
@@ -57,7 +71,7 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   // Fixture with test data
   async function deployCollectorNFTv1WithDataFixture() {
-    const fixtureData = await loadFixture(deployCollectorNFTv1Fixture);
+    const fixtureData = await networkConn.networkHelpers.loadFixture(deployCollectorNFTv1Fixture);
     const { genImNFT, owner, otherAccount } = fixtureData;
 
     // Mint some GenImNFTs for testing
@@ -81,7 +95,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   describe("Basic Minting Functionality", function () {
     it("Should allow minting CollectorNFTs for listed GenImNFTs", async function () {
-      const { genImNFT, collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { genImNFT, collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Mint a CollectorNFT for the first GenImNFT (which is listed)
       await collectorNFTv1.write.mintCollectorNFT([0n], {
@@ -100,51 +116,59 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should reject minting for unlisted GenImNFTs", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Try to mint for GenImNFT token 2 (which is not listed)
-      await expect(
+      await assert.rejects(() =>
         collectorNFTv1.write.mintCollectorNFT([2n], {
           account: otherAccount.account,
           value: BASE_MINT_PRICE,
         }),
-      ).to.be.rejected;
+      );
     });
 
     it("Should reject minting with insufficient payment", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Try to mint with insufficient payment
-      await expect(
+      await assert.rejects(() =>
         collectorNFTv1.write.mintCollectorNFT([0n], {
           account: otherAccount.account,
           value: BASE_MINT_PRICE - 1n,
         }),
-      ).to.be.rejected;
+      );
     });
 
     it("Should reject minting for non-existent GenImNFT", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Try to mint for non-existent GenImNFT token
-      await expect(
+      await assert.rejects(() =>
         collectorNFTv1.write.mintCollectorNFT([999n], {
           account: otherAccount.account,
           value: BASE_MINT_PRICE,
         }),
-      ).to.be.rejected;
+      );
     });
   });
 
   describe("Dynamic Pricing System", function () {
     it("Should start with base price", async function () {
-      const { collectorNFTv1 } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1 } = await networkConn.networkHelpers.loadFixture(deployCollectorNFTv1WithDataFixture);
 
       expect(await collectorNFTv1.read.getCurrentPrice([0n])).to.equal(BASE_MINT_PRICE);
     });
 
     it("Should maintain base price for first 5 mints", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Mint 5 CollectorNFTs
       for (let i = 0; i < 5; i++) {
@@ -164,7 +188,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should double price after 5 mints", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Mint 5 CollectorNFTs at base price
       for (let i = 0; i < 5; i++) {
@@ -188,7 +214,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should have independent pricing per GenImNFT", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Mint for GenImNFT token 0
       await collectorNFTv1.write.mintCollectorNFT([0n], {
@@ -210,7 +238,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   describe("Statistics and Tracking", function () {
     it("Should track mint statistics correctly", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Initially no mints
       const [mintCount, currentPrice, nextPrice] = await collectorNFTv1.read.getMintStats([0n]);
@@ -231,7 +261,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should track GenImNFT to CollectorNFT relationships", async function () {
-      const { collectorNFTv1, owner, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { collectorNFTv1, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       // Mint for different GenImNFTs
       await collectorNFTv1.write.mintCollectorNFT([0n], {
@@ -265,7 +297,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   describe("URI Management", function () {
     it("Should automatically inherit GenImNFT URI", async function () {
-      const { genImNFT, collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { genImNFT, collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       const genImTokenId = 0n;
       const originalURI = await genImNFT.read.tokenURI([genImTokenId]);
@@ -282,7 +316,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should retrieve original GenImNFT URI for any CollectorNFT", async function () {
-      const { genImNFT, collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { genImNFT, collectorNFTv1, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       const genImTokenId = 1n;
       const originalURI = await genImNFT.read.tokenURI([genImTokenId]);
@@ -300,7 +336,9 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should work with multiple collectors inheriting same URI", async function () {
-      const { genImNFT, collectorNFTv1, owner, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { genImNFT, collectorNFTv1, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
       const genImTokenId = 0n;
       const originalURI = await genImNFT.read.tokenURI([genImTokenId]);
@@ -329,9 +367,11 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   describe("Payment Distribution", function () {
     it("Should distribute payments to GenImNFT owners", async function () {
-      const { genImNFT, collectorNFTv1, owner, otherAccount } = await loadFixture(deployCollectorNFTv1WithDataFixture);
+      const { genImNFT, collectorNFTv1, owner, otherAccount } = await networkConn.networkHelpers.loadFixture(
+        deployCollectorNFTv1WithDataFixture,
+      );
 
-      const publicClient = await hre.viem.getPublicClient();
+      const publicClient = await networkConn.viem.getPublicClient();
 
       // Get initial balances
       const initialOwnerBalance = await publicClient.getBalance({ address: owner.account.address });
@@ -355,15 +395,15 @@ describe("CollectorNFTv1 - Functional Tests", function () {
 
   describe("Access Control", function () {
     it("Should have correct owner", async function () {
-      const { collectorNFTv1, owner } = await loadFixture(deployCollectorNFTv1Fixture);
+      const { collectorNFTv1, owner } = await networkConn.networkHelpers.loadFixture(deployCollectorNFTv1Fixture);
 
       expect(await collectorNFTv1.read.owner()).to.equal(getAddress(owner.account.address));
     });
 
     it("Should allow owner to update base mint price", async function () {
-      const { collectorNFTv1, owner } = await loadFixture(deployCollectorNFTv1Fixture);
+      const { collectorNFTv1, owner } = await networkConn.networkHelpers.loadFixture(deployCollectorNFTv1Fixture);
 
-      const newPrice = hre.ethers.parseEther("0.002");
+      const newPrice = parseEther("0.002");
 
       await collectorNFTv1.write.setBaseMintPrice([newPrice], {
         account: owner.account,
@@ -373,15 +413,16 @@ describe("CollectorNFTv1 - Functional Tests", function () {
     });
 
     it("Should reject non-owner attempts to update base mint price", async function () {
-      const { collectorNFTv1, otherAccount } = await loadFixture(deployCollectorNFTv1Fixture);
+      const { collectorNFTv1, otherAccount } =
+        await networkConn.networkHelpers.loadFixture(deployCollectorNFTv1Fixture);
 
-      const newPrice = hre.ethers.parseEther("0.002");
+      const newPrice = parseEther("0.002");
 
-      await expect(
+      await assert.rejects(() =>
         collectorNFTv1.write.setBaseMintPrice([newPrice], {
           account: otherAccount.account,
         }),
-      ).to.be.rejected;
+      );
     });
   });
 });

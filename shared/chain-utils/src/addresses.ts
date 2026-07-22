@@ -89,24 +89,6 @@ export const SUPPORT_V2_NETWORKS = [
 ] as const;
 
 // ═══════════════════════════════════════════════════════════════
-// LLMv1 (out of scope for migration, but included for completeness)
-// ═══════════════════════════════════════════════════════════════
-
-export const MAINNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:10": "0x833F39D6e67390324796f861990ce9B7cf9F5dE1", // Optimism
-};
-
-export const TESTNET_LLM_V1_ADDRESSES: Record<string, `0x${string}`> = {
-  "eip155:11155420": "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56", // Optimism Sepolia
-};
-
-/** All networks where LLMv1 is deployed */
-export const LLM_V1_NETWORKS = [
-  ...Object.keys(MAINNET_LLM_V1_ADDRESSES),
-  ...Object.keys(TESTNET_LLM_V1_ADDRESSES),
-] as const;
-
-// ═══════════════════════════════════════════════════════════════
 // USDC (available on all chains)
 // ═══════════════════════════════════════════════════════════════
 
@@ -181,25 +163,6 @@ export function tryGetCollectorNFTAddress(network: string): `0x${string}` | null
   return (
     MAINNET_COLLECTOR_NFT_ADDRESSES[network] || TESTNET_COLLECTOR_NFT_ADDRESSES[network] || null
   );
-}
-
-/**
- * Get LLMv1 address for a network (mainnet or testnet).
- * @throws Error if not deployed on that network
- */
-export function getLLMv1Address(network: string): `0x${string}` {
-  const address = MAINNET_LLM_V1_ADDRESSES[network] || TESTNET_LLM_V1_ADDRESSES[network];
-  if (!address) {
-    throw new Error(`LLMv1 not deployed on ${network}`);
-  }
-  return address;
-}
-
-/**
- * Try to get LLMv1 address, returns null if not deployed.
- */
-export function tryGetLLMv1Address(network: string): `0x${string}` | null {
-  return MAINNET_LLM_V1_ADDRESSES[network] || TESTNET_LLM_V1_ADDRESSES[network] || null;
 }
 
 /**

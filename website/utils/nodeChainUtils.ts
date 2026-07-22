@@ -9,7 +9,6 @@
 import { createPublicClient, http, type Chain, type PublicClient } from "viem";
 import { sepolia, optimism, optimismSepolia } from "viem/chains";
 import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
-import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 // ═══════════════════════════════════════════════════════════════
 // SSR/Node.js specific utilities
@@ -98,33 +97,11 @@ const NODE_COLLECTOR_NFT_CONTRACT_CONFIG = (() => {
   }
 })();
 
-const NODE_LLM_V1_CONTRACT_CONFIG = (() => {
-  switch (NODE_CHAIN_NAME) {
-    case "optimismSepolia":
-      return {
-        address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
-        abi: LLMv1ABI,
-      } as const;
-    case "optimism":
-      return {
-        address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1" as `0x${string}`,
-        abi: LLMv1ABI,
-      } as const;
-    default:
-      return {
-        address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
-        abi: LLMv1ABI,
-      } as const;
-  }
-})();
-
 // Export stable contract configurations for Node.js
 // GenAI NFT: Use chain-utils getGenAiNFTAddress() + GenImNFTv4ABI instead
 export const nodeContractConfigs = {
   collectorNFT: NODE_COLLECTOR_NFT_CONTRACT_CONFIG,
-  llmV1: NODE_LLM_V1_CONTRACT_CONFIG,
 } as const;
 
 // Convenience exports for backward compatibility
 export const nodeCollectorNFTContractConfig = NODE_COLLECTOR_NFT_CONTRACT_CONFIG;
-export const nodeLlmV1ContractConfig = NODE_LLM_V1_CONTRACT_CONFIG;

@@ -36,9 +36,7 @@ vi.mock("../hooks/useAutoNetwork", () => ({
 // Mock chain-utils
 vi.mock("@fretchen/chain-utils", () => ({
   getGenAiNFTAddress: vi.fn(() => "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb"),
-  getLLMv1Address: vi.fn(() => "0x1234567890123456789012345678901234567890"),
   GENAI_NFT_NETWORKS: ["eip155:10", "eip155:11155420"],
-  LLM_V1_NETWORKS: ["eip155:10", "eip155:11155420"],
 }));
 
 // Mock styles

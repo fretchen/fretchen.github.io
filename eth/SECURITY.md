@@ -23,7 +23,7 @@ Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. Th
 | `CollectorNFT.sol` | Reentrancy via `_safeMint` — price manipulation only, no fund theft | Medium | Open — tracked privately |
 | All upgradeable | Upgrade gated by single EOA only, no timelock or multi-sig | Medium (governance) | Partially mitigated — see below |
 | `SupportV2.sol` | Arbitrary `_token` address accepted in `donateToken()` | Low | Accepted — contract holds no funds |
-| `LLMv1.sol` | `processBatch` state-update ordering — reentrancy hardening | Low | Open — fix on next upgrade |
+| `LLMv1.sol` (deprecated) | `processBatch` state-update ordering — reentrancy hardening | Low | Won't fix — contract deprecated in favor of x402 batch-settlement (`/assistent`); no further upgrades planned |
 
 ---
 
@@ -34,8 +34,7 @@ Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. Th
 - `SupportV2.donate()` and `donateToken()` use `ReentrancyGuardTransient` (OZ 5.x transient storage)
 - Solidity 0.8.27 — built-in overflow/underflow protection
 - Storage layout preserved across v3→v4 upgrade (gap 49 → 48 slots)
-- Merkle proof replay protection in `LLMv1` via `processedBatches` mapping
-- **Planned (next `LLMv1` upgrade):** set `processedBatches` before the provider-payment loop (CEI) or add `nonReentrant` to `processBatch`
+- Merkle proof replay protection in `LLMv1` via `processedBatches` mapping (deprecated contract, no code path calls it anymore)
 
 ---
 

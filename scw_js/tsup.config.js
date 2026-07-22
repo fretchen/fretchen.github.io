@@ -2,14 +2,7 @@ import { defineConfig } from "tsup";
 import { builtinModules } from "module";
 
 export default defineConfig({
-  entry: [
-    "genimg_x402_token.ts",
-    "sc_llm.ts",
-    "sc_llm_x402.ts",
-    "llm_x402_cron.ts",
-    "leaf_history.ts",
-    "growth_api.ts",
-  ],
+  entry: ["genimg_x402_token.ts", "sc_llm_x402.ts", "llm_x402_cron.ts", "growth_api.ts"],
   format: ["esm"],
   platform: "node",
   target: "node22",

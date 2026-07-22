@@ -18,7 +18,7 @@ export const config = createConfig({
     [sepolia.id]: http(),
     [optimism.id]: http(),
     [optimismSepolia.id]: http(),
-    // assistent-v2's x402 batch-settlement channel reads (channel-open, corrective-402
+    // assistent's x402 batch-settlement channel reads (channel-open, corrective-402
     // recovery) hit this on every real chat session. viem's default (mainnet.base.org)
     // is explicitly documented by Base as not for production traffic, and has already
     // rate-limited a Multicall3-bundled read batch in this exact repo (see getRpcUrl's

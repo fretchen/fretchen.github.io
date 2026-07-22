@@ -13,7 +13,6 @@ Detailed usage and config options are documented in JSDoc at the top of each fil
 | Script                  | Contract                              | Config file                      |
 | ----------------------- | ------------------------------------- | -------------------------------- |
 | `deploy-genimg-v4.ts`   | GenImNFTv4 (NFT + image generation)   | `deploy-genimg-v4.config.json`   |
-| `deploy-llm-v1.ts`      | LLMv1 (prepaid LLM balance)           | `llm-v1.config.json`             |
 | `deploy-splitter-v1.ts` | EIP3009SplitterV1 (USDC fee splitter) | `deploy-splitter-v1.config.json` |
 | `deploy-support-v2.ts`  | SupportV2 (ETH donations)             | `deploy-support-v2.config.json`  |
 
@@ -24,14 +23,12 @@ All deploy scripts support `validateOnly` and `dryRun` modes via their config fi
 | Script                     | Contract                  | Config file                     |
 | -------------------------- | ------------------------- | ------------------------------- |
 | `upgrade-genimg-v4.ts`     | GenImNFTv4 implementation | `upgrade-genimg-v4.config.json` |
-| `upgrade-collector-nft.ts` | CollectorNFT → v2         | `PROXY_ADDRESS` env var         |
 
 ## Verify
 
 | Script                | Purpose                            |
 | --------------------- | ---------------------------------- |
 | `verify-genimg-v4.ts` | Verify GenImNFTv4 on Etherscan     |
-| `verify-llm.ts`       | Verify LLMv1 on Etherscan          |
 | `verify-contract.ts`  | Generic UUPS contract verification |
 
 ## Utilities

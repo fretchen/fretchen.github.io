@@ -1,5 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Script to extract and export contract ABIs in various formats
@@ -38,30 +43,6 @@ const contracts: ContractConfig[] = [
     description: "GenImNFT Version 4 with EIP-8004 agent whitelist (CVE-2025-11-26 fix)",
   },
   {
-    name: "CollectorNFT",
-    contractFile: "CollectorNFT.sol",
-    contractName: "CollectorNFT",
-    description: "NFT collection based on GenImNFT tokens",
-  },
-  {
-    name: "CollectorNFTv1",
-    contractFile: "CollectorNFTv1.sol",
-    contractName: "CollectorNFTv1",
-    description: "CollectorNFT Version 1 with upgraded features and UUPS proxy pattern",
-  },
-  {
-    name: "Support",
-    contractFile: "Support.sol",
-    contractName: "Support",
-    description: "Support contract for donations and likes functionality",
-  },
-  {
-    name: "LLMv1",
-    contractFile: "LLMv1.sol",
-    contractName: "LLMv1",
-    description: "LLM Version 1 to interact with LLMs",
-  },
-  {
     name: "EIP3009SplitterV1",
     contractFile: "EIP3009SplitterV1.sol",
     contractName: "EIP3009SplitterV1",
@@ -75,14 +56,14 @@ const contracts: ContractConfig[] = [
   },
 ];
 
-function exportContractABI(config: ContractConfig) {
+export function exportContractABI(config: ContractConfig, dirs: { artifactsRoot?: string; exportRoot?: string } = {}) {
   console.log(`🔧 Extracting ${config.name} ABI...`);
 
+  const artifactsRoot = dirs.artifactsRoot ?? path.join(__dirname, "../artifacts/contracts");
+  const exportDir = dirs.exportRoot ?? path.join(__dirname, "../abi/contracts");
+
   // Read the artifact file
-  const artifactPath = path.join(
-    __dirname,
-    `../artifacts/contracts/${config.contractFile}/${config.contractName}.json`,
-  );
+  const artifactPath = path.join(artifactsRoot, `${config.contractFile}/${config.contractName}.json`);
 
   if (!fs.existsSync(artifactPath)) {
     console.error(`❌ ${config.name} artifact not found. Please compile first:`);
@@ -94,7 +75,6 @@ function exportContractABI(config: ContractConfig) {
   const abi = artifact.abi;
 
   // Create export directory
-  const exportDir = path.join(__dirname, "../abi/contracts");
   if (!fs.existsSync(exportDir)) {
     fs.mkdirSync(exportDir, { recursive: true });
   }
@@ -134,36 +114,6 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
     );
     if (specificFunctions.length > 0) {
       console.log("\n🆕 V3 Specific Functions:");
-      specificFunctions.forEach((f: ABIItem) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
-      });
-    }
-  } else if (config.name === "CollectorNFT") {
-    specificFunctions = functions.filter(
-      (f: ABIItem) =>
-        f.name?.includes("mint") ||
-        f.name?.includes("Price") ||
-        f.name?.includes("GenIm") ||
-        f.name?.includes("Collector"),
-    );
-    if (specificFunctions.length > 0) {
-      console.log("\n🎨 CollectorNFT Specific Functions:");
-      specificFunctions.forEach((f: ABIItem) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
-      });
-    }
-  } else if (config.name === "CollectorNFTv1") {
-    specificFunctions = functions.filter(
-      (f: ABIItem) =>
-        f.name?.includes("mint") ||
-        f.name?.includes("Price") ||
-        f.name?.includes("GenIm") ||
-        f.name?.includes("Collector") ||
-        f.name?.includes("upgrade") ||
-        f.name === "initialize",
-    );
-    if (specificFunctions.length > 0) {
-      console.log("\n🎨 CollectorNFTv1 Specific Functions:");
       specificFunctions.forEach((f: ABIItem) => {
         console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });
@@ -268,9 +218,26 @@ async function main() {
   }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+// `hardhat run` invokes scripts as a dynamic import from within the hardhat binary
+// process, so process.argv[1] is always the hardhat binary — never this file's path.
+// The script path Hardhat was told to run does appear as a CLI arg though (e.g.
+// `hardhat run scripts/export-abi.ts [--network ...]`), so resolve each arg against
+// cwd and compare to this file's absolute path to detect "run directly" vs "imported
+// for testing" (see export-abi.test.ts, which imports exportContractABI without
+// wanting the full real export to run as a side effect).
+const isMainModule = process.argv.slice(2).some((arg) => {
+  try {
+    return path.resolve(process.cwd(), arg) === __filename;
+  } catch {
+    return false;
+  }
+});
+
+if (isMainModule) {
+  main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

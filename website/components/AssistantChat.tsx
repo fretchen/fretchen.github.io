@@ -1,6 +1,6 @@
 /**
  * AssistantChat — the interactive core of the x402 batch-settlement chat assistant
- * (`/assistent-v2`). Pays per message via `useX402Chat` (USDC payment channels): the
+ * (`/assistent`). Pays per message via `useX402Chat` (USDC payment channels): the
  * first message opens a channel (one wallet-signed deposit), later messages are
  * off-chain voucher signatures reusing the open channel.
  */

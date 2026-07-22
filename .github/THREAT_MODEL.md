@@ -20,7 +20,7 @@ What has monetary value, irreversibility, or trust significance in this system:
 | Asset | Location | Value |
 |---|---|---|
 | ETH in GenImNFTv4 | On-chain | Accumulates mint fees until `withdraw()` is called |
-| ETH in LLMv1 | On-chain | User prepaid balances; withdrawable by users or claimable by providers |
+| ETH in LLMv1 (deprecated) | On-chain | User prepaid balances; withdrawable by users or claimable by providers. **No serverless code path calls this contract anymore** — `sc_llm.ts`/`leaf_history.ts` were retired in favor of `/assistent`'s x402 batch-settlement USDC channels. Final decommission (contract-level retirement) is pending confirmation that all balances have been withdrawn. |
 | USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
 | EIP3009 Splitter contract (testnet) | On-chain, Optimism Sepolia only (`eip155:11155420`) | Routes USDC settlements via EIP-3009; owner-upgradeable. Not yet on mainnet — promotes to a live asset on mainnet deployment |
 | NFT metadata integrity | On-chain (token URIs) | Authoritative record of what image each token represents |
@@ -46,7 +46,7 @@ If a component is fully compromised, what else falls with it:
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
 | **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
 | **x402_facilitator service** | Payment settlements halt | Image generation feature unavailable; already-signed USDC authorizations expire unused |
-| **LLMv1 authorized provider** | Can submit fraudulent Merkle batches; drains user balances up to available ETH | Only affects LLMv1 user balances; no access to other contracts |
+| **LLMv1 authorized provider** (deprecated path — see §1) | Can submit fraudulent Merkle batches; drains user balances up to available ETH | Only affects LLMv1 user balances; no access to other contracts |
 
 Key observation: the **owner EOA** is the single point of catastrophic failure. All other compromises are bounded in scope. This makes key management the highest-priority operational security concern, ahead of any code-level finding.
 

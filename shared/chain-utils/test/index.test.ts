@@ -19,7 +19,6 @@ import {
 import {
   getGenAiNFTAddress,
   getCollectorNFTAddress,
-  getLLMv1Address,
   getSupportV2Address,
   getEIP3009SplitterAddress,
   getUSDCAddress,
@@ -28,8 +27,6 @@ import {
   getGenAiNFTTestnetNetworks,
   MAINNET_GENAI_NFT_ADDRESSES,
   TESTNET_GENAI_NFT_ADDRESSES,
-  MAINNET_LLM_V1_ADDRESSES,
-  TESTNET_LLM_V1_ADDRESSES,
   MAINNET_SUPPORT_V2_ADDRESSES,
   TESTNET_SUPPORT_V2_ADDRESSES,
   MAINNET_EIP3009_SPLITTER_ADDRESSES,
@@ -207,31 +204,6 @@ describe("@fretchen/chain-utils", () => {
         expect(() => getCollectorNFTAddress("eip155:1")).toThrow(
           "CollectorNFT not deployed on eip155:1"
         );
-      });
-    });
-
-    describe("getLLMv1Address()", () => {
-      test("should return addresses for all deployed networks", () => {
-        // Mainnet
-        expect(getLLMv1Address("eip155:10")).toBe("0x833F39D6e67390324796f861990ce9B7cf9F5dE1");
-        // Testnet
-        expect(getLLMv1Address("eip155:11155420")).toBe(
-          "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56"
-        );
-      });
-
-      test("should throw for unsupported network", () => {
-        expect(() => getLLMv1Address("eip155:1")).toThrow("LLMv1 not deployed on eip155:1");
-        expect(() => getLLMv1Address("eip155:8453")).toThrow("LLMv1 not deployed on eip155:8453");
-      });
-
-      test("all addresses should be valid checksummed addresses", () => {
-        Object.entries(MAINNET_LLM_V1_ADDRESSES).forEach(([, address]) => {
-          expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
-        });
-        Object.entries(TESTNET_LLM_V1_ADDRESSES).forEach(([, address]) => {
-          expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
-        });
       });
     });
 

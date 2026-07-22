@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect } from "vitest";
-import { GenImNFTv4ABI, EIP3009SplitterV1ABI, LLMv1ABI } from "../src/index";
+import { GenImNFTv4ABI, EIP3009SplitterV1ABI } from "../src/index";
 
 describe("GenImNFTv4ABI", () => {
   test("should be a valid ABI array", () => {
@@ -95,24 +95,5 @@ describe("EIP3009SplitterV1ABI", () => {
     const splitEvent = events.find((e) => e.name === "SplitExecuted");
 
     expect(splitEvent).toBeDefined();
-  });
-});
-
-describe("LLMv1ABI", () => {
-  test("should be a valid ABI array", () => {
-    expect(Array.isArray(LLMv1ABI)).toBe(true);
-    expect(LLMv1ABI.length).toBeGreaterThan(0);
-  });
-
-  test("should contain required functions", () => {
-    const functionNames = LLMv1ABI.filter((item) => item.type === "function").map(
-      (item) => item.name
-    );
-
-    const requiredFunctions = ["checkBalance", "processBatch"];
-
-    requiredFunctions.forEach((funcName) => {
-      expect(functionNames).toContain(funcName);
-    });
   });
 });

@@ -602,14 +602,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/agent-onboarding/"/>
   </url>
   <url>
-    <loc>https://www.fretchen.eu/assistent-v2/</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/assistent-v2/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/assistent-v2/"/>
-  </url>
-  <url>
     <loc>https://www.fretchen.eu/growth/</loc>
     <lastmod>2026-07-22</lastmod>
     <changefreq>monthly</changefreq>

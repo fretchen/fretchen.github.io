@@ -44,7 +44,6 @@
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
-    "@openzeppelin/merkle-tree": "^1.0.8",
     "@x402/core": "^2.18.0",
     "@x402/evm": "^2.18.0",
     "dotenv": "^17.4.2",

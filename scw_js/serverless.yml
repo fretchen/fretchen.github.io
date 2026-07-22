@@ -51,8 +51,6 @@ functions:
     description: "x402 v2 Token Payment - Paid image generation with USDC"
     custom_domains:
       - imagegen-agent.fretchen.eu
-  llm:
-    handler: dist/sc_llm.handle
   llmx402:
     handler: dist/sc_llm_x402.handle
     description: "x402 batch-settlement LLM chat (USDC payment channels)"
@@ -65,8 +63,6 @@ functions:
           # doesn't support the standard */N step syntax (its regex requires digits on
           # both sides of the "/") — "0/12" (start at 0, every 12h) works, "*/12" doesn't.
           rate: "0 0/12 * * *"
-  leafhistory:
-    handler: dist/leaf_history.handle
   growthapi:
     handler: dist/growth_api.handle
     description: "Growth Agent API - draft approval with wallet auth"

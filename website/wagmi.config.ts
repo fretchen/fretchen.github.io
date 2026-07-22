@@ -18,7 +18,14 @@ export const config = createConfig({
     [sepolia.id]: http(),
     [optimism.id]: http(),
     [optimismSepolia.id]: http(),
-    [base.id]: http(),
+    // assistent-v2's x402 batch-settlement channel reads (channel-open, corrective-402
+    // recovery) hit this on every real chat session. viem's default (mainnet.base.org)
+    // is explicitly documented by Base as not for production traffic, and has already
+    // rate-limited a Multicall3-bundled read batch in this exact repo (see getRpcUrl's
+    // doc comment in shared/chain-utils). publicnode is browser-CORS-clean (verified)
+    // and general-purpose public infra rather than a convenience default — no key to
+    // manage, so nothing to lose by using it instead.
+    [base.id]: http("https://base-rpc.publicnode.com"),
     [baseSepolia.id]: http(),
   },
 });

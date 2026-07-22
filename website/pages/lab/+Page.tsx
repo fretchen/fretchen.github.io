@@ -20,7 +20,7 @@ const LabPage: React.FC = () => {
 
       <Card
         title="AI Assistant"
-        description="Chat with an AI assistant. Pay per message with prepaid ETH on a smart contract."
+        description="Chat with an AI assistant. Pay per message with x402 batch-settlement USDC payment channels — no prepaid balance."
         link="/assistent"
       />
 

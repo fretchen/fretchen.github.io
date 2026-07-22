@@ -19,7 +19,7 @@ import { css } from "../styled-system/css";
 import { useAgentInfo } from "../hooks/useAgentInfo";
 import { useLocale } from "../hooks/useLocale";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { getGenAiNFTAddress, getLLMv1Address, GENAI_NFT_NETWORKS, LLM_V1_NETWORKS } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
@@ -37,7 +37,6 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
 
   // Get contract address based on service - hooks must be called before early returns
   const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const { network: llmNetwork } = useAutoNetwork(LLM_V1_NETWORKS);
 
   const isSidebar = variant === "sidebar";
 
@@ -74,7 +73,10 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   const serviceEndpoint = service === "genimg" ? agent.genimgEndpoint : agent.llmEndpoint;
   const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
 
-  const contractAddress = service === "genimg" ? getGenAiNFTAddress(genimgNetwork) : getLLMv1Address(llmNetwork);
+  // "llm" (x402 batch-settlement) has no dedicated deployed contract to link — the
+  // canonical batch-settlement contract is shared infrastructure, not owned by this
+  // project (see assistent_plan.md "Infrastructure: consume, don't deploy").
+  const contractAddress = service === "genimg" ? getGenAiNFTAddress(genimgNetwork) : null;
 
   // Sidebar variant - vertical layout
   if (isSidebar) {

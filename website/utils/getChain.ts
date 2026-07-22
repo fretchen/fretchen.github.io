@@ -1,6 +1,5 @@
-import { optimism, optimismSepolia, base, baseSepolia, type Chain } from "wagmi/chains";
+import { optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
 import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
-import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 
 // ═══════════════════════════════════════════════════════════════
 // Chain utilities are now in @fretchen/chain-utils
@@ -8,11 +7,6 @@ import LLMv1ABI from "../../eth/abi/contracts/LLMv1.json";
 //   import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
 //   import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS } from "@fretchen/chain-utils";
 // ═══════════════════════════════════════════════════════════════
-
-/**
- * Get PUBLIC_ENV__CHAIN_NAME in Vite context (Browser)
- */
-const CHAIN_NAME = (import.meta.env.PUBLIC_ENV__CHAIN_NAME as string | undefined) ?? "optimism";
 
 // ═══════════════════════════════════════════════════════════════
 // SupportV2: Multi-Chain Configuration
@@ -87,46 +81,4 @@ export function isSupportV2Chain(chainId: number): boolean {
 //   import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS } from "@fretchen/chain-utils";
 //   const { network, switchIfNeeded } = useAutoNetwork(COLLECTOR_NFT_NETWORKS);
 //   const address = getCollectorNFTAddress(network);
-//
-// LLMv1: Stays in legacy config (out of scope for multi-chain)
 // ═══════════════════════════════════════════════════════════════
-
-const STABLE_LLM_V1_CONTRACT_CONFIG = (() => {
-  switch (CHAIN_NAME) {
-    case "optimismSepolia":
-      return {
-        address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
-        abi: LLMv1ABI,
-      } as const;
-    case "optimism":
-      return { address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1" as `0x${string}`, abi: LLMv1ABI } as const;
-    default:
-      return {
-        address: "0xB3dbD44477a7bcf253f2fA68eDb4be5aF2F2cA56" as `0x${string}`,
-        abi: LLMv1ABI,
-      } as const;
-  }
-})();
-
-/** Out of scope: LLMv1 stays in legacy config */
-export const llmV1ContractConfig = STABLE_LLM_V1_CONTRACT_CONFIG;
-
-// ═══════════════════════════════════════════════════════════════
-// Legacy getChain() for LLMv1 (Phase 4 migration candidate)
-// Returns the chain object based on CHAIN_NAME environment variable
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Get chain for LLMv1 contract based on environment variable
- * @returns Chain object (optimism or optimismSepolia)
- * @deprecated Use chain-utils for GenAI/CollectorNFT. LLMv1 migration is Phase 4.
- */
-export function getChain(): Chain {
-  switch (CHAIN_NAME) {
-    case "optimismSepolia":
-      return optimismSepolia;
-    case "optimism":
-    default:
-      return optimism;
-  }
-}

@@ -56,12 +56,6 @@ const contracts: ContractConfig[] = [
     description: "Support contract for donations and likes functionality",
   },
   {
-    name: "LLMv1",
-    contractFile: "LLMv1.sol",
-    contractName: "LLMv1",
-    description: "LLM Version 1 to interact with LLMs",
-  },
-  {
     name: "EIP3009SplitterV1",
     contractFile: "EIP3009SplitterV1.sol",
     contractName: "EIP3009SplitterV1",

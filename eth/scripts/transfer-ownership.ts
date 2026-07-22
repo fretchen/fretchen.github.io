@@ -39,7 +39,6 @@ const OWNABLE_ABI = [
 const CONTRACTS_BY_NETWORK: Record<string, Array<{ name: string; address: `0x${string}` }>> = {
   optimisticEthereum: [
     { name: "GenImNFTv4", address: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb" },
-    { name: "LLMv1", address: "0x833F39D6e67390324796f861990ce9B7cf9F5dE1" },
     { name: "CollectorNFT", address: "0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea" },
     { name: "SupportV2", address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316" },
   ],

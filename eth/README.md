@@ -8,7 +8,6 @@ Solidity contracts for a blockchain-based AI image generation platform on Optimi
 | ------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
 | `GenImNFTv4`        | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` | AI image NFTs with agent-whitelist security fix (CVE-2025-11-26) |
 | `CollectorNFT`      | `0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea` | Community NFTs minted on top of GenImNFT tokens                  |
-| `LLMv1`             | `0x833F39D6e67390324796f861990ce9B7cf9F5dE1` | LLM access NFT                                                   |
 | `EIP3009SplitterV1` | testnet only                                 | Token-agnostic USDC/EURC payment splitter                        |
 
 ## Common Commands
@@ -41,9 +40,6 @@ Config files live alongside each script (`scripts/*.config.json`). Deployment re
 ```shell
 # GenImNFTv4 (fresh deployment, rarely needed — use upgrade instead)
 NETWORK=optsepolia npx hardhat run scripts/deploy-genimg-v4.ts --network optsepolia
-
-# LLMv1
-npx hardhat run scripts/deploy-llm-v1.ts --network optimisticEthereum
 
 # EIP3009SplitterV1
 npx hardhat run scripts/deploy-splitter-v1.ts --network optimisticEthereum

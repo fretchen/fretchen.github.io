@@ -37,7 +37,7 @@ vi.mock("../hooks/useWalletConnection", () => ({
 
 vi.mock("../hooks/useAutoNetwork", () => ({
   useAutoNetwork: vi.fn(() => ({
-    network: "eip155:84532",
+    network: "eip155:8453",
     isOnCorrectNetwork: true,
     switchIfNeeded: mockSwitchIfNeeded,
     switchError: null,
@@ -82,7 +82,7 @@ describe("AssistantChat", () => {
       connectWallet: mockConnectWallet,
     });
     vi.mocked(useAutoNetwork).mockReturnValue({
-      network: "eip155:84532",
+      network: "eip155:8453",
       isOnCorrectNetwork: true,
       switchIfNeeded: mockSwitchIfNeeded,
       switchError: null,
@@ -123,7 +123,7 @@ describe("AssistantChat", () => {
   it("shows an error bubble with the real switch-failure reason instead of a generic message", async () => {
     mockSwitchIfNeeded.mockResolvedValue(false);
     vi.mocked(useAutoNetwork).mockReturnValue({
-      network: "eip155:84532",
+      network: "eip155:8453",
       isOnCorrectNetwork: false,
       switchIfNeeded: mockSwitchIfNeeded,
       switchError: "Unrecognized chain ID, please add it in your wallet first",
@@ -161,7 +161,7 @@ describe("AssistantChat", () => {
       sendMessage: mockSendMessage,
       status: "success",
       error: null,
-      paymentReceipt: { transaction: "0xdeposit", network: "eip155:84532" },
+      paymentReceipt: { transaction: "0xdeposit", network: "eip155:8453" },
       reset: vi.fn(),
       isReady: true,
     });
@@ -169,7 +169,7 @@ describe("AssistantChat", () => {
     render(<AssistantChat />);
 
     const link = screen.getByRole("link", { name: /assistent\.viewPayment/ });
-    expect(link).toHaveAttribute("href", "https://sepolia.basescan.org/tx/0xdeposit");
+    expect(link).toHaveAttribute("href", "https://basescan.org/tx/0xdeposit");
   });
 
   it("does not render a payment receipt link before any payment has settled", () => {

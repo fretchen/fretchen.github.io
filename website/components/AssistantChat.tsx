@@ -22,8 +22,8 @@ interface ChatMessage {
   timestamp: number;
 }
 
-// Launch scope: Base Sepolia only. Add "eip155:8453" (Base mainnet) here to go to production.
-const CHAT_NETWORKS = ["eip155:84532"] as const;
+// Production: Base Mainnet only. Real USDC, real Mistral responses.
+const CHAT_NETWORKS = ["eip155:8453"] as const;
 
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {

@@ -9,12 +9,12 @@ Serverless functions for AI image generation and LLM services with blockchain in
 
 ### Quick Links
 
-| Service          | Endpoint          | Description                                           |
-| ---------------- | ----------------- | ----------------------------------------------------- |
-| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment) |
+| Service          | Endpoint          | Description                                            |
+| ---------------- | ----------------- | ------------------------------------------------------ |
+| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment)  |
 | LLM Chat         | `llmx402`         | x402 batch-settlement LLM chat (USDC payment channels) |
-| LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h |
-| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)     |
+| LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h  |
+| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)      |
 
 ## Functions
 
@@ -107,13 +107,13 @@ Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
 
 All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.
 
-| Prefix / object                            | Access        | Why                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `images/`, `metadata/`, root `image*.json` | `public-read` | NFT assets referenced on-chain via `tokenURI` — must be publicly fetchable.                                                                                                                                                                                                                                                                           |
+| Prefix / object                            | Access        | Why                                                                                                                                                                                                                                |
+| ------------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `images/`, `metadata/`, root `image*.json` | `public-read` | NFT assets referenced on-chain via `tokenURI` — must be publicly fetchable.                                                                                                                                                        |
 | `channels/`                                | private       | x402 batch-settlement channel state (`x402_channel_storage.ts`) — per-channel balance, cumulative claim, pending-request lock. Not public; settled totals are independently verifiable on-chain via the batch-settlement contract. |
-| `growth-agent/`, `growth-agent-dev/`       | private       | Internal growth-agent state; owner-only, read/written via the authenticated `growthapi` function.                                                                                                                                                                                                                                                     |
-| `comments/`                                | private       | Comment-service state.                                                                                                                                                                                                                                                                                                                                |
-| `terraform/`                               | private       | Infrastructure-as-code state.                                                                                                                                                                                                                                                                                                                         |
+| `growth-agent/`, `growth-agent-dev/`       | private       | Internal growth-agent state; owner-only, read/written via the authenticated `growthapi` function.                                                                                                                                  |
+| `comments/`                                | private       | Comment-service state.                                                                                                                                                                                                             |
+| `terraform/`                               | private       | Infrastructure-as-code state.                                                                                                                                                                                                      |
 
 > Note: anonymous bucket **listing** is currently enabled, which exposes object _key names_ (not contents) of the private prefixes. This is an accepted low-severity item — see [SECURITY.md](./SECURITY.md).
 

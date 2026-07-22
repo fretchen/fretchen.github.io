@@ -166,4 +166,3 @@ export function convertTokensToUsdcCost(
   // "per 1,000,000 tokens" divisor and USDC's 6 decimals cancel exactly.
   return (p * inNum * outDen + c * outNum * inDen) / (inDen * outDen);
 }
-

@@ -1,26 +1,45 @@
+import { describe, it, before } from "node:test";
+import assert from "node:assert";
 import { expect } from "chai";
 import hre from "hardhat";
-import { deployCollectorNFT } from "../scripts/deploy-collector-nft-v1";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
+import type { HardhatUpgrades } from "@openzeppelin/hardhat-upgrades";
+import { deployCollectorNFT } from "../archive/scripts/deploy-collector-nft-v1";
 import * as fs from "fs";
 import * as path from "path";
+import { parseEther } from "viem";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-const BASE_MINT_PRICE = hre.ethers.parseEther("0.001");
+let connection: Awaited<ReturnType<typeof hre.network.create>>;
+let ethers: typeof connection.ethers;
+let upgradesApi: HardhatUpgrades;
+
+const BASE_MINT_PRICE = parseEther("0.001");
 
 describe("CollectorNFTv1 - Deployment Tests", function () {
+  before(async () => {
+    connection = await hre.network.getOrCreate();
+    ethers = connection.ethers;
+    upgradesApi = await upgradesPlugin(hre, connection);
+  });
+
   // Fixture to deploy GenImNFTv3 for testing (using ethers for OpenZeppelin compatibility)
   async function deployGenImNFTv3Fixture() {
-    const [owner, otherAccount] = await hre.ethers.getSigners();
+    const [owner, otherAccount] = await ethers.getSigners();
 
     // Deploy GenImNFTv3 for testing
-    const GenImNFTv3Factory = await hre.ethers.getContractFactory("GenImNFTv3");
-    const genImProxy = await hre.upgrades.deployProxy(GenImNFTv3Factory, [], {
+    const GenImNFTv3Factory = await ethers.getContractFactory("GenImNFTv3");
+    const genImProxy = await upgradesApi.deployProxy(GenImNFTv3Factory, [], {
       initializer: "initialize",
       kind: "uups",
     });
     await genImProxy.waitForDeployment();
 
     const genImAddress = await genImProxy.getAddress();
-    const genImNFT = await hre.ethers.getContractAt("GenImNFTv3", genImAddress);
+    const genImNFT = await ethers.getContractAt("GenImNFTv3", genImAddress);
 
     return {
       genImNFT,
@@ -35,15 +54,15 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
     const { genImNFT, genImAddress, owner, otherAccount } = await deployGenImNFTv3Fixture();
 
     // Deploy CollectorNFTv1 using OpenZeppelin upgrades
-    const CollectorNFTv1Factory = await hre.ethers.getContractFactory("CollectorNFTv1");
-    const collectorProxy = await hre.upgrades.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
+    const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
+    const collectorProxy = await upgradesApi.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
       initializer: "initialize",
       kind: "uups",
     });
     await collectorProxy.waitForDeployment();
 
     const proxyAddress = await collectorProxy.getAddress();
-    const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", proxyAddress);
+    const collectorNFTv1 = await ethers.getContractAt("CollectorNFTv1", proxyAddress);
 
     return {
       genImNFT,
@@ -57,7 +76,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
   // Helper function to create a temporary config file for testing
   async function createTempConfig(genImAddress: string, options: { validateOnly?: boolean; dryRun?: boolean } = {}) {
-    const tempConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-test.json");
+    const tempConfigPath = path.join(__dirname, "../archive/scripts/collector-nft-v1.config-test.json");
     const config = {
       parameters: {
         genImNFTAddress: genImAddress,
@@ -85,8 +104,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
     options: { validateOnly?: boolean; dryRun?: boolean },
     testFn: () => Promise<void>,
   ) {
-    const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
-    const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
+    const originalConfigPath = path.join(__dirname, "../archive/scripts/collector-nft-v1.config.json");
+    const backupConfigPath = path.join(__dirname, "../archive/scripts/collector-nft-v1.config.json.backup");
     const tempConfigPath = await createTempConfig(genImAddress, options);
 
     try {
@@ -132,15 +151,15 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
       const { genImAddress } = await deployGenImNFTv3Fixture();
 
       // Deploy and check for initialization event
-      const CollectorNFTv1Factory = await hre.ethers.getContractFactory("CollectorNFTv1");
-      const collectorProxy = await hre.upgrades.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
+      const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
+      const collectorProxy = await upgradesApi.deployProxy(CollectorNFTv1Factory, [genImAddress, BASE_MINT_PRICE], {
         initializer: "initialize",
         kind: "uups",
       });
       await collectorProxy.waitForDeployment();
 
       const proxyAddress = await collectorProxy.getAddress();
-      const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", proxyAddress);
+      const collectorNFTv1 = await ethers.getContractAt("CollectorNFTv1", proxyAddress);
       const filter = collectorNFTv1.filters.ContractInitialized();
       const events = await collectorNFTv1.queryFilter(filter);
 
@@ -154,7 +173,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
       // Check that it's a valid proxy by checking implementation storage
       const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-      const implementation = await hre.ethers.provider.getStorage(proxyAddress, implementationSlot);
+      const implementation = await ethers.provider.getStorage(proxyAddress, implementationSlot);
 
       expect(implementation).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
     });
@@ -187,13 +206,13 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
           expect(result).to.have.property("deploymentInfo");
 
           // Verify the deployed contract using ethers
-          const collectorNFTv1 = await hre.ethers.getContractAt("CollectorNFTv1", result.proxyAddress);
+          const collectorNFTv1 = await ethers.getContractAt("CollectorNFTv1", result.proxyAddress);
           expect(await collectorNFTv1.name()).to.equal("CollectorNFTv1");
           expect(await collectorNFTv1.symbol()).to.equal("COLLECTORv1");
           expect(await collectorNFTv1.genImNFTContract()).to.equal(genImAddress);
 
           // Verify deployment info
-          expect(result.deploymentInfo.network).to.equal("hardhat");
+          expect(result.deploymentInfo.network).to.equal("default");
           expect(result.deploymentInfo.genImNFTAddress).to.equal(genImAddress);
           expect(result.deploymentInfo.baseMintPrice).to.equal("0.001");
         }
@@ -229,7 +248,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
       await withTempConfig(invalidAddress, { validateOnly: true }, async () => {
         // This should fail because the contract doesn't exist
-        await expect(deployCollectorNFT()).to.be.rejectedWith("No contract found at GenImNFT address");
+        await assert.rejects(() => deployCollectorNFT(), /No contract found at GenImNFT address/);
       });
     });
 
@@ -238,7 +257,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
       await deployGenImNFTv3Fixture();
 
       // Create a config with invalid data
-      const invalidConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config-invalid.json");
+      const invalidConfigPath = path.join(__dirname, "../archive/scripts/collector-nft-v1.config-invalid.json");
       const invalidConfig = {
         parameters: {
           genImNFTAddress: "invalid-address", // Invalid address format
@@ -257,8 +276,8 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
 
       fs.writeFileSync(invalidConfigPath, JSON.stringify(invalidConfig, null, 2));
 
-      const originalConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json");
-      const backupConfigPath = path.join(__dirname, "../scripts/collector-nft-v1.config.json.backup");
+      const originalConfigPath = path.join(__dirname, "../archive/scripts/collector-nft-v1.config.json");
+      const backupConfigPath = path.join(__dirname, "../archive/scripts/collector-nft-v1.config.json.backup");
 
       try {
         // Backup original config if it exists
@@ -270,7 +289,7 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
         fs.copyFileSync(invalidConfigPath, originalConfigPath);
 
         // This should fail due to format validation
-        await expect(deployCollectorNFT()).to.be.rejectedWith("Invalid genImNFTAddress format");
+        await assert.rejects(() => deployCollectorNFT(), /Invalid genImNFTAddress format/);
       } finally {
         // Restore original config
         if (fs.existsSync(backupConfigPath)) {
@@ -301,14 +320,14 @@ describe("CollectorNFTv1 - Deployment Tests", function () {
           const deploymentsDir = path.join(__dirname, "../deployments");
           expect(fs.existsSync(deploymentsDir)).to.be.true;
 
-          const deploymentFileName = `collector-nft-v1-hardhat.json`;
+          const deploymentFileName = `collector-nft-v1-default.json`;
           const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
           expect(fs.existsSync(deploymentFilePath)).to.be.true;
 
           // Verify deployment file content
           const deploymentData = JSON.parse(fs.readFileSync(deploymentFilePath, "utf8"));
-          expect(deploymentData.network).to.equal("hardhat");
+          expect(deploymentData.network).to.equal("default");
           expect(deploymentData.proxyAddress).to.equal(result.proxyAddress);
           expect(deploymentData.genImNFTAddress).to.equal(genImAddress);
           expect(deploymentData.baseMintPrice).to.equal("0.001");

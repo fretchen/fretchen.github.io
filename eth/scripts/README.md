@@ -23,7 +23,6 @@ All deploy scripts support `validateOnly` and `dryRun` modes via their config fi
 | Script                     | Contract                  | Config file                     |
 | -------------------------- | ------------------------- | ------------------------------- |
 | `upgrade-genimg-v4.ts`     | GenImNFTv4 implementation | `upgrade-genimg-v4.config.json` |
-| `upgrade-collector-nft.ts` | CollectorNFT → v2         | `PROXY_ADDRESS` env var         |
 
 ## Verify
 

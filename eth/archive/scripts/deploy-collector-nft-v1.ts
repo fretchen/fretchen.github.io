@@ -1,10 +1,15 @@
 #!/usr/bin/env npx hardhat run
-import { ethers, upgrades, network } from "hardhat";
+import hre from "hardhat";
+import { upgrades as upgradesPlugin } from "@openzeppelin/hardhat-upgrades";
 import { getAddress, formatEther, parseEther } from "viem";
-import { validateCollectorNFT, validateImplementation } from "./validate-contract";
+import { validateCollectorNFT, validateImplementation } from "../../scripts/validate-contract";
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Minimum ETH balance required for deployment (0.03 ETH)
 const MIN_DEPLOYMENT_BALANCE = parseEther("0.03");
@@ -70,7 +75,7 @@ function loadConfig(): CollectorNFTv1Config {
 
   // Validate price format
   try {
-    ethers.parseEther(config.parameters.baseMintPrice);
+    parseEther(config.parameters.baseMintPrice);
   } catch {
     throw new Error(`Invalid baseMintPrice format: ${config.parameters.baseMintPrice}`);
   }
@@ -122,9 +127,12 @@ async function checkDeployerBalance(deployer: {
  * Configuration is loaded from collector-nft-v1.config.json
  */
 async function deployCollectorNFT() {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
+  const networkName = connection.networkName;
   console.log("🚀 CollectorNFTv1 Deployment Script");
   console.log("=".repeat(60));
-  console.log(`Network: ${network.name}`);
+  console.log(`Network: ${networkName}`);
   console.log(`Block: ${await ethers.provider.getBlockNumber()}`);
   console.log("");
 
@@ -134,7 +142,7 @@ async function deployCollectorNFT() {
   const parameters = config.parameters;
 
   const genImNFTAddress = parameters.genImNFTAddress;
-  const baseMintPrice = ethers.parseEther(parameters.baseMintPrice);
+  const baseMintPrice = parseEther(parameters.baseMintPrice);
 
   // Check if validation only
   if (options.validateOnly) {
@@ -163,6 +171,7 @@ async function deployCollectorNFT() {
 
   // Get contract factory
   console.log("📦 Getting CollectorNFTv1 contract factory...");
+  const upgradesApi = await upgradesPlugin(hre, connection);
   const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
 
   // Verify GenImNFT contract exists
@@ -177,7 +186,7 @@ async function deployCollectorNFT() {
   console.log("🚀 Deploying CollectorNFTv1...");
   console.log("");
 
-  const collectorNFTv1 = await upgrades.deployProxy(CollectorNFTv1Factory, [genImNFTAddress, baseMintPrice], {
+  const collectorNFTv1 = await upgradesApi.deployProxy(CollectorNFTv1Factory, [genImNFTAddress, baseMintPrice], {
     kind: "uups",
     initializer: "initialize",
   });
@@ -188,8 +197,8 @@ async function deployCollectorNFT() {
   console.log("✅ CollectorNFTv1 deployed successfully!");
   console.log("=".repeat(50));
   console.log(`📍 Proxy Address: ${proxyAddress}`);
-  console.log(`📍 Implementation Address: ${await upgrades.erc1967.getImplementationAddress(proxyAddress)}`);
-  console.log(`📍 Admin Address: ${await upgrades.erc1967.getAdminAddress(proxyAddress)}`);
+  console.log(`📍 Implementation Address: ${await upgradesApi.erc1967.getImplementationAddress(proxyAddress)}`);
+  console.log(`📍 Admin Address: ${await upgradesApi.erc1967.getAdminAddress(proxyAddress)}`);
   console.log("");
 
   // Verify deployment
@@ -200,7 +209,7 @@ async function deployCollectorNFT() {
   const contractSymbol = await deployedContract.symbol();
   const contractGenImNFT = await deployedContract.genImNFTContract();
   const contractBaseMintPrice = await deployedContract.baseMintPrice();
-  const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+  const implementationAddress = await upgradesApi.erc1967.getImplementationAddress(proxyAddress);
 
   console.log(`📄 Contract Name: ${contractName}`);
   console.log(`🏷️  Contract Symbol: ${contractSymbol}`);
@@ -239,12 +248,12 @@ async function deployCollectorNFT() {
 
   // Create deployment info
   const deploymentInfo = {
-    network: network.name,
+    network: networkName,
     timestamp: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyAddress: proxyAddress,
-    implementationAddress: await upgrades.erc1967.getImplementationAddress(proxyAddress),
-    adminAddress: await upgrades.erc1967.getAdminAddress(proxyAddress),
+    implementationAddress: implementationAddress,
+    adminAddress: await upgradesApi.erc1967.getAdminAddress(proxyAddress),
     genImNFTAddress: genImNFTAddress,
     baseMintPrice: parameters.baseMintPrice,
     contractName: contractName,
@@ -256,13 +265,15 @@ async function deployCollectorNFT() {
   console.log("📋 Deployment Summary:");
   console.log(JSON.stringify(deploymentInfo, null, 2));
 
-  // Save deployment information to file
-  const deploymentsDir = path.join(__dirname, "../deployments");
+  // Save deployment information to file (shared eth/deployments/ folder, not
+  // archive/deployments/ — this script lives in archive/scripts/ but its output
+  // belongs alongside every other script's deployment records)
+  const deploymentsDir = path.join(__dirname, "../../deployments");
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  const deploymentFileName = `collector-nft-v1-${network.name}.json`;
+  const deploymentFileName = `collector-nft-v1-${networkName}.json`;
   const deploymentFilePath = path.join(deploymentsDir, deploymentFileName);
 
   fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentInfo, null, 2));
@@ -295,6 +306,9 @@ async function deployCollectorNFT() {
 }
 
 async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint) {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
+  const upgradesApi = await upgradesPlugin(hre, connection);
   console.log("🔍 Validating deployment configuration...");
 
   // Check deployer balance
@@ -311,7 +325,7 @@ async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint
   const CollectorNFTv1Factory = await ethers.getContractFactory("CollectorNFTv1");
 
   // Validate OpenZeppelin upgradeable patterns
-  await upgrades.validateImplementation(CollectorNFTv1Factory, {
+  await upgradesApi.validateImplementation(CollectorNFTv1Factory, {
     kind: "uups",
   });
 
@@ -326,6 +340,9 @@ async function validateDeployment(genImNFTAddress: string, baseMintPrice: bigint
 }
 
 async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint) {
+  const connection = await hre.network.getOrCreate();
+  const { ethers } = connection;
+  const networkName = connection.networkName;
   console.log("🧪 Simulating deployment...");
 
   const [deployer] = await ethers.getSigners();
@@ -341,7 +358,7 @@ async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint
 
   console.log("");
   console.log("📋 Deployment parameters:");
-  console.log(`  - Network: ${network.name}`);
+  console.log(`  - Network: ${networkName}`);
   console.log(`  - GenImNFT Address: ${genImNFTAddress}`);
   console.log(`  - Base Mint Price: ${ethers.formatEther(baseMintPrice)} ETH`);
   console.log("");
@@ -356,13 +373,3 @@ async function simulateDeployment(genImNFTAddress: string, baseMintPrice: bigint
 
 // Export for testing
 export { deployCollectorNFT, MIN_DEPLOYMENT_BALANCE, CollectorNFTv1ConfigSchema };
-
-// Execute only when run directly (not imported)
-if (require.main === module) {
-  deployCollectorNFT()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
-}

@@ -150,7 +150,7 @@ async function validateCollectorNFT(proxyAddress: string): Promise<CollectorNFTI
   console.log("=".repeat(50));
 
   // Get contract instance
-  const contract = await ethers.getContractAt("CollectorNFT", proxyAddress);
+  const contract = await ethers.getContractAt("CollectorNFTv1", proxyAddress);
 
   try {
     // Basic contract information
@@ -336,7 +336,7 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
   if (deploymentData.proxyAddress) {
     try {
       const collectorInfo = await validateCollectorNFT(deploymentData.proxyAddress);
-      await checkUpgradeReadiness(deploymentData.proxyAddress, "CollectorNFT");
+      await checkUpgradeReadiness(deploymentData.proxyAddress, "CollectorNFTv1");
 
       console.log("\n📋 CollectorNFT Summary:");
       console.log("=".repeat(30));
@@ -349,7 +349,7 @@ async function validateFromDeploymentFile(deploymentData: DeploymentData): Promi
   // Validate CollectorNFT implementation
   if (deploymentData.implementationAddress) {
     try {
-      await validateImplementation(deploymentData.implementationAddress, "CollectorNFT");
+      await validateImplementation(deploymentData.implementationAddress, "CollectorNFTv1");
     } catch (error: unknown) {
       console.error(
         "❌ CollectorNFT implementation validation failed:",

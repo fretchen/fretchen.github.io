@@ -43,12 +43,6 @@ const contracts: ContractConfig[] = [
     description: "GenImNFT Version 4 with EIP-8004 agent whitelist (CVE-2025-11-26 fix)",
   },
   {
-    name: "CollectorNFT",
-    contractFile: "CollectorNFT.sol",
-    contractName: "CollectorNFT",
-    description: "NFT collection based on GenImNFT tokens",
-  },
-  {
     name: "EIP3009SplitterV1",
     contractFile: "EIP3009SplitterV1.sol",
     contractName: "EIP3009SplitterV1",
@@ -120,20 +114,6 @@ export type ${config.name}ABI = typeof ${config.name}ABI;
     );
     if (specificFunctions.length > 0) {
       console.log("\n🆕 V3 Specific Functions:");
-      specificFunctions.forEach((f: ABIItem) => {
-        console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
-      });
-    }
-  } else if (config.name === "CollectorNFT") {
-    specificFunctions = functions.filter(
-      (f: ABIItem) =>
-        f.name?.includes("mint") ||
-        f.name?.includes("Price") ||
-        f.name?.includes("GenIm") ||
-        f.name?.includes("Collector"),
-    );
-    if (specificFunctions.length > 0) {
-      console.log("\n🎨 CollectorNFT Specific Functions:");
       specificFunctions.forEach((f: ABIItem) => {
         console.log(`   • ${f.name}(${f.inputs?.map((i) => `${i.type} ${i.name}`).join(", ") || ""})`);
       });

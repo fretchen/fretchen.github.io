@@ -7,7 +7,7 @@ Solidity contracts for a blockchain-based AI image generation platform on Optimi
 | Contract            | Address (Optimism Mainnet)                   | Purpose                                                          |
 | ------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
 | `GenImNFTv4`        | `0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb` | AI image NFTs with agent-whitelist security fix (CVE-2025-11-26) |
-| `CollectorNFT`      | `0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea` | Community NFTs minted on top of GenImNFT tokens                  |
+| `CollectorNFTv1`    | `0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea` | Community NFTs minted on top of GenImNFT tokens                  |
 | `EIP3009SplitterV1` | testnet only                                 | Token-agnostic USDC/EURC payment splitter                        |
 
 ## Common Commands
@@ -54,10 +54,6 @@ npx hardhat run scripts/deploy-support-v2.ts --network optimisticEthereum
 # Upgrade GenImNFTv4 implementation (set PROXY_ADDRESS in config first)
 PROXY_ADDRESS=0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb \
   npx hardhat run scripts/upgrade-genimg-v4.ts --network optimisticEthereum
-
-# Upgrade CollectorNFT
-PROXY_ADDRESS=0x584c40d8a7cA164933b5F90a2dC11ddCB4a924ea \
-  npx hardhat run scripts/upgrade-collector-nft.ts --network optimisticEthereum
 ```
 
 ### Verify & ABI

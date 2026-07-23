@@ -1,0 +1,88 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fretchen AI Assistant (LLM) Service",
+    "version": "1.0.0",
+    "x-guidance": "POST / with { data: { prompt: [{ role, content }, ...] } } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns the LLM's response. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower.",
+    "contact": {
+      "name": "fretchen",
+      "url": "https://www.fretchen.eu"
+    }
+  },
+  "servers": [
+    { "url": "https://mypersonaljscloudivnad9dy-llmx402.functions.fnc.fr-par.scw.cloud" }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "llmX402",
+        "summary": "Chat with the AI assistant (x402 batch-settlement USDC payment)",
+        "security": [],
+        "x-payment-info": {
+          "protocols": ["x402"],
+          "price": { "mode": "dynamic", "currency": "USD", "min": "0", "max": "0.003" }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LLMChatRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LLM response generated and payment settled successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LLMChatResponse" }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required. Body/headers (Payment-Required, X-Payment) carry the x402 batch-settlement payment requirements to satisfy and retry with."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LLMChatRequest": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["prompt"],
+            "properties": {
+              "prompt": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+                    "content": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "LLMChatResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "prompt_tokens": { "type": "integer" },
+              "completion_tokens": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

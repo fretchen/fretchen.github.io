@@ -28,6 +28,7 @@ import {
 } from "./x402_server.js";
 import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
+import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
@@ -288,10 +289,18 @@ async function handle(
         // Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
         "Access-Control-Allow-Headers":
           "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Content-Type": "application/json",
       },
       body: "",
+    };
+  }
+
+  if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify(openapiSpec),
     };
   }
 

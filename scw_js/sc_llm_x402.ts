@@ -12,6 +12,7 @@ import {
   LLM_MAX_TIMEOUT_SECONDS,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
+import openapiSpec from "./openapi.llm.json" with { type: "json" };
 
 export type { ScwEvent };
 
@@ -69,7 +70,7 @@ const CORS_HEADERS = {
   // genimg_x402_token.ts's identical OPTIONS block for the same reasoning.
   "Access-Control-Allow-Headers":
     "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Content-Type": "application/json",
 };
 
@@ -84,6 +85,14 @@ function errorResponse(statusCode: number, error: string): ScwResponse {
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  }
+
+  if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify(openapiSpec),
+    };
   }
 
   if (event.httpMethod !== "POST") {

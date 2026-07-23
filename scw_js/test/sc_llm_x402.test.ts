@@ -174,9 +174,41 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(200);
     });
 
+    it("includes GET in the OPTIONS preflight allow-list", async () => {
+      // Regression guard: GET must stay allowed so GET /openapi.json passes preflight
+      // for browser-based x402 discovery crawlers.
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.headers["Access-Control-Allow-Methods"]).toContain("GET");
+    });
+
     it("returns 400 for a non-POST method", async () => {
       const res = await handle(makeEvent({ httpMethod: "GET" }) as never, {});
       expect(res.statusCode).toBe(400);
+    });
+
+    it("serves the OpenAPI discovery document on GET /openapi.json", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/openapi.json" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("application/json");
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+
+      const body = JSON.parse(res.body);
+      expect(body.openapi).toBe("3.1.0");
+      expect(body.info.title).toBeTruthy();
+      expect(body.paths["/"].post["x-payment-info"]).toEqual({
+        protocols: ["x402"],
+        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.003" },
+      });
+      expect(body.paths["/"].post.responses["402"]).toBeDefined();
+    });
+
+    it("serves openapi.json without a leading slash in the path too", async () => {
+      const res = await handle(makeEvent({ httpMethod: "GET", path: "openapi.json" }) as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body).openapi).toBe("3.1.0");
     });
 
     it("returns 400 for malformed JSON body", async () => {

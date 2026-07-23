@@ -371,6 +371,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       ]) {
         expect(allowedHeaders).toContain(header);
       }
+
+      // Regression guard: GET must stay allowed so GET /openapi.json passes preflight
+      // for browser-based x402 discovery crawlers.
+      expect(response.headers["Access-Control-Allow-Methods"]).toContain("GET");
     });
 
     test("should reject non-POST requests", async () => {
@@ -386,6 +390,44 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
       expect(body.error).toContain("Only POST");
+    });
+
+    test("should serve the OpenAPI discovery document on GET /openapi.json", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "/openapi.json",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toBe("application/json");
+      expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
+
+      const body = JSON.parse(response.body);
+      expect(body.openapi).toBe("3.1.0");
+      expect(body.info.title).toBeTruthy();
+      expect(body.paths["/"].post["x-payment-info"]).toEqual({
+        protocols: ["x402"],
+        price: { mode: "fixed", currency: "USD", amount: "0.07" },
+      });
+      expect(body.paths["/"].post.responses["402"]).toBeDefined();
+    });
+
+    test("should serve openapi.json without a leading slash in the path too", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "openapi.json",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.body).openapi).toBe("3.1.0");
     });
 
     test("should reject invalid JSON body", async () => {

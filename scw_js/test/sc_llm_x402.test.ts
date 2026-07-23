@@ -234,6 +234,16 @@ describe("sc_llm_x402", () => {
       expect(bytes[1]).toBe(0xd8);
     });
 
+    it("answers a HEAD /favicon.ico probe with 200 and an image content-type", async () => {
+      // x402scan (@agentcash/discovery) probes /favicon.ico with HEAD first and only
+      // retries with GET on 403/405. A 400 here makes it report "no favicon", so HEAD
+      // must return 200 + image content-type (with an empty body, per HTTP HEAD).
+      const res = await handle(makeEvent({ httpMethod: "HEAD", path: "/favicon.ico" }) as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("image/jpeg");
+      expect(res.body).toBe("");
+    });
+
     // Regression guard: x-payment-info.price.max must track the real, live price
     // ceiling (USDC_MAX_PRICE_PER_MESSAGE), not a value hardcoded in openapi.llm.json —
     // otherwise the served discovery doc silently drifts from actual 402 behavior if

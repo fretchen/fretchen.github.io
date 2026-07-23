@@ -291,7 +291,7 @@ async function handle(
         // Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
         "Access-Control-Allow-Headers":
           "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
         "Content-Type": "application/json",
       },
       body: "",
@@ -306,12 +306,19 @@ async function handle(
     };
   }
 
-  if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "favicon.ico") {
+  // x402scan probes /favicon.ico with HEAD first and only falls back to GET on a
+  // 403/405 — a 400 makes it give up and report "no favicon". So answer HEAD here too:
+  // 200 with the image content-type and an empty body (HEAD carries no body).
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === "favicon.ico"
+  ) {
+    const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
       headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
-      body: faviconBase64,
-      isBase64Encoded: true,
+      body: isHead ? "" : faviconBase64,
+      isBase64Encoded: !isHead,
     };
   }
 

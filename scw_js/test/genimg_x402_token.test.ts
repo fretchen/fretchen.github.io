@@ -451,6 +451,24 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(bytes[1]).toBe(0xd8);
     });
 
+    test("should answer a HEAD /favicon.ico probe with 200 and an image content-type", async () => {
+      // x402scan (@agentcash/discovery) probes /favicon.ico with HEAD first and only
+      // retries with GET on 403/405. A 400 here makes it report "no favicon", so HEAD
+      // must return 200 + image content-type (with an empty body, per HTTP HEAD).
+      const event = {
+        httpMethod: "HEAD",
+        headers: {},
+        body: "",
+        path: "/favicon.ico",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toBe("image/jpeg");
+      expect(response.body).toBe("");
+    });
+
     test("should reject invalid JSON body", async () => {
       const event = {
         httpMethod: "POST",

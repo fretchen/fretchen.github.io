@@ -7,7 +7,8 @@
     "x-guidance": "POST / with { data: { prompt: [{ role, content }, ...] } } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns the LLM's response. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower.",
     "contact": {
       "name": "fretchen",
-      "url": "https://www.fretchen.eu"
+      "url": "https://www.fretchen.eu",
+      "email": "fretchen.dev@proton.me"
     }
   },
   "x-discovery": {

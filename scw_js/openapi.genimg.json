@@ -7,7 +7,8 @@
     "x-guidance": "POST / with { prompt, tokenId, mode, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service mints/updates the NFT and returns its metadata and image URLs.",
     "contact": {
       "name": "fretchen",
-      "url": "https://www.fretchen.eu"
+      "url": "https://www.fretchen.eu",
+      "email": "fretchen.dev@proton.me"
     }
   },
   "x-discovery": {

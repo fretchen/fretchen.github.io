@@ -29,6 +29,7 @@ import {
 import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
+import { faviconBase64, faviconContentType } from "./favicon.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
@@ -275,6 +276,7 @@ async function handle(
   statusCode: number;
   headers: Record<string, string>;
   body: string;
+  isBase64Encoded?: boolean;
 }> {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -301,6 +303,15 @@ async function handle(
       statusCode: 200,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify(openapiSpec),
+    };
+  }
+
+  if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "favicon.ico") {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
+      body: faviconBase64,
+      isBase64Encoded: true,
     };
   }
 

@@ -237,7 +237,10 @@ describe("sc_llm_x402", () => {
     });
 
     it("answers a HEAD /favicon.png probe with 200 and an image content-type", async () => {
-      const res = await handle(makeEvent({ httpMethod: "HEAD", path: "/favicon.png" }) as never, {});
+      const res = await handle(
+        makeEvent({ httpMethod: "HEAD", path: "/favicon.png" }) as never,
+        {},
+      );
       expect(res.statusCode).toBe(200);
       expect(res.headers["Content-Type"]).toBe("image/jpeg");
       expect(res.body).toBe("");
@@ -263,7 +266,10 @@ describe("sc_llm_x402", () => {
     // An x402 payment client GETs / without an HTML Accept header — it must fall through
     // to the normal "only POST" rejection, not receive HTML.
     it("does NOT serve HTML on GET / without an HTML Accept header", async () => {
-      const res = await handle(makeEvent({ httpMethod: "GET", path: "/", headers: {} }) as never, {});
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/", headers: {} }) as never,
+        {},
+      );
       expect(res.statusCode).toBe(400);
     });
 

@@ -2,6 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Fretchen AI Image Generation Service",
+    "description": "AI-powered image generation with NFT minting on Optimism/Base, paid via x402 USDC.",
     "version": "1.0.0",
     "x-guidance": "POST / with { prompt, tokenId, mode, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service mints/updates the NFT and returns its metadata and image URLs.",
     "contact": {
@@ -9,12 +10,18 @@
       "url": "https://www.fretchen.eu"
     }
   },
+  "x-discovery": {
+    "ownershipProofs": [
+      "0x8af9242b0056decb756ccd803fa791f7bd022f3f4973e9f84fec58ab3ab9160305a35b947c9a817146b91e7b61b49a1eea8eaa5832bc80682fb7b6fbba737e4f1b"
+    ]
+  },
   "servers": [{ "url": "https://imagegen-agent.fretchen.eu" }],
   "paths": {
     "/": {
       "post": {
         "operationId": "genimgX402Token",
         "summary": "Generate AI Image and Mint NFT (x402 USDC payment)",
+        "description": "Generates an AI image using Black Forest Labs (BFL) API, uploads to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires x402 USDC payment.",
         "security": [],
         "x-payment-info": {
           "protocols": ["x402"],
@@ -50,19 +57,49 @@
         "type": "object",
         "required": ["prompt", "tokenId"],
         "properties": {
-          "prompt": { "type": "string" },
-          "tokenId": { "type": "integer" },
-          "mode": { "type": "string", "enum": ["generate", "edit"], "default": "generate" },
-          "size": { "type": "string", "enum": ["1024x1024", "1792x1024"] },
-          "referenceImage": { "type": "string", "format": "byte" }
+          "prompt": {
+            "type": "string",
+            "description": "The text prompt for AI image generation"
+          },
+          "tokenId": {
+            "type": "integer",
+            "description": "The NFT token ID to update"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["generate", "edit"],
+            "default": "generate",
+            "description": "generate: create new image, edit: modify existing image"
+          },
+          "size": {
+            "type": "string",
+            "enum": ["1024x1024", "1792x1024"],
+            "description": "Output image dimensions"
+          },
+          "referenceImage": {
+            "type": "string",
+            "format": "byte",
+            "description": "Base64-encoded reference image (required for edit mode)"
+          }
         }
       },
       "ImageGenerationResponse": {
         "type": "object",
         "properties": {
-          "metadata_url": { "type": "string", "format": "uri" },
-          "image_url": { "type": "string", "format": "uri" },
-          "transaction_hash": { "type": "string" }
+          "metadata_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the NFT metadata JSON"
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the generated image"
+          },
+          "transaction_hash": {
+            "type": "string",
+            "description": "Mint transaction hash on-chain"
+          }
         }
       }
     }

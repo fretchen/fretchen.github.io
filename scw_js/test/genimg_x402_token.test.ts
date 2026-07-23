@@ -430,6 +430,27 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(JSON.parse(response.body).openapi).toBe("3.1.0");
     });
 
+    test("should serve the favicon as a base64 image on GET /favicon.ico", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "/favicon.ico",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toBe("image/jpeg");
+      expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(response.isBase64Encoded).toBe(true);
+      // Valid base64 that decodes to a JPEG (SOI marker 0xFFD8).
+      const bytes = Buffer.from(response.body, "base64");
+      expect(bytes.length).toBeGreaterThan(0);
+      expect(bytes[0]).toBe(0xff);
+      expect(bytes[1]).toBe(0xd8);
+    });
+
     test("should reject invalid JSON body", async () => {
       const event = {
         httpMethod: "POST",

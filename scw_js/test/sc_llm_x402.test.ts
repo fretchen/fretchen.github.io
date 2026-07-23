@@ -221,6 +221,19 @@ describe("sc_llm_x402", () => {
       expect(JSON.parse(res.body).openapi).toBe("3.1.0");
     });
 
+    it("serves the favicon as a base64 image on GET /favicon.ico", async () => {
+      const res = await handle(makeEvent({ httpMethod: "GET", path: "/favicon.ico" }) as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("image/jpeg");
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(res.isBase64Encoded).toBe(true);
+      // Valid base64 that decodes to a JPEG (SOI marker 0xFFD8).
+      const bytes = Buffer.from(res.body, "base64");
+      expect(bytes.length).toBeGreaterThan(0);
+      expect(bytes[0]).toBe(0xff);
+      expect(bytes[1]).toBe(0xd8);
+    });
+
     // Regression guard: x-payment-info.price.max must track the real, live price
     // ceiling (USDC_MAX_PRICE_PER_MESSAGE), not a value hardcoded in openapi.llm.json —
     // otherwise the served discovery doc silently drifts from actual 402 behavior if

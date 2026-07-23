@@ -28,6 +28,9 @@ import {
 } from "./x402_server.js";
 import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
+import openapiSpec from "./openapi.genimg.json" with { type: "json" };
+import { faviconBase64, faviconContentType } from "./favicon.js";
+import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
@@ -274,6 +277,7 @@ async function handle(
   statusCode: number;
   headers: Record<string, string>;
   body: string;
+  isBase64Encoded?: boolean;
 }> {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -288,10 +292,50 @@ async function handle(
         // Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
         "Access-Control-Allow-Headers":
           "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
         "Content-Type": "application/json",
       },
       body: "",
+    };
+  }
+
+  if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify(openapiSpec),
+    };
+  }
+
+  // The Scaleway/Envoy gateway intercepts the exact path /favicon.ico and answers it
+  // with its own 404 before the function runs, so we cannot serve favicon.ico here.
+  // Instead we cover the two paths that DO reach the function and that x402scan
+  // (@agentcash/discovery) actually uses to resolve an icon:
+  //   1. The origin root: scrapeFavicon fetches it and parses <link rel="icon"> first,
+  //      before probing any COMMON_FAVICON_PATHS. So a GET on "/" that asks for HTML
+  //      (a scraper, never an x402 payment client — those POST JSON) gets a minimal
+  //      HTML page pointing at /favicon.png.
+  //   2. /favicon.png: one of scrapeFavicon's COMMON_FAVICON_PATHS fallbacks, and unlike
+  //      /favicon.ico it is not swallowed by the gateway.
+  const normalizedPath = (event.path ?? "").replace(/^\/+/, "");
+  const isGetOrHead = event.httpMethod === "GET" || event.httpMethod === "HEAD";
+
+  if (isGetOrHead && normalizedPath === "favicon.png") {
+    const isHead = event.httpMethod === "HEAD";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
+      body: isHead ? "" : faviconBase64,
+      isBase64Encoded: !isHead,
+    };
+  }
+
+  if (isGetOrHead && normalizedPath === "" && wantsHtml(event.headers)) {
+    const isHead = event.httpMethod === "HEAD";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" },
+      body: isHead ? "" : FAVICON_DISCOVERY_HTML,
     };
   }
 

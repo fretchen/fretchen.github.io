@@ -1,0 +1,109 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fretchen AI Assistant (LLM) Service",
+    "description": "AI chat assistant, paid via x402 batch-settlement USDC payment channels.",
+    "version": "1.0.0",
+    "x-guidance": "POST / with { data: { prompt: [{ role, content }, ...] } } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns the LLM's response. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower.",
+    "contact": {
+      "name": "fretchen",
+      "url": "https://www.fretchen.eu",
+      "email": "fretchen.dev@proton.me"
+    }
+  },
+  "x-discovery": {
+    "ownershipProofs": [
+      "0x08fd2874a7a85b7250830bf6be396953c108e197739ccc758e373036b2fe78a71ddcaf48183690b5f1d2a0049eb0af93068fb35eaaf59d266168eaeea1df357d1c"
+    ]
+  },
+  "servers": [{ "url": "https://llm-agent.fretchen.eu" }],
+  "tags": [
+    { "name": "LLM", "description": "AI chat assistant / text completion" },
+    { "name": "Chat", "description": "Multi-turn conversational messages" },
+    { "name": "x402", "description": "Paid via x402 batch-settlement USDC payment channels" }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "llmX402",
+        "summary": "Chat with the AI assistant (x402 batch-settlement USDC payment)",
+        "description": "Sends a prompt to the LLM and returns its response. Payment is settled per message via an x402 batch-settlement USDC payment channel, capped at a per-message price ceiling.",
+        "tags": ["LLM", "Chat", "x402"],
+        "security": [],
+        "x-payment-info": {
+          "protocols": ["x402"],
+          "price": { "mode": "dynamic", "currency": "USD", "min": "0", "max": "0.003" }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LLMChatRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LLM response generated and payment settled successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LLMChatResponse" }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required. Body/headers (Payment-Required, X-Payment) carry the x402 batch-settlement payment requirements to satisfy and retry with."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LLMChatRequest": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["prompt"],
+            "properties": {
+              "prompt": {
+                "type": "array",
+                "description": "Chat message history to send to the LLM",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": ["user", "assistant", "system"],
+                      "description": "The speaker's role in the conversation"
+                    },
+                    "content": { "type": "string", "description": "The message text" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "LLMChatResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "description": "The LLM's response content" },
+          "usage": {
+            "type": "object",
+            "description": "Token usage for this request, used to derive the settled charge",
+            "properties": {
+              "prompt_tokens": { "type": "integer", "description": "Input tokens consumed" },
+              "completion_tokens": {
+                "type": "integer",
+                "description": "Output tokens generated"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

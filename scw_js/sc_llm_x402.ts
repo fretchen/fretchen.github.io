@@ -9,9 +9,13 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
   getBatchSettlementNetworks,
+  formatUsdcAtomicAsDecimalUsd,
   LLM_MAX_TIMEOUT_SECONDS,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
+import openapiSpec from "./openapi.llm.json" with { type: "json" };
+import { faviconBase64, faviconContentType } from "./favicon.js";
+import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 
 export type { ScwEvent };
 
@@ -19,6 +23,7 @@ interface ScwResponse {
   body: string;
   statusCode: number;
   headers: Record<string, string>;
+  isBase64Encoded?: boolean;
 }
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
@@ -69,7 +74,7 @@ const CORS_HEADERS = {
   // genimg_x402_token.ts's identical OPTIONS block for the same reasoning.
   "Access-Control-Allow-Headers":
     "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
   "Content-Type": "application/json",
 };
 
@@ -84,6 +89,51 @@ function errorResponse(statusCode: number, error: string): ScwResponse {
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  }
+
+  if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
+    // The static file's x-payment-info.price.max is a documentation-only baseline —
+    // USDC_MAX_PRICE_PER_MESSAGE (derived from LLM_ESTIMATED_TOKENS_PER_MESSAGE and the
+    // LLM provider's rate card) is the real, live ceiling, so override it here rather than
+    // let the served discovery doc silently drift from the actual runtime 402 behavior.
+    const spec = structuredClone(openapiSpec) as typeof openapiSpec;
+    spec.paths["/"].post["x-payment-info"].price.max = formatUsdcAtomicAsDecimalUsd(
+      USDC_MAX_PRICE_PER_MESSAGE,
+    );
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify(spec),
+    };
+  }
+
+  // The Scaleway/Envoy gateway intercepts the exact path /favicon.ico and answers it
+  // with its own 404 before the function runs, so we cannot serve favicon.ico here.
+  // Instead we cover the two paths that DO reach the function and that x402scan
+  // (@agentcash/discovery) actually uses to resolve an icon: the origin root (parsed for
+  // <link rel="icon"> before any COMMON_FAVICON_PATHS probe) and /favicon.png (a
+  // COMMON_FAVICON_PATHS fallback that, unlike /favicon.ico, is not swallowed). See
+  // discovery.ts for the full reasoning.
+  const normalizedPath = (event.path ?? "").replace(/^\/+/, "");
+  const isGetOrHead = event.httpMethod === "GET" || event.httpMethod === "HEAD";
+
+  if (isGetOrHead && normalizedPath === "favicon.png") {
+    const isHead = event.httpMethod === "HEAD";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
+      body: isHead ? "" : faviconBase64,
+      isBase64Encoded: !isHead,
+    };
+  }
+
+  if (isGetOrHead && normalizedPath === "" && wantsHtml(event.headers)) {
+    const isHead = event.httpMethod === "HEAD";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" },
+      body: isHead ? "" : FAVICON_DISCOVERY_HTML,
+    };
   }
 
   if (event.httpMethod !== "POST") {

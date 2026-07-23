@@ -86,6 +86,16 @@ vi.mock("../x402_server.js", () => ({
   // Real constant (not a mock fn) — imported by sc_llm_x402.ts for the verify-time
   // maxTimeoutSeconds; keep in sync with x402_server.ts's exported value.
   LLM_MAX_TIMEOUT_SECONDS: 120,
+  // Real implementation (pure bigint math, no side effects) — keep in sync with
+  // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
+  formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
+    const atomic = BigInt(atomicAmount);
+    const divisor = 1_000_000n;
+    const whole = atomic / divisor;
+    const fraction = (atomic % divisor).toString().padStart(6, "0");
+    const trimmedFraction = fraction.replace(/0+$/, "");
+    return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+  },
 }));
 
 vi.mock("@fretchen/chain-utils", () => ({
@@ -174,9 +184,124 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(200);
     });
 
+    it("includes GET in the OPTIONS preflight allow-list", async () => {
+      // Regression guard: GET must stay allowed so GET /openapi.json passes preflight
+      // for browser-based x402 discovery crawlers.
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.headers["Access-Control-Allow-Methods"]).toContain("GET");
+    });
+
     it("returns 400 for a non-POST method", async () => {
       const res = await handle(makeEvent({ httpMethod: "GET" }) as never, {});
       expect(res.statusCode).toBe(400);
+    });
+
+    it("serves the OpenAPI discovery document on GET /openapi.json", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/openapi.json" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("application/json");
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+
+      const body = JSON.parse(res.body);
+      expect(body.openapi).toBe("3.1.0");
+      expect(body.info.title).toBeTruthy();
+      expect(body.paths["/"].post["x-payment-info"]).toEqual({
+        protocols: ["x402"],
+        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.003" },
+      });
+      expect(body.paths["/"].post.responses["402"]).toBeDefined();
+    });
+
+    it("serves openapi.json without a leading slash in the path too", async () => {
+      const res = await handle(makeEvent({ httpMethod: "GET", path: "openapi.json" }) as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body).openapi).toBe("3.1.0");
+    });
+
+    // /favicon.ico is swallowed by the Scaleway gateway before the function runs, so we
+    // serve the icon at /favicon.png (a COMMON_FAVICON_PATHS fallback that reaches us).
+    it("serves the favicon as a base64 image on GET /favicon.png", async () => {
+      const res = await handle(makeEvent({ httpMethod: "GET", path: "/favicon.png" }) as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("image/jpeg");
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(res.isBase64Encoded).toBe(true);
+      // Valid base64 that decodes to a JPEG (SOI marker 0xFFD8).
+      const bytes = Buffer.from(res.body, "base64");
+      expect(bytes.length).toBeGreaterThan(0);
+      expect(bytes[0]).toBe(0xff);
+      expect(bytes[1]).toBe(0xd8);
+    });
+
+    it("answers a HEAD /favicon.png probe with 200 and an image content-type", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "HEAD", path: "/favicon.png" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("image/jpeg");
+      expect(res.body).toBe("");
+    });
+
+    // x402scan fetches the origin root and parses <link rel="icon"> before probing any
+    // favicon path. An HTML-accepting GET on "/" must return that discovery HTML.
+    it("serves favicon-discovery HTML on GET / when the client accepts HTML", async () => {
+      const res = await handle(
+        makeEvent({
+          httpMethod: "GET",
+          path: "/",
+          headers: { accept: "text/html,application/xhtml+xml" },
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toContain("text/html");
+      expect(res.body).toContain('rel="icon"');
+      expect(res.body).toContain("/favicon.png");
+    });
+
+    // An x402 payment client GETs / without an HTML Accept header — it must fall through
+    // to the normal "only POST" rejection, not receive HTML.
+    it("does NOT serve HTML on GET / without an HTML Accept header", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/", headers: {} }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+    });
+
+    // Regression guard: x-payment-info.price.max must track the real, live price
+    // ceiling (USDC_MAX_PRICE_PER_MESSAGE), not a value hardcoded in openapi.llm.json —
+    // otherwise the served discovery doc silently drifts from actual 402 behavior if
+    // LLM_ESTIMATED_TOKENS_PER_MESSAGE or the provider's rate card ever changes. Proves
+    // this by re-importing the module with a different token estimate and checking the
+    // served price.max changes accordingly, rather than coincidentally matching a literal.
+    it("serves a price.max that tracks LLM_ESTIMATED_TOKENS_PER_MESSAGE, not a hardcoded value", async () => {
+      const originalEstimate = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE;
+      process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE = "4000";
+      vi.resetModules();
+      try {
+        const mod = await import("../sc_llm_x402.js");
+        const res = await mod.handle(
+          makeEvent({ httpMethod: "GET", path: "/openapi.json" }) as never,
+          {},
+        );
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        // 4000 tokens * 150n/100n (mistral output rate, mocked to match llm_service.ts) = 6000n
+        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.003".
+        expect(body.paths["/"].post["x-payment-info"].price.max).toBe("0.006");
+      } finally {
+        if (originalEstimate === undefined) {
+          delete process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE;
+        } else {
+          process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE = originalEstimate;
+        }
+        vi.resetModules();
+      }
     });
 
     it("returns 400 for malformed JSON body", async () => {

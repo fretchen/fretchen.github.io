@@ -371,6 +371,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       ]) {
         expect(allowedHeaders).toContain(header);
       }
+
+      // Regression guard: GET must stay allowed so GET /openapi.json passes preflight
+      // for browser-based x402 discovery crawlers.
+      expect(response.headers["Access-Control-Allow-Methods"]).toContain("GET");
     });
 
     test("should reject non-POST requests", async () => {
@@ -386,6 +390,116 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
       expect(body.error).toContain("Only POST");
+    });
+
+    test("should serve the OpenAPI discovery document on GET /openapi.json", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "/openapi.json",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toBe("application/json");
+      expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
+
+      const body = JSON.parse(response.body);
+      expect(body.openapi).toBe("3.1.0");
+      expect(body.info.title).toBeTruthy();
+      expect(body.paths["/"].post["x-payment-info"]).toEqual({
+        protocols: ["x402"],
+        price: { mode: "fixed", currency: "USD", amount: "0.07" },
+      });
+      expect(body.paths["/"].post.responses["402"]).toBeDefined();
+    });
+
+    test("should serve openapi.json without a leading slash in the path too", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "openapi.json",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.body).openapi).toBe("3.1.0");
+    });
+
+    // /favicon.ico is swallowed by the Scaleway gateway before the function runs, so we
+    // serve the icon at /favicon.png (a COMMON_FAVICON_PATHS fallback that reaches us).
+    test("should serve the favicon as a base64 image on GET /favicon.png", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "/favicon.png",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toBe("image/jpeg");
+      expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(response.isBase64Encoded).toBe(true);
+      // Valid base64 that decodes to a JPEG (SOI marker 0xFFD8).
+      const bytes = Buffer.from(response.body, "base64");
+      expect(bytes.length).toBeGreaterThan(0);
+      expect(bytes[0]).toBe(0xff);
+      expect(bytes[1]).toBe(0xd8);
+    });
+
+    test("should answer a HEAD /favicon.png probe with 200 and an image content-type", async () => {
+      const event = {
+        httpMethod: "HEAD",
+        headers: {},
+        body: "",
+        path: "/favicon.png",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toBe("image/jpeg");
+      expect(response.body).toBe("");
+    });
+
+    // x402scan fetches the origin root and parses <link rel="icon"> before probing any
+    // favicon path. An HTML-accepting GET on "/" must return that discovery HTML.
+    test("should serve favicon-discovery HTML on GET / when the client accepts HTML", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: { accept: "text/html,application/xhtml+xml" },
+        body: "",
+        path: "/",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toContain("text/html");
+      expect(response.body).toContain('rel="icon"');
+      expect(response.body).toContain("/favicon.png");
+    });
+
+    // An x402 payment client GETs / without an HTML Accept header — it must NOT get HTML,
+    // it must fall through to the normal "only POST" rejection.
+    test("should NOT serve HTML on GET / without an HTML Accept header", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "/",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body).error).toContain("Only POST");
     });
 
     test("should reject invalid JSON body", async () => {

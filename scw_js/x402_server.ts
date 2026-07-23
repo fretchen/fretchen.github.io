@@ -281,6 +281,22 @@ export function extractPaymentPayload(
   return null;
 }
 
+/**
+ * Converts a USDC atomic-unit amount (6 decimals, as used by accepts[].amount) into a
+ * decimal USD string suitable for OpenAPI's x-payment-info.price (which the x402scan
+ * discovery spec requires in decimal USD, not atomic units). Bigint-based to avoid float
+ * precision loss; trims trailing zeros so "3000" -> "0.003", not "0.003000".
+ */
+export function formatUsdcAtomicAsDecimalUsd(atomicAmount: string): string {
+  const atomic = BigInt(atomicAmount);
+  const DECIMALS = 6n;
+  const divisor = 10n ** DECIMALS;
+  const whole = atomic / divisor;
+  const fraction = (atomic % divisor).toString().padStart(Number(DECIMALS), "0");
+  const trimmedFraction = fraction.replace(/0+$/, "");
+  return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+}
+
 export function createSettlementHeaders(
   settlementResult: Record<string, unknown>,
 ): Record<string, string> {

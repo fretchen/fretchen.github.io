@@ -4,7 +4,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 
 ## 📖 API Documentation
 
-- **OpenAPI Spec**: [`openapi.json`](./openapi.json) - Full REST API documentation
+- **OpenAPI Specs**: [`openapi.genimg.json`](./openapi.genimg.json) / [`openapi.llm.json`](./openapi.llm.json) - Per-service x402 discovery contracts, each served live at `GET /openapi.json` on its own origin
 - **EIP-8004 Registration**: [`agent-registration.json`](./agent-registration.json) - Agent discovery and trust
 
 ### Quick Links

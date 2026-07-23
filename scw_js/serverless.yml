@@ -54,6 +54,8 @@ functions:
   llmx402:
     handler: dist/sc_llm_x402.handle
     description: "x402 batch-settlement LLM chat (USDC payment channels)"
+    custom_domains:
+      - llm-agent.fretchen.eu
   llmx402cron:
     handler: dist/llm_x402_cron.handle
     description: "Claims and settles accumulated x402 batch-settlement channels every 12h"

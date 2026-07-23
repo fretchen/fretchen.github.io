@@ -15,6 +15,7 @@ import {
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
+import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 
 export type { ScwEvent };
 
@@ -106,19 +107,32 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     };
   }
 
-  // x402scan probes /favicon.ico with HEAD first and only falls back to GET on a
-  // 403/405 — a 400 makes it give up and report "no favicon". So answer HEAD here too:
-  // 200 with the image content-type and an empty body (HEAD carries no body).
-  if (
-    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
-    (event.path ?? "").replace(/^\/+/, "") === "favicon.ico"
-  ) {
+  // The Scaleway/Envoy gateway intercepts the exact path /favicon.ico and answers it
+  // with its own 404 before the function runs, so we cannot serve favicon.ico here.
+  // Instead we cover the two paths that DO reach the function and that x402scan
+  // (@agentcash/discovery) actually uses to resolve an icon: the origin root (parsed for
+  // <link rel="icon"> before any COMMON_FAVICON_PATHS probe) and /favicon.png (a
+  // COMMON_FAVICON_PATHS fallback that, unlike /favicon.ico, is not swallowed). See
+  // discovery.ts for the full reasoning.
+  const normalizedPath = (event.path ?? "").replace(/^\/+/, "");
+  const isGetOrHead = event.httpMethod === "GET" || event.httpMethod === "HEAD";
+
+  if (isGetOrHead && normalizedPath === "favicon.png") {
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
       headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
       body: isHead ? "" : faviconBase64,
       isBase64Encoded: !isHead,
+    };
+  }
+
+  if (isGetOrHead && normalizedPath === "" && wantsHtml(event.headers)) {
+    const isHead = event.httpMethod === "HEAD";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" },
+      body: isHead ? "" : FAVICON_DISCOVERY_HTML,
     };
   }
 

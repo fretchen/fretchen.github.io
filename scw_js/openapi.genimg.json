@@ -17,12 +17,18 @@
     ]
   },
   "servers": [{ "url": "https://imagegen-agent.fretchen.eu" }],
+  "tags": [
+    { "name": "Image Generation", "description": "AI text-to-image and image editing" },
+    { "name": "NFT", "description": "Mints the result as an NFT on Optimism/Base" },
+    { "name": "x402", "description": "Paid via x402 USDC payments" }
+  ],
   "paths": {
     "/": {
       "post": {
         "operationId": "genimgX402Token",
         "summary": "Generate AI Image and Mint NFT (x402 USDC payment)",
         "description": "Generates an AI image using Black Forest Labs (BFL) API, uploads to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires x402 USDC payment.",
+        "tags": ["Image Generation", "NFT", "x402"],
         "security": [],
         "x-payment-info": {
           "protocols": ["x402"],

@@ -13,11 +13,14 @@
   },
   "x-discovery": {
     "ownershipProofs": [
-      "0x73c598b299c68af3df704504a82e2d47a6d5b6d1bdec53ed93c521c49142259816c6fbf86253ac7c97d59f809705181086e3600def715a9854eb10c36c389ecc1b"
+      "0x08fd2874a7a85b7250830bf6be396953c108e197739ccc758e373036b2fe78a71ddcaf48183690b5f1d2a0049eb0af93068fb35eaaf59d266168eaeea1df357d1c"
     ]
   },
-  "servers": [
-    { "url": "https://mypersonaljscloudivnad9dy-llmx402.functions.fnc.fr-par.scw.cloud" }
+  "servers": [{ "url": "https://llm-agent.fretchen.eu" }],
+  "tags": [
+    { "name": "LLM", "description": "AI chat assistant / text completion" },
+    { "name": "Chat", "description": "Multi-turn conversational messages" },
+    { "name": "x402", "description": "Paid via x402 batch-settlement USDC payment channels" }
   ],
   "paths": {
     "/": {
@@ -25,6 +28,7 @@
         "operationId": "llmX402",
         "summary": "Chat with the AI assistant (x402 batch-settlement USDC payment)",
         "description": "Sends a prompt to the LLM and returns its response. Payment is settled per message via an x402 batch-settlement USDC payment channel, capped at a per-message price ceiling.",
+        "tags": ["LLM", "Chat", "x402"],
         "security": [],
         "x-payment-info": {
           "protocols": ["x402"],

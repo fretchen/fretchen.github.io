@@ -430,12 +430,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(JSON.parse(response.body).openapi).toBe("3.1.0");
     });
 
-    test("should serve the favicon as a base64 image on GET /favicon.ico", async () => {
+    // /favicon.ico is swallowed by the Scaleway gateway before the function runs, so we
+    // serve the icon at /favicon.png (a COMMON_FAVICON_PATHS fallback that reaches us).
+    test("should serve the favicon as a base64 image on GET /favicon.png", async () => {
       const event = {
         httpMethod: "GET",
         headers: {},
         body: "",
-        path: "/favicon.ico",
+        path: "/favicon.png",
       };
 
       const response = await handle(event, {});
@@ -451,15 +453,12 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(bytes[1]).toBe(0xd8);
     });
 
-    test("should answer a HEAD /favicon.ico probe with 200 and an image content-type", async () => {
-      // x402scan (@agentcash/discovery) probes /favicon.ico with HEAD first and only
-      // retries with GET on 403/405. A 400 here makes it report "no favicon", so HEAD
-      // must return 200 + image content-type (with an empty body, per HTTP HEAD).
+    test("should answer a HEAD /favicon.png probe with 200 and an image content-type", async () => {
       const event = {
         httpMethod: "HEAD",
         headers: {},
         body: "",
-        path: "/favicon.ico",
+        path: "/favicon.png",
       };
 
       const response = await handle(event, {});
@@ -467,6 +466,40 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
       expect(response.headers["Content-Type"]).toBe("image/jpeg");
       expect(response.body).toBe("");
+    });
+
+    // x402scan fetches the origin root and parses <link rel="icon"> before probing any
+    // favicon path. An HTML-accepting GET on "/" must return that discovery HTML.
+    test("should serve favicon-discovery HTML on GET / when the client accepts HTML", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: { accept: "text/html,application/xhtml+xml" },
+        body: "",
+        path: "/",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["Content-Type"]).toContain("text/html");
+      expect(response.body).toContain('rel="icon"');
+      expect(response.body).toContain("/favicon.png");
+    });
+
+    // An x402 payment client GETs / without an HTML Accept header — it must NOT get HTML,
+    // it must fall through to the normal "only POST" rejection.
+    test("should NOT serve HTML on GET / without an HTML Accept header", async () => {
+      const event = {
+        httpMethod: "GET",
+        headers: {},
+        body: "",
+        path: "/",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body).error).toContain("Only POST");
     });
 
     test("should reject invalid JSON body", async () => {

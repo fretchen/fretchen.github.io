@@ -30,6 +30,7 @@ import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
+import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
@@ -306,19 +307,35 @@ async function handle(
     };
   }
 
-  // x402scan probes /favicon.ico with HEAD first and only falls back to GET on a
-  // 403/405 — a 400 makes it give up and report "no favicon". So answer HEAD here too:
-  // 200 with the image content-type and an empty body (HEAD carries no body).
-  if (
-    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
-    (event.path ?? "").replace(/^\/+/, "") === "favicon.ico"
-  ) {
+  // The Scaleway/Envoy gateway intercepts the exact path /favicon.ico and answers it
+  // with its own 404 before the function runs, so we cannot serve favicon.ico here.
+  // Instead we cover the two paths that DO reach the function and that x402scan
+  // (@agentcash/discovery) actually uses to resolve an icon:
+  //   1. The origin root: scrapeFavicon fetches it and parses <link rel="icon"> first,
+  //      before probing any COMMON_FAVICON_PATHS. So a GET on "/" that asks for HTML
+  //      (a scraper, never an x402 payment client — those POST JSON) gets a minimal
+  //      HTML page pointing at /favicon.png.
+  //   2. /favicon.png: one of scrapeFavicon's COMMON_FAVICON_PATHS fallbacks, and unlike
+  //      /favicon.ico it is not swallowed by the gateway.
+  const normalizedPath = (event.path ?? "").replace(/^\/+/, "");
+  const isGetOrHead = event.httpMethod === "GET" || event.httpMethod === "HEAD";
+
+  if (isGetOrHead && normalizedPath === "favicon.png") {
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
       headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
       body: isHead ? "" : faviconBase64,
       isBase64Encoded: !isHead,
+    };
+  }
+
+  if (isGetOrHead && normalizedPath === "" && wantsHtml(event.headers)) {
+    const isHead = event.httpMethod === "HEAD";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" },
+      body: isHead ? "" : FAVICON_DISCOVERY_HTML,
     };
   }
 

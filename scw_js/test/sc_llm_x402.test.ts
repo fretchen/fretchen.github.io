@@ -86,6 +86,16 @@ vi.mock("../x402_server.js", () => ({
   // Real constant (not a mock fn) — imported by sc_llm_x402.ts for the verify-time
   // maxTimeoutSeconds; keep in sync with x402_server.ts's exported value.
   LLM_MAX_TIMEOUT_SECONDS: 120,
+  // Real implementation (pure bigint math, no side effects) — keep in sync with
+  // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
+  formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
+    const atomic = BigInt(atomicAmount);
+    const divisor = 1_000_000n;
+    const whole = atomic / divisor;
+    const fraction = (atomic % divisor).toString().padStart(6, "0");
+    const trimmedFraction = fraction.replace(/0+$/, "");
+    return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+  },
 }));
 
 vi.mock("@fretchen/chain-utils", () => ({
@@ -209,6 +219,37 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent({ httpMethod: "GET", path: "openapi.json" }) as never, {});
       expect(res.statusCode).toBe(200);
       expect(JSON.parse(res.body).openapi).toBe("3.1.0");
+    });
+
+    // Regression guard: x-payment-info.price.max must track the real, live price
+    // ceiling (USDC_MAX_PRICE_PER_MESSAGE), not a value hardcoded in openapi.llm.json —
+    // otherwise the served discovery doc silently drifts from actual 402 behavior if
+    // LLM_ESTIMATED_TOKENS_PER_MESSAGE or the provider's rate card ever changes. Proves
+    // this by re-importing the module with a different token estimate and checking the
+    // served price.max changes accordingly, rather than coincidentally matching a literal.
+    it("serves a price.max that tracks LLM_ESTIMATED_TOKENS_PER_MESSAGE, not a hardcoded value", async () => {
+      const originalEstimate = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE;
+      process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE = "4000";
+      vi.resetModules();
+      try {
+        const mod = await import("../sc_llm_x402.js");
+        const res = await mod.handle(
+          makeEvent({ httpMethod: "GET", path: "/openapi.json" }) as never,
+          {},
+        );
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        // 4000 tokens * 150n/100n (mistral output rate, mocked to match llm_service.ts) = 6000n
+        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.003".
+        expect(body.paths["/"].post["x-payment-info"].price.max).toBe("0.006");
+      } finally {
+        if (originalEstimate === undefined) {
+          delete process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE;
+        } else {
+          process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE = originalEstimate;
+        }
+        vi.resetModules();
+      }
     });
 
     it("returns 400 for malformed JSON body", async () => {

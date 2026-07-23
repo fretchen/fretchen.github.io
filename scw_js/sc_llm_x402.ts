@@ -9,6 +9,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
   getBatchSettlementNetworks,
+  formatUsdcAtomicAsDecimalUsd,
   LLM_MAX_TIMEOUT_SECONDS,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
@@ -88,10 +89,18 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
+    // The static file's x-payment-info.price.max is a documentation-only baseline —
+    // USDC_MAX_PRICE_PER_MESSAGE (derived from LLM_ESTIMATED_TOKENS_PER_MESSAGE and the
+    // LLM provider's rate card) is the real, live ceiling, so override it here rather than
+    // let the served discovery doc silently drift from the actual runtime 402 behavior.
+    const spec = structuredClone(openapiSpec) as typeof openapiSpec;
+    spec.paths["/"].post["x-payment-info"].price.max = formatUsdcAtomicAsDecimalUsd(
+      USDC_MAX_PRICE_PER_MESSAGE,
+    );
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify(openapiSpec),
+      body: JSON.stringify(spec),
     };
   }
 

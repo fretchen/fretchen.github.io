@@ -44,8 +44,8 @@
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
-    "@x402/core": "^2.18.0",
-    "@x402/evm": "^2.18.0",
+    "@x402/core": "^2.19.0",
+    "@x402/evm": "^2.19.0",
     "dotenv": "^17.4.2",
     "pino": "^10.3.1",
     "tsx": "^4.23.1",

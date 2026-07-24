@@ -102,9 +102,7 @@ function isRateLimited(ip: string): boolean {
 async function sendEmailNotification(comment: Comment): Promise<void> {
   try {
     if (!process.env.TEM_PROJECT_ID || !process.env.NOTIFICATION_EMAIL || !process.env.SCW_SECRET_KEY) {
-      console.warn(
-        "Email notification skipped: TEM_PROJECT_ID, NOTIFICATION_EMAIL or SCW_SECRET_KEY not set",
-      );
+      console.warn("Email notification skipped: TEM_PROJECT_ID, NOTIFICATION_EMAIL or SCW_SECRET_KEY not set");
       return;
     }
 

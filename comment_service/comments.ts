@@ -101,8 +101,8 @@ function isRateLimited(ip: string): boolean {
 
 async function sendEmailNotification(comment: Comment): Promise<void> {
   try {
-    if (!process.env.TEM_PROJECT_ID || !process.env.NOTIFICATION_EMAIL) {
-      console.warn("Email notification skipped: TEM_PROJECT_ID or NOTIFICATION_EMAIL not set");
+    if (!process.env.TEM_PROJECT_ID || !process.env.NOTIFICATION_EMAIL || !process.env.SCW_SECRET_KEY) {
+      console.warn("Email notification skipped: TEM_PROJECT_ID, NOTIFICATION_EMAIL or SCW_SECRET_KEY not set");
       return;
     }
 
@@ -110,7 +110,7 @@ async function sendEmailNotification(comment: Comment): Promise<void> {
     const res = await fetch("https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails", {
       method: "POST",
       headers: {
-        "X-Auth-Token": process.env.SCW_SECRET_KEY!,
+        "X-Auth-Token": process.env.SCW_SECRET_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -22,9 +22,17 @@ provider:
     #                      can never authorize real funds. Keep testnet-only wallets here.
     BATCH_SETTLEMENT_MANUAL_WHITELIST: ${env:BATCH_SETTLEMENT_MANUAL_WHITELIST, ''}
     BATCH_SETTLEMENT_TEST_WALLETS: ${env:BATCH_SETTLEMENT_TEST_WALLETS, ''}
+    # Weekly wallet report (walletreportcron): warn when native gas balance drops below
+    # this many ETH. Public value — the actual send is gated on the TEM secrets below.
+    LOW_GAS_THRESHOLD_ETH: ${env:LOW_GAS_THRESHOLD_ETH, '0.005'}
   # Secrets (set via Scaleway Console or CLI)
   secret:
     FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}
+    # Scaleway Transactional Email — used by walletreportcron to send the weekly report.
+    # SCW_SECRET_KEY doubles as the TEM X-Auth-Token (same value comment_service uses).
+    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY, ''}
+    TEM_PROJECT_ID: ${env:TEM_PROJECT_ID, ''}
+    NOTIFICATION_EMAIL: ${env:NOTIFICATION_EMAIL, ''}
     # Per-network RPC endpoints (see getRpcUrl in chain_utils.ts). Unset => viem falls
     # back to the chain's public endpoint, which is aggressively rate-limited: a single
     # batch-settlement deposit does a Multicall3 read batch and fails with "over rate
@@ -62,3 +70,15 @@ functions:
     # Custom domain for x402 standard compliance
     custom_domains:
       - facilitator.fretchen.eu
+
+  # Weekly (Mondays 08:00 UTC) email report of wallet balances + 7-day USDC activity.
+  walletreportcron:
+    handler: dist/wallet_report_cron.handle
+    description: "Weekly facilitator wallet balance + USDC activity email"
+    memoryLimit: 256
+    timeout: 60s
+    events:
+      - schedule:
+          # Scaleway's cron validator rejects the standard */N step syntax; plain fields
+          # are fine here. "0 8 * * 1" = Mondays at 08:00 UTC.
+          rate: "0 8 * * 1"

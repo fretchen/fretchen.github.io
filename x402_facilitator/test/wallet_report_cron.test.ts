@@ -179,9 +179,7 @@ describe("wallet_report_cron", () => {
 
   it("skips the email (but still returns 200) when TEM vars are missing", async () => {
     delete process.env.TEM_PROJECT_ID;
-    mockCreatePublicClient.mockReturnValue(
-      setupClient({ ethBalance: 1_000_000_000_000_000_000n }),
-    );
+    mockCreatePublicClient.mockReturnValue(setupClient({ ethBalance: 1_000_000_000_000_000_000n }));
 
     const res = await handle(makeEvent(), {});
     expect(res.statusCode).toBe(200);

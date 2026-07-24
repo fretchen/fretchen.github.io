@@ -111,7 +111,9 @@ function renderEmailText(facilitator: Address, reports: NetworkReport[]): string
       lines.push("");
       continue;
     }
-    lines.push(`  Gas (ETH):    ${r.eth}${r.lowGas ? "   ⚠️ LOW — top up to avoid stalled settlements" : ""}`);
+    lines.push(
+      `  Gas (ETH):    ${r.eth}${r.lowGas ? "   ⚠️ LOW — top up to avoid stalled settlements" : ""}`,
+    );
     lines.push(`  USDC balance: ${r.usdc}`);
     lines.push("");
   }
@@ -125,7 +127,11 @@ function renderEmailText(facilitator: Address, reports: NetworkReport[]): string
  */
 async function sendReport(subject: string, text: string): Promise<void> {
   try {
-    if (!process.env.TEM_PROJECT_ID || !process.env.NOTIFICATION_EMAIL || !process.env.SCW_SECRET_KEY) {
+    if (
+      !process.env.TEM_PROJECT_ID ||
+      !process.env.NOTIFICATION_EMAIL ||
+      !process.env.SCW_SECRET_KEY
+    ) {
       logger.warn(
         "Email report skipped: TEM_PROJECT_ID, NOTIFICATION_EMAIL or SCW_SECRET_KEY not set",
       );

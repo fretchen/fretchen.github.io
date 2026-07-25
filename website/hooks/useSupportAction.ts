@@ -3,12 +3,18 @@ import {
   useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
-  useSimulateContract,
   useSwitchChain,
   useChainId,
   useReadContracts,
+  useWalletClient,
 } from "wagmi";
-import { parseEther } from "viem";
+import {
+  getUSDCConfig,
+  toCAIP2,
+  buildTransferWithAuthorizationTypedData,
+  randomAuthorizationNonce,
+  splitAuthorizationSignature,
+} from "@fretchen/chain-utils";
 import {
   getSupportV2Config,
   isSupportV2Chain,
@@ -18,23 +24,28 @@ import {
 } from "../utils/getChain";
 import { trackEvent } from "../utils/analytics";
 
+// Fixed donation amount: 0.50 USDC (6 decimals)
+const DONATION_AMOUNT_USDC = 500000n;
+
 /**
  * Custom hook for SupportV2 with multi-chain support
  * - Reads likes from BOTH chains in current mode (mainnet or testnet) and aggregates them
  * - Mode controlled by VITE_USE_TESTNET env variable
- * - Automatic chain switch when user clicks "Support"
+ * - Donates in USDC via EIP-3009 transferWithAuthorization (donateToken) — no ETH needed for
+ *   the donation itself, only for gas. Donates on whichever supported chain the wallet is
+ *   already on; only switches chain as a fallback when the wallet is on an unsupported one.
  */
 export function useSupportAction(url: string) {
-  // errorMessage tracks chain-switch failures and config errors from handleSupport
+  // errorMessage tracks chain-switch/signing failures and config errors from handleSupport
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   // Captures the chain used at write time so the analytics effect reads a stable value
   const txChainIdRef = React.useRef<number | undefined>(undefined);
 
   // Wagmi hooks
-  const { isConnected, chainId: accountChainId } = useAccount();
+  const { isConnected, chainId: accountChainId, address } = useAccount();
   const wagmiChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
-  const donationAmount = parseEther("0.0002");
+  const { data: walletClient } = useWalletClient();
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
@@ -77,21 +88,6 @@ export function useSupportAction(url: string) {
     query: { enabled: !!fullUrl },
   });
 
-  // Derive which chain to donate on based on current wallet chain
-  const activeConfig = React.useMemo(() => {
-    const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
-    const targetChainId = currentlySupported ? chainId : DEFAULT_SUPPORT_CHAIN.id;
-    return targetChainId ? getSupportV2Config(targetChainId) : null;
-  }, [chainId]);
-
-  const { data: simulateDonateData } = useSimulateContract({
-    ...(activeConfig ?? {}),
-    functionName: "donate",
-    args: fullUrl ? [fullUrl, SUPPORT_RECIPIENT_ADDRESS] : undefined,
-    value: donationAmount,
-    query: { enabled: !!fullUrl && !!activeConfig && isConnected },
-  });
-
   // Aggregate counts from all chains
   const aggregatedCount = chainResults
     ? chainResults.reduce((sum, result) => {
@@ -102,11 +98,17 @@ export function useSupportAction(url: string) {
       }, 0n)
     : 0n;
 
-  // Handle support action with automatic chain switch
+  // Handle support action: sign an EIP-3009 USDC authorization, then submit donateToken.
+  // Donates on whichever supported chain the wallet is already on; only switches chain
+  // as a fallback when the wallet is on an unsupported one — the user never picks a chain.
   const handleSupport = React.useCallback(async () => {
     setErrorMessage(null);
     if (!fullUrl) {
       setErrorMessage("URL ist erforderlich");
+      return;
+    }
+    if (!address || !walletClient) {
+      setErrorMessage("Wallet nicht verbunden");
       return;
     }
 
@@ -132,16 +134,59 @@ export function useSupportAction(url: string) {
       return;
     }
 
-    if (!simulateDonateData) {
-      // Simulation still loading (e.g. after chain switch) — bail silently
+    let usdcConfig;
+    try {
+      usdcConfig = getUSDCConfig(toCAIP2(targetChainId));
+    } catch {
+      setErrorMessage("USDC ist auf dieser Chain nicht verfügbar");
       return;
     }
+
+    // Build and sign the EIP-3009 authorization (donor -> recipient, single-use nonce)
+    const nonce = randomAuthorizationNonce();
+    const validAfter = 0n;
+    const validBefore = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour window
+
+    const typedData = buildTransferWithAuthorizationTypedData(usdcConfig, {
+      from: address,
+      to: SUPPORT_RECIPIENT_ADDRESS,
+      value: DONATION_AMOUNT_USDC,
+      validAfter,
+      validBefore,
+      nonce,
+    });
+
+    let signature: `0x${string}`;
+    try {
+      signature = await walletClient.signTypedData({ account: address, ...typedData });
+    } catch {
+      setErrorMessage("Signatur abgelehnt");
+      return;
+    }
+
+    const { v, r, s } = splitAuthorizationSignature(signature);
 
     // Capture chain at write time; read in the effect to avoid chainId dep causing re-fires
     txChainIdRef.current = targetChainId;
 
-    writeContract(simulateDonateData.request);
-  }, [fullUrl, chainId, switchChainAsync, writeContract, simulateDonateData]);
+    writeContract({
+      ...resolvedConfig,
+      functionName: "donateToken",
+      args: [
+        fullUrl,
+        SUPPORT_RECIPIENT_ADDRESS,
+        usdcConfig.address,
+        DONATION_AMOUNT_USDC,
+        validAfter,
+        validBefore,
+        nonce,
+        v,
+        r,
+        s,
+      ],
+      chainId: targetChainId,
+    });
+  }, [fullUrl, address, walletClient, chainId, switchChainAsync, writeContract]);
 
   // Side effects after transaction: analytics + refetch
   React.useEffect(() => {

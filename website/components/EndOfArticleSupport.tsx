@@ -67,8 +67,8 @@ export default function EndOfArticleSupport() {
   // Tooltip
   const getTooltip = () => {
     if (errorMessage) return errorMessage;
-    if (!isConnected) return "Connect your wallet to support (~$0.50 via Optimism)";
-    return "Secure donation via Optimism (~$0.50)";
+    if (!isConnected) return "Connect your wallet to support (0.50 USDC)";
+    return "Secure donation of 0.50 USDC";
   };
 
   if (isReadPending) {
@@ -87,12 +87,12 @@ export default function EndOfArticleSupport() {
           title={getTooltip()}
         >
           {getButtonText()}
-          {!isSuccess && <span className={styles.price}>~50¢</span>}
+          {!isSuccess && <span className={styles.price}>0.50 USDC</span>}
         </button>
 
         <p className={styles.subtitle}>{getSubtitle()}</p>
 
-        {!isConnected && <p className={styles.hint}>Requires a Web3 wallet on Optimism network</p>}
+        {!isConnected && <p className={styles.hint}>Requires a Web3 wallet with USDC (Optimism or Base)</p>}
       </div>
     </div>
   );

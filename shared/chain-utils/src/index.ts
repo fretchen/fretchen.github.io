@@ -128,6 +128,18 @@ export function getUSDCConfig(network: string): USDCConfig {
 export type { USDCConfig };
 
 // ═══════════════════════════════════════════════════════════════
+// EIP-3009 transferWithAuthorization helpers
+// ═══════════════════════════════════════════════════════════════
+
+export {
+  TRANSFER_WITH_AUTHORIZATION_TYPES,
+  buildTransferWithAuthorizationTypedData,
+  randomAuthorizationNonce,
+  splitAuthorizationSignature,
+} from "./eip3009";
+export type { TransferWithAuthorizationMessage } from "./eip3009";
+
+// ═══════════════════════════════════════════════════════════════
 // Contract ABIs
 // ═══════════════════════════════════════════════════════════════
 

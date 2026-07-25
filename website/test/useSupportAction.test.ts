@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId, useSimulateContract } from "wagmi";
+import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId, useWalletClient } from "wagmi";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
 
@@ -28,6 +28,40 @@ vi.mock("../utils/getChain", async () => {
   };
 });
 
+// Mock only the USDC address/network lookup; keep the real EIP-3009 typed-data + signature
+// helpers (buildTransferWithAuthorizationTypedData, randomAuthorizationNonce,
+// splitAuthorizationSignature) so tests exercise the same logic used in production.
+vi.mock("@fretchen/chain-utils", async () => {
+  const actual = await vi.importActual<typeof import("@fretchen/chain-utils")>("@fretchen/chain-utils");
+  return {
+    ...actual,
+    toCAIP2: (chainId: number) => `eip155:${chainId}`,
+    getUSDCConfig: vi.fn((network: string) => {
+      const configs: Record<string, unknown> = {
+        "eip155:10": {
+          name: "OP Mainnet",
+          chainId: 10,
+          address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          decimals: 6,
+          usdcName: "USD Coin",
+          usdcVersion: "2",
+        },
+        "eip155:8453": {
+          name: "Base",
+          chainId: 8453,
+          address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          decimals: 6,
+          usdcName: "USD Coin",
+          usdcVersion: "2",
+        },
+      };
+      const config = configs[network];
+      if (!config) throw new Error(`USDC not available on ${network}`);
+      return config;
+    }),
+  };
+});
+
 // Mock analytics
 vi.mock("../utils/analytics", () => ({
   trackEvent: vi.fn(),
@@ -38,9 +72,13 @@ describe("useSupportAction", () => {
   const mockWriteContract = vi.fn();
   const mockSwitchChainAsync = vi.fn();
   const mockRefetch = vi.fn();
+  // Deterministic 65-byte signature: r (32 bytes) + s (32 bytes) + v=27 (1 byte, 0x1b)
+  const mockSignature = `0x${"11".repeat(32)}${"22".repeat(32)}1b` as `0x${string}`;
+  const mockSignTypedData = vi.fn().mockResolvedValue(mockSignature);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSignTypedData.mockResolvedValue(mockSignature);
 
     // Default mock implementations - use Optimism Mainnet (10)
     vi.mocked(useAccount).mockReturnValue({
@@ -64,13 +102,9 @@ describe("useSupportAction", () => {
       chains: [],
     } as unknown as ReturnType<typeof useSwitchChain>);
 
-    // Mock useSimulateContract - echoes params back as request so writeContract assertions still pass
-    vi.mocked(useSimulateContract).mockImplementation(
-      (params) =>
-        ({
-          data: { request: { ...params } },
-        }) as unknown as ReturnType<typeof useSimulateContract>,
-    );
+    vi.mocked(useWalletClient).mockReturnValue({
+      data: { signTypedData: mockSignTypedData },
+    } as unknown as ReturnType<typeof useWalletClient>);
 
     // Mock useReadContracts - returns array of results for all chains
     // useReadContracts aggregates reads from multiple chains in one hook
@@ -188,13 +222,25 @@ describe("useSupportAction", () => {
         await result.current.handleSupport();
       });
 
+      expect(mockSignTypedData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          primaryType: "TransferWithAuthorization",
+          domain: expect.objectContaining({ chainId: 10 }),
+          message: expect.objectContaining({
+            to: SUPPORT_RECIPIENT_ADDRESS,
+            value: 500000n,
+          }),
+        }),
+      );
+
       expect(mockWriteContract).toHaveBeenCalledWith(
         expect.objectContaining({
           address: "0x4ca63f8A4Cd56287E854f53E18ca482D74391316", // Optimism Mainnet
-          functionName: "donate",
-          args: [expect.stringContaining("/blog/test"), SUPPORT_RECIPIENT_ADDRESS],
+          functionName: "donateToken",
+          args: expect.arrayContaining([expect.stringContaining("/blog/test"), SUPPORT_RECIPIENT_ADDRESS]),
         }),
       );
+      expect(mockWriteContract.mock.calls[0][0].args).toHaveLength(10);
     });
 
     it("should use Base Mainnet contract when on Base Mainnet", async () => {
@@ -335,11 +381,9 @@ describe("useSupportAction", () => {
         await result.current.handleSupport();
       });
 
-      expect(mockWriteContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: ["https://example.com/blog/my-post", expect.any(String)],
-        }),
-      );
+      const writeCall = mockWriteContract.mock.calls[0][0];
+      expect(writeCall.args[0]).toBe("https://example.com/blog/my-post");
+      expect(writeCall.args[1]).toBe(SUPPORT_RECIPIENT_ADDRESS);
     });
 
     it("should strip trailing slashes from URL", async () => {
@@ -349,11 +393,9 @@ describe("useSupportAction", () => {
         await result.current.handleSupport();
       });
 
-      expect(mockWriteContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: ["https://example.com/blog/my-post", expect.any(String)],
-        }),
-      );
+      const call = mockWriteContract.mock.calls[0][0];
+      expect(call.args[0]).toBe("https://example.com/blog/my-post");
+      expect(call.args[1]).toBe(SUPPORT_RECIPIENT_ADDRESS);
     });
 
     it("should handle empty URL path (uses origin only)", async () => {
@@ -366,11 +408,9 @@ describe("useSupportAction", () => {
       });
 
       // Empty path still results in origin URL being used
-      expect(mockWriteContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: ["https://example.com", expect.any(String)],
-        }),
-      );
+      const call = mockWriteContract.mock.calls[0][0];
+      expect(call.args[0]).toBe("https://example.com");
+      expect(call.args[1]).toBe(SUPPORT_RECIPIENT_ADDRESS);
     });
   });
 });

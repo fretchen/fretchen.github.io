@@ -264,25 +264,27 @@ describe("useSupportAction", () => {
       );
     });
 
-    it("should trigger chain switch on unsupported chain", async () => {
+    it("should NOT auto-switch or donate on an unsupported chain — surfaces guidance instead", async () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
         chainId: 1, // Ethereum mainnet (unsupported)
         address: "0x1234",
         connector: { name: "MetaMask" },
       } as ReturnType<typeof useAccount>);
-
-      mockSwitchChainAsync.mockResolvedValue(undefined);
+      vi.mocked(useChainId).mockReturnValue(1);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      expect(result.current.isOnSupportedChain).toBe(false);
 
       await act(async () => {
         await result.current.handleSupport();
       });
 
-      expect(mockSwitchChainAsync).toHaveBeenCalledWith({
-        chainId: DEFAULT_SUPPORT_CHAIN.id,
-      });
+      // No blind wallet switch prompt and no attempted donation on the wrong chain
+      expect(mockSwitchChainAsync).not.toHaveBeenCalled();
+      expect(mockWriteContract).not.toHaveBeenCalled();
+      expect(result.current.errorMessage).toContain("Optimism");
     });
 
     it("should NOT trigger chain switch on supported chain", async () => {
@@ -295,31 +297,41 @@ describe("useSupportAction", () => {
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
+      expect(result.current.isOnSupportedChain).toBe(true);
+
       await act(async () => {
         await result.current.handleSupport();
       });
 
       expect(mockSwitchChainAsync).not.toHaveBeenCalled();
     });
+  });
 
-    it("should show error if chain switch fails", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 1, // Unsupported
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+  describe("switchToSupportedChain", () => {
+    it("switches to the default supported chain when called explicitly", async () => {
+      mockSwitchChainAsync.mockResolvedValue(undefined);
 
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      await act(async () => {
+        await result.current.switchToSupportedChain();
+      });
+
+      expect(mockSwitchChainAsync).toHaveBeenCalledWith({
+        chainId: DEFAULT_SUPPORT_CHAIN.id,
+      });
+    });
+
+    it("shows an error if the switch fails", async () => {
       mockSwitchChainAsync.mockRejectedValue(new Error("User rejected"));
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
       await act(async () => {
-        await result.current.handleSupport();
+        await result.current.switchToSupportedChain();
       });
 
       expect(result.current.errorMessage).toContain("Chain-Wechsel");
-      expect(mockWriteContract).not.toHaveBeenCalled();
     });
   });
 

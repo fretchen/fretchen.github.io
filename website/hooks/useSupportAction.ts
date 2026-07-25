@@ -33,7 +33,10 @@ const DONATION_AMOUNT_USDC = 500000n;
  * - Mode controlled by VITE_USE_TESTNET env variable
  * - Donates in USDC via EIP-3009 transferWithAuthorization (donateToken) — no ETH needed for
  *   the donation itself, only for gas. Donates on whichever supported chain the wallet is
- *   already on; only switches chain as a fallback when the wallet is on an unsupported one.
+ *   already on. Never auto-switches: an unsupported chain (e.g. Ethereum mainnet) surfaces
+ *   as `isOnSupportedChain: false` for the UI to explain, with `switchToSupportedChain` as
+ *   an explicit opt-in action — a blind switch would likely just move the user to a chain
+ *   they have no USDC on, turning one confusing failure into another.
  */
 export function useSupportAction(url: string) {
   // errorMessage tracks chain-switch/signing failures and config errors from handleSupport
@@ -98,9 +101,27 @@ export function useSupportAction(url: string) {
       }, 0n)
     : 0n;
 
+  // Whether the wallet is currently on a chain SupportV2 is deployed on (Optimism/Base).
+  // Exposed so the UI can show guidance BEFORE any wallet action is attempted, instead of
+  // silently firing a chain-switch popup for a chain the user has no USDC on.
+  const isOnSupportedChain = chainId ? isSupportV2Chain(chainId) : false;
+
+  // Explicit, opt-in chain switch — never called automatically. The user should understand
+  // why they're switching (via the UI guidance) before the wallet prompt appears.
+  const switchToSupportedChain = React.useCallback(async () => {
+    setErrorMessage(null);
+    try {
+      await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
+    } catch {
+      setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
+    }
+  }, [switchChainAsync]);
+
   // Handle support action: sign an EIP-3009 USDC authorization, then submit donateToken.
-  // Donates on whichever supported chain the wallet is already on; only switches chain
-  // as a fallback when the wallet is on an unsupported one — the user never picks a chain.
+  // Donates on whichever supported chain the wallet is already on. Does NOT auto-switch —
+  // an unsupported chain is a UI-guidance case (see isOnSupportedChain / switchToSupportedChain),
+  // not something to silently work around, since the user's USDC may not even be on the
+  // target chain and a blind switch would likely just lead to a confusing failed donation.
   const handleSupport = React.useCallback(async () => {
     setErrorMessage(null);
     if (!fullUrl) {
@@ -112,21 +133,14 @@ export function useSupportAction(url: string) {
       return;
     }
 
-    // Determine which chain to use for the transaction
     // Check support status directly (not from closure) to avoid stale state
-    const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
-    let targetChainId = chainId ?? DEFAULT_SUPPORT_CHAIN.id;
-
-    // Automatic chain switch only if not on a supported chain
-    if (!currentlySupported) {
-      try {
-        await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
-        targetChainId = DEFAULT_SUPPORT_CHAIN.id;
-      } catch {
-        setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
-        return;
-      }
+    if (!isSupportV2Chain(chainId)) {
+      setErrorMessage(
+        `Diese Funktion benötigt USDC auf Optimism oder Base. Bitte wechsle das Netzwerk und stelle sicher, dass du dort USDC hast.`,
+      );
+      return;
     }
+    const targetChainId = chainId;
 
     const resolvedConfig = getSupportV2Config(targetChainId);
     if (!resolvedConfig) {
@@ -186,7 +200,7 @@ export function useSupportAction(url: string) {
       ],
       chainId: targetChainId,
     });
-  }, [fullUrl, address, walletClient, chainId, switchChainAsync, writeContract]);
+  }, [fullUrl, address, walletClient, chainId, writeContract]);
 
   // Side effects after transaction: analytics + refetch
   React.useEffect(() => {
@@ -205,7 +219,9 @@ export function useSupportAction(url: string) {
     isConnected,
     isReadPending,
     readError,
+    isOnSupportedChain,
     // Actions
     handleSupport,
+    switchToSupportedChain,
   };
 }

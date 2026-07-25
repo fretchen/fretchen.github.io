@@ -18,8 +18,17 @@ export default function EndOfArticleSupport() {
   const pageContext = usePageContext();
   const currentUrl = pageContext.urlPathname;
 
-  const { supportCount, isLoading, isSuccess, errorMessage, isConnected, handleSupport, isReadPending } =
-    useSupportAction(currentUrl);
+  const {
+    supportCount,
+    isLoading,
+    isSuccess,
+    errorMessage,
+    isConnected,
+    handleSupport,
+    isReadPending,
+    isOnSupportedChain,
+    switchToSupportedChain,
+  } = useSupportAction(currentUrl);
 
   const count = parseInt(supportCount) || 0;
 
@@ -48,6 +57,14 @@ export default function EndOfArticleSupport() {
       isConnected: isConnected,
     });
   };
+
+  const handleSwitchClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    trackEvent("blog-support-switch-chain-click", { variant: "end-of-article" });
+    void switchToSupportedChain();
+  };
+
+  const showUnsupportedChainGuidance = isConnected && !isOnSupportedChain;
 
   // Dynamic button text
   const getButtonText = () => {
@@ -82,7 +99,7 @@ export default function EndOfArticleSupport() {
 
         <button
           onClick={handleSupportClick}
-          disabled={isLoading}
+          disabled={isLoading || showUnsupportedChainGuidance}
           className={isSuccess ? styles.buttonSuccess : styles.button}
           title={getTooltip()}
         >
@@ -93,6 +110,25 @@ export default function EndOfArticleSupport() {
         <p className={styles.subtitle}>{getSubtitle()}</p>
 
         {!isConnected && <p className={styles.hint}>Requires a Web3 wallet with USDC (Optimism or Base)</p>}
+
+        {showUnsupportedChainGuidance && (
+          <div className={styles.chainNotice}>
+            <p className={styles.hint}>
+              This works on Optimism or Base — you&rsquo;ll need USDC on one of those networks.{" "}
+              <a href="https://app.optimism.io/bridge" target="_blank" rel="noopener noreferrer">
+                Bridge to Optimism
+              </a>{" "}
+              or{" "}
+              <a href="https://bridge.base.org" target="_blank" rel="noopener noreferrer">
+                Bridge to Base
+              </a>
+              .
+            </p>
+            <button onClick={handleSwitchClick} className={styles.switchButton}>
+              Switch to Optimism
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -228,6 +264,26 @@ const styles = {
     "@media (max-width: 480px)": {
       fontSize: "2xs",
       marginTop: "2px",
+    },
+  }),
+  chainNotice: css({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "xs",
+    marginTop: "xs",
+  }),
+  switchButton: css({
+    background: "transparent",
+    border: "1px solid #CD853F",
+    color: "#8B4513",
+    cursor: "pointer",
+    fontSize: "xs",
+    fontWeight: "semibold",
+    padding: "6px 14px",
+    borderRadius: "999px",
+    _hover: {
+      background: "rgba(205, 133, 63, 0.1)",
     },
   }),
 };

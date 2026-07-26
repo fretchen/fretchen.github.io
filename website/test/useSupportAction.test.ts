@@ -281,10 +281,11 @@ describe("useSupportAction", () => {
         await result.current.handleSupport();
       });
 
-      // No blind wallet switch prompt and no attempted donation on the wrong chain
+      // No blind wallet switch prompt and no attempted donation on the wrong chain.
+      // useLocale is globally mocked to echo the raw label key (see test/setup.ts).
       expect(mockSwitchChainAsync).not.toHaveBeenCalled();
       expect(mockWriteContract).not.toHaveBeenCalled();
-      expect(result.current.errorMessage).toContain("Optimism");
+      expect(result.current.errorMessage).toBe("metadataLine.modalBody");
     });
 
     it("should NOT trigger chain switch on supported chain", async () => {
@@ -331,7 +332,8 @@ describe("useSupportAction", () => {
         await result.current.switchToSupportedChain();
       });
 
-      expect(result.current.errorMessage).toContain("Chain-Wechsel");
+      // useLocale is globally mocked to echo the raw label key (see test/setup.ts).
+      expect(result.current.errorMessage).toBe("metadataLine.errorChainSwitchFailed");
     });
   });
 

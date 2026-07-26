@@ -1,27 +1,14 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { ImageModalProps } from "../types/components";
 import { useToast } from "./Toast";
 import { ChainInfoDisplay } from "./ChainBadge";
+import { Modal } from "./Modal";
 import * as styles from "../layouts/styles";
 
 // Bildvergrößerungs-Modal Komponente
 export function ImageModal({ image, onClose }: ImageModalProps) {
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
-
-  // Cleanup timeout on unmount (removed as useToast handles cleanup)
-
-  // Schließen bei Escape-Taste
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
 
   const handleDownload = async () => {
     try {
@@ -42,11 +29,9 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
   };
 
   return (
-    <div className={styles.nftCard.modalOverlay} onClick={onClose}>
-      <div className={styles.nftCard.modalContent} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.nftCard.modalClose} onClick={onClose}>
-          ✕
-        </button>
+    <>
+      {/* padded={false}: the image is full-bleed; modalInfo provides its own padding */}
+      <Modal onClose={onClose} title={image.title} padded={false}>
         <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} decoding="async" />
         {(image.title || image.description || image.network) && (
           <div className={styles.nftCard.modalInfo}>
@@ -60,10 +45,10 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
             </div>
           </div>
         )}
-      </div>
+      </Modal>
 
       {/* Toast Component */}
       {ToastComponent}
-    </div>
+    </>
   );
 }

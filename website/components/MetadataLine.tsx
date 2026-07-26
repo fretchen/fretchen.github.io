@@ -4,6 +4,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import { metadataLine } from "../layouts/styles";
 import { useUmami } from "../hooks/useUmami";
 import { useLocale } from "../hooks/useLocale";
+import { SupportChainModal } from "./SupportChainModal";
 
 interface MetadataLineProps {
   publishingDate?: string;
@@ -33,8 +34,31 @@ export default function MetadataLine({
   const currentUrl = pageContext.urlPathname;
 
   // Support functionality (only load if needed)
-  const { supportCount, isLoading, isSuccess, errorMessage, isConnected, handleSupport, isReadPending, readError } =
-    useSupportAction(showSupport ? currentUrl : "");
+  const {
+    supportCount,
+    isLoading,
+    isSuccess,
+    errorMessage,
+    isConnected,
+    handleSupport,
+    isReadPending,
+    readError,
+    isOnSupportedChain,
+    switchToSupportedChain,
+  } = useSupportAction(showSupport ? currentUrl : "");
+
+  // Guided modal shown when the wallet is on an unsupported chain (see SupportChainModal).
+  // Stays open across the switch so a retried donation (see handleSwitchNetwork) can still
+  // show a follow-up message (e.g. insufficient USDC balance) without the user having to
+  // reopen it; only closes explicitly (user dismiss) or once a donation actually succeeds.
+  const [showChainModal, setShowChainModal] = React.useState(false);
+  const [isSwitching, setIsSwitching] = React.useState(false);
+
+  // Close the modal once a donation succeeds while it's open (e.g. the retry-after-switch
+  // path below). Derived at render time rather than reacting to isSuccess in an effect.
+  if (showChainModal && isSuccess) {
+    setShowChainModal(false);
+  }
 
   const loadingLabel = useLocale({ label: "metadataLine.loading" });
   const supportingLabel = useLocale({ label: "metadataLine.supporting" });
@@ -79,8 +103,45 @@ export default function MetadataLine({
       // Could show a connect wallet message
       return;
     }
+
+    // On an unsupported chain, open the guided modal instead of attempting (and silently
+    // failing) the donation — explains the constraint and offers an explicit network switch.
+    if (!isOnSupportedChain) {
+      setShowChainModal(true);
+      return;
+    }
+
     void handleSupport();
   };
+
+  // Tracks that the user asked to switch, so the effect below knows to retry the donation
+  // once the chain actually becomes supported (wagmi's chainId updates via re-render, not
+  // synchronously after switchChainAsync resolves, so this can't be done inline here).
+  const [awaitingRetryAfterSwitch, setAwaitingRetryAfterSwitch] = React.useState(false);
+
+  const handleSwitchNetwork = async () => {
+    setIsSwitching(true);
+    setAwaitingRetryAfterSwitch(true);
+    try {
+      await switchToSupportedChain();
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  // Once the wallet lands on a supported chain after an explicit switch request, retry the
+  // donation automatically — the user shouldn't have to close the modal and click Support
+  // again. If the retry still fails (e.g. no USDC on the new chain), the modal stays open
+  // (see the isSuccess-close check above) and shows the resulting error/get-USDC prompt.
+  // setState here is intentional: isOnSupportedChain changes asynchronously (wagmi re-render
+  // after switchChainAsync resolves), so there's no synchronous alternative to reacting to it.
+  React.useEffect(() => {
+    if (awaitingRetryAfterSwitch && isOnSupportedChain) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAwaitingRetryAfterSwitch(false);
+      void handleSupport();
+    }
+  }, [awaitingRetryAfterSwitch, isOnSupportedChain, handleSupport]);
 
   // Handle hover
   const handleSupportHover = () => {
@@ -172,13 +233,28 @@ export default function MetadataLine({
   }
 
   return (
-    <div className={`${metadataLine.container} ${className || ""}`}>
-      {metadataItems.map((item, index) => (
-        <React.Fragment key={index}>
-          {index > 0 && <span className={metadataLine.separator}>•</span>}
-          {item}
-        </React.Fragment>
-      ))}
-    </div>
+    <>
+      <div className={`${metadataLine.container} ${className || ""}`}>
+        {metadataItems.map((item, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && <span className={metadataLine.separator}>•</span>}
+            {item}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {showChainModal && (
+        <SupportChainModal
+          onClose={() => setShowChainModal(false)}
+          onSwitchNetwork={handleSwitchNetwork}
+          isSwitching={isSwitching}
+          // Once the switch succeeded (isOnSupportedChain) but an error is still set,
+          // the donation itself must have failed after switching — most likely the wallet
+          // has no USDC on the new chain, so point to a way to get some.
+          showGetUsdc={isOnSupportedChain && !!errorMessage}
+          errorMessage={errorMessage}
+        />
+      )}
+    </>
   );
 }

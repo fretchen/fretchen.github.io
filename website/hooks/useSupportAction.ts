@@ -23,6 +23,7 @@ import {
   SUPPORT_V2_CHAINS,
 } from "../utils/getChain";
 import { trackEvent } from "../utils/analytics";
+import { useLocale } from "./useLocale";
 
 // Fixed donation amount: 0.50 USDC (6 decimals)
 const DONATION_AMOUNT_USDC = 500000n;
@@ -43,6 +44,15 @@ export function useSupportAction(url: string) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   // Captures the chain used at write time so the analytics effect reads a stable value
   const txChainIdRef = React.useRef<number | undefined>(undefined);
+
+  // Localized error strings
+  const errorUrlRequired = useLocale({ label: "metadataLine.errorUrlRequired" });
+  const errorWalletNotConnected = useLocale({ label: "metadataLine.errorWalletNotConnected" });
+  const errorChainSwitchFailed = useLocale({ label: "metadataLine.errorChainSwitchFailed" });
+  const errorConfig = useLocale({ label: "metadataLine.errorConfig" });
+  const errorUsdcUnavailable = useLocale({ label: "metadataLine.errorUsdcUnavailable" });
+  const errorSignatureRejected = useLocale({ label: "metadataLine.errorSignatureRejected" });
+  const modalBody = useLocale({ label: "metadataLine.modalBody" });
 
   // Wagmi hooks
   const { isConnected, chainId: accountChainId, address } = useAccount();
@@ -113,9 +123,9 @@ export function useSupportAction(url: string) {
     try {
       await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
     } catch {
-      setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
+      setErrorMessage(errorChainSwitchFailed.replace("{chain}", DEFAULT_SUPPORT_CHAIN.name));
     }
-  }, [switchChainAsync]);
+  }, [switchChainAsync, errorChainSwitchFailed]);
 
   // Handle support action: sign an EIP-3009 USDC authorization, then submit donateToken.
   // Donates on whichever supported chain the wallet is already on. Does NOT auto-switch —
@@ -125,26 +135,28 @@ export function useSupportAction(url: string) {
   const handleSupport = React.useCallback(async () => {
     setErrorMessage(null);
     if (!fullUrl) {
-      setErrorMessage("URL ist erforderlich");
+      setErrorMessage(errorUrlRequired);
       return;
     }
     if (!address || !walletClient) {
-      setErrorMessage("Wallet nicht verbunden");
+      setErrorMessage(errorWalletNotConnected);
       return;
     }
 
-    // Check support status directly (not from closure) to avoid stale state
+    // Check support status directly (not from closure) to avoid stale state.
+    // Normally the caller (MetadataLine) checks isOnSupportedChain and shows the guided
+    // modal BEFORE calling handleSupport, so this is a defensive fallback (e.g. chain
+    // changed between render and click) — reuse the modal's own plain-language copy
+    // rather than a separate message.
     if (!isSupportV2Chain(chainId)) {
-      setErrorMessage(
-        `Diese Funktion benötigt USDC auf Optimism oder Base. Bitte wechsle das Netzwerk und stelle sicher, dass du dort USDC hast.`,
-      );
+      setErrorMessage(modalBody);
       return;
     }
     const targetChainId = chainId;
 
     const resolvedConfig = getSupportV2Config(targetChainId);
     if (!resolvedConfig) {
-      setErrorMessage("Konfigurationsfehler");
+      setErrorMessage(errorConfig);
       return;
     }
 
@@ -152,7 +164,7 @@ export function useSupportAction(url: string) {
     try {
       usdcConfig = getUSDCConfig(toCAIP2(targetChainId));
     } catch {
-      setErrorMessage("USDC ist auf dieser Chain nicht verfügbar");
+      setErrorMessage(errorUsdcUnavailable);
       return;
     }
 
@@ -174,7 +186,7 @@ export function useSupportAction(url: string) {
     try {
       signature = await walletClient.signTypedData({ account: address, ...typedData });
     } catch {
-      setErrorMessage("Signatur abgelehnt");
+      setErrorMessage(errorSignatureRejected);
       return;
     }
 
@@ -200,7 +212,19 @@ export function useSupportAction(url: string) {
       ],
       chainId: targetChainId,
     });
-  }, [fullUrl, address, walletClient, chainId, writeContract]);
+  }, [
+    fullUrl,
+    address,
+    walletClient,
+    chainId,
+    writeContract,
+    errorUrlRequired,
+    errorWalletNotConnected,
+    modalBody,
+    errorConfig,
+    errorUsdcUnavailable,
+    errorSignatureRejected,
+  ]);
 
   // Side effects after transaction: analytics + refetch
   React.useEffect(() => {

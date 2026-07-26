@@ -130,5 +130,20 @@ export default {
     reaction: "reaction",
     reactions: "reactions",
     reactionsTooltip: "Likes, reposts, and replies from the web",
+    // Error messages (useSupportAction)
+    errorUrlRequired: "A URL is required",
+    errorWalletNotConnected: "Wallet not connected",
+    errorChainSwitchFailed: "Couldn't switch to {chain}",
+    errorConfig: "Something's misconfigured — please try again later",
+    errorUsdcUnavailable: "USDC isn't available on this network",
+    errorSignatureRejected: "Signature was declined",
+    // Unsupported-chain modal
+    modalTitle: "Support this post",
+    modalBody: "Donations use USDC and only work on Optimism or Base right now. Your wallet is on a different network.",
+    modalSwitchButton: "Switch to Optimism",
+    modalSwitchNote: "Your wallet will ask you to confirm.",
+    modalGetUsdcPrompt: "Don't have USDC there yet?",
+    modalGetUsdcLink: "Get USDC →",
+    modalCloseAria: "Close",
   },
 };

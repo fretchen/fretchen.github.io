@@ -2668,93 +2668,96 @@ export const primaryButtonDisabled = css({
   },
 });
 
-// Modal styles
-export const modalOverlay = css({
-  position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 1000,
-});
-
-export const modalContent = css({
-  backgroundColor: "background",
-  padding: "2xl",
-  borderRadius: "sm",
-  minWidth: "300px",
-  maxWidth: "400px",
-});
-
-export const modalTitle = css({
-  margin: "0 0 md 0",
-  fontSize: "lg",
-});
-
-export const modalSection = css({
-  marginBottom: "md",
-});
-
-export const modalLabel = css({
-  marginBottom: "xs",
-  fontSize: "sm",
-  color: "#666",
-});
-
-export const modalText = css({
-  fontSize: "sm",
-  color: "#666",
-  marginBottom: "xs",
-});
-
-export const modalInput = css({
-  width: "100%",
-  padding: "md",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  fontSize: "sm",
-  _focus: {
-    borderColor: "brand",
-  },
-});
-
-export const modalButtons = css({
-  display: "flex",
-  gap: "xs",
-  justifyContent: "flex-end",
-});
-
-export const modalButtonCancel = css({
-  padding: "xs md",
-  background: "transparent",
-  color: "#666",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "sm",
-});
-
-export const modalButtonPrimary = css({
-  padding: "xs md",
-  background: "text",
-  color: "background",
-  border: "none",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "500",
-  _disabled: {
-    backgroundColor: "#f5f5f5",
-    color: "#999",
-    cursor: "not-allowed",
-  },
-});
+// ─── Shared Modal shell ───────────────────────────────────────────────
+// One dialog look for the whole site (NFT zoom, donation guide, …). Values match the
+// original nftCard.modal* pattern (the site's only live modal) so nothing changes visually.
+export const modal = {
+  overlay: css({
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "lg",
+  }),
+  content: css({
+    position: "relative",
+    maxWidth: "90vw",
+    maxHeight: "90vh",
+    background: "white",
+    borderRadius: "md",
+    overflow: "auto",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    display: "flex",
+    flexDirection: "column",
+  }),
+  close: css({
+    position: "absolute",
+    top: "sm",
+    right: "sm",
+    background: "rgba(0, 0, 0, 0.5)",
+    color: "white",
+    border: "none",
+    borderRadius: "50%",
+    width: "36px",
+    height: "36px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "md",
+    lineHeight: 1,
+    zIndex: 1,
+    _hover: {
+      background: "rgba(0, 0, 0, 0.7)",
+    },
+  }),
+  // Padded body for text/content modals. Image modals put edge-to-edge content directly
+  // in `content` instead and skip this.
+  body: css({
+    padding: "xl",
+  }),
+  title: css({
+    fontSize: "lg",
+    fontWeight: "bold",
+    margin: "0 0 md 0",
+    // leave room so the title never sits under the ✕
+    paddingRight: "2xl",
+  }),
+  // Body text inside a padded modal
+  text: css({
+    fontSize: "sm",
+    color: "gray.700",
+    lineHeight: "1.5",
+    margin: "0 0 md 0",
+  }),
+  // Inline error message inside a modal
+  error: css({
+    fontSize: "sm",
+    color: "#c0392b",
+    lineHeight: "1.5",
+    margin: "0 0 md 0",
+  }),
+  // Row holding the modal's primary action(s)
+  actions: css({
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "sm",
+    marginTop: "lg",
+  }),
+  // Small helper note beneath the action (e.g. "your wallet will ask you to confirm")
+  note: css({
+    fontSize: "xs",
+    color: "gray.500",
+    margin: "sm 0 0 0",
+    textAlign: "right",
+  }),
+};
 
 // Preset amount buttons
 export const presetButtons = css({

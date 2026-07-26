@@ -130,5 +130,21 @@ export default {
     reaction: "Reaktion",
     reactions: "Reaktionen",
     reactionsTooltip: "Likes, Reposts und Antworten aus dem Web",
+    // Fehlermeldungen (useSupportAction)
+    errorUrlRequired: "Eine URL ist erforderlich",
+    errorWalletNotConnected: "Wallet nicht verbunden",
+    errorChainSwitchFailed: "Wechsel zu {chain} fehlgeschlagen",
+    errorConfig: "Etwas ist falsch konfiguriert — bitte später erneut versuchen",
+    errorUsdcUnavailable: "USDC ist in diesem Netzwerk nicht verfügbar",
+    errorSignatureRejected: "Signatur wurde abgelehnt",
+    // Modal für nicht unterstützte Netzwerke
+    modalTitle: "Diesen Beitrag unterstützen",
+    modalBody:
+      "Spenden erfolgen in USDC und funktionieren derzeit nur auf Optimism oder Base. Deine Wallet ist gerade in einem anderen Netzwerk.",
+    modalSwitchButton: "Zu Optimism wechseln",
+    modalSwitchNote: "Deine Wallet wird dich um Bestätigung bitten.",
+    modalGetUsdcPrompt: "Noch kein USDC dort?",
+    modalGetUsdcLink: "USDC besorgen →",
+    modalCloseAria: "Schließen",
   },
 };

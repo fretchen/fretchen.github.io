@@ -39,9 +39,7 @@ export function SupportChainModal({
     <Modal onClose={onClose} title={title} closeLabel={closeAria}>
       <p className={styles.modal.text}>{body}</p>
 
-      {errorMessage && (
-        <p className={styles.modal.error}>{errorMessage}</p>
-      )}
+      {errorMessage && <p className={styles.modal.error}>{errorMessage}</p>}
 
       {showGetUsdc && (
         <p className={styles.modal.text}>

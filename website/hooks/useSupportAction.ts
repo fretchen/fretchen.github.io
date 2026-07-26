@@ -6,8 +6,8 @@ import {
   useSwitchChain,
   useChainId,
   useReadContracts,
-  useWalletClient,
 } from "wagmi";
+import { getWalletClient } from "wagmi/actions";
 import {
   getUSDCConfig,
   toCAIP2,
@@ -22,6 +22,7 @@ import {
   SUPPORT_RECIPIENT_ADDRESS,
   SUPPORT_V2_CHAINS,
 } from "../utils/getChain";
+import { config } from "../wagmi.config";
 import { trackEvent } from "../utils/analytics";
 import { useLocale } from "./useLocale";
 
@@ -52,13 +53,13 @@ export function useSupportAction(url: string) {
   const errorConfig = useLocale({ label: "metadataLine.errorConfig" });
   const errorUsdcUnavailable = useLocale({ label: "metadataLine.errorUsdcUnavailable" });
   const errorSignatureRejected = useLocale({ label: "metadataLine.errorSignatureRejected" });
+  const errorDonationFailed = useLocale({ label: "metadataLine.errorDonationFailed" });
   const modalBody = useLocale({ label: "metadataLine.modalBody" });
 
   // Wagmi hooks
   const { isConnected, chainId: accountChainId, address } = useAccount();
   const wagmiChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
-  const { data: walletClient } = useWalletClient();
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
@@ -138,7 +139,7 @@ export function useSupportAction(url: string) {
       setErrorMessage(errorUrlRequired);
       return;
     }
-    if (!address || !walletClient) {
+    if (!address) {
       setErrorMessage(errorWalletNotConnected);
       return;
     }
@@ -165,6 +166,17 @@ export function useSupportAction(url: string) {
       usdcConfig = getUSDCConfig(toCAIP2(targetChainId));
     } catch {
       setErrorMessage(errorUsdcUnavailable);
+      return;
+    }
+
+    // Fetch the wallet client on-demand for the target chain rather than reading the reactive
+    // useWalletClient() value. Right after a chain switch (the retry-after-switch path in
+    // MetadataLine), the reactive client is transiently undefined while wagmi re-resolves it
+    // for the new chain — reading it here instead gets the correct, ready signer and avoids a
+    // spurious "wallet not connected" error.
+    const walletClient = await getWalletClient(config, { chainId: targetChainId });
+    if (!walletClient) {
+      setErrorMessage(errorWalletNotConnected);
       return;
     }
 
@@ -215,7 +227,6 @@ export function useSupportAction(url: string) {
   }, [
     fullUrl,
     address,
-    walletClient,
     chainId,
     writeContract,
     errorUrlRequired,
@@ -239,7 +250,11 @@ export function useSupportAction(url: string) {
     supportCount: aggregatedCount.toString(),
     isLoading: isPending || isConfirming,
     isSuccess,
-    errorMessage: errorMessage ?? writeError?.message ?? null,
+    // writeError is wagmi's raw on-chain revert error (e.g. insufficient USDC balance) —
+    // never shown verbatim (contract addresses, ABI decode attempts, hex data). Any write
+    // failure not already covered by the hook's own setErrorMessage calls above is most
+    // likely the reader having no USDC yet on the chain they just switched to.
+    errorMessage: errorMessage ?? (writeError ? errorDonationFailed : null),
     isConnected,
     isReadPending,
     readError,

@@ -23,12 +23,18 @@ vi.mock("../hooks/useUmami", () => ({
 
 const mockHandleSupport = vi.fn();
 const mockSwitchToSupportedChain = vi.fn();
+const mockConnectWallet = vi.fn();
 
-// Mutable mock state for useSupportAction so each test can steer isConnected/isOnSupportedChain
+// Mutable mock state for useSupportAction so each test can steer isOnSupportedChain
 let mockSupportActionState: {
-  isConnected: boolean;
   isOnSupportedChain: boolean;
   errorMessage: string | null;
+};
+
+// Mutable mock state for useWalletConnection (the quick-connect hook MetadataLine now
+// sources isConnected/connectWallet from, matching ImageGenerator/assistant/growth).
+let mockWalletConnectionState: {
+  isConnected: boolean;
 };
 
 vi.mock("../hooks/useSupportAction", () => ({
@@ -37,7 +43,6 @@ vi.mock("../hooks/useSupportAction", () => ({
     isLoading: false,
     isSuccess: false,
     errorMessage: mockSupportActionState.errorMessage,
-    isConnected: mockSupportActionState.isConnected,
     isOnSupportedChain: mockSupportActionState.isOnSupportedChain,
     handleSupport: mockHandleSupport,
     switchToSupportedChain: mockSwitchToSupportedChain,
@@ -46,13 +51,22 @@ vi.mock("../hooks/useSupportAction", () => ({
   }),
 }));
 
+vi.mock("../hooks/useWalletConnection", () => ({
+  useWalletConnection: () => ({
+    isConnected: mockWalletConnectionState.isConnected,
+    connectWallet: mockConnectWallet,
+  }),
+}));
+
 describe("MetadataLine — unsupported-chain guidance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSupportActionState = {
-      isConnected: true,
       isOnSupportedChain: true,
       errorMessage: null,
+    };
+    mockWalletConnectionState = {
+      isConnected: true,
     };
   });
 
@@ -75,6 +89,12 @@ describe("MetadataLine — unsupported-chain guidance", () => {
     expect(mockHandleSupport).not.toHaveBeenCalled();
     expect(screen.getByText("metadataLine.modalTitle")).toBeInTheDocument();
     expect(screen.getByText("metadataLine.modalBody")).toBeInTheDocument();
+    // Motivation line + chain links to learn more
+    expect(screen.getByText(/metadataLine\.modalWhy/)).toBeInTheDocument();
+    const optimismLink = screen.getByRole("link", { name: "metadataLine.modalLearnMoreOptimism" });
+    const baseLink = screen.getByRole("link", { name: "metadataLine.modalLearnMoreBase" });
+    expect(optimismLink).toHaveAttribute("href", "https://optimism.io");
+    expect(baseLink).toHaveAttribute("href", "https://base.org");
   });
 
   it("modal's switch button calls switchToSupportedChain", async () => {
@@ -105,14 +125,14 @@ describe("MetadataLine — unsupported-chain guidance", () => {
     expect(screen.queryByText("metadataLine.modalTitle")).not.toBeInTheDocument();
   });
 
-  it("does not open the modal or call handleSupport when the wallet isn't connected", () => {
-    mockSupportActionState.isConnected = false;
-    mockSupportActionState.isOnSupportedChain = false;
+  it("triggers the wallet connect flow when disconnected, instead of doing nothing", () => {
+    mockWalletConnectionState.isConnected = false;
 
     renderWithQuery(<MetadataLine showSupport={true} publishingDate="2024-01-01" />);
 
     fireEvent.click(screen.getByRole("button", { name: /metadataLine\.support/ }));
 
+    expect(mockConnectWallet).toHaveBeenCalledWith("support");
     expect(mockHandleSupport).not.toHaveBeenCalled();
     expect(screen.queryByText("metadataLine.modalTitle")).not.toBeInTheDocument();
   });

@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId, useWalletClient } from "wagmi";
+import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChainId } from "wagmi";
+import { getWalletClient } from "wagmi/actions";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
+
+// The hook fetches the signer on-demand via getWalletClient(config, { chainId }) from
+// wagmi/actions (avoids the reactive-useWalletClient race right after a chain switch).
+vi.mock("wagmi/actions", () => ({
+  getWalletClient: vi.fn(),
+}));
 
 // Mock the getChain module - simulates mainnet mode (VITE_USE_TESTNET not set)
 vi.mock("../utils/getChain", async () => {
@@ -102,9 +109,9 @@ describe("useSupportAction", () => {
       chains: [],
     } as unknown as ReturnType<typeof useSwitchChain>);
 
-    vi.mocked(useWalletClient).mockReturnValue({
-      data: { signTypedData: mockSignTypedData },
-    } as unknown as ReturnType<typeof useWalletClient>);
+    vi.mocked(getWalletClient).mockResolvedValue({
+      signTypedData: mockSignTypedData,
+    } as unknown as Awaited<ReturnType<typeof getWalletClient>>);
 
     // Mock useReadContracts - returns array of results for all chains
     // useReadContracts aggregates reads from multiple chains in one hook
@@ -264,6 +271,31 @@ describe("useSupportAction", () => {
       );
     });
 
+    it("shows a friendly message instead of the raw on-chain revert error (e.g. insufficient USDC)", async () => {
+      vi.mocked(useAccount).mockReturnValue({
+        isConnected: true,
+        chainId: 10,
+        address: "0x1234",
+        connector: { name: "MetaMask" },
+      } as ReturnType<typeof useAccount>);
+
+      // Simulate wagmi surfacing a raw contract-revert error via useWriteContract's `error`
+      vi.mocked(useWriteContract).mockReturnValue({
+        writeContract: mockWriteContract,
+        isPending: false,
+        data: undefined,
+        error: new Error(
+          "ContractFunctionExecutionError: reverted with reason string 'ERC20: transfer amount exceeds balance' ...",
+        ),
+      } as unknown as ReturnType<typeof useWriteContract>);
+
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      // useLocale is globally mocked to echo the raw label key (see test/setup.ts) —
+      // this must NOT be the raw Error's message.
+      expect(result.current.errorMessage).toBe("metadataLine.errorDonationFailed");
+    });
+
     it("should NOT auto-switch or donate on an unsupported chain — surfaces guidance instead", async () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
@@ -305,6 +337,48 @@ describe("useSupportAction", () => {
       });
 
       expect(mockSwitchChainAsync).not.toHaveBeenCalled();
+    });
+
+    it("fetches the signer on-demand for the target chain (no spurious wallet-not-connected)", async () => {
+      // Regression for the post-switch race: the reactive useWalletClient() is transiently
+      // undefined right after a chain switch; getWalletClient resolves the correct client,
+      // so no "wallet not connected" error should surface and the donation should proceed.
+      vi.mocked(useAccount).mockReturnValue({
+        isConnected: true,
+        chainId: 10,
+        address: "0x1234",
+        connector: { name: "MetaMask" },
+      } as ReturnType<typeof useAccount>);
+
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      await act(async () => {
+        await result.current.handleSupport();
+      });
+
+      // Signer fetched on-demand for the current (supported) chain
+      expect(getWalletClient).toHaveBeenCalledWith(expect.anything(), { chainId: 10 });
+      expect(result.current.errorMessage).toBeNull();
+      expect(mockWriteContract).toHaveBeenCalled();
+    });
+
+    it("shows wallet-not-connected only when no signer can be resolved", async () => {
+      vi.mocked(useAccount).mockReturnValue({
+        isConnected: true,
+        chainId: 10,
+        address: "0x1234",
+        connector: { name: "MetaMask" },
+      } as ReturnType<typeof useAccount>);
+      vi.mocked(getWalletClient).mockResolvedValue(null as unknown as Awaited<ReturnType<typeof getWalletClient>>);
+
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      await act(async () => {
+        await result.current.handleSupport();
+      });
+
+      expect(result.current.errorMessage).toBe("metadataLine.errorWalletNotConnected");
+      expect(mockWriteContract).not.toHaveBeenCalled();
     });
   });
 

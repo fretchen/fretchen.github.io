@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useSupportAction } from "../hooks/useSupportAction";
+import { useWalletConnection } from "../hooks/useWalletConnection";
 import { usePageContext } from "vike-react/usePageContext";
 import { metadataLine } from "../layouts/styles";
 import { useUmami } from "../hooks/useUmami";
@@ -39,13 +40,16 @@ export default function MetadataLine({
     isLoading,
     isSuccess,
     errorMessage,
-    isConnected,
     handleSupport,
     isReadPending,
     readError,
     isOnSupportedChain,
     switchToSupportedChain,
   } = useSupportAction(showSupport ? currentUrl : "");
+
+  // Quick-connect: the same pattern used by ImageGenerator/assistant/growth
+  // (hasMounted && status === "connected" — robust against SSR/hydration mismatch).
+  const { isConnected, connectWallet } = useWalletConnection();
 
   // Guided modal shown when the wallet is on an unsupported chain (see SupportChainModal).
   // Stays open across the switch so a retried donation (see handleSwitchNetwork) can still
@@ -100,7 +104,9 @@ export default function MetadataLine({
     });
 
     if (!isConnected) {
-      // Could show a connect wallet message
+      // Trigger the wallet's own connect flow directly — same quick-connect pattern used
+      // by ImageGenerator/assistant/growth. No custom "please connect" messaging needed.
+      connectWallet("support");
       return;
     }
 

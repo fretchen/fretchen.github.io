@@ -29,6 +29,9 @@ export function SupportChainModal({
 }: SupportChainModalProps) {
   const title = useLocale({ label: "metadataLine.modalTitle" });
   const body = useLocale({ label: "metadataLine.modalBody" });
+  const why = useLocale({ label: "metadataLine.modalWhy" });
+  const optimismLabel = useLocale({ label: "metadataLine.modalLearnMoreOptimism" });
+  const baseLabel = useLocale({ label: "metadataLine.modalLearnMoreBase" });
   const switchButtonLabel = useLocale({ label: "metadataLine.modalSwitchButton" });
   const switchNote = useLocale({ label: "metadataLine.modalSwitchNote" });
   const getUsdcPrompt = useLocale({ label: "metadataLine.modalGetUsdcPrompt" });
@@ -39,18 +42,34 @@ export function SupportChainModal({
     <Modal onClose={onClose} title={title} closeLabel={closeAria}>
       <p className={styles.modal.text}>{body}</p>
 
+      <p className={styles.modal.why}>
+        {why}{" "}
+        <a className={styles.modal.link} href="https://optimism.io" target="_blank" rel="noopener noreferrer">
+          {optimismLabel}
+        </a>{" "}
+        ·{" "}
+        <a className={styles.modal.link} href="https://base.org" target="_blank" rel="noopener noreferrer">
+          {baseLabel}
+        </a>
+      </p>
+
       {errorMessage && <p className={styles.modal.error}>{errorMessage}</p>}
 
       {showGetUsdc && (
         <p className={styles.modal.text}>
           {getUsdcPrompt}{" "}
-          <a href="https://app.optimism.io/bridge" target="_blank" rel="noopener noreferrer">
+          <a
+            className={styles.modal.link}
+            href="https://app.optimism.io/bridge"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             {getUsdcLink}
           </a>
         </p>
       )}
 
-      <div className={styles.modal.actions}>
+      <div className={styles.modal.primaryAction}>
         <button
           className={styles.primaryButton}
           onClick={() => void onSwitchNetwork()}

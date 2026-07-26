@@ -2743,19 +2743,36 @@ export const modal = {
     lineHeight: "1.5",
     margin: "0 0 md 0",
   }),
-  // Row holding the modal's primary action(s)
-  actions: css({
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "sm",
-    marginTop: "lg",
+  // Muted "why this?" motivation line
+  why: css({
+    fontSize: "sm",
+    color: "gray.500",
+    lineHeight: "1.5",
+    margin: "0 0 lg 0",
   }),
-  // Small helper note beneath the action (e.g. "your wallet will ask you to confirm")
+  // Inline brand-colored link (e.g. "Learn more: Optimism · Base")
+  link: css({
+    color: "brand",
+    textDecoration: "none",
+    fontWeight: "medium",
+    _hover: { textDecoration: "underline" },
+  }),
+  // Wrapper that makes a single primary action span the modal width — the conventional
+  // treatment for a one-action guided/onboarding step (vs. a right-aligned confirm/cancel row).
+  primaryAction: css({
+    display: "flex",
+    marginTop: "lg",
+    "& > button": {
+      width: "100%",
+      justifyContent: "center",
+    },
+  }),
+  // Small helper note beneath the primary action (e.g. "your wallet will ask you to confirm")
   note: css({
     fontSize: "xs",
     color: "gray.500",
     margin: "sm 0 0 0",
-    textAlign: "right",
+    textAlign: "center",
   }),
 };
 

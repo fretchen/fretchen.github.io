@@ -192,8 +192,11 @@ describe("Post Component Integration Tests", () => {
       // Act
       renderWithQuery(<Post {...postProps} />);
 
-      // Assert: Support button should be present (new text: "Support ~50¢")
-      expect(screen.getByText(/Support/)).toBeInTheDocument();
+      // Assert: Support button should be present. useLocale is globally mocked to echo
+      // the raw label key (see test/setup.ts), and the button text is now split across
+      // multiple nodes (icon between the label and the amount), so match on the button's
+      // accessible name rather than a single text node.
+      expect(screen.getByRole("button", { name: /metadataLine\.support/ })).toBeInTheDocument();
     });
   });
 

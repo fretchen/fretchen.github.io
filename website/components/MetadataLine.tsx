@@ -1,8 +1,11 @@
 import * as React from "react";
 import { useSupportAction } from "../hooks/useSupportAction";
+import { useWalletConnection } from "../hooks/useWalletConnection";
 import { usePageContext } from "vike-react/usePageContext";
 import { metadataLine } from "../layouts/styles";
 import { useUmami } from "../hooks/useUmami";
+import { useLocale } from "../hooks/useLocale";
+import { SupportChainModal } from "./SupportChainModal";
 
 interface MetadataLineProps {
   publishingDate?: string;
@@ -32,8 +35,47 @@ export default function MetadataLine({
   const currentUrl = pageContext.urlPathname;
 
   // Support functionality (only load if needed)
-  const { supportCount, isLoading, isSuccess, errorMessage, isConnected, handleSupport, isReadPending, readError } =
-    useSupportAction(showSupport ? currentUrl : "");
+  const {
+    supportCount,
+    isLoading,
+    isSuccess,
+    errorMessage,
+    handleSupport,
+    isReadPending,
+    readError,
+    isOnSupportedChain,
+    isInsufficientFunds,
+    switchToSupportedChain,
+  } = useSupportAction(showSupport ? currentUrl : "");
+
+  // Quick-connect: the same pattern used by ImageGenerator/assistant/growth
+  // (hasMounted && status === "connected" — robust against SSR/hydration mismatch).
+  const { isConnected, connectWallet } = useWalletConnection();
+
+  // Guided modal shown when the wallet is on an unsupported chain (see SupportChainModal).
+  // Stays open across the switch so a retried donation (see handleSwitchNetwork) can still
+  // show a follow-up message (e.g. insufficient USDC balance) without the user having to
+  // reopen it; only closes explicitly (user dismiss) or once a donation actually succeeds.
+  const [showChainModal, setShowChainModal] = React.useState(false);
+  const [isSwitching, setIsSwitching] = React.useState(false);
+
+  // Close the modal once a donation succeeds while it's open (e.g. the retry-after-switch
+  // path below). Derived at render time rather than reacting to isSuccess in an effect.
+  if (showChainModal && isSuccess) {
+    setShowChainModal(false);
+  }
+
+  const loadingLabel = useLocale({ label: "metadataLine.loading" });
+  const supportingLabel = useLocale({ label: "metadataLine.supporting" });
+  const thankYouLabel = useLocale({ label: "metadataLine.thankYou" });
+  const supportLabel = useLocale({ label: "metadataLine.support" });
+  const supportWithCountLabel = useLocale({ label: "metadataLine.supportWithCount" });
+  const amountLabel = useLocale({ label: "metadataLine.amount" });
+  const tooltipConnectLabel = useLocale({ label: "metadataLine.tooltipConnect" });
+  const tooltipDonateLabel = useLocale({ label: "metadataLine.tooltipDonate" });
+  const reactionLabel = useLocale({ label: "metadataLine.reaction" });
+  const reactionsLabel = useLocale({ label: "metadataLine.reactions" });
+  const reactionsTooltipLabel = useLocale({ label: "metadataLine.reactionsTooltip" });
 
   // Format publishing date — parse as local time to avoid timezone shifts
   const formatDate = (dateString: string) => {
@@ -63,11 +105,55 @@ export default function MetadataLine({
     });
 
     if (!isConnected) {
-      // Could show a connect wallet message
+      // Trigger the wallet's own connect flow directly — same quick-connect pattern used
+      // by ImageGenerator/assistant/growth. No custom "please connect" messaging needed.
+      connectWallet("support");
       return;
     }
+
+    // On an unsupported chain, open the guided modal instead of attempting (and silently
+    // failing) the donation — explains the constraint and offers an explicit network switch.
+    if (!isOnSupportedChain) {
+      setShowChainModal(true);
+      return;
+    }
+
     void handleSupport();
   };
+
+  // Tracks that the user asked to switch, so the effect below knows to retry the donation
+  // once the chain actually becomes supported (wagmi's chainId updates via re-render, not
+  // synchronously after switchChainAsync resolves, so this can't be done inline here).
+  const [awaitingRetryAfterSwitch, setAwaitingRetryAfterSwitch] = React.useState(false);
+
+  const handleSwitchNetwork = async () => {
+    setIsSwitching(true);
+    setAwaitingRetryAfterSwitch(true);
+    try {
+      await switchToSupportedChain();
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  // Once the wallet lands on a supported chain after an explicit switch request, retry the
+  // donation automatically — the user shouldn't have to close the modal and click Support
+  // again. If the retry still fails (e.g. no USDC on the new chain), the modal stays open
+  // (see the isSuccess-close check above) and shows the resulting error/get-USDC prompt.
+  // setState here is intentional: isOnSupportedChain changes asynchronously (wagmi re-render
+  // after switchChainAsync resolves), so there's no synchronous alternative to reacting to it.
+  //
+  // This effect also depends on `handleSupport`, whose identity can churn (its useCallback
+  // lists useLocale-derived strings). Clearing `awaitingRetryAfterSwitch` FIRST — synchronously,
+  // before awaiting the retry — is the guard that keeps this to exactly one donation per switch:
+  // any later re-run from a handleSupport identity change finds the flag already false and no-ops.
+  React.useEffect(() => {
+    if (awaitingRetryAfterSwitch && isOnSupportedChain) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAwaitingRetryAfterSwitch(false);
+      void handleSupport();
+    }
+  }, [awaitingRetryAfterSwitch, isOnSupportedChain, handleSupport]);
 
   // Handle hover
   const handleSupportHover = () => {
@@ -88,7 +174,7 @@ export default function MetadataLine({
       return (
         <div className={metadataLine.supportWrapper}>
           <span className={metadataLine.supportButton} style={{ opacity: 0.7 }}>
-            ☕ Loading...
+            ☕ {loadingLabel}
           </span>
         </div>
       );
@@ -100,18 +186,36 @@ export default function MetadataLine({
 
     const count = parseInt(supportCount) || 0;
 
-    // Dynamic button text based on state
-    const getButtonText = () => {
-      if (isLoading) return "☕ Supporting...";
-      if (isSuccess) return `☕ Thank you! (${count})`;
-      if (!isConnected) return "☕ Support ~50¢";
-      return count > 0 ? `☕ Support ~50¢ (${count})` : "☕ Support ~50¢";
+    // Success is a confirmation, not an action — render a non-interactive green pill so the
+    // colour itself signals the payment landed (instead of staying idle orange).
+    if (isSuccess) {
+      return (
+        <div className={metadataLine.supportWrapper}>
+          <span className={metadataLine.supportButtonSuccess}>
+            ☕ {thankYouLabel.replace("{count}", String(count))}
+          </span>
+        </div>
+      );
+    }
+
+    // Dynamic button content based on state. In the idle state the action verb leads and
+    // the amount is a visually secondary span ("☕ Support · 0.50 USDC") — standard tip-button
+    // hierarchy. The transient loading state drops the amount to stay concise.
+    const getButtonContent = () => {
+      if (isLoading) return `☕ ${supportingLabel}`;
+      const label = count > 0 ? supportWithCountLabel.replace("{count}", String(count)) : supportLabel;
+      return (
+        <>
+          ☕ {label}
+          <span className={metadataLine.supportAmount}>· {amountLabel}</span>
+        </>
+      );
     };
 
     const getTooltip = () => {
       if (errorMessage) return errorMessage;
-      if (!isConnected) return "Connect wallet to buy me a coffee (~$0.50 via Optimism)";
-      return "Buy me a coffee! Secure donation via Optimism (~$0.50)";
+      if (!isConnected) return tooltipConnectLabel;
+      return tooltipDonateLabel;
     };
 
     return (
@@ -122,7 +226,7 @@ export default function MetadataLine({
           className={metadataLine.supportButton}
           title={getTooltip()}
         >
-          {getButtonText()}
+          {getButtonContent()}
         </button>
       </div>
     );
@@ -132,9 +236,9 @@ export default function MetadataLine({
   const renderReactionCount = () => {
     if (reactionCount === undefined || reactionCount === 0) return null;
 
-    const reactionText = reactionCount === 1 ? "reaction" : "reactions";
+    const reactionText = reactionCount === 1 ? reactionLabel : reactionsLabel;
     return (
-      <span className={metadataLine.reactions} title="Likes, reposts, and replies from the web">
+      <span className={metadataLine.reactions} title={reactionsTooltipLabel}>
         💬 {reactionCount} {reactionText}
       </span>
     );
@@ -152,13 +256,29 @@ export default function MetadataLine({
   }
 
   return (
-    <div className={`${metadataLine.container} ${className || ""}`}>
-      {metadataItems.map((item, index) => (
-        <React.Fragment key={index}>
-          {index > 0 && <span className={metadataLine.separator}>•</span>}
-          {item}
-        </React.Fragment>
-      ))}
-    </div>
+    <>
+      <div className={`${metadataLine.container} ${className || ""}`}>
+        {metadataItems.map((item, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && <span className={metadataLine.separator}>•</span>}
+            {item}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {showChainModal && (
+        <SupportChainModal
+          onClose={() => setShowChainModal(false)}
+          onSwitchNetwork={handleSwitchNetwork}
+          onRetry={handleSupport}
+          isBusy={isSwitching || isLoading}
+          // Flip to State B (Get USDC / Try again) only on a genuine insufficient-balance
+          // failure — not on a user cancel (which sets errorMessage but not isInsufficientFunds),
+          // so cancelling the payment doesn't wrongly imply the reader is out of funds.
+          showGetUsdc={isOnSupportedChain && isInsufficientFunds}
+          errorMessage={errorMessage}
+        />
+      )}
+    </>
   );
 }

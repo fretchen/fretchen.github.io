@@ -1913,10 +1913,14 @@ export const metadataLine = {
     color: "#ffffff",
     cursor: "pointer",
     textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
     fontSize: "sm",
     fontFamily: "inherit",
-    fontWeight: "medium",
-    padding: "4px 12px",
+    fontWeight: "semibold",
+    lineHeight: 1,
+    padding: "6px 14px",
     margin: 0,
     borderRadius: "999px", // Pill shape
     transition: "all 0.2s ease",
@@ -1933,6 +1937,30 @@ export const metadataLine = {
       transform: "none",
       boxShadow: "none",
     },
+  }),
+  // Amount reads as secondary to the "Support" verb (lighter weight + slightly muted).
+  supportAmount: css({
+    fontWeight: "normal",
+    opacity: 0.85,
+  }),
+  // Success state — shift the pill to the system's confirmation green so "Thank you!"
+  // visibly confirms the payment landed (instead of staying the idle orange).
+  supportButtonSuccess: css({
+    background: "#16a34a", // green.600
+    border: "none",
+    color: "#ffffff",
+    cursor: "default",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "sm",
+    fontFamily: "inherit",
+    fontWeight: "semibold",
+    lineHeight: 1,
+    padding: "6px 14px",
+    margin: 0,
+    borderRadius: "999px",
+    boxShadow: "0 1px 3px rgba(22, 163, 74, 0.3)",
   }),
 };
 
@@ -2659,93 +2687,193 @@ export const primaryButtonDisabled = css({
   },
 });
 
-// Modal styles
-export const modalOverlay = css({
-  position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 1000,
-});
-
-export const modalContent = css({
-  backgroundColor: "background",
-  padding: "2xl",
-  borderRadius: "sm",
-  minWidth: "300px",
-  maxWidth: "400px",
-});
-
-export const modalTitle = css({
-  margin: "0 0 md 0",
-  fontSize: "lg",
-});
-
-export const modalSection = css({
-  marginBottom: "md",
-});
-
-export const modalLabel = css({
-  marginBottom: "xs",
-  fontSize: "sm",
-  color: "#666",
-});
-
-export const modalText = css({
-  fontSize: "sm",
-  color: "#666",
-  marginBottom: "xs",
-});
-
-export const modalInput = css({
-  width: "100%",
-  padding: "md",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  fontSize: "sm",
-  _focus: {
-    borderColor: "brand",
-  },
-});
-
-export const modalButtons = css({
-  display: "flex",
-  gap: "xs",
-  justifyContent: "flex-end",
-});
-
-export const modalButtonCancel = css({
-  padding: "xs md",
-  background: "transparent",
-  color: "#666",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "sm",
-});
-
-export const modalButtonPrimary = css({
-  padding: "xs md",
-  background: "text",
-  color: "background",
-  border: "none",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "500",
-  _disabled: {
-    backgroundColor: "#f5f5f5",
-    color: "#999",
-    cursor: "not-allowed",
-  },
-});
+// ─── Shared Modal shell ───────────────────────────────────────────────
+// One dialog look for the whole site (NFT zoom, donation guide, …). Values match the
+// original nftCard.modal* pattern (the site's only live modal) so nothing changes visually.
+export const modal = {
+  overlay: css({
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "lg",
+  }),
+  content: css({
+    position: "relative",
+    maxWidth: "90vw",
+    maxHeight: "90vh",
+    background: "white",
+    borderRadius: "md",
+    overflow: "auto",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    display: "flex",
+    flexDirection: "column",
+  }),
+  // Dark filled circle — for modals whose content sits over a full-bleed image (ImageModal).
+  close: css({
+    position: "absolute",
+    top: "sm",
+    right: "sm",
+    background: "rgba(0, 0, 0, 0.5)",
+    color: "white",
+    border: "none",
+    borderRadius: "50%",
+    width: "36px",
+    height: "36px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "md",
+    lineHeight: 1,
+    zIndex: 1,
+    _hover: {
+      background: "rgba(0, 0, 0, 0.7)",
+    },
+  }),
+  // Light glyph — for text modals on a white card, where a dark filled circle reads louder
+  // than the title. Subtle grey ✕ that darkens on hover.
+  closeLight: css({
+    position: "absolute",
+    top: "sm",
+    right: "sm",
+    background: "transparent",
+    color: "gray.400",
+    border: "none",
+    borderRadius: "sm",
+    width: "28px",
+    height: "28px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "md",
+    lineHeight: 1,
+    zIndex: 1,
+    transition: "color 0.15s ease",
+    _hover: {
+      color: "gray.700",
+    },
+  }),
+  // Padded body for text/content modals. Image modals put edge-to-edge content directly
+  // in `content` instead and skip this — so bounding the width here keeps text dialogs at a
+  // sane ~440px card without constraining the full-bleed image modal (which stays maxWidth 90vw).
+  body: css({
+    width: "min(440px, 90vw)",
+    padding: "lg",
+  }),
+  title: css({
+    fontSize: "lg",
+    fontWeight: "bold",
+    margin: "0 0 md 0",
+    // leave room so the title never sits under the ✕
+    paddingRight: "lg",
+  }),
+  // Body text inside a padded modal
+  text: css({
+    fontSize: "sm",
+    color: "gray.700",
+    lineHeight: "1.5",
+    margin: "0 0 md 0",
+  }),
+  // Inline error message inside a modal
+  error: css({
+    fontSize: "sm",
+    color: "#c0392b",
+    lineHeight: "1.5",
+    margin: "0 0 md 0",
+  }),
+  // Muted "why this?" motivation line
+  why: css({
+    fontSize: "sm",
+    color: "gray.500",
+    lineHeight: "1.5",
+    margin: "0 0 md 0",
+  }),
+  // Inline brand-colored link (e.g. "Learn more: Optimism · Base")
+  link: css({
+    color: "brand",
+    textDecoration: "none",
+    fontWeight: "medium",
+    _hover: { textDecoration: "underline" },
+  }),
+  // Wrapper that makes a single primary action span the modal width — the conventional
+  // treatment for a one-action guided/onboarding step (vs. a right-aligned confirm/cancel row).
+  primaryAction: css({
+    display: "flex",
+    marginTop: "md",
+    "& > button, & > a": {
+      width: "100%",
+      justifyContent: "center",
+    },
+  }),
+  // Small helper note beneath the primary action (e.g. "your wallet will ask you to confirm")
+  note: css({
+    fontSize: "xs",
+    color: "gray.500",
+    margin: "sm 0 0 0",
+    textAlign: "center",
+  }),
+  // Full-width orange primary action for the support flow — carries the support pill's
+  // warm accent (metadataLine.supportButton) into the modal so the whole flow reads as one.
+  // Shares the shape/interaction of the site's primaryButton, only the color differs.
+  supportPrimary: css({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "xs",
+    width: "100%",
+    paddingY: "sm",
+    paddingX: "lg",
+    background: "linear-gradient(135deg, #FF6B35 0%, #FF8255 100%)",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "md",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "sm",
+    textDecoration: "none",
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 4px rgba(255, 107, 53, 0.25)",
+    _hover: {
+      transform: "translateY(-1px)",
+      boxShadow: "0 4px 8px rgba(255, 107, 53, 0.35)",
+    },
+    _active: {
+      transform: "translateY(0)",
+      boxShadow: "0 2px 4px rgba(255, 107, 53, 0.25)",
+    },
+    _disabled: {
+      cursor: "default",
+      opacity: 0.6,
+      transform: "none",
+      boxShadow: "none",
+    },
+  }),
+  // Quiet secondary action beneath the primary (e.g. "Try again") — text-weight, neutral.
+  secondaryAction: css({
+    display: "block",
+    width: "100%",
+    marginTop: "sm",
+    padding: "sm",
+    background: "transparent",
+    color: "gray.600",
+    border: "none",
+    borderRadius: "md",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    textAlign: "center",
+    transition: "color 0.15s ease",
+    _hover: { color: "text" },
+  }),
+};
 
 // Preset amount buttons
 export const presetButtons = css({

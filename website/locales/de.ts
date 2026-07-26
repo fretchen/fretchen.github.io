@@ -118,4 +118,41 @@ export default {
     connectAccount: "Konto verbinden",
     disconnect: "Trennen",
   },
+  metadataLine: {
+    loading: "Wird geladen...",
+    supporting: "Wird unterstützt...",
+    thankYou: "Danke! ({count})",
+    support: "Unterstützen",
+    supportWithCount: "Unterstützen ({count})",
+    amount: "0,50 USDC",
+    tooltipConnect: "Wallet verbinden, um einen Kaffee zu spendieren (0,50 USDC)",
+    tooltipDonate: "Spendiere mir einen Kaffee! Sichere Spende von 0,50 USDC",
+    reaction: "Reaktion",
+    reactions: "Reaktionen",
+    reactionsTooltip: "Likes, Reposts und Antworten aus dem Web",
+    // Fehlermeldungen (useSupportAction)
+    errorUrlRequired: "Eine URL ist erforderlich",
+    errorWalletNotConnected: "Wallet nicht verbunden",
+    errorChainSwitchFailed: "Wechsel zu {chain} fehlgeschlagen",
+    errorConfig: "Etwas ist falsch konfiguriert — bitte später erneut versuchen",
+    errorUsdcUnavailable: "USDC ist in diesem Netzwerk nicht verfügbar",
+    errorSignatureRejected: "Signatur wurde abgelehnt",
+    errorDonationFailed: "Die Zahlung ist fehlgeschlagen — möglicherweise hast du noch kein USDC in diesem Netzwerk.",
+    errorDonationCancelled: "Zahlung abgebrochen — es wurde nichts gesendet.",
+    // Support-Modal — gemeinsam
+    modalTitle: "Diesen Beitrag unterstützen",
+    modalWhy: "USDC auf Optimism oder Base ist eine schnelle, günstige und dezentrale Art zu bezahlen.",
+    modalLearnMoreOptimism: "Optimism",
+    modalLearnMoreBase: "Base",
+    modalCloseAria: "Schließen",
+    // Zustand A — Wallet im falschen Netzwerk
+    modalBody:
+      "Spenden erfolgen in USDC und funktionieren derzeit nur auf Optimism oder Base. Deine Wallet ist gerade in einem anderen Netzwerk.",
+    modalSwitchButton: "Wechseln & 0,50 USDC spenden",
+    modalSwitchNote: "Deine Wallet bittet dich, das Netzwerk zu wechseln und dann die Zahlung zu bestätigen.",
+    // Zustand B — im richtigen Netzwerk, aber Spende nicht möglich (kein USDC)
+    modalOnChainBody: "Du bist im richtigen Netzwerk — dir fehlt nur USDC, um 0,50 USDC zu spenden.",
+    modalGetUsdcButton: "USDC besorgen",
+    modalRetry: "Erneut versuchen",
+  },
 };

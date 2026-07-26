@@ -1913,10 +1913,14 @@ export const metadataLine = {
     color: "#ffffff",
     cursor: "pointer",
     textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
     fontSize: "sm",
     fontFamily: "inherit",
-    fontWeight: "medium",
-    padding: "4px 12px",
+    fontWeight: "semibold",
+    lineHeight: 1,
+    padding: "6px 14px",
     margin: 0,
     borderRadius: "999px", // Pill shape
     transition: "all 0.2s ease",
@@ -1933,6 +1937,11 @@ export const metadataLine = {
       transform: "none",
       boxShadow: "none",
     },
+  }),
+  // Amount reads as secondary to the "Support" verb (lighter weight + slightly muted).
+  supportAmount: css({
+    fontWeight: "normal",
+    opacity: 0.85,
   }),
 };
 

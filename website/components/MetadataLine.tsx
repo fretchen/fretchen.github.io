@@ -3,6 +3,7 @@ import { useSupportAction } from "../hooks/useSupportAction";
 import { usePageContext } from "vike-react/usePageContext";
 import { metadataLine } from "../layouts/styles";
 import { useUmami } from "../hooks/useUmami";
+import { useLocale } from "../hooks/useLocale";
 
 interface MetadataLineProps {
   publishingDate?: string;
@@ -34,6 +35,18 @@ export default function MetadataLine({
   // Support functionality (only load if needed)
   const { supportCount, isLoading, isSuccess, errorMessage, isConnected, handleSupport, isReadPending, readError } =
     useSupportAction(showSupport ? currentUrl : "");
+
+  const loadingLabel = useLocale({ label: "metadataLine.loading" });
+  const supportingLabel = useLocale({ label: "metadataLine.supporting" });
+  const thankYouLabel = useLocale({ label: "metadataLine.thankYou" });
+  const supportLabel = useLocale({ label: "metadataLine.support" });
+  const supportWithCountLabel = useLocale({ label: "metadataLine.supportWithCount" });
+  const amountLabel = useLocale({ label: "metadataLine.amount" });
+  const tooltipConnectLabel = useLocale({ label: "metadataLine.tooltipConnect" });
+  const tooltipDonateLabel = useLocale({ label: "metadataLine.tooltipDonate" });
+  const reactionLabel = useLocale({ label: "metadataLine.reaction" });
+  const reactionsLabel = useLocale({ label: "metadataLine.reactions" });
+  const reactionsTooltipLabel = useLocale({ label: "metadataLine.reactionsTooltip" });
 
   // Format publishing date — parse as local time to avoid timezone shifts
   const formatDate = (dateString: string) => {
@@ -88,7 +101,7 @@ export default function MetadataLine({
       return (
         <div className={metadataLine.supportWrapper}>
           <span className={metadataLine.supportButton} style={{ opacity: 0.7 }}>
-            ☕ Loading...
+            ☕ {loadingLabel}
           </span>
         </div>
       );
@@ -100,18 +113,25 @@ export default function MetadataLine({
 
     const count = parseInt(supportCount) || 0;
 
-    // Dynamic button text based on state
-    const getButtonText = () => {
-      if (isLoading) return "☕ Supporting...";
-      if (isSuccess) return `☕ Thank you! (${count})`;
-      if (!isConnected) return "☕ Support ~50¢";
-      return count > 0 ? `☕ Support ~50¢ (${count})` : "☕ Support ~50¢";
+    // Dynamic button content based on state. In the idle state the action verb leads and
+    // the amount is a visually secondary span ("☕ Support · 0.50 USDC") — standard tip-button
+    // hierarchy. Transient states (loading/success) drop the amount to stay concise.
+    const getButtonContent = () => {
+      if (isLoading) return `☕ ${supportingLabel}`;
+      if (isSuccess) return `☕ ${thankYouLabel.replace("{count}", String(count))}`;
+      const label = count > 0 ? supportWithCountLabel.replace("{count}", String(count)) : supportLabel;
+      return (
+        <>
+          ☕ {label}
+          <span className={metadataLine.supportAmount}>· {amountLabel}</span>
+        </>
+      );
     };
 
     const getTooltip = () => {
       if (errorMessage) return errorMessage;
-      if (!isConnected) return "Connect wallet to buy me a coffee (~$0.50 via Optimism)";
-      return "Buy me a coffee! Secure donation via Optimism (~$0.50)";
+      if (!isConnected) return tooltipConnectLabel;
+      return tooltipDonateLabel;
     };
 
     return (
@@ -122,7 +142,7 @@ export default function MetadataLine({
           className={metadataLine.supportButton}
           title={getTooltip()}
         >
-          {getButtonText()}
+          {getButtonContent()}
         </button>
       </div>
     );
@@ -132,9 +152,9 @@ export default function MetadataLine({
   const renderReactionCount = () => {
     if (reactionCount === undefined || reactionCount === 0) return null;
 
-    const reactionText = reactionCount === 1 ? "reaction" : "reactions";
+    const reactionText = reactionCount === 1 ? reactionLabel : reactionsLabel;
     return (
-      <span className={metadataLine.reactions} title="Likes, reposts, and replies from the web">
+      <span className={metadataLine.reactions} title={reactionsTooltipLabel}>
         💬 {reactionCount} {reactionText}
       </span>
     );

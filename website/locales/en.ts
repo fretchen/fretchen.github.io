@@ -118,4 +118,17 @@ export default {
     connectAccount: "Connect Account",
     disconnect: "Disconnect",
   },
+  metadataLine: {
+    loading: "Loading...",
+    supporting: "Supporting...",
+    thankYou: "Thank you! ({count})",
+    support: "Support",
+    supportWithCount: "Support ({count})",
+    amount: "0.50 USDC",
+    tooltipConnect: "Connect wallet to buy me a coffee (0.50 USDC)",
+    tooltipDonate: "Buy me a coffee! Secure donation of 0.50 USDC",
+    reaction: "reaction",
+    reactions: "reactions",
+    reactionsTooltip: "Likes, reposts, and replies from the web",
+  },
 };

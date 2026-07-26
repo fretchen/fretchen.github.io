@@ -138,6 +138,7 @@ export default {
     errorUsdcUnavailable: "USDC ist in diesem Netzwerk nicht verfügbar",
     errorSignatureRejected: "Signatur wurde abgelehnt",
     errorDonationFailed: "Die Zahlung ist fehlgeschlagen — möglicherweise hast du noch kein USDC in diesem Netzwerk.",
+    errorDonationCancelled: "Zahlung abgebrochen — es wurde nichts gesendet.",
     // Support-Modal — gemeinsam
     modalTitle: "Diesen Beitrag unterstützen",
     modalWhy: "USDC auf Optimism oder Base ist eine schnelle, günstige und dezentrale Art zu bezahlen.",

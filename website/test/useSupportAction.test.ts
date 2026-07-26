@@ -294,6 +294,52 @@ describe("useSupportAction", () => {
       // useLocale is globally mocked to echo the raw label key (see test/setup.ts) —
       // this must NOT be the raw Error's message.
       expect(result.current.errorMessage).toBe("metadataLine.errorDonationFailed");
+      // A genuine (non-cancel) failure flags insufficient funds → drives the modal's Get-USDC state.
+      expect(result.current.isInsufficientFunds).toBe(true);
+    });
+
+    it("maps a user-cancelled transaction to a 'cancelled' message, not 'no USDC'", async () => {
+      vi.mocked(useAccount).mockReturnValue({
+        isConnected: true,
+        chainId: 10,
+        address: "0x1234",
+        connector: { name: "MetaMask" },
+      } as ReturnType<typeof useAccount>);
+
+      const rejection = new Error("User rejected the request.");
+      rejection.name = "UserRejectedRequestError";
+      vi.mocked(useWriteContract).mockReturnValue({
+        writeContract: mockWriteContract,
+        isPending: false,
+        data: undefined,
+        error: rejection,
+      } as unknown as ReturnType<typeof useWriteContract>);
+
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      expect(result.current.errorMessage).toBe("metadataLine.errorDonationCancelled");
+      // A cancel is NOT insufficient funds — must not trigger the "Get USDC" modal state.
+      expect(result.current.isInsufficientFunds).toBe(false);
+    });
+
+    it("shows the friendly wallet-not-connected message when getWalletClient throws", async () => {
+      vi.mocked(useAccount).mockReturnValue({
+        isConnected: true,
+        chainId: 10,
+        address: "0x1234",
+        connector: { name: "MetaMask" },
+      } as ReturnType<typeof useAccount>);
+      // wagmi's getWalletClient can throw (e.g. ConnectorNotConnectedError) instead of resolving falsy.
+      vi.mocked(getWalletClient).mockRejectedValue(new Error("ConnectorNotConnectedError"));
+
+      const { result } = renderHook(() => useSupportAction("/blog/test"));
+
+      await act(async () => {
+        await result.current.handleSupport();
+      });
+
+      expect(result.current.errorMessage).toBe("metadataLine.errorWalletNotConnected");
+      expect(mockWriteContract).not.toHaveBeenCalled();
     });
 
     it("should NOT auto-switch or donate on an unsupported chain — surfaces guidance instead", async () => {

@@ -54,6 +54,7 @@ export function useSupportAction(url: string) {
   const errorUsdcUnavailable = useLocale({ label: "metadataLine.errorUsdcUnavailable" });
   const errorSignatureRejected = useLocale({ label: "metadataLine.errorSignatureRejected" });
   const errorDonationFailed = useLocale({ label: "metadataLine.errorDonationFailed" });
+  const errorDonationCancelled = useLocale({ label: "metadataLine.errorDonationCancelled" });
   const modalBody = useLocale({ label: "metadataLine.modalBody" });
 
   // Wagmi hooks
@@ -174,7 +175,14 @@ export function useSupportAction(url: string) {
     // MetadataLine), the reactive client is transiently undefined while wagmi re-resolves it
     // for the new chain — reading it here instead gets the correct, ready signer and avoids a
     // spurious "wallet not connected" error.
-    const walletClient = await getWalletClient(config, { chainId: targetChainId });
+    // getWalletClient can either resolve falsy OR throw (e.g. ConnectorNotConnectedError);
+    // route both to the same friendly message instead of an unhandled rejection.
+    let walletClient;
+    try {
+      walletClient = await getWalletClient(config, { chainId: targetChainId });
+    } catch {
+      walletClient = null;
+    }
     if (!walletClient) {
       setErrorMessage(errorWalletNotConnected);
       return;
@@ -245,20 +253,33 @@ export function useSupportAction(url: string) {
     }
   }, [isSuccess, writeError, refetch, fullUrl]);
 
+  // Classify a raw wagmi write error. We deliberately do NOT parse on-chain revert reasons
+  // (fragile — USDC's exact string can vary), with one cheap exception: an explicit user
+  // rejection of the tx has a stable name/message and should read as "cancelled", not "no
+  // USDC". Everything else is treated as the likely insufficient-balance case, which also
+  // drives the modal's "Get USDC" state (isInsufficientFunds).
+  const isUserRejection =
+    writeError instanceof Error &&
+    (writeError.name.includes("UserRejectedRequestError") ||
+      /user rejected|user denied|rejected the request/i.test(writeError.message));
+  const isInsufficientFunds = !!writeError && !isUserRejection;
+  const writeErrorMessage = writeError ? (isUserRejection ? errorDonationCancelled : errorDonationFailed) : null;
+
   return {
     // State - aggregated count from both chains in current mode
     supportCount: aggregatedCount.toString(),
     isLoading: isPending || isConfirming,
     isSuccess,
-    // writeError is wagmi's raw on-chain revert error (e.g. insufficient USDC balance) —
-    // never shown verbatim (contract addresses, ABI decode attempts, hex data). Any write
-    // failure not already covered by the hook's own setErrorMessage calls above is most
-    // likely the reader having no USDC yet on the chain they just switched to.
-    errorMessage: errorMessage ?? (writeError ? errorDonationFailed : null),
+    // writeError is wagmi's raw on-chain revert error — never shown verbatim (contract
+    // addresses, ABI decode attempts, hex data). Mapped to friendly copy above.
+    errorMessage: errorMessage ?? writeErrorMessage,
     isConnected,
     isReadPending,
     readError,
     isOnSupportedChain,
+    // True only for a genuine (non-cancel) write failure — most likely no USDC on this chain.
+    // The UI uses this to show the "Get USDC" guidance, so a user cancel doesn't trigger it.
+    isInsufficientFunds,
     // Actions
     handleSupport,
     switchToSupportedChain,

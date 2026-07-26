@@ -138,6 +138,7 @@ export default {
     errorUsdcUnavailable: "USDC isn't available on this network",
     errorSignatureRejected: "Signature was declined",
     errorDonationFailed: "The payment didn't go through — you may not have USDC on this network yet.",
+    errorDonationCancelled: "Payment cancelled — nothing was sent.",
     // Support modal — shared
     modalTitle: "Support this post",
     modalWhy: "USDC on Optimism or Base is a fast, low-cost, and decentralized way to pay.",

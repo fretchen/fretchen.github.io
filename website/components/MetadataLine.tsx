@@ -44,6 +44,7 @@ export default function MetadataLine({
     isReadPending,
     readError,
     isOnSupportedChain,
+    isInsufficientFunds,
     switchToSupportedChain,
   } = useSupportAction(showSupport ? currentUrl : "");
 
@@ -141,6 +142,11 @@ export default function MetadataLine({
   // (see the isSuccess-close check above) and shows the resulting error/get-USDC prompt.
   // setState here is intentional: isOnSupportedChain changes asynchronously (wagmi re-render
   // after switchChainAsync resolves), so there's no synchronous alternative to reacting to it.
+  //
+  // This effect also depends on `handleSupport`, whose identity can churn (its useCallback
+  // lists useLocale-derived strings). Clearing `awaitingRetryAfterSwitch` FIRST — synchronously,
+  // before awaiting the retry — is the guard that keeps this to exactly one donation per switch:
+  // any later re-run from a handleSupport identity change finds the flag already false and no-ops.
   React.useEffect(() => {
     if (awaitingRetryAfterSwitch && isOnSupportedChain) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -266,10 +272,10 @@ export default function MetadataLine({
           onSwitchNetwork={handleSwitchNetwork}
           onRetry={handleSupport}
           isBusy={isSwitching || isLoading}
-          // Once the switch succeeded (isOnSupportedChain) but an error is still set, the
-          // donation itself failed after switching — most likely no USDC on the new chain,
-          // so the modal flips to State B (Get USDC / Try again).
-          showGetUsdc={isOnSupportedChain && !!errorMessage}
+          // Flip to State B (Get USDC / Try again) only on a genuine insufficient-balance
+          // failure — not on a user cancel (which sets errorMessage but not isInsufficientFunds),
+          // so cancelling the payment doesn't wrongly imply the reader is out of funds.
+          showGetUsdc={isOnSupportedChain && isInsufficientFunds}
           errorMessage={errorMessage}
         />
       )}

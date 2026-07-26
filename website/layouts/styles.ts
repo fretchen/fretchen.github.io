@@ -2762,8 +2762,10 @@ export const modal = {
     },
   }),
   // Padded body for text/content modals. Image modals put edge-to-edge content directly
-  // in `content` instead and skip this.
+  // in `content` instead and skip this — so bounding the width here keeps text dialogs at a
+  // sane ~440px card without constraining the full-bleed image modal (which stays maxWidth 90vw).
   body: css({
+    width: "min(440px, 90vw)",
     padding: "lg",
   }),
   title: css({

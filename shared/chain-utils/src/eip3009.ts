@@ -42,7 +42,10 @@ export interface TransferWithAuthorizationMessage {
  *
  * @param usdcConfig From `getUSDCConfig(network)` — supplies domain name/version/chainId/address.
  */
-export function buildTransferWithAuthorizationTypedData(usdcConfig: USDCConfig, message: TransferWithAuthorizationMessage) {
+export function buildTransferWithAuthorizationTypedData(
+  usdcConfig: USDCConfig,
+  message: TransferWithAuthorizationMessage
+) {
   return {
     domain: {
       name: usdcConfig.usdcName,

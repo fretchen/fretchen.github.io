@@ -13,14 +13,26 @@ interface ModalProps {
    * set false for edge-to-edge content like a full-bleed image that manages its own padding.
    */
   padded?: boolean;
+  /**
+   * Use the subtle grey ✕ instead of the dark filled circle. Preferred for text modals on a
+   * white card (the filled circle is meant to sit over a full-bleed image, e.g. ImageModal).
+   */
+  lightClose?: boolean;
 }
 
 /**
  * Shared modal shell for the whole site — one consistent dialog look (overlay, white rounded
- * card, circular ✕ top-right, click-outside + Escape to close). Presentational only; callers
- * provide the body. Used by ImageModal (NFT zoom) and SupportChainModal (donation guide).
+ * card, ✕ top-right, click-outside + Escape to close). Presentational only; callers provide
+ * the body. Used by ImageModal (NFT zoom) and SupportChainModal (donation guide).
  */
-export function Modal({ onClose, children, title, closeLabel = "Close", padded = true }: ModalProps) {
+export function Modal({
+  onClose,
+  children,
+  title,
+  closeLabel = "Close",
+  padded = true,
+  lightClose = false,
+}: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -38,7 +50,12 @@ export function Modal({ onClose, children, title, closeLabel = "Close", padded =
         aria-modal="true"
         aria-label={title}
       >
-        <button className={modal.close} onClick={onClose} aria-label={closeLabel} type="button">
+        <button
+          className={lightClose ? modal.closeLight : modal.close}
+          onClick={onClose}
+          aria-label={closeLabel}
+          type="button"
+        >
           ✕
         </button>
         {padded ? (

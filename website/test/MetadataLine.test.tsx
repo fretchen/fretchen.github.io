@@ -25,10 +25,11 @@ const mockHandleSupport = vi.fn();
 const mockSwitchToSupportedChain = vi.fn();
 const mockConnectWallet = vi.fn();
 
-// Mutable mock state for useSupportAction so each test can steer isOnSupportedChain
+// Mutable mock state for useSupportAction so each test can steer the flow
 let mockSupportActionState: {
   isOnSupportedChain: boolean;
   errorMessage: string | null;
+  isSuccess: boolean;
 };
 
 // Mutable mock state for useWalletConnection (the quick-connect hook MetadataLine now
@@ -41,7 +42,7 @@ vi.mock("../hooks/useSupportAction", () => ({
   useSupportAction: () => ({
     supportCount: "0",
     isLoading: false,
-    isSuccess: false,
+    isSuccess: mockSupportActionState.isSuccess,
     errorMessage: mockSupportActionState.errorMessage,
     isOnSupportedChain: mockSupportActionState.isOnSupportedChain,
     handleSupport: mockHandleSupport,
@@ -64,6 +65,7 @@ describe("MetadataLine — unsupported-chain guidance", () => {
     mockSupportActionState = {
       isOnSupportedChain: true,
       errorMessage: null,
+      isSuccess: false,
     };
     mockWalletConnectionState = {
       isConnected: true,
@@ -135,5 +137,16 @@ describe("MetadataLine — unsupported-chain guidance", () => {
     expect(mockConnectWallet).toHaveBeenCalledWith("support");
     expect(mockHandleSupport).not.toHaveBeenCalled();
     expect(screen.queryByText("metadataLine.modalTitle")).not.toBeInTheDocument();
+  });
+
+  it("renders a distinct success pill when the donation succeeds", () => {
+    mockSupportActionState.isSuccess = true;
+
+    renderWithQuery(<MetadataLine showSupport={true} publishingDate="2024-01-01" />);
+
+    // Success is a confirmation, not an action — rendered as a non-button span, so there is
+    // no clickable Support button in this state.
+    expect(screen.getByText(/metadataLine\.thankYou/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /metadataLine\.support/ })).not.toBeInTheDocument();
   });
 });

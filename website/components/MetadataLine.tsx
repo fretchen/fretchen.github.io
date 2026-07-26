@@ -180,12 +180,23 @@ export default function MetadataLine({
 
     const count = parseInt(supportCount) || 0;
 
+    // Success is a confirmation, not an action — render a non-interactive green pill so the
+    // colour itself signals the payment landed (instead of staying idle orange).
+    if (isSuccess) {
+      return (
+        <div className={metadataLine.supportWrapper}>
+          <span className={metadataLine.supportButtonSuccess}>
+            ☕ {thankYouLabel.replace("{count}", String(count))}
+          </span>
+        </div>
+      );
+    }
+
     // Dynamic button content based on state. In the idle state the action verb leads and
     // the amount is a visually secondary span ("☕ Support · 0.50 USDC") — standard tip-button
-    // hierarchy. Transient states (loading/success) drop the amount to stay concise.
+    // hierarchy. The transient loading state drops the amount to stay concise.
     const getButtonContent = () => {
       if (isLoading) return `☕ ${supportingLabel}`;
-      if (isSuccess) return `☕ ${thankYouLabel.replace("{count}", String(count))}`;
       const label = count > 0 ? supportWithCountLabel.replace("{count}", String(count)) : supportLabel;
       return (
         <>
@@ -253,10 +264,11 @@ export default function MetadataLine({
         <SupportChainModal
           onClose={() => setShowChainModal(false)}
           onSwitchNetwork={handleSwitchNetwork}
-          isSwitching={isSwitching}
-          // Once the switch succeeded (isOnSupportedChain) but an error is still set,
-          // the donation itself must have failed after switching — most likely the wallet
-          // has no USDC on the new chain, so point to a way to get some.
+          onRetry={handleSupport}
+          isBusy={isSwitching || isLoading}
+          // Once the switch succeeded (isOnSupportedChain) but an error is still set, the
+          // donation itself failed after switching — most likely no USDC on the new chain,
+          // so the modal flips to State B (Get USDC / Try again).
           showGetUsdc={isOnSupportedChain && !!errorMessage}
           errorMessage={errorMessage}
         />

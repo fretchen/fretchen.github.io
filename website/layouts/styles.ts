@@ -1943,6 +1943,25 @@ export const metadataLine = {
     fontWeight: "normal",
     opacity: 0.85,
   }),
+  // Success state — shift the pill to the system's confirmation green so "Thank you!"
+  // visibly confirms the payment landed (instead of staying the idle orange).
+  supportButtonSuccess: css({
+    background: "#16a34a", // green.600
+    border: "none",
+    color: "#ffffff",
+    cursor: "default",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "sm",
+    fontFamily: "inherit",
+    fontWeight: "semibold",
+    lineHeight: 1,
+    padding: "6px 14px",
+    margin: 0,
+    borderRadius: "999px",
+    boxShadow: "0 1px 3px rgba(22, 163, 74, 0.3)",
+  }),
 };
 
 // ===== COMMENTS SECTION STYLES =====
@@ -2696,6 +2715,7 @@ export const modal = {
     display: "flex",
     flexDirection: "column",
   }),
+  // Dark filled circle — for modals whose content sits over a full-bleed image (ImageModal).
   close: css({
     position: "absolute",
     top: "sm",
@@ -2717,17 +2737,41 @@ export const modal = {
       background: "rgba(0, 0, 0, 0.7)",
     },
   }),
+  // Light glyph — for text modals on a white card, where a dark filled circle reads louder
+  // than the title. Subtle grey ✕ that darkens on hover.
+  closeLight: css({
+    position: "absolute",
+    top: "sm",
+    right: "sm",
+    background: "transparent",
+    color: "gray.400",
+    border: "none",
+    borderRadius: "sm",
+    width: "28px",
+    height: "28px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "md",
+    lineHeight: 1,
+    zIndex: 1,
+    transition: "color 0.15s ease",
+    _hover: {
+      color: "gray.700",
+    },
+  }),
   // Padded body for text/content modals. Image modals put edge-to-edge content directly
   // in `content` instead and skip this.
   body: css({
-    padding: "xl",
+    padding: "lg",
   }),
   title: css({
     fontSize: "lg",
     fontWeight: "bold",
     margin: "0 0 md 0",
     // leave room so the title never sits under the ✕
-    paddingRight: "2xl",
+    paddingRight: "lg",
   }),
   // Body text inside a padded modal
   text: css({
@@ -2748,7 +2792,7 @@ export const modal = {
     fontSize: "sm",
     color: "gray.500",
     lineHeight: "1.5",
-    margin: "0 0 lg 0",
+    margin: "0 0 md 0",
   }),
   // Inline brand-colored link (e.g. "Learn more: Optimism · Base")
   link: css({
@@ -2761,8 +2805,8 @@ export const modal = {
   // treatment for a one-action guided/onboarding step (vs. a right-aligned confirm/cancel row).
   primaryAction: css({
     display: "flex",
-    marginTop: "lg",
-    "& > button": {
+    marginTop: "md",
+    "& > button, & > a": {
       width: "100%",
       justifyContent: "center",
     },
@@ -2773,6 +2817,59 @@ export const modal = {
     color: "gray.500",
     margin: "sm 0 0 0",
     textAlign: "center",
+  }),
+  // Full-width orange primary action for the support flow — carries the support pill's
+  // warm accent (metadataLine.supportButton) into the modal so the whole flow reads as one.
+  // Shares the shape/interaction of the site's primaryButton, only the color differs.
+  supportPrimary: css({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "xs",
+    width: "100%",
+    paddingY: "sm",
+    paddingX: "lg",
+    background: "linear-gradient(135deg, #FF6B35 0%, #FF8255 100%)",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "md",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "sm",
+    textDecoration: "none",
+    transition: "all 0.2s ease",
+    boxShadow: "0 2px 4px rgba(255, 107, 53, 0.25)",
+    _hover: {
+      transform: "translateY(-1px)",
+      boxShadow: "0 4px 8px rgba(255, 107, 53, 0.35)",
+    },
+    _active: {
+      transform: "translateY(0)",
+      boxShadow: "0 2px 4px rgba(255, 107, 53, 0.25)",
+    },
+    _disabled: {
+      cursor: "default",
+      opacity: 0.6,
+      transform: "none",
+      boxShadow: "none",
+    },
+  }),
+  // Quiet secondary action beneath the primary (e.g. "Try again") — text-weight, neutral.
+  secondaryAction: css({
+    display: "block",
+    width: "100%",
+    marginTop: "sm",
+    padding: "sm",
+    background: "transparent",
+    color: "gray.600",
+    border: "none",
+    borderRadius: "md",
+    cursor: "pointer",
+    fontSize: "sm",
+    fontWeight: "medium",
+    textAlign: "center",
+    transition: "color 0.15s ease",
+    _hover: { color: "text" },
   }),
 };
 

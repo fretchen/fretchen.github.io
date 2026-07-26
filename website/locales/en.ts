@@ -138,16 +138,19 @@ export default {
     errorUsdcUnavailable: "USDC isn't available on this network",
     errorSignatureRejected: "Signature was declined",
     errorDonationFailed: "The payment didn't go through — you may not have USDC on this network yet.",
-    // Unsupported-chain modal
+    // Support modal — shared
     modalTitle: "Support this post",
-    modalBody: "Donations use USDC and only work on Optimism or Base right now. Your wallet is on a different network.",
     modalWhy: "USDC on Optimism or Base is a fast, low-cost, and decentralized way to pay.",
     modalLearnMoreOptimism: "Optimism",
     modalLearnMoreBase: "Base",
+    modalCloseAria: "Close",
+    // State A — wallet on the wrong network
+    modalBody: "Donations use USDC and only work on Optimism or Base right now. Your wallet is on a different network.",
     modalSwitchButton: "Switch & donate 0.50 USDC",
     modalSwitchNote: "Your wallet will ask you to switch network, then confirm the payment.",
-    modalGetUsdcPrompt: "Don't have USDC there yet?",
-    modalGetUsdcLink: "Get USDC →",
-    modalCloseAria: "Close",
+    // State B — on a supported network, but the donation couldn't be completed (no USDC)
+    modalOnChainBody: "You're on a supported network — you just need USDC to donate 0.50 USDC.",
+    modalGetUsdcButton: "Get USDC",
+    modalRetry: "Try again",
   },
 };

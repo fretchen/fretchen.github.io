@@ -208,6 +208,8 @@ describe("sc_llm_x402", () => {
       const body = JSON.parse(res.body);
       expect(body.openapi).toBe("3.1.0");
       expect(body.info.title).toBeTruthy();
+      // Declares the llm/v1 service contract so discovery clients can classify it.
+      expect(body["x-service-type"]).toBe("llm/v1");
       expect(body.paths["/"].post["x-payment-info"]).toEqual({
         protocols: ["x402"],
         price: { mode: "dynamic", currency: "USD", min: "0", max: "0.003" },

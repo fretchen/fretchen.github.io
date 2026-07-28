@@ -36,10 +36,11 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // The REAL, usage-derived charge is computed after the LLM call and passed to
 // settlePayment() as a *separate*, smaller requirements.amount — handleBeforeSettle only
 // enforces chargedCumulativeAmount + requirements.amount <= voucher.maxClaimableAmount (a
-// ceiling, not equality), so verify and settle are free to use different amounts. This is
-// the "authorize an upper bound, claim the real amount" pattern the SDK's
-// setSettlementOverrides() wraps for Express apps — we do it manually here since we call
-// settlePayment() directly. See getSettleAmount() below.
+// ceiling, not equality), so verify and settle are free to use different amounts. We
+// implement this "authorize an upper bound, claim the real amount" split manually: verify
+// with the ceiling amount, then pass a smaller usage-derived amount to settlePayment().
+// (The installed @x402/evm — 2.18.0 — exposes no higher-level helper for this; we call the
+// resourceServer verify/settle primitives directly.) See getSettleAmount() below.
 // This endpoint uses Mistral, not IONOS — see llm_service.ts's LLM_PROVIDERS. Legacy
 // sc_llm.ts (merkle settlement) is untouched and stays on IONOS.
 const LLM_PROVIDER = "mistral";

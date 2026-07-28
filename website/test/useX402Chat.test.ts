@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
-import { useX402Chat, WebStorageClientChannelStorage } from "./useX402Chat";
+import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
 import type { X402ChatMessage } from "../types/x402";
 
 const mockRegister = vi.fn();
@@ -294,6 +294,41 @@ describe("useX402Chat", () => {
       expect(thrown?.message).not.toContain("channel_busy");
       expect(result.current.status).toBe("error");
       expect(result.current.error).toMatch(/wait a few seconds/i);
+    });
+  });
+
+  describe("Agent URL targeting (open-agent-platform)", () => {
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
+      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+    });
+
+    it("POSTs to the provided agentUrl", async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchSpy);
+      const agentUrl = "https://someone-elses-agent.example";
+
+      const { result } = renderHook(() => useX402Chat(NETWORK, agentUrl));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith(agentUrl, expect.objectContaining({ method: "POST" }));
+    });
+
+    it("falls back to the default fretchen endpoint when no agentUrl is given", async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchSpy);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "https://llm-agent.fretchen.eu",
+        expect.objectContaining({ method: "POST" }),
+      );
     });
   });
 

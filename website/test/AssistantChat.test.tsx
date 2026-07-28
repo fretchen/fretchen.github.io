@@ -24,6 +24,11 @@ vi.mock("../hooks/useX402Chat", () => ({
     reset: vi.fn(),
     isReady: true,
   })),
+  DEFAULT_LLM_AGENT_URL: "https://llm-agent.fretchen.eu",
+}));
+
+vi.mock("../hooks/x402Discovery", () => ({
+  fetchAgentCard: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock("../hooks/useWalletConnection", () => ({

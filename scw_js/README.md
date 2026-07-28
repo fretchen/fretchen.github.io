@@ -68,6 +68,8 @@ Generates AI images using Black Forest Labs API with USDC payment via x402 proto
 
 LLM chat paid via x402 batch-settlement USDC payment channels — no bearer token, the payment voucher itself proves wallet control. `llmx402` handles chat requests (deposit/voucher/402 flow); `llmx402cron` claims and settles accumulated channels on a 12h schedule. See [`assistent_plan.md`](../assistent_plan.md) at the repo root for the full design record (deposit/voucher/claim/settle lifecycle, pricing model, gotchas).
 
+**`llm/v1` contract.** [`openapi.llm.json`](./openapi.llm.json) declares `x-service-type: "llm/v1"` — the interchangeable-agent contract. It is defined entirely by that document: the request/response schema (`LLMChatRequest`/`LLMChatResponse`) plus the `x-interop-floor` (a compatible agent must advertise ≥1 `accepts[]` entry with USDC on Base `eip155:8453`, scheme `batch-settlement`). A `v2` aligning to the OpenAI chat-completions shape is the intended evolution, not yet built.
+
 ### `growth_api.ts` - Growth Agent Draft Approval
 
 API for reviewing, editing, and approving AI-generated social media drafts. Used by the Growth Agent notebooks and cron job.

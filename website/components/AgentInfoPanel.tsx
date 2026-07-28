@@ -20,15 +20,19 @@ import { useAgentInfo } from "../hooks/useAgentInfo";
 import { useLocale } from "../hooks/useLocale";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { getGenAiNFTAddress, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+import type { AgentCard } from "../hooks/x402Discovery";
 
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
   service?: "genimg" | "llm";
   // Layout variant
   variant?: "footer" | "sidebar";
+  // When set (llm escape hatch), show this pre-checked agent's provenance instead of the
+  // default single-tenant registration file. Derived live from the agent's own /openapi.json.
+  agentCard?: AgentCard | null;
 }
 
-export function AgentInfoPanel({ service = "genimg", variant = "footer" }: AgentInfoPanelProps) {
+export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCard = null }: AgentInfoPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { agent, isLoading, error } = useAgentInfo();
 
@@ -39,6 +43,44 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
 
   const isSidebar = variant === "sidebar";
+
+  // llm path: render honest provenance (operator + origin + payTo) read live from the agent's
+  // own /openapi.json + 402 — who the user actually pays. Third-party agents (not a *.fretchen.eu
+  // origin) additionally carry an at-your-own-risk note. The multi-agent picker that would make
+  // a third-party card appear here isn't rendered yet (see AssistantChat / the plan).
+  if (agentCard) {
+    let isThirdParty = true;
+    try {
+      isThirdParty = !new URL(agentCard.origin).hostname.endsWith("fretchen.eu");
+    } catch {
+      // Unparseable origin — treat as third-party (safer disclosure).
+    }
+    return (
+      <div className={css({ fontSize: "xs", color: "gray.700" })}>
+        <div className={css({ fontWeight: "medium" })}>{agentCard.operator ?? agentCard.origin}</div>
+        <div className={css({ color: "gray.500", wordBreak: "break-all" })}>{agentCard.origin}</div>
+        {agentCard.payTo && (
+          <div className={css({ fontFamily: "mono", color: "gray.600", mt: "1" })} title="Payment recipient">
+            pays → {agentCard.payTo.slice(0, 6)}…{agentCard.payTo.slice(-4)}
+          </div>
+        )}
+        {isThirdParty && (
+          <div className={css({ color: "amber.600", mt: "1" })}>third-party agent · at your own risk</div>
+        )}
+      </div>
+    );
+  }
+
+  // The llm service is card-driven (above). Before the card resolves, show a compact
+  // placeholder rather than falling through to the legacy registration-file rendering (which
+  // carries the retired "Become a provider" / EIP-8004 JSON links we don't want on /assistent).
+  if (service === "llm") {
+    return (
+      <div className={css({ fontSize: "xs", color: "gray.500", textAlign: isSidebar ? "left" : "center", mt: "2" })}>
+        Loading agent…
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

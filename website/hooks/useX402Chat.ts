@@ -16,6 +16,7 @@ import { useState, useCallback } from "react";
 import { useWalletClient, useAccount } from "wagmi";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { useConfiguredPublicClient } from "./useConfiguredPublicClient";
+import { decodePaymentRequired } from "./x402Discovery";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
@@ -24,11 +25,13 @@ import type {
   BatchSettlementDepositStrategyContext,
 } from "@x402/evm/batch-settlement/client";
 
-// Endpoint of the batch-settlement chat function (override for local dev with
-// PUBLIC_ENV__LLM_X402_ENDPOINT=http://localhost:8085).
-const X402_LLM_URL =
-  (import.meta.env.PUBLIC_ENV__LLM_X402_ENDPOINT as string | undefined) ??
-  "https://mypersonaljscloudivnad9dy-llmx402.functions.fnc.fr-par.scw.cloud";
+// Default batch-settlement chat agent — fretchen's own llm/v1 endpoint (the origin
+// advertised in scw_js/openapi.llm.json). Override for local dev with
+// PUBLIC_ENV__LLM_X402_ENDPOINT=http://localhost:8085. Callers may also pass an explicit
+// agentUrl to useX402Chat to target any other llm/v1 agent (see the open-agent-platform
+// work) — this constant is only the fallback when none is given.
+export const DEFAULT_LLM_AGENT_URL =
+  (import.meta.env.PUBLIC_ENV__LLM_X402_ENDPOINT as string | undefined) ?? "https://llm-agent.fretchen.eu";
 
 /**
  * Client-side `ClientChannelStorage` backed by the Web Storage API. Persists channel
@@ -141,8 +144,11 @@ export interface UseX402ChatResult {
  * @param network - CAIP-2 network the channel operates on (e.g. "eip155:84532").
  *   Determines the public client used for on-chain channel reads and the scheme
  *   registration network.
+ * @param agentUrl - The llm/v1 agent endpoint to pay and call. Defaults to fretchen's
+ *   own endpoint (`DEFAULT_LLM_AGENT_URL`); pass any other llm/v1 agent to target it.
+ *   Channel state in localStorage is keyed per-origin, so switching agents is isolated.
  */
-export function useX402Chat(network: string): UseX402ChatResult {
+export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGENT_URL): UseX402ChatResult {
   const { data: walletClient } = useWalletClient();
   const { isConnected } = useAccount();
   // A readContract-capable client is required: batch-settlement's corrective-402
@@ -203,24 +209,14 @@ export function useX402Chat(network: string): UseX402ChatResult {
         const validatingFetch: typeof fetch = async (input, init) => {
           const response = await fetch(input, init);
           if (response.status === 402) {
-            const paymentRequiredHeader = response.headers.get("Payment-Required");
-            if (paymentRequiredHeader) {
-              try {
-                const decoded = JSON.parse(atob(paymentRequiredHeader)) as {
-                  accepts?: Array<{ network?: string }>;
-                };
-                const offered = decoded.accepts?.map((a) => a.network).filter(Boolean) as string[] | undefined;
-                if (offered && offered.length > 0 && !offered.includes(network)) {
-                  throw new Error(
-                    `Server does not offer ${network}. Offered: ${offered.join(", ")}. ` +
-                      `This could indicate a backend configuration error.`,
-                  );
-                }
-              } catch (parseError) {
-                if (parseError instanceof Error && parseError.message.includes("does not offer")) {
-                  throw parseError;
-                }
-                // Silently continue if header parsing fails — the request will proceed
+            const accepts = decodePaymentRequired(response.headers.get("Payment-Required"));
+            if (accepts) {
+              const offered = accepts.map((a) => a.network).filter(Boolean) as string[];
+              if (offered.length > 0 && !offered.includes(network)) {
+                throw new Error(
+                  `Agent ${agentUrl} does not offer ${network}. Offered: ${offered.join(", ")}. ` +
+                    `Pick a network this agent supports, or choose a different agent.`,
+                );
               }
             }
           }
@@ -232,7 +228,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
         // First bare request → 402 → SDK opens channel (deposit) or signs a voucher → retries.
         // Wrapped in try/catch as defense-in-depth (see notebook: a client-side crash could
         // once mask a successful settlement; the underlying facilitator bug is fixed).
-        const response = await fetchWithPayment(X402_LLM_URL, {
+        const response = await fetchWithPayment(agentUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data: { prompt } }),
@@ -267,7 +263,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
         throw err;
       }
     },
-    [walletClient, publicClient, network],
+    [walletClient, publicClient, network, agentUrl],
   );
 
   const reset = useCallback(() => {

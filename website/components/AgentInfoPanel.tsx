@@ -20,15 +20,19 @@ import { useAgentInfo } from "../hooks/useAgentInfo";
 import { useLocale } from "../hooks/useLocale";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { getGenAiNFTAddress, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+import type { AgentCard } from "../hooks/x402Discovery";
 
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
   service?: "genimg" | "llm";
   // Layout variant
   variant?: "footer" | "sidebar";
+  // When set (llm escape hatch), show this pre-checked agent's provenance instead of the
+  // default single-tenant registration file. Derived live from the agent's own /openapi.json.
+  agentCard?: AgentCard | null;
 }
 
-export function AgentInfoPanel({ service = "genimg", variant = "footer" }: AgentInfoPanelProps) {
+export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCard = null }: AgentInfoPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { agent, isLoading, error } = useAgentInfo();
 
@@ -39,6 +43,23 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
 
   const isSidebar = variant === "sidebar";
+
+  // Escape-hatch agent selected: render its live provenance (operator + payTo + origin)
+  // rather than the default registration file. Kept intentionally compact.
+  if (agentCard) {
+    return (
+      <div className={css({ fontSize: "xs", color: "gray.700" })}>
+        <div className={css({ fontWeight: "medium" })}>{agentCard.operator ?? agentCard.origin}</div>
+        <div className={css({ color: "gray.500", wordBreak: "break-all" })}>{agentCard.origin}</div>
+        {agentCard.payTo && (
+          <div className={css({ fontFamily: "mono", color: "gray.600", mt: "1" })} title="Payment recipient">
+            pays → {agentCard.payTo.slice(0, 6)}…{agentCard.payTo.slice(-4)}
+          </div>
+        )}
+        <div className={css({ color: "amber.600", mt: "1" })}>third-party agent · at your own risk</div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

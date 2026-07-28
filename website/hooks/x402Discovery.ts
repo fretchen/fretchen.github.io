@@ -121,9 +121,7 @@ export async function precheckLlmV1Agent(agentUrl: string): Promise<PreCheckResu
     };
   }
 
-  const match = accepts!.find(
-    (a) => a.network === LLM_V1_FLOOR.network && a.scheme === LLM_V1_FLOOR.scheme,
-  );
+  const match = accepts!.find((a) => a.network === LLM_V1_FLOOR.network && a.scheme === LLM_V1_FLOOR.scheme);
   return {
     ok: true,
     card: {

@@ -3,12 +3,7 @@
  * check, and the agent pre-check (contract doc + live 402 probe).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  decodePaymentRequired,
-  meetsLlmV1Floor,
-  precheckLlmV1Agent,
-  type AcceptsEntry,
-} from "../hooks/x402Discovery";
+import { decodePaymentRequired, meetsLlmV1Floor, precheckLlmV1Agent, type AcceptsEntry } from "../hooks/x402Discovery";
 
 const floorEntry: AcceptsEntry = {
   scheme: "batch-settlement",
@@ -75,7 +70,10 @@ describe("precheckLlmV1Agent", () => {
 
   it("passes a well-formed llm/v1 agent and returns its provenance card", async () => {
     mockFetch({
-      openapi: { status: 200, body: { "x-service-type": "llm/v1", info: { title: "T", contact: { name: "fretchen", url: "https://x" } } } },
+      openapi: {
+        status: 200,
+        body: { "x-service-type": "llm/v1", info: { title: "T", contact: { name: "fretchen", url: "https://x" } } },
+      },
       probe: { status: 402, accepts: [floorEntry] },
     });
     const res = await precheckLlmV1Agent("https://agent.example");

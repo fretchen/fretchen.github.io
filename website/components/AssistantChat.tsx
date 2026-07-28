@@ -7,6 +7,7 @@
 
 import React, { useState, useMemo } from "react";
 import { AgentInfoPanel } from "./AgentInfoPanel";
+import { AgentSelector } from "./AgentSelector";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
@@ -14,6 +15,7 @@ import { css } from "../styled-system/css";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat } from "../hooks/useX402Chat";
+import { precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { getViemChain } from "@fretchen/chain-utils";
 
 interface ChatMessage {
@@ -72,7 +74,44 @@ export function AssistantChat() {
 
   const { isConnected, connectWallet } = useWalletConnection();
   const { network, switchIfNeeded, switchError } = useAutoNetwork(CHAT_NETWORKS);
-  const { sendMessage: payAndSend, paymentReceipt } = useX402Chat(network);
+
+  // Custom agent (escape hatch, G3): when the user pastes a URL that passes the llm/v1
+  // pre-check, chat is served by that agent instead of the default fretchen endpoint. While
+  // no custom agent is selected, `selectedAgentUrl` is undefined and useX402Chat falls back
+  // to its own default (proving the default has no privileged path).
+  const [selectedAgentUrl, setSelectedAgentUrl] = useState<string | undefined>(undefined);
+  const [customUrlInput, setCustomUrlInput] = useState("");
+  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
+
+  const { sendMessage: payAndSend, paymentReceipt } = useX402Chat(network, selectedAgentUrl);
+
+  const tryCustomAgent = async () => {
+    const url = customUrlInput.trim();
+    if (!url) return;
+    setCheckState("checking");
+    setCheckError(null);
+    const result = await precheckLlmV1Agent(url);
+    if (result.ok && result.card) {
+      setSelectedAgentUrl(url);
+      setCustomCard(result.card);
+      setCheckState("idle");
+      setMessages([]); // fresh conversation on the new agent
+    } else {
+      setCheckState("error");
+      setCheckError(result.reason ?? "This agent could not be verified.");
+    }
+  };
+
+  const useDefaultAgent = () => {
+    setSelectedAgentUrl(undefined);
+    setCustomCard(null);
+    setCustomUrlInput("");
+    setCheckState("idle");
+    setCheckError(null);
+    setMessages([]);
+  };
 
   const buttonState = useMemo(() => {
     if (!isConnected) return "connect";
@@ -186,7 +225,16 @@ export function AssistantChat() {
             {/* Agent Info Section */}
             <div className={styles.sidebarSection}>
               <h4 className={styles.sidebarHeading}>Agent</h4>
-              <AgentInfoPanel service="llm" variant="sidebar" />
+              <AgentInfoPanel service="llm" variant="sidebar" agentCard={customCard} />
+              <AgentSelector
+                customUrlInput={customUrlInput}
+                onCustomUrlInputChange={setCustomUrlInput}
+                customCard={customCard}
+                checkState={checkState}
+                checkError={checkError}
+                onTryCustomAgent={() => void tryCustomAgent()}
+                onUseDefaultAgent={useDefaultAgent}
+              />
             </div>
           </div>
         )}
@@ -270,7 +318,20 @@ export function AssistantChat() {
           </div>
 
           {/* Agent Info - Mobile Footer */}
-          {isMobile && <AgentInfoPanel service="llm" variant="sidebar" />}
+          {isMobile && (
+            <>
+              <AgentInfoPanel service="llm" variant="sidebar" agentCard={customCard} />
+              <AgentSelector
+                customUrlInput={customUrlInput}
+                onCustomUrlInputChange={setCustomUrlInput}
+                customCard={customCard}
+                checkState={checkState}
+                checkError={checkError}
+                onTryCustomAgent={() => void tryCustomAgent()}
+                onUseDefaultAgent={useDefaultAgent}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

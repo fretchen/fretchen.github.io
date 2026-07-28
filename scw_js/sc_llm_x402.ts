@@ -373,6 +373,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // advertised (resolved.provider === LLM_PROVIDER), so pricing (getSettleAmount /
     // USDC_MAX_PRICE_PER_MESSAGE, which use LLM_PROVIDER) stays correct. When a second
     // provider (e.g. ionos) is advertised, per-provider pricing must follow suit here.
+    // TODO: getSettleAmount() and USDC_MAX_PRICE_PER_MESSAGE (above) are hardcoded to
+    // LLM_PROVIDER = "mistral" and do NOT use resolved.provider. The moment a second model
+    // is added to advertisedModelIds(), a request routed to that provider here will still be
+    // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
+    // advertising a second model.
     llmData = await callLLMAPI(prompt, useMock, resolved.provider);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");

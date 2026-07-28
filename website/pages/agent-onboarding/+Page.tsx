@@ -1,107 +1,65 @@
-import React, { useState } from "react";
+import React from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/styles";
-import { useToast } from "../../components/Toast";
 
-// Validate Ethereum address format
-const isValidEthAddress = (address: string): boolean => {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
-};
+const LLM_ORIGIN = "https://llm-agent.fretchen.eu";
+const GH_BLOB = "https://github.com/fretchen/fretchen.github.io/blob/main";
+
+// Small presentational helpers ------------------------------------------------
+
+const sectionCard = css({
+  mb: "10",
+  p: "6",
+  bg: "gray.50",
+  borderRadius: "lg",
+  border: "1px solid",
+  borderColor: "gray.200",
+});
+
+const h2 = css({ fontSize: "xl", fontWeight: "semibold", mb: "4", color: "gray.800" });
+const para = css({ fontSize: "sm", color: "gray.600", mb: "3", lineHeight: "1.6" });
+const codeBlock = css({
+  bg: "gray.900",
+  color: "gray.100",
+  p: "3",
+  borderRadius: "md",
+  overflow: "auto",
+  fontSize: "xs",
+  lineHeight: "1.5",
+  mt: "1",
+  mb: "3",
+  whiteSpace: "pre",
+});
+const inlineCode = css({ fontFamily: "mono", fontSize: "0.9em", bg: "gray.100", px: "1", borderRadius: "sm" });
+const extLink = css({ color: "indigo.600", textDecoration: "underline", _hover: { color: "indigo.800" } });
+
+function Code({ children }: { children: string }) {
+  return <pre className={codeBlock}>{children}</pre>;
+}
+
+function Challenge({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div
+      className={css({
+        p: "3",
+        mb: "3",
+        bg: "white",
+        borderRadius: "md",
+        border: "1px solid",
+        borderColor: "gray.200",
+      })}
+    >
+      <div className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "1" })}>{title}</div>
+      <div className={css({ fontSize: "xs", color: "gray.600", lineHeight: "1.6" })}>{children}</div>
+    </div>
+  );
+}
 
 export default function Page() {
-  // Form state
-  const [agentName, setAgentName] = useState("");
-  const [apiEndpoint, setApiEndpoint] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
-  const [generatedJson, setGeneratedJson] = useState<string | null>(null);
-
-  // Service selection (radio: one at a time)
-  const [serviceType, setServiceType] = useState<"genimg" | "llm">("genimg");
-
-  // Collapsible sections
-  const [showWhitelisting, setShowWhitelisting] = useState(false);
-
-  // Toast for feedback
-  const { showToast, ToastComponent } = useToast();
-
-  // Derived validation state
-  const walletIsEmpty = walletAddress.trim() === "";
-  const walletIsValid = walletIsEmpty || isValidEthAddress(walletAddress);
-  const canGenerate = agentName && apiEndpoint && walletAddress && isValidEthAddress(walletAddress);
-
-  // Generate JSON from form
-  const generateJson = () => {
-    if (!agentName || !walletAddress) {
-      alert("Please fill in agent name and wallet address");
-      return;
-    }
-
-    if (!apiEndpoint) {
-      alert("Please fill in the API endpoint");
-      return;
-    }
-
-    const serviceName = serviceType === "genimg" ? "Image Generation" : "Chat/LLM";
-
-    const json = {
-      type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-      name: agentName,
-      description: `${serviceName} service provided by ${agentName}. Integrated with fretchen.eu for on-chain settlement.`,
-      image: "",
-      endpoints: [
-        {
-          name: serviceType,
-          endpoint: apiEndpoint,
-        },
-        {
-          name: "agentWallet",
-          endpoint: `eip155:10:${walletAddress}`,
-        },
-      ],
-      registrations: [],
-      supportedTrust: ["reputation"],
-    };
-
-    setGeneratedJson(JSON.stringify(json, null, 2));
-  };
-
-  // Generate GitHub issue URL
-  const getGitHubIssueUrl = () => {
-    const title = encodeURIComponent(`Agent Registration: ${agentName || "New Agent"}`);
-    const serviceName = serviceType === "genimg" ? "Image Generation" : "Chat/LLM";
-    const body = encodeURIComponent(`## Agent Registration Request
-
-**Agent Name:** ${agentName || "(please fill in)"}
-**Service Type:** ${serviceName}
-**API Endpoint:** ${apiEndpoint || "(please fill in)"}
-**Wallet Address:** ${walletAddress || "(please fill in)"}
-
-### Generated JSON
-\`\`\`json
-${generatedJson || "(please generate JSON first)"}
-\`\`\`
-
-### Checklist
-- [ ] JSON is hosted and publicly accessible
-- [ ] API endpoint is reachable
-- [ ] I understand the on-chain settlement process
-
-### Additional Notes
-(Add any additional information about your service here)
-`);
-    return `https://github.com/fretchen/fretchen.github.io/issues/new?title=${title}&body=${body}&labels=agent-registration`;
-  };
-
   return (
     <div className={styles.container}>
-      <article
-        className={css({
-          maxWidth: "800px",
-          margin: "0 auto",
-          padding: "4",
-        })}
-      >
-        {/* Alpha Banner */}
+      <article className={css({ maxWidth: "800px", margin: "0 auto", padding: "4" })}>
+        {/* Beta banner */}
         <div
           className={css({
             bg: "alphaBanner.bg",
@@ -114,848 +72,309 @@ ${generatedJson || "(please generate JSON first)"}
           })}
         >
           <span className={css({ fontSize: "sm", color: "alphaBanner.text" })}>
-            <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Alpha Experiment</strong> – Building
-            towards{" "}
-            <a
-              href="https://eips.ethereum.org/EIPS/eip-8004"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={css({
-                color: "alphaBanner.icon",
-                textDecoration: "underline",
-                fontWeight: "medium",
-              })}
-            >
-              EIP-8004 (Trustless Agents)
+            <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Beta</strong> — this documents the{" "}
+            <code className={inlineCode}>llm/v1</code> agent contract. The client-facing contract is stable and
+            self-checkable; the rough edges are on the ecosystem side (thin tooling, few facilitators) — see{" "}
+            <a href="#challenges" className={css({ color: "alphaBanner.icon", textDecoration: "underline" })}>
+              Known Challenges
             </a>
-            . Currently manual whitelisting, preparing for permissionless on-chain registration.
+            .
           </span>
         </div>
 
-        {/* Hero Section */}
-        <div
-          className={css({
-            textAlign: "center",
-            mb: "8",
-            pt: "2",
-          })}
-        >
-          <h1
-            className={css({
-              fontSize: "3xl",
-              fontWeight: "bold",
-              mb: "4",
-              color: "gray.800",
-            })}
-          >
-            🛠️ Can We Build An Open AI Payment Infrastructure Together?
+        {/* Hero */}
+        <div className={css({ textAlign: "center", mb: "8", pt: "2" })}>
+          <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "4", color: "gray.800" })}>
+            🤖 Build an <code className={inlineCode}>llm/v1</code> Agent
           </h1>
           <p
             className={css({
               fontSize: "lg",
               color: "gray.600",
-              maxWidth: "600px",
+              maxWidth: "620px",
               margin: "0 auto",
               lineHeight: "1.6",
             })}
           >
-            Join as an early provider and help shape the protocol.
+            An open, machine-checkable contract for an x402-paid chat endpoint. Any agent that meets it can be used by
+            the{" "}
+            <a href="/assistent" className={extLink}>
+              assistant
+            </a>{" "}
+            — no account, no manual approval.
           </p>
         </div>
 
-        {/* Benefits Section - Compact */}
-        <div
-          className={css({
-            display: "grid",
-            gridTemplateColumns: { base: "1fr", md: "repeat(3, 1fr)" },
-            gap: "4",
-            mb: "10",
-          })}
-        >
-          <div className={css({ textAlign: "center", p: "3" })}>
-            <span className={css({ fontSize: "2xl" })}>🔑</span>
-            <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>Direct payments after whitelisting</p>
-          </div>
-          <div className={css({ textAlign: "center", p: "3" })}>
-            <span className={css({ fontSize: "2xl" })}>🛠️</span>
-            <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>Your infrastructure, your keys</p>
-          </div>
-          <div className={css({ textAlign: "center", p: "3" })}>
-            <span className={css({ fontSize: "2xl" })}>📊</span>
-            <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>Transparent on Optimism L2</p>
-          </div>
-        </div>
-
-        {/* SECTION 1: What Your API Needs To Do */}
-        <div
-          className={css({
-            mb: "10",
-            p: "6",
-            bg: "gray.50",
-            borderRadius: "lg",
-            border: "1px solid",
-            borderColor: "gray.200",
-          })}
-        >
-          <h2
-            className={css({
-              fontSize: "xl",
-              fontWeight: "semibold",
-              mb: "4",
-              color: "gray.800",
-            })}
-          >
-            📡 What Your API Needs To Do
+        {/* SECTION 1 — what llm/v1 is */}
+        <div className={sectionCard}>
+          <h2 className={h2}>
+            📡 What <code className={inlineCode}>llm/v1</code> is
           </h2>
-
-          <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
-            We support two service types. Your API receives requests and interacts with our smart contracts. No
-            authentication needed – the system is prepaid.
+          <p className={para}>
+            An <code className={inlineCode}>llm/v1</code> agent is a single HTTP endpoint that speaks the{" "}
+            <strong>OpenAI chat-completions</strong> body and is paid per message via{" "}
+            <strong>x402 batch-settlement</strong> (a USDC payment channel). The OpenAI shape is there so the
+            request/response is easy to read and reuse types against — it is <em>not</em> a promise that a stock OpenAI
+            SDK can pay it (it can&apos;t; see Known Challenges).
           </p>
 
-          {/* Two Service Types */}
-          <div className={css({ display: "grid", gap: "4", md: { gridTemplateColumns: "1fr 1fr" } })}>
-            {/* Image Generation */}
-            <div
-              className={css({
-                p: "4",
-                bg: "white",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.200",
-              })}
-            >
-              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "3" })}>
-                🖼️ Image Generation
-              </h4>
-              <div className={css({ mb: "2" })}>
-                <span className={css({ fontSize: "xs", color: "gray.500" })}>Request:</span>
-                <pre
-                  className={css({
-                    bg: "gray.900",
-                    color: "gray.100",
-                    p: "2",
-                    borderRadius: "md",
-                    overflow: "auto",
-                    fontSize: "xs",
-                    lineHeight: "1.4",
-                    mt: "1",
-                  })}
-                >
-                  {`{ "prompt": "...", "tokenId": 42 }`}
-                </pre>
-              </div>
-              <div className={css({ mb: "2" })}>
-                <span className={css({ fontSize: "xs", color: "gray.500" })}>Response:</span>
-                <pre
-                  className={css({
-                    bg: "gray.900",
-                    color: "gray.100",
-                    p: "2",
-                    borderRadius: "md",
-                    overflow: "auto",
-                    fontSize: "xs",
-                    lineHeight: "1.4",
-                    mt: "1",
-                  })}
-                >
-                  {`{ "image_url": "...", "tx": "0x..." }`}
-                </pre>
-              </div>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "2" })}>→ Updates NFT metadata on-chain</p>
-            </div>
+          <p className={css({ fontSize: "xs", color: "gray.500", mb: "1" })}>Request:</p>
+          <Code>{`POST /  (no auth header; the 402 challenge drives payment)
+{
+  "model": "mistral-large-latest",
+  "messages": [{ "role": "user", "content": "Hello" }]
+}`}</Code>
 
-            {/* Chat/LLM */}
-            <div
-              className={css({
-                p: "4",
-                bg: "white",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.200",
-              })}
-            >
-              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "3" })}>
-                💬 Chat / LLM
-              </h4>
-              <div className={css({ mb: "2" })}>
-                <span className={css({ fontSize: "xs", color: "gray.500" })}>Request:</span>
-                <pre
-                  className={css({
-                    bg: "gray.900",
-                    color: "gray.100",
-                    p: "2",
-                    borderRadius: "md",
-                    overflow: "auto",
-                    fontSize: "xs",
-                    lineHeight: "1.4",
-                    mt: "1",
-                  })}
-                >
-                  {`{ "message": "...", "address": "0x..." }`}
-                </pre>
-              </div>
-              <div className={css({ mb: "2" })}>
-                <span className={css({ fontSize: "xs", color: "gray.500" })}>Response:</span>
-                <pre
-                  className={css({
-                    bg: "gray.900",
-                    color: "gray.100",
-                    p: "2",
-                    borderRadius: "md",
-                    overflow: "auto",
-                    fontSize: "xs",
-                    lineHeight: "1.4",
-                    mt: "1",
-                  })}
-                >
-                  {`{ "response": "...", "leaf": "0x..." }`}
-                </pre>
-              </div>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "2" })}>→ Deducts from user balance</p>
-            </div>
-          </div>
+          <p className={css({ fontSize: "xs", color: "gray.500", mb: "1" })}>
+            Response — a standard OpenAI <code className={inlineCode}>chat.completion</code>:
+          </p>
+          <Code>{`{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "model": "mistral-large-latest",
+  "choices": [{ "index": 0, "message": { "role": "assistant", "content": "..." }, "finish_reason": "stop" }],
+  "usage": { "prompt_tokens": 10, "completion_tokens": 9, "total_tokens": 19 }
+}`}</Code>
 
-          {/* Links */}
-          <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", mt: "4" })}>
-            <a
-              href="/openapi.json"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={css({
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "1",
-                px: "3",
-                py: "1.5",
-                bg: "white",
-                borderRadius: "md",
-                color: "indigo.600",
-                textDecoration: "none",
-                fontSize: "sm",
-                fontWeight: "medium",
-                border: "1px solid",
-                borderColor: "gray.300",
-                _hover: { bg: "gray.100" },
-              })}
-            >
-              📄 OpenAPI Spec →
+          <ul className={css({ fontSize: "sm", color: "gray.600", pl: "4", lineHeight: "1.7", mb: "3" })}>
+            <li>
+              <code className={inlineCode}>usage</code> is <strong>required</strong> — the per-message charge is settled
+              from it.
+            </li>
+            <li>
+              Streaming (<code className={inlineCode}>stream: true</code>) is <strong>not supported</strong> —
+              settlement needs the final usage, which needs the whole completion.
+            </li>
+            <li>
+              <code className={inlineCode}>model</code> is validated against the advertised ids; an unknown model
+              returns <code className={inlineCode}>404 model_not_found</code>.
+            </li>
+          </ul>
+
+          <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", mt: "2" })}>
+            <a href={`${LLM_ORIGIN}/openapi.json`} target="_blank" rel="noopener noreferrer" className={extLink}>
+              📄 Live spec (openapi.json) →
             </a>
-            <a
-              href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/genimg_bfl.js"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={css({
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "1",
-                px: "3",
-                py: "1.5",
-                bg: "white",
-                borderRadius: "md",
-                color: "indigo.600",
-                textDecoration: "none",
-                fontSize: "sm",
-                fontWeight: "medium",
-                border: "1px solid",
-                borderColor: "gray.300",
-                _hover: { bg: "gray.100" },
-              })}
-            >
-              🖼️ ImageGen Example →
-            </a>
-            <a
-              href="https://github.com/fretchen/fretchen.github.io/blob/main/scw_js/sc_llm.js"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={css({
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "1",
-                px: "3",
-                py: "1.5",
-                bg: "white",
-                borderRadius: "md",
-                color: "indigo.600",
-                textDecoration: "none",
-                fontSize: "sm",
-                fontWeight: "medium",
-                border: "1px solid",
-                borderColor: "gray.300",
-                _hover: { bg: "gray.100" },
-              })}
-            >
-              💬 Chat Example →
+            <a href={`${GH_BLOB}/scw_js/sc_llm_x402.ts`} target="_blank" rel="noopener noreferrer" className={extLink}>
+              💬 Reference implementation →
             </a>
           </div>
         </div>
 
-        {/* SECTION 2: How The Payment Flow Works */}
-        <div
-          className={css({
-            mb: "10",
-            p: "6",
-            bg: "gray.50",
-            borderRadius: "lg",
-            border: "1px solid",
-            borderColor: "gray.200",
-          })}
-        >
-          <h2
-            className={css({
-              fontSize: "xl",
-              fontWeight: "semibold",
-              mb: "4",
-              color: "gray.800",
-            })}
-          >
-            💰 How The Payment Flow Works
-          </h2>
-
-          <div
-            className={css({
-              display: "grid",
-              gridTemplateColumns: { base: "1fr", md: "repeat(4, 1fr)" },
-              gap: "2",
-              textAlign: "center",
-            })}
-          >
-            <div className={css({ p: "3" })}>
-              <div
-                className={css({
-                  fontSize: "2xl",
-                  mb: "2",
-                  bg: "white",
-                  borderRadius: "full",
-                  width: "12",
-                  height: "12",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto",
-                  border: "1px solid",
-                  borderColor: "gray.300",
-                })}
-              >
-                1
-              </div>
-              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>User Pays</p>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>ETH → Smart Contract</p>
-            </div>
-
-            <div className={css({ p: "3" })}>
-              <div
-                className={css({
-                  fontSize: "2xl",
-                  mb: "2",
-                  bg: "white",
-                  borderRadius: "full",
-                  width: "12",
-                  height: "12",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto",
-                  border: "1px solid",
-                  borderColor: "gray.300",
-                })}
-              >
-                2
-              </div>
-              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>Frontend Calls You</p>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>POST to your API</p>
-            </div>
-
-            <div className={css({ p: "3" })}>
-              <div
-                className={css({
-                  fontSize: "2xl",
-                  mb: "2",
-                  bg: "white",
-                  borderRadius: "full",
-                  width: "12",
-                  height: "12",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto",
-                  border: "1px solid",
-                  borderColor: "gray.300",
-                })}
-              >
-                3
-              </div>
-              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>You Update Token</p>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Write to contract</p>
-            </div>
-
-            <div className={css({ p: "3" })}>
-              <div
-                className={css({
-                  fontSize: "2xl",
-                  mb: "2",
-                  bg: "gray.200",
-                  borderRadius: "full",
-                  width: "12",
-                  height: "12",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto",
-                  border: "1px solid",
-                  borderColor: "gray.400",
-                  color: "gray.800",
-                })}
-              >
-                💰
-              </div>
-              <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800" })}>ETH → Your Wallet</p>
-              <p className={css({ fontSize: "xs", color: "gray.500", mt: "1" })}>Direct payment</p>
-            </div>
-          </div>
-
-          <div
-            className={css({
-              mt: "4",
-              p: "3",
-              bg: "white",
-              borderRadius: "md",
-              border: "1px solid",
-              borderColor: "gray.200",
-            })}
-          >
-            <p className={css({ fontSize: "sm", color: "gray.700" })}>
-              <strong>Key insight:</strong> Payment happens BEFORE your API is called. You only need to do the work and
-              update the token. No payment handling required on your side.
-            </p>
-          </div>
-        </div>
-
-        {/* SECTION 3: Get Started - Registration Form */}
-        <div
-          className={css({
-            bg: "gray.50",
-            border: "1px solid",
-            borderColor: "gray.200",
-            borderRadius: "lg",
-            p: "6",
-            mb: "8",
-          })}
-        >
-          <h2
-            className={css({
-              fontSize: "xl",
-              fontWeight: "semibold",
-              mb: "4",
-              color: "gray.800",
-            })}
-          >
-            🚀 Get Started: Register Your Service
-          </h2>
-
-          <p className={css({ fontSize: "sm", color: "gray.600", mb: "4" })}>
-            Generate your registration JSON and open a GitHub issue to request whitelisting.
+        {/* SECTION 2 — interop floor + self-check */}
+        <div className={sectionCard}>
+          <h2 className={h2}>✅ The contract, and how to self-check it</h2>
+          <p className={para}>
+            Compatibility is <strong>objective and automated</strong> — there is no human approval step. An agent
+            qualifies when it publishes the right discovery document and advertises the right payment option. These are
+            exactly the two checks the assistant runs before it will talk to an endpoint.
           </p>
 
-          <div className={css({ display: "grid", gap: "4", mb: "4" })}>
-            {/* Agent Name */}
-            <div>
-              <label
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  mb: "1",
-                })}
-              >
-                Agent Name
-              </label>
-              <input
-                type="text"
-                value={agentName}
-                onChange={(e) => setAgentName(e.target.value)}
-                placeholder="My AI Service"
-                className={css({
-                  width: "100%",
-                  px: "3",
-                  py: "2",
-                  border: "1px solid",
-                  borderColor: "gray.300",
-                  borderRadius: "md",
-                  fontSize: "sm",
-                  _focus: {
-                    outline: "none",
-                    borderColor: "blue.500",
-                    boxShadow: "0 0 0 1px var(--colors-blue-500)",
-                  },
-                })}
-              />
-            </div>
+          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800", mb: "1" })}>
+            Check 1 — discovery document
+          </p>
+          <p className={para}>
+            Serve <code className={inlineCode}>GET &lt;origin&gt;/openapi.json</code> returning{" "}
+            <code className={inlineCode}>200</code> with{" "}
+            <code className={inlineCode}>x-service-type: &quot;llm/v1&quot;</code>, plus{" "}
+            <code className={inlineCode}>x-interop-floor</code>, <code className={inlineCode}>x-payment-info</code>, and{" "}
+            <code className={inlineCode}>x-discovery.ownershipProofs</code>.
+          </p>
+          <Code>{`curl -s https://your-agent.example/openapi.json | jq '."x-service-type"'
+# => "llm/v1"`}</Code>
 
-            {/* Service Type - Radio */}
-            <div>
-              <label
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  mb: "2",
-                })}
-              >
-                Service Type
-              </label>
-              <div className={css({ display: "flex", gap: "4", flexWrap: "wrap" })}>
-                <label
-                  className={css({
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2",
-                    cursor: "pointer",
-                    fontSize: "sm",
-                    color: serviceType === "genimg" ? "gray.900" : "gray.600",
-                    fontWeight: serviceType === "genimg" ? "medium" : "normal",
-                  })}
-                >
-                  <input
-                    type="radio"
-                    name="serviceType"
-                    checked={serviceType === "genimg"}
-                    onChange={() => setServiceType("genimg")}
-                    className={css({ width: "4", height: "4", cursor: "pointer" })}
-                  />
-                  🖼️ Image Generation
-                </label>
-                <label
-                  className={css({
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2",
-                    cursor: "pointer",
-                    fontSize: "sm",
-                    color: serviceType === "llm" ? "gray.900" : "gray.600",
-                    fontWeight: serviceType === "llm" ? "medium" : "normal",
-                  })}
-                >
-                  <input
-                    type="radio"
-                    name="serviceType"
-                    checked={serviceType === "llm"}
-                    onChange={() => setServiceType("llm")}
-                    className={css({ width: "4", height: "4", cursor: "pointer" })}
-                  />
-                  💬 Chat / LLM
-                </label>
-              </div>
-            </div>
+          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800", mb: "1" })}>
+            Check 2 — payment challenge meets the interop floor
+          </p>
+          <p className={para}>
+            A bare unpaid <code className={inlineCode}>POST</code> must return <code className={inlineCode}>402</code>{" "}
+            with a base64 <code className={inlineCode}>Payment-Required</code> header whose decoded{" "}
+            <code className={inlineCode}>accepts[]</code> has at least one entry with{" "}
+            <strong>
+              network Base mainnet (<code className={inlineCode}>eip155:8453</code>)
+            </strong>
+            ,{" "}
+            <strong>
+              scheme <code className={inlineCode}>batch-settlement</code>
+            </strong>
+            , asset <strong>USDC</strong>.
+          </p>
+          <Code>{`curl -si https://your-agent.example/ \\
+  -X POST -H 'Content-Type: application/json' \\
+  -d '{"model":"probe","messages":[]}' | grep -i '^payment-required'
+# decode the base64 value → accepts[] must include { network: "eip155:8453", scheme: "batch-settlement" }`}</Code>
 
-            {/* API Endpoint */}
-            <div>
-              <label
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  mb: "1",
-                })}
-              >
-                {serviceType === "genimg" ? "🖼️ Image Generation" : "💬 Chat / LLM"} Endpoint
-              </label>
-              <input
-                type="url"
-                value={apiEndpoint}
-                onChange={(e) => setApiEndpoint(e.target.value)}
-                placeholder={
-                  serviceType === "genimg" ? "https://api.your-service.com/genimg" : "https://api.your-service.com/llm"
-                }
-                className={css({
-                  width: "100%",
-                  px: "3",
-                  py: "2",
-                  border: "1px solid",
-                  borderColor: "gray.300",
-                  borderRadius: "md",
-                  fontSize: "sm",
-                  _focus: {
-                    outline: "none",
-                    borderColor: "blue.500",
-                    boxShadow: "0 0 0 1px var(--colors-blue-500)",
-                  },
-                })}
-              />
-            </div>
-
-            {/* Payment Wallet Address */}
-            <div>
-              <label
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  mb: "1",
-                })}
-              >
-                Payment Wallet Address
-                <span className={css({ fontWeight: "normal", color: "gray.500", ml: "1" })}>
-                  (where you receive ETH)
-                </span>
-              </label>
-              <input
-                type="text"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="0x..."
-                className={css({
-                  width: "100%",
-                  px: "3",
-                  py: "2",
-                  border: "1px solid",
-                  borderColor: walletIsValid ? "gray.300" : "red.500",
-                  borderRadius: "md",
-                  fontSize: "sm",
-                  fontFamily: "mono",
-                  _focus: {
-                    outline: "none",
-                    borderColor: walletIsValid ? "blue.500" : "red.500",
-                    boxShadow: walletIsValid ? "0 0 0 1px var(--colors-blue-500)" : "0 0 0 1px var(--colors-red-500)",
-                  },
-                })}
-              />
-              {!walletIsValid && (
-                <p className={css({ fontSize: "xs", color: "red.600", mt: "1" })}>
-                  Invalid address format. Must be 0x followed by 40 hexadecimal characters.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className={css({ display: "flex", gap: "3", flexWrap: "wrap" })}>
-            <button
-              onClick={generateJson}
-              className={css({
-                px: "4",
-                py: "2",
-                bg: "gray.800",
-                color: "white",
-                borderRadius: "md",
-                fontWeight: "medium",
-                fontSize: "sm",
-                cursor: "pointer",
-                border: "none",
-                _hover: { bg: "gray.700" },
-                _disabled: { opacity: 0.5, cursor: "not-allowed" },
-              })}
-              disabled={!canGenerate}
-            >
-              Generate JSON
-            </button>
-
+          <p className={para}>
+            Pass both and any <code className={inlineCode}>llm/v1</code> client can use you. Ownership proofs are an
+            EIP-191 signature over your origin; the repo ships a signer you can reuse:{" "}
             <a
-              href={getGitHubIssueUrl()}
+              href={`${GH_BLOB}/scw_js/scripts/sign_ownership_proof.ts`}
               target="_blank"
               rel="noopener noreferrer"
-              className={css({
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "2",
-                px: "4",
-                py: "2",
-                bg: generatedJson ? "blue.600" : "gray.300",
-                color: generatedJson ? "white" : "gray.500",
-                borderRadius: "md",
-                fontWeight: "medium",
-                fontSize: "sm",
-                textDecoration: "none",
-                pointerEvents: generatedJson ? "auto" : "none",
-                _hover: generatedJson ? { bg: "blue.700" } : {},
-              })}
+              className={extLink}
             >
-              Open GitHub Issue →
+              sign_ownership_proof.ts
             </a>
-          </div>
-
-          {/* Generated JSON Preview */}
-          {generatedJson && (
-            <div className={css({ mt: "4" })}>
-              <div
-                className={css({
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: "2",
-                })}
-              >
-                <span className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.700" })}>
-                  Generated JSON:
-                </span>
-                <button
-                  onClick={() => {
-                    void navigator.clipboard.writeText(generatedJson);
-                    showToast("Copied to clipboard!", "success");
-                  }}
-                  className={css({
-                    fontSize: "xs",
-                    color: "blue.600",
-                    bg: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    _hover: { textDecoration: "underline" },
-                  })}
-                >
-                  Copy to clipboard
-                </button>
-              </div>
-              <pre
-                className={css({
-                  bg: "gray.900",
-                  color: "gray.100",
-                  p: "4",
-                  borderRadius: "md",
-                  overflow: "auto",
-                  fontSize: "xs",
-                  lineHeight: "1.5",
-                  maxHeight: "300px",
-                })}
-              >
-                {generatedJson}
-              </pre>
-            </div>
-          )}
+            .
+          </p>
         </div>
 
-        {/* SECTION 4: Whitelisting Process (Collapsible) */}
-        <div className={css({ mb: "8" })}>
-          <div
-            className={css({
-              border: "1px solid",
-              borderColor: "gray.200",
-              borderRadius: "md",
-            })}
-          >
-            <button
-              onClick={() => setShowWhitelisting(!showWhitelisting)}
-              className={css({
-                width: "100%",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: "4",
-                bg: "transparent",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                _hover: { bg: "gray.50" },
-              })}
+        {/* SECTION 3 — what running a provider takes */}
+        <div className={sectionCard}>
+          <h2 className={h2}>🛠️ What running a provider takes</h2>
+          <p className={para}>
+            Most of the stack is stock <code className={inlineCode}>@x402/evm</code>. One piece is currently
+            bring-your-own.
+          </p>
+
+          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "green.700", mb: "1" })}>
+            Standard / reusable
+          </p>
+          <ul className={css({ fontSize: "sm", color: "gray.600", pl: "4", lineHeight: "1.7", mb: "3" })}>
+            <li>
+              Build the 402 with the SDK&apos;s <code className={inlineCode}>BatchSettlementEvmScheme</code> +{" "}
+              <code className={inlineCode}>enhancePaymentRequirements</code>; verify each message&apos;s voucher with{" "}
+              <code className={inlineCode}>verifyPayment</code>.
+            </li>
+            <li>
+              Channel storage is stock: <code className={inlineCode}>InMemoryChannelStorage</code> for dev,{" "}
+              <code className={inlineCode}>RedisChannelStorage</code>/
+              <code className={inlineCode}>FileChannelStorage</code> for prod. A custom backend only has to provide
+              atomic compare-and-swap on <code className={inlineCode}>updateChannel</code>.
+            </li>
+            <li>
+              Run a <strong>recurring claim/settle job</strong>. Per-message voucher settlements are local bookkeeping
+              only — funds move on-chain solely through{" "}
+              <code className={inlineCode}>scheme.createChannelManager().claimAndSettle()</code>. Skip it and earned
+              vouchers never become revenue.
+            </li>
+            <li>
+              Config: a receiver wallet, an off-chain <code className={inlineCode}>receiverAuthorizer</code> signing
+              key, per-network RPC URLs, your inference key, and pricing / withdraw-delay knobs.
+            </li>
+          </ul>
+
+          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "amber.700", mb: "1" })}>
+            The one external dependency: a facilitator
+          </p>
+          <p className={css({ fontSize: "sm", color: "gray.600", lineHeight: "1.7", mb: "0" })}>
+            You need an <strong>x402 batch-settlement facilitator</strong> — the process that submits the on-chain
+            deposit / claim / settle transactions. Unlike the <code className={inlineCode}>exact</code> scheme, only a
+            handful of public facilitators enable batch-settlement on EVM mainnet today (
+            <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer" className={extLink}>
+              Solvador
+            </a>{" "}
+            is one; this project runs its own). You can point at one of those or run your own — but the small pool is a
+            real constraint, so check{" "}
+            <a
+              href="https://docs.x402.org/dev-tools/facilitators"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={extLink}
             >
-              <span className={css({ fontWeight: "medium", color: "gray.800" })}>🔐 Whitelisting Process</span>
-              <span
-                className={css({
-                  color: "gray.400",
-                  transition: "transform 0.2s",
-                  transform: showWhitelisting ? "rotate(180deg)" : "rotate(0deg)",
-                })}
-              >
-                ▼
-              </span>
-            </button>
-            {showWhitelisting && (
-              <div className={css({ p: "4", pt: "0" })}>
-                <div className={css({ display: "grid", gap: "3" })}>
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "white",
-                      borderRadius: "md",
-                      border: "1px solid",
-                      borderColor: "gray.200",
-                    })}
-                  >
-                    <p className={css({ fontSize: "sm", color: "gray.800", fontWeight: "medium" })}>
-                      Why is whitelisting required?
-                    </p>
-                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
-                      During the alpha phase, we manually review providers to ensure quality and prevent spam. This is a
-                      temporary measure.
-                    </p>
-                  </div>
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "white",
-                      borderRadius: "md",
-                      border: "1px solid",
-                      borderColor: "gray.200",
-                    })}
-                  >
-                    <p className={css({ fontSize: "sm", color: "gray.800", fontWeight: "medium" })}>
-                      What happens after whitelisting?
-                    </p>
-                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
-                      Once your wallet is whitelisted in the smart contract, all payments between users and your service
-                      are fully decentralized. No middleman, no approval needed.
-                    </p>
-                  </div>
-                  <div
-                    className={css({
-                      p: "3",
-                      bg: "white",
-                      borderRadius: "md",
-                      border: "1px solid",
-                      borderColor: "gray.200",
-                    })}
-                  >
-                    <p className={css({ fontSize: "sm", color: "gray.800", fontWeight: "medium" })}>Long-term vision</p>
-                    <p className={css({ fontSize: "sm", color: "gray.600", mt: "1" })}>
-                      Once EIP-8004 Identity Registry is deployed on Optimism, registration will be fully permissionless
-                      and on-chain.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              the facilitator list
+            </a>{" "}
+            for one that advertises <code className={inlineCode}>batch-settlement</code> on your network.
+          </p>
         </div>
 
-        {/* Live Example */}
-        <div className={css({ mb: "8" })}>
-          <h2
-            className={css({
-              fontSize: "xl",
-              fontWeight: "semibold",
-              mb: "4",
-              color: "gray.800",
-            })}
-          >
-            📄 Live Example
-          </h2>
-          <p className={css({ color: "gray.600", mb: "4" })}>See our own agent registration as a reference:</p>
-          <a
-            href="/agent-registration.json"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={css({
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "2",
-              px: "4",
-              py: "2",
-              bg: "gray.100",
-              borderRadius: "md",
-              color: "indigo.600",
-              textDecoration: "none",
-              fontWeight: "medium",
-              _hover: { bg: "gray.200" },
-            })}
-          >
-            📄 agent-registration.json →
-          </a>
+        {/* SECTION 4 — known challenges */}
+        <div id="challenges" className={sectionCard}>
+          <h2 className={h2}>⚠️ Known challenges (beta)</h2>
+          <p className={para}>
+            We&apos;re documenting these openly because <code className={inlineCode}>llm/v1</code> is genuinely beta —
+            these are the sharp edges we&apos;ve actually hit.
+          </p>
+
+          <Challenge title="Few facilitators run batch-settlement">
+            Batch-settlement is a Coinbase-blessed standard scheme, but most public facilitators (Coinbase&apos;s CDP
+            among them) only enable <code className={inlineCode}>exact</code>. A handful advertise batch-settlement on
+            EVM mainnet —{" "}
+            <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer" className={extLink}>
+              Solvador
+            </a>{" "}
+            and this project — so you can point at one or run your own, but the pool is small. Part of the reason: the
+            abstract scheme is standardized, yet the EVM wire binding is currently defined by the{" "}
+            <code className={inlineCode}>@x402/evm</code> code rather than a ratified spec doc, which slows adoption.
+          </Challenge>
+
+          <Challenge title="A stock OpenAI SDK can't pay the endpoint">
+            The SDK has no client-side register helper for batch-settlement (unlike{" "}
+            <code className={inlineCode}>registerExactEvmScheme</code> for exact). A caller must hand-wire the scheme,
+            channel storage, deposit, and voucher signing. So the OpenAI body shape buys legibility, not drop-in SDK use
+            — a plain <code className={inlineCode}>Authorization: Bearer</code> request just hits the 402 and stops.
+          </Challenge>
+
+          <Challenge title="channel_busy has no client auto-recovery">
+            Each channel is serialized: a second concurrent request returns{" "}
+            <code className={inlineCode}>channel_busy</code>, and the client SDK does not auto-recover. An interrupted
+            request (tab close, network drop) orphans the lock for up to the request timeout (~2 min). The fix is
+            &quot;wait a few seconds and retry.&quot;
+          </Challenge>
+
+          <Challenge title="Base mainnet only">
+            Optimism mainnet is excluded by a gap in <code className={inlineCode}>@x402/evm</code>&apos;s{" "}
+            <code className={inlineCode}>DEFAULT_STABLECOINS</code> registry (it throws while enhancing the 402), even
+            though the contract is deployed there. The interop floor is Base (
+            <code className={inlineCode}>eip155:8453</code>).
+          </Challenge>
+
+          <Challenge title="Withdraw delay must exceed your claim interval">
+            A channel&apos;s unilateral-exit withdraw delay has to stay well above your claim/settle job&apos;s
+            interval, or a channel can become withdrawable before you ever claim it — and you lose earned revenue. The
+            reference uses a 24h delay against a 12h job. (Also: cache on-chain channel state briefly, or a user&apos;s
+            first message right after depositing can spuriously fail.)
+          </Challenge>
+
+          <Challenge title="Cumulative-amount desync needs corrective 402s">
+            If client and server disagree on the channel&apos;s cumulative total, recovery requires the client signer to
+            expose <code className={inlineCode}>readContract</code> and the server to re-emit the 402 via the SDK&apos;s{" "}
+            <code className={inlineCode}>createPaymentRequiredResponse</code> (a hand-rolled 402 body breaks recovery).
+            Get either wrong and a recoverable desync becomes a hard failure.
+          </Challenge>
+        </div>
+
+        {/* SECTION 5 — what's next / contact */}
+        <div className={sectionCard}>
+          <h2 className={h2}>🧭 Where this is going</h2>
+          <p className={para}>
+            The contract itself is stable. The open questions are ecosystem-level: client ergonomics (the SDK has no
+            batch-settlement register helper, so every client hand-wires the scheme) and the still-thin set of
+            facilitators and agents running it. Until that ecosystem fills in, the realistic pool of third-party{" "}
+            <code className={inlineCode}>llm/v1</code> agents is small — which is exactly why the assistant doesn&apos;t
+            yet expose a &quot;pick another agent&quot; box.
+          </p>
+          <p className={css({ fontSize: "sm", color: "gray.600", lineHeight: "1.6", mb: "0" })}>
+            Building one, or want to be listed when a picker ships? Reach out at{" "}
+            <a href="mailto:fretchen.dev@proton.me" className={extLink}>
+              fretchen.dev@proton.me
+            </a>{" "}
+            or via{" "}
+            <a
+              href="https://github.com/fretchen/fretchen.github.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={extLink}
+            >
+              GitHub
+            </a>
+            . The full design record lives in{" "}
+            <a href={`${GH_BLOB}/scw_js/README.md`} target="_blank" rel="noopener noreferrer" className={extLink}>
+              scw_js/README.md
+            </a>{" "}
+            and{" "}
+            <a
+              href={`${GH_BLOB}/scw_js/openapi.llm.json`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={extLink}
+            >
+              openapi.llm.json
+            </a>
+            .
+          </p>
         </div>
       </article>
-      {ToastComponent}
     </div>
   );
 }

@@ -1,3 +1,3 @@
 export function description() {
-  return "Learn how to register your AI service as an agent on fretchen.eu. Follow EIP-8004 standards for trustless agent discovery and on-chain verification.";
+  return "Build an llm/v1 agent: the open, self-checkable contract for an x402 batch-settlement chat endpoint on fretchen.eu — wire format, interop floor, and the known challenges.";
 }

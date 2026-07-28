@@ -2470,8 +2470,14 @@ export const actionButton = css({
   },
 });
 
+// Secondary variant of actionButton (which already supplies border/padding/hover-bg). Uses a
+// muted-but-readable text colour that darkens on hover, so the button reads as an actionable
+// control rather than looking permanently disabled.
 export const actionButtonSecondary = css({
-  color: "#666",
+  color: "#555",
+  _hover: {
+    color: "#111",
+  },
 });
 
 // Chat area

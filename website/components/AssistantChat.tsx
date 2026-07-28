@@ -5,18 +5,23 @@
  * off-chain voucher signatures reusing the open channel.
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { AgentInfoPanel } from "./AgentInfoPanel";
-import { AgentSelector } from "./AgentSelector";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { css } from "../styled-system/css";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { useX402Chat } from "../hooks/useX402Chat";
-import { precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
+import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
+import { fetchAgentCard, type AgentCard } from "../hooks/x402Discovery";
 import { getViemChain } from "@fretchen/chain-utils";
+
+// The multi-agent picker / custom-URL escape hatch (AgentSelector) is intentionally NOT
+// rendered yet — see open_agent_platform_plan.md. Today the only llm/v1-compatible agent is
+// ours, so a "use a different agent" box would point at an empty room. AgentSelector.tsx,
+// x402Discovery's precheckLlmV1Agent, and useX402Chat's agentUrl param are kept ready for
+// when llm/v2 (OpenAI chat shape) makes third-party agents actually compatible.
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -75,43 +80,20 @@ export function AssistantChat() {
   const { isConnected, connectWallet } = useWalletConnection();
   const { network, switchIfNeeded, switchError } = useAutoNetwork(CHAT_NETWORKS);
 
-  // Custom agent (escape hatch, G3): when the user pastes a URL that passes the llm/v1
-  // pre-check, chat is served by that agent instead of the default fretchen endpoint. While
-  // no custom agent is selected, `selectedAgentUrl` is undefined and useX402Chat falls back
-  // to its own default (proving the default has no privileged path).
-  const [selectedAgentUrl, setSelectedAgentUrl] = useState<string | undefined>(undefined);
-  const [customUrlInput, setCustomUrlInput] = useState("");
-  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
-  const [checkError, setCheckError] = useState<string | null>(null);
-  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
+  const { sendMessage: payAndSend, paymentReceipt } = useX402Chat(network);
 
-  const { sendMessage: payAndSend, paymentReceipt } = useX402Chat(network, selectedAgentUrl);
-
-  const tryCustomAgent = async () => {
-    const url = customUrlInput.trim();
-    if (!url) return;
-    setCheckState("checking");
-    setCheckError(null);
-    const result = await precheckLlmV1Agent(url);
-    if (result.ok && result.card) {
-      setSelectedAgentUrl(url);
-      setCustomCard(result.card);
-      setCheckState("idle");
-      setMessages([]); // fresh conversation on the new agent
-    } else {
-      setCheckState("error");
-      setCheckError(result.reason ?? "This agent could not be verified.");
-    }
-  };
-
-  const useDefaultAgent = () => {
-    setSelectedAgentUrl(undefined);
-    setCustomCard(null);
-    setCustomUrlInput("");
-    setCheckState("idle");
-    setCheckError(null);
-    setMessages([]);
-  };
+  // Provenance of the agent actually serving this chat (operator + payTo + origin), read
+  // live from its own /openapi.json + 402 so the sidebar can honestly show who the user pays.
+  const [agentCard, setAgentCard] = useState<AgentCard | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAgentCard(DEFAULT_LLM_AGENT_URL).then((card) => {
+      if (!cancelled) setAgentCard(card);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const buttonState = useMemo(() => {
     if (!isConnected) return "connect";
@@ -225,16 +207,7 @@ export function AssistantChat() {
             {/* Agent Info Section */}
             <div className={styles.sidebarSection}>
               <h4 className={styles.sidebarHeading}>Agent</h4>
-              <AgentInfoPanel service="llm" variant="sidebar" agentCard={customCard} />
-              <AgentSelector
-                customUrlInput={customUrlInput}
-                onCustomUrlInputChange={setCustomUrlInput}
-                customCard={customCard}
-                checkState={checkState}
-                checkError={checkError}
-                onTryCustomAgent={() => void tryCustomAgent()}
-                onUseDefaultAgent={useDefaultAgent}
-              />
+              <AgentInfoPanel service="llm" variant="sidebar" agentCard={agentCard} />
             </div>
           </div>
         )}
@@ -318,20 +291,7 @@ export function AssistantChat() {
           </div>
 
           {/* Agent Info - Mobile Footer */}
-          {isMobile && (
-            <>
-              <AgentInfoPanel service="llm" variant="sidebar" agentCard={customCard} />
-              <AgentSelector
-                customUrlInput={customUrlInput}
-                onCustomUrlInputChange={setCustomUrlInput}
-                customCard={customCard}
-                checkState={checkState}
-                checkError={checkError}
-                onTryCustomAgent={() => void tryCustomAgent()}
-                onUseDefaultAgent={useDefaultAgent}
-              />
-            </>
-          )}
+          {isMobile && <AgentInfoPanel service="llm" variant="sidebar" agentCard={agentCard} />}
         </div>
       </div>
     </div>

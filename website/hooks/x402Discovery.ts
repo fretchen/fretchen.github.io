@@ -72,6 +72,54 @@ interface OpenApiDoc {
 }
 
 /**
+ * Best-effort provenance for display (no pass/fail gate): reads the agent's `/openapi.json`
+ * for operator/title and probes once for the live `payTo`/network from the 402. Returns
+ * `null` only if the origin is unusable; otherwise returns whatever it could read (fields it
+ * couldn't resolve are left null). Use this for the sidebar's "who you pay" disclosure of the
+ * agent already in use — `precheckLlmV1Agent` is the stricter gate for *adding* a new agent.
+ */
+export async function fetchAgentCard(agentUrl: string): Promise<AgentCard | null> {
+  let origin: string;
+  try {
+    origin = agentOrigin(agentUrl);
+  } catch {
+    return null;
+  }
+
+  let doc: OpenApiDoc = {};
+  try {
+    const res = await fetch(`${origin}/openapi.json`, { method: "GET" });
+    if (res.ok) doc = (await res.json()) as OpenApiDoc;
+  } catch {
+    // Leave doc empty — still return a card with the origin so the UI shows something.
+  }
+
+  let match: AcceptsEntry | undefined;
+  try {
+    const res = await fetch(agentUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { prompt: [] } }),
+    });
+    if (res.status === 402) {
+      const accepts = decodePaymentRequired(res.headers.get("Payment-Required"));
+      match = accepts?.find((a) => a.network === LLM_V1_FLOOR.network && a.scheme === LLM_V1_FLOOR.scheme);
+    }
+  } catch {
+    // No live 402 — payTo/network stay null.
+  }
+
+  return {
+    origin,
+    title: doc.info?.title ?? null,
+    operator: doc.info?.contact?.name ?? null,
+    contactUrl: doc.info?.contact?.url ?? null,
+    payTo: match?.payTo ?? null,
+    network: match?.network ?? null,
+  };
+}
+
+/**
  * Liveness + contract pre-check for a (possibly third-party) llm/v1 agent URL:
  *   1. fetch `<origin>/openapi.json`, require `x-service-type === "llm/v1"`;
  *   2. send a bare POST and require a 402 whose accepts[] meets the interop floor.

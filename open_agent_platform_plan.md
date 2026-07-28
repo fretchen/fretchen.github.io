@@ -105,9 +105,11 @@ No registry document, no agent-card indirection layer for the MVP — the OpenAP
 - [ ] `AssistantChat` passes the selected agent's URL through.
 
 ### Phase 3 — Provenance + escape hatch (proves G3/G4)
-- [ ] Retarget provenance display off the stale `/agent-registration.json`: show operator + `payTo` + price + network parsed from the target agent's `/openapi.json` and its live 402 `accepts[]` (fixes C3). Reuse/replace `useAgentInfo`.
-- [ ] Custom-URL input on `/assistent`: paste any `llm/v1` endpoint, no listing required (proves G3).
-- [ ] Pre-payment disclosure: operator, `payTo`, price, network shown before the first paid message (G4).
+- [x] Retarget provenance display off the stale `/agent-registration.json`: operator + `payTo` + origin parsed from the agent's own `/openapi.json` and its live 402 `accepts[]` (fixes C3), via `fetchAgentCard` in `website/hooks/x402Discovery.ts`. `AgentInfoPanel`'s llm path now renders from this card and no longer shows the retired "Become a provider" / EIP-8004 JSON links.
+- [x] Custom-URL escape hatch **built** (`website/components/AgentSelector.tsx` + `precheckLlmV1Agent`) and unit-tested — but see the deferral note below.
+- [x] Pre-payment disclosure (operator + `payTo` + origin) shown in the sidebar for the agent actually serving the chat (G4/G6).
+
+> **Deferred rendering — the escape hatch is built but NOT shown yet.** The custom-URL picker (`AgentSelector`) is intentionally not mounted in `AssistantChat`. Today the only `llm/v1`-compatible agent is ours (our `{ data: { prompt } }` shape + Base batch-settlement), so a "use a different agent" box would point at an empty room and only confuse users. **Re-enable trigger:** when `llm/v2` (the OpenAI chat-completions shape — see [Design record D-shape]) ships, thousands of existing agents become compatible and the picker becomes motivated. Until then it stays in the codebase, ready: `AgentSelector.tsx`, `x402Discovery.ts`'s `precheckLlmV1Agent`, and `useX402Chat(network, agentUrl?)`'s agent-URL parameter are all retained and tested; re-mount `AgentSelector` and pass the selected URL into `useX402Chat` to turn it back on.
 
 ### Phase 4 (deferred, not this PR) — Registry + automated listing
 A `registry.json` of multiple vetted agents, automated permissionless listing (ownership-proof + contract-validation + liveness probe). Explicitly out of scope for the MVP; the escape hatch stands in for it. Prepare toward it, do not build it yet.

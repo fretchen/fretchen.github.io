@@ -30,7 +30,7 @@ import type {
 // PUBLIC_ENV__LLM_X402_ENDPOINT=http://localhost:8085. Callers may also pass an explicit
 // agentUrl to useX402Chat to target any other llm/v1 agent (see the open-agent-platform
 // work) — this constant is only the fallback when none is given.
-const DEFAULT_LLM_AGENT_URL =
+export const DEFAULT_LLM_AGENT_URL =
   (import.meta.env.PUBLIC_ENV__LLM_X402_ENDPOINT as string | undefined) ?? "https://llm-agent.fretchen.eu";
 
 /**

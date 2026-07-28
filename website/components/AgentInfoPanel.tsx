@@ -44,9 +44,17 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
 
   const isSidebar = variant === "sidebar";
 
-  // Escape-hatch agent selected: render its live provenance (operator + payTo + origin)
-  // rather than the default registration file. Kept intentionally compact.
+  // llm path: render honest provenance (operator + origin + payTo) read live from the agent's
+  // own /openapi.json + 402 — who the user actually pays. Third-party agents (not a *.fretchen.eu
+  // origin) additionally carry an at-your-own-risk note. The multi-agent picker that would make
+  // a third-party card appear here isn't rendered yet (see AssistantChat / the plan).
   if (agentCard) {
+    let isThirdParty = true;
+    try {
+      isThirdParty = !new URL(agentCard.origin).hostname.endsWith("fretchen.eu");
+    } catch {
+      // Unparseable origin — treat as third-party (safer disclosure).
+    }
     return (
       <div className={css({ fontSize: "xs", color: "gray.700" })}>
         <div className={css({ fontWeight: "medium" })}>{agentCard.operator ?? agentCard.origin}</div>
@@ -56,7 +64,20 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
             pays → {agentCard.payTo.slice(0, 6)}…{agentCard.payTo.slice(-4)}
           </div>
         )}
-        <div className={css({ color: "amber.600", mt: "1" })}>third-party agent · at your own risk</div>
+        {isThirdParty && (
+          <div className={css({ color: "amber.600", mt: "1" })}>third-party agent · at your own risk</div>
+        )}
+      </div>
+    );
+  }
+
+  // The llm service is card-driven (above). Before the card resolves, show a compact
+  // placeholder rather than falling through to the legacy registration-file rendering (which
+  // carries the retired "Become a provider" / EIP-8004 JSON links we don't want on /assistent).
+  if (service === "llm") {
+    return (
+      <div className={css({ fontSize: "xs", color: "gray.500", textAlign: isSidebar ? "left" : "center", mt: "2" })}>
+        Loading agent…
       </div>
     );
   }

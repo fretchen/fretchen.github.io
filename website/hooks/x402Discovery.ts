@@ -99,7 +99,11 @@ export async function fetchAgentCard(agentUrl: string): Promise<AgentCard | null
     const res = await fetch(agentUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: { prompt: [] } }),
+      // OpenAI chat-completions probe body — matches the llm/v1 wire contract (see
+      // scw_js/sc_llm_x402.ts). `model` is a placeholder; any 402-returning agent should
+      // challenge for payment before validating this, but a well-formed body avoids relying
+      // on that ordering.
+      body: JSON.stringify({ model: "probe", messages: [] }),
     });
     if (res.status === 402) {
       const accepts = decodePaymentRequired(res.headers.get("Payment-Required"));
@@ -153,7 +157,11 @@ export async function precheckLlmV1Agent(agentUrl: string): Promise<PreCheckResu
     const res = await fetch(agentUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: { prompt: [] } }),
+      // OpenAI chat-completions probe body — matches the llm/v1 wire contract (see
+      // scw_js/sc_llm_x402.ts). `model` is a placeholder; any 402-returning agent should
+      // challenge for payment before validating this, but a well-formed body avoids relying
+      // on that ordering.
+      body: JSON.stringify({ model: "probe", messages: [] }),
     });
     if (res.status !== 402) {
       return { ok: false, reason: `Expected a 402 payment challenge, got ${res.status}.` };

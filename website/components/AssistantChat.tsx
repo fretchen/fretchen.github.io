@@ -140,7 +140,7 @@ export function AssistantChat() {
         throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
       }
 
-      // Full conversation history, matching sc_llm_x402's { data: { prompt: [...] } } contract.
+      // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects.
       const promptArray = [
         { role: "system", content: systemPromptMessage },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
@@ -151,7 +151,7 @@ export function AssistantChat() {
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.content ?? noResponseMessage,
+        content: data.choices?.[0]?.message?.content ?? noResponseMessage,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);

@@ -1,4 +1,10 @@
-import { callLLMAPI, convertTokensToUsdcCost, type LLMMessage } from "./llm_service.js";
+import {
+  callLLMAPI,
+  convertTokensToUsdcCost,
+  resolveModel,
+  advertisedModelIds,
+  type LLMMessage,
+} from "./llm_service.js";
 import { parseJsonBody } from "./utils.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
@@ -87,6 +93,25 @@ function errorResponse(statusCode: number, error: string): ScwResponse {
   return { body: JSON.stringify({ error }), headers: CORS_HEADERS, statusCode };
 }
 
+/**
+ * OpenAI-shaped error body ({ error: { message, type, code } }) for request/model validation
+ * failures, so callers reusing OpenAI response types parse our errors too. Payment (402) and
+ * internal (500) errors keep the plain x402-style `errorResponse` above — those are not part
+ * of the OpenAI request contract.
+ */
+function openAiError(
+  statusCode: number,
+  message: string,
+  type: string,
+  code: string | null = null,
+): ScwResponse {
+  return {
+    body: JSON.stringify({ error: { message, type, code } }),
+    headers: CORS_HEADERS,
+    statusCode,
+  };
+}
+
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
@@ -143,23 +168,61 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
 
   const body = parseJsonBody(event.body);
   if (!body) {
-    return errorResponse(400, "Invalid JSON body");
+    return openAiError(400, "Invalid JSON body", "invalid_request_error");
   }
 
-  const data = body["data"] as Record<string, unknown> | undefined;
-  if (!Array.isArray(data?.["prompt"])) {
-    return errorResponse(400, "No prompt provided");
+  // OpenAI chat-completions request body: { model, messages: [{ role, content }, ...] }.
+  // Streaming settles per message on the final usage, which requires the whole completion —
+  // so stream:true is rejected rather than silently buffered.
+  if (body["stream"] === true) {
+    return openAiError(
+      400,
+      "Streaming (stream: true) is not supported by this endpoint.",
+      "invalid_request_error",
+      "stream_unsupported",
+    );
   }
-  const prompt = data["prompt"] as LLMMessage[];
 
+  const messages = body["messages"];
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return openAiError(400, "'messages' must be a non-empty array.", "invalid_request_error");
+  }
+  const validMessages = messages.every(
+    (m) =>
+      m && typeof m === "object" && typeof m.role === "string" && typeof m.content === "string",
+  );
+  if (!validMessages) {
+    return openAiError(
+      400,
+      "Each message must have a string 'role' and string 'content'.",
+      "invalid_request_error",
+    );
+  }
+  const prompt = messages as LLMMessage[];
+
+  const requestedModel = body["model"];
+  if (typeof requestedModel !== "string" || !requestedModel) {
+    return openAiError(400, "'model' is required.", "invalid_request_error");
+  }
+  const resolved = resolveModel(requestedModel);
+  if (!resolved) {
+    return openAiError(
+      404,
+      `The model '${requestedModel}' does not exist or is not served by this endpoint. Available: ${advertisedModelIds().join(", ")}.`,
+      "invalid_request_error",
+      "model_not_found",
+    );
+  }
+
+  // `useDummyData` is our vendor extension (testnet mock control), not part of OpenAI.
   // Deliberately left undefined (not defaulted to false) when absent — the testnet
   // reject check below needs to distinguish "not sent" from "explicitly false".
   let useDummyData: boolean | undefined;
-  if (data["useDummyData"] !== undefined) {
-    if (typeof data["useDummyData"] !== "boolean") {
-      return errorResponse(400, "Invalid useDummyData flag");
+  if (body["useDummyData"] !== undefined) {
+    if (typeof body["useDummyData"] !== "boolean") {
+      return openAiError(400, "Invalid useDummyData flag.", "invalid_request_error");
     }
-    useDummyData = data["useDummyData"];
+    useDummyData = body["useDummyData"] as boolean;
   }
 
   const receiverAddress = process.env.NFT_WALLET_PUBLIC_KEY;
@@ -306,7 +369,11 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       logger.info({ network: clientNetwork }, "Using mock LLM response (test mode)");
     }
     logger.debug({ prompt }, "Generating answer for prompt");
-    llmData = await callLLMAPI(prompt, useMock, LLM_PROVIDER);
+    // Route to the provider that serves the requested model. Today only mistral is
+    // advertised (resolved.provider === LLM_PROVIDER), so pricing (getSettleAmount /
+    // USDC_MAX_PRICE_PER_MESSAGE, which use LLM_PROVIDER) stays correct. When a second
+    // provider (e.g. ionos) is advertised, per-provider pricing must follow suit here.
+    llmData = await callLLMAPI(prompt, useMock, resolved.provider);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     const msg = (error as Error).message;

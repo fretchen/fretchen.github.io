@@ -71,7 +71,9 @@ describe("AssistantChat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSwitchIfNeeded.mockResolvedValue(true);
-    mockSendMessage.mockResolvedValue({ content: "Paris is the capital of France." });
+    mockSendMessage.mockResolvedValue({
+      choices: [{ message: { role: "assistant", content: "Paris is the capital of France." } }],
+    });
     vi.mocked(useX402Chat).mockReturnValue({
       sendMessage: mockSendMessage,
       status: "idle",

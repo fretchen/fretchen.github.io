@@ -74,6 +74,11 @@ const {
 vi.mock("../llm_service.js", () => ({
   callLLMAPI: mockCallLLMAPI,
   convertTokensToUsdcCost: mockConvertTokensToUsdcCost,
+  // Real, tiny implementations (keep in sync with llm_service.ts): the handler validates the
+  // request `model` against these, so a mock that omitted them would fail every request.
+  resolveModel: (modelId: string) =>
+    modelId === "mistral-large-latest" ? { provider: "mistral" } : null,
+  advertisedModelIds: () => ["mistral-large-latest"],
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -111,11 +116,29 @@ import { handle } from "../sc_llm_x402.js";
 
 const VALID_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678";
 
+// The endpoint's request body is the OpenAI chat-completions shape.
+const TEST_MODEL = "mistral-large-latest";
+
+// callLLMAPI now resolves to an OpenAI chat.completion object; build one for the mock.
+function openAiCompletion(
+  content: string,
+  usage = { prompt_tokens: 5, completion_tokens: 7, total_tokens: 12 },
+) {
+  return {
+    id: "chatcmpl-test",
+    object: "chat.completion" as const,
+    created: 0,
+    model: "test-model",
+    choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+    usage,
+  };
+}
+
 function makeEvent(overrides: Record<string, unknown> = {}) {
   return {
     httpMethod: "POST",
     headers: {},
-    body: JSON.stringify({ data: { prompt: [{ role: "user", content: "hi" }] } }),
+    body: JSON.stringify({ model: TEST_MODEL, messages: [{ role: "user", content: "hi" }] }),
     path: "/llmx402",
     ...overrides,
   };
@@ -165,11 +188,7 @@ describe("sc_llm_x402", () => {
       accepts: [],
     });
     mockCreateSettlementHeaders.mockReturnValue({ "Payment-Response": "encoded" });
-    mockCallLLMAPI.mockResolvedValue({
-      content: "answer",
-      usage: { prompt_tokens: 5, completion_tokens: 7, total_tokens: 12 },
-      model: "test-model",
-    });
+    mockCallLLMAPI.mockResolvedValue(openAiCompletion("answer"));
     mockVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
     mockSettlePayment.mockResolvedValue({
       success: true,
@@ -311,17 +330,48 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it("returns 400 when prompt is missing", async () => {
-      const res = await handle(makeEvent({ body: JSON.stringify({ data: {} }) }) as never, {});
+    it("returns 400 (OpenAI-shaped) when messages is missing or empty", async () => {
+      const res = await handle(
+        makeEvent({ body: JSON.stringify({ model: TEST_MODEL, messages: [] }) }) as never,
+        {},
+      );
       expect(res.statusCode).toBe(400);
-      expect(JSON.parse(res.body).error).toBe("No prompt provided");
+      expect(JSON.parse(res.body).error.type).toBe("invalid_request_error");
+    });
+
+    it("returns 404 model_not_found for an unadvertised model", async () => {
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: "hi" }] }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(404);
+      expect(JSON.parse(res.body).error.code).toBe("model_not_found");
+    });
+
+    it("rejects stream: true with an OpenAI-shaped error", async () => {
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            stream: true,
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error.code).toBe("stream_unsupported");
     });
 
     it("returns 400 for an invalid useDummyData flag", async () => {
       const res = await handle(
         makeEvent({
           body: JSON.stringify({
-            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: "yes" },
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: "yes",
           }),
         }) as never,
         {},
@@ -484,7 +534,9 @@ describe("sc_llm_x402", () => {
       const res = await handle(
         makeEvent({
           body: JSON.stringify({
-            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: false },
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: false,
           }),
         }) as never,
         {},
@@ -499,7 +551,9 @@ describe("sc_llm_x402", () => {
       const res = await handle(
         makeEvent({
           body: JSON.stringify({
-            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: true },
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: true,
           }),
         }) as never,
         {},
@@ -516,7 +570,9 @@ describe("sc_llm_x402", () => {
       const res = await handle(
         makeEvent({
           body: JSON.stringify({
-            data: { prompt: [{ role: "user", content: "hi" }], useDummyData: false },
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: false,
           }),
         }) as never,
         {},
@@ -534,7 +590,10 @@ describe("sc_llm_x402", () => {
     it("returns 200 with the LLM response and settlement headers on success", async () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
-      expect(JSON.parse(res.body).content).toBe("answer");
+      const body = JSON.parse(res.body);
+      expect(body.choices[0].message.content).toBe("answer");
+      expect(body.object).toBe("chat.completion");
+      expect(body.usage).toBeDefined();
       expect(res.headers["Payment-Response"]).toBe("encoded");
       expect(mockSettlePayment).toHaveBeenCalledTimes(1);
 
@@ -573,11 +632,13 @@ describe("sc_llm_x402", () => {
     it("settles for the LLM's actual token usage, not the ceiling", async () => {
       // 200 prompt + 800 completion -> 0.5*200 + 1.5*800 = 100 + 1200 = 1300 (Mistral
       // rates), well under the 3000 ceiling (2000 tokens, all priced as completion).
-      mockCallLLMAPI.mockResolvedValue({
-        content: "answer",
-        usage: { prompt_tokens: 200, completion_tokens: 800, total_tokens: 1000 },
-        model: "test-model",
-      });
+      mockCallLLMAPI.mockResolvedValue(
+        openAiCompletion("answer", {
+          prompt_tokens: 200,
+          completion_tokens: 800,
+          total_tokens: 1000,
+        }),
+      );
 
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
@@ -601,11 +662,13 @@ describe("sc_llm_x402", () => {
       // 500 prompt + 2500 completion -> 0.5*500 + 1.5*2500 = 250 + 3750 = 4000, which
       // exceeds the 3000 ceiling — must be capped there rather than settling for more
       // than the client authorized (or aborting).
-      mockCallLLMAPI.mockResolvedValue({
-        content: "answer",
-        usage: { prompt_tokens: 500, completion_tokens: 2500, total_tokens: 3000 },
-        model: "test-model",
-      });
+      mockCallLLMAPI.mockResolvedValue(
+        openAiCompletion("answer", {
+          prompt_tokens: 500,
+          completion_tokens: 2500,
+          total_tokens: 3000,
+        }),
+      );
 
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);

@@ -40,10 +40,21 @@ describe("llm_service.js", () => {
         }),
       }),
     );
+    // callLLMAPI forwards the upstream OpenAI chat.completion envelope, synthesizing any
+    // fields the upstream omits (id/created/object, and per-choice index/role/finish_reason).
     expect(result).toEqual({
-      content: "Antwort vom LLM",
-      usage: { prompt_tokens: 5, completion_tokens: 7, total_tokens: 12 },
+      id: expect.any(String),
+      object: "chat.completion",
+      created: expect.any(Number),
       model: "meta-llama/Llama-3.3-70B-Instruct",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "Antwort vom LLM" },
+          finish_reason: "stop",
+        },
+      ],
+      usage: { prompt_tokens: 5, completion_tokens: 7, total_tokens: 12 },
     });
   });
 
@@ -84,7 +95,7 @@ describe("llm_service.js", () => {
       { role: "assistant", content: "Quantenphysik ist..." },
     ];
     const result = await callLLMAPI(prompt);
-    expect(result.content).toBe("Antwort vom LLM");
+    expect(result.choices[0].message.content).toBe("Antwort vom LLM");
     expect(global.fetch).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({

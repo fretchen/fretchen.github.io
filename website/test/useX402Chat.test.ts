@@ -17,7 +17,7 @@ import type { X402ChatMessage } from "../types/x402";
 const mockRegister = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
 const mockBatchSettlementEvmScheme = vi.fn();
-const mockToClientEvmSigner = vi.fn((signer: unknown) => signer);
+const mockToClientEvmSigner = vi.fn((...args: unknown[]) => args[0]);
 
 vi.mock("../hooks/useConfiguredPublicClient", () => ({
   useConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
@@ -179,21 +179,24 @@ describe("useX402Chat", () => {
     it("returns the parsed response and sets status through success", async () => {
       vi.stubGlobal(
         "fetch",
-        vi
-          .fn()
-          .mockResolvedValue(
-            new Response(JSON.stringify({ content: "Paris is the capital of France." }), { status: 200 }),
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              choices: [{ message: { role: "assistant", content: "Paris is the capital of France." } }],
+            }),
+            { status: 200 },
           ),
+        ),
       );
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 
-      let response: { content: string } | undefined;
+      let response: Awaited<ReturnType<typeof result.current.sendMessage>> | undefined;
       await act(async () => {
         response = await result.current.sendMessage([{ role: "user", content: "Capital of France?" }]);
       });
 
-      expect(response?.content).toBe("Paris is the capital of France.");
+      expect(response?.choices[0].message.content).toBe("Paris is the capital of France.");
       expect(result.current.status).toBe("success");
       expect(result.current.error).toBeNull();
     });

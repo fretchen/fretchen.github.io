@@ -151,7 +151,7 @@ export function AssistantChat() {
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.content ?? noResponseMessage,
+        content: data.choices?.[0]?.message?.content ?? noResponseMessage,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);

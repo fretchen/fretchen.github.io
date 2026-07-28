@@ -33,6 +33,10 @@ import type {
 export const DEFAULT_LLM_AGENT_URL =
   (import.meta.env.PUBLIC_ENV__LLM_X402_ENDPOINT as string | undefined) ?? "https://llm-agent.fretchen.eu";
 
+// The model id sent in the OpenAI-shaped request. Must match an id the target agent
+// advertises in its openapi.json (the default fretchen agent serves mistral-large-latest).
+const LLM_MODEL = (import.meta.env.PUBLIC_ENV__LLM_MODEL as string | undefined) ?? "mistral-large-latest";
+
 /**
  * Client-side `ClientChannelStorage` backed by the Web Storage API. Persists channel
  * state to `localStorage` so an open channel survives a page reload (the browser
@@ -203,7 +207,9 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
         const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
 
         const client = new x402Client();
-        client.register(network, scheme);
+        // `network` is a CAIP-2 id (e.g. "eip155:8453"); register's type wants the literal
+        // `${string}:${string}` shape, which every CAIP-2 value satisfies.
+        client.register(network as `${string}:${string}`, scheme);
 
         // === Validating fetch: reject before signing if the server doesn't offer our network ===
         const validatingFetch: typeof fetch = async (input, init) => {
@@ -231,7 +237,9 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
         const response = await fetchWithPayment(agentUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: { prompt } }),
+          // OpenAI chat-completions body. `model` must be one the agent advertises in its
+          // openapi.json (mistral-large-latest for fretchen's default agent).
+          body: JSON.stringify({ model: LLM_MODEL, messages: prompt }),
         });
 
         setStatus("processing");

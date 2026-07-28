@@ -49,14 +49,52 @@ export interface LLMMessage {
   content: string;
 }
 
-interface LLMResponse {
-  content: string;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+export interface LLMUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+/**
+ * An OpenAI chat-completion response object. Mistral (and the other OpenAI-compatible
+ * upstreams in LLM_PROVIDERS) already return this shape, so we forward it largely as-is
+ * rather than unwrapping it — the endpoint's public contract is the OpenAI chat-completions
+ * shape. `usage` is load-bearing: the batch-settlement handler prices the settled amount
+ * from it (see getSettleAmount in sc_llm_x402.ts).
+ */
+export interface LLMResponse {
+  id: string;
+  object: "chat.completion";
+  created: number;
   model: string;
+  choices: Array<{
+    index: number;
+    message: { role: string; content: string };
+    finish_reason: string | null;
+  }>;
+  usage: LLMUsage;
+}
+
+/**
+ * Resolve an OpenAI-style `model` id (as sent by a caller in the request body) to the
+ * internal provider whose config serves it. Returns `null` for an unknown/unsupported model
+ * so the handler can answer with an OpenAI-shaped `model_not_found` error. Today only
+ * Mistral's `mistral-large-latest` is advertised; exposing IONOS later is a one-line change
+ * (add its `defaultModel` here) — the registry (LLM_PROVIDERS) already carries the ids.
+ */
+export function resolveModel(modelId: string): { provider: string } | null {
+  for (const [provider, config] of Object.entries(LLM_PROVIDERS)) {
+    if (config.defaultModel === modelId) {
+      return { provider };
+    }
+  }
+  return null;
+}
+
+/** The model ids this endpoint currently advertises + serves (for OpenAPI enum + validation). */
+export function advertisedModelIds(): string[] {
+  // Only Mistral is live today (see sc_llm_x402.ts's LLM_PROVIDER); IONOS stays internal.
+  return [LLM_PROVIDERS.mistral.defaultModel];
 }
 
 export async function callLLMAPI(
@@ -66,9 +104,18 @@ export async function callLLMAPI(
 ): Promise<LLMResponse> {
   if (dummy) {
     return {
-      content: "I am a placeholder for the LLM response",
+      id: "chatcmpl-mock",
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: "placeholder-model",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "I am a placeholder for the LLM response" },
+          finish_reason: "stop",
+        },
+      ],
       usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 },
-      model: "placeholder model",
     };
   }
   const config = getLLMProviderConfig(provider);
@@ -104,19 +151,35 @@ export async function callLLMAPI(
     );
   }
 
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string } }>;
-    usage: LLMResponse["usage"];
-    model: string;
+  // Upstream is OpenAI-compatible; forward its chat-completion envelope, synthesizing only
+  // the fields a given provider might omit (id/created/object) so our response is a
+  // well-formed OpenAI chat.completion regardless of upstream quirks.
+  const data = (await response.json()) as Partial<LLMResponse> & {
+    choices?: Array<{
+      index?: number;
+      message: { role?: string; content: string };
+      finish_reason?: string | null;
+    }>;
+    usage?: LLMUsage;
+    model?: string;
   };
-  const firstChoice = data.choices[0];
-  if (!firstChoice) {
-    throw new Error(`LLM API returned empty choices (model: ${data.model})`);
+  const firstChoice = data.choices?.[0];
+  if (!firstChoice || !data.usage) {
+    throw new Error(
+      `LLM API returned an incomplete completion (model: ${data.model ?? config.defaultModel})`,
+    );
   }
   return {
-    content: firstChoice.message.content,
+    id: data.id ?? `chatcmpl-${Date.now()}`,
+    object: "chat.completion",
+    created: data.created ?? Math.floor(Date.now() / 1000),
+    model: data.model ?? config.defaultModel,
+    choices: data.choices!.map((c, i) => ({
+      index: c.index ?? i,
+      message: { role: c.message.role ?? "assistant", content: c.message.content },
+      finish_reason: c.finish_reason ?? "stop",
+    })),
     usage: data.usage,
-    model: data.model,
   };
 }
 

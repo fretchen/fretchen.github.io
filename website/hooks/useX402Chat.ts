@@ -16,6 +16,7 @@ import { useState, useCallback } from "react";
 import { useWalletClient, useAccount } from "wagmi";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { useConfiguredPublicClient } from "./useConfiguredPublicClient";
+import { decodePaymentRequired } from "./x402Discovery";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
@@ -208,24 +209,14 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
         const validatingFetch: typeof fetch = async (input, init) => {
           const response = await fetch(input, init);
           if (response.status === 402) {
-            const paymentRequiredHeader = response.headers.get("Payment-Required");
-            if (paymentRequiredHeader) {
-              try {
-                const decoded = JSON.parse(atob(paymentRequiredHeader)) as {
-                  accepts?: Array<{ network?: string }>;
-                };
-                const offered = decoded.accepts?.map((a) => a.network).filter(Boolean) as string[] | undefined;
-                if (offered && offered.length > 0 && !offered.includes(network)) {
-                  throw new Error(
-                    `Agent ${agentUrl} does not offer ${network}. Offered: ${offered.join(", ")}. ` +
-                      `Pick a network this agent supports, or choose a different agent.`,
-                  );
-                }
-              } catch (parseError) {
-                if (parseError instanceof Error && parseError.message.includes("does not offer")) {
-                  throw parseError;
-                }
-                // Silently continue if header parsing fails — the request will proceed
+            const accepts = decodePaymentRequired(response.headers.get("Payment-Required"));
+            if (accepts) {
+              const offered = accepts.map((a) => a.network).filter(Boolean) as string[];
+              if (offered.length > 0 && !offered.includes(network)) {
+                throw new Error(
+                  `Agent ${agentUrl} does not offer ${network}. Offered: ${offered.join(", ")}. ` +
+                    `Pick a network this agent supports, or choose a different agent.`,
+                );
               }
             }
           }
